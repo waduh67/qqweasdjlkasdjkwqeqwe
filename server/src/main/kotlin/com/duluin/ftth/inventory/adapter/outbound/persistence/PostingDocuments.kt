@@ -46,7 +46,8 @@ internal class PostingDocuments(private val sql: PostingSql) {
                 if(sql.value("SELECT id FROM inventory_document_line WHERE tenant_id=? AND id=? $mode",sql.tenant,id)==null) sql.fail(WarehouseErrorCode.NOT_FOUND)
             }
         val bindings=PostingLineBindings(sql,command)
-        val quantities=bindings.validate()
+        val allocations=bindings.validate()
+        bindings.validateFacts(allocations)
         if(linkedSources(command)!=linkedLines) sql.fail(WarehouseErrorCode.STALE_REVISION)
         val document=locked.getValue(command.documentId)
         (linkedLines.map { it.first } + listOfNotNull(source?.first)).distinct().forEach { id ->
@@ -61,10 +62,10 @@ internal class PostingDocuments(private val sql: PostingSql) {
             }
         }
         command.usage?.let { require(it.workOrderId==document.workOrder) { "Usage snapshot and posting document context mismatch" } }
-        validateIssueSources(command,source?.first?.takeIf { locked.getValue(it).kind=="ISSUE" },bindings,quantities)
+        validateIssueSources(command,source?.first?.takeIf { locked.getValue(it).kind=="ISSUE" },bindings,allocations)
     }
 
-    private fun validateIssueSources(command: WarehousePost, declaredIssue: UUID?, bindings: PostingLineBindings, quantities: Map<UUID,StockQuantity>) {
+    private fun validateIssueSources(command: WarehousePost, declaredIssue: UUID?, bindings: PostingLineBindings, allocations: Map<UUID,PostingLineAllocation>) {
         val posted=mutableMapOf<UUID,StockQuantity>()
         val accountable=command.facts.isNotEmpty() || command.usage!=null
         command.legs.map { it.documentLineId }.distinct().sortedBy(UUID::toString).forEach { line ->
@@ -88,7 +89,7 @@ internal class PostingDocuments(private val sql: PostingSql) {
                 bindings.requireDescendant(requireNotNull(source.identity),issuedIdentity)
                 command.legs.filter { it.documentLineId==line }.forEach { bindings.requireDescendant(it.dimension.stockIdentityId,issuedIdentity) }
                 val issuedLine=requireNotNull(source.line)
-                val quantity=quantities.getValue(line)
+                val quantity=allocations.getValue(line).quantity
                 val amount=(posted[issuedLine] ?: StockQuantity.of(0,quantity.unit))+quantity
                 posted[issuedLine]=amount
                 val prior=if(accountable) sql.value("""SELECT coalesce(sum(fact.quantity_base::numeric),0) FROM inventory_customer_material_fact fact

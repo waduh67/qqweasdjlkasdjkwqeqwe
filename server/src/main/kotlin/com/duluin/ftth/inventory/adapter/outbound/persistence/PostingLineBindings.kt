@@ -5,11 +5,20 @@ import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
 import java.util.UUID
 
+internal data class PostingLineAllocation(
+    val quantity: StockQuantity,
+    val inbound: List<PostingLeg>,
+    val retained: List<PostingLeg>,
+    val factual: List<PostingLeg>,
+) {
+    val factCapacity: StockQuantity = factual.fold(StockQuantity.of(0,quantity.unit)) { sum,leg -> sum+leg.quantity }
+}
+
 internal class PostingLineBindings(private val sql: PostingSql, private val command: WarehousePost) {
     private val children=command.splits.flatMap { split -> split.children.map { it.id to (split.parentId to it) } }
     private val pending=children.toMap()
 
-    fun validate(): Map<UUID,StockQuantity> {
+    fun validate(): Map<UUID,PostingLineAllocation> {
         require(children.size==pending.size) { "A split child cannot belong to multiple parents" }
         pending.keys.forEach { identity ->
             require(sql.value("SELECT id FROM inventory_segment WHERE tenant_id=? AND id=?",sql.tenant,identity)==null) { "Split children must be new identities" }
@@ -32,15 +41,38 @@ internal class PostingLineBindings(private val sql: PostingSql, private val comm
             val retained=incoming.filter { leg ->
                 val child=pending[leg.dimension.stockIdentityId]
                 child!=null && child.second.kind==SegmentKind.REMNANT && child.second.quantity==leg.quantity && outgoing.any { source ->
-                    child.first==source.dimension.stockIdentityId && leg.status==source.status &&
-                        leg.dimension.copy(stockIdentityId=source.dimension.stockIdentityId)==source.dimension
+                    child.first==source.dimension.stockIdentityId && unchangedPosition(leg,source)
                 }
-            }.fold(zero) { sum,leg -> sum+leg.quantity }
-            val allocated=debit-retained
+            }
+            val allocated=debit-retained.fold(zero) { sum,leg -> sum+leg.quantity }
             val quantity=if(allocated.quantityBase==0L) debit else allocated
             require(quantity.quantityBase>0 && quantity.quantityBase<=line.quantity.quantityBase) { "Actual posting quantity exceeds the locked line or has no allocated quantity" }
-            id to quantity
+            val factual=incoming.filter { leg -> command.legs.none { source -> source.direction==LegDirection.OUT && unchangedPosition(leg,source) } }
+            id to PostingLineAllocation(quantity,incoming,retained,factual)
         }
+    }
+
+    fun validateFacts(allocations: Map<UUID,PostingLineAllocation>) {
+        val incoming=allocations.flatMap { (line,allocation) -> allocation.inbound.map { line to it } }
+        val totals=mutableMapOf<UUID,StockQuantity>()
+        command.facts.forEach { fact ->
+            val matches=incoming.filter { it.second.dimension.stockIdentityId==fact.stockIdentityId }
+            require(matches.size==1) { "Material fact must identify exactly one inbound leg and document line" }
+            val (line,leg)=matches.single()
+            val allocation=allocations.getValue(line)
+            require(leg !in allocation.retained && leg in allocation.factual) { "Unchanged retained stock cannot produce a material movement fact" }
+            require(fact.quantity==leg.quantity) { "Material fact quantity must equal its allocated inbound leg" }
+            val total=(totals[line] ?: StockQuantity.of(0,allocation.quantity.unit))+fact.quantity
+            require(total.quantityBase<=allocation.factCapacity.quantityBase && total.quantityBase<=allocation.quantity.quantityBase) { "Material facts exceed the actual allocated quantity of their line" }
+            totals[line]=total
+        }
+    }
+
+    private fun unchangedPosition(inbound: PostingLeg,outbound: PostingLeg): Boolean {
+        val samePiece=inbound.dimension.stockIdentityId==outbound.dimension.stockIdentityId ||
+            pending[inbound.dimension.stockIdentityId]?.first==outbound.dimension.stockIdentityId
+        return samePiece && inbound.status==outbound.status &&
+            inbound.dimension.copy(stockIdentityId=outbound.dimension.stockIdentityId)==outbound.dimension
     }
 
     fun requireDescendant(actual: UUID, ancestor: UUID) {
