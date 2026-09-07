@@ -144,3 +144,24 @@ sekadar menyalin environment. Detail ini hanya boleh terbuka di profil lokal.
 Config Playwright task31 harus mengaktifkan reporter JSON (boleh bersama line),
 mengikuti `PLAYWRIGHT_JSON_OUTPUT_NAME`. Laporan hilang, nol test pada salah
 satu project, test dilewati, flaky, atau gagal membuat runner gagal.
+
+## 2026-09-07: koreksi verifikasi independen task04
+
+Manifest M02 diperluas menjadi **V174, V174.1, V174.2**. V174.2 diperiksa bebas
+dan dicadangkan sebelum SQL dibuat. V173/V174/V174.1 tetap byte-identical;
+V175-V178 tetap milik task berikutnya. Koreksi forward ini menutup AV-01
+(rantai VERIFIED), AV-02 (opening tanpa approval), dan AV-03 (lot serta saldo
+parent split), bukan migrasi approval/assignment baru.
+
+Pemeriksaan admission/provenance dan spendability memakai constraint trigger
+deferred sehingga receipt dan split atomik diperiksa terhadap keadaan akhir
+transaksi. Parent terminal tidak boleh menyisakan saldo VERIFIED positif atau
+encumbrance terbuka. Alias claim lama tetap dicadangkan; RETIRED bukan izin stok.
+Opening memakai satu extension point DB document/revision-bound yang selalu
+menolak sampai task12 memasang pembuktian approval independen yang nyata.
+
+Tenant owner menerbitkan event root saat tenant benar-benar dibuat. Listener
+inventory dan IAM sinkron, MANDATORY, fail-fast pada transaksi yang sama;
+tidak memakai AFTER_COMMIT/best-effort. JDBC scoped di koneksi Hibernate yang
+sama memulihkan GUC asal tanpa mengganti tenant EntityManager di tengah transaksi.
+Pengiriman event ganda tidak mempromosikan policy existing atau menaikkan epoch.
