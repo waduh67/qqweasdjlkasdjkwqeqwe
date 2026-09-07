@@ -21,16 +21,23 @@ class WarehouseSchemaITRestart {
     fun `fresh Spring process contexts read identical committed policy master and document`() {
         WarehouseSchemaDatabase().use { database ->
             lateinit var tenant: UUID
+            var authorityEpoch = -1L
             val sku = UUID.randomUUID()
             val document = UUID.randomUUID()
             start(database).use { context ->
                 tenant = context.getBean(com.duluin.ftth.tenancy.TenantApi::class.java)
                     .ensureTenant("restart-${UUID.randomUUID()}", "Restart").id
                 transaction(context, tenant) {
+                    val provisioner = context.getBean(com.duluin.ftth.iam.application.service.AdminProvisioner::class.java)
+                    provisioner.ensureTenantAdminRole(tenant)
+                    provisioner.ensureTechnicianRole(tenant)
                     assertThat(context.getBean(InventoryTenantPolicyService::class.java).read().state).isEqualTo(WarehouseCutoverState.ENFORCED)
                     val entityManager = requireNotNull(EntityManagerFactoryUtils.getTransactionalEntityManager(context.getBean(EntityManagerFactory::class.java)))
                     entityManager.persist(WarehouseSkuJpaEntity(sku, "restart-cable", "Restart cable", WarehouseTracking.LOT, WarehouseBaseUnit.MM))
                     entityManager.persist(WarehouseDocumentJpaEntity(document, "restart-draft", WarehouseDocumentKind.DEMAND, UUID.randomUUID(), 0, 0))
+                    authorityEpoch = entityManager.createNativeQuery("SELECT epoch FROM iam_authorization_epoch WHERE tenant_id=:tenant", Long::class.java)
+                        .setParameter("tenant", tenant).singleResult as Long
+                    assertThat(authorityEpoch).isEqualTo(1L)
                 }
             }
             start(database).use { context ->
@@ -43,7 +50,7 @@ class WarehouseSchemaITRestart {
                     assertThat(entityManager.find(WarehouseDocumentJpaEntity::class.java, document).code).isEqualTo("restart-draft")
                     assertThat(entityManager.createNativeQuery("SELECT current_user", String::class.java).singleResult).isEqualTo("warehouse_app")
                     assertThat(entityManager.createNativeQuery("SELECT epoch FROM iam_authorization_epoch WHERE tenant_id=:tenant", Long::class.java)
-                        .setParameter("tenant",tenant).singleResult).isEqualTo(0L)
+                        .setParameter("tenant",tenant).singleResult).isEqualTo(authorityEpoch)
                 }
             }
         }
