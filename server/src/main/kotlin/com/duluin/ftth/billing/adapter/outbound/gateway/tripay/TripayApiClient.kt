@@ -70,7 +70,9 @@ class TripayApiClient private constructor(
                 .retrieve()
                 .body(String::class.java)
         } catch (e: RestClientResponseException) {
-            throw ConflictException("Tripay menolak create transaction (${e.statusCode.value()})")
+            val genericMessage = "Tripay menolak create transaction (${e.statusCode.value()})"
+            val providerMessage = safeProviderMessage(e.responseBodyAsString, credentials)
+            throw ConflictException(providerMessage?.let { "$genericMessage: $it" } ?: genericMessage)
         } catch (e: ResourceAccessException) {
             throw ConflictException("Tripay tidak dapat dihubungi saat membuat transaksi")
         } catch (e: RestClientException) {
@@ -86,6 +88,28 @@ class TripayApiClient private constructor(
             ?.let { body -> runCatching { objectMapper.readTree(body) }.getOrNull() }
             ?.takeIf { it.isObject }
 
+    private fun safeProviderMessage(responseBody: String, credentials: TripayCredentials): String? {
+        val message = runCatching {
+            objectMapper.readTree(responseBody)
+                .takeIf { it.isObject }
+                ?.get("message")
+                ?.takeIf { it.isString }
+                ?.stringValue()
+        }.getOrNull() ?: return null
+
+        val sanitized = listOf(credentials.apiKeyForHttp(), credentials.privateKeyForSignature())
+            .filter(String::isNotBlank)
+            .fold(message) { value, credential -> value.replace(credential, REDACTED) }
+            .replace(WHITESPACE, " ")
+            .trim()
+
+        return sanitized
+            .takeIf { it.isNotBlank() && it.length <= MAX_PROVIDER_MESSAGE_LENGTH }
+            ?.takeUnless { value ->
+                REDACTED in value || UNSAFE_CREDENTIAL_PATTERNS.any { pattern -> pattern.containsMatchIn(value) }
+            }
+    }
+
     private fun client(sandbox: Boolean): RestClient = RestClient.builder()
         .baseUrl(endpointFor(sandbox))
         .requestFactory(
@@ -100,7 +124,17 @@ class TripayApiClient private constructor(
         const val SANDBOX_BASE_URL = "https://tripay.co.id/api-sandbox"
         const val PRODUCTION_BASE_URL = "https://tripay.co.id/api"
         const val CREATE_TRANSACTION_PATH = "/transaction/create"
+        const val MAX_PROVIDER_MESSAGE_LENGTH = 180
+        const val REDACTED = "[REDACTED]"
         val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
         val READ_TIMEOUT: Duration = Duration.ofSeconds(20)
+        val WHITESPACE = Regex("\\s+")
+        val UNSAFE_CREDENTIAL_PATTERNS = listOf(
+            Regex(
+                "\\bBearer\\s+[A-Za-z0-9._~+/-]{8,}={0,2}(?=$|[^A-Za-z0-9._~+/-=])",
+                RegexOption.IGNORE_CASE,
+            ),
+            Regex("\\b[0-9A-Fa-f]{64}\\b"),
+        )
     }
 }

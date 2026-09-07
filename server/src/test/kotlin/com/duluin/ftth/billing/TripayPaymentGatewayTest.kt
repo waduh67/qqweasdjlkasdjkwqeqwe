@@ -227,13 +227,92 @@ class TripayPaymentGatewayTest {
     }
 
     @Test
-    fun `Tripay HTTP error becomes safe conflict without credential text`() {
-        WireTripay("{\"success\":false,\"message\":\"request rejected\"}", status = 422).use { wire ->
+    fun `Tripay HTTP 400 includes a safe JSON provider message`() {
+        WireTripay("{\"success\":false,\"message\":\"Metode pembayaran tidak aktif\"}", status = 400).use { wire ->
             val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
 
             assertThat(thrown).isInstanceOf(ConflictException::class.java)
-            assertThat(thrown.message).contains("Tripay menolak create transaction (422)")
-            assertThat(thrown.message).doesNotContain("fixture-api-key", "fixture-private-key")
+            assertThat(thrown.message)
+                .isEqualTo("Tripay menolak create transaction (400): Metode pembayaran tidak aktif")
+                .doesNotContain("fixture-api-key", "fixture-private-key")
+        }
+    }
+
+    @Test
+    fun `Tripay HTTP error includes Invalid API Key diagnostic label`() {
+        WireTripay("{\"success\":false,\"message\":\"Invalid API Key\"}", status = 400).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown.message)
+                .isEqualTo("Tripay menolak create transaction (400): Invalid API Key")
+                .doesNotContain("fixture-api-key", "fixture-private-key")
+        }
+    }
+
+    @Test
+    fun `Tripay HTTP error normalizes safe provider message whitespace`() {
+        WireTripay("{\"success\":false,\"message\":\" Metode\\n pembayaran\\t tidak aktif \"}", status = 400).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown.message)
+                .isEqualTo("Tripay menolak create transaction (400): Metode pembayaran tidak aktif")
+        }
+    }
+
+    @Test
+    fun `Tripay malformed HTTP error body falls back to a generic safe conflict`() {
+        WireTripay("not JSON", status = 422).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message)
+                .isEqualTo("Tripay menolak create transaction (422)")
+                .doesNotContain("fixture-api-key", "fixture-private-key")
+        }
+    }
+
+    @Test
+    fun `Tripay overlong HTTP error message falls back to a generic safe conflict`() {
+        WireTripay("{\"success\":false,\"message\":\"${"x".repeat(181)}\"}", status = 400).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown.message).isEqualTo("Tripay menolak create transaction (400)")
+        }
+    }
+
+    @Test
+    fun `Tripay credential echo in HTTP error body falls back to a generic safe conflict`() {
+        WireTripay(
+            "{\"success\":false,\"message\":\"Bearer fixture-api-key signature fixture-private-key\"}",
+            status = 400,
+        ).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message)
+                .isEqualTo("Tripay menolak create transaction (400)")
+                .doesNotContain("fixture-api-key", "fixture-private-key")
+        }
+    }
+
+    @Test
+    fun `Tripay HTTP error with punctuated standalone Bearer token falls back to a generic safe conflict`() {
+        WireTripay("{\"success\":false,\"message\":\"Bearer example.token-value,\"}", status = 400).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message).isEqualTo("Tripay menolak create transaction (400)")
+        }
+    }
+
+    @Test
+    fun `Tripay HTTP error with standalone hex signature falls back to a generic safe conflict`() {
+        val signature = "a".repeat(64)
+        WireTripay("{\"success\":false,\"message\":\"$signature\"}", status = 400).use { wire ->
+            val thrown = checkNotNull(catchThrowable { gateway(wire).createCharge(request(method = "QR"), ctx(sandbox = true)) })
+
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message).isEqualTo("Tripay menolak create transaction (400)")
         }
     }
 
