@@ -1,5 +1,7 @@
 package com.duluin.ftth.iam.application.service
 
+import com.duluin.ftth.iam.authorizeChange
+
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
@@ -23,7 +25,7 @@ class AreaService(
 ) : ManageAreaUseCase {
 
     override fun create(command: CreateAreaCommand): AreaView {
-        authority.lockForChange().incrementEpoch()
+        authority.authorizeChange("iam.area.create").incrementEpoch()
         val code = command.code.trim().uppercase()
         if (areaRepository.existsByCode(code)) throw ConflictException("Kode area '$code' sudah ada")
         command.parentId?.let { requireArea(it) }
@@ -34,7 +36,7 @@ class AreaService(
     }
 
     override fun update(id: UUID, command: UpdateAreaCommand): AreaView {
-        authority.lockForChange().incrementEpoch()
+        authority.authorizeChange("iam.area.update").incrementEpoch()
         val area = requireArea(id)
         if (command.parentId != null) {
             if (command.parentId == id) throw ValidationException("Area tidak boleh menjadi induk dirinya sendiri")
@@ -45,7 +47,7 @@ class AreaService(
     }
 
     override fun delete(id: UUID) {
-        authority.lockForChange().incrementEpoch()
+        authority.authorizeChange("iam.area.delete").incrementEpoch()
         requireArea(id)
         areaRepository.deleteById(id)
     }

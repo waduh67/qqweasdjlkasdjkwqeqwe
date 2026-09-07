@@ -13,6 +13,7 @@ class WarehouseConcurrencyITArea {
     @Test fun `area create update and delete use a single committed epoch`() {
         WarehouseSchemaDatabase().use { database -> postingContext(database).use { context ->
             val fixture = WarehousePostingFixture(context)
+            fixture.transaction { sql("INSERT INTO app_user(id,tenant_id,email,name,password_hash,platform_admin) VALUES ('$actor','$tenant','$actor@example.test','Actor','unused',true)") }
             SecurityContextHolder.getContext().authentication = FtthAuthenticationToken(
                 AuthenticatedUser(fixture.actor, fixture.tenant, "actor@example.test", "Actor", false, emptySet(), emptySet()))
             try {
