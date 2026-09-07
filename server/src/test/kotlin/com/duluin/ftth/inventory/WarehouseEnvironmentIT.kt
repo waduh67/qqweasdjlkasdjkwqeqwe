@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.nio.file.Path
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import java.sql.SQLException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -34,13 +35,48 @@ class WarehouseEnvironmentIT {
             .redirectErrorStream(true)
             .apply {
                 environment().keys.removeIf { it.startsWith("SPRING_") || it.startsWith("FTTH_") }
-                environment()["SPRING_DATASOURCE_URL"] = "jdbc:postgresql://production.invalid:5432/ftth"
+                environment()["SPRING_DATASOURCE_URL"] = "jdbc:postgresql://127.0.0.1:1/ftth"
             }
             .start()
         assertThat(process.waitFor(15, TimeUnit.SECONDS)).isTrue()
         val output = process.inputStream.bufferedReader().readText()
         assertThat(process.exitValue()).isEqualTo(64)
         assertThat(output).contains("REFUSED: external configuration override")
+    }
+
+    @Test
+    fun `runner refuses JVM launcher overrides before Docker access`() {
+        val launchers = listOf("_JAVA_OPTIONS", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "JAVA_OPTS", "GRADLE_OPTS")
+        val binaries = Files.createDirectories(temporary.resolve("bin"))
+        val sentinel = temporary.resolve("docker-access")
+        for (name in listOf("docker", "sudo")) {
+            val executable = Files.writeString(
+                binaries.resolve(name),
+                "#!/bin/sh\nprintf touched > \"\$JVM_GUARD_SENTINEL\"\nexit 99\n",
+            )
+            Files.setPosixFilePermissions(executable, PosixFilePermissions.fromString("rwx------"))
+        }
+        for (launcher in launchers) {
+            val process = ProcessBuilder(
+                "bash", root.resolve("scripts/warehouse/qa.sh").toString(), "server",
+                "--tests", "*WarehouseEnvironmentIT*", "--no-parallel",
+            ).directory(root.toFile()).redirectErrorStream(true).apply {
+                environment().keys.removeIf { it.startsWith("SPRING_") || it.startsWith("FTTH_") || it in launchers }
+                environment()["PATH"] = "$binaries:${System.getenv("PATH")}"
+                environment()["JVM_GUARD_SENTINEL"] = sentinel.toString()
+                environment()[launcher] = "-Dspring.datasource.url=jdbc:postgresql://127.0.0.1:1/ftth -Dspring.flyway.url=jdbc:postgresql://127.0.0.1:1/ftth"
+            }.start()
+            try {
+                assertThat(process.waitFor(15, TimeUnit.SECONDS)).isTrue()
+                assertThat(process.exitValue()).isEqualTo(64)
+                assertThat(process.inputStream.bufferedReader().readText())
+                    .contains("REFUSED: external configuration override ($launcher)")
+                    .doesNotContain("PASS:", "> Task", "Picked up", "Flyway")
+                assertThat(Files.exists(sentinel)).isFalse()
+            } finally {
+                if (process.isAlive) process.destroyForcibly().waitFor()
+            }
+        }
     }
 
     @Test

@@ -14,7 +14,7 @@ reject_overrides() {
     local variable
     while IFS= read -r variable; do
         case "$variable" in
-            SPRING_*|FTTH_*|WH_*|PGHOST*|PGPORT|PGDATABASE|PGUSER|PGPASSWORD|PGSERVICE*|PGOPTIONS|DOCKER_HOST|DOCKER_CONTEXT|COMPOSE_*|JAVA_TOOL_OPTIONS|JDK_JAVA_OPTIONS|JAVA_OPTS|GRADLE_OPTS)
+            SPRING_*|FTTH_*|WH_*|PGHOST*|PGPORT|PGDATABASE|PGUSER|PGPASSWORD|PGSERVICE*|PGOPTIONS|DOCKER_HOST|DOCKER_CONTEXT|COMPOSE_*|_JAVA_OPTIONS|JAVA_TOOL_OPTIONS|JDK_JAVA_OPTIONS|JAVA_OPTS|GRADLE_OPTS)
                 refuse "external configuration override ($variable); use only the generated warehouse environment" ;;
         esac
     done < <(compgen -e)
