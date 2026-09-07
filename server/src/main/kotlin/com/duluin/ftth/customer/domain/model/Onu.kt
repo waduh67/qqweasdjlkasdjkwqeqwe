@@ -3,6 +3,7 @@ package com.duluin.ftth.customer.domain.model
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.domain.identity.SerialIdentity
 import java.time.Instant
 import java.util.UUID
 
@@ -159,7 +160,7 @@ class Onu private constructor(
         )
 
         private fun validateSerial(serial: String): String {
-            val normalized = serial.trim().uppercase()
+            val normalized = SerialIdentity.parse(serial).canonical
             if (!SERIAL_PATTERN.matches(normalized)) {
                 throw ValidationException("Serial number ONU '$serial' tidak valid: 4-60 karakter alfanumerik")
             }
