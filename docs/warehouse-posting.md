@@ -159,3 +159,27 @@ lot-capacity, atau deferred tenant-scope guard yang diubah untuk koreksi ini.
   dirujuk. Quantity acknowledged serta pengurangan oleh fakta terdahulu berlaku
   untuk posting material accountable; pemeriksaan struktural tidak dilewati
   hanya karena daftar fakta kosong.
+
+## Fakta hanya untuk alokasi yang benar-benar berpindah
+
+Hasil validasi `PostingLineBindings` sekarang membawa quantity alokasi, leg IN,
+leg retained, leg yang layak menjadi fakta, dan kapasitas fakta per line. Satu
+perhitungan posisi/identitas yang sama dipakai untuk retensi fisik dan kelayakan
+fakta; persistence fakta tidak menebak ulang status remnant.
+
+- Fakta harus menunjuk tepat satu leg IN pada tepat satu line. Quantity fakta
+  harus sama dengan leg itu; total fakta per line tidak boleh melampaui kapasitas
+  faktual maupun quantity alokasi line tersebut.
+- REMNANT yang tetap pada posisi/custody/condition/owner/status source tidak
+  menghasilkan fakta used/returned/installed. Pure local cutting atau pertukaran
+  mapping line juga tidak dapat menyatakan stok yang sebenarnya tetap di tempat
+  sebagai returned. Pemeriksaan posisi memakai pasangan identitas yang sama atau
+  parent split yang tepat di seluruh posting, bukan sekadar urutan line.
+- Split retained tanpa fakta tetap sah dan konservasi fisiknya tidak diubah.
+  RETURN100m menjadi moved60m+retained40m hanya boleh menghasilkan fakta moved60m,
+  bukan100m. Sisa40m baru dapat menghasilkan fakta bila benar-benar dipindahkan
+  melalui posting berikutnya.
+- Budget source tetap memakai alokasi yang telah dikunci dan fakta immutable
+  terdahulu. Karena fakta sekarang dibatasi oleh alokasi faktualnya, retained
+  material tidak dapat menyelundupkan fakta di luar accepted quantity. Tidak ada
+  migration, rewrite histori, atau perubahan delivery/otorisasi task6.
