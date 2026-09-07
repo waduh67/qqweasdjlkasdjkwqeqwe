@@ -34,9 +34,11 @@ class UserService(
     private val passwordHasher: PasswordHasher,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageUserUseCase {
 
     override fun create(command: CreateUserCommand): UserView {
+        authority.lockForChange().incrementEpoch()
         val email = Email.of(command.email)
         if (userRepository.existsByEmail(email)) throw ConflictException("Email '${email.value}' sudah dipakai")
         validatePassword(command.password)
@@ -56,6 +58,7 @@ class UserService(
     }
 
     override fun update(id: UUID, command: UpdateUserCommand): UserView {
+        authority.lockForChange().incrementEpoch()
         val user = load(id)
         user.rename(command.name)
         val saved = userRepository.save(user)
@@ -64,17 +67,18 @@ class UserService(
     }
 
     override fun assignAccess(id: UUID, command: AssignAccessCommand): UserView {
+        authority.lockForChange().incrementEpoch()
         val user = load(id)
         user.assignRoles(validateRoles(command.roleIds))
         user.assignAreas(validateAreas(command.areaIds))
         val saved = userRepository.save(user)
-        // Cabut refresh token agar perubahan izin berlaku setelah access-token kadaluarsa.
         refreshTokens.revokeAllForUser(id)
         audit("user.access_changed", saved)
         return saved.toView()
     }
 
     override fun setEnabled(id: UUID, enabled: Boolean): UserView {
+        authority.lockForChange().incrementEpoch()
         val user = load(id)
         if (enabled) {
             user.enable()
@@ -89,6 +93,7 @@ class UserService(
     }
 
     override fun delete(id: UUID) {
+        authority.lockForChange().incrementEpoch()
         val user = load(id)
         requireNotSelf(id, "menghapus")
         userRepository.deleteById(id)
