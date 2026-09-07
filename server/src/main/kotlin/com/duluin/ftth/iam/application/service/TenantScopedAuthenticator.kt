@@ -44,8 +44,10 @@ class TenantScopedAuthenticator(
     private val totp: TotpEngine,
     private val cipher: SecretCipher,
     private val recoveryCodes: RecoveryCodeRepository,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) {
     fun authenticateAndIssue(rawEmail: String, rawPassword: String, otpCode: String? = null): AuthTokens {
+        authority.lockForChange()
         val email = parseEmail(rawEmail) ?: throw invalidCredentials()
         val user = userRepository.findByEmail(email) ?: throw invalidCredentials()
         if (!user.active) throw AuthenticationException("Akun dinonaktifkan")
@@ -91,6 +93,7 @@ class TenantScopedAuthenticator(
     }
 
     fun rotateAndIssue(presented: RefreshToken): AuthTokens {
+        authority.lockForChange()
         presented.revoke()
         refreshTokens.save(presented)
         val user = userRepository.findById(presented.userId)?.takeIf { it.active }

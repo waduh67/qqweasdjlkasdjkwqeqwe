@@ -40,6 +40,7 @@ class TwoFactorService(
     private val passwordHasher: PasswordHasher,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageTwoFactorUseCase {
 
     private val random = SecureRandom()
@@ -55,6 +56,7 @@ class TwoFactorService(
     }
 
     override fun startEnrollment(): TotpEnrollmentView {
+        authority.lockForChange().incrementEpoch()
         val user = loadSelf()
         val secret = totp.newSecret()
         user.beginTotpEnrollment(cipher.encrypt(secret))
@@ -66,6 +68,7 @@ class TwoFactorService(
     }
 
     override fun confirmEnrollment(code: String): RecoveryCodesView {
+        authority.lockForChange().incrementEpoch()
         val user = loadSelf()
         val secret = user.totpSecret?.let(cipher::decrypt)
             ?: throw ValidationException("Belum ada pendaftaran 2FA yang menunggu — mulai dari awal")
@@ -79,6 +82,7 @@ class TwoFactorService(
     }
 
     override fun disable(password: String) {
+        authority.lockForChange().incrementEpoch()
         val user = loadSelf()
         requirePassword(user, password)
         user.disableTotp()
@@ -88,6 +92,7 @@ class TwoFactorService(
     }
 
     override fun regenerateRecoveryCodes(password: String): RecoveryCodesView {
+        authority.lockForChange().incrementEpoch()
         val user = loadSelf()
         requirePassword(user, password)
         if (!user.twoFactorEnabled) throw ValidationException("2FA belum aktif")
@@ -102,6 +107,7 @@ class TwoFactorService(
      * dicari lebih dulu kalau suatu saat ada akun yang disalahgunakan.
      */
     override fun resetFor(userId: UUID) {
+        authority.lockForChange().incrementEpoch()
         val user = userRepository.findById(userId)
             ?: throw NotFoundException("User $userId tidak ditemukan")
         user.disableTotp()
