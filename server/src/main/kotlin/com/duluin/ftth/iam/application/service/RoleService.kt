@@ -25,9 +25,11 @@ class RoleService(
     private val permissionRepository: PermissionRepository,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageRoleUseCase {
 
     override fun create(command: CreateRoleCommand): RoleView {
+        authority.lockForChange().incrementEpoch()
         if (roleRepository.existsByName(command.name.trim())) {
             throw ConflictException("Role '${command.name}' sudah ada")
         }
@@ -46,6 +48,7 @@ class RoleService(
     }
 
     override fun update(id: UUID, command: UpdateRoleCommand): RoleView {
+        authority.lockForChange().incrementEpoch()
         val role = load(id)
         val newName = command.name.trim()
         if (!role.name.equals(newName, ignoreCase = false) && roleRepository.existsByName(newName)) {
@@ -61,6 +64,7 @@ class RoleService(
     }
 
     override fun delete(id: UUID) {
+        authority.lockForChange().incrementEpoch()
         val role = load(id)
         if (role.systemRole) throw ValidationException("Role sistem tidak bisa dihapus")
         roleRepository.deleteById(id)

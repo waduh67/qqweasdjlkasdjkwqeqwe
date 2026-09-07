@@ -9,6 +9,11 @@ import org.junit.jupiter.api.*
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import java.util.UUID
+import com.duluin.ftth.iam.application.port.inbound.*
+import com.duluin.ftth.iam.application.service.RoleService
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WarehouseConcurrencyITAuthority {
@@ -57,5 +62,44 @@ class WarehouseConcurrencyITAuthority {
         authenticate(fixture)
         assertThatThrownBy { fixture.transaction { authorities.lockCurrent() } }
             .isInstanceOf(com.duluin.ftth.common.domain.error.AccessDeniedException::class.java)
+    }
+
+    @Test fun `role revocation waits for shared authority and original JWT loses permission`() {
+        val fixture = fixture()
+        authenticate(fixture)
+        val roles = context.getBean(RoleService::class.java)
+        val authority = context.getBean(CurrentAuthorityApi::class.java)
+        val role = fixture.transaction {
+            val permission = UUID.fromString(scalar("SELECT id FROM permission WHERE code='inventory.transfer.manage'"))
+            val created = roles.create(CreateRoleCommand("Warehouse", null, setOf(permission)))
+            context.getBean(UserService::class.java).assignAccess(actor, AssignAccessCommand(setOf(created.id), emptySet()))
+            created
+        }
+        val held = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val reader = pool.submit { authenticate(fixture); fixture.transaction {
+                val snapshot = authority.lockCurrent()
+                assertThat(snapshot.permissions).contains("inventory.transfer.manage")
+                held.countDown()
+                check(release.await(15, TimeUnit.SECONDS))
+                snapshot.fence.assertHeld()
+            } }
+            check(held.await(10, TimeUnit.SECONDS))
+            val revoke = pool.submit { authenticate(fixture); fixture.transaction {
+                roles.update(role.id, UpdateRoleCommand("Warehouse", null, emptySet()))
+            } }
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            var blocked = false
+            while (!blocked && System.nanoTime() < deadline) {
+                blocked = fixture.transaction { scalar("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND usename=current_user AND wait_event_type='Lock' AND query LIKE '%iam_authorization_epoch%'").toInt() > 0 }
+                Thread.yield()
+            }
+            assertThat(blocked).isTrue()
+            release.countDown()
+            reader.get(15, TimeUnit.SECONDS); revoke.get(15, TimeUnit.SECONDS)
+            assertThat(fixture.transaction { authority.lockCurrent().permissions }).doesNotContain("inventory.transfer.manage")
+        } finally { release.countDown(); pool.shutdownNow(); pool.awaitTermination(10, TimeUnit.SECONDS) }
     }
 }
