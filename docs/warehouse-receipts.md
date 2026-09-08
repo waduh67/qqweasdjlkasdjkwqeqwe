@@ -112,7 +112,9 @@ Rejected tetap quarantine/supplier-return; task08 tidak menjalankan retur pemaso
 Attachment menerima PNG/JPEG/PDF1..15728640 byte yang benar-benar dapat diparse.
 PDFBox3.0.8 (Apache License2.0) berjalan non-lenient: header/end framing, xref,
 trailer, objects dan content stream diperiksa, tanpa rendering atau eksekusi.
-PDF terenkripsi, form/JavaScript/action/embedded-file dan konstruksi aktif lain
+Keberhasilan load PDFBox saja tidak cukup: lexer independen memeriksa seluruh
+rentang file, objek langsung/tidak langsung dan grammar instruksi content stream.
+PDF terenkripsi, form interaktif/JavaScript/action/embedded-file dan konstruksi aktif lain
 ditolak. Batas100 halaman,50000 xref,100000 objects/tokens,16MiB content per halaman
 dan64MiB content total mencegah input tak berbatas. Gambar didecode ImageIO dengan
 batas25 juta pixel/10000 per dimensi, CRC/chunk PNG dan marker/end JPEG lengkap;
@@ -211,3 +213,60 @@ Compiler/Spring/PostgreSQL dipakai sebagai gate lane ini, bukan LSP/CodeGraph.
 Evidence koreksi tersimpan di `.omo/evidence/warehouse-workorder-asset-provenance/task-8/corrections/`
 dan tidak ikut commit. No-cache JAR SHA256:
 `12e3a9db9ec40ea36ebb162e7961b9abaa2beda31ef5afe122d63e9108224750`.
+
+## Kelengkapan sintaks PDF AV8-3
+
+Koreksi lanjutan menutup dua kasus yang masih lolos pada19e0de8c: HTML mentah
+di antara objek dan xref dengan startxref yang disesuaikan, serta keyword/operand
+tidak sah di content stream. Tidak ada blacklist substring HTML/script dan tidak
+ada sanitasi/rewrite bytes bukti.
+
+- `PdfLexicalCursor` memerlukan string/hex/array/dictionary lengkap, escaping PDF
+  sah, angka tanpa koersi permisif dan batas nesting. Teks literal seperti
+  `(<html><script>...</script></html>) Tj` tetap sah di dalam text object.
+- `PdfFileTopology` berjalan sekuensial atas bytes asli. Header, span indirect
+  objects, tabel/stream xref, trailer, startxref dan EOF harus mencakup file;
+  hanya whitespace/comment PDF diperbolehkan di antaranya. Panjang stream eksplisit
+  atau referensi integer menentukan span binary, bukan pencarian substring endobj.
+- Entry xref harus menunjuk header dengan object number/generation yang sama;
+  object stream members, offset/index, Size, sentinel dan rantai Prev/hybrid diperiksa.
+  Span tak terdaftar, overlap, startxref salah dan footer duplikat ditolak.
+  Classic xref, compressed object/xref streams dan incremental update diuji positif.
+- `PdfOperatorSyntax` mencakup seluruh keyword standar pada PDFBox OperatorName,
+  dengan arity/type operand, warna, path/text/graphics/marked-content state dan
+  batas nesting. Unknown operator hanya diabaikan di dalam BX/EX yang sah;
+  known operator tetap divalidasi. Operand sisa atau struktur tak tertutup ditolak.
+- Inline image dictionary/data/EI dan sample/pixel budget divalidasi. Page content,
+  Form XObject, tiling pattern dan Type3 glyph diperiksa tanpa rendering. Resource
+  lookup menolak XObject tak bertipe dan mempertahankan inheritance form yang sah.
+- Semua resource limit, larangan active content, MIME/size, binding intake, replay,
+  lifecycle dan cleanup transaksi dari koreksi sebelumnya tetap berlaku. Tidak ada
+  perubahan dependency atau migration pada koreksi sintaks ini.
+
+Bukti terbaru:
+
+- Fixture raw-gap474 byte/startxref311 tetap SHA256
+  `0d1beb189093fb5f730111816aae48930920eb62f570f90ea1df72017c457b84`.
+  Before: upload201, inspection200, opening409. After: ketiganya400
+  MALFORMED_REQUEST. Upload menghasilkan metadata/revision0/0; revalidasi bukti
+  historis menghasilkan inspection/disposition0/0 dan tidak menaikkan revision.
+- Content-stream HTML fixture SHA256
+  `cc6718a94ce883662172fef79be9ef1b9cf1a48c8372096f842c84f4f9ec0948`
+  ditolak400 di upload/opening/inspection/download. Bukti lama yang malformed
+  tidak dapat melewati revalidasi hanya karena metadata/hash-nya cocok.
+- 12 fixture positif: empty, text, literal HTML, vector, comments, inline image,
+  CRLF inline image, Flate inline image, compatibility, form/image, inherited form,
+  incremental PDF. Seluruhnya upload201/download200 byte-identical; opening409.
+- Exact WarehouseReceiptIT dua kali: **65 test,0 gagal,0 skipped** setiap run.
+  Parser-focused gate:70 unit +18 HTTP =88 lulus. Gabungan tasks1-8/schema/network/
+  Modularity: **662 test,0 gagal,0 skipped**. Clean no-cache bootJar sukses.
+- Packaged HTTP + private MinIO + warehouse_app/PostgreSQL mengulang kedua fixture,
+  matrix positif dan seluruh AV8 probe. Main stock tetap available900000MM+8EA,
+  quarantine100000MM+2EA, cost500000/1000000 IDR. No public upload atau script execution.
+
+Artefak terbaru SHA256:
+`9972da33fbaa156c2807fbd829a1a6cc31fb896dd063f1fad0fdd87b28fc7f69`.
+Evidence dan fixture bytes berada di
+`.omo/evidence/warehouse-workorder-asset-provenance/task-8/pdf-syntax/` (tidak di git).
+Fixture/probe runtime telah dihapus; schema/trigger/function/child connection
+sementara0/0/0/0. Container/network milik task dihentikan, volume dipertahankan.
