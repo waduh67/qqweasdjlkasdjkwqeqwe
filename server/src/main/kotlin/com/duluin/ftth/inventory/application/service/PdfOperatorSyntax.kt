@@ -4,9 +4,6 @@ import org.apache.pdfbox.cos.*
 import org.apache.pdfbox.pdmodel.PDResources
 import org.apache.pdfbox.pdmodel.graphics.color.PDPattern
 
-internal data class PdfColourSpace(val components: Int, val pattern: Boolean = false)
-internal data class PdfGraphicsSyntax(val stroke: PdfColourSpace = PdfColourSpace(1), val fill: PdfColourSpace = PdfColourSpace(1))
-
 internal object PdfOperatorSyntax {
     private val zero = setOf("q", "Q", "h", "S", "s", "f", "F", "f*", "B", "B*", "b", "b*", "n", "W", "W*", "BT", "ET", "T*", "EMC", "BX", "EX")
     private val numbers = mapOf(1 to setOf("w", "J", "j", "M", "i", "G", "g", "Tc", "Tw", "Tz", "TL", "Tr", "Ts"),
@@ -35,7 +32,10 @@ internal object PdfOperatorSyntax {
             name == "\"" -> require(operands.size == 3 && operands[0] is COSNumber && operands[1] is COSNumber && operands[2] is COSString)
             name in setOf("DP", "BDC") -> require(operands.size == 2 && operands[0] is COSName && (operands[1] is COSName || operands[1] is COSDictionary))
             name in setOf("SC", "SCN", "sc", "scn") -> {
-                val colour = if (name[0].isUpperCase()) graphics.stroke else graphics.fill
+                val named = name.endsWith("N", ignoreCase = true) && operands.lastOrNull() is COSName
+                val count = operands.size - if (named) 1 else 0
+                require(count in 0..32 && (count > 0 || named) && operands.take(count).all { it is COSNumber })
+                val colour = (if (name[0].isUpperCase()) graphics.stroke else graphics.fill).constrain(count, named)
                 val pattern = colour.pattern && name.endsWith("N", ignoreCase = true)
                 require(!colour.pattern || pattern)
                 require(operands.size == colour.components + if (pattern) 1 else 0)
@@ -54,15 +54,17 @@ internal object PdfOperatorSyntax {
         if (name == "ri") require((operands[0] as COSName).name in setOf("AbsoluteColorimetric", "RelativeColorimetric", "Saturation", "Perceptual"))
         PdfContentResources.validateOperator(name, operands, resources)
         return when (name) {
-            "CS" -> graphics.copy(stroke = colour((operands[0] as COSName), resources))
-            "cs" -> graphics.copy(fill = colour((operands[0] as COSName), resources))
-            "G" -> graphics.copy(stroke = PdfColourSpace(1))
-            "g" -> graphics.copy(fill = PdfColourSpace(1))
-            "RG" -> graphics.copy(stroke = PdfColourSpace(3))
-            "rg" -> graphics.copy(fill = PdfColourSpace(3))
-            "K" -> graphics.copy(stroke = PdfColourSpace(4))
-            "k" -> graphics.copy(fill = PdfColourSpace(4))
-            else -> graphics
+            "CS" -> graphics.copy(stroke = colour((operands[0] as COSName), resources), strokeValues = null)
+            "cs" -> graphics.copy(fill = colour((operands[0] as COSName), resources), fillValues = null)
+            "G" -> graphics.copy(stroke = PdfColourSpace(1), strokeValues = operands.toList())
+            "g" -> graphics.copy(fill = PdfColourSpace(1), fillValues = operands.toList())
+            "RG" -> graphics.copy(stroke = PdfColourSpace(3), strokeValues = operands.toList())
+            "rg" -> graphics.copy(fill = PdfColourSpace(3), fillValues = operands.toList())
+            "K" -> graphics.copy(stroke = PdfColourSpace(4), strokeValues = operands.toList())
+            "k" -> graphics.copy(fill = PdfColourSpace(4), fillValues = operands.toList())
+            "SC", "SCN" -> graphics.copy(strokeValues = operands.toList())
+            "sc", "scn" -> graphics.copy(fillValues = operands.toList())
+            else -> PdfGraphicsOperators.apply(name, operands, graphics, resources)
         }
     }
 
