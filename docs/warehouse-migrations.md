@@ -9,7 +9,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10 | 04 / 06 / 07 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission and tenant/site/area consistency guards |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11 | 04 / 06 / 07 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -37,6 +37,14 @@ FK NOT VALID mempertahankan siteId historis yang sudah dangling tanpa menghapus
 data; write baru wajib valid, read/replay menyembunyikan reference lama tidak
 konsisten. Jangan memvalidasi atau memperbaiki reference historis secara diam-diam.
 Tidak ada perubahan byte V174.9 ke bawah atau pengambilalihan slot V175+.
+
+V174.11 dicadangkan sebelum SQL dibuat setelah pemeriksaan slot V174.x. Koreksi
+inheritance menambah fence revisi topology per tenant (FORCE RLS), validasi
+deferred atas seluruh ancestry dan subtree yang berubah, scope assertion pada
+validator sebenarnya, serta penolakan cycle/depth overflow. Site efektif adalah
+satu-satunya site non-null pada rantai, bukan site immediate parent. Histori
+tidak konsisten dipertahankan tanpa backfill destruktif dan disembunyikan reader.
+V174.10 dan seluruh migrasi sebelumnya tetap byte-identical; V175+ tidak dipakai.
 
 Reservasi tambahan V174.1 dicatat sebelum file dibuat setelah probe PostgreSQL
 menemukan upper/btrim default berbeda dari codec Kotlin untuk Unicode/whitespace.
