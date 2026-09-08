@@ -61,6 +61,12 @@ class WarehouseReceiptController(private val commands: WarehouseCommandService, 
     @PostMapping("/{id}/receive")
     fun receive(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         response(commands.receiveReceipt(id, decode(body, ReceiptReceiveInput::class.java), key))
+    @PostMapping("/{id}/inspect")
+    fun inspect(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        response(commands.inspectReceipt(id, decode(body, ReceiptInspectInput::class.java), key))
+    @PostMapping("/{id}/putaway")
+    fun putaway(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        response(commands.putawayReceipt(id, decode(body, ReceiptPutawayInput::class.java), key))
     @GetMapping("/{id}/history") fun history(@PathVariable id: UUID) = receipts.history(id)
     @GetMapping
     fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,

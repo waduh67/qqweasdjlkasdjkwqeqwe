@@ -32,7 +32,15 @@ class WarehouseCommandService(
 
     @Transactional(rollbackFor = [Exception::class])
     fun receiveReceipt(id: UUID, input: com.duluin.ftth.inventory.application.port.inbound.ReceiptReceiveInput, key: String): WarehouseOperationReceipt =
-        receiptTransitions.receive(id, input, key)
+        receiptTransitions.execute(id, input, key)
+
+    @Transactional(rollbackFor = [Exception::class])
+    fun inspectReceipt(id: UUID, input: com.duluin.ftth.inventory.application.port.inbound.ReceiptInspectInput, key: String): WarehouseOperationReceipt =
+        receiptTransitions.execute(id, input, key)
+
+    @Transactional(rollbackFor = [Exception::class])
+    fun putawayReceipt(id: UUID, input: com.duluin.ftth.inventory.application.port.inbound.ReceiptPutawayInput, key: String): WarehouseOperationReceipt =
+        receiptTransitions.execute(id, input, key)
 
     @Transactional(rollbackFor = [Exception::class])
     fun draftReceipt(id: UUID?, input: com.duluin.ftth.inventory.application.port.inbound.ReceiptDraftInput, key: String): WarehouseOperationReceipt =
