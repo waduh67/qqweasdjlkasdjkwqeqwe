@@ -26,6 +26,7 @@ internal object ReceiptPdfValidation {
                 val budget = PdfSyntaxBudget()
                 PdfFileTopology.validate(bytes, document, budget)
                 val contentStreams = mutableListOf<Triple<COSStream, PDResources?, PdfContentKind>>()
+                val resourcesByStream = PdfContentResources(document.pages.mapNotNull { it.resources })
                 val pending = ArrayDeque<COSBase>()
                 pending.add(document.document.trailer)
                 require(document.document.xrefTable.size <= 50000)
@@ -69,7 +70,7 @@ internal object ReceiptPdfValidation {
                 for ((stream, resources, kind) in contentStreams) {
                     val content = stream.createInputStream().use { it.readNBytes(16777217) }
                     budget.decoded(content.size)
-                    PdfContentSyntax.validate(content, resources, budget, kind)
+                    resourcesByStream.contexts(stream, resources).forEach { effective -> PdfContentSyntax.validate(content, effective, budget, kind) }
                 }
             }
         }

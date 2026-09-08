@@ -2,6 +2,9 @@ package com.duluin.ftth.inventory
 
 import com.duluin.ftth.inventory.application.service.*
 import org.apache.pdfbox.contentstream.operator.OperatorName
+import org.apache.pdfbox.cos.COSDictionary
+import org.apache.pdfbox.cos.COSName
+import org.apache.pdfbox.pdmodel.PDResources
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -15,7 +18,10 @@ class WarehousePdfContentSyntaxTest {
     }
     @ParameterizedTest @ValueSource(strings = ["BT /F1 12 Tf (<html>script</html>) Tj ET", "BX 1 FutureOp EX", "BX nullOperator EX", "q /DeviceRGB cs 0.1 0.2 0.3 scn 0 0 10 10 re f Q", "/Tag << /ActualText (<html>) >> BDC EMC"])
     fun `standard operands and compatibility syntax remain valid`(content: String) {
-        PdfContentSyntax.validate(content.toByteArray(), null, PdfSyntaxBudget())
+        val resources = PDResources().apply { cosObject.setItem(COSName.FONT, COSDictionary().apply {
+            setItem(COSName.getPDFName("F1"), COSDictionary().apply { setName(COSName.SUBTYPE, "Type1"); setName(COSName.BASE_FONT, "Helvetica") })
+        }) }
+        PdfContentSyntax.validate(content.toByteArray(), resources, PdfSyntaxBudget())
     }
     @ParameterizedTest @ValueSource(strings = ["1 FutureOp", "BX 1 q EX", "1 2 3 4 5 cm", "BT 1 Tj ET", "BT /F1 12 Tf [(text) /Bad] TJ ET", "1 0 0 sc", "1000 0 d0", "1 2 m W q"])
     fun `unknown operators and malformed operand sequences fail`(content: String) {

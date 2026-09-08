@@ -52,6 +52,7 @@ internal object PdfOperatorSyntax {
         if (name == "M") require((operands[0] as COSNumber).floatValue() >= 1)
         if (name == "i") require((operands[0] as COSNumber).floatValue() in 0f..100f)
         if (name == "ri") require((operands[0] as COSName).name in setOf("AbsoluteColorimetric", "RelativeColorimetric", "Saturation", "Perceptual"))
+        PdfContentResources.validateOperator(name, operands, resources)
         return when (name) {
             "CS" -> graphics.copy(stroke = colour((operands[0] as COSName), resources))
             "cs" -> graphics.copy(fill = colour((operands[0] as COSName), resources))

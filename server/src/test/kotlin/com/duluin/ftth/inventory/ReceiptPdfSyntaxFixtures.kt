@@ -7,6 +7,8 @@ import org.apache.pdfbox.pdmodel.PDResources
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory
+import org.apache.pdfbox.cos.COSDictionary
+import org.apache.pdfbox.cos.COSName
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.zip.DeflaterOutputStream
@@ -25,6 +27,10 @@ internal object ReceiptPdfSyntaxFixtures {
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
             "<< /Length ${if (indirectLength) "6 0 R" else content.length} >>\nstream\n${content}\nendstream",
             "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>") + if (indirectLength) listOf(content.length.toString()) else emptyList()
+        return serialize(objects, gap)
+    }
+
+    private fun serialize(objects: List<String>, gap: String = ""): ByteArray {
         val text = StringBuilder("%PDF-1.7\n%\u00e2\u00e3\u00cf\u00d3\n")
         val offsets = objects.mapIndexed { index, body -> val offset = text.length; text.append("${index + 1} 0 obj\n$body\nendobj\n"); offset }
         text.append(gap)
@@ -33,6 +39,24 @@ internal object ReceiptPdfSyntaxFixtures {
         offsets.forEach { text.append("%010d 00000 n \n".format(java.util.Locale.ROOT, it)) }
         text.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n")
         return text.toString().toByteArray(Charsets.ISO_8859_1)
+    }
+
+    fun untypedXObject(): ByteArray {
+        val content = "/X Do"
+        val hidden = "<html><script>alert(1)</script></html>"
+        return serialize(listOf("<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << /XObject << /X 5 0 R >> >> /Contents 4 0 R >>",
+            "<< /Length ${content.length} >>\nstream\n$content\nendstream", "<< /Length ${hidden.length} >>\nstream\n$hidden\nendstream"))
+    }
+
+    fun inheritedForm(): ByteArray = PDDocument().use { document ->
+        val page = PDPage(PDRectangle(100f, 100f)).apply { resources = PDResources() }
+        document.addPage(page)
+        page.resources.cosObject.setItem(COSName.COLORSPACE, COSDictionary().apply { setItem(COSName.getPDFName("CS1"), COSName.DEVICERGB) })
+        val form = PDFormXObject(document).apply { bBox = PDRectangle(20f, 20f); cosObject.removeItem(COSName.RESOURCES) }
+        form.contentStream.createOutputStream().use { it.write("/CS1 cs 1 0 0 sc 0 0 10 10 re f".toByteArray()) }
+        PDPageContentStream(document, page).use { it.drawForm(form) }
+        ByteArrayOutputStream().use { output -> document.save(output); output.toByteArray() }
     }
 
     fun formImage(formContent: String = "0 0 20 20 re f\n"): ByteArray = PDDocument().use { document ->
@@ -59,6 +83,7 @@ internal object ReceiptPdfSyntaxFixtures {
         }
         "COMPATIBILITY" -> classic("BX 12 /Parameter FuturePaint EX\n")
         "FORM_IMAGE" -> formImage()
+        "INHERITED_FORM" -> inheritedForm()
         "INCREMENTAL" -> {
             val original = classic().toString(Charsets.ISO_8859_1)
             val previous = original.substringAfterLast("startxref\n").substringBefore('\n')

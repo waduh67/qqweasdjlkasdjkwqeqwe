@@ -26,7 +26,10 @@ class WarehousePdfSyntaxTest {
     @Test fun `malformed form content is rejected without rendering`() {
         assertThatThrownBy { validateReceiptEvidence("application/pdf", ReceiptPdfSyntaxFixtures.formImage("12 UnknownPaint")) }.isInstanceOf(WarehouseContractException::class.java)
     }
-    @ParameterizedTest @ValueSource(strings = ["EMPTY", "TEXT", "HTML_LITERAL", "VECTOR", "COMMENTS", "INLINE_IMAGE", "INLINE_CRLF", "INLINE_FLATE", "COMPATIBILITY", "FORM_IMAGE", "INCREMENTAL"])
+    @Test fun `untyped XObject cannot hide executable content`() {
+        assertThatThrownBy { validateReceiptEvidence("application/pdf", ReceiptPdfSyntaxFixtures.untypedXObject()) }.isInstanceOf(WarehouseContractException::class.java)
+    }
+    @ParameterizedTest @ValueSource(strings = ["EMPTY", "TEXT", "HTML_LITERAL", "VECTOR", "COMMENTS", "INLINE_IMAGE", "INLINE_CRLF", "INLINE_FLATE", "COMPATIBILITY", "FORM_IMAGE", "INHERITED_FORM", "INCREMENTAL"])
     fun `valid diverse document syntax is preserved`(kind: String) {
         com.duluin.ftth.inventory.application.service.ReceiptPdfValidation.validate(ReceiptPdfSyntaxFixtures.positive(kind))
     }

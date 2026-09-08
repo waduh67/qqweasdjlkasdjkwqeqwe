@@ -58,7 +58,7 @@ class WarehouseReceiptITPdfSyntax : WarehouseReceiptHttpFixture() {
         } finally { storage.list(database.tenant.toString(), prefix).objects.forEach { storage.delete(it.key) } }
     }
 
-    @ParameterizedTest @ValueSource(strings = ["EMPTY", "TEXT", "HTML_LITERAL", "VECTOR", "COMMENTS", "INLINE_IMAGE", "INLINE_CRLF", "INLINE_FLATE", "COMPATIBILITY", "FORM_IMAGE", "INCREMENTAL"])
+    @ParameterizedTest @ValueSource(strings = ["EMPTY", "TEXT", "HTML_LITERAL", "VECTOR", "COMMENTS", "INLINE_IMAGE", "INLINE_CRLF", "INLINE_FLATE", "COMPATIBILITY", "FORM_IMAGE", "INHERITED_FORM", "INCREMENTAL"])
     fun `valid diverse PDFs upload and download byte identically`(kind: String) {
         val setup = setupReceipt()
         val id = draft(setup, """{"skuId":"${setup.cable}","quantityBase":"1000","lotCode":"VALID-PDF"}""").path("id").asString()
