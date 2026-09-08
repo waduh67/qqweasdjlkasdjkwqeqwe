@@ -5,9 +5,10 @@ import org.apache.pdfbox.cos.COSBase
 import org.apache.pdfbox.cos.COSDictionary
 import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.cos.COSObject
+import org.apache.pdfbox.cos.COSStream
 import org.apache.pdfbox.io.RandomAccessReadBuffer
 import org.apache.pdfbox.pdfparser.PDFParser
-import org.apache.pdfbox.pdfparser.PDFStreamParser
+import org.apache.pdfbox.pdmodel.PDResources
 import java.util.Collections
 import java.util.IdentityHashMap
 
@@ -22,6 +23,9 @@ internal object ReceiptPdfValidation {
         RandomAccessReadBuffer(bytes).use { source ->
             PDFParser(source).parse(false).use { document ->
                 require(!document.isEncrypted && document.numberOfPages in 1..100)
+                val budget = PdfSyntaxBudget()
+                PdfFileTopology.validate(bytes, document, budget)
+                val contentStreams = mutableListOf<Triple<COSStream, PDResources?, PdfContentKind>>()
                 val pending = ArrayDeque<COSBase>()
                 pending.add(document.document.trailer)
                 require(document.document.xrefTable.size <= 50000)
@@ -33,23 +37,39 @@ internal object ReceiptPdfValidation {
                     require(visited.size <= 100000)
                     when (value) {
                         is COSObject -> value.`object`?.let(pending::add)
-                        is COSDictionary -> value.keySet().forEach { key ->
-                            require(key.name !in activeNames)
-                            value.getItem(key)?.let(pending::add)
+                        is COSDictionary -> {
+                            val resources = value.getCOSDictionary(COSName.RESOURCES)?.let(::PDResources)
+                            if (value is COSStream) {
+                                require(!value.containsKey(COSName.F) && !value.containsKey(COSName.F_FILTER) && !value.containsKey(COSName.F_DECODE_PARMS))
+                                if (value.getNameAsString(COSName.SUBTYPE) == "Form") contentStreams += Triple(value, resources, PdfContentKind.FORM)
+                                if (value.getInt(COSName.PATTERN_TYPE) == 1) contentStreams += Triple(value, resources,
+                                    if (value.getInt(COSName.PAINT_TYPE) == 2) PdfContentKind.UNCOLOURED_PATTERN else PdfContentKind.FORM)
+                                if (value.getNameAsString(COSName.SUBTYPE) == "Image") {
+                                    val width = value.getInt(COSName.WIDTH); val height = value.getInt(COSName.HEIGHT)
+                                    require(width in 1..10000 && height in 1..10000 && width.toLong() * height <= 25000000)
+                                }
+                            }
+                            if (value.getNameAsString(COSName.SUBTYPE) == "Type3") value.getCOSDictionary(COSName.CHAR_PROCS)?.let { glyphs ->
+                                glyphs.keySet().forEach { key -> contentStreams += Triple(glyphs.getDictionaryObject(key) as? COSStream ?: error("Glyph stream required"), resources, PdfContentKind.GLYPH) }
+                            }
+                            value.keySet().forEach { key ->
+                                require(key.name !in activeNames)
+                                value.getItem(key)?.let(pending::add)
+                            }
                         }
                         is COSArray -> value.forEach(pending::add)
                         is COSName -> require(value.name !in activeNames)
                     }
                 }
-                var tokens = 0
-                var decoded = 0L
                 for (page in document.pages) {
                     val content = page.contents.use { it.readNBytes(16777217) }
-                    decoded += content.size
-                    require(content.size <= 16777216 && decoded <= 67108864)
-                    val parser = PDFStreamParser(content)
-                    try { while (parser.parseNextToken() != null) { tokens++; require(tokens <= 100000) } }
-                    finally { parser.close() }
+                    budget.decoded(content.size)
+                    PdfContentSyntax.validate(content, page.resources, budget)
+                }
+                for ((stream, resources, kind) in contentStreams) {
+                    val content = stream.createInputStream().use { it.readNBytes(16777217) }
+                    budget.decoded(content.size)
+                    PdfContentSyntax.validate(content, resources, budget, kind)
                 }
             }
         }
