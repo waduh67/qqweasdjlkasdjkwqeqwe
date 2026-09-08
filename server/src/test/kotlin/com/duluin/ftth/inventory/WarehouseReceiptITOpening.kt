@@ -16,6 +16,7 @@ class WarehouseReceiptITOpening : WarehouseMasterHttpFixture() {
         assertThat(opening(viewer).status).isEqualTo(403)
         assertThat(opening(token, type = "image/png").status).isEqualTo(400)
         assertThat(opening(token, input.dropLast(1) + ",\"approved\":true}").status).isEqualTo(400)
+        assertThat(opening(token, input.replace("\"2026-01-01T00:00:00Z\"", "0")).status).isEqualTo(400)
         val response = opening(token)
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(409)
         assertThat(mapper.readTree(response.contentAsString).path("code").asString()).isEqualTo("INDEPENDENT_APPROVER_REQUIRED")

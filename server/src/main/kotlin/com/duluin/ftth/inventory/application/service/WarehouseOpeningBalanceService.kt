@@ -18,7 +18,8 @@ class WarehouseOpeningBalanceService(private val cutovers: InventoryTenantCutove
         receiptPermission(current, "inventory.provenance.manage")
         receiptText(input.migrationReference, 500)
         receiptText(input.sourceSnapshot, 10000)
-        if (input.cutoff > Instant.now()) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val cutoff = try { Instant.parse(input.cutoff) } catch (_: java.time.format.DateTimeParseException) { masterFailure(WarehouseErrorCode.MALFORMED_REQUEST) }
+        if (cutoff > Instant.now()) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         validateReceiptEvidence(contentType, bytes)
         masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
     }
