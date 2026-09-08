@@ -19,6 +19,8 @@ class WarehouseCommandJdbc(private val entityManager: EntityManager) {
                 when (failure.sqlState) {
                     "40001", "40P01", "55P03" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.STALE_REVISION)
                     "23505" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+                    "23503" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.NOT_FOUND)
+                    "23514" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.SOURCE_NOT_VERIFIED)
                     else -> throw failure
                 }
             }

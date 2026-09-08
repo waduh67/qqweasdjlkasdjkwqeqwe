@@ -20,7 +20,7 @@ class WarehouseOperationStore(private val jdbc: WarehouseCommandJdbc) {
             sql.tenant, namespace, key) { row ->
             StoredWarehouseOperation(row.uuid("actor_id"), row.uuid("resource_id"), row.getString("resource_scope"),
                 row.getString("payload_hash"), row.getLong("cutover_epoch"), WarehouseOperationReceipt(row.uuid("id"),
-                    row.uuid("document_id"), row.getLong("document_revision"), row.getInt("original_status"),
+                     row.optionalUuid("document_id") ?: row.uuid("resource_id"), row.getLong("document_revision"), row.getInt("original_status"),
                     row.getString("original_body"), row.getTimestamp("created_at").toInstant()))
         }.singleOrNull()
     }
@@ -60,5 +60,21 @@ class WarehouseOperationStore(private val jdbc: WarehouseCommandJdbc) {
                 location to it.optionalUuid("area_id")
             }.singleOrNull() ?: sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.NOT_FOUND)).second
         }
+    }
+
+    fun storeMaster(kind: com.duluin.ftth.inventory.application.port.inbound.MasterKind,
+        action: com.duluin.ftth.inventory.application.port.inbound.MasterAction, key: String, resource: UUID,
+        revision: Long, actor: UUID, epoch: Long, cutoverEpoch: Long, canonical: String, hash: String,
+        body: String, session: String?): WarehouseOperationReceipt {
+        val id = UUID.randomUUID()
+        val namespace = "warehouse.master.${kind.name.lowercase()}.${action.name.lowercase()}"
+        jdbc.execute { sql ->
+            sql.update("""INSERT INTO inventory_operation(id,tenant_id,namespace,operation_key,actor_id,resource_id,resource_scope,
+                payload_hash,document_revision,business_action,original_status,original_body,cutover_epoch,authority_epoch,master_kind)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", id, sql.tenant, namespace, key, actor, resource, "master:${kind.name}:$resource",
+                hash, revision, action.name, if (action.name == "CREATE") 201 else 200, body, cutoverEpoch, epoch, kind.name)
+        }
+        storeIdentity(id, canonical, session)
+        return requireNotNull(findKey(namespace, key)).receipt
     }
 }
