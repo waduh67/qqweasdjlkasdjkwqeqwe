@@ -9,13 +9,21 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7 | 04 / 06 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8 | 04 / 06 / 07 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata and control-plane operation binding |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M01/M02: persistence task04
+
+Task07 mencadangkan V174.8 sebelum SQL dibuat: metadata category/model/minimum
+SKU, site location, serta binding operation master tanpa dokumen stok palsu.
+Operasi stok tetap wajib memiliki document_id; hanya namespace master bernama
+yang boleh memakai binding master. Guard arsip/referensi dan hierarki diperketat
+secara forward-only. V173 hingga V174.7 tidak diubah; V175+ tetap milik task lain.
+Gate perubahan ini mencakup seluruh WarehouseSchemaIT, restart/upgrade, dan
+WarehouseMasterIT melalui warehouse_app non-owner dengan FORCE RLS.
 
 Reservasi tambahan V174.1 dicatat sebelum file dibuat setelah probe PostgreSQL
 menemukan upper/btrim default berbeda dari codec Kotlin untuk Unicode/whitespace.
