@@ -114,5 +114,59 @@ STALE_CUTOVER. Tidak ada fallback sukses kosong.
   menjadi gate. Warning compiler historis tidak diubah.
 
 Arsip XML/manual berada di `.omo/evidence/warehouse-workorder-asset-provenance/task-7/`
-dan sengaja tidak masuk git. Uji restart master menggunakan fondasi schema restart;
-belum ada fault injection khusus restart proses di tengah master HTTP response.
+dan sengaja tidak masuk git. Hasil di atas adalah baseline implementasi awal;
+koreksi dan gate terbaru berikut menggantikan klaim strict decoding/reference awal.
+
+## Koreksi verifikasi AV7
+
+AV7-01: Jackson3 memerlukan aturan coercion eksplisit untuk Textual dan Integer,
+bukan hanya `ALLOW_COERCION_OF_SCALARS=false`. Mapper khusus warehouse menolak
+number/boolean ke string, float/exponent/string ke revision, duplicate property,
+unknown field dan enum angka. `minimumQuantityBase` tetap JSON string;
+`expectedRevision` wajib token integer JSON, sehingga `0.9`, `0.0`, `0e0` dan
+`"0"` ditolak400. Mapper legacy tidak diubah. Matriks HTTP205 masukan invalid
+mencakup create/update/archive ketiga master dan membuktikan nol perubahan data.
+
+AV7-02: M02 V174.10 menambahkan FK `(tenant_id,site_id)` ke site dengan key
+tenant/id, serta guard area site dan parent/site. Site area change dan delete
+mengambil lock owner; network menanyakan `SiteUsageProbe` miliknya yang
+diimplementasikan inventory, tanpa dependensi network ke internal inventory.
+Referensi gudang termasuk arsip harus dipindahkan sebelum site dihapus/diubah
+areanya. SQL FK/trigger tetap menjadi penjaga akhir jika layanan owner dilewati.
+
+Inventory memakai `SiteReferenceApi` untuk lock dan snapshot site yang segar.
+Detail/list/search/lookup memeriksa site dan area ancestor, selain scope gudang.
+Replay memeriksa **snapshot lokasi sekarang dan snapshot original response**:
+memindahkan lokasi dari siteA ke siteB tidak memberi izin membocorkan receipt lama
+setelah siteA dihapus atau pindah ke area yang tidak lagi dapat diakses.
+
+FK dipasang NOT VALID untuk mempertahankan reference historis yang terlanjur
+dangling sebelum koreksi. Write baru ditegakkan; reference lama tidak konsisten
+tetap tersimpan tetapi tidak ditampilkan/replay. Tidak ada pembersihan atau
+rekonsiliasi historis otomatis. NULL siteId yang sah tidak berubah.
+
+AV7-03: satu query lookup mematerialisasi matches, claims dan candidates pada
+lingkup tenant **sebelum** filter visibility. CONFLICT, beberapa kandidat sumber,
+raw/canonical yang tidak konsisten dan hasil ambigu menghasilkan404 NOT_FOUND
+yang sama dengan missing/foreign/hidden. Unique candidate baru diperiksa terhadap
+scope warehouse/area/site dan izin provenance; tidak ada collision count di body.
+Uji SERIAL/MAC mencakup satu/dua/nol lokasi terlihat, multiple candidate tanpa flag
+CONFLICT, single candidate ber-flag CONFLICT, malformed dan unique visible/hidden.
+
+Gate final setelah seluruh koreksi:
+
+- Exact WarehouseMasterIT dua kali: **53 test,0 failure,0 skipped** setiap run.
+- Gabungan warehouse/inventory + NetworkEndToEndIT + ModularityTests:
+  **501 test,0 failure,0 skipped**, termasuk seluruh task01-07 dan schema gates.
+- Gate terfokus schema/site/network/Modularity sebelum tambahan original-replay:
+ 154 test lulus;8 race memakai transaksi nyata, latch dan observasi lock PostgreSQL,
+ tanpa sleep untuk menentukan pemenang. SQLSTATE FK23503 dan invariant23514 diuji.
+- Clean no-cache bootJar final sukses; V174.10 dan kelas owner guards ada di JAR.
+- Live server: POST supplier melalui socket tanpa membaca response; commit
+ dikonfirmasi sebagai warehouse_app, server di-SIGKILL, lalu proses baru replay
+ exact body201. DB tetap1 operation/1 supplier. Disable actor melalui HTTP membuat
+ original token replay403 tanpa body lama. Probe memakai warehouse_test non-owner,
+ NOSUPERUSER/NOBYPASSRLS; tidak memanggil layanan produksi.
+
+Evidence koreksi: `.omo/evidence/warehouse-workorder-asset-provenance/task-7/corrections/`.
+Seluruh migrasi sebelum V174.10 tetap byte-identical. V175+ tetap milik task lain.
