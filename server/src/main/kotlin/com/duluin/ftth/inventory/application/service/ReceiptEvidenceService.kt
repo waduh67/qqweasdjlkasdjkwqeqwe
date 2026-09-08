@@ -84,6 +84,7 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
         val result = try { storage.get(value.objectKey) } catch (_: NotFoundException) { masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED) }
         if (result.size != value.view.sizeBytes || result.contentType != value.view.contentType || digest(result.bytes) != value.view.sha256)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        validateReceiptEvidence(result.contentType, result.bytes)
         return result
     }
     private fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
@@ -91,11 +92,13 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
 
 internal fun validateReceiptEvidence(contentType: String, bytes: ByteArray) {
     if (bytes.isEmpty() || bytes.size > 15728640) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-    val matches = when (contentType) {
-        "image/png" -> bytes.take(8).toByteArray().contentEquals(byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10))
-        "image/jpeg" -> bytes.take(3).toByteArray().contentEquals(byteArrayOf(-1, -40, -1))
-        "application/pdf" -> bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray())
-        else -> false
-    }
-    if (!matches) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+    try {
+        when (contentType) {
+            "image/png" -> ReceiptImageValidation.validate(bytes, "png")
+            "image/jpeg" -> ReceiptImageValidation.validate(bytes, "jpeg")
+            "application/pdf" -> ReceiptPdfValidation.validate(bytes)
+            else -> throw IllegalArgumentException("Unsupported evidence type")
+        }
+    } catch (_: java.io.IOException) { masterFailure(WarehouseErrorCode.MALFORMED_REQUEST) }
+    catch (_: RuntimeException) { masterFailure(WarehouseErrorCode.MALFORMED_REQUEST) }
 }
