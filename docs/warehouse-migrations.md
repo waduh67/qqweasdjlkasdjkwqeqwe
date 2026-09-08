@@ -9,13 +9,19 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11 | 04 / 06 / 07 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11, V174.12 | 04 / 06 / 07 / 08 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards; receipt intake snapshots, secured evidence and exact inspection disposition |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M01/M02: persistence task04
+
+Task08 mencadangkan V174.12 sebelum SQL dibuat. Tambahan M02 menyimpan snapshot
+intake draft, bukti objek privat dan disposition inspeksi yang terikat identitas,
+line dan operation. Stok tetap melalui posting task05/command task06. Opening
+balance tetap fail-closed tanpa approval independen task12. Tidak mengubah byte
+V173-V174.11, tidak memakai V175+, dan tidak mengaktifkan policy approval baru.
 
 Task07 mencadangkan V174.8 sebelum SQL dibuat: metadata category/model/minimum
 SKU, site location, serta binding operation master tanpa dokumen stok palsu.
