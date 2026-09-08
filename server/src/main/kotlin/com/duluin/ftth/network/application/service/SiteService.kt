@@ -29,6 +29,8 @@ class SiteService(
     private val cableAttachment: CableAttachmentService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
+    private val references: com.duluin.ftth.network.SiteReferenceApi,
+    private val usage: List<com.duluin.ftth.network.SiteUsageProbe>,
 ) : ManageSiteUseCase {
 
     @Transactional(readOnly = true)
@@ -59,6 +61,8 @@ class SiteService(
     }
 
     override fun update(id: UUID, command: SaveSiteCommand): SiteView {
+        val reference = references.lockForChange(id) ?: throw NotFoundException("Site tidak ditemukan")
+        if (reference.areaId != command.areaId) usage.forEach { it.assertSiteUnreferenced(id) }
         val site = requireSite(id)
         val moved = site.location != command.location
         site.update(command.name, command.address, command.location, command.areaId)
@@ -69,6 +73,7 @@ class SiteService(
     }
 
     override fun relocate(id: UUID, location: Coordinate): SiteView {
+        references.lockForChange(id) ?: throw NotFoundException("Site tidak ditemukan")
         val site = requireSite(id)
         site.relocate(location)
         val saved = siteRepository.save(site)
@@ -78,6 +83,8 @@ class SiteService(
     }
 
     override fun delete(id: UUID) {
+        references.lockForChange(id) ?: throw NotFoundException("Site tidak ditemukan")
+        usage.forEach { it.assertSiteUnreferenced(id) }
         val site = requireSite(id)
         val oltCount = oltRepository.countBySiteId(id)
         if (oltCount > 0) {
