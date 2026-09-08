@@ -9,13 +9,20 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11, V174.12 | 04 / 06 / 07 / 08 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards; receipt intake snapshots, secured evidence and exact inspection disposition |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11, V174.12, V174.13 | 04 / 06 / 07 / 08 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards; receipt intake snapshots, secured evidence and exact inspection disposition; immutable intake-content evidence binding |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M01/M02: persistence task04
+
+AV8 mencadangkan V174.13 sebelum SQL dibuat, setelah memastikan slot bebas.
+Revision/hash konten intake terpisah dari revision operation dokumen. Evidence
+baru terikat snapshot konten yang tepat; evidence historis tanpa binding tetap
+disimpan tetapi tidak boleh mengotorisasi inspeksi baru. Binding tidak direkayasa
+dari snapshot receipt terkini. V174.12 dan seluruh byte sebelumnya dipertahankan;
+V175+ tidak dipakai. Gate schema mencakup seluruh tabel task08 dan upgrade174.13.
 
 Task08 mencadangkan V174.12 sebelum SQL dibuat. Tambahan M02 menyimpan snapshot
 intake draft, bukti objek privat dan disposition inspeksi yang terikat identitas,
