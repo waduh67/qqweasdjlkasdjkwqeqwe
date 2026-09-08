@@ -29,6 +29,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         val change = if (kind == MasterKind.LOCATION) authority.lockForChange() else null
         val current = authority.lockCurrent()
         permission(current, "${kind.permission}.manage")
+        if (kind == MasterKind.LOCATION) store.lockTopology()
         val allowed = scopes.currentUnderFence(current.fence)
         validate(input, action)
         val namespace = "warehouse.master.${kind.name.lowercase()}.${action.name.lowercase()}"
@@ -132,6 +133,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         if (!current.platformAdmin && scope is AuthorityScope.Restricted && location.id !in scope.ids) masterFailure(WarehouseErrorCode.NOT_FOUND)
         area(location.areaId, current)
         val visited = mutableSetOf<UUID>()
+        val effectiveSites = mutableSetOf<UUID>()
         var ancestor: LocationSnapshot? = location
         while (ancestor != null) {
             if (!visited.add(ancestor.id) || visited.size > 32) masterFailure(WarehouseErrorCode.NOT_FOUND)
@@ -140,7 +142,8 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
                 val site = sites.lock(siteId) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
                 area(site.areaId, current)
                 if (site.areaId != location.areaId) masterFailure(WarehouseErrorCode.NOT_FOUND)
-                if (location.siteId != null && location.siteId != siteId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+                effectiveSites.add(siteId)
+                if (effectiveSites.size > 1) masterFailure(WarehouseErrorCode.NOT_FOUND)
             }
             ancestor = ancestor.parentLocationId?.let { store.get(MasterKind.LOCATION, it) as LocationSnapshot }
         }
@@ -171,7 +174,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
             authorizeLocation(location, current, scope)
             if (location.state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             if (location.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN) || location.areaId != input.areaId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-            if (input.siteId != null && location.siteId != null && input.siteId != location.siteId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            if (parent == input.parentLocationId && input.siteId != null && location.siteId != null && input.siteId != location.siteId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             parent = location.parentLocationId
         }
         if (creating && input.parentLocationId == null && !current.platformAdmin && current.areaScope is AuthorityScope.Restricted && input.areaId == null) masterFailure(WarehouseErrorCode.FORBIDDEN)

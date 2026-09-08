@@ -11,6 +11,10 @@ import java.util.UUID
 
 @Repository
 class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : WarehouseMasterStore {
+    override fun lockTopology() = jdbc.execute { sql ->
+        sql.value("SELECT warehouse_lock_location_topology(?)", sql.tenant)
+        Unit
+    }
     override fun get(kind: MasterKind, id: UUID, lock: Boolean): MasterSnapshot = jdbc.execute { sql ->
         sql.query("SELECT * FROM ${kind.table} WHERE tenant_id=? AND id=?${if (lock) " FOR UPDATE" else ""}", sql.tenant, id) {
             snapshot(kind, it)
@@ -58,6 +62,7 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
                     *fields.values.toTypedArray(), sql.tenant, id, existing.revision)
                 if (count != 1) masterFailure(WarehouseErrorCode.STALE_REVISION)
             }
+            if (kind == MasterKind.LOCATION) sql.value("SELECT warehouse_assert_location_tree(?,?)", sql.tenant, id)
         }
         return get(kind, id)
     }
@@ -106,11 +111,12 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
     private fun siteVisibility(alias: String, values: MutableList<Any?>, sites: Map<UUID, UUID?>): String {
         values += tools.jackson.module.kotlin.jacksonObjectMapper().writeValueAsString(sites)
         return """NOT EXISTS (WITH RECURSIVE ancestors AS (
-            SELECT id,parent_location_id,site_id,area_id FROM inventory_location WHERE tenant_id=$alias.tenant_id AND id=$alias.id
-            UNION SELECT parent.id,parent.parent_location_id,parent.site_id,parent.area_id FROM inventory_location parent
-                JOIN ancestors child ON parent.id=child.parent_location_id WHERE parent.tenant_id=$alias.tenant_id)
-            SELECT FROM ancestors WHERE area_id IS DISTINCT FROM $alias.area_id OR
-                (site_id IS NOT NULL AND $alias.site_id IS NOT NULL AND site_id<>$alias.site_id) OR
+            SELECT id,parent_location_id,site_id,area_id,ARRAY[id] AS path,false AS cycle FROM inventory_location WHERE tenant_id=$alias.tenant_id AND id=$alias.id
+            UNION ALL SELECT parent.id,parent.parent_location_id,parent.site_id,parent.area_id,child.path||parent.id,parent.id=ANY(child.path)
+                FROM inventory_location parent JOIN ancestors child ON parent.id=child.parent_location_id
+                WHERE parent.tenant_id=$alias.tenant_id AND NOT child.cycle AND cardinality(child.path)<=32)
+            SELECT FROM ancestors WHERE cycle OR cardinality(path)>32 OR area_id IS DISTINCT FROM $alias.area_id OR
+                (SELECT count(DISTINCT site_id) FROM ancestors)>1 OR
                 (site_id IS NOT NULL AND NOT EXISTS (SELECT FROM jsonb_each_text(CAST(? AS jsonb)) visible
                     WHERE visible.key=site_id::text AND visible.value IS NOT DISTINCT FROM area_id::text)))"""
     }

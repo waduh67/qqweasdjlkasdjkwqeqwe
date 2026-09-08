@@ -11,29 +11,23 @@ import java.util.UUID
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseMasterITSiteUpgrade : WarehouseMasterHttpFixture() {
     companion object {
-        private val database = WarehouseSchemaDatabase("174.9")
+        private val history = WarehouseSiteHistorySeed(false)
         @JvmStatic @DynamicPropertySource fun properties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { database.url }
-            registry.add("spring.flyway.url") { database.url }
-            registry.add("spring.flyway.schemas") { database.schema }
-            registry.add("spring.flyway.default-schema") { database.schema }
-            registry.add("spring.flyway.target") { "174.9" }
+            registry.add("spring.datasource.url") { history.database.url }
+            registry.add("spring.flyway.url") { history.database.url }
+            registry.add("spring.flyway.schemas") { history.database.schema }
+            registry.add("spring.flyway.default-schema") { history.database.schema }
         }
-        @JvmStatic @AfterAll fun cleanup() { database.close() }
+        @JvmStatic @AfterAll fun cleanup() { history.close() }
     }
 
     @Test fun `AV7-02 safe upgrade preserves invalid history but hides detail list and replay`() {
-        val token = tenant(); val fixture = fixture(token)
-        val siteBody = """{"code":"SITE","name":"Site","location":{"longitude":106.8,"latitude":-6.2},"areaId":"${area(token)}"}"""
-        val site = mapper.readTree(request("POST", "/api/sites", token,siteBody).contentAsString).path("id").asString()
-        val hidden = mapper.readTree(request("POST", "/api/areas",token,"""{"code":"HIDDEN","name":"Hidden"}""").contentAsString).path("id").asString()
-        val body = """{"code":"WH","name":"Warehouse","kind":"WAREHOUSE","siteId":"$site","areaId":"${area(token)}"}"""
-        val key = UUID.randomUUID().toString()
-        val first = request("POST", "/api/v1/warehouse/locations",token,body,key)
-        assertThat(first.status).isEqualTo(201)
-        val id = mapper.readTree(first.contentAsString).path("id").asString()
-        fixture.transaction { sql("UPDATE site SET area_id='$hidden' WHERE id='$site'") }
-        database.migrate()
+        val token = tenant(history.slug); val fixture = fixture(token)
+        val me = mapper.readTree(request("GET", "/api/me",token).contentAsString)
+        assertThat(request("PUT", "/api/users/${me.path("id").asString()}/access",token,mapper.writeValueAsString(mapOf(
+            "roleIds" to me.path("roleIds").asSequence().map { it.asString() }.toList(),"areaIds" to listOf(history.area.toString())))).status).isEqualTo(200)
+        val (body,key) = history.recordReplay(fixture,UUID.fromString(me.path("id").asString()))
+        val id = history.target.toString(); val site = history.firstSite.toString()
         val detail = request("GET", "/api/v1/warehouse/locations/$id",token)
         val replay = request("POST", "/api/v1/warehouse/locations",token,body,key)
         val page = request("GET", "/api/v1/warehouse/locations?search=WH",token)

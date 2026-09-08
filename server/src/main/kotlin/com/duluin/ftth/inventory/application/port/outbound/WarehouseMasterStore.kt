@@ -6,6 +6,7 @@ import com.duluin.ftth.inventory.application.port.inbound.*
 import java.util.UUID
 
 interface WarehouseMasterStore {
+    fun lockTopology()
     fun get(kind: MasterKind, id: UUID, lock: Boolean = false): MasterSnapshot
     fun list(kind: MasterKind, filter: MasterFilter, locations: AuthorityScope, areas: AuthorityScope, sites: Map<UUID, UUID?>): WarehousePage<MasterSnapshot>
     fun save(kind: MasterKind, id: UUID, input: MasterInput, existing: MasterSnapshot?): MasterSnapshot
