@@ -62,29 +62,32 @@ class WarehouseLegacyCommandExecutor(
                 if (areaScope is AuthorityScope.Restricted && operations.locationAreas(locations).values.any { it != null && it !in areaScope.ids }) fail(WarehouseErrorCode.FORBIDDEN)
             }
         }
+        val preview = operations.findKey(namespace, command.operationKey)
+        if (preview != null && (preview.actorId != identity.userId || preview.resourceId != command.workOrderId)) fail(WarehouseErrorCode.FORBIDDEN)
+        val source = if (preview == null) legacy.reference(command) else null
+        val snapshot = if (preview != null) references(preview.receipt.operationId) else {
+            val issued = requireNotNull(source)
+            LegacyReferences(mapOf("document:${issued.document}" to issued.revision, "workorder:${command.workOrderId}" to workOrderRevision),
+                setOf(command.locationId, issued.returnLocation))
+        }
+        authorize(snapshot.locations)
+        if (snapshot.revisions["workorder:${command.workOrderId}"] != workOrderRevision) fail(WarehouseErrorCode.STALE_REVISION)
+        operations.lockDocuments(null, snapshot.revisions)
+        val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("request" to requestJson,
+            "references" to snapshot.revisions, "locations" to snapshot.locations.sortedBy(UUID::toString))))
         val prior = operations.lockKey(namespace, command.operationKey)
         if (prior != null) {
             if (prior.actorId != identity.userId || prior.resourceId != command.workOrderId) fail(WarehouseErrorCode.FORBIDDEN)
-            val stored = mapper.readTree(operations.identity(prior.receipt.operationId))
-            val locations = stored.path("locations").asSequence().map { UUID.fromString(it.asString()) }.toSet()
-            authorize(locations)
-            val references = stored.path("references").properties().associate { it.key to it.value.asLong() }
-            val replay = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("request" to requestJson, "references" to references, "locations" to locations.sortedBy(UUID::toString))))
-            if (replay.hash != prior.hash) fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+            if (references(prior.receipt.operationId) != snapshot || prior.hash != canonical.hash || prior.scope != scope(snapshot.locations)) {
+                fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+            }
             if (prior.cutoverEpoch != cutover.snapshot.epoch) fail(WarehouseErrorCode.STALE_CUTOVER)
-            if (references["workorder:${command.workOrderId}"] != workOrderRevision) fail(WarehouseErrorCode.STALE_REVISION)
-            operations.lockDocuments(null, references)
             return mapper.readValue(prior.receipt.originalBody)
         }
-        val source = legacy.reference(command)
-        val references = mapOf("document:${source.document}" to source.revision, "workorder:${command.workOrderId}" to workOrderRevision)
-        operations.lockDocuments(null, references)
-        authorize(setOf(command.locationId, source.returnLocation))
-        val post = legacy.resolve(command, returned, cutover.snapshot.epoch, source)
-        val locations = setOf(command.locationId, source.returnLocation)
-        val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("request" to requestJson, "references" to references, "locations" to locations.sortedBy(UUID::toString))))
+        if (preview != null) fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+        val post = legacy.resolve(command, returned, cutover.snapshot.epoch, requireNotNull(source))
         val operation = post.operation.copy(actorId = identity.userId, resourceId = command.workOrderId,
-            resourceScope = locations.sortedBy(UUID::toString).joinToString(",", "locations:"), payloadHash = canonical.hash, authorityEpoch = current.fence.epoch)
+            resourceScope = scope(snapshot.locations), payloadHash = canonical.hash, authorityEpoch = current.fence.epoch)
         val result = InventoryMovement(operation.postingId, identity.tenantId, namespace, command.operationKey, canonical.hash, identity.userId,
             command.reason, operation.recordedAt, post.kind, post.legs.map { leg ->
                 MovementLeg(leg.direction, leg.dimension.stockIdentityId, leg.dimension.skuId, leg.dimension.locationId,
@@ -94,6 +97,16 @@ class WarehouseLegacyCommandExecutor(
         operations.storeIdentity(operation.id, canonical.json, identity.sessionId)
         return result
     }
+
+    private data class LegacyReferences(val revisions: Map<String, Long>, val locations: Set<UUID>)
+
+    private fun references(operationId: UUID): LegacyReferences {
+        val stored = mapper.readTree(operations.identity(operationId))
+        return LegacyReferences(stored.path("references").properties().associate { it.key to it.value.asLong() },
+            stored.path("locations").asSequence().map { UUID.fromString(it.asString()) }.toSet())
+    }
+
+    private fun scope(locations: Set<UUID>): String = locations.sortedBy(UUID::toString).joinToString(",", "locations:")
 
     private fun fail(code: WarehouseErrorCode): Nothing = throw WarehouseContractException(WarehouseError(code, code.name))
 }
