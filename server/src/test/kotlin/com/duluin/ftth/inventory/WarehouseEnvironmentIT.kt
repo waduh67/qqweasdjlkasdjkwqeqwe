@@ -159,6 +159,7 @@ class WarehouseEnvironmentIT {
             connection.autoCommit = false
             try {
                 connection.createStatement().use { statement ->
+                    statement.execute("INSERT INTO tenant(id,slug,name) VALUES ('$tenant','env-$tenant','Environment'),('$foreign','env-$foreign','Foreign environment')")
                     statement.execute("SET LOCAL app.tenant_id='$tenant'")
                     statement.execute("INSERT INTO inventory_location(id,tenant_id,code,kind) VALUES ('${UUID.randomUUID()}','$tenant','warehouse-env-probe','WAREHOUSE')")
                     statement.executeQuery("SELECT count(*) FROM inventory_location WHERE code='warehouse-env-probe'").use { result ->
@@ -170,9 +171,14 @@ class WarehouseEnvironmentIT {
                         result.next()
                         assertThat(result.getInt(1)).isZero()
                     }
+                    val savepoint = connection.setSavepoint()
+                    assertThatThrownBy {
+                        statement.execute("INSERT INTO inventory_supplier(id,tenant_id,code,name) VALUES ('${UUID.randomUUID()}','$tenant','denied','Denied')")
+                    }.isInstanceOf(SQLException::class.java).hasMessageContaining("row-level security")
+                    connection.rollback(savepoint)
                     assertThatThrownBy {
                         statement.execute("INSERT INTO inventory_location(id,tenant_id,code,kind) VALUES ('${UUID.randomUUID()}','$tenant','denied','WAREHOUSE')")
-                    }.isInstanceOf(SQLException::class.java).hasMessageContaining("row-level security")
+                    }.isInstanceOf(SQLException::class.java).hasMessageContaining("row tenant scope")
                 }
             } finally {
                 connection.rollback()
