@@ -30,7 +30,7 @@ internal object ReceiptPdfSyntaxFixtures {
         return serialize(objects, gap)
     }
 
-    private fun serialize(objects: List<String>, gap: String = ""): ByteArray {
+    internal fun serialize(objects: List<String>, gap: String = ""): ByteArray {
         val text = StringBuilder("%PDF-1.7\n%\u00e2\u00e3\u00cf\u00d3\n")
         val offsets = objects.mapIndexed { index, body -> val offset = text.length; text.append("${index + 1} 0 obj\n$body\nendobj\n"); offset }
         text.append(gap)
