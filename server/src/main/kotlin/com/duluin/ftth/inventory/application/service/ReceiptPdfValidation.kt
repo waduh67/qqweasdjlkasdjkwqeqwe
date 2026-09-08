@@ -24,6 +24,7 @@ internal object ReceiptPdfValidation {
             PDFParser(source).parse(false).use { document ->
                 require(!document.isEncrypted && document.numberOfPages in 1..100)
                 val budget = PdfSyntaxBudget()
+                val forms = PdfFormInvocations(budget)
                 PdfFileTopology.validate(bytes, document, budget)
                 val contentStreams = mutableListOf<Triple<COSStream, PDResources?, PdfContentKind>>()
                 val resourcesByStream = PdfContentResources(document.pages.mapNotNull { it.resources })
@@ -65,12 +66,11 @@ internal object ReceiptPdfValidation {
                 for (page in document.pages) {
                     val content = page.contents.use { it.readNBytes(16777217) }
                     budget.decoded(content.size)
-                    PdfContentSyntax.validate(content, page.resources, budget)
+                    PdfContentSyntax.validate(content, PdfContentContext(page.resources, PdfGraphicsSyntax(), PdfContentKind.PAGE, forms), budget)
                 }
                 for ((stream, resources, kind) in contentStreams) {
-                    val content = stream.createInputStream().use { it.readNBytes(16777217) }
-                    budget.decoded(content.size)
-                    resourcesByStream.contexts(stream, resources).forEach { effective -> PdfContentSyntax.validate(content, effective, budget, kind) }
+                    if (stream.getNameAsString(COSName.SUBTYPE) == "Form" && forms.wasInvoked(stream)) continue
+                    resourcesByStream.contexts(stream, resources).forEach { effective -> forms.detached(stream, effective, kind) }
                 }
             }
         }

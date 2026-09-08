@@ -8,7 +8,8 @@ internal class PdfSyntaxBudget {
     private var decoded = 0L
     private var tokens = 0
     fun decoded(size: Int) { decoded += size; require(size <= 16777216 && decoded <= 67108864) }
-    fun token() { require(++tokens <= 100000) }
+    fun token() = charge(1)
+    fun charge(count: Int) { require(count >= 0); tokens = Math.addExact(tokens, count); require(tokens <= 100000) }
 }
 
 internal class PdfTopologyStreams(private val bytes: ByteArray, private val document: PDDocument, private val budget: PdfSyntaxBudget) {
