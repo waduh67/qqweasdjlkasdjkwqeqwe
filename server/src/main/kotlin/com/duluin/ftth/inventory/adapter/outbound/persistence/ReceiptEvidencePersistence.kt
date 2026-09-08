@@ -10,6 +10,13 @@ data class StoredReceiptEvidence(val view: ReceiptEvidenceView, val objectKey: S
 
 @Repository
 class ReceiptEvidencePersistence(private val jdbc: WarehouseCommandJdbc) {
+    internal fun settledObjectKey(document: UUID, id: UUID): String? = jdbc.execute { sql ->
+        sql.update("SET LOCAL lock_timeout='2s'")
+        sql.update("SET LOCAL statement_timeout='5s'")
+        if (sql.value("SELECT id FROM inventory_document WHERE tenant_id=? AND id=? FOR NO KEY UPDATE", sql.tenant, document) == null)
+            sql.fail(WarehouseErrorCode.NOT_FOUND)
+        sql.value("SELECT object_key FROM inventory_receipt_evidence WHERE tenant_id=? AND document_id=? AND id=?", sql.tenant, document, id)
+    }
     fun currentBinding(document: UUID): ReceiptIntakeBinding = jdbc.execute { sql ->
         sql.query("SELECT content_revision,content_hash FROM inventory_receipt_intake WHERE tenant_id=? AND id=?", sql.tenant, document) {
             ReceiptIntakeBinding(it.getLong("content_revision"), it.getString("content_hash"))

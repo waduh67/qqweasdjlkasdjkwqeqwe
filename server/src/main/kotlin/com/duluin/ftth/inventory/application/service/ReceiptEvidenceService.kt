@@ -21,7 +21,7 @@ import java.util.UUID
 class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore, private val receipts: WarehouseReceiptService,
     private val documents: WarehouseReceiptPersistence, private val evidence: ReceiptEvidencePersistence,
-    private val operations: WarehouseOperationStore, private val storage: ObjectStorage) {
+    private val operations: WarehouseOperationStore, private val storage: ObjectStorage, private val reconciliation: ReceiptEvidenceReconciler) {
     private val mapper = jacksonObjectMapper()
 
     fun upload(document: UUID, revision: Long, key: String, contentType: String, bytes: ByteArray): WarehouseOperationReceipt {
@@ -52,9 +52,10 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
         val objectKey = "${current.fence.identity.tenantId}/warehouse/receipts/$document/$id"
         val value = StoredReceiptEvidence(ReceiptEvidenceView(id, document, contentType, bytes.size.toLong(), hash), objectKey, evidence.currentBinding(document))
         evidence.save(value, current.fence.identity.userId)
+        val tenant = current.fence.identity.tenantId
         TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
             override fun afterCompletion(status: Int) {
-                if (status == TransactionSynchronization.STATUS_ROLLED_BACK) storage.delete(objectKey)
+                if (status != TransactionSynchronization.STATUS_COMMITTED) reconciliation.reconcile(tenant, value)
             }
         })
         storage.put(objectKey, contentType, bytes)
