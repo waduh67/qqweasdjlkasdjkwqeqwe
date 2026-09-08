@@ -9,7 +9,8 @@ import java.util.UUID
 
 interface RefreshTokenJpaRepository : JpaRepository<RefreshTokenJpaEntity, UUID> {
 
-    fun findByTokenHash(tokenHash: String): RefreshTokenJpaEntity?
+    @Query("select token.tenantId from RefreshTokenJpaEntity token where token.tokenHash=:tokenHash")
+    fun findTenantByTokenHash(tokenHash: String): UUID?
 
     @Modifying
     @Query(

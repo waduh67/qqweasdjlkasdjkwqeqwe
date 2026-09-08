@@ -43,19 +43,20 @@ class AuthenticationService(
     }
 
     override fun refresh(refreshToken: String): AuthTokens {
-        val presented = refreshTokens.findByTokenHash(Tokens.sha256(refreshToken))
-            ?.takeIf { it.isActive() }
+        val hash = Tokens.sha256(refreshToken)
+        val tenantId = refreshTokens.findTenantByTokenHash(hash)
             ?: throw AuthenticationException("Refresh token tidak valid atau kadaluarsa")
 
-        return TenantContext.runAs(presented.tenantId) {
-            authenticator.rotateAndIssue(presented)
+        return TenantContext.runAs(tenantId) {
+            authenticator.rotateAndIssue(hash)
         }
     }
 
     override fun logout(refreshToken: String) {
-        val presented = refreshTokens.findByTokenHash(Tokens.sha256(refreshToken)) ?: return
-        TenantContext.runAs(presented.tenantId) {
-            authenticator.revoke(presented)
+        val hash = Tokens.sha256(refreshToken)
+        val tenantId = refreshTokens.findTenantByTokenHash(hash) ?: return
+        TenantContext.runAs(tenantId) {
+            authenticator.revoke(hash)
         }
     }
 }

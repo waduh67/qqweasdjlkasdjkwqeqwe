@@ -7,7 +7,11 @@ interface RefreshTokenRepository {
 
     fun save(token: RefreshToken): RefreshToken
 
-    fun findByTokenHash(tokenHash: String): RefreshToken?
+    fun findTenantByTokenHash(tokenHash: String): UUID?
+
+    fun consumeActive(tokenHash: String): RefreshToken?
+
+    fun revokeByTokenHash(tokenHash: String)
 
     fun revokeAllForUser(userId: UUID)
 }

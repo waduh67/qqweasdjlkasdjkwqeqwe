@@ -92,18 +92,17 @@ class TenantScopedAuthenticator(
         return true
     }
 
-    fun rotateAndIssue(presented: RefreshToken): AuthTokens {
+    fun rotateAndIssue(tokenHash: String): AuthTokens {
         authority.lockForChange()
-        presented.revoke()
-        refreshTokens.save(presented)
+        val presented = refreshTokens.consumeActive(tokenHash) ?: throw AuthenticationException("Sesi tidak valid")
         val user = userRepository.findById(presented.userId)?.takeIf { it.active }
             ?: throw AuthenticationException("Sesi tidak valid")
         return issue(user, "auth.refresh")
     }
 
-    fun revoke(presented: RefreshToken) {
-        presented.revoke()
-        refreshTokens.save(presented)
+    fun revoke(tokenHash: String) {
+        authority.lockForChange()
+        refreshTokens.revokeByTokenHash(tokenHash)
     }
 
     private fun issue(user: User, action: String): AuthTokens {
