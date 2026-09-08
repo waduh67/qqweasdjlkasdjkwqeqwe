@@ -18,7 +18,7 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val receipts: WarehouseReceiptService, private val store: WarehouseReceiptPersistence,
     private val operations: WarehouseOperationStore, private val origins: WarehouseReceiptOrigins, private val posting: WarehousePosting,
-    private val planning: ReceiptDispositionPlanning, private val inspections: ReceiptInspectionPersistence) {
+    private val planning: ReceiptDispositionPlanning, private val inspections: ReceiptInspectionPersistence, private val completion: ReceiptCompletion) {
     private val mapper = jacksonObjectMapper()
     fun execute(id: UUID, input: ReceiptInput, key: String): WarehouseOperationReceipt {
         receiptKey(key)
@@ -58,16 +58,18 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
         }
         val revision = Math.addExact(record.revision, 1)
         val operationId = UUID.randomUUID()
-        val body = mapper.writeValueAsString(mapOf("id" to id, "revision" to revision, "state" to plan.state, "operationId" to operationId))
+        val nextState = if (input is ReceiptReceiveInput) plan.state else completion.state(record, plan)
+        val body = mapper.writeValueAsString(mapOf("id" to id, "revision" to revision, "state" to nextState, "operationId" to operationId))
         val operation = PostingOperation(operationId, namespace, key, current.fence.identity.userId, id, "receipt:$id",
             canonical.hash, action, 200, body, current.fence.epoch)
         if (plan.legs.isEmpty()) {
-            store.advance(id, record.revision)
+            store.advance(id, record.revision, nextState)
             store.operation(operation, revision, cutover.snapshot.epoch)
-        } else posting.post(WarehousePost(id, record.revision, plan.state.name, operation,
+        } else posting.post(WarehousePost(id, record.revision, nextState.name, operation,
             if (input is ReceiptReceiveInput) MovementKind.RECEIVE else MovementKind.TRANSFER,
             "$action ${record.intake.externalReference}", plan.legs, splits = plan.splits), cutover)
         inspections.save(plan.decisions, operationId, current.fence.identity.userId)
+        if (input !is ReceiptReceiveInput) check(completion.state(record) == nextState) { "Receipt completion differs from durable disposition" }
         operations.storeIdentity(operationId, mapper.writeValueAsString(record.intake), current.fence.identity.sessionId)
         return WarehouseOperationReceipt(operationId, id, revision, 200, body, operation.recordedAt)
     }

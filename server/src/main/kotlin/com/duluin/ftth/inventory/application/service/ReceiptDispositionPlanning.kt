@@ -74,11 +74,7 @@ class ReceiptDispositionPlanning(private val store: WarehouseReceiptPersistence,
                 legs += PostingLeg(LegDirection.IN, source.copy(stockIdentityId = remainder.id), remainder.quantity, line.id, InventoryStatus.QUARANTINE)
             }
         }
-        val placed = input.lines.associate { it.stockIdentityId to it.quantityBase.toLong() }
-        val complete = record.intake.lines.all { line -> store.pieces(line.id).all { piece ->
-            piece.locationId != record.intake.inspection.id || piece.disposition in setOf("QUARANTINE", "SUPPLIER_RETURN") || placed[piece.stockIdentityId] == piece.quantityBase.toLong()
-        } }
-        return ReceiptDispositionPlan(legs, splits, emptyList(), if (complete) WarehouseReceiptState.PUTAWAY else record.state)
+        return ReceiptDispositionPlan(legs, splits, emptyList(), record.state)
     }
 
     private fun source(record: ReceiptRecord, line: ReceiptIntakeLine, identity: UUID): ReceiptPiece {

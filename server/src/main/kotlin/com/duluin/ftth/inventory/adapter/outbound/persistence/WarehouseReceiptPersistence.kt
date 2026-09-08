@@ -51,9 +51,9 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
             operation.originalStatus, operation.originalBody, cutover, operation.authorityEpoch, operation.recordedAt)
     }
 
-    fun advance(id: UUID, revision: Long) = jdbc.execute { sql ->
-        if (sql.update("UPDATE inventory_document SET revision=revision+1,updated_at=clock_timestamp() WHERE tenant_id=? AND id=? AND revision=?",
-            sql.tenant, id, revision) != 1) sql.fail(WarehouseErrorCode.STALE_REVISION)
+    fun advance(id: UUID, revision: Long, state: WarehouseReceiptState? = null) = jdbc.execute { sql ->
+        if (sql.update("UPDATE inventory_document SET state=coalesce(?,state),revision=revision+1,updated_at=clock_timestamp() WHERE tenant_id=? AND id=? AND revision=?",
+            state, sql.tenant, id, revision) != 1) sql.fail(WarehouseErrorCode.STALE_REVISION)
     }
 
     fun history(id: UUID): List<ReceiptHistory> = jdbc.execute { sql ->
