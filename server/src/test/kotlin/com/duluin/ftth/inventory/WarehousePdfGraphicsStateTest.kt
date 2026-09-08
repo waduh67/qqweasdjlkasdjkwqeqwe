@@ -88,4 +88,11 @@ class WarehousePdfGraphicsStateTest {
     }
 
     private fun numbers(vararg values: Int) = COSArray().apply { values.forEach { add(COSInteger.get(it.toLong())) } }
+
+    @Test fun `optional null dictionary entries preserve inherited graphics state`() {
+        val settings = COSDictionary().apply { setItem(COSName.getPDFName("LW"), COSNull.NULL); setItem(COSName.D, COSNull.NULL); setItem(COSName.FONT, COSNull.NULL) }
+        val resources = PDResources().apply { cosObject.setItem(COSName.EXT_G_STATE, COSDictionary().apply { setItem(COSName.getPDFName("GS"), settings) }) }
+        val state = PdfContentSyntax.validate("2 w /GS gs".toByteArray(), resources, PdfSyntaxBudget())
+        assertThat(state.line.width).isEqualTo(2.0)
+    }
 }

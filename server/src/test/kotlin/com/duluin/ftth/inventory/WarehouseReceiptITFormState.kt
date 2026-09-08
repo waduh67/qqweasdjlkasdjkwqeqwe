@@ -13,7 +13,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multi
 class WarehouseReceiptITFormState : WarehouseReceiptHttpFixture() {
     @Autowired private lateinit var storage: ObjectStorage
 
-    @ParameterizedTest @ValueSource(strings = ["EXACT", "RESET", "GRAY", "CMYK", "NAMED", "STROKE", "ISOLATED", "SHARED", "NESTED", "SIBLINGS", "DETACHED", "Q_RESTORE", "MATRIX"])
+    @ParameterizedTest @ValueSource(strings = ["EXACT", "RESET", "GRAY", "CMYK", "NAMED", "STROKE", "ISOLATED", "SHARED", "NESTED", "SIBLINGS", "DETACHED", "Q_RESTORE", "MATRIX", "NULL_MATRIX"])
     fun `valid Form invocation PDFs round trip byte identically`(kind: String) {
         val setup = setupReceipt()
         val id = draft(setup, """{"skuId":"${setup.cable}","quantityBase":"1000","lotCode":"FORM-STATE"}""").path("id").asString()

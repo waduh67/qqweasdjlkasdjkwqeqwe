@@ -18,7 +18,7 @@ class WarehousePdfFormStateTest {
         assertThat(reset.size).isEqualTo(667)
         assertThat(hash(reset)).isEqualTo("0707c233fc7e9f08c6f5a4ec45d28159c91a689b930ab489ab90f04a2bcdc459")
     }
-    @ParameterizedTest @ValueSource(strings = ["EXACT", "RESET", "GRAY", "CMYK", "NAMED", "STROKE", "ISOLATED", "SHARED", "NESTED", "SIBLINGS", "DETACHED", "Q_RESTORE", "MATRIX"])
+    @ParameterizedTest @ValueSource(strings = ["EXACT", "RESET", "GRAY", "CMYK", "NAMED", "STROKE", "ISOLATED", "SHARED", "NESTED", "SIBLINGS", "DETACHED", "Q_RESTORE", "MATRIX", "NULL_MATRIX"])
     fun `forms inherit caller state and isolate their local changes`(kind: String) {
         validateReceiptEvidence("application/pdf", ReceiptPdfFormFixtures.positive(kind))
     }

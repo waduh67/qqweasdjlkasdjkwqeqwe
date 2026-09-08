@@ -36,6 +36,7 @@ internal object ReceiptPdfFormFixtures {
         "DETACHED" -> document("q Q", listOf(Form(content = "1 0 0 sc 0 0 10 10 re f")))
         "Q_RESTORE" -> document("q /DeviceRGB cs /Fm Do 1 0 0 sc Q .5 sc", listOf(Form(content = "q /DeviceCMYK cs 0 1 1 0 sc Q 0 0 1 sc")))
         "MATRIX" -> document("2 0 0 2 10 20 cm /DeviceRGB cs /Fm Do 1 0 0 sc", listOf(Form(content = "3 0 0 3 0 0 cm 1 0 0 sc 0 0 10 10 re W n", matrix = "[1 0 0 1 3 4]")))
+        "NULL_MATRIX" -> document("/DeviceRGB cs /Fm Do", listOf(Form(content = "1 0 0 sc", matrix = "null")))
         else -> error("Unknown form fixture")
     }
 
