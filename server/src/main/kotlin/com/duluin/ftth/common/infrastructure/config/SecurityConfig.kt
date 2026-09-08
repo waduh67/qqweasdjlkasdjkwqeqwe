@@ -133,7 +133,13 @@ class SecurityConfig {
                     jwt.decoder(jwtDecoder)
                     jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)
                 }
-                oauth2.authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                oauth2.authenticationEntryPoint { request, response, failure ->
+                    if (request.requestURI.startsWith("/api/v1/warehouse/")) {
+                        response.status = 401
+                        response.contentType = "application/json"
+                        response.writer.write("""{"code":"UNAUTHENTICATED","message":"Authentication required"}""")
+                    } else HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED).commence(request, response, failure)
+                }
                 oauth2.accessDeniedHandler(BearerTokenAccessDeniedHandler())
             }
             // Pasang tenant ke context SETELAH autentikasi bearer token selesai.
