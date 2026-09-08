@@ -2,10 +2,12 @@ import { StrictMode } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearOltOnusCache } from '@/api/oltOnus'
 import { deferred, deviceOnu, oltOnusSnapshot, unsupportedOnu } from '@/api/oltOnus.test-support'
 import { OltDeviceOnus } from './OltDeviceOnus'
 
 afterEach(() => {
+  clearOltOnusCache()
   vi.unstubAllGlobals()
   vi.useRealTimers()
 })
@@ -63,7 +65,7 @@ describe('OltDeviceOnus snapshot lifecycle', () => {
     expect(fetch).toHaveBeenCalledTimes(3)
   })
 
-  it('aborts on OLT change and ignores late results even when fetch does not honor abort', async () => {
+  it('ignores another OLT late result while retaining its snapshot for a return visit', async () => {
     const oldRead = deferred<Response>()
     const fetch = vi.fn<typeof globalThis.fetch>()
       .mockReturnValueOnce(oldRead.promise)
@@ -71,9 +73,7 @@ describe('OltDeviceOnus snapshot lifecycle', () => {
     vi.stubGlobal('fetch', fetch)
     const { rerender } = render(<OltDeviceOnus oltId="olt-a" />)
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
-    const oldSignal = fetch.mock.calls[0]?.[1]?.signal
     rerender(<OltDeviceOnus oltId="olt-b" />)
-    expect(oldSignal?.aborted).toBe(true)
     await screen.findByText('ZTEG44556677')
     await act(async () => oldRead.resolve(Response.json(oltOnusSnapshot())))
     expect(screen.queryByText('HWTC00112233')).toBeNull()
@@ -81,6 +81,10 @@ describe('OltDeviceOnus snapshot lifecycle', () => {
     expect(fetch.mock.calls.map(([path]) => path)).toEqual([
       '/api/monitoring/olts/olt-a/onus', '/api/monitoring/olts/olt-b/onus',
     ])
+    rerender(<OltDeviceOnus oltId="olt-a" />)
+    expect(await screen.findByText('HWTC00112233')).toBeDefined()
+    expect(screen.queryByText('ZTEG44556677')).toBeNull()
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   it('resets a previous OLT snapshot and its search immediately when OLT changes', async () => {
@@ -101,7 +105,7 @@ describe('OltDeviceOnus snapshot lifecycle', () => {
     expect(screen.getByRole('searchbox').getAttribute('value')).toBe('')
   })
 
-  it('aborts on unmount and safely ignores late rejection', async () => {
+  it('does not cancel a shared read on unmount and safely ignores late rejection', async () => {
     const pending = deferred<Response>()
     const fetch = vi.fn<typeof globalThis.fetch>().mockReturnValue(pending.promise)
     vi.stubGlobal('fetch', fetch)
@@ -109,9 +113,26 @@ describe('OltDeviceOnus snapshot lifecycle', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
     const signal = fetch.mock.calls[0]?.[1]?.signal
     unmount()
-    expect(signal?.aborted).toBe(true)
+    expect(signal?.aborted).not.toBe(true)
     await act(async () => pending.reject(new Error('late failure')))
     expect(screen.queryByRole('alert')).toBeNull()
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the same pending read after remounting and the completed cache on later visits', async () => {
+    const pending = deferred<Response>()
+    const fetch = vi.fn<typeof globalThis.fetch>().mockReturnValue(pending.promise)
+    vi.stubGlobal('fetch', fetch)
+    const first = render(<OltDeviceOnus oltId="olt-a" />)
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    first.unmount()
+    const second = render(<OltDeviceOnus oltId="olt-a" />)
+    await act(async () => pending.resolve(Response.json(oltOnusSnapshot())))
+    expect(screen.getByText('HWTC00112233')).toBeDefined()
+    second.unmount()
+    render(<OltDeviceOnus oltId="olt-a" />)
+    expect(screen.queryByText('Membaca ONU dari OLT…')).toBeNull()
+    expect(await screen.findByText('HWTC00112233')).toBeDefined()
     expect(fetch).toHaveBeenCalledTimes(1)
   })
 

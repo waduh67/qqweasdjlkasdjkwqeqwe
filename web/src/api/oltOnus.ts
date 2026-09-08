@@ -118,3 +118,41 @@ export async function readOltOnus(oltId: string, signal?: AbortSignal): Promise<
   if (snapshot.oltId !== oltId) throw new InvalidOltOnusResponseError()
   return snapshot
 }
+
+const CACHE_TTL_MS = 15 * 60 * 1000
+const snapshots = new Map<string, { snapshot: OltOnusSnapshot; expiresAt: number }>()
+const pendingReads = new Map<string, Promise<OltOnusSnapshot>>()
+
+export function clearOltOnusCache(): void {
+  snapshots.clear()
+  pendingReads.clear()
+}
+
+export function getCachedOltOnus(oltId: string): OltOnusSnapshot | undefined {
+  const cached = snapshots.get(oltId)
+  return cached && cached.expiresAt > Date.now() ? cached.snapshot : undefined
+}
+
+export function readCachedOltOnus(oltId: string, forceRefresh = false): Promise<OltOnusSnapshot> {
+  const pending = pendingReads.get(oltId)
+  if (pending) return pending
+  const cached = getCachedOltOnus(oltId)
+  if (cached && !forceRefresh) return Promise.resolve(cached)
+
+  snapshots.delete(oltId)
+  for (const [id, entry] of snapshots) {
+    if (entry.expiresAt <= Date.now()) snapshots.delete(id)
+  }
+  // A tab may unmount while SNMP is reading; its next visit shares this request.
+  const read = readOltOnus(oltId).then((snapshot) => {
+    // A response from a cleared session must not repopulate the cache.
+    if (pendingReads.get(oltId) === read) {
+      snapshots.set(oltId, { snapshot, expiresAt: Date.now() + CACHE_TTL_MS })
+    }
+    return snapshot
+  }).finally(() => {
+    if (pendingReads.get(oltId) === read) pendingReads.delete(oltId)
+  })
+  pendingReads.set(oltId, read)
+  return read
+}

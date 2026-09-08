@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Text } from '@fluentui/react-components'
 import { RefreshCw } from 'lucide-react'
 import { ApiError } from '@/api/client'
-import { InvalidOltOnusResponseError, readOltOnus, type OltDeviceOnu, type OltOnusSnapshot } from '@/api/oltOnus'
+import { getCachedOltOnus, InvalidOltOnusResponseError, readCachedOltOnus, type OltDeviceOnu, type OltOnusSnapshot } from '@/api/oltOnus'
 import { Badge, Button, EmptyState, Spinner, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { DataTable, type Column } from './DataTable'
 import './OltDeviceOnus.css'
@@ -15,63 +15,56 @@ type ReadState =
 type DeviceColumn = {
   readonly key: Exclude<keyof OltDeviceOnu, 'index'>
   readonly header: string
+  readonly width: string
   readonly render?: (row: OltDeviceOnu) => ReactNode
 }
 
 const deviceColumns: readonly DeviceColumn[] = [
-  { key: 'ontId', header: 'ONT ID' },
-  { key: 'name', header: 'Name' },
-  { key: 'serialNumber', header: 'Serial number' },
-  { key: 'state', header: 'State' },
+  { key: 'ontId', header: 'ONT ID', width: '5.5rem' },
+  { key: 'name', header: 'Name', width: '10rem' },
+  { key: 'serialNumber', header: 'Serial number', width: '10rem' },
+  { key: 'state', header: 'State', width: '7rem' },
   {
-    key: 'runningState', header: 'Running state',
+    key: 'runningState', header: 'Running state', width: '8.5rem',
     render: (row) => row.runningState === null ? '—' : <StatusBadge status={row.runningState} label={row.runningState} />,
   },
-  { key: 'configState', header: 'Config state' },
-  { key: 'deviceType', header: 'Device type' },
-  { key: 'rxPowerDbm', header: 'Receive power', render: (row) => row.rxPowerDbm === null ? '—' : row.rxPowerDbm + ' dBm' },
-  { key: 'lastUpTime', header: 'Last up time' },
-  { key: 'lastDownTime', header: 'Last down time' },
-  { key: 'lastDownCause', header: 'Last down cause' },
+  { key: 'configState', header: 'Config state', width: '8rem' },
+  { key: 'deviceType', header: 'Device type', width: '8rem' },
+  { key: 'rxPowerDbm', header: 'Receive power', width: '8rem', render: (row) => row.rxPowerDbm === null ? '—' : row.rxPowerDbm + ' dBm' },
+  { key: 'lastUpTime', header: 'Last up time', width: '12rem' },
+  { key: 'lastDownTime', header: 'Last down time', width: '12rem' },
+  { key: 'lastDownCause', header: 'Last down cause', width: '11rem' },
 ]
-
-const columns: Column<OltDeviceOnu>[] = deviceColumns.map((column) => ({
-  key: column.key,
-  header: column.header,
-  cell: (row) => (
-    <>
-      <span className="olt-device-onus__label">{column.header}</span>
-      <span className="olt-device-onus__value">{column.render ? column.render(row) : row[column.key] ?? '—'}</span>
-    </>
-  ),
-}))
 
 export function OltDeviceOnus({ oltId }: { oltId: string }) {
   return <DeviceSnapshot key={oltId} oltId={oltId} />
 }
 
 function DeviceSnapshot({ oltId }: { oltId: string }) {
-  const [state, setState] = useState<ReadState>({ kind: 'loading' })
+  const [state, setState] = useState<ReadState>(() => {
+    const snapshot = getCachedOltOnus(oltId)
+    return snapshot ? { kind: 'success', snapshot } : { kind: 'loading' }
+  })
   const [readVersion, setReadVersion] = useState(0)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    const controller = new AbortController()
+    let cancelled = false
     // Deferral avoids a duplicate device read during StrictMode effect replay.
     void Promise.resolve().then(async () => {
-      if (controller.signal.aborted) return
+      if (cancelled) return
       try {
-        const snapshot = await readOltOnus(oltId, controller.signal)
-        if (!controller.signal.aborted) setState({ kind: 'success', snapshot })
+        const snapshot = await readCachedOltOnus(oltId, readVersion > 0)
+        if (!cancelled) setState({ kind: 'success', snapshot })
       } catch (error: unknown) {
-        if (controller.signal.aborted) return
+        if (cancelled) return
         const message = error instanceof ApiError || error instanceof InvalidOltOnusResponseError
           ? error.message
           : 'Tidak dapat membaca ONU dari OLT. Periksa koneksi lalu tekan Refresh.'
         setState({ kind: 'error', message })
       }
     })
-    return () => controller.abort()
+    return () => { cancelled = true }
   }, [oltId, readVersion])
 
   const refresh = () => {
@@ -125,8 +118,23 @@ function SnapshotResults({ snapshot, query, onQueryChange }: {
   const search = query.trim().toLowerCase()
   const rows = snapshot.onus.filter((row) => [row.serialNumber, row.name, row.ontId]
     .some((value) => value?.toLowerCase().includes(search)))
-  const hasUnsupportedFields = snapshot.systemDescription === null || snapshot.onus
-    .some((row) => deviceColumns.some((column) => row[column.key] === null))
+  const visibleColumns = deviceColumns.filter((column) => snapshot.onus.some((row) => {
+    const value = row[column.key]
+    return value !== null && (typeof value !== 'string' || value.trim() !== '')
+  }))
+  const columns: Column<OltDeviceOnu>[] = visibleColumns.map((column) => ({
+    key: column.key,
+    header: column.header,
+    cell: (row) => (
+      <>
+        <span className="olt-device-onus__label">{column.header}</span>
+        <span className="olt-device-onus__value">{column.render ? column.render(row) : row[column.key] ?? '—'}</span>
+      </>
+    ),
+  }))
+  const tableStyle: CSSProperties & { '--olt-device-onus-columns': string } = {
+    '--olt-device-onus-columns': visibleColumns.map((column) => column.width).join(' '),
+  }
 
   return (
     <>
@@ -134,14 +142,9 @@ function SnapshotResults({ snapshot, query, onQueryChange }: {
         <Text size={300} weight="semibold">Sumber: {snapshot.oltCode} · {snapshot.vendor}</Text>
         <Text size={200}>{snapshot.systemDescription ?? '—'}</Text>
         <Text as="p" size={200}>Waktu baca aplikasi: <time dateTime={snapshot.readAt}>{snapshot.readAt}</time></Text>
+        <Text as="p" size={200} className="muted">Cache 15 menit. Refresh membaca ulang dari OLT.</Text>
         <Text as="p" size={200} className="muted">Last up/down time mengikuti jam OLT, ditampilkan apa adanya tanpa konversi zona waktu.</Text>
       </div>
-      {(hasUnsupportedFields || snapshot.warnings.length > 0) && (
-        <div className="workspace-callout warning stack" role="note" aria-label="Peringatan hasil baca">
-          <Text size={300}>Field yang tidak tersedia atau belum didukung ditampilkan sebagai —. Hasil baca dapat parsial.</Text>
-          {snapshot.warnings.length > 0 && <ul>{snapshot.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
-        </div>
-      )}
       <Toolbar>
         <TextField
           type="search"
@@ -152,11 +155,13 @@ function SnapshotResults({ snapshot, query, onQueryChange }: {
         <Text size={200} className="muted" role="status">{rows.length} dari {snapshot.onus.length} ONU pada hasil baca ini</Text>
       </Toolbar>
       {rows.length > 0 ? (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.index} />
+        <div className="olt-device-onus__table" style={tableStyle}>
+          <DataTable columns={columns} rows={rows} rowKey={(row) => row.index} />
+        </div>
       ) : (
         <EmptyState
           title="Tidak ditemukan pada hasil baca ini"
-          hint={search ? 'Periksa kata pencarian atau tekan Refresh untuk membaca ulang.' : 'Hasil ini bukan kepastian bahwa ONU tidak ada pada perangkat. Periksa peringatan atau tekan Refresh untuk membaca ulang.'}
+          hint={search ? 'Periksa kata pencarian atau tekan Refresh untuk membaca ulang.' : 'Hasil ini bukan kepastian bahwa ONU tidak ada pada perangkat. Tekan Refresh untuk membaca ulang.'}
         />
       )}
     </>

@@ -79,16 +79,25 @@ Di detail OLT dari **Inventory**, **Peta**, maupun `/olts/:id`:
 
 - **ONU di OLT** membaca daftar perangkat langsung lewat SNMP, tanpa harus ada
   pelanggan/ODP yang terpasang. Cari serial, nama, atau ONT ID; **Refresh** membaca
-  ulang. Izin: `network.olt.view` dan `monitoring.provisioning.view`.
+  ulang dengan melewati cache. Hasil sukses disimpan di memori browser per OLT
+  selama 15 menit sejak diterima, termasuk hasil kosong. Pindah tab atau membuka
+  ulang detail memakai hasil yang sama; pembacaan yang masih berjalan juga dibagi.
+  Setelah cache kedaluwarsa, pembacaan baru dilakukan saat tab dibuka kembali,
+  tanpa polling latar belakang. Cache dibersihkan saat sesi/profil berubah atau
+  halaman dimuat ulang penuh. Izin: `network.olt.view` dan `monitoring.provisioning.view`.
 - **ONU Pelanggan** tetap menampilkan hubungan pelanggan dan topologi aplikasi.
 - **ONU Baru** tetap menjadi kotak masuk untuk menautkan ONU ke pelanggan.
 
 `GET /api/monitoring/olts/{id}/onus` hanya membaca target yang tercatat pada tenant.
 Tidak menyimpan atau mengubah konfigurasi OLT, pelanggan, maupun topologi. Hasilnya
 snapshot dengan waktu baca aplikasi, bukan stream waktu nyata. Kegagalan membaca
-identitas menghasilkan error; kegagalan field tambahan menghasilkan `null`/`—`
-beserta peringatan. Serial yang tidak ditemukan hanya berarti tidak ada pada
-hasil baca tersebut, bukan bukti pasti ONU tidak terdaftar di perangkat.
+identitas menghasilkan error dan membuang cache sebelumnya. Kegagalan field
+tambahan tetap menghasilkan `null` dan peringatan pada respons API, tetapi UI
+tidak menampilkan kartu peringatan tersebut. Kolom yang seluruh nilainya kosong
+disembunyikan; kolom dengan sebagian nilai tersedia tetap muncul, dengan `—`
+untuk sel kosong. Pencarian tidak mengubah pilihan kolom. Serial yang tidak
+ditemukan hanya berarti tidak ada pada hasil baca tersebut, bukan bukti pasti
+ONU tidak terdaftar di perangkat.
 
 ### Peta GPON HSGQ-G01ID
 

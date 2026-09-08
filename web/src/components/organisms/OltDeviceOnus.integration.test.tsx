@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearOltOnusCache } from '@/api/oltOnus'
 import type { OltView } from '@/api/network'
 import { deferred, oltOnusSnapshot } from '@/api/oltOnus.test-support'
 import { DialogProvider, ToastProvider } from '@/system'
@@ -20,6 +21,7 @@ const olt: OltView = {
 }
 
 afterEach(() => {
+  clearOltOnusCache()
   vi.unstubAllGlobals()
   can.mockReset()
 })
@@ -73,13 +75,12 @@ describe('shared OLT detail device inventory tab', () => {
     expect(screen.queryByRole('tab', { name: 'ONU' })).toBeNull()
   })
 
-  it('cancels a read when leaving the tab and takes one new snapshot on reactivation', async () => {
+  it('finishes an in-flight read after leaving the tab and reuses it on reactivation', async () => {
     allow('network.olt.view', 'monitoring.provisioning.view')
     const pending = deferred<Response>()
     const fetch = vi.fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(Response.json(olt))
       .mockReturnValueOnce(pending.promise)
-      .mockResolvedValueOnce(Response.json(oltOnusSnapshot()))
     vi.stubGlobal('fetch', fetch)
     const user = userEvent.setup()
     render(renderDetail(true))
@@ -87,12 +88,15 @@ describe('shared OLT detail device inventory tab', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
     const signal = fetch.mock.calls[1]?.[1]?.signal
     await user.click(screen.getByRole('tab', { name: 'Ringkasan' }))
-    expect(signal?.aborted).toBe(true)
+    expect(signal?.aborted).not.toBe(true)
     await act(async () => pending.resolve(Response.json(oltOnusSnapshot())))
     expect(screen.queryByText('HWTC00112233')).toBeNull()
     await user.click(screen.getByRole('tab', { name: 'ONU di OLT' }))
     expect(await screen.findByText('HWTC00112233')).toBeDefined()
-    expect(fetch).toHaveBeenCalledTimes(3)
+    await user.click(screen.getByRole('tab', { name: 'Ringkasan' }))
+    await user.click(screen.getByRole('tab', { name: 'ONU di OLT' }))
+    expect(await screen.findByText('HWTC00112233')).toBeDefined()
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   it('reads the new prop OLT while shared-detail metadata is still loading', async () => {

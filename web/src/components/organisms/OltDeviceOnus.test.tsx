@@ -1,10 +1,14 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearOltOnusCache } from '@/api/oltOnus'
 import { deviceOnu, oltOnusSnapshot, unsupportedOnu } from '@/api/oltOnus.test-support'
 import { OltDeviceOnus } from './OltDeviceOnus'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  clearOltOnusCache()
+  vi.unstubAllGlobals()
+})
 
 function serveSnapshot(snapshot = oltOnusSnapshot()) {
   const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(snapshot))
@@ -59,17 +63,20 @@ describe('OltDeviceOnus', () => {
     expect(screen.getByText('HWTC00112233')).toBeDefined()
   })
 
-  it('renders unavailable values as dashes without inferring IDs, vendor, or state', async () => {
+  it('hides entirely unavailable columns without inferring IDs, vendor, or state', async () => {
     serveSnapshot(oltOnusSnapshot({ onus: [unsupportedOnu], systemDescription: null }))
     render(<OltDeviceOnus oltId="olt-a" />)
     await screen.findByText('ZTEG44556677')
-    expect(within(screen.getByRole('grid')).getAllByText('—')).toHaveLength(10)
+    const grid = screen.getByRole('grid')
+    expect(within(grid).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Serial number'])
+    expect(within(grid).queryAllByText('—')).toHaveLength(0)
+    expect(grid.closest('.olt-device-onus__table')?.getAttribute('style')).toContain('--olt-device-onus-columns: 10rem')
     expect(screen.queryByText('4194562')).toBeNull()
     expect(screen.queryByText('UNKNOWN')).toBeNull()
-    expect(screen.getByText(/Field yang tidak tersedia atau belum didukung/)).toBeDefined()
+    expect(screen.queryByText(/Field yang tidak tersedia atau belum didukung/)).toBeNull()
   })
 
-  it('keeps read-only source, actual read timestamp, device clock notice and partial-read warnings visible', async () => {
+  it('keeps source and cache age visible without displaying partial-read alerts', async () => {
     serveSnapshot(oltOnusSnapshot({ warnings: ['Sebagian port gagal dibaca', 'Receive power belum didukung'] }))
     render(<OltDeviceOnus oltId="olt-a" />)
     await screen.findByText('HWTC00112233')
@@ -78,8 +85,38 @@ describe('OltDeviceOnus', () => {
     expect(screen.getByText('Test OLT firmware')).toBeDefined()
     expect(screen.getByText('2026-09-08T04:05:06Z').getAttribute('datetime')).toBe('2026-09-08T04:05:06Z')
     expect(screen.getByText(/time mengikuti jam OLT/)).toBeDefined()
-    expect(screen.getByText('Sebagian port gagal dibaca')).toBeDefined()
-    expect(screen.getByText('Receive power belum didukung')).toBeDefined()
+    expect(screen.getByText('Cache 15 menit. Refresh membaca ulang dari OLT.')).toBeDefined()
+    expect(screen.queryByText('Sebagian port gagal dibaca')).toBeNull()
+    expect(screen.queryByText('Receive power belum didukung')).toBeNull()
+    expect(screen.queryByRole('note')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('keeps partially populated columns and does not change them when search filters to a missing value', async () => {
+    serveSnapshot(oltOnusSnapshot({ onus: [
+      { ...deviceOnu, deviceType: null, lastDownTime: null, lastDownCause: null },
+      unsupportedOnu,
+    ] }))
+    const user = userEvent.setup()
+    render(<OltDeviceOnus oltId="olt-a" />)
+    await screen.findByText('HWTC00112233')
+    const expectedHeaders = headers.filter((header) => !['Device type', 'Last down time', 'Last down cause'].includes(header))
+    const grid = screen.getByRole('grid')
+    expect(within(grid).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(expectedHeaders)
+    expect(within(grid).getByText('-21.75 dBm')).toBeDefined()
+    await user.type(screen.getByRole('searchbox'), 'zteg')
+    expect(within(grid).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(expectedHeaders)
+    expect(within(grid).getByText('ZTEG44556677')).toBeDefined()
+    expect(within(grid).queryByText('-21.75 dBm')).toBeNull()
+    expect(within(grid).getAllByText('—')).toHaveLength(expectedHeaders.length - 1)
+  })
+
+  it('hides blank optional fields but includes zero power', async () => {
+    serveSnapshot(oltOnusSnapshot({ onus: [{ ...unsupportedOnu, name: '  ', state: '', rxPowerDbm: 0 }] }))
+    render(<OltDeviceOnus oltId="olt-a" />)
+    await screen.findByText('0 dBm')
+    expect(within(screen.getByRole('grid')).getAllByRole('columnheader').map((header) => header.textContent))
+      .toEqual(['Serial number', 'Receive power'])
   })
 
   it('renders zero receive power and arbitrary readable state/time/cause without normalization', async () => {

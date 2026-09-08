@@ -1,5 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, refreshSession, tokenStore } from '../api/client'
+import { clearOltOnusCache } from '../api/oltOnus'
 import { getSubscriptionLock, type SubscriptionLockView } from '../api/subscription'
 import type { Profile, TokenResponse } from '../api/types'
 
@@ -30,7 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscriptionLock, setSubscriptionLock] = useState<SubscriptionLockView | null>(null)
 
   const refreshProfile = useCallback(async () => {
-    setUser(await api.get<Profile>('/api/me'))
+    const profile = await api.get<Profile>('/api/me')
+    clearOltOnusCache()
+    setUser(profile)
   }, [])
 
   /**
@@ -59,11 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setUser(tokens.user)
       } else {
         tokenStore.clear()
+        clearOltOnusCache()
       }
       if (!cancelled) setLoading(false)
     }
 
-    tokenStore.onSessionLost(() => setUser(null))
+    tokenStore.onSessionLost(() => {
+      clearOltOnusCache()
+      setUser(null)
+    })
     // Server bisa mengunci di tengah sesi (scheduler penagihan jalan tiap malam). Penolakan
     // 402 pertama itulah kabar pertama yang sampai ke klien — pakai untuk memuat ulang status.
     tokenStore.onSubscriptionLocked(() => void refreshSubscriptionLock())
@@ -85,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string, otpCode?: string) => {
     const tokens = await api.post<TokenResponse>('/api/auth/login', { email, password, otpCode })
+    clearOltOnusCache()
     tokenStore.setAccessToken(tokens.accessToken)
     tokenStore.setRefreshToken(tokens.refreshToken)
     setUser(tokens.user)
@@ -100,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     tokenStore.clear()
+    clearOltOnusCache()
     setUser(null)
   }, [])
 

@@ -20,13 +20,8 @@
 }
 
 .olt-device-onus h2,
-.olt-device-onus p,
-.olt-device-onus ul {
+.olt-device-onus p {
   margin: 0;
-}
-
-.olt-device-onus ul {
-  padding-inline-start: 1.25rem;
 }
 
 .olt-device-onus .workspace-callout {
@@ -50,6 +45,7 @@
   width: 100%;
 }
 
+.olt-device-onus__table,
 .olt-device-onus .table-card,
 .olt-device-onus .table-wrap {
   min-width: 0;
@@ -67,7 +63,7 @@
 
 .olt-device-onus .fui-DataGridRow {
   display: grid;
-  grid-template-columns: 5.5rem 10rem 10rem 7rem 8.5rem 8rem 8rem 8rem 12rem 12rem 11rem;
+  grid-template-columns: var(--olt-device-onus-columns);
 }
 
 .olt-device-onus .fui-DataGridCell,
