@@ -153,7 +153,7 @@ scope warehouse/area/site dan izin provenance; tidak ada collision count di body
 Uji SERIAL/MAC mencakup satu/dua/nol lokasi terlihat, multiple candidate tanpa flag
 CONFLICT, single candidate ber-flag CONFLICT, malformed dan unique visible/hidden.
 
-Gate final setelah seluruh koreksi:
+Gate koreksi awal, sebelum perbaikan inheritance transitif berikut:
 
 - Exact WarehouseMasterIT dua kali: **53 test,0 failure,0 skipped** setiap run.
 - Gabungan warehouse/inventory + NetworkEndToEndIT + ModularityTests:
@@ -170,3 +170,49 @@ Gate final setelah seluruh koreksi:
 
 Evidence koreksi: `.omo/evidence/warehouse-workorder-asset-provenance/task-7/corrections/`.
 Seluruh migrasi sebelum V174.10 tetap byte-identical. V175+ tetap milik task lain.
+
+## Inheritance transitif V174.11
+
+Site efektif adalah himpunan site non-null pada **self dan seluruh ancestor**:
+nol site berarti tidak terikat site (scope area/gudang tetap berlaku), satu site
+berarti inherited, lebih dari satu berarti tidak konsisten. NULL bukan pemutus
+inheritance. Rantai NULL-NULL-NULL, A-NULL-NULL, NULL-A-NULL dan A-NULL-A sah;
+A-NULL-B dan seluruh turunannya tidak sah, termasuk leaf dengan siteId NULL.
+
+M02 V174.11 menambah `inventory_location_topology_fence` dengan FORCE RLS dan
+revisi per tenant. Statement insert/update mengambil fence sebelum row locks;
+command HTTP mengambilnya sesudah cutover/IAM dan sebelum membaca scope/row/site.
+Revisi fence menutup write skew dari snapshot REPEATABLE READ/SERIALIZABLE yang
+stale dengan40001. Site owner tetap memakai row lock/FK/usage guard V174.10.
+
+Constraint deferred memeriksa keadaan akhir node yang berubah dan setiap
+descendant: site efektif unik, area sama, site/area cocok, tanpa cycle, maksimum31
+ancestor (32 node termasuk self). Validator sebenarnya memeriksa current tenant
+scope saat dipanggil dan saat commit; hasil validasi awal tidak menjadi credential
+untuk mengganti GUC setelahnya. HTTP menjalankan validator yang sama setelah save
+untuk memetakan konflik ke409, tanpa menghabiskan deferred check saat commit.
+Perubahan banyak row yang konsisten pada akhir transaksi tetap sah.
+
+Detail/list/search/replay/lookup menghitung site efektif independen dari siteId
+node yang diminta. Histori A-NULL-B-NULL yang sudah committed sebelum174.11 tetap
+tersimpan, tetapi conflict node dan null leaf sama-sama404/excluded. Tidak ada
+backfill destruktif, pemilihan salah satu site, atau pelonggaran AV7-01/03.
+
+Bukti final inheritance:
+
+- Failing-first10 kasus:4 inheritance sah lulus,6 kegagalan menunjukkan raw commit,
+  perubahan ancestor/cycle, HTTP status, dan visibility leaf historis.
+- Exact WarehouseMasterIT dua kali: **72 test,0 failure,0 skipped** setiap run.
+- Gabungan tasks01-07/schema/network/Modularity: **526 test,0 failure,0 skipped**.
+  Keluarga deferred LOCATION ditambahkan ke seluruh selective tenant-scope gates.
+- 4 race SQL/HTTP memakai barrier dan observasi blocking, tanpa sleep: contender
+  SQL23514 atau HTTP409, konflik ancestry final0. Snapshot stale40001; batas31/32
+  dan coherent multi-row replacement turut diuji.
+- Live JAR/non-owner PostgreSQL: raw A-NULL-B-NULL ditolak23514 pada commit,
+  kedua row rollback; HTTP A-NULL-B409. A-NULL-NULL tetap200 dan exact201 replay
+  sesudah SIGKILL/restart. Supplier response-loss tetap1 operation/1 supplier;
+  actor revoked403 tanpa original body.
+- Clean no-cache bootJar berhasil; V174.11 dan reader terbaru ada di artefak.
+  V174.10 dan seluruh migrasi sebelumnya tidak berubah; V175+ tidak digunakan.
+
+Evidence terbaru: `.omo/evidence/warehouse-workorder-asset-provenance/task-7/inheritance/`.
