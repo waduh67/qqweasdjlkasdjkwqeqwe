@@ -45,7 +45,10 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
             if (prior.actorId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
             if (prior.hash != canonical.hash || (id != null && prior.resourceId != id)) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
             if (prior.cutoverEpoch != cutover.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
-            if (kind == MasterKind.LOCATION) authorizeLocation(store.get(kind, prior.resourceId) as LocationSnapshot, current, allowed)
+            if (kind == MasterKind.LOCATION) {
+                authorizeLocation(store.get(kind, prior.resourceId) as LocationSnapshot, current, allowed)
+                authorizeLocation(mapper.readValue(prior.receipt.originalBody, LocationSnapshot::class.java), current, allowed)
+            }
             return prior.receipt
         }
         if (input is LocationInput) validateLocation(target, input, current, allowed, existing == null)

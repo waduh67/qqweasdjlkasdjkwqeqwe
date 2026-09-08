@@ -3,6 +3,8 @@ package com.duluin.ftth.inventory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.sql.SQLException
 import java.util.UUID
 
@@ -53,5 +55,24 @@ class WarehouseMasterITSite : WarehouseMasterHttpFixture() {
         assertThat(generateSequence<Throwable>(missing) { it.cause }.filterIsInstance<SQLException>().first().sqlState).isEqualTo("23503")
         val changed = assertThrows<RuntimeException> { fixture.transaction { sql("UPDATE site SET area_id=NULL WHERE id='$site'") } }
         assertThat(generateSequence<Throwable>(changed) { it.cause }.filterIsInstance<SQLException>().first().sqlState).isEqualTo("23514")
+    }
+
+    @ParameterizedTest @ValueSource(strings = ["MOVE", "DELETE"])
+    fun `AV7-02 replay authorizes original site even after master points to another site`(change: String) {
+        val token = tenant(); val original = site(token,"ORIGINAL"); val replacement = site(token,"REPLACEMENT")
+        val body = """{"code":"WH","name":"Warehouse","kind":"WAREHOUSE","siteId":"$original","areaId":"${area(token)}"}"""
+        val key = UUID.randomUUID().toString()
+        val first = request("POST", "/api/v1/warehouse/locations",token,body,key)
+        assertThat(first.status).isEqualTo(201)
+        val id = mapper.readTree(first.contentAsString).path("id").asString()
+        assertThat(request("PUT", "/api/v1/warehouse/locations/$id",token,body.replace(original,replacement).dropLast(1)+",\"expectedRevision\":0}").status).isEqualTo(200)
+        if(change=="DELETE") assertThat(request("DELETE", "/api/sites/$original",token).status).isEqualTo(204) else {
+            val hidden = mapper.readTree(request("POST", "/api/areas",token,"""{"code":"HIDDEN","name":"Hidden"}""").contentAsString).path("id").asString()
+            assertThat(request("PUT", "/api/sites/$original",token,siteBody("ORIGINAL",hidden)).status).isEqualTo(200)
+        }
+        assertThat(request("GET", "/api/v1/warehouse/locations/$id",token).status).isEqualTo(200)
+        val replay = request("POST", "/api/v1/warehouse/locations",token,body,key)
+        assertThat(replay.status).isEqualTo(404)
+        assertThat(replay.contentAsString).doesNotContain(original,id)
     }
 }
