@@ -73,13 +73,31 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
     }
 
     override fun lookup(serial: String, mac: String?, locations: AuthorityScope, areas: AuthorityScope, provenance: Boolean, sites: Map<UUID, UUID?>): IdentityLookupSnapshot = jdbc.execute { sql ->
-        val predicates = mutableListOf("asset.tenant_id=?", "(asset.canonical_serial=? OR asset.canonical_mac=?" +
-            if (provenance) " OR asset.canonical_serial_candidate=? OR asset.canonical_mac_candidate=?)" else ")")
+        val predicates = mutableListOf("(SELECT count(*) FROM matches)=1",
+            "NOT EXISTS (SELECT FROM claims WHERE state='CONFLICT')",
+            "(SELECT count(DISTINCT (source_table,source_id)) FROM candidates)<=1",
+            "NOT EXISTS (SELECT FROM candidates WHERE source_table<>'inventory_serialized_asset' OR source_id<>asset.id)",
+            """NOT EXISTS (SELECT FROM candidates WHERE canonical_value IS DISTINCT FROM
+                CASE identity_type WHEN 'SERIAL' THEN warehouse_canonical_serial(raw_value) ELSE warehouse_canonical_mac(raw_value) END)""",
+            """NOT (coalesce(asset.canonical_serial=request.serial OR asset.canonical_serial_candidate=request.serial,false) AND
+                warehouse_canonical_serial(asset.serial_number) IS DISTINCT FROM request.serial)""",
+            """NOT (coalesce(asset.canonical_mac=request.mac OR asset.canonical_mac_candidate=request.mac,false) AND
+                warehouse_canonical_mac(asset.mac_address) IS DISTINCT FROM request.mac)""")
         val values = mutableListOf<Any?>(sql.tenant, serial, mac)
-        if (provenance) { values += serial; values += mac } else predicates += "asset.warehouse_admission='VERIFIED'"
+        if (!provenance) predicates += "asset.warehouse_admission='VERIFIED'"
         scoped(predicates, values, "asset.location_id", locations); scoped(predicates, values, "location.area_id", areas)
         predicates += siteVisibility("location", values, sites)
-        val found = sql.query("SELECT asset.* FROM inventory_serialized_asset asset JOIN inventory_location location ON location.tenant_id=asset.tenant_id AND location.id=asset.location_id WHERE ${predicates.joinToString(" AND ")} ORDER BY asset.id LIMIT 2",
+        val found = sql.query("""WITH request AS (SELECT ?::uuid AS tenant,?::text AS serial,?::text AS mac),
+            matches AS MATERIALIZED (SELECT asset.* FROM inventory_serialized_asset asset CROSS JOIN request
+                WHERE asset.tenant_id=request.tenant AND (asset.canonical_serial=request.serial OR asset.canonical_serial_candidate=request.serial OR
+                    asset.canonical_mac=request.mac OR asset.canonical_mac_candidate=request.mac)),
+            claims AS MATERIALIZED (SELECT claim.* FROM inventory_identity_claim claim CROSS JOIN request WHERE claim.tenant_id=request.tenant AND
+                ((identity_type='SERIAL' AND canonical_value=request.serial) OR (identity_type='MAC' AND canonical_value=request.mac))),
+            candidates AS MATERIALIZED (SELECT candidate.* FROM inventory_identity_candidate candidate CROSS JOIN request WHERE candidate.tenant_id=request.tenant AND
+                (claim_id IN (SELECT id FROM claims) OR (identity_type='SERIAL' AND canonical_value=request.serial) OR (identity_type='MAC' AND canonical_value=request.mac)))
+            SELECT asset.* FROM matches asset CROSS JOIN request JOIN inventory_location location
+                ON location.tenant_id=asset.tenant_id AND location.id=asset.location_id
+            WHERE ${predicates.joinToString(" AND ")} ORDER BY asset.id LIMIT 1""",
             *values.toTypedArray()) { row -> IdentityLookupSnapshot(row.uuid("id"), row.optionalUuid("warehouse_sku_id"),
                 row.getString("serial_number"), row.getString("mac_address"), row.uuid("location_id"), row.getString("warehouse_admission") == "LEGACY_UNRESOLVED") }
         found.singleOrNull() ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
