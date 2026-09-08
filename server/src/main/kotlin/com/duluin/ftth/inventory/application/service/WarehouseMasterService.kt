@@ -129,7 +129,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         }
     }
 
-    private fun authorizeLocation(location: LocationSnapshot, current: CurrentAuthority, scope: AuthorityScope) {
+    internal fun authorizeLocation(location: LocationSnapshot, current: CurrentAuthority, scope: AuthorityScope) {
         if (!current.platformAdmin && scope is AuthorityScope.Restricted && location.id !in scope.ids) masterFailure(WarehouseErrorCode.NOT_FOUND)
         area(location.areaId, current)
         val visited = mutableSetOf<UUID>()
