@@ -4,6 +4,8 @@ Task07 menyediakan setup master, bukan receiving atau workflow stok task08+.
 API lama `/api/inventory` tidak mendapat writer baru dan mempertahankan bentuk
 array/count baca yang ada.
 
+Implementasi receiving task08 kini dijelaskan di [warehouse-receipts.md](warehouse-receipts.md).
+
 ## Endpoint dan izin
 
 | Resource | Baca | Create/update/archive |
