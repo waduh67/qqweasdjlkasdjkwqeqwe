@@ -9,7 +9,7 @@ import com.duluin.ftth.network.NetworkApi
 import com.duluin.ftth.network.OltPollingTarget
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.GponSnmpAdapter
-import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
+import com.duluin.ftth.snmp.HsgqSnmpAdapter
 import com.duluin.ftth.snmp.MibProfiles
 import com.duluin.ftth.snmp.OltAdapter
 import com.duluin.ftth.snmp.ProbeResult
@@ -194,7 +194,7 @@ class ServerSnmpPollingConfig {
 
     @Bean
     fun oltAdapterRegistry(): AdapterRegistry =
-        AdapterRegistry(MibProfiles.all().map { GponSnmpAdapter(it) } + HsgqEponSnmpAdapter())
+        AdapterRegistry(MibProfiles.all().map { GponSnmpAdapter(it) } + HsgqSnmpAdapter())
 
     /**
      * Pembuka sesi SNMP untuk jalur DIAGNOSTIK (lihat

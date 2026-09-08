@@ -24,12 +24,18 @@ import com.duluin.ftth.network.PonPortTopology
 import com.duluin.ftth.network.SiteRef
 import com.duluin.ftth.network.UpstreamPath
 import com.duluin.ftth.snmp.AdapterRegistry
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
+import com.duluin.ftth.snmp.HsgqSnmpAdapter
 import com.duluin.ftth.snmp.OidRole
 import com.duluin.ftth.snmp.OltAdapter
 import com.duluin.ftth.snmp.ProbeResult
+import com.duluin.ftth.snmp.SnmpReaderFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.NullSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 /**
@@ -44,6 +50,35 @@ import java.util.UUID
 class SnmpDiagnosticServiceTest {
 
     private val oltId = UuidV7.generate()
+
+    @ParameterizedTest
+    @ValueSource(strings = ["HSGQ-G01ID", "HSGQ-G01ID firmware 1.2.3", "hsgq-g01id"])
+    fun `diagnostic uses the GPON model plan from the greeting instead of the static EPON plan`(description: String) {
+        val probe = FakeProbe(systemDescription = description)
+        val adapter = HsgqSnmpAdapter(SnmpReaderFactory { _, _, _ -> error("Use the diagnostic probe only") })
+
+        val check = service(probe, vendor = "HSGQ", adapter = adapter).checkOidPlan(oltId)
+
+        assertThat(check.systemDescription).isEqualTo(description)
+        assertThat(check.oids.single { it.role == "SERIAL" }.oid).isEqualTo(HsgqSnmpAdapter.SERIAL_OID)
+        assertThat(check.oids.map { it.role }).contains("STATE", "CONFIG_STATE", "LAST_ON")
+        assertThat(probe.walkCalls.single()).contains(HsgqSnmpAdapter.SERIAL_OID)
+            .doesNotContain(HsgqEponSnmpAdapter.MAC_OID)
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = ["HSGQ-E04I", "HSGQ-G01IDX"])
+    fun `diagnostic retains EPON for other models or an absent description`(description: String?) {
+        val probe = FakeProbe(systemDescription = description)
+        val adapter = HsgqSnmpAdapter(SnmpReaderFactory { _, _, _ -> error("Use the diagnostic probe only") })
+
+        val check = service(probe, vendor = "HSGQ", adapter = adapter).checkOidPlan(oltId)
+
+        assertThat(check.oids.single { it.role == "SERIAL" }.oid).isEqualTo(HsgqEponSnmpAdapter.MAC_OID)
+        assertThat(probe.walkCalls.single()).contains(HsgqEponSnmpAdapter.MAC_OID)
+            .doesNotContain(HsgqSnmpAdapter.SERIAL_OID)
+    }
 
     @Test
     fun `menilai tiap peran OID — terbaca, tak terbaca, kosong, dan belum dipetakan`() {
@@ -214,9 +249,10 @@ class SnmpDiagnosticServiceTest {
         host: String? = "10.10.0.1",
         community: String? = "public",
         olt: OltPollingTarget? = OltPollingTarget(oltId, "OLT-01", vendor, host, community, snmpPort = 1161),
+        adapter: OltAdapter = FakeAdapter(),
     ) = SnmpDiagnosticService(
         networkApi = StubNetworkApi(olt),
-        adapterRegistry = AdapterRegistry(listOf(FakeAdapter())),
+        adapterRegistry = AdapterRegistry(listOf(adapter)),
         probe = probe,
     )
 
@@ -252,12 +288,13 @@ class SnmpDiagnosticServiceTest {
     private class FakeProbe(
         private val samples: Map<String, List<SnmpSample>> = emptyMap(),
         private val greetFailure: String? = null,
+        private val systemDescription: String? = "Fake OLT v1",
     ) : OltSnmpProbePort {
         val walkCalls = mutableListOf<List<String>>()
 
         override fun greet(target: SnmpProbeTarget): SnmpGreeting {
             greetFailure?.let { throw SnmpProbeFailure(it) }
-            return SnmpGreeting("Fake OLT v1", roundTripMillis = 12)
+            return SnmpGreeting(systemDescription, roundTripMillis = 12)
         }
 
         override fun walk(target: SnmpProbeTarget, rootOids: List<String>): Map<String, List<SnmpSample>> {

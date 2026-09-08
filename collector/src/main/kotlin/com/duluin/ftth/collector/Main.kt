@@ -11,7 +11,7 @@ import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
 import com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapter
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.GponSnmpAdapter
-import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
+import com.duluin.ftth.snmp.HsgqSnmpAdapter
 import com.duluin.ftth.snmp.MibProfiles
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
@@ -46,13 +46,12 @@ fun main() {
         simulatorRequested = env("FTTH_COLLECTOR_SIMULATOR", "false").toBoolean(),
     ).simulatorEnabled
 
-    // GPON (data-driven MibProfile) + EPON HSGQ (adapter tersendiri karena identitas MAC
-    // & join dua-tabel — lihat HsgqEponSnmpAdapter). Simulator memerankan tiap vendor.
+    // HSGQ memilih profil GPON/EPON dari sysDescr; simulator memerankan tiap vendor.
     val adapters = if (simulatorEnabled) {
         MibProfiles.all().map { SimulatorOltAdapter(vendor = it.vendor) } +
-            SimulatorOltAdapter(vendor = HsgqEponSnmpAdapter.VENDOR)
+            SimulatorOltAdapter(vendor = HsgqSnmpAdapter.VENDOR)
     } else {
-        MibProfiles.all().map { GponSnmpAdapter(it) } + HsgqEponSnmpAdapter()
+        MibProfiles.all().map { GponSnmpAdapter(it) } + HsgqSnmpAdapter()
     }
     val registry = AdapterRegistry(adapters)
 

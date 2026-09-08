@@ -26,7 +26,7 @@ import java.util.UUID
  *
  * Semua penilaian ada di sini, bukan di adapter maupun controller, supaya bisa diuji
  * tanpa perangkat: yang disuntik hanyalah [OltSnmpProbePort]. Yang dinilai adalah
- * [com.duluin.ftth.snmp.OltAdapter.oidPlan] milik adapter vendor itu sendiri — bukan
+ * [com.duluin.ftth.snmp.OltAdapter.oidPlanFor] milik adapter vendor itu sendiri — bukan
  * daftar OID yang disalin ulang di sini — sehingga hasil diagnosa selalu berbicara
  * tentang OID yang PERSIS dipakai polling.
  */
@@ -69,7 +69,7 @@ class SnmpDiagnosticService(
             )
         }
 
-        val plan = adapter.oidPlan
+        val plan = adapter.oidPlanFor(greeting.systemDescription)
         val oids = plan.mapNotNull { it.oid }.distinct()
         // Sekali walk untuk seluruh peran: selain lebih cepat, nilainya berasal dari saat
         // yang kurang lebih sama — persis seperti polling, sehingga yang terlihat di sini

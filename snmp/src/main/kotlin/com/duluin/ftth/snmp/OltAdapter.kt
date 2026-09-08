@@ -42,6 +42,14 @@ interface OltAdapter {
      * berpura-pura punya.
      */
     val oidPlan: List<OidRole> get() = emptyList()
+
+    /** Satu vendor dapat memakai keluarga MIB berbeda menurut identitas perangkat. */
+    fun oidPlanFor(systemDescription: String?): List<OidRole> = oidPlan
+
+    /** Indeks tabel tambahan ke indeks inventori; null untuk baris bukan ONU. */
+    fun inventoryIndex(index: String): String? = index
+
+    fun ontIdFrom(index: String): String? = null
 }
 
 /**
