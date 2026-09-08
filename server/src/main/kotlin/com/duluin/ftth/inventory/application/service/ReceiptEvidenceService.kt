@@ -27,13 +27,7 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
     fun upload(document: UUID, revision: Long, key: String, contentType: String, bytes: ByteArray): WarehouseOperationReceipt {
         receiptKey(key)
         if (revision !in 0 until Long.MAX_VALUE || bytes.isEmpty() || bytes.size > 15728640) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val matches = when (contentType) {
-            "image/png" -> bytes.take(8).toByteArray().contentEquals(byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10))
-            "image/jpeg" -> bytes.take(3).toByteArray().contentEquals(byteArrayOf(-1, -40, -1))
-            "application/pdf" -> bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray())
-            else -> false
-        }
-        if (!matches) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        validateReceiptEvidence(contentType, bytes)
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.receipt.manage")
@@ -89,4 +83,15 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
         return result
     }
     private fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+}
+
+internal fun validateReceiptEvidence(contentType: String, bytes: ByteArray) {
+    if (bytes.isEmpty() || bytes.size > 15728640) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+    val matches = when (contentType) {
+        "image/png" -> bytes.take(8).toByteArray().contentEquals(byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10))
+        "image/jpeg" -> bytes.take(3).toByteArray().contentEquals(byteArrayOf(-1, -40, -1))
+        "application/pdf" -> bytes.take(5).toByteArray().contentEquals("%PDF-".toByteArray())
+        else -> false
+    }
+    if (!matches) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
 }
