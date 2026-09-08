@@ -9,7 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
 class WarehousePdfTopologyTest {
-    @ParameterizedTest @ValueSource(strings = ["RAW_GAP", "UNINDEXED_OBJECT", "STREAM_LENGTH", "GENERATION", "FALSE_STARTXREF"])
+    @ParameterizedTest @ValueSource(strings = ["RAW_GAP", "UNINDEXED_OBJECT", "STREAM_LENGTH", "GENERATION", "FALSE_STARTXREF", "DUPLICATE_FOOTER", "BAD_FREE_GENERATION", "BAD_SIZE"])
     fun `complete topology rejects gaps unindexed spans lengths and reference disagreements`(kind: String) {
         val bytes = when (kind) {
             "RAW_GAP" -> ReceiptPdfSyntaxFixtures.rawGap()
@@ -17,6 +17,9 @@ class WarehousePdfTopologyTest {
             "STREAM_LENGTH" -> ReceiptPdfSyntaxFixtures.classic("q Q").toString(Charsets.ISO_8859_1).replace("/Length 3", "/Length 2").toByteArray(Charsets.ISO_8859_1)
             "GENERATION" -> ReceiptEvidenceFixtures.pdf().toString(Charsets.US_ASCII).replace("4 0 obj", "4 1 obj").toByteArray()
             "FALSE_STARTXREF" -> ReceiptEvidenceFixtures.pdf().toString(Charsets.US_ASCII).replace("startxref\n272", "startxref\n271").toByteArray()
+            "DUPLICATE_FOOTER" -> ReceiptEvidenceFixtures.pdf() + "startxref\n272\n%%EOF\n".toByteArray()
+            "BAD_FREE_GENERATION" -> ReceiptEvidenceFixtures.pdf().toString(Charsets.US_ASCII).replace("0000000000 65535 f", "0000000000 00000 f").toByteArray()
+            "BAD_SIZE" -> ReceiptEvidenceFixtures.pdf().toString(Charsets.US_ASCII).replace("/Size 5", "/Size 6").toByteArray()
             else -> error("Unknown fixture")
         }
         assertThatThrownBy { validate(bytes) }.isInstanceOfAny(IllegalArgumentException::class.java, IllegalStateException::class.java, java.io.IOException::class.java)

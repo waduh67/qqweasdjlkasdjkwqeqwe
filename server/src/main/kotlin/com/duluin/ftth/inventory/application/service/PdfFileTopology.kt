@@ -79,11 +79,21 @@ internal object PdfFileTopology {
             val section = sections.getValue(offset)
             return section.hybrid?.let { sections.getValue(it).entries[number] } ?: section.entries[number] ?: section.previous?.let { lookup(it, number) }
         }
+        val root = sections.getValue(footers.last())
+        require(root.dictionary.integer("Size") == Math.addExact(sections.values.flatMap { it.entries.keys }.max(), 1))
+        lookup(root.offset, 0)?.let { require(it.type == 0) }
         val covered = mutableSetOf<Int>()
         val members = mutableMapOf<Int, List<Long>>()
         sections.values.forEach { section -> section.entries.forEach { (number, entry) ->
             when (entry.type) {
-                0 -> Unit
+                0 -> {
+                    require(entry.location in 0 until section.dictionary.integer("Size"))
+                    if (number == 0L) {
+                        val width = (section.dictionary.values["W"] as? PdfArray)?.values?.get(2)?.let { (it as PdfNumber).integer() } ?: 2L
+                        val sentinel = when (width) { 0L -> 0; 1L -> 255; else -> 65535 }
+                        require(entry.generationOrIndex == sentinel)
+                    }
+                }
                 1 -> {
                     require(entry.location in 0 until section.offset.toLong() || entry.location == section.offset.toLong())
                     val target = objects[entry.location.toInt()] ?: error("Xref does not address an object header")
