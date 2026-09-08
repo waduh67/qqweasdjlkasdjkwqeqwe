@@ -21,7 +21,7 @@ class WarehouseHttpErrors {
     fun contract(error: WarehouseContractException) = ResponseEntity.status(error.error.code.httpStatus).body(error.error)
 
     @ExceptionHandler(JacksonException::class, ValidationException::class, HttpMessageNotReadableException::class,
-        MissingRequestValueException::class, MethodArgumentTypeMismatchException::class)
+        MissingRequestValueException::class, MethodArgumentTypeMismatchException::class, org.springframework.web.multipart.MultipartException::class)
     fun malformed(error: Exception) = response(WarehouseErrorCode.MALFORMED_REQUEST)
 
     @ExceptionHandler(AccessDeniedException::class)
