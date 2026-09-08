@@ -23,8 +23,7 @@ data class ReceiptInspectionInput(val lineId: UUID, val stockIdentityId: UUID, v
 data class ReceiptPutawayInput(override val expectedRevision: Long, val destinationLocationId: UUID,
     val lines: List<ReceiptPutawayLine>) : ReceiptInput
 data class ReceiptPutawayLine(val lineId: UUID, val stockIdentityId: UUID, val quantityBase: String, val baseUnit: WarehouseBaseUnit)
-data class OpeningBalanceInput(val migrationReference: String, val sourceSnapshot: String, val cutoff: Instant,
-    val evidenceDocumentId: UUID, val evidenceId: UUID)
+data class OpeningBalanceInput(val migrationReference: String, val sourceSnapshot: String, val cutoff: Instant)
 
 data class ReceiptIntake(val supplier: SupplierSnapshot, val externalReference: String,
     val source: LocationSnapshot, val inspection: LocationSnapshot, val lines: List<ReceiptIntakeLine>)
