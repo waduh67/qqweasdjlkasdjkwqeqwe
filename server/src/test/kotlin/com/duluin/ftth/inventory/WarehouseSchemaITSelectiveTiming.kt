@@ -69,7 +69,7 @@ class WarehouseSchemaITSelectiveTiming {
     }
 
     @ParameterizedTest
-    @EnumSource(value=WarehouseTimingFamily::class,names=["PROVENANCE","SOURCE","CLAIM","ORIGIN","CONSERVATION","USAGE","CAPACITY"])
+    @EnumSource(value=WarehouseTimingFamily::class,names=["PROVENANCE","SOURCE","CLAIM","ORIGIN","CONSERVATION","USAGE","CAPACITY","LOCATION"])
     internal fun `invalid data fails when its actual invariant is forced immediate`(family: WarehouseTimingFamily) {
         WarehouseTimingFixture(database,family.serial).use { fixture ->
             fixture.prepare(family,false)

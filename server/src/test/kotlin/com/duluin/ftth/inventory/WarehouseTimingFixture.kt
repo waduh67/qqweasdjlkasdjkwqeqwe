@@ -13,6 +13,7 @@ internal enum class WarehouseTimingFamily(val constraint: String, val function: 
     USAGE("warehouse_usage_postings", "warehouse_usage_postings_guard", invalidState = "23503"),
     CAPACITY("warehouse_lot_root_capacity", "warehouse_check_lot_root_capacity"),
     SCOPE("warehouse_aaa_deferred_tenant_scope", "warehouse_deferred_scope_guard"),
+    LOCATION("warehouse_location_tree_consistent", "warehouse_location_tree_guard"),
 }
 
 internal class WarehouseTimingFixture(database: WarehouseSchemaDatabase, serial: Boolean) : AutoCloseable {
@@ -59,6 +60,15 @@ internal class WarehouseTimingFixture(database: WarehouseSchemaDatabase, serial:
                 else sql("INSERT INTO inventory_segment(id,tenant_id,sku_id,lot_id,kind,base_unit,quantity_base) VALUES ('${UUID.randomUUID()}','$tenant','$sku','$lot','REEL','MM',1)")
             }
             WarehouseTimingFamily.SCOPE -> sql("UPDATE inventory_balance_projection SET revision=1 WHERE stock_identity_id='$segment'")
+            WarehouseTimingFamily.LOCATION -> {
+                if (valid) sql("UPDATE inventory_location SET name='Updated',revision=revision+1 WHERE id='$location'") else {
+                    val first=UUID.randomUUID(); val second=UUID.randomUUID(); val bridge=UUID.randomUUID()
+                    sql("INSERT INTO site(id,tenant_id,code,name,location) VALUES ('$first','$tenant','AA','A',ST_SetSRID(ST_MakePoint(1,1),4326)),('$second','$tenant','BB','B',ST_SetSRID(ST_MakePoint(1,1),4326))")
+                    sql("INSERT INTO inventory_location(id,tenant_id,code,kind,parent_location_id) VALUES ('$bridge','$tenant','bridge','BIN','$location')")
+                    sql("INSERT INTO inventory_location(id,tenant_id,code,kind,parent_location_id,site_id) VALUES ('${UUID.randomUUID()}','$tenant','leaf','BIN','$bridge','$second')")
+                    sql("UPDATE inventory_location SET site_id='$first',revision=revision+1 WHERE id='$location'")
+                }
+            }
         }
     }
 
