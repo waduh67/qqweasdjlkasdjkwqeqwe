@@ -6,10 +6,12 @@ import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.workorder.WorkOrderAssigned
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
 import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
@@ -60,11 +62,11 @@ class WorkOrderService(
 
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
-        commandFence("workorder.order.create")
-        requireArea(command.areaId)
+        val current = commandFence("workorder.order.create")
+        requireArea(command.areaId, current)
         requireCustomerExists(command.customerId)
         command.assignees.forEach { requireActiveTechnician(it) }
-        val actor = currentUser.current()
+        val actor = current.fence.identity
         val workOrder = WorkOrder.open(
             tenantId = actor.tenantId,
             type = command.type,
@@ -87,10 +89,10 @@ class WorkOrderService(
 
     @Transactional
     override fun update(id: UUID, command: UpdateWorkOrderCommand): WorkOrderView {
-        commandFence("workorder.order.update")
-        requireArea(command.areaId)
+        val current = commandFence("workorder.order.update")
+        val workOrder = require(id, current)
+        requireArea(command.areaId, current)
         requireCustomerExists(command.customerId)
-        val workOrder = require(id)
         workOrder.updateDetails(
             newTitle = command.title,
             newDescription = command.description,
@@ -100,19 +102,18 @@ class WorkOrderService(
             newAreaId = command.areaId,
             newScheduledAt = command.scheduledAt,
             at = Instant.now(),
-            actorId = currentUser.current().userId,
+            actorId = current.fence.identity.userId,
         )
         return repository.save(workOrder).toView()
     }
 
     @Transactional
     override fun assign(id: UUID, technicianIds: Set<UUID>): WorkOrderView {
-        commandFence("workorder.order.assign")
+        val current = commandFence("workorder.order.assign")
         if (technicianIds.isEmpty()) throw ConflictException("Minimal satu teknisi harus ditugaskan")
-        val workOrder = require(id)
-        requireArea(workOrder)
+        val workOrder = require(id, current)
         technicianIds.forEach { requireActiveTechnician(it) }
-        workOrder.assign(technicianIds, Instant.now(), currentUser.current().userId)
+        workOrder.assign(technicianIds, Instant.now(), current.fence.identity.userId)
         val saved = repository.save(workOrder)
         publishAssigned(saved)
         return saved.toView()
@@ -120,26 +121,25 @@ class WorkOrderService(
 
     @Transactional
     override fun start(id: UUID): WorkOrderView {
-        commandFence("workorder.order.update", "workorder.order.field")
-        val workOrder = require(id)
-        requireArea(workOrder)
-        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
-        workOrder.start(Instant.now(), currentUser.current().userId)
+        val current = commandFence("workorder.order.update", "workorder.order.field")
+        val workOrder = require(id, current)
+        requireFieldAccess(workOrder, "workorder.order.update", current)
+        workOrder.start(Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
 
+    @Transactional
     override fun authorizeComplete(id: UUID) {
-        val workOrder = require(id)
-        requireArea(workOrder)
-        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
+        val current = commandFence("workorder.order.close", "workorder.order.field")
+        val workOrder = require(id, current)
+        requireFieldAccess(workOrder, "workorder.order.close", current)
     }
 
     @Transactional
     override fun complete(id: UUID, resolutionNote: String?, packet: ProofOfWorkPacket): WorkOrderView {
-        commandFence("workorder.order.close", "workorder.order.field")
-        val workOrder = require(id)
-        requireArea(workOrder)
-        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
+        val current = commandFence("workorder.order.close", "workorder.order.field")
+        val workOrder = require(id, current)
+        requireFieldAccess(workOrder, "workorder.order.close", current)
         val authoritativeArtifacts = HashMap<UUID, ProofArtifactKind>()
         evidence.listByWorkOrder(id).forEach { item ->
             ProofArtifactCompatibility.fromEvidence(item.kind)?.let { kind -> authoritativeArtifacts[item.id] = kind }
@@ -152,35 +152,32 @@ class WorkOrderService(
             throw ConflictException("Proof of Work sudah berubah; muat ulang bukti sebelum mengirim")
         }
         ProofArtifactCompatibility.requireMatching(packet.artifacts, authoritativeArtifacts)
-        workOrder.complete(resolutionNote, packet, Instant.now(), currentUser.current().userId)
+        workOrder.complete(resolutionNote, packet, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
 
     @Transactional
     override fun cancel(id: UUID, reason: String?): WorkOrderView {
-        commandFence("workorder.order.close")
-        val workOrder = require(id)
-        workOrder.cancel(reason, Instant.now(), currentUser.current().userId)
+        val current = commandFence("workorder.order.close")
+        val workOrder = require(id, current)
+        workOrder.cancel(reason, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
 
     @Transactional
     override fun recordOptical(id: UUID, command: RecordOpticalCommand): WorkOrderView {
-        commandFence("workorder.order.update", "workorder.order.field")
-        val workOrder = require(id)
-        requireArea(workOrder)
-        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
-        workOrder.recordOptical(command.rxBeforeDbm, command.rxAfterDbm, Instant.now(), currentUser.current().userId)
+        val current = commandFence("workorder.order.update", "workorder.order.field")
+        val workOrder = require(id, current)
+        requireFieldAccess(workOrder, "workorder.order.update", current)
+        workOrder.recordOptical(command.rxBeforeDbm, command.rxAfterDbm, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
 
     @Transactional
     override fun approve(id: UUID, note: String?): WorkOrderView {
-        commandFence("workorder.order.approve")
-        val workOrder = require(id)
-        requireActiveActor()
-        requireArea(workOrder)
-        workOrder.approve(note, Instant.now(), currentUser.current().userId)
+        val current = commandFence("workorder.order.approve")
+        val workOrder = require(id, current)
+        workOrder.approve(note, Instant.now(), current.fence.identity.userId)
         val saved = repository.save(workOrder)
         events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER")))
         return saved.toView()
@@ -188,18 +185,16 @@ class WorkOrderService(
 
     @Transactional
     override fun reject(id: UUID, reason: String): WorkOrderView {
-        commandFence("workorder.order.approve")
-        val workOrder = require(id)
-        requireActiveActor()
-        requireArea(workOrder)
-        workOrder.reject(reason, Instant.now(), currentUser.current().userId)
+        val current = commandFence("workorder.order.approve")
+        val workOrder = require(id, current)
+        workOrder.reject(reason, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
 
     @Transactional
     override fun delete(id: UUID) {
-        commandFence("workorder.order.update")
-        val workOrder = require(id)
+        val current = commandFence("workorder.order.update")
+        val workOrder = require(id, current)
         // Sekali ditugaskan, work order punya jejak (assignment/timeline) yang tak boleh
         // hilang diam-diam; yang belum tersentuh boleh dihapus, sisanya dibatalkan saja.
         if (workOrder.status != WorkOrderStatus.DRAFT) {
@@ -208,10 +203,11 @@ class WorkOrderService(
         repository.deleteById(id)
     }
 
-    private fun commandFence(vararg permissions: String) {
+    private fun commandFence(vararg permissions: String): CurrentAuthority {
         cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
         val current = authority.lockCurrent()
         if (!current.platformAdmin && permissions.none { it in current.permissions }) throw AccessDeniedException("Current work order permission required")
+        return current
     }
 
     override fun search(filter: WorkOrderFilter, page: PageRequest): Page<WorkOrderView> {
@@ -289,6 +285,16 @@ class WorkOrderService(
     private fun require(id: UUID): WorkOrder =
         repository.findById(id) ?: throw NotFoundException("Work order $id tidak ditemukan")
 
+    private fun require(id: UUID, current: CurrentAuthority): WorkOrder = require(id).also { requireArea(it.areaId, current) }
+
+    private fun requireArea(areaId: UUID?, current: CurrentAuthority) {
+        current.fence.assertHeld()
+        val scope = current.areaScope
+        if (areaId != null && scope is AuthorityScope.Restricted && areaId !in scope.ids) {
+            throw AccessDeniedException("Work order di luar area Anda")
+        }
+    }
+
     private fun proofRevision(revisionIds: Set<UUID>): String = java.security.MessageDigest.getInstance("SHA-256")
         .digest(revisionIds.sortedBy { it.toString() }.joinToString("|").toByteArray())
         .joinToString("") { "%02x".format(it) }
@@ -309,21 +315,21 @@ class WorkOrderService(
     /**
      * Pengerjaan lapangan dibatasi kepemilikan: pemegang izin dispatcher boleh aksi
      * WO mana pun, sedangkan teknisi lapangan (hanya izin `field`) hanya boleh WO
-     * yang ditugaskan ke dirinya. Platform admin lolos otomatis via [hasPermission].
+     * yang ditugaskan ke dirinya. Seluruh keputusan memakai authority yang dipagar.
      */
-    private fun requireFieldAccess(workOrder: WorkOrder, dispatcherPermission: String) {
-        val actor = currentUser.current()
-        requireActiveActor()
-        requireArea(workOrder)
-        if (actor.hasPermission(dispatcherPermission)) return
-        if (!actor.hasPermission("workorder.order.field") || !iamApi.findUser(actor.userId).let { it?.technician == true } || !workOrder.isAssignedTo(actor.userId)) {
+    private fun requireFieldAccess(workOrder: WorkOrder, dispatcherPermission: String, current: CurrentAuthority) {
+        current.fence.assertHeld()
+        if (current.platformAdmin || dispatcherPermission in current.permissions) return
+        val actor = current.fence.identity
+        val technician = iamApi.findUser(actor.userId)
+        if ("workorder.order.field" !in current.permissions || technician?.active != true || !technician.technician || !workOrder.isAssignedTo(actor.userId)) {
             throw AccessDeniedException("Work order ${workOrder.code} tidak ditugaskan ke Anda")
         }
     }
 
     private fun requireReadAccess(workOrder: WorkOrder) {
         requireActiveActor()
-        requireArea(workOrder)
+        requireReadArea(workOrder.areaId)
         val actor = currentUser.current()
         if (actor.hasPermission("workorder.order.view")) return
         if (actor.hasPermission("workorder.order.field") && iamApi.findUser(actor.userId)?.technician == true && workOrder.isAssignedTo(actor.userId)) return
@@ -336,9 +342,7 @@ class WorkOrderService(
         }
     }
 
-    private fun requireArea(workOrder: WorkOrder) = requireArea(workOrder.areaId)
-
-    private fun requireArea(areaId: UUID?) {
+    private fun requireReadArea(areaId: UUID?) {
         val scope = currentUser.current().areaScope()
         if (scope != null && (areaId == null || areaId !in scope)) {
             throw AccessDeniedException("Work order di luar area Anda")
