@@ -90,6 +90,7 @@ tasks.withType<Test> {
         events("passed", "skipped", "failed")
     }
     if (providers.environmentVariable("WAREHOUSE_QA").orNull == "true") {
+        systemProperty("warehouse.test.classpath", sourceSets.test.get().runtimeClasspath.asPath)
         outputs.upToDateWhen { false }
         outputs.cacheIf { false }
         filter.isFailOnNoMatchingTests = true
