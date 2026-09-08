@@ -11,7 +11,7 @@ import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.domain.model.*
-import com.duluin.ftth.network.NetworkApi
+import com.duluin.ftth.network.SiteReferenceApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.module.kotlin.jacksonObjectMapper
@@ -20,7 +20,7 @@ import java.util.UUID
 @Service
 class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val store: WarehouseMasterStore,
-    private val operations: WarehouseOperationStore, private val iam: IamApi, private val network: NetworkApi) {
+    private val operations: WarehouseOperationStore, private val iam: IamApi, private val sites: SiteReferenceApi) {
     private val mapper = jacksonObjectMapper()
 
     fun execute(kind: MasterKind, action: MasterAction, id: UUID?, input: MasterInput, key: String): WarehouseOperationReceipt {
@@ -85,8 +85,9 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         val current = authority.lockCurrent(); permission(current, "${kind.permission}.view")
         if (filter.page < 0 || filter.size !in 1..100 || filter.sort !in setOf("code", "name") || filter.direction !in setOf("asc", "desc") ||
             listOfNotNull(filter.search, filter.code, filter.name).any { it.length > 200 }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
         return store.list(kind, filter, if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence),
-            if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope)
+            areas, if (kind == MasterKind.LOCATION) sites.visibleAreas(areas) else emptyMap())
     }
 
     @Transactional
@@ -97,7 +98,8 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         val mac = try { MacIdentity.parse(value).canonical.replace(":", "") } catch (_: com.duluin.ftth.common.domain.error.ValidationException) { null }
         return store.lookup(serial, mac, if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence),
             if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope,
-            current.platformAdmin || "inventory.provenance.view" in current.permissions)
+            current.platformAdmin || "inventory.provenance.view" in current.permissions,
+            sites.visibleAreas(if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope))
     }
 
     private fun permission(current: CurrentAuthority, permission: String) {
@@ -124,9 +126,21 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
     }
 
     private fun authorizeLocation(location: LocationSnapshot, current: CurrentAuthority, scope: AuthorityScope) {
-        if (current.platformAdmin) return
-        if (scope is AuthorityScope.Restricted && location.id !in scope.ids) masterFailure(WarehouseErrorCode.NOT_FOUND)
+        if (!current.platformAdmin && scope is AuthorityScope.Restricted && location.id !in scope.ids) masterFailure(WarehouseErrorCode.NOT_FOUND)
         area(location.areaId, current)
+        val visited = mutableSetOf<UUID>()
+        var ancestor: LocationSnapshot? = location
+        while (ancestor != null) {
+            if (!visited.add(ancestor.id) || visited.size > 32) masterFailure(WarehouseErrorCode.NOT_FOUND)
+            if (ancestor.areaId != location.areaId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+            ancestor.siteId?.let { siteId ->
+                val site = sites.lock(siteId) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+                area(site.areaId, current)
+                if (site.areaId != location.areaId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+                if (location.siteId != null && location.siteId != siteId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+            }
+            ancestor = ancestor.parentLocationId?.let { store.get(MasterKind.LOCATION, it) as LocationSnapshot }
+        }
     }
 
     private fun area(id: UUID?, current: CurrentAuthority) {
@@ -138,7 +152,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         area(input.areaId, current)
         if (input.areaId != null && iam.areasByIds(setOf(input.areaId)).isEmpty()) masterFailure(WarehouseErrorCode.NOT_FOUND)
         if (input.siteId != null) {
-            val site = network.findSite(input.siteId) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+            val site = sites.lock(input.siteId) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
             area(site.areaId, current)
             if (site.areaId != input.areaId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         }
@@ -154,6 +168,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
             authorizeLocation(location, current, scope)
             if (location.state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             if (location.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN) || location.areaId != input.areaId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            if (input.siteId != null && location.siteId != null && input.siteId != location.siteId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             parent = location.parentLocationId
         }
         if (creating && input.parentLocationId == null && !current.platformAdmin && current.areaScope is AuthorityScope.Restricted && input.areaId == null) masterFailure(WarehouseErrorCode.FORBIDDEN)

@@ -7,9 +7,9 @@ import java.util.UUID
 
 interface WarehouseMasterStore {
     fun get(kind: MasterKind, id: UUID, lock: Boolean = false): MasterSnapshot
-    fun list(kind: MasterKind, filter: MasterFilter, locations: AuthorityScope, areas: AuthorityScope): WarehousePage<MasterSnapshot>
+    fun list(kind: MasterKind, filter: MasterFilter, locations: AuthorityScope, areas: AuthorityScope, sites: Map<UUID, UUID?>): WarehousePage<MasterSnapshot>
     fun save(kind: MasterKind, id: UUID, input: MasterInput, existing: MasterSnapshot?): MasterSnapshot
     fun hasReferences(kind: MasterKind, id: UUID): Boolean
     fun grantCreator(location: UUID, actor: UUID, epoch: Long)
-    fun lookup(serial: String, mac: String?, locations: AuthorityScope, areas: AuthorityScope, provenance: Boolean): IdentityLookupSnapshot
+    fun lookup(serial: String, mac: String?, locations: AuthorityScope, areas: AuthorityScope, provenance: Boolean, sites: Map<UUID, UUID?>): IdentityLookupSnapshot
 }

@@ -17,7 +17,7 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
         }.singleOrNull() ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
     }
 
-    override fun list(kind: MasterKind, filter: MasterFilter, locations: AuthorityScope, areas: AuthorityScope): WarehousePage<MasterSnapshot> = jdbc.execute { sql ->
+    override fun list(kind: MasterKind, filter: MasterFilter, locations: AuthorityScope, areas: AuthorityScope, sites: Map<UUID, UUID?>): WarehousePage<MasterSnapshot> = jdbc.execute { sql ->
         val predicates = mutableListOf("tenant_id=?")
         val values = mutableListOf<Any?>(sql.tenant)
         fun contains(column: String, value: String?) {
@@ -28,10 +28,11 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
         if (filter.state != null) { predicates += "state=?"; values += filter.state.name }
         if (kind == MasterKind.LOCATION) {
             scoped(predicates, values, "id", locations); scoped(predicates, values, "area_id", areas)
+            predicates += siteVisibility("master", values, sites)
         }
         val where = predicates.joinToString(" AND ")
-        val total = requireNotNull(sql.value("SELECT count(*) FROM ${kind.table} WHERE $where", *values.toTypedArray())).toLong()
-        val rows = sql.query("SELECT * FROM ${kind.table} WHERE $where ORDER BY ${filter.sort} ${filter.direction},id ASC LIMIT ? OFFSET ?",
+        val total = requireNotNull(sql.value("SELECT count(*) FROM ${kind.table} master WHERE $where", *values.toTypedArray())).toLong()
+        val rows = sql.query("SELECT * FROM ${kind.table} master WHERE $where ORDER BY ${filter.sort} ${filter.direction},id ASC LIMIT ? OFFSET ?",
             *values.toTypedArray(), filter.size, filter.page.toLong() * filter.size) { snapshot(kind, it) }
         WarehousePage(rows, filter.page, filter.size, total)
     }
@@ -71,16 +72,29 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
         Unit
     }
 
-    override fun lookup(serial: String, mac: String?, locations: AuthorityScope, areas: AuthorityScope, provenance: Boolean): IdentityLookupSnapshot = jdbc.execute { sql ->
+    override fun lookup(serial: String, mac: String?, locations: AuthorityScope, areas: AuthorityScope, provenance: Boolean, sites: Map<UUID, UUID?>): IdentityLookupSnapshot = jdbc.execute { sql ->
         val predicates = mutableListOf("asset.tenant_id=?", "(asset.canonical_serial=? OR asset.canonical_mac=?" +
             if (provenance) " OR asset.canonical_serial_candidate=? OR asset.canonical_mac_candidate=?)" else ")")
         val values = mutableListOf<Any?>(sql.tenant, serial, mac)
         if (provenance) { values += serial; values += mac } else predicates += "asset.warehouse_admission='VERIFIED'"
         scoped(predicates, values, "asset.location_id", locations); scoped(predicates, values, "location.area_id", areas)
+        predicates += siteVisibility("location", values, sites)
         val found = sql.query("SELECT asset.* FROM inventory_serialized_asset asset JOIN inventory_location location ON location.tenant_id=asset.tenant_id AND location.id=asset.location_id WHERE ${predicates.joinToString(" AND ")} ORDER BY asset.id LIMIT 2",
             *values.toTypedArray()) { row -> IdentityLookupSnapshot(row.uuid("id"), row.optionalUuid("warehouse_sku_id"),
                 row.getString("serial_number"), row.getString("mac_address"), row.uuid("location_id"), row.getString("warehouse_admission") == "LEGACY_UNRESOLVED") }
         found.singleOrNull() ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+    }
+
+    private fun siteVisibility(alias: String, values: MutableList<Any?>, sites: Map<UUID, UUID?>): String {
+        values += tools.jackson.module.kotlin.jacksonObjectMapper().writeValueAsString(sites)
+        return """NOT EXISTS (WITH RECURSIVE ancestors AS (
+            SELECT id,parent_location_id,site_id,area_id FROM inventory_location WHERE tenant_id=$alias.tenant_id AND id=$alias.id
+            UNION SELECT parent.id,parent.parent_location_id,parent.site_id,parent.area_id FROM inventory_location parent
+                JOIN ancestors child ON parent.id=child.parent_location_id WHERE parent.tenant_id=$alias.tenant_id)
+            SELECT FROM ancestors WHERE area_id IS DISTINCT FROM $alias.area_id OR
+                (site_id IS NOT NULL AND $alias.site_id IS NOT NULL AND site_id<>$alias.site_id) OR
+                (site_id IS NOT NULL AND NOT EXISTS (SELECT FROM jsonb_each_text(CAST(? AS jsonb)) visible
+                    WHERE visible.key=site_id::text AND visible.value IS NOT DISTINCT FROM area_id::text)))"""
     }
 
     private fun scoped(predicates: MutableList<String>, values: MutableList<Any?>, column: String, scope: AuthorityScope) {
