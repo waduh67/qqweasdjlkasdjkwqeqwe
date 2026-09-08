@@ -5,10 +5,10 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
 internal object ReceiptEvidenceFixtures {
-    fun pdf(): ByteArray {
+    fun pdf(catalogExtra: String = ""): ByteArray {
         val text = StringBuilder("%PDF-1.4\n")
         val offsets = mutableListOf<Int>()
-        val objects = listOf("<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        val objects = listOf("<< /Type /Catalog /Pages 2 0 R $catalogExtra >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> /Contents 4 0 R >>",
             "<< /Length 4 >>\nstream\nq\nQ\nendstream")
         objects.forEachIndexed { index, body -> offsets += text.length; text.append("${index + 1} 0 obj\n$body\nendobj\n") }

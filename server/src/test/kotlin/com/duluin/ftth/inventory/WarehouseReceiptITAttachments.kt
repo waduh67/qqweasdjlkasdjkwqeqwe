@@ -28,7 +28,7 @@ class WarehouseReceiptITAttachments : WarehouseReceiptHttpFixture() {
         val setup = setupReceipt()
         val draft = draft(setup, """{"skuId":"${setup.cable}","quantityBase":"1000000","lotCode":"R1"}""")
         val id = draft.path("id").asString()
-        val bytes = "%PDF-1.4\nreceipt proof\n%%EOF".toByteArray()
+        val bytes = ReceiptEvidenceFixtures.pdf()
         fun upload(type: String, data: ByteArray = bytes, key: String = "attachment-key") = mvc.perform(multipart("/api/v1/warehouse/receipts/$id/attachments")
             .file(MockMultipartFile("file", "proof.pdf", type, data)).param("expectedRevision", "0")
             .header("Authorization", "Bearer ${setup.token}").header("Idempotency-Key", key)).andReturn().response

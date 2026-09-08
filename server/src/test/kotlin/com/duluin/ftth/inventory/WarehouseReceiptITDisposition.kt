@@ -19,7 +19,7 @@ class WarehouseReceiptITDisposition : WarehouseReceiptHttpFixture() {
         val id = draft.path("id").asString()
         transition(setup, id, "receive", """{"expectedRevision":0}""")
         val upload = mvc.perform(multipart("/api/v1/warehouse/receipts/$id/attachments")
-            .file(MockMultipartFile("file", "evidence.pdf", "application/pdf", "%PDF-1.4\ninspection\n%%EOF".toByteArray()))
+            .file(MockMultipartFile("file", "evidence.pdf", "application/pdf", ReceiptEvidenceFixtures.pdf()))
             .param("expectedRevision", "1").header("Idempotency-Key", "inspection-proof")
             .header("Authorization", "Bearer ${setup.token}")).andReturn().response
         assertThat(upload.status).isEqualTo(201)

@@ -65,7 +65,7 @@ class WarehouseReceiptITInspectionGuards : WarehouseReceiptHttpFixture() {
 
     private fun proof(setup: Setup, id: String, revision: Int): String {
         val response = mvc.perform(multipart("/api/v1/warehouse/receipts/$id/attachments")
-            .file(MockMultipartFile("file", "proof.pdf", "application/pdf", "%PDF-1.4\nproof\n%%EOF".toByteArray()))
+            .file(MockMultipartFile("file", "proof.pdf", "application/pdf", ReceiptEvidenceFixtures.pdf()))
             .param("expectedRevision", revision.toString()).header("Idempotency-Key", UUID.randomUUID().toString())
             .header("Authorization", "Bearer ${setup.token}")).andReturn().response
         assertThat(response.status).isEqualTo(201)
