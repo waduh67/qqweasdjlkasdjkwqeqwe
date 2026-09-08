@@ -17,6 +17,7 @@ class WarehouseOutboxDispatcher(
     private val tenants: TenantApi,
 ) {
     private val node = UUID.randomUUID()
+    private val log = org.slf4j.LoggerFactory.getLogger(javaClass)
 
     fun dispatchOne(): Boolean {
         check(!TransactionSynchronizationManager.isActualTransactionActive()) { "Delivery must run outside local lock transactions" }
@@ -39,9 +40,16 @@ class WarehouseOutboxDispatcher(
     }
 
     fun drain() {
-        tenants.findActiveTenantIds().forEach { tenant -> TenantContext.runAs(tenant) {
-            repeat(25) { if (!dispatchOne()) return@runAs }
-        } }
+        tenants.findActiveTenantIds().forEach { tenant ->
+            try {
+                TenantContext.runAs(tenant) {
+                    repeat(25) { if (!dispatchOne()) return@runAs }
+                }
+            } catch (failure: Exception) {
+                val code = if (failure is com.duluin.ftth.inventory.WarehouseContractException) failure.error.code.name else "DELIVERY_FAILURE"
+                log.warn("warehouse_delivery_tenant_failed tenant={} code={}", tenant, code)
+            }
+        }
     }
 }
 
