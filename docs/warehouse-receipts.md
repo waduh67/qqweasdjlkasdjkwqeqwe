@@ -101,16 +101,46 @@ serta accepted atau snapshot SKU `inspectionRequired=false`. Rejected tidak bole
 memakai bypass. Partial putaway membuat cut+retained remainder dengan lineage sama.
 State tetap RECEIVED_IN_INSPECTION selama ada bagian pending/accepted belum
 ditempatkan; menjadi PUTAWAY setelah seluruh bagian non-rejected ditempatkan.
+Completion dihitung pada inspeksi maupun putaway, lalu diperiksa kembali terhadap
+disposition dan ledger durable sebelum commit. Jika semua barang ditolak tanpa
+putaway, state menjadi CLOSED. Inspeksi terakhir dapat mengakhiri receipt tanpa
+movement tambahan atau permintaan putaway kosong.
 Rejected tetap quarantine/supplier-return; task08 tidak menjalankan retur pemasok.
 
 ## Bukti privat dan saldo awal
 
-Attachment menerima PNG/JPEG/PDF1..15728640 byte dengan MIME dan signature yang
-cocok. Metadata tenant/document/hash/type/size immutable; bytes diverifikasi pada
-upload, inspection dan download. Response hanya ID, bukan key, secret atau URL
-publik. Download memakai attachment disposition, no-store dan nosniff. Rollback
-upload membersihkan objek; SIGKILL di celah S3/DB dapat menyisakan orphan privat
-yang tidak pernah menjadi evidence sah. Tidak ada kebijakan purge baru task08.
+Attachment menerima PNG/JPEG/PDF1..15728640 byte yang benar-benar dapat diparse.
+PDFBox3.0.8 (Apache License2.0) berjalan non-lenient: header/end framing, xref,
+trailer, objects dan content stream diperiksa, tanpa rendering atau eksekusi.
+PDF terenkripsi, form/JavaScript/action/embedded-file dan konstruksi aktif lain
+ditolak. Batas100 halaman,50000 xref,100000 objects/tokens,16MiB content per halaman
+dan64MiB content total mencegah input tak berbatas. Gambar didecode ImageIO dengan
+batas25 juta pixel/10000 per dimensi, CRC/chunk PNG dan marker/end JPEG lengkap;
+truncation, trailing payload dan warning decoder ditolak. Error parser selalu
+400 MALFORMED_REQUEST tanpa detail internal, termasuk pada bukti saldo awal.
+
+Metadata tenant/document/hash/type/size immutable; bytes diverifikasi pada upload,
+inspection dan download. V174.13 menambahkan content revision dan SHA256 snapshot
+intake, terpisah dari revision dokumen. Attachment merekam binding konten ini;
+replace draft mengubah binding, sedangkan receive/attachment/inspection tidak.
+Bukti lama setelah replace gagal409 dan tidak membuat disposition. Bukti valid
+dapat dipakai ulang pada beberapa inspeksi tanpa stale karena revision operation.
+Evidence historis sebelum binding tersedia tidak ditebak dari intake terbaru:
+tetap tersimpan dengan binding null, tidak boleh mengotorisasi inspeksi baru.
+
+Response hanya ID, bukan key, secret atau URL publik. Download memakai attachment
+disposition, no-store dan nosniff. Setelah rollback atau completion UNKNOWN,
+reconciler membuka transaksi REQUIRES_NEW dengan tenant yang sama. Lock dokumen
+menunggu transaksi asal settle sebelum memeriksa metadata durable. Hanya absence
+yang terkonfirmasi menghapus objek. Metadata committed mempertahankan objek;
+DB/lock tak dapat diperiksa mempertahankan objek privat dan mencatat warning
+reconciliation dengan evidenceId/reason, tanpa key/payload/secret. SIGKILL seluruh
+JVM sebelum callback tetap membutuhkan rekonsiliasi orphan operasional; bukan izin
+blind-delete. Tidak ada kebijakan purge atau approval baru task08.
+
+MultipartException termasuk MaxUploadSizeExceededException ditangani sebelum
+pemilihan controller khusus prefix warehouse. Batas service15MiB maupun container
+20MiB menghasilkan envelope400 `{code,message}` yang sama, bukan ProblemDetail.
 
 Route terpisah `POST /api/v1/warehouse/opening-balances/requests` menerima multipart
 `request` JSON `{migrationReference,sourceSnapshot,cutoff}` dan `file` bukti.
@@ -130,8 +160,11 @@ Semua efek receive rollback bersama saat identitas collision atau transaksi putu
 Legacy `/api/inventory` read tetap array/count; registry internal lama bukan receipt
 API dan tidak dipakai untuk admission baru.
 
-M02 V174.12 ditambahkan manifest-first. V173-V174.11 tetap byte-identical; V175+
+M02 V174.12 dan koreksiV174.13 ditambahkan manifest-first. V173-V174.12 tetap
+byte-identical pada koreksi ini; V175+
 tidak dipakai. Tiga tabel receipt memakai composite tenant references dan FORCE RLS.
+
+Bukti implementasi awal sebelum koreksi AV8:
 
 - Failing-first: draft404, receive404, inspection404 dan attachment404 teramati
   sebelum handler ditambahkan; legacy read compatibility lulus sejak baseline.
@@ -151,3 +184,30 @@ tidak dipakai. Tiga tabel receipt memakai composite tenant references dan FORCE 
 Probe runtime telah dihapus; `qa.sh stop` dan `test-environment.sh down` hanya
 menghapus proses/container/network milik task, volume tetap dipertahankan.
 Compiler/Spring/PostgreSQL dipakai sebagai gate lane ini, bukan LSP/CodeGraph.
+
+## Bukti koreksi AV8
+
+- Failing-first: stale intake proof200 menjadi409/no inspection; tiga completion
+  failures menjadi terminal;11 malformed file cases yang sebelumnya201 menjadi400;
+  backend termination orphan dan21MiB ProblemDetail berhasil direproduksi sebelum fix.
+- Exact WarehouseReceiptIT dengan `--rerun-tasks --no-parallel` dua kali:
+  **47 test,0 gagal,0 skipped** per run. Termasuk child-JVM SIGKILL/restart,
+  normalized serial races, real MinIO, actual servlet upload dan fault PostgreSQL.
+- Gabungan Warehouse/Inventory/NetworkEndToEnd/Modularity:
+  **574 test,0 gagal,0 skipped**. WarehouseSchemaIT mencakup ketiga tabel receipt;
+  upgrade sampai174.13, termasuk preservation evidence174.12 tanpa binding palsu.
+- Clean no-cache bootJar sukses; artefak membawa PDFBox3.0.8, V174.13 dan resolver/
+  reconciler produksi, tidak membawa test-only restart launcher.
+- Packaged HTTP/MinIO/PostgreSQL: main receipt tetap available900000MM+8EA,
+  quarantine100000MM+2EA dan cost500000/1000000 IDR. Stale proof409/no disposition;
+  final reject600/400/600 menjadi PUTAWAY revision6; semua reject CLOSED revision3.
+- Valid PDF434 byte didownload identik secara privat (proxy200, anonymousS3403).
+  Fake PDF opening400, valid opening409.15MiB+1/21MiB mendapat code/message400.
+- Terminate backend setelah object put: HTTP500, metadata/operation/revision0/0/0,
+  object0 setelah fresh confirmation. Lost response sesudah commit mempertahankan
+  object/metadata dan exact replay; unsettled row lock mempertahankan object dan
+  warning METADATA_UNAVAILABLE hingga absence dapat dikonfirmasi.
+
+Evidence koreksi tersimpan di `.omo/evidence/warehouse-workorder-asset-provenance/task-8/corrections/`
+dan tidak ikut commit. No-cache JAR SHA256:
+`12e3a9db9ec40ea36ebb162e7961b9abaa2beda31ef5afe122d63e9108224750`.
