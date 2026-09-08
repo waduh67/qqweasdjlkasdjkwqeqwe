@@ -63,6 +63,24 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
         }
     }
 
+    fun inspections(id: UUID): List<ReceiptInspectionView> = jdbc.execute { sql ->
+        sql.query("""SELECT inspection.* FROM inventory_inspection inspection JOIN inventory_document_line line
+            ON line.tenant_id=inspection.tenant_id AND line.id=inspection.document_line_id
+            WHERE line.tenant_id=? AND line.document_id=? ORDER BY inspection.created_at,inspection.id""", sql.tenant, id) {
+            ReceiptInspectionView(it.uuid("id"), it.uuid("document_line_id"), it.getLong("accepted_base").toString(), it.getLong("rejected_base").toString(),
+                WarehouseBaseUnit.valueOf(it.getString("base_unit")), UUID.fromString(it.getString("evidence_reference")), it.getString("reason"),
+                it.getString("disposition"), it.uuid("operation_id"))
+        }
+    }
+
+    fun putawayBase(line: UUID): String = jdbc.execute { sql ->
+        requireNotNull(sql.value("""SELECT coalesce(sum(leg.quantity_base::numeric),0) FROM inventory_movement_leg leg
+            JOIN inventory_movement movement ON movement.tenant_id=leg.tenant_id AND movement.id=leg.movement_id
+            JOIN inventory_operation operation ON operation.tenant_id=movement.tenant_id AND operation.id=movement.operation_id
+            WHERE leg.tenant_id=? AND leg.document_line_id=? AND leg.direction='IN' AND leg.status='AVAILABLE'
+                AND operation.namespace='warehouse.receipt.putaway'""", sql.tenant, line))
+    }
+
     fun candidates(filter: ReceiptFilter): List<UUID> = jdbc.execute { sql ->
         val conditions = mutableListOf("document.tenant_id=?")
         val values = mutableListOf<Any?>(sql.tenant)

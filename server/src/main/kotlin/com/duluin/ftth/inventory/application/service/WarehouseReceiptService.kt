@@ -107,6 +107,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         intake.lines.map { it.sku.id }.distinct().forEach {
             if (masters.get(MasterKind.SKU, it).state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
+        intake.lines.flatMap { store.pieces(it.id) }.map { it.locationId }.distinct().forEach { authorizeLocation(it, current, scope) }
     }
 
     internal fun authorizeLocation(id: UUID, current: CurrentAuthority, scope: AuthorityScope): LocationSnapshot {
@@ -116,11 +117,16 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         return location
     }
 
-    internal fun view(record: ReceiptRecord, cost: Boolean) = ReceiptView(record.id, record.revision, record.state, record.createdAt,
+    internal fun view(record: ReceiptRecord, cost: Boolean): ReceiptView {
+        val inspections = store.inspections(record.id)
+        return ReceiptView(record.id, record.revision, record.state, record.createdAt,
         record.intake.supplier.id, record.intake.supplier.name, record.intake.externalReference, record.intake.source.id, record.intake.inspection.id,
         record.intake.lines.map { line -> ReceiptLineView(line.id, line.inputLineNumber, line.sku.id, line.sku.code, line.sku.name,
             line.sku.tracking, line.sku.baseUnit, line.quantityBase, line.serial, line.mac, line.lotCode, line.sku.inspectionRequired,
-            line.conversion, if (cost) line.cost else null, store.pieces(line.id)) })
+            line.conversion, if (cost) line.cost else null, store.pieces(line.id),
+            inspections.filter { it.lineId == line.id }.sumOf { it.acceptedBase.toLong() }.toString(),
+            inspections.filter { it.lineId == line.id }.sumOf { it.rejectedBase.toLong() }.toString(), store.putawayBase(line.id)) }, inspections)
+    }
 }
 
 internal fun receiptKey(key: String) {

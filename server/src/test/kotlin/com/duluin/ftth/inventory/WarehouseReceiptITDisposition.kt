@@ -39,6 +39,9 @@ class WarehouseReceiptITDisposition : WarehouseReceiptHttpFixture() {
             transition(setup, id, "inspect", inspectBody, "inspect-key")
             database.transaction { assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE status='AVAILABLE'")).isEqualTo("0") }
             val inspected = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$id", setup.token).contentAsString)
+            assertThat(inspected.path("inspections").size()).isEqualTo(11)
+            assertThat(inspected.path("lines")[0].path("acceptedBase").asString()).isEqualTo("900000")
+            assertThat(inspected.path("lines")[0].path("rejectedBase").asString()).isEqualTo("100000")
             val placements = inspected.path("lines").flatMap { line -> line.path("pieces").filter { it.path("disposition").asString() == "ACCEPTED" }.map { piece ->
                 """{"lineId":"${line.path("id").asString()}","stockIdentityId":"${piece.path("stockIdentityId").asString()}",
                     "quantityBase":"${piece.path("quantityBase").asString()}","baseUnit":"${line.path("baseUnit").asString()}"}"""

@@ -38,10 +38,13 @@ data class ReceiptPiece(val stockIdentityId: UUID, val lotId: UUID?, val quantit
 data class ReceiptLineView(val id: UUID, val inputLineNumber: Int, val skuId: UUID, val skuCode: String, val skuName: String,
     val tracking: WarehouseTracking, val baseUnit: WarehouseBaseUnit, val quantityBase: String,
     val serial: String?, val mac: String?, val lotCode: String?, val inspectionRequired: Boolean,
-    val conversion: ReceiptPackageInput?, val cost: ReceiptCostSnapshot?, val pieces: List<ReceiptPiece>)
+    val conversion: ReceiptPackageInput?, val cost: ReceiptCostSnapshot?, val pieces: List<ReceiptPiece>,
+    val acceptedBase: String, val rejectedBase: String, val putawayBase: String)
 data class ReceiptView(val id: UUID, val revision: Long, val state: WarehouseReceiptState, val createdAt: Instant,
     val supplierId: UUID, val supplierName: String, val externalReference: String,
-    val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>)
+    val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>, val inspections: List<ReceiptInspectionView>)
+data class ReceiptInspectionView(val id: UUID, val lineId: UUID, val acceptedBase: String, val rejectedBase: String,
+    val baseUnit: WarehouseBaseUnit, val evidenceId: UUID, val reason: String, val disposition: String, val operationId: UUID)
 data class ReceiptHistory(val operationId: UUID, val revision: Long, val action: String, val recordedAt: Instant)
 data class ReceiptFilter(val page: Int = 0, val size: Int = 25, val status: WarehouseReceiptState? = null,
     val skuId: UUID? = null, val serial: String? = null, val locationId: UUID? = null,
