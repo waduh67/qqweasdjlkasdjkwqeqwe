@@ -101,7 +101,11 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
     internal fun authorize(intake: ReceiptIntake, current: CurrentAuthority, scope: AuthorityScope) {
         for (location in listOf(intake.source, intake.inspection)) {
             masterService.authorizeLocation(location, current, scope)
-            authorizeLocation(location.id, current, scope)
+            val live = authorizeLocation(location.id, current, scope)
+            if (location.id == intake.source.id && (live.code != "RECEIPT_SOURCE" || live.kind != com.duluin.ftth.inventory.domain.model.LocationKind.TRANSIT))
+                masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            if (location.id == intake.inspection.id && (live.kind != com.duluin.ftth.inventory.domain.model.LocationKind.QUARANTINE || live.issueEligible))
+                masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
         if (masters.get(MasterKind.SUPPLIER, intake.supplier.id).state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         intake.lines.map { it.sku.id }.distinct().forEach {

@@ -116,5 +116,9 @@ class WarehouseReceiptITGuards : WarehouseReceiptHttpFixture() {
         assertThat(created.status).isEqualTo(201)
         for ((kind, id) in listOf("suppliers" to setup.supplier, "locations" to setup.inspection, "skus" to setup.cable))
             assertThat(request("POST", "/api/v1/warehouse/$kind/$id/archive", setup.token, """{"expectedRevision":0}""").status).isEqualTo(409)
+        assertThat(request("PUT", "/api/v1/warehouse/locations/${setup.source}", setup.token,
+            """{"code":"RENAMED","name":"Renamed boundary","kind":"TRANSIT","areaId":"${area(setup.token)}","expectedRevision":0}""").status).isEqualTo(200)
+        val receiptId = mapper.readTree(created.contentAsString).path("id").asString()
+        assertThat(request("POST", "/api/v1/warehouse/receipts/$receiptId/receive", setup.token, """{"expectedRevision":0}""").status).isEqualTo(409)
     }
 }
