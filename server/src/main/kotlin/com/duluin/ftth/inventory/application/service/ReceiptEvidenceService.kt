@@ -50,7 +50,7 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
         if (record.state == WarehouseReceiptState.CLOSED) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val id = UUID.randomUUID()
         val objectKey = "${current.fence.identity.tenantId}/warehouse/receipts/$document/$id"
-        val value = StoredReceiptEvidence(ReceiptEvidenceView(id, document, contentType, bytes.size.toLong(), hash), objectKey)
+        val value = StoredReceiptEvidence(ReceiptEvidenceView(id, document, contentType, bytes.size.toLong(), hash), objectKey, evidence.currentBinding(document))
         evidence.save(value, current.fence.identity.userId)
         TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
             override fun afterCompletion(status: Int) {
@@ -74,7 +74,11 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
         return verified(evidence.get(document, id))
     }
 
-    internal fun requireEvidence(document: UUID, id: UUID) { verified(evidence.get(document, id)) }
+    internal fun requireEvidence(document: UUID, id: UUID) {
+        val stored = evidence.get(document, id)
+        if (stored.intakeBinding != evidence.currentBinding(document)) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        verified(stored)
+    }
 
     private fun verified(value: StoredReceiptEvidence): StoredObject {
         val result = try { storage.get(value.objectKey) } catch (_: NotFoundException) { masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED) }
