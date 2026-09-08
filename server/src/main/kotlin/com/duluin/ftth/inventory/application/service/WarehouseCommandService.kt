@@ -24,7 +24,12 @@ class WarehouseCommandService(
     private val masters: WarehouseMasterService,
     private val receipts: WarehouseReceiptService,
     private val receiptTransitions: ReceiptTransitionService,
+    private val receiptEvidence: ReceiptEvidenceService,
 ) {
+    @Transactional(rollbackFor = [Exception::class])
+    fun attachReceipt(id: UUID, revision: Long, key: String, contentType: String, bytes: ByteArray): WarehouseOperationReceipt =
+        receiptEvidence.upload(id, revision, key, contentType, bytes)
+
     @Transactional(rollbackFor = [Exception::class])
     fun receiveReceipt(id: UUID, input: com.duluin.ftth.inventory.application.port.inbound.ReceiptReceiveInput, key: String): WarehouseOperationReceipt =
         receiptTransitions.receive(id, input, key)
