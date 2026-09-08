@@ -59,6 +59,7 @@ nunggu **satu siklus polling (≤5 menit)**. Gak instan.
 | **HUAWEI** | GPON | serial | didukung |
 | **FIBERHOME** | GPON | serial | didukung |
 | **HSGQ** | EPON | **MAC address** | didukung (tabel enterprise `.50224.3`) |
+| **HSGQ-G01ID** | GPON | serial | profil `.50224.3.12` dipilih dari `sysDescr` |
 | NOKIA | — | — | **ada di dropdown tapi belum ada adapter** → dilewati diam-diam, **tanpa** alarm |
 | OTHER | — | — | monitoring tak didukung, dilewati |
 
@@ -68,6 +69,54 @@ nunggu **satu siklus polling (≤5 menit)**. Gak instan.
 
 GPON identitasnya **serial** (4 huruf kode vendor + heksa, mis. `ZTEGC0FFEE01`).
 HSGQ EPON tak punya serial GPON — identitasnya **MAC** (mis. `C0FD8465FD12`).
+HSGQ-G01ID memakai serial GPON, bukan MAC. Server dan collector memilih profil
+yang sama berdasarkan `sysDescr`; profil EPON tetap dipakai untuk perangkat HSGQ
+lain sampai keluarga MIB-nya diverifikasi.
+
+## ONU perangkat dan ONU pelanggan
+
+Di detail OLT dari **Inventory**, **Peta**, maupun `/olts/:id`:
+
+- **ONU di OLT** membaca daftar perangkat langsung lewat SNMP, tanpa harus ada
+  pelanggan/ODP yang terpasang. Cari serial, nama, atau ONT ID; **Refresh** membaca
+  ulang. Izin: `network.olt.view` dan `monitoring.provisioning.view`.
+- **ONU Pelanggan** tetap menampilkan hubungan pelanggan dan topologi aplikasi.
+- **ONU Baru** tetap menjadi kotak masuk untuk menautkan ONU ke pelanggan.
+
+`GET /api/monitoring/olts/{id}/onus` hanya membaca target yang tercatat pada tenant.
+Tidak menyimpan atau mengubah konfigurasi OLT, pelanggan, maupun topologi. Hasilnya
+snapshot dengan waktu baca aplikasi, bukan stream waktu nyata. Kegagalan membaca
+identitas menghasilkan error; kegagalan field tambahan menghasilkan `null`/`—`
+beserta peringatan. Serial yang tidak ditemukan hanya berarti tidak ada pada
+hasil baca tersebut, bukan bukti pasti ONU tidak terdaftar di perangkat.
+
+### Peta GPON HSGQ-G01ID
+
+Prefix inventori: `1.3.6.1.4.1.50224.3.12.2.1`.
+
+| Field | Kolom | Penafsiran |
+|---|---|---|
+| Name | `.2` | teks OLT |
+| State | `.3` | 0 Inactive, 1 Active, 2 Disable, 3 Enable, 4 ActiveS, 5 Awake |
+| Running state | `.4` | 0 Unknown/initial, 1 Online, 2 Offline |
+| Config state | `.5` | 0 Initial, 1 Normal, 2 Fail |
+| Serial number | `.15` | empat huruf vendor + delapan heksa |
+| Last up time | `.20` | teks jam OLT, tanpa konversi zona waktu |
+
+RX/TX: `1.3.6.1.4.1.50224.3.12.3.1.4` / `.5`, dibagi 100 menjadi dBm.
+Join optik hanya memakai indeks `<onuIndex>.0.0`; `.65535.65535` adalah optik
+port OLT dan tidak boleh menimpa RX ONU. ONT ID diambil dari byte PON/ONU dalam
+indeks, termasuk ONU nomor **0**. Device type, last down time, dan last down cause
+belum dipetakan dan tetap `—`; tidak disimpulkan dari kolom lain.
+
+Peta berdasarkan MIB `PARKS-PK700` enterprise 50224 di LibreNMS, commit
+`6044667c3ed1c99e83829533fc33233a7943552d`
+(`mibs/parks/PARKS-PK700`), ditambah verifikasi `snmpwalk` baca-saja pada
+HSGQ-G01ID firmware `IGC_V1.0.10ID_Rel` tanggal 8 September 2026. Serial, nama,
+running state, suffix RX dan last-up dikonfirmasi perangkat; enum state/config
+dan satuan RX/TX mengikuti MIB. Nilai SNMP tidak dijamin identik dengan web OLT.
+Jam OLT yang belum disetel bisa menghasilkan tahun 1970 dan tetap ditampilkan
+apa adanya. Tidak ada OID password atau aksi konfigurasi dalam profil ini.
 
 ---
 
@@ -108,7 +157,7 @@ pakai OID yang **persis dipakai polling**, lalu kasih vonis per peran:
 | **Belum dipetakan** | profil vendor kami emang belum punya OID buat peran itu | metrik itu selalu kosong |
 
 Peran ber-label **wajib** (serial/MAC, status, redaman RX) yang gak "Terbaca"
-= polling gak bakal ngasih baris sama sekali. Nilai **mentah** ikut ditampilkan
+menandai identitas atau metrik utama yang bermasalah, bukan selalu berarti nol ONU. Nilai **mentah** ikut ditampilkan
 di samping tafsirannya — dari situ kelihatan skalanya: `-2350` itu 0,01 dBm,
 `-23500` itu 0,001 dBm.
 
@@ -227,7 +276,7 @@ Status ONU pelanggan: `PENDING` → `ONLINE`/`OFFLINE`/`LOS` (dari pembacaan) �
 
 - Server polling OLT via SNMP tiap ~5 menit; OLT wajib reachable + punya IP,
   community, dan **port** yang benar (HSGQ = **1161**).
-- Adapter ada buat **ZTE/HUAWEI/FIBERHOME (GPON)** + **HSGQ (EPON, identitas MAC)**;
+- Adapter ada buat **ZTE/HUAWEI/FIBERHOME (GPON)** + **HSGQ (EPON MAC / G01ID GPON serial)**;
   NOKIA/OTHER dilewati diam-diam.
 - **ONU nol padahal OLT nyambung** → tab **Diagnostik** di detail OLT: uji peta OID
   (Terbaca / Kosong / Tak terbaca / Belum dipetakan) + walk OID manual buat nyari

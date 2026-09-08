@@ -1,0 +1,143 @@
+.olt-device-onus {
+  container: olt-device-onus / inline-size;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.olt-device-onus__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.olt-device-onus__summary,
+.olt-device-onus__source {
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.olt-device-onus h2,
+.olt-device-onus p,
+.olt-device-onus ul {
+  margin: 0;
+}
+
+.olt-device-onus ul {
+  padding-inline-start: 1.25rem;
+}
+
+.olt-device-onus .workspace-callout {
+  gap: 0.5rem;
+}
+
+.olt-device-onus .toolbar {
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.olt-device-onus .toolbar > .fui-Field {
+  flex: 1 1 18rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.olt-device-onus .fui-Input {
+  min-width: 0;
+  width: 100%;
+}
+
+.olt-device-onus .table-card,
+.olt-device-onus .table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.olt-device-onus .table-wrap {
+  overflow-x: auto;
+}
+
+.olt-device-onus .data-table-grid {
+  width: max-content;
+  min-width: 100%;
+}
+
+.olt-device-onus .fui-DataGridRow {
+  display: grid;
+  grid-template-columns: 5.5rem 10rem 10rem 7rem 8.5rem 8rem 8rem 8rem 12rem 12rem 11rem;
+}
+
+.olt-device-onus .fui-DataGridCell,
+.olt-device-onus .fui-DataGridHeaderCell {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.olt-device-onus__label {
+  display: none;
+}
+
+.olt-device-onus__value {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@container olt-device-onus (max-width: 48rem) {
+  .olt-device-onus .table-card {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .olt-device-onus .table-wrap {
+    overflow: visible;
+  }
+
+  .olt-device-onus .data-table-grid {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .olt-device-onus .fui-DataGridHeader {
+    display: none;
+  }
+
+  .olt-device-onus .fui-DataGridBody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .olt-device-onus .fui-DataGridRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+
+  .olt-device-onus .fui-DataGridCell {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .olt-device-onus .fui-DataGridCell:last-child {
+    border-bottom: 0;
+  }
+
+  .olt-device-onus__label {
+    display: block;
+    min-width: 0;
+    color: var(--text-2);
+    font-weight: 600;
+  }
+}

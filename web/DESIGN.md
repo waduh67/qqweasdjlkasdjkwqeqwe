@@ -47,6 +47,14 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - Accessibility: semantic headings, labeled controls, keyboard-operable tabs and buttons, `aria-live` for execution state, and stable rejection codes shown as text.
 - Layout: detail grids collapse to one column on narrow containers; compact summary metrics may remain a readable 2×2 grid. The document remains the only vertical scroll owner.
 
+### OLT device ONU snapshot
+- Shared OLT detail exposes `ONU di OLT` only with both OLT-view and provisioning-view permissions, independently of customer, map, and ODP access. The customer-linked list is `ONU Pelanggan`; `ONU Baru` retains its provisioning behavior.
+- Structure: read-only device-source summary, application read timestamp, manual Refresh button, visibly labeled serial/name/ONT ID search, warning callout, and the shared `DataTable`. No customer association or provisioning action is added.
+- One snapshot loads on tab activation; Refresh explicitly rereads. Loading disables Refresh. Errors have their own alert and clear any previous snapshot; no polling or automatic retry. Changing OLT or leaving the tab cancels/discards outstanding results.
+- Device values are never inferred. Missing values render as `—`; partial/unsupported fields and backend warnings remain visible. Up/down times are verbatim OLT-clock strings, distinct from the application's ISO read timestamp. An unmatched search says only `Tidak ditemukan pada hasil baca ini`.
+- Geometry: the eleven-column grid scrolls inside its own table region on wide containers. At container widths up to 48rem, actual Fluent grid rows become full-width detail cards with explicit labels for all eleven fields. Long serials, names, warnings, and times wrap. Container sizing also covers compact inventory/map blades, independent of viewport size; the primary page never needs horizontal scrolling at 375px or 768px.
+- Accessibility: existing Fluent buttons, fields, tabs, and text-plus-dot badges; labeled section and search; live loading/result count and error alert. Card labels remain real text, and the same grid cells preserve keyboard navigation. Existing tokens, spacing, typography, and scroll ownership apply without new dependencies.
+
 ## 6. Motion & Interaction
 
 Only existing Fluent hover/focus transitions and the current 50-150ms card/button feedback are used. Motion communicates interaction state only, animates transform/opacity, and respects the global reduced-motion rules.

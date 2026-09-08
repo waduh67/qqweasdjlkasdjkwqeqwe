@@ -30,6 +30,7 @@ import { mapFocusState } from '@/map/mapFocus'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { DiscoveredOnuInbox } from '@/components/organisms'
 import { OltRegisteredOnus } from '@/components/organisms'
+import { OltDeviceOnus } from '@/components/organisms/OltDeviceOnus'
 import { SnmpDiagnosticPanel } from '@/components/organisms'
 import { PonPortLoadPanel } from '@/components/organisms'
 
@@ -58,7 +59,7 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'INACTIVE', label: 'Nonaktif' },
 ]
 
-type Tab = 'ringkasan' | 'pon' | 'onu' | 'onubaru' | 'diagnostik'
+type Tab = 'ringkasan' | 'pon' | 'onu' | 'onuolt' | 'onubaru' | 'diagnostik'
 
 /**
  * Konten detail satu OLT — komponen dipakai-ulang oleh DUA pemanggil:
@@ -102,6 +103,7 @@ export function OltDetail({
     canMap && can('network.olt.view') && can('network.odp.view') && canCustomer
   // Tab "ONU Baru" memakai kotak masuk provisioning — sama seperti halaman Provisioning.
   const canProvisioning = can('monitoring.provisioning.view')
+  const canDeviceOnus = can('network.olt.view') && can('monitoring.provisioning.view')
   // Diagnostik SNMP menyuruh server menembak perangkat sungguhan dan menyingkap peta OID
   // kami, jadi gerbangnya sama dengan menyetel polling: "Kelola collector & polling".
   // Sengaja TIDAK digerbang `snmpEnabled` — justru sebelum SNMP dinyalakan-lah operator
@@ -201,13 +203,14 @@ export function OltDetail({
 
       {commands.length > 0 && <CommandBar actions={commands} />}
 
-      <Tabs
+      <Tabs<Tab>
         tabs={[
-          { key: 'ringkasan' as Tab, label: 'Ringkasan' },
-          { key: 'pon' as Tab, label: 'PON Port', badge: olt.ponPortCount || undefined },
-          ...(canOnuList ? [{ key: 'onu' as Tab, label: 'ONU' }] : []),
-          ...(canProvisioning ? [{ key: 'onubaru' as Tab, label: 'ONU Baru' }] : []),
-          ...(canDiagnose ? [{ key: 'diagnostik' as Tab, label: 'Diagnostik' }] : []),
+          { key: 'ringkasan', label: 'Ringkasan' },
+          { key: 'pon', label: 'PON Port', badge: olt.ponPortCount || undefined },
+          ...(canOnuList ? [{ key: 'onu', label: 'ONU Pelanggan' } satisfies { key: Tab; label: string }] : []),
+          ...(canDeviceOnus ? [{ key: 'onuolt', label: 'ONU di OLT' } satisfies { key: Tab; label: string }] : []),
+          ...(canProvisioning ? [{ key: 'onubaru', label: 'ONU Baru' } satisfies { key: Tab; label: string }] : []),
+          ...(canDiagnose ? [{ key: 'diagnostik', label: 'Diagnostik' } satisfies { key: Tab; label: string }] : []),
         ]}
         active={tab}
         onChange={setTab}
@@ -218,6 +221,7 @@ export function OltDetail({
       {tab === 'onu' && canOnuList && (
         <OltRegisteredOnus oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
       )}
+      {tab === 'onuolt' && canDeviceOnus && <OltDeviceOnus oltId={id} />}
       {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox oltId={olt.id} />}
       {tab === 'diagnostik' && canDiagnose && <SnmpDiagnosticPanel oltId={olt.id} />}
 
