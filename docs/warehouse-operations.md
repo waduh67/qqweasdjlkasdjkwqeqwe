@@ -93,17 +93,47 @@ memposting stok lagi, menyetujui settlement atau memanggil BNG/perangkat.
 Fulfillment checkpoint/legacy consumer juga mengambil cutover fence sebelum lock.
 Provisioning/perangkat tetap pada jalur after-commit/outbox pemiliknya.
 
+## Koreksi verifier AV6
+
+WorkOrderService meneruskan hasil CurrentAuthority yang masih dipagar ke setiap
+keputusan mutasi, termasuk preflight complete. Izin dispatcher, field permission
+dan scope area tidak lagi dibaca dari JWT setelah fence. Jalur field tanpa izin
+dispatcher memerlukan teknisi aktif dan assignment sekarang. Update mengecek area
+lama dan baru; actor berscope area tidak boleh menghapus batas area menjadi null.
+Area-less WO tetap merupakan resource tenant tanpa area, bukan akses ke semua area.
+
+Refresh/logout sebelum transaksi hanya me-resolve tenant dari hash token. Worker
+mengambil authority fence, mengunci row token persis berdasarkan tenant/hash,
+kemudian membaca dan mengonsumsi state persisted yang masih aktif, belum expired,
+belum revoked dan milik user aktif pada tenant yang sama. Token lama dan pengganti
+commit/rollback bersama. Logout serta access-change revocation memakai urutan
+authority lalu token; objek token yang dibaca sebelum fence tidak dipakai kembali.
+
+Dispatcher mengisolasi exception per tenant dan melanjutkan tenant berikutnya.
+Diagnostik hanya tenant ID dan stable error code, tanpa payload, kredensial atau
+raw exception. Missing policy tetap CUTOVER_REQUIRED; tidak dianggap berhasil.
+
+Legacy command membaca identity/metadata tanpa lock hanya untuk merencanakan
+referensi. WO dan document references dikunci sebelum operation key. Setelah key
+terkunci, identity dibaca ulang dan actor/resource/hash/scope/reference dibandingkan
+dengan snapshot yang telah dikunci; mismatch tidak memicu lock baru setelah key.
+
 ## Bukti
 
-Command exact dijalankan dua kali, masing-masing39 test tanpa gagal/skipped:
+Command exact dijalankan dua kali setelah koreksi AV6, masing-masing61 test tanpa gagal/skipped:
 
 ```sh
 scripts/warehouse/qa.sh server --tests '*WarehouseConcurrencyIT*' --rerun-tasks --no-parallel
 ```
 
-Gabungan task1-6, schema, IAM/2FA, fulfillment, workorder dan modularity:453 test,
+Gabungan task1-6, schema, IAM/2FA, fulfillment, workorder dan modularity:475 test,
 nol gagal/skipped. Arsip XML/HTML disimpan sebelum clean build di evidence task6.
 Probe Spring/JVM terpisah membuktikan response-loss replay, original JWT revoked,
 rollback inbox+effect, delivery-port call di luar transaksi, lost ACK dan restart:
 3 outbox =3 delivered =3 inbox =3 observation, tanpa posting tambahan. Runtime
 source probe diarsipkan lalu dihapus. Tidak ada test hook atau probe dalam bootJar.
+
+Probe AV6 terpisah juga membuktikan JWT lama tidak dapat start WO setelah scope
+dicabut, revocation saat refresh menunggu fence menghasilkan nol token pengganti,
+tenant sehat tetap delivered/inbox/effect=1 setelah tenant pertama gagal, dan
+operation key masih bebas ketika replay menunggu referenced document yang berubah.
