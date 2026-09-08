@@ -9,7 +9,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8 | 04 / 06 / 07 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata and control-plane operation binding |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9 | 04 / 06 / 07 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding and reference admission guards |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -24,6 +24,11 @@ yang boleh memakai binding master. Guard arsip/referensi dan hierarki diperketat
 secara forward-only. V173 hingga V174.7 tidak diubah; V175+ tetap milik task lain.
 Gate perubahan ini mencakup seluruh WarehouseSchemaIT, restart/upgrade, dan
 WarehouseMasterIT melalui warehouse_app non-owner dengan FORCE RLS.
+
+V174.9 dicadangkan setelah uji V174.8: pertahankan SQLSTATE 23503 untuk referensi
+master asing/hilang (bukan 23514), tutup binding operation NULL, dan cegah hard
+delete serta referensi saldo/posting baru ke master arsip. V174.8 yang sudah
+diterapkan pada warehouse_test tidak diedit ulang.
 
 Reservasi tambahan V174.1 dicatat sebelum file dibuat setelah probe PostgreSQL
 menemukan upper/btrim default berbeda dari codec Kotlin untuk Unicode/whitespace.
