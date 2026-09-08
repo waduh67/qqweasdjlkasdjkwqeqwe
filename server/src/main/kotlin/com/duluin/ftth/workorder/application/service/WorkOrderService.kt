@@ -290,7 +290,7 @@ class WorkOrderService(
     private fun requireArea(areaId: UUID?, current: CurrentAuthority) {
         current.fence.assertHeld()
         val scope = current.areaScope
-        if (areaId != null && scope is AuthorityScope.Restricted && areaId !in scope.ids) {
+        if (scope is AuthorityScope.Restricted && (if (areaId == null) scope.ids.isNotEmpty() else areaId !in scope.ids)) {
             throw AccessDeniedException("Work order di luar area Anda")
         }
     }

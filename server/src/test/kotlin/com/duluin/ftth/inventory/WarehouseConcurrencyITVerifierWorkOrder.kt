@@ -23,7 +23,7 @@ class WarehouseConcurrencyITVerifierWorkOrder {
     @AfterAll fun stop() { context.close(); database.close() }
     @AfterEach fun clear() { SecurityContextHolder.clearContext() }
 
-    @ParameterizedTest @ValueSource(strings=["CREATE","UPDATE_OLD","UPDATE_NEW","ASSIGN","START","AUTHORIZE_COMPLETE","CANCEL","OPTICAL","APPROVE","REJECT","DELETE"])
+    @ParameterizedTest @ValueSource(strings=["CREATE","UPDATE_OLD","UPDATE_NEW","UPDATE_CLEAR","ASSIGN","START","AUTHORIZE_COMPLETE","CANCEL","OPTICAL","APPROVE","REJECT","DELETE"])
     fun `WO mutations check existing and destination areas against fenced scope`(action: String) {
         val fixture=WarehousePostingFixture(context).also { it.setup(); it.legacyAuthority() }
         val allowed=UUID.randomUUID(); val denied=UUID.randomUUID(); val role=UUID.randomUUID()
@@ -34,7 +34,7 @@ class WarehouseConcurrencyITVerifierWorkOrder {
             sql("INSERT INTO user_role(user_id,role_id) VALUES ('$actor','$role')")
             sql("INSERT INTO user_area(user_id,area_id) VALUES ('$actor','$allowed')")
             sql("UPDATE app_user SET platform_admin=false WHERE id='$actor'")
-            sql("UPDATE work_order SET area_id='${if(action=="UPDATE_NEW") allowed else denied}' WHERE id='$workOrder'")
+            sql("UPDATE work_order SET area_id='${if(action in setOf("UPDATE_NEW","UPDATE_CLEAR")) allowed else denied}' WHERE id='$workOrder'")
         }
         SecurityContextHolder.getContext().authentication=JwtAuthenticationConverter().convert(
             Jwt.withTokenValue("stale-area-jwt").header("alg","RS256").subject(fixture.actor.toString()).claim("tid",fixture.tenant.toString())
@@ -46,8 +46,9 @@ class WarehouseConcurrencyITVerifierWorkOrder {
             when(action) {
                 "CREATE" -> service.create(com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand(
                     com.duluin.ftth.workorder.domain.model.WorkOrderType.REPAIR,"New",null,com.duluin.ftth.workorder.domain.model.WorkOrderPriority.NORMAL,null,null,null,denied,null))
-                "UPDATE_OLD","UPDATE_NEW" -> service.update(workOrder,com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand(
-                    "Changed",null,com.duluin.ftth.workorder.domain.model.WorkOrderPriority.NORMAL,null,null,if(action=="UPDATE_OLD") allowed else denied,null))
+                "UPDATE_OLD","UPDATE_NEW","UPDATE_CLEAR" -> service.update(workOrder,com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand(
+                    "Changed",null,com.duluin.ftth.workorder.domain.model.WorkOrderPriority.NORMAL,null,null,
+                    when(action) { "UPDATE_OLD" -> allowed; "UPDATE_CLEAR" -> null; else -> denied },null))
                 "ASSIGN" -> service.assign(workOrder,setOf(actor))
                 "START" -> service.start(workOrder)
                 "AUTHORIZE_COMPLETE" -> service.authorizeComplete(workOrder)
