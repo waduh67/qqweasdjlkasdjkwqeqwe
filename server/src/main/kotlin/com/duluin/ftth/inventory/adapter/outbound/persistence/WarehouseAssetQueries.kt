@@ -14,7 +14,8 @@ class WarehouseAssetQueries(private val jdbc: WarehouseCommandJdbc) {
             FROM inventory_serialized_asset asset LEFT JOIN inventory_sku sku ON sku.tenant_id=asset.tenant_id AND sku.id=asset.warehouse_sku_id,request
             WHERE asset.tenant_id=request.tenant AND asset.location_id IN (SELECT id FROM visible_locations)
             AND (asset.warehouse_admission='VERIFIED' ${if (access.provenance && id != null) "OR asset.warehouse_admission='LEGACY_UNRESOLVED'" else ""})
-            AND (request.sku IS NULL OR asset.warehouse_sku_id=request.sku) AND (request.serial IS NULL OR asset.canonical_serial=request.serial)
+            AND (request.sku IS NULL OR asset.warehouse_sku_id=request.sku)
+            AND (request.serial IS NULL OR ${if (history) "asset.id IN (SELECT id FROM resolved_serial_asset)" else "asset.canonical_serial=request.serial"})
             ${if (history) "" else """AND (request.location IS NULL OR asset.location_id=request.location) AND (request.status IS NULL OR asset.status=request.status)
             AND (request.condition IS NULL OR asset.condition=request.condition) AND (request.owner IS NULL OR asset.legal_owner=request.owner)
             AND ${WarehouseQueryPredicates.assetCreated}"""}"""

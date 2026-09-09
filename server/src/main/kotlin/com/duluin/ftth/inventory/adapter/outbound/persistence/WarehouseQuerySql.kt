@@ -75,7 +75,23 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
         dimension_filtered_positions AS MATERIALIZED (SELECT position.* FROM scoped_positions position,request
             WHERE ${WarehouseQueryPredicates.positionDimensions}),
         filtered_positions AS MATERIALIZED (SELECT position.* FROM dimension_filtered_positions position,request
-            WHERE ${WarehouseQueryPredicates.positionUpdated})
+            WHERE ${WarehouseQueryPredicates.positionUpdated}),
+        requested_serial_assets AS MATERIALIZED (SELECT asset.id,asset.location_id,asset.canonical_serial,asset.serial_number
+            FROM inventory_serialized_asset asset,request WHERE asset.tenant_id=request.tenant AND request.serial IS NOT NULL
+            AND (asset.canonical_serial=request.serial OR asset.canonical_serial_candidate=request.serial
+                OR warehouse_canonical_serial(asset.serial_number)=request.serial)),
+        requested_serial_claims AS MATERIALIZED (SELECT claim.id,claim.state FROM inventory_identity_claim claim,request
+            WHERE claim.tenant_id=request.tenant AND claim.identity_type='SERIAL' AND claim.canonical_value=request.serial),
+        requested_serial_candidates AS MATERIALIZED (SELECT candidate.source_table,candidate.source_id,candidate.raw_value,candidate.canonical_value
+            FROM inventory_identity_candidate candidate,request WHERE candidate.tenant_id=request.tenant AND candidate.identity_type='SERIAL'
+            AND (candidate.claim_id IN (SELECT id FROM requested_serial_claims) OR candidate.canonical_value=request.serial)),
+        resolved_serial_asset AS MATERIALIZED (SELECT asset.id FROM requested_serial_assets asset,request
+            WHERE (SELECT count(*) FROM requested_serial_assets)=1 AND asset.canonical_serial=request.serial
+            AND warehouse_canonical_serial(asset.serial_number)=request.serial AND asset.location_id IN (SELECT id FROM visible_locations)
+            AND NOT EXISTS (SELECT FROM requested_serial_claims WHERE state='CONFLICT')
+            AND (SELECT count(DISTINCT (source_table,source_id)) FROM requested_serial_candidates)<=1
+            AND NOT EXISTS (SELECT FROM requested_serial_candidates WHERE source_table<>'inventory_serialized_asset' OR source_id<>asset.id
+                OR canonical_value IS DISTINCT FROM warehouse_canonical_serial(raw_value)))
         """
 }
 

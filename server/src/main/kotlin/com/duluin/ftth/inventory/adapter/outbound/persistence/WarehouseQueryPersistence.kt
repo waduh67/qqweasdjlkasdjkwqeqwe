@@ -18,7 +18,8 @@ class WarehouseQueryPersistence(private val jdbc: WarehouseCommandJdbc) {
 
     fun history(filter: WarehouseQueryFilter, access: WarehouseQueryAccess, id: UUID): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, filter, access)
-        query.result(""",target AS (SELECT * FROM scoped_positions WHERE id=? AND warehouse_admission='VERIFIED'),
+        query.result(""",target AS (SELECT position.* FROM scoped_positions position,request WHERE position.id=? AND position.warehouse_admission='VERIFIED'
+                AND (request.serial IS NULL OR position.stock_identity_id IN (SELECT id FROM resolved_serial_asset))),
             target_segments AS (SELECT stock_identity_id id FROM target)""" + warehouseTimeline(query), id)
     }
 
