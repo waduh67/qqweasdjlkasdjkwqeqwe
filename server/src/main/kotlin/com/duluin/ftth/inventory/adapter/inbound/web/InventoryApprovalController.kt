@@ -16,6 +16,7 @@ import java.util.UUID
 class InventoryApprovalController(
     private val approvals: InventoryApprovalService,
     private val currentUser: CurrentUserProvider,
+    private val policy: com.duluin.ftth.inventory.WarehousePolicyEvaluationApi,
 ) {
     @GetMapping("/pending")
     @PreAuthorize("@authz.can('inventory.approval.view')")
@@ -23,16 +24,17 @@ class InventoryApprovalController(
 
     @PostMapping
     @PreAuthorize("@authz.can('inventory.approval.request')")
-    fun request(@Valid @RequestBody body: ApprovalRequestBody): InventoryApprovalRequest {
-        val actor = currentUser.current()
-        return approvals.request(body.toCommand(actor.tenantId, actor.userId))
+    fun request(@RequestBody body: String): org.springframework.http.ResponseEntity<com.duluin.ftth.inventory.WarehousePolicyEvaluation> {
+        val source = WarehouseReceiptJson.decode(body, com.duluin.ftth.inventory.WarehouseSourceInput::class.java)
+        return org.springframework.http.ResponseEntity.status(409).body(policy.evaluate(source))
     }
 
     @PostMapping("/{id}/decision")
     @PreAuthorize("@authz.can('inventory.approval.decide')")
-    fun decide(@PathVariable id: UUID, @Valid @RequestBody body: ApprovalDecisionBody): InventoryApprovalRequest {
-        val actor = currentUser.current()
-        return approvals.decide(id, DecideInventoryApproval(actor.tenantId, actor.userId, body.decision, body.operationKey, body.operationHash, body.reason, body.movementId))
+    fun decide(@PathVariable id: UUID, @RequestBody body: String): Nothing {
+        WarehouseReceiptJson.decode(body, SafeApprovalDecisionBody::class.java)
+        throw com.duluin.ftth.inventory.WarehouseContractException(com.duluin.ftth.inventory.WarehouseError(
+            com.duluin.ftth.inventory.WarehouseErrorCode.APPROVAL_REQUIRED, "Use the durable document approval workflow; decisions are not available from legacy requests"))
     }
 
     @GetMapping("/{id}")
@@ -40,28 +42,4 @@ class InventoryApprovalController(
     fun get(@PathVariable id: UUID): InventoryApprovalRequest = approvals.get(id) ?: error("approval not found")
 }
 
-data class ApprovalRequestBody(
-    val type: InventoryApprovalType,
-    @field:PositiveOrZero val amount: Long,
-    val custodianId: UUID?,
-    val tiers: List<ApprovalTierBody>,
-    val expiryHours: Long = 24,
-    val emergencyReason: String? = null,
-    @field:NotBlank val policySnapshotHash: String,
-    @field:NotBlank val operationKey: String,
-    @field:NotBlank val operationHash: String,
-) {
-    fun toCommand(tenantId: UUID, requesterId: UUID) = CreateInventoryApproval(tenantId, type, amount, requesterId, custodianId, InventoryApprovalPolicy(1, tiers.map { it.toTier() }, Duration.ofHours(expiryHours), emergencyReason != null), policySnapshotHash, operationKey, operationHash, emergencyReason)
-}
-
-data class ApprovalTierBody(val number: Int, val minimumAmount: Long, val approverIds: Set<UUID>) {
-    fun toTier() = ApprovalTier(number, minimumAmount, approverIds)
-}
-
-data class ApprovalDecisionBody(
-    val decision: InventoryApprovalDecision,
-    @field:NotBlank val operationKey: String,
-    @field:NotBlank val operationHash: String,
-    val reason: String? = null,
-    val movementId: UUID? = null,
-)
+data class SafeApprovalDecisionBody(val expectedRevision: Long, val decision: InventoryApprovalDecision, val reason: String? = null)
