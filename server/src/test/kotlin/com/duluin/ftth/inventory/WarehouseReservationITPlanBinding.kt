@@ -77,13 +77,18 @@ class WarehouseReservationITPlanBinding : WarehouseReservationFixture() {
         newerDraft(demand)
         val actor = UUID.fromString(mapper.readTree(request("GET", "/api/me", demand.token).contentAsString).path("id").asString())
         val scopeApi = context.getBean(com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseScopePersistence::class.java)
+        val manager = user(demand.token, setOf("inventory.location.manage"))
+        authenticated(demand.token, demand.fixture) { scopeApi.replace(UUID.fromString(manager.second), setOf(demand.fixture.warehouse), 0) }
         authenticated(demand.token, demand.fixture) { scopeApi.replace(actor, emptySet(), 0) }
         val before = demand.fixture.transaction { counts() }
         val path = "/api/v1/warehouse/material-requests/${demand.document}"
         assertThat(request("GET", "/api/v1/warehouse/material-requests/allocations/${demand.workOrder}", demand.token).status).isEqualTo(404)
         assertThat(request("POST", "$path/unpick", demand.token, mutation(3, row, "20000")).status).isEqualTo(404)
         assertThat(request("POST", "$path/reserve", demand.token, """{"expectedRevision":1,"workOrderRevision":0,"planRevision":1}""", "original-reserve").status).isEqualTo(404)
-        authenticated(demand.token, demand.fixture) { scopeApi.replace(actor, setOf(demand.fixture.warehouse), 0) }
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            authenticated(demand.token, demand.fixture) { scopeApi.replace(actor, setOf(demand.fixture.warehouse), 0) }
+        }.isInstanceOf(WarehouseContractException::class.java)
+        authenticated(manager.first, demand.fixture) { scopeApi.replace(actor, setOf(demand.fixture.warehouse), 0) }
         assertThat(allocations(demand).single()).isEqualTo(row)
         assertThat(request("PUT", "/api/users/$actor/access", demand.token, """{"roleIds":[],"areaIds":[]}""").status).isEqualTo(200)
         assertThat(request("GET", "/api/v1/warehouse/material-requests/allocations/${demand.workOrder}", demand.token).status).isEqualTo(403)
