@@ -44,6 +44,14 @@ class WarehouseReservationITRestart : WarehouseReservationFixture() {
             result = http(first.second, token, "${demand.document}/reserve", body)
             snapshot = http(first.second, token, "allocations/${demand.workOrder}")
         } finally { stop(first.first) }
+        fixture.transaction {
+            val newer = java.util.UUID.randomUUID()
+            sql("""INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id)
+                SELECT '$newer',tenant_id,work_order_id,2,work_order_revision,material_mode,actor_id FROM inventory_material_plan WHERE work_order_id='${demand.workOrder}' AND plan_revision=1""")
+            sql("""INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit,continuous_cut)
+                SELECT gen_random_uuid(),tenant_id,'$newer',line_number,sku_id,quantity_base,base_unit,continuous_cut FROM inventory_material_plan_line
+                WHERE plan_id=(SELECT id FROM inventory_material_plan WHERE work_order_id='${demand.workOrder}' AND plan_revision=1)""")
+        }
         val second = start("second")
         try {
             assertThat(http(second.second, token, "${demand.document}/reserve", body)).isEqualTo(result)
@@ -59,6 +67,9 @@ class WarehouseReservationITRestart : WarehouseReservationFixture() {
         assertThat(row.path("state").asString()).isEqualTo("EXPIRED")
         assertThat(row.path("reservedUnpickedBase").asString()).isEqualTo("0")
         assertThat(row.path("reservationRevision").asLong()).isEqualTo(2)
+        assertThat(row.path("demandSupply").path("requestedBase").asString()).isEqualTo("100000")
+        assertThat(row.path("demandSupply").path("backorderBase").asString()).isEqualTo("100000")
+        assertThat(row.path("demandSupply").path("demandState").asString()).isEqualTo("SUBMITTED")
     }
     private fun http(port: Int, token: String, path: String, body: String? = null): String {
         val builder = HttpRequest.newBuilder(URI("http://127.0.0.1:$port/api/v1/warehouse/material-requests/$path"))

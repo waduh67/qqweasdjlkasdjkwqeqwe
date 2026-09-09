@@ -70,4 +70,43 @@ class WarehouseReservationITPlanBinding : WarehouseReservationFixture() {
         call(demand, "unpick", mutation(4, row, "20000"))
         call(demand, "release", mutation(5, allocations(demand).single(), "20000"))
     }
+
+    @Test fun `historical binding still enforces current scope and permission after newer draft`() {
+        val demand = picked()
+        val row = allocations(demand).single()
+        newerDraft(demand)
+        val actor = UUID.fromString(mapper.readTree(request("GET", "/api/me", demand.token).contentAsString).path("id").asString())
+        val scopeApi = context.getBean(com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseScopePersistence::class.java)
+        authenticated(demand.token, demand.fixture) { scopeApi.replace(actor, emptySet(), 0) }
+        val before = demand.fixture.transaction { counts() }
+        val path = "/api/v1/warehouse/material-requests/${demand.document}"
+        assertThat(request("GET", "/api/v1/warehouse/material-requests/allocations/${demand.workOrder}", demand.token).status).isEqualTo(404)
+        assertThat(request("POST", "$path/unpick", demand.token, mutation(3, row, "20000")).status).isEqualTo(404)
+        assertThat(request("POST", "$path/reserve", demand.token, """{"expectedRevision":1,"workOrderRevision":0,"planRevision":1}""", "original-reserve").status).isEqualTo(404)
+        authenticated(demand.token, demand.fixture) { scopeApi.replace(actor, setOf(demand.fixture.warehouse), 0) }
+        assertThat(allocations(demand).single()).isEqualTo(row)
+        assertThat(request("PUT", "/api/users/$actor/access", demand.token, """{"roleIds":[],"areaIds":[]}""").status).isEqualTo(200)
+        assertThat(request("GET", "/api/v1/warehouse/material-requests/allocations/${demand.workOrder}", demand.token).status).isEqualTo(403)
+        assertThat(request("POST", "$path/unpick", demand.token, mutation(3, row, "20000")).status).isEqualTo(403)
+        assertThat(request("POST", "$path/reserve", demand.token, """{"expectedRevision":1,"workOrderRevision":0,"planRevision":1}""", "original-reserve").status).isEqualTo(403)
+        assertThat(demand.fixture.transaction { counts() }).isEqualTo(before)
+    }
+
+    @Test fun `reallocation uses historical source binding but requires current target plan`() {
+        val source = picked()
+        newerDraft(source)
+        call(source, "unpick", mutation(3, allocations(source).single(), "20000"))
+        val staleTarget = demand(source.token, source.fixture, 60000)
+        newerDraft(staleTarget)
+        val row = allocations(source).single()
+        fun targetBody(target: Demand) = """, "target":{"documentId":"${target.document}","expectedRevision":1,"workOrderRevision":0,"planRevision":1,"demandLineId":"${target.line}"}"""
+        val before = source.fixture.transaction { counts() }
+        assertThat(request("POST", "/api/v1/warehouse/material-requests/${source.document}/reallocate", source.token,
+            mutation(4, row, "60000", targetBody(staleTarget))).status).isEqualTo(409)
+        assertThat(source.fixture.transaction { counts() }).isEqualTo(before)
+        val target = demand(source.token, source.fixture, 60000)
+        call(source, "reallocate", mutation(4, row, "60000", targetBody(target)))
+        assertThat(allocations(source).single().path("state").asString()).isEqualTo("RELEASED")
+        assertThat(allocations(target).single().path("reservedUnpickedBase").asString()).isEqualTo("60000")
+    }
 }
