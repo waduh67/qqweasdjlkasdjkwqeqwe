@@ -25,6 +25,7 @@ class WarehouseContractTest {
         "inventory.InventoryMaterialApi", "inventory.InventoryWorkOrderValidationPort",
         "inventory.InventoryDeploymentApi", "inventory.InventoryTenantCutoverApi",
         "inventory.InventoryWarehouseScopeApi", "inventory.MaterialConsumptionApiV2",
+        "inventory.InventoryReservationApi", "inventory.InventoryMaterialReservationApi",
         "workorder.WorkOrderMaterialContextApi", "customer.CustomerAssetApi", "iam.CurrentAuthorityApi",
         "common.security.AuthorityFence", "common.security.AuthorityChangeFence",
     )
@@ -174,7 +175,8 @@ class WarehouseContractTest {
         val required = pairs.flatMap { resource -> listOf("inventory.$resource.view", "inventory.$resource.manage") } +
             listOf("inventory.report.view", "inventory.cost.view", "inventory.location.view", "inventory.location.manage",
                 "inventory.item.view", "inventory.item.manage", "inventory.custody.view", "inventory.custody.manage",
-                "inventory.approval.view", "inventory.approval.request", "inventory.approval.decide", "inventory.approval.emergency", "inventory.approval.manage")
+                "inventory.approval.view", "inventory.approval.request", "inventory.approval.decide", "inventory.approval.emergency", "inventory.approval.manage",
+                "inventory.request.override")
         val actual = PermissionCatalog.ALL.map { it.code.value }.filter { it.startsWith("inventory.") }
         assertThat(actual).containsExactlyInAnyOrderElementsOf(required).doesNotHaveDuplicates()
         assertThat(actual).allMatch { Regex("[a-z]+\\.[a-z]+\\.[a-z]+").matches(it) }
