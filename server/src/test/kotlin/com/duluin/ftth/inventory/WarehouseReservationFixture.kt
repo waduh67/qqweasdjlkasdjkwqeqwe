@@ -63,4 +63,12 @@ abstract class WarehouseReservationFixture : WarehouseReceiptHttpFixture() {
     internal fun receive(fixture: WarehousePostingFixture, quantity: String, serial: Boolean = false): PostingDimension = fixture.transaction {
         receipt(if (serial) StockQuantity.each(quantity) else StockQuantity.metres(quantity))
     }
+    internal fun <T> authenticated(token: String, fixture: WarehousePostingFixture, action: () -> T): T {
+        val security = org.springframework.security.core.context.SecurityContextHolder.getContext()
+        val previous = security.authentication
+        security.authentication = com.duluin.ftth.common.infrastructure.security.JwtAuthenticationConverter().convert(
+            context.getBean(org.springframework.security.oauth2.jwt.JwtDecoder::class.java).decode(token))
+        try { return com.duluin.ftth.common.tenant.TenantContext.runAs(fixture.tenant, action) }
+        finally { security.authentication = previous }
+    }
 }
