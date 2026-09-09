@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository
 import java.time.Instant
 import java.util.UUID
 
+enum class ReservationValidationMode { NEW_ALLOCATION, BOUND_LIFECYCLE, HISTORICAL_READ, REPLAY }
+
 @Repository
 class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
     fun now(): Instant = jdbc.execute { sql -> sql.query("SELECT clock_timestamp()") { it.getTimestamp(1).toInstant() }.single() }
@@ -26,14 +28,14 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
             if (sql.value("SELECT id FROM inventory_document WHERE tenant_id=? AND id=? FOR UPDATE", sql.tenant, id) == null) sql.fail(WarehouseErrorCode.NOT_FOUND)
         }
     }
-    fun lines(document: ReservationDemand, requireLatest: Boolean = true): List<ReservationDemandLine> = jdbc.execute { sql ->
+    fun lines(document: ReservationDemand, mode: ReservationValidationMode): List<ReservationDemandLine> = jdbc.execute { sql ->
         val rows = sql.query("""SELECT demand.*,line.id plan_line_id FROM inventory_document_line demand
             JOIN inventory_material_plan plan ON plan.tenant_id=demand.tenant_id AND plan.work_order_id=? AND plan.plan_revision=?
             JOIN inventory_material_plan_line line ON line.tenant_id=plan.tenant_id AND line.plan_id=plan.id AND line.line_number=demand.line_number
             WHERE demand.tenant_id=? AND demand.document_id=? AND plan.state='SUBMITTED' AND plan.material_mode='MATERIAL_REQUIRED'
             AND line.sku_id=demand.sku_id AND line.base_unit=demand.base_unit AND line.quantity_base=demand.quantity_base AND line.continuous_cut=demand.continuous_cut
             AND (? OR NOT EXISTS (SELECT FROM inventory_material_plan newer WHERE newer.tenant_id=plan.tenant_id AND newer.work_order_id=plan.work_order_id AND newer.plan_revision>plan.plan_revision))
-            ORDER BY demand.line_number LIMIT 101""", document.workOrder, document.planRevision, sql.tenant, document.id, !requireLatest) {
+            ORDER BY demand.line_number LIMIT 101""", document.workOrder, document.planRevision, sql.tenant, document.id, mode != ReservationValidationMode.NEW_ALLOCATION) {
             ReservationDemandLine(it.uuid("id"), it.uuid("plan_line_id"), it.uuid("sku_id"), StockUnit.valueOf(it.getString("base_unit")),
                 it.getLong("quantity_base"), it.getBoolean("continuous_cut"), it.getString("tracking"))
         }

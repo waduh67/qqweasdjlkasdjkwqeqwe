@@ -4,6 +4,7 @@ import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReservationStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.ReservationValidationMode
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
@@ -39,8 +40,8 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
         val rows = store.rows(documentId)
         val targetRows = targetPreview?.let { store.rows(it.id) }.orEmpty()
         (rows + targetRows).map { it.dimension.locationId }.distinct().forEach { receipts.authorizeLocation(it, current, scope) }
-        val lines = store.lines(preview)
-        val targetLines = targetPreview?.let(store::lines).orEmpty()
+        val lines = store.lines(preview, ReservationValidationMode.REPLAY)
+        val targetLines = targetPreview?.let { store.lines(it, ReservationValidationMode.REPLAY) }.orEmpty()
         val candidates = store.candidates((lines + targetLines).map { it.sku }.toSet()).filter { candidate ->
             try { receipts.authorizeLocation(candidate.dimension.locationId, current, scope); true }
             catch (failure: WarehouseContractException) { if (failure.error.code == WarehouseErrorCode.NOT_FOUND) false else throw failure }
@@ -57,11 +58,13 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
             return prior.receipt
         }
         checkDemand(document, request.expectedRevision, request.planRevision, contexts.getValue(document.workOrder), request.workOrderRevision, action)
+        store.lines(document, if (action == ReservationAction.RESERVE) ReservationValidationMode.NEW_ALLOCATION else ReservationValidationMode.BOUND_LIFECYCLE)
         val target = targetPreview?.let { store.demand(it.id) }
         if (target != null) {
             val input = requireNotNull(request.target)
             if (target.workOrder == document.workOrder) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             checkDemand(target, input.expectedRevision, input.planRevision, contexts.getValue(target.workOrder), input.workOrderRevision, ReservationAction.RESERVE)
+            store.lines(target, ReservationValidationMode.NEW_ALLOCATION)
         }
         store.lockStock(candidates, rows + targetRows)
         val locked = store.candidates((lines + targetLines).map { it.sku }.toSet()).filter { fresh -> candidates.any { it.dimension == fresh.dimension } }
@@ -109,7 +112,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
         val scope = scopes.currentUnderFence(current.fence)
         return documents.flatMap { id ->
             val demand = store.demand(id)
-            store.lines(demand)
+            store.lines(demand, ReservationValidationMode.HISTORICAL_READ)
             store.rows(id).map { it.dimension.locationId }.distinct().forEach { receipts.authorizeLocation(it, current, scope) }
             store.allocations(demand)
         }

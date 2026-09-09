@@ -4,6 +4,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReservationStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.ReservationValidationMode
 import com.duluin.ftth.inventory.application.port.outbound.ReservationState
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
 import com.duluin.ftth.inventory.domain.model.StockQuantity
@@ -28,7 +29,7 @@ class WarehouseReservationExpiry(private val cutovers: InventoryTenantCutoverApi
         val preview = store.demand(id)
         workOrders.lock(preview.workOrder, null, null)
         masters.lockTopology()
-        val lines = store.lines(preview, false)
+        val lines = store.lines(preview, ReservationValidationMode.BOUND_LIFECYCLE)
         val candidates = store.candidates(lines.map { it.sku }.toSet())
         store.lockDocuments(listOf(id) + candidates.map { it.originDocument })
         val document = store.demand(id)
