@@ -54,7 +54,9 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
         }
     }
     fun candidates(skus: Set<UUID>): List<ReservationCandidate> = jdbc.execute { sql ->
-        sql.query("""SELECT balance.*,segment.revision stock_revision,coalesce(lot.received_at,source.created_at) received_at,
+        sql.query("""SELECT balance.*,segment.revision stock_revision,coalesce(lot.received_at,
+            (SELECT min(server_received_at) FROM inventory_movement movement WHERE movement.tenant_id=source.tenant_id
+                AND movement.document_id=source.id AND movement.kind='RECEIVE' AND movement.state='APPLIED')) received_at,
             source.id origin_document,origin.id origin_line,source.revision origin_revision,
             balance.quantity_base::numeric-coalesce((SELECT sum(reserved_unpicked_base::numeric+reserved_picked_base::numeric)
                 FROM inventory_reservation reservation WHERE reservation.tenant_id=balance.tenant_id AND reservation.state='OPEN'
@@ -103,15 +105,19 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
             line.demandLineId, line.planLineId, line.requestedBase.toLong(), line.reservedUnpickedBase.toLong(), line.reservedPickedBase.toLong(), line.backorderBase.toLong()) }
     }
     fun allocations(document: ReservationDemand): List<ReservationAllocation> = jdbc.execute { sql ->
-        val bindings = sql.query("""SELECT allocation.*,reservation.*,allocation.id allocation_id,reservation.revision reservation_revision FROM inventory_reservation_allocation allocation
+        val bindings = sql.query("""SELECT allocation.*,reservation.*,allocation.id allocation_id,reservation.revision reservation_revision,
+            document.customer_id,operation.actor_id,sku.name item_category FROM inventory_reservation_allocation allocation
             JOIN inventory_reservation reservation ON reservation.tenant_id=allocation.tenant_id AND reservation.id=allocation.reservation_id
             JOIN inventory_document_line line ON line.tenant_id=reservation.tenant_id AND line.id=reservation.document_line_id
+            JOIN inventory_document document ON document.tenant_id=line.tenant_id AND document.id=line.document_id
+            JOIN inventory_operation operation ON operation.tenant_id=allocation.tenant_id AND operation.id=allocation.operation_id
+            JOIN inventory_sku sku ON sku.tenant_id=reservation.tenant_id AND sku.id=reservation.sku_id
             WHERE allocation.tenant_id=? AND line.document_id=? ORDER BY allocation.created_at,allocation.id""", sql.tenant, document.id) {
             ReservationAllocation(it.uuid("allocation_id"), it.uuid("reservation_id"), it.getLong("reservation_revision"), document.id, document.revision,
                 it.uuid("document_line_id"), it.uuid("plan_line_id"), document.planRevision, document.workOrder, it.uuid("stock_identity_id"), it.optionalUuid("lot_id"),
                 it.uuid("sku_id"), it.uuid("location_id"), it.uuid("origin_line_id"), it.getLong("origin_revision"), it.getLong("stock_revision"),
                 it.getLong("reserved_unpicked_base").toString(), it.getLong("reserved_picked_base").toString(), WarehouseBaseUnit.valueOf(it.getString("base_unit")),
-                it.getString("state"), it.getTimestamp("expires_at").toInstant())
+                it.getString("state"), it.getTimestamp("expires_at").toInstant(), it.optionalUuid("customer_id"), it.uuid("actor_id"), it.getString("item_category"))
         }
         if (bindings.size != rows(document.id).size) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         bindings
