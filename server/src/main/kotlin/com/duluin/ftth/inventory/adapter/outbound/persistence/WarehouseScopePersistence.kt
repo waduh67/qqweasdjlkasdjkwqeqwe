@@ -34,7 +34,12 @@ class WarehouseScopePersistence(
         val change = authority.lockForChange()
         val current = authority.lockCurrent()
         if (!current.platformAdmin && "inventory.location.manage" !in current.permissions) denied()
-        if (iam.findUser(userId) == null) denied()
+        if (iam.findUser(userId)?.active != true) denied()
+        val allowed = currentUnderFence(current.fence)
+        jdbc.execute { sql -> locations.forEach { location ->
+            if (!current.platformAdmin && allowed is AuthorityScope.Restricted && location !in allowed.ids) denied()
+            if (sql.value("SELECT id FROM inventory_location WHERE tenant_id=? AND id=? AND state='ACTIVE'", sql.tenant, location) == null) denied()
+        } }
         val epoch = change.incrementEpoch()
         jdbc.execute { sql ->
             sql.update("UPDATE inventory_warehouse_scope SET state='REVOKED',authority_epoch=?,revision=revision+1,updated_at=clock_timestamp() WHERE tenant_id=? AND user_id=? AND state='ACTIVE'",
