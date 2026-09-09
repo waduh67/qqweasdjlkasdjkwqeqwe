@@ -28,7 +28,7 @@ class WarehouseScopeSettingsService(private val cutovers: InventoryTenantCutover
         val change = authority.lockForChange()
         val current = authority.lockCurrent()
         access.permission(current, "inventory.location.manage")
-        access.location(location, current)
+        val bootstrap = access.scopeSetupLocation(location, current, input.active && input.expectedRevision == 0L && user == current.fence.identity.userId)
         if (access.directory(current).users.none { it.id == user }) masterFailure(WarehouseErrorCode.NOT_FOUND)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("user" to user, "location" to location, "input" to input)))
         access.replay(store.replay("scope.replace", key), current, canonical.hash, cutover.snapshot.epoch)?.let { return it }
@@ -38,7 +38,7 @@ class WarehouseScopeSettingsService(private val cutovers: InventoryTenantCutover
         val grant = store.scope(user, location, input.active, current.fence.identity.userId, epoch)
         val body = mapper.writeValueAsString(grant)
         store.record("scope.replace", key, current.fence.identity.userId, grant.id, listOf(location), grant.revision,
-            canonical.hash, epoch, cutover.snapshot.epoch, body)
+            canonical.hash, epoch, cutover.snapshot.epoch, body, bootstrap)
         return body
     }
 }

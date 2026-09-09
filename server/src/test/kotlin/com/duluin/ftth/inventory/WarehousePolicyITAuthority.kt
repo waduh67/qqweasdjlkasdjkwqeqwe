@@ -9,6 +9,25 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class WarehousePolicyITAuthority : WarehousePolicyHttpFixture() {
+    @Test fun `first scope setup is explicit current IAM authorized audited and cannot reopen after revocation`() {
+        val setup = setupReceipt()
+        val administrator = user(setup.token, setOf("iam.user.assign", "iam.role.create", "inventory.approval.manage", "inventory.location.manage", "inventory.receipt.manage"))
+        val principal = mapper.readTree(request("GET", "/api/users/${administrator.second}", setup.token).contentAsString)
+        val membership = mapper.writeValueAsString(mapOf("roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(setup.token))))
+        assertThat(request("PUT", "/api/users/${administrator.second}/access", setup.token, membership).status).isEqualTo(200)
+        val document = draft(setup, costLine(setup)).path("id").asString()
+        assertThat(evaluate(administrator.first, document).status).isEqualTo(404)
+        val path = "/api/v1/warehouse/settings/scopes/${administrator.second}/${setup.inspection}"
+        val grant = request("PUT", path, administrator.first, """{"expectedRevision":0,"active":true}""")
+        assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
+        assertThat(evaluate(administrator.first, document).status).isEqualTo(200)
+        fixture(setup.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_settings_operation WHERE actor_id='${administrator.second}' AND bootstrap")).isEqualTo("1")
+        }
+        assertThat(request("PUT", path, setup.token, """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+        assertThat(request("PUT", path, administrator.first, """{"expectedRevision":2,"active":true}""").status).isEqualTo(404)
+        assertThat(evaluate(administrator.first, document).status).isEqualTo(404)
+    }
     @Test fun `concurrent policy replacement has one winner and retains both immutable versions`() {
         val setup = setupReceipt()
         val approver = approver(setup.token, listOf(setup.inspection))

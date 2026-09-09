@@ -22,6 +22,17 @@ class WarehousePolicyAccess(private val scopes: InventoryWarehouseScopeApi, priv
         return location
     }
     fun directory(current: CurrentAuthority): ApprovalAuthorityDirectory = directory.directory(current.fence)
+    fun scopeSetupLocation(id: UUID, current: CurrentAuthority, initialGrant: Boolean): Boolean {
+        val scope = scopes.currentUnderFence(current.fence)
+        val setup = initialGrant && !current.platformAdmin && scope is AuthorityScope.Restricted && scope.ids.isEmpty() &&
+            store.scopes(current.fence.identity.userId).isEmpty() && store.current() == null &&
+            setOf("iam.user.assign", "iam.role.create", "inventory.approval.manage", "inventory.location.manage").all(current.permissions::contains)
+        if (!setup) { location(id, current); return false }
+        val location = masters.get(MasterKind.LOCATION, id) as LocationSnapshot
+        masterService.authorizeLocation(location, current, AuthorityScope.Restricted(setOf(id)))
+        if (location.state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.NOT_FOUND)
+        return true
+    }
     fun eligible(principal: ApprovalPrincipal, locations: Collection<UUID>): Boolean {
         if ("inventory.approval.decide" !in principal.permissions) return false
         val scope = store.locationsFor(principal.id)
