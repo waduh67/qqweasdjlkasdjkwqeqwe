@@ -6,6 +6,22 @@ import java.util.UUID
 
 @Repository
 class WarehouseQueryPersistence(private val jdbc: WarehouseCommandJdbc) {
+    fun legacyStock(access: WarehouseQueryAccess): String = jdbc.execute { sql ->
+        WarehouseQuerySql(sql, WarehouseQueryFilter(), access).result(""", counts AS (
+            SELECT asset.sku_id,asset.location_id,asset.status,count(*) quantity FROM inventory_serialized_asset asset,request
+            WHERE asset.tenant_id=request.tenant AND asset.location_id IN (SELECT id FROM visible_locations)
+            GROUP BY asset.sku_id,asset.location_id,asset.status), grouped AS (
+            SELECT sku_id,location_id,jsonb_object_agg(status,quantity) quantities FROM counts GROUP BY sku_id,location_id)
+            SELECT coalesce(jsonb_agg(jsonb_build_object('skuId',sku_id,'locationId',location_id,'quantities',quantities)
+                ORDER BY sku_id,location_id),'[]'::jsonb)::text FROM grouped""")
+    }
+
+    fun history(filter: WarehouseQueryFilter, access: WarehouseQueryAccess, id: UUID): String = jdbc.execute { sql ->
+        val query = WarehouseQuerySql(sql, filter, access)
+        query.result(""",target AS (SELECT * FROM scoped_positions WHERE id=? AND warehouse_admission='VERIFIED'),
+            target_segments AS (SELECT stock_identity_id id FROM target)""" + warehouseTimeline(query), id)
+    }
+
     fun stock(filter: WarehouseQueryFilter, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, filter, access)
         val rows = """SELECT sku_id id,sku_id,sku_code,sku_name name,tracking,base_unit,sum(quantity_base::numeric) physical,
