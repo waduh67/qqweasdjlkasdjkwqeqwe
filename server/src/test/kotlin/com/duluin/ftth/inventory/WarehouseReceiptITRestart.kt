@@ -3,7 +3,11 @@ package com.duluin.ftth.inventory
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.io.TempDir
+import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import java.net.Socket
 import java.net.URI
 import java.net.http.HttpClient
@@ -15,7 +19,18 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseReceiptITRestart : WarehouseReceiptHttpFixture() {
+    companion object {
+        private val restartDatabase by lazy { WarehouseSchemaDatabase() }
+        @JvmStatic @DynamicPropertySource fun database(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url") { restartDatabase.url }
+            registry.add("spring.flyway.url") { restartDatabase.url }
+            registry.add("spring.flyway.schemas") { restartDatabase.schema }
+            registry.add("spring.flyway.default-schema") { restartDatabase.schema }
+        }
+        @JvmStatic @AfterAll fun cleanup() { restartDatabase.close() }
+    }
     @TempDir lateinit var temporary: Path
 
     @Test fun `response loss followed by SIGKILL restart returns original HTTP receipt without another stock increase`() {
@@ -98,7 +113,7 @@ class WarehouseReceiptITRestart : WarehouseReceiptHttpFixture() {
         val port = temporary.resolve("$name.port")
         val classpath = requireNotNull(System.getProperty("warehouse.test.classpath"))
         val process = ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(), "-Xmx512m", "-cp", classpath,
-            WarehouseReceiptRestartProcess::class.java.name, port.toString(), name)
+            WarehouseReceiptRestartProcess::class.java.name, port.toString(), name, restartDatabase.url, restartDatabase.schema)
             .redirectErrorStream(true).redirectOutput(temporary.resolve("$name.log").toFile()).start()
         try {
             await().atMost(Duration.ofSeconds(100)).until { check(process.isAlive) { "Child server failed: ${Files.readString(temporary.resolve("$name.log"))}" }; Files.exists(port) }
