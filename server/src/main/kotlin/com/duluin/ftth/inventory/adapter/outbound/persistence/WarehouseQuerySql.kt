@@ -14,10 +14,19 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
         AuthorityScope.Unrestricted -> null
         is AuthorityScope.Restricted -> sql.connection.createArrayOf("uuid", scope.ids.toTypedArray())
     }
-    fun result(query: String, vararg values: Any?): String = sql.value(prefix + query,
-        sql.tenant, array(access.locations), array(access.areas), jacksonObjectMapper().writeValueAsString(access.sites),
-        filter.skuId, filter.serial, filter.locationId, filter.status, filter.condition, filter.owner, filter.from, filter.until,
-        *values) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+    fun result(query: String, vararg values: Any?): String {
+        val parameters = listOf(sql.tenant, array(access.locations), array(access.areas), jacksonObjectMapper().writeValueAsString(access.sites),
+            filter.skuId, filter.serial, filter.locationId, filter.status, filter.condition, filter.owner, filter.from, filter.until) + values
+        return sql.connection.prepareStatement(prefix + query).use { statement ->
+            statement.queryTimeout = 20
+            parameters.forEachIndexed { index, value -> statement.setObject(index + 1,
+                if (value is java.time.Instant) java.sql.Timestamp.from(value) else value) }
+            statement.executeQuery().use { result ->
+                if (!result.next()) sql.fail(WarehouseErrorCode.NOT_FOUND)
+                result.getString(1) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+            }
+        }
+    }
 
     fun page(rows: String, json: String, order: String, requireTarget: Boolean = false): String = """,
         matches AS MATERIALIZED ($rows), selected AS (SELECT *${if (json == "body") "" else ", $json AS body"} FROM matches
