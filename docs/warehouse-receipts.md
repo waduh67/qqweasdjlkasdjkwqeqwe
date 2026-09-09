@@ -243,7 +243,7 @@ ada sanitasi/rewrite bytes bukti.
   lifecycle dan cleanup transaksi dari koreksi sebelumnya tetap berlaku. Tidak ada
   perubahan dependency atau migration pada koreksi sintaks ini.
 
-Bukti terbaru:
+Bukti koreksi sintaks sebelum perbaikan state Form:
 
 - Fixture raw-gap474 byte/startxref311 tetap SHA256
   `0d1beb189093fb5f730111816aae48930920eb62f570f90ea1df72017c457b84`.
@@ -264,9 +264,65 @@ Bukti terbaru:
   matrix positif dan seluruh AV8 probe. Main stock tetap available900000MM+8EA,
   quarantine100000MM+2EA, cost500000/1000000 IDR. No public upload atau script execution.
 
-Artefak terbaru SHA256:
+Artefak koreksi sintaks SHA256:
 `9972da33fbaa156c2807fbd829a1a6cc31fb896dd063f1fad0fdd87b28fc7f69`.
 Evidence dan fixture bytes berada di
 `.omo/evidence/warehouse-workorder-asset-provenance/task-8/pdf-syntax/` (tidak di git).
 Fixture/probe runtime telah dihapus; schema/trigger/function/child connection
 sementara0/0/0/0. Container/network milik task dihentikan, volume dipertahankan.
+
+## Pewarisan graphics state Form XObject
+
+Validasi Form sekarang dijalankan pada setiap operator `Do`, bukan sebagai stream
+terpisah yang selalu dimulai dengan DeviceGray. Snapshot caller membawa colour
+space/value stroking dan nonstroking, CTM, clipping, text/line state dan ExtGState.
+Matrix Form dikomposisikan dengan CTM caller; BBox menambah irisan clip simbolik
+yang mempertahankan batas caller. Arithmetic harus finite. Ini model validasi
+non-rendering: tidak menggambar, mengeksekusi action atau menulis ulang bytes PDF.
+
+Stack q/Q, text object, path dan marked-content milik invocation tetap lokal.
+Perubahan colour, matrix, clip, font/spacing maupun line state di Form dibuang
+saat kembali ke caller. Resource dictionary lookup tetap terpisah dari pewarisan
+graphics state; Form dengan Resources kosong dapat memakai RGB yang sudah dipilih
+caller, tanpa harus mendeklarasikan ulang colour space tersebut.
+
+Tidak ada cache hasil validasi Form berdasarkan object ID. Set Form yang pernah
+dipanggil hanya mencegah pemeriksaan context-free kedua setelah page selesai;
+setiap `Do` tetap membaca dan memvalidasi instruksi lagi. Active-path identity
+menolak cycle/rekursi dan depth lebih dari64. Decoded-byte, token dan pekerjaan
+operand ExtGState dibebankan ke budget dokumen yang sama pada setiap invocation.
+Form yang tidak dipanggil diperiksa memakai constraint colour yang diwariskan,
+bukan memilih Gray secara arbitrer; constraint yang bertentangan tetap ditolak.
+
+Bukti perbaikan:
+
+- Fixture653 byte SHA256
+  `13a68f2c92ff8bd28ab062307b24092a2167a1f6e2b1b3f1087ae659a1a9c951`
+  berubah dari upload400 menjadi201/download200 byte-identical. Control667 byte
+  SHA256 `0707c233fc7e9f08c6f5a4ec45d28159c91a689b930ab489ab90f04a2bcdc459`
+  tetap201/200. Keduanya valid untuk inspeksi; opening tetap409 approval-required.
+- 14 matrix positif mencakup Gray/RGB/CMYK/named/stroking, shared Form, nested dan
+  sibling calls, implicit restore, q/Q, matrix/clip dan metadata opsional.
+  14 matrix negatif mencakup operand mismatch, invocation kedua yang inkompatibel,
+  cycle, depth/stack/budget dan constraint detached yang bertentangan:400/no writes.
+- Exact WarehouseReceiptIT final dua kali berturut-turut:
+  **93 test,0 gagal,0 skipped**. Gabungan tasks1-8/schema/network/Modularity:
+  **727 test,0 gagal,0 skipped**. Clean no-cache bootJar sukses.
+- Probe packaged HTTP/private MinIO/PostgreSQL mengulang matrix Form,12 PDF valid
+  sebelumnya, raw-gap/invalid-content, stale evidence, lifecycle, multipart dan
+  object-reconciliation. Main stock tetap available900000MM+8EA serta
+  quarantine100000MM+2EA, dengan cost500000/1000000 IDR.
+
+QA sempat menangkap deadline startup child100s pada fixture restart lama yang
+memindai ribuan tenant uji yang dipertahankan. Fixture restart kini memakai schema
+unik di warehouse_test untuk parent dan child JVM, mengikuti harness schema task4;
+migrations, warehouse_app non-owner/NOBYPASSRLS, otoritas dan timeout100s tetap.
+Tidak ada retry wrapper, pelonggaran timeout, perubahan bootstrap produksi atau
+penghapusan data public. Kegagalan awal tetap disimpan bersama bukti rerun final.
+
+Artefak Form-state SHA256:
+`52c58bc540132d44d6247dfc266418ae532fda06571c558b4f31a78c17177d1e`.
+Evidence: `.omo/evidence/warehouse-workorder-asset-provenance/task-8/form-state/`.
+Tidak ada migration, dependency atau task9+ yang diubah.
+Probe/runtime objects dibersihkan; schema/trigger/function/child connection
+sementara0/0/0/0. Service/container/network task dihentikan, volume dipertahankan.
