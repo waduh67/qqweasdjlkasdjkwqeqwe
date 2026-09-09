@@ -10,10 +10,18 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
 | M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11, V174.12, V174.13, V174.14 | 04 / 06 / 07 / 08 / 10 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards; receipt intake snapshots, secured evidence and exact inspection disposition; immutable intake-content evidence binding; reservation allocation links and demand supply snapshots |
-| M03 | V175 | 11 | Approval, counts, remaining operations |
+| M03 | V175 | 11 | Versioned policy/rules/tiers/approvers, warehouse applicability, durable settings replay, delegation lifecycle; approval/count source snapshots and repair/replenishment foundations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
+
+## M03: reservation task11
+
+Task11 reserves `V175__warehouse_policy_foundations.sql` before creating SQL.
+V174.14 and every earlier migration remain byte-identical. V176 and later slots
+remain reserved for their existing owners. This expansion does not create
+approval requests, decisions, movements, repair jobs or replenishment requests.
+Policy settings are control-plane operations; evaluation is not approval.
 
 ## M01/M02: persistence task04
 
