@@ -19,12 +19,18 @@ class WarehouseQueryService(private val authority: CurrentAuthorityApi, private 
     private val sites: SiteReferenceApi, private val store: WarehouseQueryPersistence,
     private val assets: WarehouseAssetQueries, private val lots: WarehouseLotQueries) {
     @Transactional(timeout = 20)
+    fun legacyStock(): String = store.legacyStock(access())
+
+    @Transactional(timeout = 20)
+    fun stockHistory(parameters: Map<String, List<String>>, id: UUID): String = store.history(WarehouseQueryFilter.parse(parameters, true), access(), id)
+
+    @Transactional(timeout = 20)
     fun assets(parameters: Map<String, List<String>>, id: UUID? = null, history: Boolean = false): String =
         assets.assets(WarehouseQueryFilter.parse(parameters, history), access(), id, history)
 
     @Transactional(timeout = 20)
-    fun lots(parameters: Map<String, List<String>>, id: UUID? = null, part: String? = null): String =
-        lots.lots(WarehouseQueryFilter.parse(parameters, part == "history"), access(), id, part)
+    fun lots(parameters: Map<String, List<String>>, id: UUID? = null, part: String? = null, segmentId: UUID? = null): String =
+        lots.lots(WarehouseQueryFilter.parse(parameters, part == "history"), access(), id, part, segmentId)
 
     @Transactional(timeout = 20)
     fun stock(parameters: Map<String, List<String>>): String = store.stock(WarehouseQueryFilter.parse(parameters), access())
