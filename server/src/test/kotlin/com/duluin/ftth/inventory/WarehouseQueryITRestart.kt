@@ -42,22 +42,34 @@ class WarehouseQueryITRestart : WarehouseReceiptHttpFixture() {
             {"skuId":"${setup.onu}","quantityBase":"30","serials":[$serials]}""")
         val receiptId = receipt.path("id").asString()
         transition(setup, receiptId, "receive", """{"expectedRevision":0}""")
+        val window = fixture(setup.token).transaction { jdbc { connection -> connection.createStatement().use { statement ->
+            statement.executeQuery("SELECT received_at,clock_timestamp() FROM inventory_lot").use { rows ->
+                rows.next(); rows.getTimestamp(1).toInstant().minusSeconds(1) to rows.getTimestamp(2).toInstant()
+            }
+        } } }
+        val range = "from=${window.first}&until=${window.second}"
         val detail = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$receiptId", setup.token).contentAsString)
         val line = detail.path("lines")[0]
         transition(setup, receiptId, "putaway", """{"expectedRevision":1,"destinationLocationId":"${setup.bin}","lines":[
             {"lineId":"${line.path("id").asString()}","stockIdentityId":"${line.path("pieces")[0].path("stockIdentityId").asString()}","quantityBase":"82501","baseUnit":"MM"}]}""")
         val lot = mapper.readTree(request("GET", "/api/v1/warehouse/lots", setup.token).contentAsString).path("items")[0].path("id").asString()
         val asset = mapper.readTree(request("GET", "/api/v1/warehouse/assets/lookup?value=RESTART-1", setup.token).contentAsString).path("assetId").asString()
-        val paths = listOf("stock", "stock/positions", "assets?sort=name", "assets?sort=name&page=1", "assets/$asset", "assets/$asset/history", "lots/$lot", "lots/$lot/segments", "lots/$lot/history")
+        val position = mapper.readTree(request("GET", "/api/v1/warehouse/stock/positions?serial=RESTART-1", setup.token).contentAsString).path("items")[0].path("id").asString()
+        fixture(setup.token).transaction { sql("UPDATE inventory_balance_projection SET updated_at='${window.second.plusSeconds(86400)}',revision=revision+1 WHERE id='$position'") }
+        val paths = listOf("stock", "stock/positions", "assets?sort=name", "assets?sort=name&page=1", "assets/$asset", "assets/$asset/history", "lots/$lot", "lots/$lot/segments", "lots/$lot/history",
+            "lots?$range", "stock/positions/$position/history?serial=restart-1&$range", "assets/$asset/history?serial=restart-1&$range")
+        val rejected = listOf("stock/positions/$position/history?serial=NOT-THE-ASSET", "assets/$asset/history?serial=NOT-THE-ASSET")
         val first = start("query-first")
-        val snapshots = try { paths.associateWith { get(first.second, setup.token, it) } } finally { stop(first.first) }
+        val snapshots = try { (paths + rejected).associateWith { get(first.second, setup.token, it, if (it in rejected) 404 else 200) } } finally { stop(first.first) }
+        assertThat(mapper.readTree(snapshots.getValue("lots?$range")).path("totalElements").asInt()).isEqualTo(1)
+        assertThat(mapper.readTree(snapshots.getValue("stock/positions/$position/history?serial=restart-1&$range")).path("totalElements").asInt()).isEqualTo(2)
         val firstPage = mapper.readTree(snapshots.getValue("assets?sort=name"))
         val secondPage = mapper.readTree(snapshots.getValue("assets?sort=name&page=1"))
         assertThat(firstPage.path("items").size()).isEqualTo(25)
         assertThat(secondPage.path("items").size()).isEqualTo(5)
         assertThat((firstPage.path("items").asSequence()+secondPage.path("items").asSequence()).map { it.path("id").asString() }.toSet()).hasSize(30)
         val restarted = start("query-second")
-        try { paths.forEach { assertThat(get(restarted.second,setup.token,it)).describedAs(it).isEqualTo(snapshots.getValue(it)) } }
+        try { (paths + rejected).forEach { assertThat(get(restarted.second,setup.token,it,if (it in rejected) 404 else 200)).describedAs(it).isEqualTo(snapshots.getValue(it)) } }
         finally { stop(restarted.first) }
     }
 
@@ -105,10 +117,10 @@ class WarehouseQueryITRestart : WarehouseReceiptHttpFixture() {
         } } finally { stop(process.first) }
     }
 
-    private fun get(port: Int, token: String, path: String): String {
+    private fun get(port: Int, token: String, path: String, expected: Int = 200): String {
         val response = client.send(HttpRequest.newBuilder(URI("http://127.0.0.1:$port/api/v1/warehouse/$path"))
             .timeout(Duration.ofSeconds(20)).header("Authorization","Bearer $token").GET().build(),HttpResponse.BodyHandlers.ofString())
-        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(200)
+        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(expected)
         return response.body()
     }
     private fun start(name: String): Pair<Process,Int> {
