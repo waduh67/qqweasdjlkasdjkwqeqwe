@@ -19,22 +19,23 @@ abstract class WarehouseReservationFixture : WarehouseReceiptHttpFixture() {
         }
         return token to fixture
     }
-    internal fun demand(token: String, fixture: WarehousePostingFixture, quantity: Long, continuous: Boolean = true, serial: Boolean = false): Demand {
+    internal fun demand(token: String, fixture: WarehousePostingFixture, quantity: Long, continuous: Boolean = true, serial: Boolean = false,
+        skuId: UUID? = null, lineCount: Int = 1): Demand {
         val actor = mapper.readTree(request("GET", "/api/me", token).contentAsString).path("id").asString()
         val workOrder = UUID.randomUUID()
         val document = UUID.randomUUID()
         val line = UUID.randomUUID()
         val plan = UUID.randomUUID()
         fixture.transaction {
-            val selectedSku = if (serial) serialSku else sku
+            val selectedSku = skuId ?: if (serial) serialSku else sku
             val unit = if (serial) "EA" else "MM"
             val tracking = if (serial) "SERIAL" else "LOT"
             sql("INSERT INTO work_order(id,tenant_id,code,type,title,status,created_by,area_id) VALUES ('$workOrder','$tenant','${workOrder.toString().take(18)}','PREVENTIVE','Reservation','DRAFT','$actor','${area(token)}')")
             sql("INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id) VALUES ('$plan','$tenant','$workOrder',1,0,'MATERIAL_REQUIRED','$actor')")
-            sql("INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit,continuous_cut) VALUES (gen_random_uuid(),'$tenant','$plan',1,'$selectedSku',$quantity,'$unit',$continuous)")
+            for (number in 1..lineCount) sql("INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit,continuous_cut) VALUES (gen_random_uuid(),'$tenant','$plan',$number,'$selectedSku',$quantity,'$unit',$continuous)")
             sql("UPDATE inventory_material_plan SET state='SUBMITTED',submitted_at=now(),revision=1 WHERE id='$plan'")
             sql("INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,work_order_id,work_order_revision,plan_revision,submitted_at,cutover_epoch,authority_epoch) VALUES ('$document','$tenant','$document','DEMAND','$actor','$workOrder',0,1,now(),0,0)")
-            sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,quantity_base,base_unit,tracking,continuous_cut) VALUES ('$line','$tenant','$document',1,0,'$selectedSku',$quantity,'$unit','$tracking',$continuous)")
+            for (number in 1..lineCount) sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,quantity_base,base_unit,tracking,continuous_cut) VALUES ('${if (number == 1) line else UUID.randomUUID()}','$tenant','$document',$number,0,'$selectedSku',$quantity,'$unit','$tracking',$continuous)")
             sql("UPDATE inventory_document SET state='SUBMITTED',revision=1 WHERE id='$document'")
         }
         return Demand(fixture, token, document, line, workOrder)
