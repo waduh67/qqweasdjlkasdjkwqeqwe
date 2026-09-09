@@ -23,7 +23,8 @@ interface InventoryApi {
 
     fun consumeFulfillment(command: InventoryFulfillmentCommand): InventoryFulfillmentResult
     fun returnFulfillment(command: InventoryFulfillmentCommand): InventoryFulfillmentResult
-    fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> = emptyList()
+    fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> =
+        throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Allocation reader is not configured"))
 }
 
 data class InventoryFulfillmentAllocation(
@@ -31,11 +32,12 @@ data class InventoryFulfillmentAllocation(
     val itemId: UUID,
     val skuId: UUID,
     val locationId: UUID,
-    val customerId: UUID,
-    val quantity: Int,
+    val customerId: UUID?,
+    val quantity: Int?,
     val serialized: Boolean,
     val actorId: UUID,
     val itemCategory: String,
+    val reservation: ReservationAllocation? = null,
 )
 
 data class InventoryFulfillmentCommand(

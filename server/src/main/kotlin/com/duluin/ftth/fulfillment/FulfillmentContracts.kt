@@ -206,15 +206,18 @@ class PublicApiFulfillmentEffectExecutor(
         if (allocations.isEmpty()) throw FulfillmentExecutionFailure.ReconciliationRequired("INVENTORY_ALLOCATIONS_NOT_FOUND")
         try {
             allocations.forEach { allocation ->
+                if (allocation.reservation != null) throw FulfillmentExecutionFailure.ReconciliationRequired("RESERVATION_REQUIRES_ISSUE_AND_USE_WORKFLOW")
+                val customerId = allocation.customerId ?: throw FulfillmentExecutionFailure.ReconciliationRequired("INVENTORY_CUSTOMER_NOT_FOUND")
+                val quantity = allocation.quantity ?: throw FulfillmentExecutionFailure.ReconciliationRequired("INVENTORY_UNIT_REQUIRES_MATERIAL_WORKFLOW")
                 val result = inventory.consumeFulfillment(InventoryFulfillmentCommand(
                     tenantId = request.tenantId,
                     targetId = allocation.targetId,
                     itemId = allocation.itemId,
                     skuId = allocation.skuId,
                     locationId = allocation.locationId,
-                    customerId = allocation.customerId,
+                    customerId = customerId,
                     workOrderId = workOrderId,
-                    quantity = allocation.quantity,
+                    quantity = quantity,
                     serialized = allocation.serialized,
                     installed = request.workOrderKind != "DISMANTLE",
                     actorId = allocation.actorId,
