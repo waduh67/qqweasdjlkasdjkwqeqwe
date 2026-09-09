@@ -23,6 +23,10 @@ class WarehouseQueryIT : WarehouseReceiptHttpFixture() {
         val positions = request("GET", "/api/v1/warehouse/stock/positions?skuId=${setup.cable}", setup.token)
         assertThat(positions.status).withFailMessage(positions.contentAsString).isEqualTo(200)
         assertThat(mapper.readTree(positions.contentAsString).path("totalElements").asLong()).isEqualTo(1)
+        val position = mapper.readTree(positions.contentAsString).path("items")[0].path("id").asString()
+        val history = request("GET", "/api/v1/warehouse/stock/$position/history", setup.token)
+        assertThat(history.status).withFailMessage(history.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(history.contentAsString).path("totalElements").asInt()).isEqualTo(2)
         assertThat(fixture(setup.token).transaction { counts() }).isEqualTo(before)
     }
 

@@ -42,6 +42,9 @@ class WarehouseQueryITIdentity : WarehouseReceiptHttpFixture() {
         val segments = mapper.readTree(request("GET", "/api/v1/warehouse/lots/$id/segments", setup.token).contentAsString)
         assertThat(segments.path("totalElements").asInt()).isEqualTo(1)
         assertThat(segments.path("items")[0].path("kind").asString()).isEqualTo("REEL")
+        val segmentId = segments.path("items")[0].path("id").asString()
+        assertThat(request("GET", "/api/v1/warehouse/lots/$id/segments/$segmentId", setup.token).status).isEqualTo(200)
+        assertThat(mapper.readTree(request("GET", "/api/v1/warehouse/lots/$id/segments?status=SPLIT", setup.token).contentAsString).path("totalElements").asInt()).isZero()
         assertThat(request("GET", "/api/v1/warehouse/lots/$id", tenant()).status).isEqualTo(404)
     }
 }
