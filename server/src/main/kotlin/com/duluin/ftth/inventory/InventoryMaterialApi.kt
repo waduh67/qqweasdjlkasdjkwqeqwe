@@ -2,13 +2,18 @@ package com.duluin.ftth.inventory
 
 import java.util.UUID
 
-interface InventoryMaterialApi {
+interface InventoryMaterialReservationApi {
+    fun reserve(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    fun release(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+}
+
+interface InventoryMaterialApi : InventoryMaterialReservationApi {
     fun summary(workOrderId: UUID): MaterialSummary
     fun history(workOrderId: UUID, page: WarehousePageRequest): WarehousePage<WarehouseHistoryEntry>
     fun replacePlan(workOrderId: UUID, request: ReplaceMaterialPlanRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun submitRequest(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
-    fun reserve(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
-    fun release(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    override fun reserve(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    override fun release(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun pick(workOrderId: UUID, request: PickMaterialRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun dispatch(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun acknowledge(workOrderId: UUID, request: AcknowledgeMaterialRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt

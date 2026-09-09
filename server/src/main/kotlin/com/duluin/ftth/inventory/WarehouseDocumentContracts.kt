@@ -19,7 +19,7 @@ enum class WarehouseEventKind {
 }
 
 data class WarehouseMutationMetadata(val idempotencyKey: String)
-data class MaterialDocumentRequest(val documentId: UUID, val expectedRevision: Long)
+data class MaterialDocumentRequest(val documentId: UUID, val expectedRevision: Long, val reservation: ReservationRequest? = null)
 data class ApprovalSourceRequest(val documentId: UUID, val expectedRevision: Long)
 
 data class WarehouseOperationReceipt(
