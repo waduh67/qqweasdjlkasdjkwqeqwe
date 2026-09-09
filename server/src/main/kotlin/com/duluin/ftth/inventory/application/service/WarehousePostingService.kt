@@ -34,7 +34,8 @@ class WarehousePostingService(
         require(command.expectedRevision >= 0 && command.expectedRevision < Long.MAX_VALUE)
         require(command.reason.isNotBlank())
         val availability = command.kind in setOf(MovementKind.RESERVE, MovementKind.RELEASE)
-        require(if (availability) command.legs.isEmpty() && command.reservations.isNotEmpty() else command.legs.isNotEmpty())
+        require(if (availability) command.legs.isEmpty() && (command.reservations.isNotEmpty() ||
+            command.events.any { it.kind == WarehouseEventKind.RESERVED }) else command.legs.isNotEmpty())
         require(command.splits.map { it.parentId }.distinct().size == command.splits.size)
         require(command.reservations.map { it.id }.distinct().size == command.reservations.size)
         require(command.facts.map { it.stockIdentityId }.distinct().size == command.facts.size)
