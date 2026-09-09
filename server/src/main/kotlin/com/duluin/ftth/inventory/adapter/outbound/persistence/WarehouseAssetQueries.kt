@@ -17,7 +17,7 @@ class WarehouseAssetQueries(private val jdbc: WarehouseCommandJdbc) {
             AND (request.sku IS NULL OR asset.warehouse_sku_id=request.sku) AND (request.serial IS NULL OR asset.canonical_serial=request.serial)
             ${if (history) "" else """AND (request.location IS NULL OR asset.location_id=request.location) AND (request.status IS NULL OR asset.status=request.status)
             AND (request.condition IS NULL OR asset.condition=request.condition) AND (request.owner IS NULL OR asset.legal_owner=request.owner)
-            AND (request.since IS NULL OR asset.created_at>=request.since) AND (request.until IS NULL OR asset.created_at<request.until)"""}"""
+            AND ${WarehouseQueryPredicates.assetCreated}"""}"""
         val origin = queryOrigin("origin_document_line_id")
         val cost = if (access.cost) """coalesce((SELECT ${queryCost("line", true)} FROM inventory_document_line line,request
             WHERE line.tenant_id=request.tenant AND line.id=matches.origin_document_line_id AND $origin IS NOT NULL),'{}'::jsonb)""" else "'{}'::jsonb"

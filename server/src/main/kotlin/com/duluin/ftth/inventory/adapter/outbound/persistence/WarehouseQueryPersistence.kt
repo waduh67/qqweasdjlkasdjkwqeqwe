@@ -56,7 +56,7 @@ class WarehouseQueryPersistence(private val jdbc: WarehouseCommandJdbc) {
             AND (request.sku IS NULL OR asset.sku_id=request.sku) AND (request.serial IS NULL OR warehouse_canonical_serial(asset.serial_number)=request.serial)
             AND (request.location IS NULL OR asset.location_id=request.location) AND (request.status IS NULL OR asset.status=request.status)
             AND (request.condition IS NULL OR asset.condition=request.condition) AND (request.owner IS NULL OR asset.legal_owner=request.owner)
-            AND (request.since IS NULL OR asset.created_at>=request.since) AND (request.until IS NULL OR asset.created_at<request.until)"""
+            AND ${WarehouseQueryPredicates.assetCreated}"""
         query.result(query.page(rows, """jsonb_build_object('id',id,'source',source,'skuId',sku_id,'name',name,'locationId',location_id,
             'status',status,'rawQuantity',raw_quantity,'quantityBase',quantity_base,'baseUnit',base_unit,'legalOwner',legal_owner,
             'admission',warehouse_admission,'serial',serial_number,'available',false,'reason','UNVERIFIED_UNIT_OR_ORIGIN_OR_TITLE')""", order(filter)))

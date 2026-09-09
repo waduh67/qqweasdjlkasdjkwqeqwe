@@ -72,11 +72,10 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
                 AND reservation.location_id=balance.location_id AND reservation.custodian_id=balance.custody_owner_id
                 AND reservation.custodian_kind=balance.custody_owner_kind AND reservation.condition=balance.condition AND reservation.legal_owner=balance.legal_owner) reserved ON true,request
             WHERE balance.tenant_id=request.tenant AND (balance.quantity_base>0 OR (balance.warehouse_admission='LEGACY_UNRESOLVED' AND balance.quantity>0))),
-        filtered_positions AS MATERIALIZED (SELECT position.* FROM scoped_positions position,request WHERE
-            (request.sku IS NULL OR position.sku_id=request.sku) AND (request.serial IS NULL OR warehouse_canonical_serial(position.serial_number)=request.serial)
-            AND (request.location IS NULL OR position.location_id=request.location) AND (request.status IS NULL OR position.status=request.status)
-            AND (request.condition IS NULL OR position.condition=request.condition) AND (request.owner IS NULL OR position.legal_owner=request.owner)
-            AND (request.since IS NULL OR position.updated_at>=request.since) AND (request.until IS NULL OR position.updated_at<request.until))
+        dimension_filtered_positions AS MATERIALIZED (SELECT position.* FROM scoped_positions position,request
+            WHERE ${WarehouseQueryPredicates.positionDimensions}),
+        filtered_positions AS MATERIALIZED (SELECT position.* FROM dimension_filtered_positions position,request
+            WHERE ${WarehouseQueryPredicates.positionUpdated})
         """
 }
 

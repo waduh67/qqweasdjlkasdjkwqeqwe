@@ -1,11 +1,7 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 internal fun warehouseTimeline(query: WarehouseQuerySql): String {
-    val rows = """SELECT event.* FROM events event,request WHERE
-        (request.sku IS NULL OR event.sku_id=request.sku) AND (request.location IS NULL OR event.location_id=request.location)
-        AND (request.status IS NULL OR event.status=request.status) AND (request.condition IS NULL OR event.condition=request.condition)
-        AND (request.owner IS NULL OR event.legal_owner=request.owner) AND (request.since IS NULL OR event.created_at>=request.since)
-        AND (request.until IS NULL OR event.created_at<request.until)"""
+    val rows = "SELECT event.* FROM events event,request WHERE ${WarehouseQueryPredicates.eventHistory}"
     return """, events AS (
         SELECT leg.id::text id,movement.server_received_at created_at,leg.sku_id,leg.location_id,leg.status,leg.condition,leg.legal_owner,
             jsonb_build_object('id',leg.id,'kind','MOVEMENT_LEG','postingId',movement.id,'movementKind',movement.kind,
