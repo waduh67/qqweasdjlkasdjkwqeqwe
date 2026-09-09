@@ -12,7 +12,7 @@ data class ReservationDemand(val id: UUID, val revision: Long, val workOrder: UU
 data class ReservationDemandLine(val id: UUID, val planLineId: UUID, val sku: UUID, val unit: StockUnit,
     val requested: Long, val continuous: Boolean, val tracking: String)
 data class ReservationCandidate(val dimension: PostingDimension, val unit: StockUnit, val available: Long,
-    val receivedAt: Instant, val originDocument: UUID, val originLine: UUID, val originRevision: Long, val stockRevision: Long)
+    val receivedAt: Instant, val originDocument: UUID, val originLine: UUID, val originRevision: Long, val stockRevision: Long, val balanceId: UUID)
 data class ReservationRow(val change: ReservationChange, val state: ReservationState)
 data class ReservationLineSupply(val demandLineId: UUID, val planLineId: UUID, val requestedBase: String,
     val reservedUnpickedBase: String, val reservedPickedBase: String, val backorderBase: String, val baseUnit: StockUnit)
@@ -21,13 +21,19 @@ internal object ReservationPlanning {
     fun quantity(raw: String): Long = raw.takeIf { it.matches(Regex("[1-9][0-9]{0,18}")) }?.toLongOrNull()
         ?: masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
 
-    fun allocate(line: ReservationDemandLine, selection: ReservationSelection?, candidates: List<ReservationCandidate>,
-        existing: List<ReservationChange>, expiresAt: Instant): List<ReservationChange> {
+    fun wanted(line: ReservationDemandLine, selection: ReservationSelection?, existing: List<ReservationChange>): Long {
         val current = existing.filter { it.documentLineId == line.id && it.state == ReservationState.OPEN }
         val reserved = current.fold(0L) { total, row -> Math.addExact(total, (row.unpicked + row.picked).quantityBase) }
         val remaining = Math.subtractExact(line.requested, reserved)
         val wanted = selection?.partialQuantityBase?.let(::quantity) ?: remaining
         if (wanted > remaining || remaining < 0) masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
+        return wanted
+    }
+
+    fun allocate(line: ReservationDemandLine, selection: ReservationSelection?, candidates: List<ReservationCandidate>,
+        existing: List<ReservationChange>, expiresAt: Instant): List<ReservationChange> {
+        val wanted = wanted(line, selection, existing)
+        val current = existing.filter { it.documentLineId == line.id && it.state == ReservationState.OPEN }
         if (wanted == 0L) return emptyList()
         var ordered = candidates.filter { it.dimension.skuId == line.sku && it.unit == line.unit && it.available > 0 }
             .sortedWith(compareBy({ it.receivedAt }, { it.dimension.stockIdentityId.toString() }, { it.dimension.orderKey() }))

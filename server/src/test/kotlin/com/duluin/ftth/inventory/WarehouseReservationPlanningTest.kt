@@ -14,7 +14,7 @@ class WarehouseReservationPlanningTest {
     private val line = ReservationDemandLine(UUID.randomUUID(), UUID.randomUUID(), sku, StockUnit.MM, 15000, true, "LOT")
     private fun candidate(quantity: Long, time: Instant = now) = ReservationCandidate(
         PostingDimension(sku, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), OwnerKind.WAREHOUSE,
-            WarehouseCondition.SERVICEABLE, AssetLegalOwner.ISP), StockUnit.MM, quantity, time, UUID.randomUUID(), UUID.randomUUID(), 2, 0)
+            WarehouseCondition.SERVICEABLE, AssetLegalOwner.ISP), StockUnit.MM, quantity, time, UUID.randomUUID(), UUID.randomUUID(), 2, 0, UUID.randomUUID())
 
     @Test fun `two remnants cannot supply continuous cut but explicit partial may use one`() {
         val stock = listOf(candidate(10000), candidate(10000))

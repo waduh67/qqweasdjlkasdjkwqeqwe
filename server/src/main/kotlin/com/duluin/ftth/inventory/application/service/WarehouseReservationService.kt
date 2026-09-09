@@ -5,6 +5,10 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReservationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.ReservationValidationMode
+import com.duluin.ftth.inventory.adapter.outbound.persistence.ReservationStockQueries
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAccess
+import com.duluin.ftth.common.security.AuthorityScope
+import com.duluin.ftth.network.SiteReferenceApi
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
@@ -18,7 +22,8 @@ import java.util.UUID
 class WarehouseReservationService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val workOrders: InventoryReservationWorkOrderPort,
     private val masters: WarehouseMasterStore, private val receipts: WarehouseReceiptService,
-    private val store: WarehouseReservationStore, private val operations: WarehouseOperationStore, private val posting: WarehousePosting) : InventoryReservationApi {
+    private val store: WarehouseReservationStore, private val operations: WarehouseOperationStore, private val posting: WarehousePosting,
+    private val planning: ReservationAllocationPlanning, private val stock: ReservationStockQueries, private val sites: SiteReferenceApi) : InventoryReservationApi {
     private val mapper = jacksonObjectMapper()
 
     @Transactional(timeout = 30, rollbackFor = [Exception::class])
@@ -42,12 +47,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
         (rows + targetRows).map { it.dimension.locationId }.distinct().forEach { receipts.authorizeLocation(it, current, scope) }
         val lines = store.lines(preview, ReservationValidationMode.REPLAY)
         val targetLines = targetPreview?.let { store.lines(it, ReservationValidationMode.REPLAY) }.orEmpty()
-        val candidates = store.candidates((lines + targetLines).map { it.sku }.toSet()).filter { candidate ->
-            try { receipts.authorizeLocation(candidate.dimension.locationId, current, scope); true }
-            catch (failure: WarehouseContractException) { if (failure.error.code == WarehouseErrorCode.NOT_FOUND) false else throw failure }
-        }
-        store.lockDocuments(listOf(documentId) + listOfNotNull(targetPreview?.id) + candidates.map { it.originDocument })
-        val document = store.demand(documentId)
+        val boundDocuments = listOf(documentId) + listOfNotNull(targetPreview?.id) + store.originDocuments(rows + targetRows)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("documentId" to documentId, "action" to action, "request" to request)))
         val namespace = "warehouse.reservation.${action.name.lowercase()}"
         val prior = operations.lockKey(namespace, metadata.idempotencyKey)
@@ -55,27 +55,36 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
             if (prior.actorId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
             if (prior.hash != canonical.hash || prior.resourceId != documentId) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
             if (prior.cutoverEpoch != cutover.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
+            store.lockDocuments(boundDocuments)
             return prior.receipt
         }
-        checkDemand(document, request.expectedRevision, request.planRevision, contexts.getValue(document.workOrder), request.workOrderRevision, action)
-        store.lines(document, if (action == ReservationAction.RESERVE) ReservationValidationMode.NEW_ALLOCATION else ReservationValidationMode.BOUND_LIFECYCLE)
-        val target = targetPreview?.let { store.demand(it.id) }
-        if (target != null) {
+        checkDemand(preview, request.expectedRevision, request.planRevision, contexts.getValue(preview.workOrder), request.workOrderRevision, action)
+        store.lines(preview, if (action == ReservationAction.RESERVE) ReservationValidationMode.NEW_ALLOCATION else ReservationValidationMode.BOUND_LIFECYCLE)
+        if (targetPreview != null) {
             val input = requireNotNull(request.target)
-            if (target.workOrder == document.workOrder) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-            checkDemand(target, input.expectedRevision, input.planRevision, contexts.getValue(target.workOrder), input.workOrderRevision, ReservationAction.RESERVE)
-            store.lines(target, ReservationValidationMode.NEW_ALLOCATION)
+            if (targetPreview.workOrder == preview.workOrder) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            checkDemand(targetPreview, input.expectedRevision, input.planRevision, contexts.getValue(targetPreview.workOrder), input.workOrderRevision, ReservationAction.RESERVE)
+            store.lines(targetPreview, ReservationValidationMode.NEW_ALLOCATION)
         }
-        store.lockStock(candidates, rows + targetRows)
-        val locked = store.candidates((lines + targetLines).map { it.sku }.toSet()).filter { fresh -> candidates.any { it.dimension == fresh.dimension } }
-        val liveRows = store.rows(documentId)
         val now = store.now()
-        val context = contexts.getValue(document.workOrder)
-        val expiry = maxOf(document.submittedAt.plusSeconds(86400), (context.scheduledEndAt ?: context.scheduledAt ?: document.submittedAt).plusSeconds(86400))
-        val changes = if (action == ReservationAction.RESERVE) {
+        val context = contexts.getValue(preview.workOrder)
+        val expiry = maxOf(preview.submittedAt.plusSeconds(86400), (context.scheduledEndAt ?: context.scheduledAt ?: preview.submittedAt).plusSeconds(86400))
+        val plan = if (action == ReservationAction.RESERVE) {
             if (expiry <= now) masterFailure(WarehouseErrorCode.STALE_REVISION)
-            reserve(lines, request.lines, locked, liveRows, expiry)
-        } else transition(action, request, liveRows, now)
+            val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+            planning.prepare(lines, request.lines, rows, expiry, WarehouseQueryAccess(
+                if (current.platformAdmin) AuthorityScope.Unrestricted else scope, areas, sites.visibleAreas(areas), false, false))
+        } else null
+        val candidates = plan?.candidates.orEmpty()
+        candidates.map { it.dimension.locationId }.distinct().forEach { receipts.authorizeLocation(it, current, scope) }
+        store.lockDocuments(boundDocuments + candidates.map { it.originDocument })
+        val document = store.demand(documentId)
+        if (document.revision != preview.revision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        val target = targetPreview?.let { store.demand(it.id).also { locked -> if (locked.revision != it.revision) masterFailure(WarehouseErrorCode.STALE_REVISION) } }
+        store.lockStock(candidates, rows + targetRows)
+        val liveRows = store.rows(documentId)
+        val locked = plan?.let { planning.refresh(it, liveRows) }.orEmpty()
+        val changes = plan?.changes ?: transition(action, request, liveRows, now)
         if (action == ReservationAction.REALLOCATE) {
             val targetDocument = requireNotNull(target)
             val targetInput = requireNotNull(request.target)
@@ -83,7 +92,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
             if (changes.size != 1) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             val source = liveRows.single { it.id == changes.single().id }
             if (source.dimension.skuId != targetLine.sku || source.unpicked.unit != targetLine.unit) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-            val available = locked.singleOrNull { it.dimension == source.dimension } ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            val available = stock.position(source.dimension)
             val targetContext = contexts.getValue(targetDocument.workOrder)
             val targetExpiry = maxOf(targetDocument.submittedAt.plusSeconds(86400), (targetContext.scheduledEndAt ?: targetContext.scheduledAt ?: targetDocument.submittedAt).plusSeconds(86400))
             if (targetExpiry <= now) masterFailure(WarehouseErrorCode.STALE_REVISION)
@@ -93,7 +102,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
             if (added != source.unpicked.quantityBase) masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
             val sourceReceipt = persist(document, action, changes, lines, liveRows, locked, cutover, current.fence.identity.userId,
                 current.fence.epoch, namespace, metadata.idempotencyKey, canonical, request.reason, now, current.fence.identity.sessionId)
-            persist(targetDocument, ReservationAction.RESERVE, proposed, targetLines, targetRows, locked, cutover, current.fence.identity.userId,
+            persist(targetDocument, ReservationAction.RESERVE, proposed, targetLines, targetRows, listOf(available), cutover, current.fence.identity.userId,
                 current.fence.epoch, "$namespace.target", metadata.idempotencyKey, canonical, request.reason, now, current.fence.identity.sessionId)
             return sourceReceipt
         }
@@ -142,25 +151,6 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
         store.snapshot(id, supplies)
         operations.storeIdentity(id, canonical.json, session)
         return WarehouseOperationReceipt(id, document.id, revision, 200, body, now)
-    }
-
-    private fun reserve(lines: List<ReservationDemandLine>, selections: List<ReservationSelection>, candidates: List<ReservationCandidate>,
-        rows: List<ReservationChange>, expiry: Instant): List<ReservationChange> {
-        if (selections.any { selection -> lines.none { it.id == selection.demandLineId } }) masterFailure(WarehouseErrorCode.NOT_FOUND)
-        val available = candidates.associateBy { it.dimension }.toMutableMap()
-        return buildList {
-            lines.filter { selections.isEmpty() || selections.any { selection -> it.id == selection.demandLineId } }.forEach { line ->
-                val selection = selections.singleOrNull { it.demandLineId == line.id }
-                val changes = ReservationPlanning.allocate(line, selection, available.values.toList(), rows, expiry)
-                if (selection?.stockIdentityId != null && changes.isEmpty()) masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
-                changes.forEach { change ->
-                    val before = rows.singleOrNull { it.id == change.id }?.unpicked?.quantityBase ?: 0
-                    val candidate = available.getValue(change.dimension)
-                    available[change.dimension] = candidate.copy(available = candidate.available - (change.unpicked.quantityBase - before))
-                }
-                addAll(changes)
-            }
-        }
     }
 
     private fun transition(action: ReservationAction, request: ReservationRequest, rows: List<ReservationChange>, now: Instant) = request.allocations.map { input ->

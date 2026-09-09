@@ -55,35 +55,14 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
                 it.getTimestamp("expires_at").toInstant(), ReservationState.valueOf(it.getString("state")))
         }
     }
-    fun candidates(skus: Set<UUID>): List<ReservationCandidate> = jdbc.execute { sql ->
-        sql.query("""SELECT balance.*,segment.revision stock_revision,coalesce(lot.received_at,
-            (SELECT min(server_received_at) FROM inventory_movement movement WHERE movement.tenant_id=source.tenant_id
-                AND movement.document_id=source.id AND movement.kind='RECEIVE' AND movement.state='APPLIED')) received_at,
-            source.id origin_document,origin.id origin_line,source.revision origin_revision,
-            balance.quantity_base::numeric-coalesce((SELECT sum(reserved_unpicked_base::numeric+reserved_picked_base::numeric)
-                FROM inventory_reservation reservation WHERE reservation.tenant_id=balance.tenant_id AND reservation.state='OPEN'
-                AND reservation.stock_identity_id=balance.stock_identity_id AND reservation.location_id=balance.location_id
-                AND reservation.custodian_id=balance.custody_owner_id AND reservation.custodian_kind=balance.custody_owner_kind
-                AND reservation.condition=balance.condition AND reservation.legal_owner=balance.legal_owner),0) available
-            FROM inventory_balance_projection balance JOIN inventory_segment segment ON segment.tenant_id=balance.tenant_id AND segment.id=balance.stock_identity_id
-            JOIN inventory_sku sku ON sku.tenant_id=balance.tenant_id AND sku.id=balance.sku_id
-            JOIN inventory_location location ON location.tenant_id=balance.tenant_id AND location.id=balance.location_id
-            LEFT JOIN inventory_lot lot ON lot.tenant_id=segment.tenant_id AND lot.id=segment.lot_id
-            LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=segment.tenant_id AND asset.id=segment.asset_id
-            JOIN inventory_document_line origin ON origin.tenant_id=segment.tenant_id AND origin.id=coalesce(lot.origin_document_line_id,asset.origin_document_line_id)
-            JOIN inventory_document source ON source.tenant_id=origin.tenant_id AND source.id=origin.document_id
-            WHERE balance.tenant_id=? AND balance.sku_id=ANY(?) AND balance.warehouse_admission='VERIFIED'
-            AND segment.warehouse_admission='VERIFIED' AND segment.state='ACTIVE' AND sku.state='ACTIVE'
-            AND balance.status='AVAILABLE' AND balance.condition='SERVICEABLE' AND balance.legal_owner='ISP' AND balance.quantity_base>0
-            AND location.state='ACTIVE' AND location.issue_eligible AND sku.base_unit=balance.base_unit AND segment.base_unit=balance.base_unit
-            AND ((location.kind IN ('WAREHOUSE','BIN') AND balance.custody_owner_kind='WAREHOUSE') OR
-                (location.kind='TECHNICIAN' AND balance.custody_owner_kind='TECHNICIAN') OR (location.kind='VEHICLE' AND balance.custody_owner_kind='VEHICLE'))
-            ORDER BY received_at,segment.id,balance.id LIMIT 2001""", sql.tenant, sql.connection.createArrayOf("uuid", skus.toTypedArray())) {
-            ReservationCandidate(PostingDimension(it.uuid("sku_id"), it.uuid("stock_identity_id"), it.optionalUuid("lot_id"), it.uuid("location_id"),
-                it.uuid("custody_owner_id"), OwnerKind.valueOf(it.getString("custody_owner_kind")), WarehouseCondition.SERVICEABLE, AssetLegalOwner.ISP),
-                StockUnit.valueOf(it.getString("base_unit")), it.getBigDecimal("available").longValueExact(), it.getTimestamp("received_at").toInstant(),
-                it.uuid("origin_document"), it.uuid("origin_line"), it.getLong("origin_revision"), it.getLong("stock_revision"))
-        }.also { if (it.size > 2000) sql.fail(WarehouseErrorCode.MALFORMED_REQUEST) }
+    fun originDocuments(rows: List<ReservationChange>): List<UUID> = jdbc.execute { sql ->
+        if (rows.isEmpty()) return@execute emptyList()
+        val origins = sql.query("""SELECT origin.document_id FROM inventory_reservation_allocation allocation
+            JOIN inventory_document_line origin ON origin.tenant_id=allocation.tenant_id AND origin.id=allocation.origin_line_id
+            WHERE allocation.tenant_id=? AND allocation.reservation_id=ANY(?)""", sql.tenant,
+            sql.connection.createArrayOf("uuid", rows.map { it.id }.distinct().toTypedArray())) { it.uuid("document_id") }
+        if (origins.size != rows.map { it.id }.distinct().size) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        origins.distinct()
     }
     fun lockStock(candidates: List<ReservationCandidate>, rows: List<ReservationChange>) = jdbc.execute { sql ->
         val dimensions = (candidates.map { it.dimension } + rows.map { it.dimension }).distinct()

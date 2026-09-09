@@ -30,20 +30,20 @@ class WarehouseReservationExpiry(private val cutovers: InventoryTenantCutoverApi
         workOrders.lock(preview.workOrder, null, null)
         masters.lockTopology()
         val lines = store.lines(preview, ReservationValidationMode.BOUND_LIFECYCLE)
-        val candidates = store.candidates(lines.map { it.sku }.toSet())
-        store.lockDocuments(listOf(id) + candidates.map { it.originDocument })
+        val before = store.rows(id)
+        store.lockDocuments(listOf(id) + store.originDocuments(before))
         val document = store.demand(id)
         val rows = store.rows(id)
-        store.lockStock(candidates, rows)
         val now = store.now()
         val changes = rows.filter { it.state == ReservationState.OPEN && it.unpicked.quantityBase > 0 && it.expiresAt <= now }.map { row ->
             row.copy(unpicked = StockQuantity.of(0, row.unpicked.unit), state = if (row.picked.quantityBase == 0L) ReservationState.EXPIRED else ReservationState.OPEN)
         }
         if (changes.isEmpty()) return false
+        store.lockStock(emptyList(), changes)
         val key = "$id:${document.revision}"
         val canonical = WarehouseCanonicalPayload.parse(jacksonObjectMapper().writeValueAsString(mapOf("documentId" to id,
             "revision" to document.revision, "expired" to changes.map { it.id })))
-        reservations.persist(document, ReservationAction.RELEASE, changes, lines, rows, candidates, cutover, document.actor,
+        reservations.persist(document, ReservationAction.RELEASE, changes, lines, rows, emptyList(), cutover, document.actor,
             fence.epoch, "warehouse.reservation.expire", key, canonical, "SYSTEM: unpicked reservation expiry", now, null, WarehouseEventKind.RESERVATION_EXPIRED)
         return true
     }
