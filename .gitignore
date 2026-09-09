@@ -3,6 +3,24 @@
 build/
 !gradle/wrapper/gradle-wrapper.jar
 .omo
+!.omo/
+!.omo/plans/
+!.omo/plans/warehouse-workorder-asset-provenance.md
+!.omo/drafts/
+!.omo/drafts/warehouse-workorder-asset-provenance.md
+!.omo/notepads/
+.omo/notepads/*.md
+!.omo/notepads/warehouse-workorder-asset-provenance/
+!.omo/notepads/warehouse-workorder-asset-provenance/*.md
+!.omo/start-work/
+!.omo/start-work/ledger.jsonl
+!.omo/handoffs/
+!.omo/handoffs/warehouse-workorder-asset-provenance.md
+# OMO runtime, evidence, and state remain denied; only the narrow allowlist above is trackable.
+.omo/runtime/**
+.omo/evidence/**
+.omo/boulder.json
+.omo/run-continuation/**
 
 # IDE
 .idea/
