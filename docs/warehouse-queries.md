@@ -140,3 +140,49 @@ consumer legacy internal lain tidak dialihkan ke jumlah panjang.
 XML/log/JSON dan notepad tersimpan di `.omo/evidence/warehouse-workorder-asset-provenance/task-9/`
 dan `.omo/notepads/task-9.md`, tidak ikut git. CodeGraph/LSP tidak tersedia pada
 lane ini; compiler, Spring HTTP, PostgreSQL dan packaged runtime adalah bukti.
+
+## Koreksi AV9: filter memiliki objek dan waktu sendiri
+
+AV9-01: tanggal list/detail lot hanya memfilter `inventory_lot.received_at`.
+Seleksi piece memakai `dimension_filtered_positions` untuk SKU/serial/location/
+status/condition/owner, tanpa `updated_at`. Query posisi tetap menambahkan filter
+`position.updated_at` sendiri. Predicate bernama memisahkan lot received, asset
+created, segment created, position updated dan history event time; caller tidak
+mewariskan tanggal dari tabel lain melalui page posisi. Lot tanpa posisi positif
+atau dengan piece/histori di luar scope tetap tidak ditampilkan.
+
+AV9-02: filter serial pada kedua alias position-history mengikat stockIdentityId
+ke aset serial kanonis yang unik sebelum memilih timeline. Codec task03 tetap
+trim/uppercase. Matches, claims dan candidates diperiksa tenant-wide sebelum
+visibility; duplikat tersembunyi atau claim konflik tidak memilih aset yang kebetulan
+terlihat. Asset-history menggunakan guard yang sama. Serial salah/asing/ambigu/
+tersembunyi dan serial pada posisi non-serialized menghasilkan generic404 NOT_FOUND,
+bukan200 berisi history lain. Tanpa parameter serial, perilaku query ID tetap.
+Tanggal history hanya memfilter waktu event, bukan timestamp posisi sekarang.
+
+Bukti koreksi dari baseline4a370f39:
+
+- Failing-first HTTP: lot dalam received interval menghasilkan200/total0 setelah
+  inspect/split/putaway. Serial salah menghasilkan200 dengan event aset target;
+  hidden duplicate juga menghasilkan200. Regression kini menghasilkan1/404/404.
+- Matrix lot mencakup3 posisi dengan update sebelum/di dalam/sesudah interval,
+  dimensi positif/negatif, hidden piece dan tanpa posisi; filter tanggal posisi
+  tetap membedakan ketiga waktu tersebut.
+- Exact WarehouseQueryIT dua kali dengan rerun/no-parallel: **15/0/0** per run
+  (7m05s dan7m10s). Gabungan tanpa overlap **746/0/0**:244 authority/master/receipt/
+  network/Modularity,230 schema/posting,272 contract/quantity/legacy/query.
+  Modularity terpisah **3/0/0**. Tidak ada migrasi atau availability math yang diubah.
+- Packaged baseline: received09:30:35.491300Z, until09:30:35.864Z, updates09:30:36.629101Z
+  dan09:30:36.918979Z menghasilkan total0; serial mismatch200/five events.
+  Packaged sesudah koreksi: received10:31:28.867055Z, until10:31:29.464Z,
+  updates10:31:30.305485Z dan10:31:30.592543Z menghasilkan total1; serial mismatch404.
+  Semua waktu pada2026-09-09. SQL dan HTTP direkam sebagai warehouse_app non-owner.
+- Matching serial dengan posisi diupdate satu hari setelah interval tetap
+  mengembalikan2 receipt events. SIGKILL/fresh JVM mempertahankan exact JSON untuk
+  date-filtered lot, matching/mismatching serial history, totals, tree dan pagination.
+- Clean no-cache bootJar sukses; SHA256
+  `e67b98ea32a6c26bb4634a5185a32f7a91efe4bcb82832f496e2717707b24850`.
+
+Evidence koreksi: `.omo/evidence/warehouse-workorder-asset-provenance/task-9/corrections/`.
+Probe sumber diarsipkan, runtime/proof object dihapus. Namespace sementara,
+app connections, pause triggers dan functions berakhir0/0/0/0; volume dipertahankan.
