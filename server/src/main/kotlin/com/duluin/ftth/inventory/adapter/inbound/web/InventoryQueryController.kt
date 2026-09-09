@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/inventory")
-class InventoryQueryController(private val queries: InventoryApiService) {
+class InventoryQueryController(private val queries: InventoryApiService, private val warehouse: WarehouseQueryService) {
     @GetMapping("/warehouses")
     @PreAuthorize("@authz.can('inventory.location.view')")
     fun warehouses(): List<InventoryLocationView> = queries.locations()
@@ -18,8 +18,9 @@ class InventoryQueryController(private val queries: InventoryApiService) {
     fun items(): List<InventoryItemView> = queries.items()
 
     @GetMapping("/stock")
-    @PreAuthorize("@authz.can('inventory.item.view')")
-    fun stock(): List<InventoryStockView> = queries.stock()
+    fun stock() = org.springframework.http.ResponseEntity.ok().contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+        .header("Cache-Control", "no-store").header("Link", "</api/v1/warehouse/stock>; rel=\"successor-version\"")
+        .body(warehouse.legacyStock())
 
     @GetMapping("/reservations")
     @PreAuthorize("@authz.can('inventory.custody.view')")

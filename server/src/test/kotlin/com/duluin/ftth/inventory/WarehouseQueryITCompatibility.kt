@@ -14,6 +14,7 @@ class WarehouseQueryITCompatibility : WarehouseReceiptHttpFixture() {
         transition(setup, receipt.path("id").asString(), "receive", """{"expectedRevision":0}""")
         val stock = request("GET", "/api/inventory/stock", setup.token)
         assertThat(stock.status).isEqualTo(200)
+        assertThat(stock.getHeader("Link")).isEqualTo("</api/v1/warehouse/stock>; rel=\"successor-version\"")
         assertThat(mapper.readTree(stock.contentAsString)).isEqualTo(mapper.readTree(
             """[{"skuId":"${setup.onu}","locationId":"${setup.inspection}","quantities":{"QUARANTINE":2}}]"""))
         val items = mapper.readTree(request("GET", "/api/inventory/items", setup.token).contentAsString)

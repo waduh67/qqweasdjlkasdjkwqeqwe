@@ -39,8 +39,10 @@ class WarehouseQueryITPrivacy : WarehouseReceiptHttpFixture() {
                 assertThat(response.contentAsString).isEqualTo(missing.contentAsString)
             }
             assertThat(mapper.readTree(request("GET", "/api/v1/warehouse/stock", token).contentAsString).path("totalElements").asInt()).isZero()
+            assertThat(request("GET", "/api/inventory/stock", token).contentAsString).isEqualTo("[]")
         }
         assertThat(request("POST", "/api/users/$viewerId/disable", setup.token).status).isEqualTo(200)
         assertThat(request("GET", "/api/v1/warehouse/assets/$asset", viewer).status).isEqualTo(403)
+        assertThat(request("GET", "/api/inventory/stock", viewer).status).isEqualTo(403)
     }
 }
