@@ -18,8 +18,8 @@ class WarehouseLotQueries(private val jdbc: WarehouseCommandJdbc) {
                 AND balance.quantity_base>0 AND balance.location_id NOT IN (SELECT id FROM visible_locations))
             AND NOT EXISTS (SELECT FROM inventory_movement_leg leg WHERE leg.tenant_id=request.tenant AND leg.lot_id=lot.id
                 AND leg.location_id NOT IN (SELECT id FROM visible_locations))
-            ${if (part != null) "" else """AND (request.since IS NULL OR lot.received_at>=request.since) AND (request.until IS NULL OR lot.received_at<request.until)
-            AND EXISTS (SELECT FROM filtered_positions WHERE lot_id=lot.id)"""}"""
+            ${if (part != null) "" else """AND ${WarehouseQueryPredicates.lotReceived}
+            AND EXISTS (SELECT FROM dimension_filtered_positions WHERE lot_id=lot.id)"""}"""
         val json = """jsonb_build_object('id',id,'skuId',sku_id,'code',code,'name',name,'received',${queryQuantity("received_quantity_base", "base_unit")},
             'receivedAt',${queryTime("created_at")},'admission',warehouse_admission,'origin',${queryOrigin("origin_document_line_id")}) || ${queryCost("matches", access.cost)}"""
         if (id == null) query.result(query.page(base, json, when (filter.sort) { "name" -> "name"; "createdAt" -> "created_at"; else -> "id" }))
@@ -30,8 +30,7 @@ class WarehouseLotQueries(private val jdbc: WarehouseCommandJdbc) {
                 "history" -> query.result(target + warehouseTimeline(query), id)
                 "segments" -> {
                     val segments = """SELECT segment.*,segment.kind name FROM target_segments segment,request WHERE
-                        (request.status IS NULL OR segment.state=request.status) AND (request.since IS NULL OR segment.created_at>=request.since)
-                        AND (request.until IS NULL OR segment.created_at<request.until) AND
+                        (request.status IS NULL OR segment.state=request.status) AND ${WarehouseQueryPredicates.segmentCreated} AND
                         ((request.location IS NULL AND request.condition IS NULL AND request.owner IS NULL) OR EXISTS (
                             SELECT FROM scoped_positions position WHERE position.stock_identity_id=segment.id
                                 AND (request.location IS NULL OR position.location_id=request.location)
