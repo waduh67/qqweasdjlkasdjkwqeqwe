@@ -10,6 +10,24 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/warehouse")
 class WarehouseQueryController(private val queries: WarehouseQueryService) {
+    @GetMapping("/assets")
+    fun assets(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.assets(parameters))
+
+    @GetMapping("/assets/{id}")
+    fun asset(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.assets(parameters, id))
+
+    @GetMapping("/assets/{id}/history")
+    fun assetHistory(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.assets(parameters, id, true))
+
+    @GetMapping("/lots")
+    fun lots(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.lots(parameters))
+
+    @GetMapping("/lots/{id}")
+    fun lot(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.lots(parameters, id))
+
+    @GetMapping("/lots/{id}/{part:segments|history}")
+    fun lotPart(@PathVariable id: UUID, @PathVariable part: String, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.lots(parameters, id, part))
+
     @GetMapping("/stock")
     fun stock(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.stock(parameters))
 

@@ -5,6 +5,8 @@ import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAccess
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryPersistence
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseAssetQueries
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseLotQueries
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseQueryFilter
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.network.SiteReferenceApi
@@ -14,7 +16,16 @@ import java.util.UUID
 
 @Service
 class WarehouseQueryService(private val authority: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
-    private val sites: SiteReferenceApi, private val store: WarehouseQueryPersistence) {
+    private val sites: SiteReferenceApi, private val store: WarehouseQueryPersistence,
+    private val assets: WarehouseAssetQueries, private val lots: WarehouseLotQueries) {
+    @Transactional(timeout = 20)
+    fun assets(parameters: Map<String, List<String>>, id: UUID? = null, history: Boolean = false): String =
+        assets.assets(WarehouseQueryFilter.parse(parameters, history), access(), id, history)
+
+    @Transactional(timeout = 20)
+    fun lots(parameters: Map<String, List<String>>, id: UUID? = null, part: String? = null): String =
+        lots.lots(WarehouseQueryFilter.parse(parameters, part == "history"), access(), id, part)
+
     @Transactional(timeout = 20)
     fun stock(parameters: Map<String, List<String>>): String = store.stock(WarehouseQueryFilter.parse(parameters), access())
 
