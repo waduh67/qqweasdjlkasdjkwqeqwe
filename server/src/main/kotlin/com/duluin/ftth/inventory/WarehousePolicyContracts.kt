@@ -32,4 +32,5 @@ data class WarehousePolicyEvaluation(val code: String, val sourceDocumentId: UUI
 
 interface WarehousePolicyEvaluationApi {
     fun evaluate(source: WarehouseSourceInput): WarehousePolicyEvaluation
+    fun evaluateForAction(source: WarehouseSourceInput, action: PolicyOperation): WarehousePolicyEvaluation
 }

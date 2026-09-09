@@ -4,6 +4,17 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class WarehousePolicyITEvaluation : WarehousePolicyHttpFixture() {
+    @Test fun `ordinary receipt manager can evaluate without approval role or implicit scope`() {
+        val setup = setupReceipt()
+        val document = draft(setup, costLine(setup)).path("id").asString()
+        val manager = user(setup.token, setOf("inventory.receipt.manage"))
+        assertThat(evaluate(manager.first, document).status).isEqualTo(404)
+        grant(setup.token, manager.second, listOf(setup.inspection))
+        val result = evaluate(manager.first, document)
+        assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(200)
+        assertThat(result.contentAsString).contains("IN_POLICY")
+        assertThat(request("GET", "/api/v1/warehouse/settings/policy", manager.first).status).isEqualTo(403)
+    }
     @Test fun `ordinary receipt requires no approval but threshold exception returns server snapshot without effects`() {
         val setup = setupReceipt()
         val document = draft(setup, costLine(setup)).path("id").asString()

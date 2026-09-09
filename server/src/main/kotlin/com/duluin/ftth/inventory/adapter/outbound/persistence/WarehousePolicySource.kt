@@ -12,12 +12,12 @@ data class PolicySource(val id: UUID, val revision: Long, val operation: PolicyO
 
 @Repository
 class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
-    fun lock(input: WarehouseSourceInput): PolicySource = jdbc.execute { sql ->
+    fun lock(input: WarehouseSourceInput, action: PolicyOperation? = null): PolicySource = jdbc.execute { sql ->
         val header = sql.query("SELECT kind,actor_id,revision FROM inventory_document WHERE tenant_id=? AND id=? FOR NO KEY UPDATE", sql.tenant, input.sourceDocumentId) {
             Triple(it.getString("kind"), it.uuid("actor_id"), it.getLong("revision"))
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         if (header.third != input.sourceRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
-        val operation = when (header.first) {
+        val derived = when (header.first) {
             "RECEIPT" -> PolicyOperation.RECEIPT
             "ISSUE" -> PolicyOperation.ISSUE
             "OPENING_BALANCE" -> PolicyOperation.OPENING_BALANCE
@@ -25,8 +25,12 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             "LOSS" -> PolicyOperation.LOSS
             "SCRAP" -> PolicyOperation.SCRAP
             "COUNT" -> PolicyOperation.COUNT_VARIANCE
+            "RETURN" -> if (action == PolicyOperation.TITLE_REACQUISITION) action else sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             else -> sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
+        if (action != null && action != derived && !(derived == PolicyOperation.ISSUE && action == PolicyOperation.ISSUE_EXCEPTION))
+            sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val operation = action ?: derived
         val lines = sql.query("""SELECT line.location_id,line.custodian_id,line.custodian_kind,line.quantity_base,
             coalesce(line.cost_total_minor,lot.cost_total_minor) numerator,
             coalesce(line.cost_basis_quantity_base,lot.cost_basis_quantity_base) denominator,

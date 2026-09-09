@@ -14,12 +14,23 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
     private val access: WarehousePolicyAccess, private val store: WarehousePolicyPersistence, private val sources: WarehousePolicySource) : WarehousePolicyEvaluationApi {
     private val mapper = jacksonObjectMapper()
     @Transactional(rollbackFor = [Exception::class])
-    override fun evaluate(source: WarehouseSourceInput): WarehousePolicyEvaluation {
+    override fun evaluate(source: WarehouseSourceInput): WarehousePolicyEvaluation = evaluateSource(source, null)
+    @Transactional(rollbackFor = [Exception::class])
+    override fun evaluateForAction(source: WarehouseSourceInput, action: PolicyOperation): WarehousePolicyEvaluation = evaluateSource(source, action)
+
+    private fun evaluateSource(source: WarehouseSourceInput, action: PolicyOperation?): WarehousePolicyEvaluation {
         if (source.sourceRevision < 0) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
-        access.permission(current, "inventory.approval.view")
-        val document = sources.lock(source)
+        if (!current.platformAdmin && current.permissions.none { it in setOf("inventory.approval.view", "inventory.approval.request",
+                "inventory.receipt.manage", "inventory.issue.manage", "inventory.count.manage") }) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        val document = sources.lock(source, action)
+        if (!current.platformAdmin && "inventory.approval.view" !in current.permissions) access.permission(current, when (document.operation) {
+            PolicyOperation.RECEIPT -> "inventory.receipt.manage"
+            PolicyOperation.ISSUE -> "inventory.issue.manage"
+            PolicyOperation.COUNT_VARIANCE -> "inventory.count.manage"
+            else -> "inventory.approval.request"
+        })
         val locations = document.lines.map { requireNotNull(it.locationId) }.distinct()
         locations.forEach { access.location(it, current) }
         val policy = store.current()
