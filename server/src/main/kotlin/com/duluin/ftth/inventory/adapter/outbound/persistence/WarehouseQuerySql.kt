@@ -82,7 +82,7 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
 
 internal fun queryQuantity(quantity: String, unit: String) = """jsonb_build_object('quantityBase',($quantity)::text,'baseUnit',$unit,
     'displayQuantity',CASE WHEN $unit='MM' THEN trunc(($quantity)::numeric/1000)::text||'.'||lpad(mod(($quantity)::numeric,1000)::text,3,'0') ELSE ($quantity)::text END,
-    'displayUnit',CASE WHEN $unit='MM' THEN 'M' ELSE 'EA' END)"""
+    'displayUnit',CASE $unit WHEN 'MM' THEN 'M' WHEN 'EA' THEN 'EA' ELSE NULL END)"""
 
 internal fun queryTime(column: String) = "to_char($column AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')"
 
