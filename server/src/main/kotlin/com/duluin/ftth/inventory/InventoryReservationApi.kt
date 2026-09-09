@@ -37,4 +37,11 @@ data class ReservationAllocation(
     val locationId: UUID, val originLineId: UUID, val originRevision: Long, val stockRevision: Long,
     val reservedUnpickedBase: String, val reservedPickedBase: String, val baseUnit: WarehouseBaseUnit,
     val state: String, val expiresAt: Instant, val customerId: UUID?, val actorId: UUID, val itemCategory: String,
+    val demandSupply: ReservationDemandSupply,
+)
+
+data class ReservationDemandSupply(
+    val snapshotId: UUID, val operationId: UUID, val documentRevision: Long, val planRevision: Long,
+    val requestedBase: String, val reservedUnpickedBase: String, val reservedPickedBase: String,
+    val totalReservedBase: String, val backorderBase: String, val baseUnit: WarehouseBaseUnit, val demandState: MaterialDemandState,
 )
