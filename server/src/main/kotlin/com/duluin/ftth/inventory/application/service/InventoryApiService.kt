@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class InventoryApiService(
     private val assets: SerializedAssetRepository,
     private val durableFulfillment: DurableInventoryFulfillmentService,
+    private val allocationReader: com.duluin.ftth.inventory.InventoryReservationApi,
     private val locations: InventoryLocationRepository? = null,
 ) : InventoryApi {
     @Transactional(readOnly = true)
@@ -63,7 +64,12 @@ class InventoryApiService(
     override fun returnFulfillment(command: InventoryFulfillmentCommand): InventoryFulfillmentResult =
         durableFulfillment.apply(command, returned = true)
 
-    override fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> = emptyList()
+    override fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> = allocationReader.allocations(workOrderId).map { allocation ->
+        val total = Math.addExact(allocation.reservedUnpickedBase.toLong(), allocation.reservedPickedBase.toLong())
+        InventoryFulfillmentAllocation(allocation.allocationId, allocation.stockIdentityId, allocation.skuId, allocation.locationId,
+            allocation.customerId, if (allocation.baseUnit == com.duluin.ftth.inventory.WarehouseBaseUnit.EA && total <= Int.MAX_VALUE) total.toInt() else null,
+            allocation.lotId == null, allocation.actorId, allocation.itemCategory, allocation)
+    }
 
     private fun com.duluin.ftth.inventory.domain.model.SerializedAsset.toRef() = InventoryAssetRef(
         id, tenantId, skuId, serialNumber, macAddress, status, locationId, custody.ownerId, installedOnuId,
