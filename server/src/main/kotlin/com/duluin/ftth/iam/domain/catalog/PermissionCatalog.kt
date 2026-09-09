@@ -111,6 +111,7 @@ object PermissionCatalog {
         perm("inventory.receipt.manage", "Kelola penerimaan gudang")
         perm("inventory.request.view", "Lihat kebutuhan material")
         perm("inventory.request.manage", "Kelola kebutuhan material")
+        perm("inventory.request.override", "Pilih stok di luar urutan FIFO dengan alasan")
         perm("inventory.issue.view", "Lihat pengeluaran material")
         perm("inventory.issue.manage", "Kelola pengeluaran material")
         perm("inventory.transfer.view", "Lihat transfer gudang")
