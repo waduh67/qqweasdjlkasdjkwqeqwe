@@ -22,6 +22,7 @@ class WarehouseSchemaIT {
         "inventory_command_identity", "inventory_outbox_delivery",
         "fulfillment_warehouse_observation",
         "inventory_receipt_intake", "inventory_receipt_evidence", "inventory_receipt_disposition",
+        "inventory_reservation_allocation", "inventory_demand_supply_snapshot",
     )
 
     private fun strings(sql: String): List<String> = dataSource.connection.use { connection ->
@@ -50,7 +51,8 @@ class WarehouseSchemaIT {
             SELECT DISTINCT conrelid::regclass::text FROM pg_constraint
             WHERE contype='f' AND cardinality(conkey)>=2
         """.trimIndent())).contains("inventory_document_line", "inventory_reservation", "inventory_segment", "inventory_command_identity", "inventory_outbox_delivery",
-            "inventory_receipt_intake", "inventory_receipt_evidence", "inventory_receipt_disposition")
+            "inventory_receipt_intake", "inventory_receipt_evidence", "inventory_receipt_disposition",
+            "inventory_reservation_allocation", "inventory_demand_supply_snapshot")
     }
 
     @Test
@@ -73,6 +75,6 @@ class WarehouseSchemaIT {
             SELECT DISTINCT event_object_table FROM information_schema.triggers
             WHERE trigger_schema='public' AND trigger_name LIKE '%append_only%'
         """.trimIndent())).contains("inventory_operation", "inventory_outbox", "inventory_inbox", "inventory_usage_snapshot", "inventory_command_identity",
-            "inventory_receipt_evidence", "inventory_receipt_disposition")
+            "inventory_receipt_evidence", "inventory_receipt_disposition", "inventory_reservation_allocation", "inventory_demand_supply_snapshot")
     }
 }
