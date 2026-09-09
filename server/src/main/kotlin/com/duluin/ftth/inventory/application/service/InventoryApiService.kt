@@ -64,7 +64,10 @@ class InventoryApiService(
     override fun returnFulfillment(command: InventoryFulfillmentCommand): InventoryFulfillmentResult =
         durableFulfillment.apply(command, returned = true)
 
-    override fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> = allocationReader.allocations(workOrderId).map { allocation ->
+    override fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> = allocationReader.allocations(workOrderId).also {
+        if (it.isEmpty()) throw com.duluin.ftth.inventory.WarehouseContractException(com.duluin.ftth.inventory.WarehouseError(
+            com.duluin.ftth.inventory.WarehouseErrorCode.INSUFFICIENT_STOCK, "Material demand has no durable allocation"))
+    }.map { allocation ->
         val total = Math.addExact(allocation.reservedUnpickedBase.toLong(), allocation.reservedPickedBase.toLong())
         InventoryFulfillmentAllocation(allocation.allocationId, allocation.stockIdentityId, allocation.skuId, allocation.locationId,
             allocation.customerId, if (allocation.baseUnit == com.duluin.ftth.inventory.WarehouseBaseUnit.EA && total <= Int.MAX_VALUE) total.toInt() else null,
