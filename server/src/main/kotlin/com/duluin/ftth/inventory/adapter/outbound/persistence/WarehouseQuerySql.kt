@@ -19,11 +19,12 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
         filter.skuId, filter.serial, filter.locationId, filter.status, filter.condition, filter.owner, filter.from, filter.until,
         *values) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
 
-    fun page(rows: String, json: String, order: String): String = """,
-        matches AS MATERIALIZED ($rows), selected AS (SELECT *, $json AS body FROM matches
+    fun page(rows: String, json: String, order: String, requireTarget: Boolean = false): String = """,
+        matches AS MATERIALIZED ($rows), selected AS (SELECT *${if (json == "body") "" else ", $json AS body"} FROM matches
             ORDER BY $order ${filter.direction},id ASC LIMIT ${filter.size} OFFSET ${filter.page.toLong() * filter.size})
-        SELECT jsonb_build_object('items',coalesce((SELECT jsonb_agg(body ORDER BY $order ${filter.direction},id ASC) FROM selected),'[]'::jsonb),
-            'page',${filter.page},'size',${filter.size},'totalElements',(SELECT count(*) FROM matches))::text"""
+        SELECT ${if (requireTarget) "CASE WHEN EXISTS (SELECT FROM target) THEN " else ""}
+            jsonb_build_object('items',coalesce((SELECT jsonb_agg(body ORDER BY $order ${filter.direction},id ASC) FROM selected),'[]'::jsonb),
+            'page',${filter.page},'size',${filter.size},'totalElements',(SELECT count(*) FROM matches))::text${if (requireTarget) " ELSE NULL END" else ""}"""
 
     val prefix = """WITH RECURSIVE request AS (SELECT ?::uuid tenant,?::uuid[] locations,?::uuid[] areas,?::jsonb sites,
         ?::uuid sku,?::text serial,?::uuid location,?::text status,?::text condition,?::text owner,?::timestamptz since,?::timestamptz until),
