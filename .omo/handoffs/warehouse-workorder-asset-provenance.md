@@ -4,7 +4,8 @@
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Remote HEAD before this checkpoint: `0df8c19fd1b9575b684f7ad61bbd4f306162c8d8`
+- Implementation SHA: `0df8c19fd1b9575b684f7ad61bbd4f306162c8d8`
+- Previous checkpoint: `c8ad1b2a2e9207e92c7c4ce4ea9b5c476388addb`
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr`
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
@@ -12,7 +13,7 @@
 
 ## Verified State
 
-Tasks 1-9 are checked in the tracked plan and have trusted ledger receipts:
+Tasks 1-10 are checked in the tracked plan and have trusted ledger receipts:
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -24,17 +25,17 @@ Tasks 1-9 are checked in the tracked plan and have trusted ledger receipts:
 - Task 8: PASS after AV8 corrections; receiving, inspection, putaway, file validation, restart, and race evidence confirmed by `ses_f7bde4ef4ffepGrCcS6ZQv0d5K`.
 - Task 9: PASS after AV9 corrections; bounded projections, filters, privacy, restart, and compatibility evidence confirmed by `ses_f7aee14dfffe6NP997sLvIMWMR`.
 
-Task 10 remains **unchecked/pending** in the plan. Its correction is pushed, but independent re-verification has not completed. The pending verifier is `ses_f79532a97ffe5s56PUPGBJ6YKA`; the task10 executor session is `ses_f7a01906fffeBIVrZnzW317yZH`. Do not mark task10 complete.
+- Task 10: PASS after corrections; independent re-verification confirmed by `ses_f79532a97ffe5s56PUPGBJ6YKA`.
 
 ## Exact Next Action
 
-Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`, inspect the task10 correction against the current remote HEAD, and have the independent verifier rerun before changing the task10 checkbox. Task11+ remain unstarted. Do not implement or alter task10 as part of this checkpoint.
+Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`. Task 11 is next; task11+ remain unstarted. Do not implement task11 as part of this checkpoint.
 
 ## Continuation Policy
 
 The active plan, draft, notepads, ledger, and this handoff are the portable state. Push immediately after every checkpoint commit; use regular fast-forward push only, stop on divergence, and never force-push. Do not merge or create a PR from this checkpoint.
 
-`.omo/boulder.json` is intentionally omitted: it contains absolute main-checkout paths and ephemeral/stale running-session metadata, so it is not portable. Resume derives from the repository-relative plan checkboxes and the tracked ledger/handoff. Runtime state is not required for this checkpoint.
+`.omo/boulder.json` is intentionally omitted: it contains absolute main-checkout paths and ephemeral/stale running-session metadata, so it is not portable. Resume derives from the repository-relative plan checkboxes and the tracked ledger/handoff. Runtime state is not required for this checkpoint. Push immediately after every checkpoint commit using regular fast-forward push only; stop on divergence and never force-push.
 
 ## Excluded Data
 
