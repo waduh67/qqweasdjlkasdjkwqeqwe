@@ -109,7 +109,7 @@ class WarehouseSchemaITSelectiveTiming {
                     assertThat(rows.getString(2).substringAfter("BEGIN").trimStart())
                         .describedAs(rows.getString(1)).startsWith("PERFORM warehouse_assert_deferred_scope(NEW.tenant_id);")
                 }
-                assertThat(names).containsExactlyInAnyOrderElementsOf(WarehouseTimingFamily.entries.map { it.function })
+                assertThat(names).containsExactlyInAnyOrderElementsOf(WarehouseTimingFamily.entries.map { it.function } + "warehouse_approval_terminal_guard")
             }
         } }
     }

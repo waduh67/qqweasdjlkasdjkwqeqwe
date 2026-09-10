@@ -6,6 +6,23 @@ import org.junit.jupiter.api.Test
 import java.sql.SQLException
 
 class WarehouseApprovalITSchema : WarehouseApprovalHttpFixture() {
+    @Test fun `cleared tenant context cannot hide a deferred approval invariant`() {
+        val case = pending()
+        fixture(case.setup.token).transaction {
+            jdbc { connection ->
+                val point = connection.setSavepoint()
+                try {
+                    connection.createStatement().use { statement ->
+                        statement.execute("UPDATE inventory_approval SET revision=revision+1 WHERE id='${case.id}'")
+                        statement.execute("SET LOCAL app.tenant_id=''")
+                        assertThatThrownBy { statement.execute("SET CONSTRAINTS warehouse_approval_terminal IMMEDIATE") }
+                            .isInstanceOfSatisfying(SQLException::class.java) { assertThat(it.sqlState).isEqualTo("23514") }
+                    }
+                } finally { connection.rollback(point) }
+            }
+        }
+        counts(case, 0, 0)
+    }
     @Test fun `request snapshots decisions and effects cannot be edited or reassigned`() {
         val case = pending()
         assertThat(decide(case).status).isEqualTo(200)
