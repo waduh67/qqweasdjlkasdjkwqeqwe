@@ -7,13 +7,13 @@ interface InventoryMaterialReservationApi {
     fun release(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
 }
 
-interface InventoryMaterialApi : InventoryMaterialReservationApi {
-    fun summary(workOrderId: UUID): MaterialSummary
-    fun history(workOrderId: UUID, page: WarehousePageRequest): WarehousePage<WarehouseHistoryEntry>
-    fun replacePlan(workOrderId: UUID, request: ReplaceMaterialPlanRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
-    fun submitRequest(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
-    override fun reserve(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
-    override fun release(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+interface InventoryMaterialApi {
+    fun summary(context: MaterialPlanningContext): MaterialSummary
+    fun history(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialPlanHistory>
+    fun replacePlan(context: MaterialPlanningContext, request: MaterialPlanningRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    fun submitRequest(context: MaterialPlanningContext, request: MaterialPlanCommand, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    fun reserve(context: MaterialPlanningContext, request: MaterialPlanCommand, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    fun release(context: MaterialPlanningContext, request: MaterialPlanCommand, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun pick(workOrderId: UUID, request: PickMaterialRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun dispatch(workOrderId: UUID, request: MaterialDocumentRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun acknowledge(workOrderId: UUID, request: AcknowledgeMaterialRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
@@ -49,6 +49,8 @@ data class MaterialPlanLine(
     val quantityBase: String,
     val baseUnit: WarehouseBaseUnit,
     val continuousCut: Boolean = true,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val substitution: MaterialSubstitution? = null,
 )
 
 data class ReportMaterialUseRequest(
@@ -79,6 +81,7 @@ data class MaterialLineTotals(
     val transferredOutBase: String,
     val disposedBase: String,
     val stillAccountableBase: String,
+    val backorderBase: String = "0",
 )
 
 data class MaterialSummary(
@@ -92,6 +95,10 @@ data class MaterialSummary(
     val provisioningState: MaterialProvisioningState,
     val settlementState: MaterialSettlementState,
     val lines: List<MaterialLineTotals>,
+    val plan: MaterialPlanSnapshot? = null,
+    val demandDocumentId: UUID? = null,
+    val demandRevision: Long? = null,
+    val template: MaterialTemplateSnapshot? = null,
 )
 
 data class MaterialSettlementSnapshot(
