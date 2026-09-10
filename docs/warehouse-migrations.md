@@ -10,7 +10,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
 | M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7, V174.8, V174.9, V174.10, V174.11, V174.12, V174.13, V174.14 | 04 / 06 / 07 / 08 / 10 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions; master metadata, control-plane operation binding, reference admission, tenant/site/area consistency and effective ancestry guards; receipt intake snapshots, secured evidence and exact inspection disposition; immutable intake-content evidence binding; reservation allocation links and demand supply snapshots |
-| M03 | V175, V175.1, V175.2, V175.3 | 11 / 12 | Versioned policy/rules/tiers/approvers, warehouse applicability, durable settings replay, delegation lifecycle; approval/count source snapshots and repair/replenishment foundations; table-specific policy child validation and exact-value compatibility; sealed approval queue, candidate requirements and command receipts |
+| M03 | V175, V175.1, V175.2, V175.3, V175.4 | 11 / 12 | Versioned policy/rules/tiers/approvers, warehouse applicability, durable settings replay, delegation lifecycle; approval/count source snapshots and repair/replenishment foundations; table-specific policy child validation and exact-value compatibility; sealed approval queue, candidate requirements and command receipts; atomic terminal/effect constraints |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
@@ -22,6 +22,11 @@ It adds sealed evaluation/source snapshots, immutable tier/candidate requirement
 actor-bound replay and document-bound effect receipts. Legacy approvals remain
 staged, never inferred from movement IDs. V175 through V175.2 and all V174 bytes
 remain unchanged. Opening approval stays closed without a migration source owner.
+
+V175.4 is reserved before SQL creation to bind the terminal approved outcome to
+its owner posting, outbox and inbox receipt at transaction commit, and to check
+expiry again at the physical posting boundary after stock-lock waits. V175.3 has
+already been applied and is not rewritten.
 
 Task11 reserves `V175__warehouse_policy_foundations.sql` before creating SQL.
 V174.14 and every earlier migration remain byte-identical. V176 and later slots
