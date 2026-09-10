@@ -13,6 +13,7 @@ class WarehouseApprovalITGuards : WarehouseApprovalHttpFixture() {
             assertThat(scalar("SELECT evaluation_snapshot FROM inventory_approval")).isEqualTo(before)
             assertThat(scalar("SELECT value_numerator::text||'/'||value_denominator::text||' '||currency FROM inventory_approval")).isEqualTo("101/1 IDR")
             assertThat(scalar("SELECT policy_version FROM inventory_approval")).isEqualTo("1")
+            assertThat(scalar("SELECT (approval.policy_snapshot_hash=policy.snapshot_hash)::text FROM inventory_approval approval JOIN inventory_approval_policy_version policy ON policy.id=approval.policy_version_id")).isEqualTo("true")
         }
         counts(case, 1, 1)
     }

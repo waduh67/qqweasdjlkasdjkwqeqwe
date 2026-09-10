@@ -47,7 +47,7 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             authority_epoch,evaluation_snapshot,source_snapshot,location_ids,cutover_epoch)
             VALUES (?,?,?,NULL,?,?,?::jsonb,?,?,?,?,?,'PENDING',0,?,?,?,?,?,?,?,?,?::jsonb,?,?,?,?,?)""",
             record.id, sql.tenant, evaluation.operation.name, snapshot.requesterId, policy.revision, mapper.writeValueAsString(policy),
-            evaluation.snapshotHash, key, hash, record.requestedAt, record.expiresAt, policy.id, evaluation.sourceDocumentId,
+            WarehouseCanonicalPayload.parse(mapper.writeValueAsString(policy)).hash, key, hash, record.requestedAt, record.expiresAt, policy.id, evaluation.sourceDocumentId,
             evaluation.sourceRevision, snapshot.sourceHash, evaluation.operation.name, requireNotNull(evaluation.valueNumerator).toBigDecimal(),
             requireNotNull(evaluation.valueDenominator).toBigDecimal(), evaluation.currency, mapper.writeValueAsString(evaluation.excludedUserIds),
             evaluation.authorityEpoch, mapper.writeValueAsString(snapshot), snapshot.source,
