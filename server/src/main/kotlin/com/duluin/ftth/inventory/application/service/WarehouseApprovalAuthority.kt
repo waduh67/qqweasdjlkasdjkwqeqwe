@@ -25,12 +25,13 @@ class WarehouseApprovalAuthority(private val access: WarehousePolicyAccess, priv
         if (grants.any { it.delegateId == actor && it.approverId in excluded }) masterFailure(WarehouseErrorCode.FORBIDDEN)
         val requirement = requireNotNull(evaluation.policy).rules.single { it.operation == evaluation.operation }.tiers[tier - 1]
         val decidingRoles = requirement.roleIds.filter { "inventory.approval.decide" in directory.roles[it].orEmpty() }
+        val sealedDirect = evaluation.tiers.single { it.number == tier }.approvers.filter { it.delegatedFrom == null }.map { it.userId }.toSet()
         val used = decisions.flatMap { listOfNotNull(it.actorId, it.delegation?.approverId) }.toSet()
         if (actor in used) masterFailure(WarehouseErrorCode.FORBIDDEN)
-        if (actor in requirement.userIds || principal.roleIds.any { it in decidingRoles }) return null
+        if (actor in sealedDirect && (actor in requirement.userIds || principal.roleIds.any { it in decidingRoles })) return null
         val delegation = grants.sortedBy { it.id.toString() }.firstOrNull { grant ->
             val delegator = directory.users.singleOrNull { it.id == grant.approverId }
-            grant.delegateId == actor && grant.approverId !in excluded && grant.approverId !in used && delegator != null &&
+            grant.delegateId == actor && grant.approverId in sealedDirect && grant.approverId !in excluded && grant.approverId !in used && delegator != null &&
                 access.eligible(delegator, locations) && locations.filter { policy.covered(it, requireNotNull(evaluation.policy).warehouseIds) }
                     .all { policy.covered(it, listOf(grant.locationId)) } &&
                 (if (grant.sourceRoleId == null) grant.approverId in requirement.userIds
