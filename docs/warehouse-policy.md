@@ -93,7 +93,7 @@ Penjumlahan memakai rasional integer eksak; tidak ada pembulatan/FX/zero fallbac
 Receipt/issue biasa tanpa rule threshold yang memerlukan approval menghasilkan
 `IN_POLICY`. Exception selalu memerlukan tier pertama, termasuk nilai di bawah
 threshold pertama; tier lanjutan berlaku ketika nilai mencapai thresholdnya.
-`APPROVAL_REQUIRED` memuat immutable policy version, tier/candidate requirements,
+Hasil **internal** `APPROVAL_REQUIRED` memuat immutable policy version, tier/candidate requirements,
 excluded identities, exact value/currency, authority epoch, dan hash server.
 Task12 harus menyimpan snapshot ini dan mengevaluasi ulang authority/source saat
 keputusan/eksekusi; hasil evaluasi tidak mengotorisasi posting dengan sendirinya.
@@ -108,6 +108,10 @@ Delegation memakai `approverId`, `delegateId`, optional `sourceRoleId`,
 berasal dari clock PostgreSQL; akhir wajib di masa depan, maksimum30 hari.
 Tidak ada self grant, chain, atau cycle. Role source harus dimiliki delegator
 dan cocok dengan rule policy. Expired/revoked grant tidak memberikan authority.
+Role sumber itu sendiri wajib masih memiliki `inventory.approval.decide`;
+permission dari role lain pada user tidak menggantikan izin role yang dipilih
+policy/delegation. Jalur `userIds` eksplisit tetap menggunakan authority agregat
+user saat ini, dengan scope/independence yang sama.
 Grant tidak dapat diedit atau dihapus; revocation adalah perubahan terminal
 ber-revisi dengan actor/time serta immutable operation receipt.
 
@@ -117,7 +121,7 @@ ber-revisi dengan actor/time serta immutable operation receipt.
 `{sourceDocumentId,sourceRevision}`. Body berisi `approverIds`, `tiers`, `amount`,
 `value`, `currency`, `policySnapshotHash`, `operationHash`, `movementId`, target
 efek, atau field authority lain ditolak400 `MALFORMED_REQUEST`.
-Source-only request mengembalikan409 beserta hasil evaluasi; bukan request queue
+Source-only request mengembalikan409 beserta proyeksi evaluasi sesuai izin; bukan request queue
 yang diterima. Legacy decision dengan hash/movement override juga ditolak400;
 decision tanpa override tetap fail-closed409 sampai workflow durable task12.
 Map request/decision legacy belum diganti pada task11; tidak dipakai sebagai
@@ -181,3 +185,58 @@ yang kotor dapat memuat kegagalan job fixture lain dan tidak diklaim sehat.
 Tidak ada file migrasi lama diubah. Test JVM dan packaged server dihentikan;
 cleanup Compose hanya menghapus container/network task dan mempertahankan volume.
 Evidence/notepad lokal tidak dimasukkan ke commit.
+
+## Koreksi verifier AV11-01 dan AV11-02
+
+Verifier menemukan dua blocker pada `a2b4a6e1`: role R masih dipakai ketika izin
+decide-nya dicabut tetapi user masih memiliki izin lewat B, dan endpoint evaluasi
+mengirim snapshot internal ke operator tanpa hak melihat biaya/policy. Koreksi
+ini tidak mengubah schema atau mengimplementasikan task12.
+
+AV11-01: candidate berbasis role harus merupakan anggota role yang dikonfigurasi,
+dan `directory.roles[roleId]` saat ini harus memuat `inventory.approval.decide`.
+Aturan sama berlaku saat membuat dan mengevaluasi delegation bersumber role.
+Revocation permission/membership segera meniadakan jalur itu walaupun B masih
+memberikan decide. Explicit `userIds` tetap valid lewat authority agregatnya,
+tetapi tidak dapat menghidupkan delegation yang mengatasnamakan R tanpa izin.
+
+AV11-02: `WarehousePolicyEvaluationApi` dan `WarehousePolicyEvaluation` tetap
+kontrak internal lengkap task12. Kedua route HTTP evaluasi memakai
+`WarehouseEvaluationQuery`, yang mengevaluasi dan membentuk proyeksi di bawah
+transaksi/current-authority fence yang sama. DTO HTTP terpisah dari snapshot;
+field tidak berizin benar-benar tidak diserialisasi, bukan null/array kosong.
+
+| Hak/scope pemanggil saat ini | Field HTTP |
+| --- | --- |
+| Operation manage saja; juga cost.view tanpa approval.view | `code`, `sourceDocumentId`, `sourceRevision`, `requiredAction`, `message` |
+| approval.view dan policy warehouse scope yang terlihat | Lima field status, `policy` metadata terbatas, dan `tiers` yang diperlukan untuk source/action ini |
+| approval.view + cost.view dan scope yang sesuai | Field di atas serta `valueNumerator`, `valueDenominator`, `currency`, bila nilai diketahui |
+
+Metadata policy hanya id/revision/expiry, operation sumber, dan warehouse IDs
+yang saat ini terlihat. Policy rules global, threshold, configuration hash,
+authority epoch dan excluded identities tidak dikirim. Candidate identities
+hanya muncul pada approval projection untuk source yang sudah diotorisasi;
+tanpa policy warehouse scope yang terlihat respons kembali ke status-only.
+Direct candidate tidak membawa placeholder delegation; delegated candidate
+memuat identity delegation yang diizinkan. Cost dan currency pada pesan setup
+error juga tidak dibocorkan. Policy GET tetap403 tanpa approval.view.
+
+Evaluasi HTTP adalah read/projection, bukan operation receipt yang menyimpan
+JSON lengkap. Retry dengan key lama menghitung ulang visibility/current authority;
+cost/approval-view revocation meredaksi respons dan warehouse revocation menolak
+source404. Jangan mengirim internal task12 receipt/snapshot langsung ke HTTP.
+
+### Bukti koreksi
+
+- Failing-first AV11-01:3/3 merah, kemudian3/3 hijau. AV11-02:4/4 merah, kemudian4/4 hijau.
+- Exact WarehousePolicyIT dua kali:27 test,0 gagal,0 skipped setiap run.
+- Bounded prior gates332 +173 +248 semuanya hijau; gabungan unik dengan policy27 adalah780 test.
+- Internal snapshot equality sebelum/sesudah HTTP projection tetap diuji: kedua warehouse, exact101/1 IDR, exclusions, candidates, dan hash lengkap tidak berubah.
+- Packaged HTTP membuktikan R+B -> cabut R ->409 tanpa A/D, restore ->200 A/D, cabut membership ->409, explicit-user A lewat B ->200 hanya A. Role revocation bertahan setelah SIGKILL/restart.
+- Operator WH1 dengan policy WH1+WH2 mendapat5 field; approval view7 field hanya WH1; approval+cost10 field. Setelah discarded response dan restart, replay meredaksi cost, lalu approval identities, lalu menolak revoked scope404.
+- Clean no-cache bootJar sukses40s; SHA256 `af8c2c04769b9f34a5d289a345839be2bb53f8355210e9fb85fbfa453e56ab1c`.
+- Probe PostgreSQL `warehouse_app|f|f|f`: bukan superuser/BYPASSRLS/schema CREATE; decisions0, effects0, movements0. M03 hashes tetap sama.
+
+Implementasi koreksi dan restart tests berada pada checkpoint `59ef72d3`;
+commit dokumentasi berikutnya hanya mencatat bukti. Evidence lokal AV11 disimpan
+terpisah dari commit; tidak ada token/password pada laporan HTTP.
