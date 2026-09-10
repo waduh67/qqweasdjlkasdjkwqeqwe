@@ -11,7 +11,17 @@ import java.util.UUID
 
 @Repository
 class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc) {
+    fun lockIdentityKeys(record: ReceiptRecord) = jdbc.execute { sql ->
+        record.intake.lines.flatMap { line -> listOfNotNull(
+            line.serial?.let { "SERIAL" to SerialIdentity.parse(it).canonical },
+            line.mac?.let { "MAC" to MacIdentity.parse(it).canonical.replace(":", "") },
+            if (line.serial == null) "LOT" to "${line.sku.id}|${line.lotCode}" else null) }
+            .distinct().sortedBy { it.first + it.second }.forEach { (type, value) ->
+                sql.value("SELECT pg_advisory_xact_lock(hashtextextended(?,0))", "${sql.tenant}|receipt-identity|$type|$value")
+            }
+    }
     fun admit(record: ReceiptRecord): List<PostingLeg> = jdbc.execute { sql ->
+        lockIdentityKeys(record)
         record.intake.lines.flatMap { line ->
             val identity = UUID.randomUUID()
             val lot = if (line.serial == null) UUID.randomUUID() else null
