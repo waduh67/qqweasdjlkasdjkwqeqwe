@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.adapter.inbound.web
 
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.service.DurableApprovalService
+import com.duluin.ftth.inventory.application.service.LegacyApprovalQuery
 import com.duluin.ftth.inventory.domain.model.InventoryApprovalDecision
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -11,7 +12,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/warehouse/approvals", "/api/inventory/approvals")
-class InventoryApprovalController(private val approvals: DurableApprovalService) {
+class InventoryApprovalController(private val approvals: DurableApprovalService, private val legacy: LegacyApprovalQuery) {
     @GetMapping
     @PreAuthorize("@authz.can('inventory.approval.view')")
     fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
@@ -19,11 +20,12 @@ class InventoryApprovalController(private val approvals: DurableApprovalService)
 
     @GetMapping("/pending")
     @PreAuthorize("@authz.can('inventory.approval.view')")
-    fun pending() = approvals.list(0, 100, WarehouseApprovalStatus.PENDING).items
+    fun pending() = legacy.pending()
 
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('inventory.approval.view')")
-    fun get(@PathVariable id: UUID) = approvals.get(id)
+    fun get(@PathVariable id: UUID, request: jakarta.servlet.http.HttpServletRequest): Any =
+        if (request.requestURI.startsWith("/api/inventory/")) legacy.get(id) else approvals.get(id)
 
     @GetMapping("/{id}/history")
     @PreAuthorize("@authz.can('inventory.approval.view')")
