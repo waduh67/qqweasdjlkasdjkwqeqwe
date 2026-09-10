@@ -2,7 +2,8 @@
 
 Task11 menyediakan konfigurasi durable dan evaluasi server. Evaluasi **bukan
 persetujuan**: tidak membuat request, keputusan, movement, atau efek stok.
-Queue, keputusan maker-checker, dan posting atomik tetap milik task12.
+Queue, keputusan maker-checker, dan posting atomik disediakan task12; lihat
+[persetujuan dokumen durable](warehouse-approvals.md) untuk kontrak executable.
 
 ## HTTP
 
@@ -116,6 +117,10 @@ Grant tidak dapat diedit atau dihapus; revocation adalah perubahan terminal
 ber-revisi dengan actor/time serta immutable operation receipt.
 
 ## Kompatibilitas approval lama
+
+Bagian berikut mencatat checkpoint task11. Task12 mengganti gate sementara ini
+dengan queue/decision durable dan proyeksi read legacy yang aman; kontrak terkini
+ada pada [warehouse-approvals.md](warehouse-approvals.md).
 
 `POST /api/inventory/approvals` sekarang hanya menerima
 `{sourceDocumentId,sourceRevision}`. Body berisi `approverIds`, `tiers`, `amount`,
