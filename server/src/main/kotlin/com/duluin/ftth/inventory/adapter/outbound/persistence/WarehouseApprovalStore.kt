@@ -7,7 +7,8 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.Instant
 import java.util.UUID
 
-data class ApprovalReplay(val actor: UUID, val requestId: UUID, val hash: String, val response: WarehouseApprovalResponse)
+data class ApprovalReplay(val actor: UUID, val requestId: UUID, val hash: String, val response: WarehouseApprovalResponse,
+    val attempt: WarehouseApprovalAttempt?)
 data class ApprovalSourceState(val revision: Long, val state: String, val kind: String, val requester: UUID,
     val code: String, val disposition: String?, val content: String, val locations: Set<UUID>)
 
@@ -80,12 +81,14 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
         sql.value("SELECT pg_advisory_xact_lock(hashtextextended(?,0))", "${sql.tenant}|$namespace|$key")
         sql.query("SELECT * FROM inventory_approval_command WHERE tenant_id=? AND namespace=? AND operation_key=?", sql.tenant, namespace, key) {
             ApprovalReplay(it.uuid("actor_id"), it.uuid("approval_id"), it.getString("payload_hash"),
-                WarehouseApprovalResponse(it.getInt("original_status"), it.getString("original_body")))
+                WarehouseApprovalResponse(it.getInt("original_status"), it.getString("original_body")),
+                it.getString("attempted_decision")?.let { value -> mapper.readValue(value, WarehouseApprovalAttempt::class.java) })
         }.singleOrNull()
     }
-    fun response(namespace: String, key: String, actor: UUID, request: UUID, hash: String, response: WarehouseApprovalResponse) = jdbc.execute { sql ->
-        sql.update("INSERT INTO inventory_approval_command(id,tenant_id,namespace,operation_key,actor_id,approval_id,payload_hash,original_status,original_body) VALUES (?,?,?,?,?,?,?,?,?)",
-            UUID.randomUUID(), sql.tenant, namespace, key, actor, request, hash, response.status, response.body)
+    fun response(namespace: String, key: String, actor: UUID, request: UUID, hash: String, response: WarehouseApprovalResponse,
+        attempt: WarehouseApprovalAttempt?) = jdbc.execute { sql ->
+        sql.update("INSERT INTO inventory_approval_command(id,tenant_id,namespace,operation_key,actor_id,approval_id,payload_hash,original_status,original_body,attempted_decision) VALUES (?,?,?,?,?,?,?,?,?,?::jsonb)",
+            UUID.randomUUID(), sql.tenant, namespace, key, actor, request, hash, response.status, response.body, attempt?.let { mapper.writeValueAsString(it) })
     }
     fun effect(record: WarehouseApprovalRecord, operation: UUID, body: String, event: UUID, now: Instant) = jdbc.execute { sql ->
         sql.update("""INSERT INTO inventory_approval_effect(id,tenant_id,approval_id,approval_type,status,operation_key,emitted_at,

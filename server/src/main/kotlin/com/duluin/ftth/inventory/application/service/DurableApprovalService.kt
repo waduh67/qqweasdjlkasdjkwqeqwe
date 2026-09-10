@@ -71,11 +71,16 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val hash = hash(input)
         replay("decide", key, hash, current)?.let { return it }
         val decisions = store.decisions(record.id)
-        if (record.status != WarehouseApprovalStatus.PENDING) masterFailure(WarehouseErrorCode.STALE_REVISION)
-        val tier = record.snapshot.evaluation.tiers[decisions.size].number
+        val tier = record.snapshot.evaluation.tiers.getOrNull(decisions.size)?.number ?: record.snapshot.evaluation.tiers.last().number
         val now = clock.now()
-        val delegation = eligibility.authorize(record, tier, current, decisions, now)
-        if (record.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        val delegation = eligibility.authorize(record, tier, current, if (record.status == WarehouseApprovalStatus.PENDING) decisions else emptyList(), now)
+        val attempt = WarehouseApprovalAttempt(record.id, record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision,
+            requireNotNull(record.snapshot.evaluation.policy).id, record.revision, tier, input.decision, delegation)
+        if (record.status != WarehouseApprovalStatus.PENDING || record.revision != input.expectedRevision) {
+            val response = WarehouseApprovalResponse(409, mapper.writeValueAsString(view(record).copy(code = "STALE_REVISION")))
+            recordResponse("decide", key, hash, current, record.id, response, attempt)
+            return response
+        }
         val invalid = when {
             now >= record.expiresAt -> WarehouseApprovalStatus.EXPIRED
             cutover.snapshot.epoch != record.snapshot.cutoverEpoch || cutover.snapshot.state != WarehouseCutoverState.ENFORCED -> WarehouseApprovalStatus.STALE
@@ -84,7 +89,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         }
         if (invalid != null) {
             val response = terminate(record, invalid)
-            recordResponse("decide", key, hash, current, record.id, response)
+            recordResponse("decide", key, hash, current, record.id, response, attempt)
             return response
         }
         owner(source.kind).validate(source, record.snapshot.evaluation.sourceDocumentId)
@@ -116,7 +121,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             probe(WarehouseApprovalStage.EFFECT_RECEIPT, record.id)
         }
         val response = WarehouseApprovalResponse(200, result)
-        recordResponse("decide", key, hash, current, record.id, response)
+        recordResponse("decide", key, hash, current, record.id, response, attempt)
         return response
     }
 
@@ -176,14 +181,18 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val record = store.get(replay.requestId)
         eligibility.view(record, current)
         if (namespace == "decide") {
-            val decision = store.decisions(record.id).firstOrNull { it.actorId == replay.actor }
-            if (decision != null) eligibility.authorize(record, decision.tier, current, emptyList(), clock.now())
+            val tier = replay.attempt?.tier ?: record.snapshot.evaluation.tiers
+                .getOrNull(mapper.readTree(replay.response.body).path("revision").asInt() - 1)?.number
+                ?: masterFailure(WarehouseErrorCode.FORBIDDEN)
+            val delegation = eligibility.authorize(record, tier, current, emptyList(), clock.now())
+            if (replay.attempt?.delegation != null && delegation?.id != replay.attempt.delegation.id) masterFailure(WarehouseErrorCode.FORBIDDEN)
         }
         if (replay.hash != hash) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
         return replay.response
     }
-    private fun recordResponse(namespace: String, key: String, hash: String, current: CurrentAuthority, id: UUID, response: WarehouseApprovalResponse) {
-        store.response(namespace, key, current.fence.identity.userId, id, hash, response)
+    private fun recordResponse(namespace: String, key: String, hash: String, current: CurrentAuthority, id: UUID, response: WarehouseApprovalResponse,
+        attempt: WarehouseApprovalAttempt? = null) {
+        store.response(namespace, key, current.fence.identity.userId, id, hash, response, attempt)
         probe(WarehouseApprovalStage.RESPONSE, id)
     }
     internal fun terminate(record: WarehouseApprovalRecord, status: WarehouseApprovalStatus): WarehouseApprovalResponse {

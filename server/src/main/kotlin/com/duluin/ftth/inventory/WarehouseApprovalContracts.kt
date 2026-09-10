@@ -19,6 +19,9 @@ data class WarehouseApprovalRecord(val id: UUID, val snapshot: WarehouseApproval
 data class WarehouseApprovalDecisionRecord(val id: UUID, val tier: Int, val actorId: UUID, val decision: InventoryApprovalDecision,
     val reason: String?, val decidedAt: Instant, val revision: Long, val delegation: WarehouseDelegation?, val authorityEpoch: Long,
     val evidenceReference: UUID?)
+data class WarehouseApprovalAttempt(val requestId: UUID, val sourceDocumentId: UUID, val sourceRevision: Long,
+    val policyVersionId: UUID, val requestRevision: Long, val tier: Int, val decision: InventoryApprovalDecision,
+    val delegation: WarehouseDelegation?)
 
 enum class WarehouseApprovalStage { REQUEST, REQUIREMENTS, DECISION, OWNER_EFFECT, INBOX, EFFECT_RECEIPT, RESPONSE }
 fun interface WarehouseApprovalProbe { fun reached(stage: WarehouseApprovalStage, requestId: UUID) }
