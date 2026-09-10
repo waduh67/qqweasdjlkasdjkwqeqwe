@@ -5,17 +5,16 @@ import com.duluin.ftth.inventory.domain.model.*
 import java.util.UUID
 
 interface InventoryApprovalApi {
-    fun request(command: CreateInventoryApproval): InventoryApprovalRequest
-    fun decide(approvalId: UUID, command: DecideInventoryApproval): InventoryApprovalRequest
-    fun get(approvalId: UUID): InventoryApprovalRequest?
-    fun effects(tenantId: UUID): List<InventoryApprovalEffect>
+    fun request(source: WarehouseSourceInput, key: String): WarehouseApprovalResponse
+    fun decide(command: WarehouseApprovalDecisionInput, key: String): WarehouseApprovalResponse
+    fun get(approvalId: UUID): WarehouseApprovalView
 }
 
-class InventoryApprovalApiAdapter(private val service: InventoryApprovalService) : InventoryApprovalApi {
-    override fun request(command: CreateInventoryApproval) = service.request(command)
-    override fun decide(approvalId: UUID, command: DecideInventoryApproval) = service.decide(approvalId, command)
+@org.springframework.stereotype.Service
+class InventoryApprovalApiAdapter(private val service: DurableApprovalService) : InventoryApprovalApi {
+    override fun request(source: WarehouseSourceInput, key: String) = service.request(source, key)
+    override fun decide(command: WarehouseApprovalDecisionInput, key: String) = service.decide(command, key)
     override fun get(approvalId: UUID) = service.get(approvalId)
-    override fun effects(tenantId: UUID) = service.effects(tenantId)
 }
 
 data class InventoryApprovalDecisionEvent(

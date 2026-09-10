@@ -65,7 +65,7 @@ class WarehousePolicyITVisibility : WarehousePolicyVisibilityFixture() {
         assertThat(body.path("code").asString()).isEqualTo("CURRENCY_MISMATCH")
         assertThat(mismatch.contentAsString).doesNotContain("IDR", "USD", scenario.warehouse2, scenario.approver.second)
         val legacy = request("POST", "/api/inventory/approvals", scenario.operator.first, sourceBody(scenario.document))
-        assertThat(legacy.status).isEqualTo(409)
-        assertThat(fields(mapper.readTree(legacy.contentAsString))).isEqualTo(statusFields)
+        assertThat(legacy.status).isEqualTo(403)
+        assertThat(legacy.contentAsString).doesNotContain("IDR", "USD", scenario.warehouse2, scenario.approver.second)
     }
 }

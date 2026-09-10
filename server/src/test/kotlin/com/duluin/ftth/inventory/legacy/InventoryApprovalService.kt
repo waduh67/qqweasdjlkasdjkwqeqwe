@@ -6,12 +6,10 @@ import com.duluin.ftth.inventory.domain.model.*
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
-import org.springframework.stereotype.Service
 import org.springframework.context.ApplicationEventPublisher
 import com.duluin.ftth.inventory.InventoryApprovalDecisionEvent
 import com.duluin.ftth.common.security.CurrentUserProvider
 
-@Service
 class InventoryApprovalService(
     private val clock: Clock = Clock.systemUTC(),
     private val events: ApplicationEventPublisher? = null,

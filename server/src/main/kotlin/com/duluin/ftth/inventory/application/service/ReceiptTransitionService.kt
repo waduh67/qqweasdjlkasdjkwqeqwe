@@ -18,7 +18,8 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val receipts: WarehouseReceiptService, private val store: WarehouseReceiptPersistence,
     private val operations: WarehouseOperationStore, private val origins: WarehouseReceiptOrigins, private val posting: WarehousePosting,
-    private val planning: ReceiptDispositionPlanning, private val inspections: ReceiptInspectionPersistence, private val completion: ReceiptCompletion) {
+    private val planning: ReceiptDispositionPlanning, private val inspections: ReceiptInspectionPersistence, private val completion: ReceiptCompletion,
+    private val policy: WarehousePolicyEvaluationApi, private val approvals: com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseApprovalStore) {
     private val mapper = jacksonObjectMapper()
     fun execute(id: UUID, input: ReceiptInput, key: String): WarehouseOperationReceipt {
         receiptKey(key)
@@ -50,6 +51,12 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
         if (record.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         if (record.state != if (input is ReceiptReceiveInput) WarehouseReceiptState.DRAFT else WarehouseReceiptState.RECEIVED_IN_INSPECTION)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (input is ReceiptReceiveInput) {
+            if (approvals.source(id).disposition != null) masterFailure(WarehouseErrorCode.APPROVAL_REQUIRED)
+            val existing = approvals.findSource(id, record.revision)
+            if (existing != null || policy.evaluate(WarehouseSourceInput(id, record.revision)).tiers.isNotEmpty())
+                masterFailure(WarehouseErrorCode.APPROVAL_REQUIRED)
+        }
         val plan = when (input) {
             is ReceiptReceiveInput -> ReceiptDispositionPlan(origins.admit(record), emptyList(), emptyList(), WarehouseReceiptState.RECEIVED_IN_INSPECTION)
             is ReceiptInspectInput -> planning.inspect(record, input)
