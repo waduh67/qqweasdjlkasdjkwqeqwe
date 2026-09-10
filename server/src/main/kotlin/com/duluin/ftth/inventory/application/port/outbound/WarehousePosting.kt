@@ -116,6 +116,7 @@ data class WarehousePost(
     val usage: PostingUsage? = null,
     val events: List<PostingEvent> = emptyList(),
     val compensatesPostingId: UUID? = null,
+    val approval: ReceiptPostingApproval? = null,
 )
 
 data class WarehousePostResult(val postingId: UUID, val operationId: UUID, val documentRevision: Long, val recordedAt: Instant)

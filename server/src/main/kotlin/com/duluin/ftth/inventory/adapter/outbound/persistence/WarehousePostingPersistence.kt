@@ -19,9 +19,19 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
         documents.lock(command,cutoverEpoch)
         val stock = PostingStock(sql)
         stock.lock(command)
+        command.approval?.let { approval ->
+            require(command.kind == com.duluin.ftth.inventory.domain.model.MovementKind.RECEIVE && command.splits.isEmpty() && command.reservations.isEmpty())
+            stock.lockBalances(command, command.operation.recordedAt)
+            assertReceiptApproval(sql, approval, true)
+        }
         val result = WarehousePostResult(command.operation.postingId,command.operation.id,Math.addExact(command.expectedRevision,1),command.operation.recordedAt)
         documents.advance(command,result,cutoverEpoch)
-        documents.header(command,result)
+        try { documents.header(command,result) }
+        catch (failure: SQLException) {
+            if (command.approval != null && failure.sqlState == "23514" && failure.message.orEmpty().contains("posting requires live document-bound approval"))
+                throw ApprovalPostingStopped(command.approval, com.duluin.ftth.inventory.WarehouseApprovalStatus.EXPIRED)
+            throw failure
+        }
         stock.split(command)
         stock.legs(command,result)
         stock.balances(command,result.recordedAt)
