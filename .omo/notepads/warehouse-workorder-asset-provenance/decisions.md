@@ -82,3 +82,8 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Preserve line allocation and retained-remnant conservation. Expose inbound, retained and fact-eligible legs in the same validated result; do not independently infer retention in the fact persistence adapter.
 - Every fact must resolve to exactly one inbound leg/line and that leg must represent changed physical position/state for the same piece or split parent. Global matching prevents stationary identities being laundered through swapped line mappings. Per-line factual sums fit both factual capacity and allocation quantity.
 - Pure local cuts/remnant reshaping without facts remain valid. Existing source budget uses unchanged allocation, which bounds the now-validated current facts; prior immutable facts are still counted. No historical fact repair or task6 behavior is introduced.
+## 2026-09-10 - Wave 2 checkpoint
+
+- Tasks 1-12 are independently confirmed complete. Task 12 verifier `ses_f73a315e5ffeibNLVDMKoYmrnu` approved implementation `ca71af1fd5a103c81dfefbea0ad72e30da26a570` through migrations `V175.3`-`V175.7`.
+- Wave 2 is complete; Task 13 is next in Wave 3 and remains unchecked until its own implementation and independent approval.
+- Recovery remains immediate-push and no-merge: resume with `/start-work warehouse-workorder-asset-provenance`, push normal fast-forward after each approved checkpoint, and never merge from checkpoint sync.

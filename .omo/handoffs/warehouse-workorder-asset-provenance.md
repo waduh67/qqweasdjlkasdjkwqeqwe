@@ -1,19 +1,21 @@
-# Warehouse Workorder Asset Provenance Checkpoint
+# Warehouse Workorder Asset Provenance Wave 2 Checkpoint
 
 ## Resume
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Implementation SHA: `68f72bfcf639a4170573267430d9acfb63d484b2`
-- Previous checkpoint: `156d917ff5deb90e63bae97c02bf39922d9cf1b1`
+- Implementation SHA: `ca71af1fd5a103c81dfefbea0ad72e30da26a570`
+- Wave 2: complete through task 12
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
-- Delivery mode: `--make-pr`
-- Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
-- No merge was performed or requested.
+- Delivery mode: immediate push
+- Resume command: `/start-work warehouse-workorder-asset-provenance`
+- Task 12 verifier: `ses_f73a315e5ffeibNLVDMKoYmrnu`
+- Next task: task 13, unchecked; begin Wave 3.
+- Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-11 are checked in the tracked plan and have trusted ledger receipts:
+Tasks 1-12 are checked in the tracked plan and have trusted ledger receipts:
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -27,10 +29,11 @@ Tasks 1-11 are checked in the tracked plan and have trusted ledger receipts:
 
 - Task 10: PASS after corrections; independent re-verification confirmed by `ses_f79532a97ffe5s56PUPGBJ6YKA`.
 - Task 11: PASS after AV11 corrections; independent re-verification confirmed by `ses_f7719948affe0wmQEHImgzxMYe`.
+- Task 12: PASS after AV12 corrections; approval, immutable effects, restart, and concurrency evidence confirmed by `ses_f73a315e5ffeibNLVDMKoYmrnu`.
 
 ## Exact Next Action
 
-Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`. Task 12 is next; task12+ remain unstarted. Do not implement task12 as part of this checkpoint.
+Resume with `/start-work warehouse-workorder-asset-provenance`. Task 13 is next; do not check or implement task13 as part of this checkpoint.
 
 ## Continuation Policy
 
