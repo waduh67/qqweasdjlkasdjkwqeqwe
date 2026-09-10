@@ -33,11 +33,13 @@ class WarehouseDelegationService(private val cutovers: InventoryTenantCutoverApi
         access.replay(store.replay("delegation.create", key), current, canonical.hash, cutover.snapshot.epoch)?.let { return it }
         val now = store.now()
         if (input.validUntil <= now || input.validUntil > now.plus(Duration.ofDays(30))) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val principals = access.directory(current).users
+        val directory = access.directory(current)
+        val principals = directory.users
         val source = principals.singleOrNull { it.id == input.approverId } ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
         val delegate = principals.singleOrNull { it.id == input.delegateId } ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
         if (!access.eligible(source, listOf(input.locationId)) || !access.eligible(delegate, listOf(input.locationId)) ||
-            (input.sourceRoleId != null && input.sourceRoleId !in source.roleIds)) masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
+            (input.sourceRoleId != null && (input.sourceRoleId !in source.roleIds ||
+                "inventory.approval.decide" !in directory.roles[input.sourceRoleId].orEmpty()))) masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
         val policy = store.current() ?: masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
         val rule = policy.rules.singleOrNull { it.operation == input.operation } ?: masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
         if (!store.covered(input.locationId, policy.warehouseIds) || rule.tiers.none { tier ->

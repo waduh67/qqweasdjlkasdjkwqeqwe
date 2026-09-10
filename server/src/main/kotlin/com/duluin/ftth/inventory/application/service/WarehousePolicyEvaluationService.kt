@@ -63,14 +63,15 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
             val excludedDelegates = delegations.filter { it.approverId in excluded }.map { it.delegateId }.toSet()
             rule.tiers.forEachIndexed { index, tier ->
                 if ((document.operation.exception && index == 0) || total >= tier.minimumMinor.toBigInteger() * basis) {
-                    val direct = directory.users.filter { it.id in tier.userIds || it.roleIds.any(tier.roleIds::contains) }
+                    val decidingRoles = tier.roleIds.filter { "inventory.approval.decide" in directory.roles[it].orEmpty() }.toSet()
+                    val direct = directory.users.filter { it.id in tier.userIds || it.roleIds.any(decidingRoles::contains) }
                     val candidates = direct.filter { it.id !in excluded && it.id !in excludedDelegates && access.eligible(it, locations) }
                         .map { PolicyEligibleApprover(it.id) }.toMutableList()
                     delegations.forEach { delegation ->
                         val delegator = direct.singleOrNull { it.id == delegation.approverId }
                         val delegate = directory.users.singleOrNull { it.id == delegation.delegateId }
                         val sourceMatches = if (delegation.sourceRoleId == null) delegation.approverId in tier.userIds
-                            else delegation.sourceRoleId in tier.roleIds && delegation.sourceRoleId in delegator?.roleIds.orEmpty()
+                            else delegation.sourceRoleId in decidingRoles && delegation.sourceRoleId in delegator?.roleIds.orEmpty()
                         if (delegator != null && delegate != null && sourceMatches && delegation.approverId !in excluded &&
                             delegation.delegateId !in excluded && delegation.delegateId !in excludedDelegates &&
                             locations.all { store.covered(it, listOf(delegation.locationId)) } &&
