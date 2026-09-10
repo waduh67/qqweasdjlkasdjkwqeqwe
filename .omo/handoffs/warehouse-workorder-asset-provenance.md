@@ -4,8 +4,8 @@
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Implementation SHA: `0df8c19fd1b9575b684f7ad61bbd4f306162c8d8`
-- Previous checkpoint: `c8ad1b2a2e9207e92c7c4ce4ea9b5c476388addb`
+- Implementation SHA: `68f72bfcf639a4170573267430d9acfb63d484b2`
+- Previous checkpoint: `156d917ff5deb90e63bae97c02bf39922d9cf1b1`
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr`
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
@@ -13,7 +13,7 @@
 
 ## Verified State
 
-Tasks 1-10 are checked in the tracked plan and have trusted ledger receipts:
+Tasks 1-11 are checked in the tracked plan and have trusted ledger receipts:
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -26,10 +26,11 @@ Tasks 1-10 are checked in the tracked plan and have trusted ledger receipts:
 - Task 9: PASS after AV9 corrections; bounded projections, filters, privacy, restart, and compatibility evidence confirmed by `ses_f7aee14dfffe6NP997sLvIMWMR`.
 
 - Task 10: PASS after corrections; independent re-verification confirmed by `ses_f79532a97ffe5s56PUPGBJ6YKA`.
+- Task 11: PASS after AV11 corrections; independent re-verification confirmed by `ses_f7719948affe0wmQEHImgzxMYe`.
 
 ## Exact Next Action
 
-Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`. Task 11 is next; task11+ remain unstarted. Do not implement task11 as part of this checkpoint.
+Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`. Task 12 is next; task12+ remain unstarted. Do not implement task12 as part of this checkpoint.
 
 ## Continuation Policy
 
