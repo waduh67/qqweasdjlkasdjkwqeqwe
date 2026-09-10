@@ -21,6 +21,9 @@ class WarehousePolicyITSchema {
                     reject("23514", "DELETE FROM inventory_approval_policy_version WHERE id='$policy'")
                     reject("23503", "INSERT INTO inventory_approval_policy_warehouse(id,tenant_id,policy_id,location_id) VALUES ('${UUID.randomUUID()}','$tenant','$policy','${UUID.randomUUID()}')")
                     assertThat(scalar("SELECT count(*) FROM inventory_approval_decision")).isEqualTo("0")
+                    assertThat(scalar("""SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND is_nullable='YES' AND
+                        ((table_name='inventory_approval' AND column_name='amount') OR
+                        (table_name='inventory_cycle_count' AND column_name IN ('prior_quantity','observed_quantity')))""")).isEqualTo("3")
                     sql("SET LOCAL app.tenant_id='${UUID.randomUUID()}'")
                     assertThat(scalar("SELECT count(*) FROM inventory_approval_policy_version")).isEqualTo("0")
                 }
