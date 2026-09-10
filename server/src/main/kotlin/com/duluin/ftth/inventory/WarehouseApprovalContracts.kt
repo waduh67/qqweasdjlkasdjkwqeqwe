@@ -23,5 +23,5 @@ data class WarehouseApprovalAttempt(val requestId: UUID, val sourceDocumentId: U
     val policyVersionId: UUID, val requestRevision: Long, val tier: Int, val decision: InventoryApprovalDecision,
     val delegation: WarehouseDelegation?)
 
-enum class WarehouseApprovalStage { REQUEST, REQUIREMENTS, DECISION, OWNER_EFFECT, INBOX, EFFECT_RECEIPT, RESPONSE }
+enum class WarehouseApprovalStage { REQUEST, REQUIREMENTS, DECISION, OWNER_EFFECT, INBOX, EFFECT_RECEIPT, RESPONSE, RECOVERY }
 fun interface WarehouseApprovalProbe { fun reached(stage: WarehouseApprovalStage, requestId: UUID) }

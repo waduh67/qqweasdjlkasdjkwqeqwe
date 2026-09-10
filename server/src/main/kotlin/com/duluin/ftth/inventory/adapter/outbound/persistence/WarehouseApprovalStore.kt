@@ -2,6 +2,8 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.service.WarehouseCanonicalPayload
+import com.duluin.ftth.inventory.application.port.outbound.ReceiptPostingApproval
+import com.duluin.ftth.inventory.application.port.outbound.ApprovalPostingStopped
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.Instant
@@ -65,13 +67,20 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             mapper.readValue(it.getString(1), WarehouseApprovalDecisionRecord::class.java)
         }
     }
-    fun decision(record: WarehouseApprovalRecord, decision: WarehouseApprovalDecisionRecord, key: String, hash: String) = jdbc.execute { sql ->
-        sql.update("""INSERT INTO inventory_approval_decision(id,tenant_id,approval_id,tier,approver_id,delegated_from,decision,reason,decided_at,
+    fun decision(record: WarehouseApprovalRecord, decision: WarehouseApprovalDecisionRecord, key: String, hash: String,
+        postingApproval: ReceiptPostingApproval? = null) = jdbc.execute { sql ->
+        try { sql.update("""INSERT INTO inventory_approval_decision(id,tenant_id,approval_id,tier,approver_id,delegated_from,decision,reason,decided_at,
             revision,operation_key,operation_hash,delegation_id,policy_version_id,authority_epoch,independence_snapshot,evidence_reference)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?)""", decision.id, sql.tenant, record.id, decision.tier, decision.actorId,
             decision.delegation?.approverId, decision.decision, decision.reason, decision.decidedAt, decision.revision, key, hash,
             decision.delegation?.id, requireNotNull(record.snapshot.evaluation.policy).id, decision.authorityEpoch,
-            mapper.writeValueAsString(decision), decision.evidenceReference)
+            mapper.writeValueAsString(decision), decision.evidenceReference) }
+        catch (failure: java.sql.SQLException) {
+            if (postingApproval != null && failure.sqlState == "23514" &&
+                failure.message.orEmpty().contains("decision requires current pending revision and unexpired request"))
+                throw ApprovalPostingStopped(postingApproval, WarehouseApprovalStatus.EXPIRED)
+            throw failure
+        }
     }
     fun advance(record: WarehouseApprovalRecord, status: WarehouseApprovalStatus, body: String?) = jdbc.execute { sql ->
         check(sql.update("UPDATE inventory_approval SET status=?,revision=revision+1,terminal_body=?,updated_at=clock_timestamp() WHERE tenant_id=? AND id=? AND revision=? AND status='PENDING'",
