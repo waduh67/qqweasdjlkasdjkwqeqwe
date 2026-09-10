@@ -16,7 +16,7 @@ import java.util.UUID
 class InventoryApprovalController(
     private val approvals: InventoryApprovalService,
     private val currentUser: CurrentUserProvider,
-    private val policy: com.duluin.ftth.inventory.WarehousePolicyEvaluationApi,
+    private val policy: WarehouseEvaluationQuery,
 ) {
     @GetMapping("/pending")
     @PreAuthorize("@authz.can('inventory.approval.view')")
@@ -24,9 +24,10 @@ class InventoryApprovalController(
 
     @PostMapping
     @PreAuthorize("@authz.can('inventory.approval.request')")
-    fun request(@RequestBody body: String): org.springframework.http.ResponseEntity<com.duluin.ftth.inventory.WarehousePolicyEvaluation> {
+    fun request(@RequestBody body: String): org.springframework.http.ResponseEntity<com.duluin.ftth.inventory.application.port.inbound.WarehouseEvaluationView> {
         val source = WarehouseReceiptJson.decode(body, com.duluin.ftth.inventory.WarehouseSourceInput::class.java)
-        return org.springframework.http.ResponseEntity.status(409).body(policy.evaluate(source))
+        val result = policy.evaluate(source)
+        return org.springframework.http.ResponseEntity.status(409).body(result.body)
     }
 
     @PostMapping("/{id}/decision")

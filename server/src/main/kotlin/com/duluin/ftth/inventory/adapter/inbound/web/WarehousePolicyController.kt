@@ -10,7 +10,7 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/warehouse/settings")
 class WarehousePolicyController(private val policies: WarehousePolicyService, private val scopes: WarehouseScopeSettingsService,
-    private val delegations: WarehouseDelegationService, private val evaluation: WarehousePolicyEvaluationApi) {
+    private val delegations: WarehouseDelegationService, private val evaluation: WarehouseEvaluationQuery) {
     @GetMapping("/policy") fun current(): WarehousePolicySettings {
         val current = policies.current()
         return WarehousePolicySettings(current != null, current)
@@ -27,6 +27,9 @@ class WarehousePolicyController(private val policies: WarehousePolicyService, pr
         json(delegations.create(WarehouseReceiptJson.decode(body, WarehouseDelegationInput::class.java), key))
     @PostMapping("/delegations/{id}/revoke") fun revoke(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         json(delegations.revoke(id, WarehouseReceiptJson.decode(body, WarehouseRevisionInput::class.java), key))
-    @PostMapping("/evaluate") fun evaluate(@RequestBody body: String) = evaluation.evaluate(WarehouseReceiptJson.decode(body, WarehouseSourceInput::class.java))
+    @PostMapping("/evaluate") fun evaluate(@RequestBody body: String): ResponseEntity<com.duluin.ftth.inventory.application.port.inbound.WarehouseEvaluationView> {
+        val result = evaluation.evaluate(WarehouseReceiptJson.decode(body, WarehouseSourceInput::class.java))
+        return ResponseEntity.status(result.status).body(result.body)
+    }
     private fun json(body: String) = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body)
 }
