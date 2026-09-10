@@ -1,8 +1,6 @@
 package com.duluin.ftth.workorder
 
 import com.duluin.ftth.common.security.AuthorityFence
-import com.duluin.ftth.inventory.MaterialMode
-import com.duluin.ftth.inventory.MaterialRevisions
 import java.time.Instant
 import java.util.UUID
 
@@ -23,8 +21,8 @@ data class WorkOrderMaterialContext(
     val active: Boolean,
     val cancelled: Boolean,
     val action: WorkOrderMaterialAction,
-    val materialMode: MaterialMode,
-    val revisions: MaterialRevisions,
+    val workType: String,
+    val workOrderRevision: Long,
     val scheduledAt: Instant?,
     val scheduledEndAt: Instant?,
 )

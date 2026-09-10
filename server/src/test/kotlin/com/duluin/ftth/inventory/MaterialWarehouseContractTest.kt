@@ -76,7 +76,7 @@ class MaterialWarehouseContractTest {
 
     @Test
     fun `standalone network work order does not fabricate customer or subscription`() {
-        val json = """{"workOrderId":"$id","code":"WO-NETWORK","customerId":null,"subscriptionId":null,"orderId":null,"visitId":null,"areaId":null,"activeAssigneeIds":[],"active":true,"cancelled":false,"action":"NETWORK","materialMode":"NONE","revisions":{"workOrderRevision":1,"planRevision":1,"useRevision":0,"settlementRevision":0},"scheduledAt":null,"scheduledEndAt":null}"""
+        val json = """{"workOrderId":"$id","code":"WO-NETWORK","customerId":null,"subscriptionId":null,"orderId":null,"visitId":null,"areaId":null,"activeAssigneeIds":[],"active":true,"cancelled":false,"action":"NETWORK","workType":"REPAIR","workOrderRevision":1,"scheduledAt":null,"scheduledEndAt":null}"""
         val type = Class.forName("com.duluin.ftth.workorder.WorkOrderMaterialContext")
         assertThat(mapper.readTree(mapper.writeValueAsString(mapper.readValue(json, type)))).isEqualTo(mapper.readTree(json))
     }
