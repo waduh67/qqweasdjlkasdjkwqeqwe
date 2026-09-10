@@ -7,9 +7,15 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.*
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.PostingOperation
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
+import com.duluin.ftth.inventory.application.port.outbound.ApprovalPostingStopped
+import com.duluin.ftth.inventory.application.service.ApprovalOutcomeCodec.view
+import com.duluin.ftth.inventory.application.service.ApprovalOutcomeCodec.body
 import com.duluin.ftth.inventory.domain.model.InventoryApprovalDecision
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
@@ -18,8 +24,10 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
     private val policy: WarehousePolicyEvaluationApi, private val clock: WarehousePolicyPersistence,
     private val store: WarehouseApprovalStore, private val access: WarehousePolicyAccess,
     private val eligibility: WarehouseApprovalAuthority, private val masters: WarehouseMasterStore,
-    private val inbox: WarehouseInboxApi, private val owners: List<WarehouseApprovalOwner>, private val probes: List<WarehouseApprovalProbe>) {
+    private val inbox: WarehouseInboxApi, private val owners: List<WarehouseApprovalOwner>, private val probes: List<WarehouseApprovalProbe>,
+    transactionManager: PlatformTransactionManager) {
     private val mapper = jacksonObjectMapper()
+    private val transaction = TransactionTemplate(transactionManager)
 
     @Transactional(rollbackFor = [Exception::class])
     fun request(input: WarehouseSourceInput, key: String): WarehouseApprovalResponse {
@@ -55,8 +63,16 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         return response
     }
 
-    @Transactional(rollbackFor = [Exception::class])
     fun decide(input: WarehouseApprovalDecisionInput, key: String): WarehouseApprovalResponse {
+        check(!TransactionSynchronizationManager.isActualTransactionActive()) { "Approval decisions own their recovery transaction" }
+        return try { requireNotNull(transaction.execute { decideLocked(input, key, null) }) }
+        catch (stopped: ApprovalPostingStopped) {
+            probe(WarehouseApprovalStage.RECOVERY, stopped.approval.attempt.requestId)
+            requireNotNull(transaction.execute { decideLocked(input, key, stopped) })
+        }
+    }
+
+    private fun decideLocked(input: WarehouseApprovalDecisionInput, key: String, stopped: ApprovalPostingStopped?): WarehouseApprovalResponse {
         receiptKey(key)
         if (input.expectedRevision < 0 || (input.reason?.length ?: 0) > 500 ||
             (input.decision == InventoryApprovalDecision.REJECT && input.reason.isNullOrBlank())) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
@@ -71,11 +87,23 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val hash = hash(input)
         replay("decide", key, hash, current)?.let { return it }
         val decisions = store.decisions(record.id)
-        val tier = record.snapshot.evaluation.tiers.getOrNull(decisions.size)?.number ?: record.snapshot.evaluation.tiers.last().number
+        val tier = stopped?.approval?.attempt?.tier ?: record.snapshot.evaluation.tiers.getOrNull(decisions.size)?.number ?: record.snapshot.evaluation.tiers.last().number
         val now = clock.now()
         val delegation = eligibility.authorize(record, tier, current, if (record.status == WarehouseApprovalStatus.PENDING) decisions else emptyList(), now)
         val attempt = WarehouseApprovalAttempt(record.id, record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision,
             requireNotNull(record.snapshot.evaluation.policy).id, record.revision, tier, input.decision, delegation)
+        if (stopped != null) {
+            val original = stopped.approval.attempt
+            check(original.requestId == record.id && original.sourceDocumentId == attempt.sourceDocumentId &&
+                original.sourceRevision == attempt.sourceRevision && original.policyVersionId == attempt.policyVersionId)
+            val response = when {
+                record.status == WarehouseApprovalStatus.PENDING && record.revision == original.requestRevision -> terminate(record, stopped.status)
+                record.status == stopped.status -> WarehouseApprovalResponse(409, requireNotNull(record.terminalBody))
+                else -> WarehouseApprovalResponse(409, mapper.writeValueAsString(view(record).copy(code = "STALE_REVISION")))
+            }
+            recordResponse("decide", key, hash, current, record.id, response, original)
+            return response
+        }
         if (record.status != WarehouseApprovalStatus.PENDING || record.revision != input.expectedRevision) {
             val response = WarehouseApprovalResponse(409, mapper.writeValueAsString(view(record).copy(code = "STALE_REVISION")))
             recordResponse("decide", key, hash, current, record.id, response, attempt)
@@ -94,11 +122,14 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         }
         owner(source.kind).validate(source, record.snapshot.evaluation.sourceDocumentId)
         input.evidenceReference?.let { store.evidence(it, record.snapshot.evaluation.sourceDocumentId) }
-        val decision = WarehouseApprovalDecisionRecord(UUID.randomUUID(), tier, current.fence.identity.userId, input.decision,
-            input.reason, now, record.revision + 1, delegation, current.fence.epoch, input.evidenceReference)
-        store.decision(record, decision, key, hash)
-        probe(WarehouseApprovalStage.DECISION, record.id)
         val final = input.decision == InventoryApprovalDecision.APPROVE && decisions.size + 1 == record.snapshot.evaluation.tiers.size
+        val postingApproval = if (final) owner(source.kind).prepare(record, attempt, current) else null
+        val decidedAt = clock.now()
+        val actualDelegation = eligibility.authorize(record, tier, current, decisions, decidedAt)
+        val decision = WarehouseApprovalDecisionRecord(UUID.randomUUID(), tier, current.fence.identity.userId, input.decision,
+            input.reason, decidedAt, record.revision + 1, actualDelegation, current.fence.epoch, input.evidenceReference)
+        store.decision(record, decision, key, hash, postingApproval)
+        probe(WarehouseApprovalStage.DECISION, record.id)
         val operationId = if (final) UUID.randomUUID() else null
         val status = when {
             input.decision == InventoryApprovalDecision.REJECT -> WarehouseApprovalStatus.REWORK_REQUIRED
@@ -109,10 +140,9 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         store.advance(record, status, if (status == WarehouseApprovalStatus.PENDING) null else result)
         if (input.decision == InventoryApprovalDecision.REJECT) store.reworkDisposition(record.snapshot.evaluation.sourceDocumentId, source.revision, true)
         if (final) {
-            if (clock.now() >= record.expiresAt) masterFailure(WarehouseErrorCode.APPROVAL_REQUIRED)
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
                 record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash, "RECEIVE", 200, result, current.fence.epoch)
-            owner(source.kind).apply(record, operation, current, cutover)
+            owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
             check(inbox.consume(event, "warehouse.approval.receipt") { })
@@ -121,7 +151,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             probe(WarehouseApprovalStage.EFFECT_RECEIPT, record.id)
         }
         val response = WarehouseApprovalResponse(200, result)
-        recordResponse("decide", key, hash, current, record.id, response, attempt)
+        recordResponse("decide", key, hash, current, record.id, response, attempt.copy(delegation = actualDelegation))
         return response
     }
 
@@ -200,15 +230,6 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         store.advance(record, status, result)
         return WarehouseApprovalResponse(409, result)
     }
-    private fun view(record: WarehouseApprovalRecord): WarehouseApprovalView = record.terminalBody?.let {
-        mapper.readValue(it, WarehouseApprovalView::class.java)
-    } ?: WarehouseApprovalView(record.id, record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision,
-        record.status, record.revision, record.expiresAt, when (record.status) {
-            WarehouseApprovalStatus.STALE -> "STALE_REVISION"
-            WarehouseApprovalStatus.EXPIRED -> "APPROVAL_EXPIRED"
-            else -> record.status.name
-        })
-    private fun body(record: WarehouseApprovalRecord, operation: UUID? = null): String = mapper.writeValueAsString(view(record).copy(effectOperationId = operation))
     private fun hash(input: Any): String = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input)).hash
     private fun independentAssignment(tiers: List<PolicyTierRequirement>, used: Set<UUID>): Boolean {
         if (tiers.isEmpty()) return true
