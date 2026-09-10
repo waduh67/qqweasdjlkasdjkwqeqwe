@@ -70,13 +70,18 @@ internal class PostingStock(private val sql: PostingSql) {
         }
     }
 
-    fun legs(command: WarehousePost, result: WarehousePostResult) {
+    fun lockBalances(command: WarehousePost, now: Instant) {
         val projection=PostingProjection(sql)
         command.legs.filter { it.endpoint!=PostingEndpoint.RECEIPT_SOURCE }.groupBy { it.dimension }.entries.sortedBy { it.key.orderKey() }.forEach { (dimension,legs) ->
+            if (dimension in positions) return@forEach
             val statuses=legs.filter { it.direction==LegDirection.IN }.map { it.status }.distinct()
             require(statuses.size<=1) { "Inbound position statuses contradict each other" }
-            positions[dimension]=projection.lock(dimension,StockQuantity.of(0,legs.first().quantity.unit),statuses.singleOrNull() ?: legs.first().status,result.recordedAt)
+            positions[dimension]=projection.lock(dimension,StockQuantity.of(0,legs.first().quantity.unit),statuses.singleOrNull() ?: legs.first().status,now)
         }
+    }
+
+    fun legs(command: WarehousePost, result: WarehousePostResult) {
+        lockBalances(command, result.recordedAt)
         command.legs.forEach { leg ->
             val dimension=leg.dimension
             sql.update("""INSERT INTO inventory_movement_leg(id,tenant_id,movement_id,direction,item_id,sku_id,location_id,quantity,serialized,
