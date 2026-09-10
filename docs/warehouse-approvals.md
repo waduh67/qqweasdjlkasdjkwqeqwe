@@ -72,7 +72,8 @@ Document lock mendahului request lock. Tiers diproses menurut urutan snapshot;
 expectedRevision harus sesuai. Final decision, request state, source owner posting,
 outbox, inbox dan effect receipt berada dalam satu local transaction. Database
 memastikan APPROVED memiliki jumlah keputusan lengkap dan receipt owner yang
-sesuai. Expiry diperiksa lagi saat movement header dibuat setelah stock-lock wait.
+sesuai. Guard expiry sekarang memperoleh lock admission sebelum write pertama,
+dan memeriksa ulang setelah lock saldo sebelum movement header (koreksi AV12).
 Owner-effect uniqueness terikat source document revision, bukan hanya key.
 
 Revision/content/state/cutover berubah menghasilkan terminal STALE tanpa efek.
@@ -103,7 +104,7 @@ movementId, backfill keputusan palsu, atau replay physical legacy movement.
 Baris tanpa scope sumber yang dapat dibuktikan tidak diekspos sebagai detail
 approval operasional; rekonsiliasi evidence-backed tetap tugas cutover berikutnya.
 
-## Verifikasi task12
+## Verifikasi awal task12 (sebelum koreksi AV12)
 
 | Gate | Tests | Failures | Skipped |
 | --- | ---: | ---: | ---: |
@@ -148,3 +149,102 @@ V175.2, V174 dan slot V176+ tidak berubah. Evidence lokal berada pada
 `.omo/evidence/warehouse-workorder-asset-provenance/task-12/`, tidak masuk commit.
 Checkpoint implementasi/test akhir03a91019; commit dokumentasi penutup tidak
 mengubah runtime. Persetujuan independen Wave2 tetap gate orchestrator.
+
+## Koreksi verifier AV12
+
+Verifier ses_f74f2b817ffeZ651Bnta7Fyh5Q menemukan tiga blocker pada49275c86
+meskipun suite awal lulus. Ketiganya direproduksi failing-first, kemudian
+diperbaiki tanpa mengubah byte migrasi terdahulu atau membuka owner baru.
+
+### AV12-1: expiry setelah menunggu lock
+
+ReceiptApprovalPostingGuard memperoleh lock DML tabel admission/posting/receipt,
+FK master, dan key identitas SERIAL/MAC/LOT secara deterministik sebelum
+decision atau admission melakukan write. Lock ROW EXCLUSIVE kompatibel dengan
+DML biasa; ini bukan serialisasi seluruh transaksi gudang. Receipt membuat
+stock identities baru, sehingga key unik dan hak insert tabel diamankan sebelum
+identitas/balance itu ada. Jalur receipt biasa memakai urutan identity key sama.
+
+ReceiptPostingApproval mengikat request ID, pending revision, source/revision,
+policy ID/hash, source hash, cutover epoch, expiresAt, dan transaction ID.
+Guard memeriksa DB clock dan source setelah lock admission, sebelum admission,
+serta setelah lock balance aktual sebelum header. Bukan callback/client field;
+guard hanya untuk receipt ingress. Future owner harus menyediakan validasi dan
+lock protocol sendiri, bukan memakai guard receipt untuk count/settlement.
+
+Jika guard mendapati EXPIRED/STALE, seluruh transaction percobaan dibatalkan.
+Boundary decide kemudian membuka satu transaction recovery yang mengambil ulang
+cutover/authority/source/request locks, mengecek current eligibility, dan menyimpan
+terminal response tanpa decision/effect. Bila expiry worker sudah menang, body
+terminalnya dipakai tanpa menaikkan revision lagi. Tidak ada retry physical effect.
+Decide adalah boundary pemilik transaksi dan menolak ambient transaction agar
+rollback selesai sebelum recovery; semua write sukses tetap satu local commit.
+
+### AV12-2: replay tanpa decision row
+
+V175.6 menyimpan attempted_decision immutable pada setiap command decide yang
+diterima, termasuk STALE, EXPIRED dan revision/terminal conflict. Context berisi
+source/request/policy binding, attempted tier/action/revision dan delegation.
+Replay selalu memeriksa current eligibility terhadap attempted tier, tidak
+bergantung pada ada/tidaknya decision row. Delegation yang dipakai attempt juga
+harus tetap eligible. Actor berbeda, revoked role/membership/permission/area/
+warehouse atau delegation tidak mendapat body asli.
+
+Receipt sebelum V175.6 tidak ditulis ulang: tier berasal dari revision pada
+original outcome dan urutan requirement immutable, lalu authority tetap diperiksa.
+Metadata lama yang tidak dapat dipetakan fail-closed, bukan melewati eligibility.
+
+### AV12-3: binding keputusan database
+
+V175.7 menambahkan insert guard dan deferred guard dengan internal
+warehouse_assert_deferred_scope. Executable request wajib memakai policy ID
+matching nonnull, required tier, sealed direct candidate atau delegation valid
+dari sealed source candidate, kolom/snapshot decision yang cocok, dan identity
+independen. Requester/custodian/counter/excluded/delegated-self, tier/revision/
+effective identity berulang ditolak. Parent request lock menserialisasi insert.
+
+Null-policy decision hanya boleh merujuk request historis yang benar-benar
+unbound (source/evaluation/policy-version ID null). Upgrade test mempertahankan
+baris legacy, termasuk bentuk historis yang tidak valid untuk workflow baru;
+baris itu tidak menjadi executable. Tidak ada penghapusan/penulisan ulang histori.
+
+### Bukti koreksi
+
+Baseline JAR269b9db3 direproduksi lagi dalam turn koreksi, bukan hanya dibaca dari
+laporan verifier. Dengan deadline DB-clock+10s dan balance table lock14s yang
+teramati, baseline menghasilkan APPROVED:1/decision1/effect1/movement1/legs2.
+JAR terkoreksi menghasilkan EXPIRED:1/decision0/effect0/movement0/legs0/lot0.
+
+Packaged dua-proses membuktikan revoked STALE replay berubah409-body-asli menjadi
+403; EXPIRED replay juga403 setelah revocation. Fresh-session eligible replay
+tetap byte-identical setelah restart. Tiga direct warehouse_app forgeries yang
+diterima baseline sekarang ditolak, sementara proper application approval sukses.
+Positive packaged concurrency tetap request1/decision1/effect1/movement1/legs2/
+inbox1. Non-owner role bukan superuser/BYPASSRLS/schema CREATE.
+
+| Gate koreksi | Tests | Failures | Skipped |
+| --- | ---: | ---: | ---: |
+| Exact WarehouseApprovalIT run1 | 38 | 0 | 0 |
+| Exact WarehouseApprovalIT run2 | 38 | 0 | 0 |
+| Core/schema/command/IAM/Modularity | 332 | 0 | 0 |
+| Posting/master | 173 | 0 | 0 |
+| Receipt/query/reservation/PDF | 248 | 0 | 0 |
+| Policy | 27 | 0 | 0 |
+
+Total unik818. Run exact12m42s/11m25s; clock deadline fixture memakai trigger
+INSERT-time hanya pada disposable schema, bukan update expiresAt produksi.
+Lock races memakai latch/observed pg_blocking_pids; pg_sleep14 hanya deadline
+fixture. Test recovery membuktikan decision percobaan sudah rollback sebelum
+expiry worker menang. Semua failure-injection stages sebelumnya tetap lulus.
+
+Clean no-cache bootJar38s, SHA256
+`b88201c1269a7e62cc383848840d5029ced0f8ac0fd33344cc9051956698bb0e`.
+
+| Migration | SHA256 | Flyway checksum |
+| --- | --- | ---: |
+| V175.6 | `d7d95d539a9ef0e5df23b360bd40b98282209821eb918460fd24dba085ff273c` | -234338125 |
+| V175.7 | `a7926fcb4a96d743a3490ffc9219ad16516a5e7029e1dac701e1599907d5a828` | -1922251006 |
+
+Semua V175.3-.5 dan predecessor tetap byte-identical; V176+ tidak disentuh.
+Evidence/notepad lokal: task-12/corrections. Checkpoint runtime/test aa12a06d;
+commit penutup hanya dokumentasi. Re-verifikasi independen tetap diperlukan.

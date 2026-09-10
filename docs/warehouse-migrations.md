@@ -23,10 +23,10 @@ actor-bound replay and document-bound effect receipts. Legacy approvals remain
 staged, never inferred from movement IDs. V175 through V175.2 and all V174 bytes
 remain unchanged. Opening approval stays closed without a migration source owner.
 
-V175.4 is reserved before SQL creation to bind the terminal approved outcome to
-its owner posting, outbox and inbox receipt at transaction commit, and to check
-expiry again at the physical posting boundary after stock-lock waits. V175.3 has
-already been applied and is not rewritten.
+V175.4 was reserved before SQL creation to bind the terminal approved outcome to
+its owner posting, outbox and inbox receipt at transaction commit. Its header
+expiry check alone did not cover later balance-lock waits; AV12 adds the typed
+pre-admission/post-lock application guard. Applied migration bytes are preserved.
 
 V175.5 is reserved before SQL creation after the task04 regression gate found
 the new deferred approval validator missing its own entry scope assertion.
