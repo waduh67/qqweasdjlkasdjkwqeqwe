@@ -18,6 +18,9 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 ## M03: reservation task13
 
 Task13 reserves `V175_8__warehouse_material_planning.sql` before SQL creation.
+Task13 additionally reserves `V175_9__warehouse_material_template_lines.sql`
+before SQL creation for normalized immutable template lines with composite SKU
+unit references, transaction-sealed insertion and active-template archive guards.
 Inventory owns versioned work-type/action templates with an explicit current
 pointer, immutable master/plan snapshots, submission-to-demand bindings and
 actor-bound replay receipts. Existing plan and document tables remain the task10
