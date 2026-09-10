@@ -14,6 +14,7 @@ data class WarehousePolicyInput(val expectedRevision: Long, val currency: String
     val warehouseIds: List<UUID>, val rules: List<PolicyRuleInput>)
 data class WarehousePolicyVersion(val id: UUID, val revision: Long, val currency: String, val expiryHours: Int,
     val warehouseIds: List<UUID>, val rules: List<PolicyRuleInput>, val actorId: UUID, val authorityEpoch: Long, val createdAt: Instant)
+data class WarehousePolicySettings(val configured: Boolean, val current: WarehousePolicyVersion?)
 data class WarehouseScopeInput(val expectedRevision: Long, val active: Boolean)
 data class WarehouseScopeGrant(val id: UUID, val userId: UUID, val locationId: UUID, val active: Boolean, val revision: Long)
 data class WarehouseDelegationInput(val expectedRevision: Long, val approverId: UUID, val delegateId: UUID, val sourceRoleId: UUID?,

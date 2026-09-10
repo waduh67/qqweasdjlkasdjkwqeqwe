@@ -11,7 +11,10 @@ import java.util.UUID
 @RequestMapping("/api/v1/warehouse/settings")
 class WarehousePolicyController(private val policies: WarehousePolicyService, private val scopes: WarehouseScopeSettingsService,
     private val delegations: WarehouseDelegationService, private val evaluation: WarehousePolicyEvaluationApi) {
-    @GetMapping("/policy") fun current() = policies.current()
+    @GetMapping("/policy") fun current(): WarehousePolicySettings {
+        val current = policies.current()
+        return WarehousePolicySettings(current != null, current)
+    }
     @GetMapping("/policy/history") fun history(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) = policies.history(page, size)
     @PutMapping("/policy") fun replace(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         json(policies.replace(WarehouseReceiptJson.decode(body, WarehousePolicyInput::class.java), key))

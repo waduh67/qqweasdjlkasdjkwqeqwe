@@ -8,6 +8,9 @@ class WarehousePolicyIT : WarehouseMasterHttpFixture() {
     @Test
     fun `empty tenant configures independent policy over HTTP and replays immutable version`() {
         val admin = tenant()
+        val empty = request("GET", "/api/v1/warehouse/settings/policy", admin)
+        assertThat(empty.status).isEqualTo(200)
+        assertThat(mapper.readTree(empty.contentAsString).path("configured").asBoolean()).isFalse()
         val approver = user(admin, setOf("inventory.approval.view", "inventory.approval.decide"))
         val warehouse = create("locations", admin, """{"code":"MAIN","name":"Main","kind":"WAREHOUSE"}""").path("id").asString()
         val principal = mapper.readTree(request("GET", "/api/users/${approver.second}", admin).contentAsString)
