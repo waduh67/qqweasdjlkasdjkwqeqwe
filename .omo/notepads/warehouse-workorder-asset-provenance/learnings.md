@@ -156,3 +156,9 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - User requested compaction pause before any task transition. Implementation boundary is `3a4f2f1ffbb0343066b503a305ef540800e508b0`, executed by `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`.
 - Verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` has partial evidence only: prior failures reject correctly, first exact run 35/35, and immutable snapshot/destination probes pass; no final verdict exists.
 - Resume that verifier, then check task14 only after confirmation; otherwise return findings to the executor. Task15 must not start.
+
+## 2026-09-11 - Task 14 checkpoint learning
+
+- Task14 is confirmed complete by verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` with verdict `confirmed` and high confidence at product head `3a4f2f1ffbb0343066b503a305ef540800e508b0`.
+- Issue dispatch preserves immutable substitution and transit bindings across restart and revocation; exact issue35, reservation26, bounded808, and packaged boot verification passed.
+- The exact next action is task15 technician custody acknowledgement; task15 remains unchecked and not started.
