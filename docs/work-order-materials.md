@@ -2,8 +2,9 @@
 
 Task13 menambahkan perencanaan dan demand, bukan lifecycle WO kedua. Fulfillment
 mengorkestrasi kontrak publik workorder dan inventory dalam satu transaksi lokal.
-Picking fisik, dispatch, acknowledgement, pelaporan penggunaan dan settlement
-melalui route material belum diaktifkan oleh task ini.
+Picking fisik, unpick dan dispatch kini disediakan task14 melalui pemilik inventory;
+lihat [pengeluaran material WO](warehouse-issues.md). Acknowledgement, pelaporan
+penggunaan dan settlement tetap bukan bagian task13/task14.
 
 ## Pemilik dan penguncian
 
@@ -50,9 +51,13 @@ mengaktifkan workflow fisik RMA. Tidak ada customer/subscription palsu.
 | POST | `/api/work-orders/{id}/materials/submit-request` | Bekukan plan dan buat satu demand yang terikat versi |
 | POST | `/api/work-orders/{id}/materials/reserve` | Reservasi task10, termasuk pasokan parsial/backorder |
 | POST | `/api/work-orders/{id}/materials/release` | Release eksplisit seluruh reservasi unpicked plan aktif |
+| POST | `/api/work-orders/{id}/materials/pick` | Pilih reservasi dan identitas eksak, potong kabel bila perlu |
+| POST | `/api/work-orders/{id}/materials/unpick` | Batalkan picking eksplisit, tanpa menyambung kembali potongan |
+| POST | `/api/work-orders/{id}/materials/dispatch` | Konsumsi picked dan pindahkan fisik ke transit |
+| GET | `/api/work-orders/{id}/materials/issues/{issueId}/slip` | Cetak ulang snapshot slip tersimpan |
 | GET/PUT | `/api/v1/warehouse/material-templates/{workType}/{action}` | Template aktif/publikasi versi baru |
 
-Semua mutation membutuhkan `Idempotency-Key`. Body tidak menerima tenant, actor,
+Semua mutation membutuhkan `Idempotency-Key`. Body perencanaan tidak menerima tenant, actor,
 customer, assignee, authority, alokasi stok, hash atau effect target. Unknown field,
 numeric quantity, duplicate JSON key dan coercion ditolak. `expectedRevision`
 adalah revisi plan, bukan revisi demand. Revisi demand dan pilihan alokasi diperoleh
@@ -143,10 +148,11 @@ berpindah atomik. SKU pada template aktif tidak dapat diarsipkan.
   yang sama dipanggil summary/history; missing/ambiguous binding menghasilkan
   `409 SOURCE_NOT_VERIFIED`, bukan requested/backorder nol. Data lama tidak direpair.
 
-Route `/pick`, `/dispatch`, `/acknowledge`, `/report-use`, `/return`, `/reallocate`
-dan `/settlement` tetap conflict409 untuk pemanggil yang dapat membaca WO. Nilai
+Route `/acknowledge`, `/report-use`, `/return`, `/reallocate` dan `/settlement`
+tetap conflict409 untuk pemanggil yang dapat membaca WO. Route pick/dispatch task14
+mempunyai DTO ketat tersendiri; body kosong dispatch kini malformed400. Nilai
 QA/provisioning/settlement di summary task13 bukan izin untuk menjalankan efek
-task14-18. Approval demand/effect owners berikutnya tetap harus menyediakan
+task15-18. Approval demand/effect owners berikutnya tetap harus menyediakan
 binding aktual sebelum suatu keputusan dapat memposting.
 
 ## Migrasi dan verifikasi
