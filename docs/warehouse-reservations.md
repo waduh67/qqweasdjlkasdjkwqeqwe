@@ -53,6 +53,20 @@ remaining unpicked persis, picked nol, serta reservation milik demand itu.
 Picked harus di-unpick eksplisit terlebih dahulu. Extend memakai `expiresAt`
 yang lebih besar dari waktu DB dan expiry sebelumnya serta kuantitas total persis.
 
+AV14: bila reservation terikat pada issue **PICKED yang masih hidup**, task10
+pick/unpick/extend/release/reallocate tidak boleh mengubahnya. Command eksplisit
+ditolak409 sebelum perencanaan kandidat, dengan arahan memakai issue-aware unpick
+atau dispatch. Reserve yang mencoba mengubah row terikat juga ditolak. Expiry
+melewati row issue-bound; ia tidak boleh memajukan revision dan membuat slip stale.
+Sesudah issue UNPICKED, operasi task10 yang memenuhi kontrak dapat dilanjutkan
+dengan revision terbaru. Reservation DISPATCHED tetap terminal, tidak dibuka ulang.
+
+V175.12 menegakkan binding OPEN/picked/revision/quantity pada final state transaksi,
+bukan hanya saat INSERT issue line. Unpick issue memajukan header menjadi UNPICKED,
+menulis receipt immutable dan mengubah reservation dalam satu transaksi. V175.13
+juga menolak flag DISPATCHED tanpa bukti paired posting. Tidak ada penghapusan
+revision check atau perubahan snapshot historis.
+
 Reallocate memerlukan satu allocation sumber serta `target` yang berisi
 `documentId`, `expectedRevision`, `workOrderRevision`, `planRevision`, dan
 `demandLineId`. Release sumber dan reserve target berkomit dalam transaksi yang
