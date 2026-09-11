@@ -7,6 +7,7 @@ import java.util.UUID
 interface WorkOrderMaterialContextApi {
     fun read(workOrderId: UUID): WorkOrderMaterialContext
     fun lock(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
+    fun lockForIssue(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
 }
 
 data class WorkOrderMaterialContext(

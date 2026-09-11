@@ -28,13 +28,21 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    override fun lock(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext {
+    override fun lock(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext =
+        locked(workOrderId, expectedRevision, authority, false)
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun lockForIssue(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext =
+        locked(workOrderId, expectedRevision, authority, true)
+
+    private fun locked(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence, issue: Boolean): WorkOrderMaterialContext {
         authority.assertHeld()
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK).assertHeld()
         val current = this.authority.lockCurrent()
         if (authority.identity != current.fence.identity || authority.epoch != current.fence.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
         val context = snapshot(workOrderId, current)
-        authorize(context, current, true)
+        authorize(context, current, !issue)
+        if (issue && !current.platformAdmin && "inventory.issue.manage" !in current.permissions) fail(WarehouseErrorCode.FORBIDDEN)
         if (context.workOrderRevision != expectedRevision) fail(WarehouseErrorCode.STALE_REVISION)
         if (!context.active || context.cancelled) fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         context.customerId?.let { if (customers.findCustomer(it) == null) fail(WarehouseErrorCode.NOT_FOUND) }
