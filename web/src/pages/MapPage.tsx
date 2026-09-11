@@ -1926,6 +1926,7 @@ export function MapPage() {
             // Petanya sudah terbentang di belakang panel ini, lengkap dengan penanda OLT
             // yang panel inspeksinya terbuka — "Lihat di peta" cukup menyingkir.
             onShowOnMap={() => setDetailOltId(null)}
+            onPollCompleted={refreshImpacted}
             onDeleted={() => {
               // OLT-nya lenyap: tutup panelnya lalu gambar ulang tile agar markernya
               // benar-benar hilang dari peta, bukan cuma dari panel.

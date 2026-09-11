@@ -1,3 +1,5 @@
+import { api } from './client'
+
 /** Tipe respons module monitoring. */
 
 export type CollectorStatus = 'ACTIVE' | 'PAUSED' | 'DISABLED'
@@ -231,6 +233,80 @@ export interface OltSnmpCheck {
   failureReason: string | null
   checkedAt: string
   oids: OidCheck[]
+}
+
+export interface ManualOltPollResult {
+  oltId: string
+  oltCode: string
+  reachable: boolean
+  readingCount: number
+  failureReason: string | null
+  checkedAt: string
+}
+
+export class InvalidManualOltPollResponseError extends Error {
+  readonly name = 'InvalidManualOltPollResponseError'
+
+  constructor() {
+    super('Respons polling SNMP OLT tidak sesuai kontrak')
+  }
+}
+
+function isManualPollObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+const manualPollFields = ['oltId', 'oltCode', 'reachable', 'readingCount', 'failureReason', 'checkedAt'] as const
+
+function manualPollText(value: unknown): string {
+  if (typeof value !== 'string' || value.trim() === '') throw new InvalidManualOltPollResponseError()
+  return value
+}
+
+function manualPollTimestamp(value: unknown): string {
+  const timestamp = manualPollText(value)
+  const isoTimestamp = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:[.][0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/
+  const calendarDate = timestamp.slice(0, 10)
+  if (
+    !isoTimestamp.test(timestamp)
+    || !Number.isFinite(Date.parse(timestamp))
+    || new Date(`${calendarDate}T00:00:00Z`).toISOString().slice(0, 10) !== calendarDate
+  ) {
+    throw new InvalidManualOltPollResponseError()
+  }
+  return timestamp
+}
+
+export function parseManualOltPollResult(value: unknown): ManualOltPollResult {
+  if (!isManualPollObject(value)) throw new InvalidManualOltPollResponseError()
+  const fields = Reflect.ownKeys(value).filter((field) => Object.prototype.propertyIsEnumerable.call(value, field))
+  if (fields.length !== manualPollFields.length || !manualPollFields.every((field) => fields.includes(field))) {
+    throw new InvalidManualOltPollResponseError()
+  }
+  const { reachable, readingCount, failureReason } = value
+  if (typeof reachable !== 'boolean') throw new InvalidManualOltPollResponseError()
+  if (typeof readingCount !== 'number' || !Number.isInteger(readingCount) || readingCount < 0) {
+    throw new InvalidManualOltPollResponseError()
+  }
+  if (failureReason !== null && typeof failureReason !== 'string') {
+    throw new InvalidManualOltPollResponseError()
+  }
+  return {
+    oltId: manualPollText(value.oltId),
+    oltCode: manualPollText(value.oltCode),
+    reachable,
+    readingCount,
+    failureReason,
+    checkedAt: manualPollTimestamp(value.checkedAt),
+  }
+}
+
+export async function pollOltNow(oltId: string): Promise<ManualOltPollResult> {
+  const result = parseManualOltPollResult(
+    await api.post<unknown>(`/api/monitoring/olts/${encodeURIComponent(oltId)}/poll`),
+  )
+  if (result.oltId !== oltId) throw new InvalidManualOltPollResponseError()
+  return result
 }
 
 export interface SnmpWalkRow {

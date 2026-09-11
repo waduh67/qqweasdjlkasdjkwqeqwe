@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clearOltOnusCache, getCachedOltOnus, readCachedOltOnus } from './oltOnus'
+import { clearOltOnusCache, getCachedOltOnus, invalidateOltOnusCache, readCachedOltOnus } from './oltOnus'
 import { deferred, oltOnusSnapshot, unsupportedOnu } from './oltOnus.test-support'
 
 afterEach(() => {
@@ -114,5 +114,31 @@ describe('ONU inventory session cache', () => {
     expect(getCachedOltOnus('olt-a')).toEqual(next)
     clearOltOnusCache()
     expect(getCachedOltOnus('olt-a')).toBeUndefined()
+  })
+
+  it('invalidates only one OLT and never lets its stale in-flight response repopulate', async () => {
+    const oldA = deferred<Response>()
+    const newA = deferred<Response>()
+    const b = oltOnusSnapshot({ oltId: 'olt-b', oltCode: 'OLT-B', onus: [unsupportedOnu] })
+    const freshA = oltOnusSnapshot({ onus: [unsupportedOnu], readAt: '2026-09-11T04:10:00Z' })
+    const fetch = vi.fn<typeof globalThis.fetch>()
+      .mockReturnValueOnce(oldA.promise)
+      .mockResolvedValueOnce(Response.json(b))
+      .mockReturnValueOnce(newA.promise)
+    vi.stubGlobal('fetch', fetch)
+
+    const staleRead = readCachedOltOnus('olt-a')
+    await expect(readCachedOltOnus('olt-b')).resolves.toEqual(b)
+    invalidateOltOnusCache('olt-a')
+    const freshRead = readCachedOltOnus('olt-a')
+
+    newA.resolve(Response.json(freshA))
+    await expect(freshRead).resolves.toEqual(freshA)
+    oldA.resolve(Response.json(oltOnusSnapshot()))
+    await expect(staleRead).resolves.toEqual(oltOnusSnapshot())
+
+    expect(getCachedOltOnus('olt-a')).toEqual(freshA)
+    expect(getCachedOltOnus('olt-b')).toEqual(b)
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
 })

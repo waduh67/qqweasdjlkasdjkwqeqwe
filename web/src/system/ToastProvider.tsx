@@ -50,7 +50,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-host">
         {toasts.map((toast) => (
-          <div key={toast.id} className={`toast ${toast.kind}`}>
+          <div
+            key={toast.id}
+            className={`toast ${toast.kind}`}
+            role={toast.kind === 'error' ? 'alert' : 'status'}
+            aria-atomic="true"
+          >
             <span className="bar" />
             {toast.kind === 'error' && <IconAlert size={17} style={{ color: 'var(--critical)', flex: 'none' }} />}
             <Text as="span" size={300}>{toast.message}</Text>

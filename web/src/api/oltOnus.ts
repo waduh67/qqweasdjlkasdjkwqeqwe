@@ -122,10 +122,18 @@ export async function readOltOnus(oltId: string, signal?: AbortSignal): Promise<
 const CACHE_TTL_MS = 15 * 60 * 1000
 const snapshots = new Map<string, { snapshot: OltOnusSnapshot; expiresAt: number }>()
 const pendingReads = new Map<string, Promise<OltOnusSnapshot>>()
+const generations = new Map<string, number>()
 
 export function clearOltOnusCache(): void {
   snapshots.clear()
   pendingReads.clear()
+  generations.clear()
+}
+
+export function invalidateOltOnusCache(oltId: string): void {
+  snapshots.delete(oltId)
+  pendingReads.delete(oltId)
+  generations.set(oltId, (generations.get(oltId) ?? 0) + 1)
 }
 
 export function getCachedOltOnus(oltId: string): OltOnusSnapshot | undefined {
@@ -143,10 +151,10 @@ export function readCachedOltOnus(oltId: string, forceRefresh = false): Promise<
   for (const [id, entry] of snapshots) {
     if (entry.expiresAt <= Date.now()) snapshots.delete(id)
   }
+  const generation = generations.get(oltId) ?? 0
   // A tab may unmount while SNMP is reading; its next visit shares this request.
   const read = readOltOnus(oltId).then((snapshot) => {
-    // A response from a cleared session must not repopulate the cache.
-    if (pendingReads.get(oltId) === read) {
+    if ((generations.get(oltId) ?? 0) === generation && pendingReads.get(oltId) === read) {
       snapshots.set(oltId, { snapshot, expiresAt: Date.now() + CACHE_TTL_MS })
     }
     return snapshot

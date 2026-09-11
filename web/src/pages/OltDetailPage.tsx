@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
@@ -25,12 +25,14 @@ import { CommandBar, Tabs, type CommandAction } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Blade } from '@/components/organisms'
 import { IconInventory, IconMap, IconPlus } from '@/components/atoms/icons'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { mapFocusState } from '@/map/mapFocus'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { DiscoveredOnuInbox } from '@/components/organisms'
 import { OltRegisteredOnus } from '@/components/organisms'
 import { OltDeviceOnus } from '@/components/organisms/OltDeviceOnus'
+import { invalidateOltOnusCache } from '@/api/oltOnus'
+import { pollOltNow, type ManualOltPollResult } from '@/api/monitoring'
 import { SnmpDiagnosticPanel } from '@/components/organisms'
 import { PonPortLoadPanel } from '@/components/organisms'
 
@@ -61,6 +63,90 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
 
 type Tab = 'ringkasan' | 'pon' | 'onu' | 'onuolt' | 'onubaru' | 'diagnostik'
 
+type ManualPollOutcome =
+  | { readonly kind: 'completed'; readonly result: ManualOltPollResult }
+  | { readonly kind: 'failed'; readonly error: unknown }
+
+interface ManualPollSnapshot {
+  readonly busy: boolean
+  readonly completionVersion: number
+}
+
+interface ManualPollEntry {
+  snapshot: ManualPollSnapshot
+  outcome: ManualPollOutcome | null
+  owner: symbol | null
+}
+
+const idleManualPollSnapshot: ManualPollSnapshot = { busy: false, completionVersion: 0 }
+const manualPollEntries = new Map<string, ManualPollEntry>()
+const manualPollSubscribers = new Map<string, Set<() => void>>()
+
+function manualPollSnapshot(oltId: string): ManualPollSnapshot {
+  return manualPollEntries.get(oltId)?.snapshot ?? idleManualPollSnapshot
+}
+
+function subscribeToManualPoll(oltId: string, subscriber: () => void): () => void {
+  const subscribers = manualPollSubscribers.get(oltId) ?? new Set<() => void>()
+  subscribers.add(subscriber)
+  manualPollSubscribers.set(oltId, subscribers)
+  return () => {
+    subscribers.delete(subscriber)
+    if (subscribers.size === 0) manualPollSubscribers.delete(oltId)
+  }
+}
+
+function notifyManualPollSubscribers(oltId: string) {
+  manualPollSubscribers.get(oltId)?.forEach((subscriber) => subscriber())
+}
+
+function settleManualPoll(oltId: string, entry: ManualPollEntry, outcome: ManualPollOutcome) {
+  if (manualPollEntries.get(oltId) !== entry) return
+  entry.outcome = outcome
+  entry.snapshot = { busy: true, completionVersion: entry.snapshot.completionVersion + 1 }
+  notifyManualPollSubscribers(oltId)
+}
+
+function startManualPoll(oltId: string): boolean {
+  if (manualPollEntries.has(oltId)) return false
+
+  const entry: ManualPollEntry = {
+    snapshot: { busy: true, completionVersion: 0 },
+    outcome: null,
+    owner: null,
+  }
+  manualPollEntries.set(oltId, entry)
+  notifyManualPollSubscribers(oltId)
+
+  void pollOltNow(oltId).then(
+    (result) => settleManualPoll(oltId, entry, { kind: 'completed', result }),
+    (error: unknown) => settleManualPoll(oltId, entry, { kind: 'failed', error }),
+  )
+  return true
+}
+
+function claimManualPollOutcome(oltId: string, owner: symbol): ManualPollOutcome | null {
+  const entry = manualPollEntries.get(oltId)
+  if (!entry?.outcome || entry.owner) return null
+  entry.owner = owner
+  return entry.outcome
+}
+
+function releaseManualPollOutcome(oltId: string, owner: symbol) {
+  const entry = manualPollEntries.get(oltId)
+  if (!entry || entry.owner !== owner) return
+  entry.owner = null
+  entry.snapshot = { busy: true, completionVersion: entry.snapshot.completionVersion + 1 }
+  notifyManualPollSubscribers(oltId)
+}
+
+function completeManualPoll(oltId: string, owner: symbol) {
+  const entry = manualPollEntries.get(oltId)
+  if (!entry || entry.owner !== owner) return
+  manualPollEntries.delete(oltId)
+  notifyManualPollSubscribers(oltId)
+}
+
 /**
  * Konten detail satu OLT — komponen dipakai-ulang oleh DUA pemanggil:
  * 1. rute `/olts/:id` ([OltDetailPage]) sebagai halaman penuh (deep-link peta), dan
@@ -75,6 +161,7 @@ export function OltDetail({
   compact = false,
   onDeleted,
   onShowOnMap,
+  onPollCompleted,
 }: {
   oltId: string
   compact?: boolean
@@ -85,6 +172,7 @@ export function OltDetail({
    * pindah rute. Bila kosong, aksinya bernavigasi ke `/map` sambil menyorot OLT ini.
    */
   onShowOnMap?: () => void
+  onPollCompleted?: () => void | Promise<void>
 }) {
   const id = oltId
   const toast = useToast()
@@ -115,6 +203,21 @@ export function OltDetail({
   const [notFound, setNotFound] = useState(false)
   const [tab, setTab] = useState<Tab>('ringkasan')
   const [editing, setEditing] = useState(false)
+  const [onuRevision, setOnuRevision] = useState(0)
+  const [manualPollOwner] = useState(() => Symbol('manual-poll-owner'))
+  const mounted = useRef(false)
+  const onPollCompletedRef = useRef(onPollCompleted)
+  const subscribe = useCallback(
+    (subscriber: () => void) => subscribeToManualPoll(id, subscriber),
+    [id],
+  )
+  const getManualPollSnapshot = useCallback(() => manualPollSnapshot(id), [id])
+  const currentManualPoll = useSyncExternalStore(
+    subscribe,
+    getManualPollSnapshot,
+    getManualPollSnapshot,
+  )
+  const polling = currentManualPoll.busy
   // Pelanggan di daftar ONU dibuka sebagai flyout DI ATAS panel ini — bukan pindah rute.
   // Operator yang sedang membedah satu OLT biasanya memeriksa beberapa pelanggan
   // berturut-turut; membuang halaman OLT tiap kali berarti memuat & mencari ulang.
@@ -122,18 +225,81 @@ export function OltDetail({
 
   const load = useCallback(async () => {
     try {
-      setOlt(await api.get<OltView>(`/api/olts/${id}`))
+      const loadedOlt = await api.get<OltView>(`/api/olts/${id}`)
+      if (!mounted.current) return
+      setOlt(loadedOlt)
+      setNotFound(false)
     } catch (err) {
+      if (!mounted.current) return
       if (err instanceof ApiError && err.status === 404) setNotFound(true)
       else toast.error(err instanceof ApiError ? err.message : 'Gagal memuat detail OLT')
     } finally {
-      setLoading(false)
+      if (mounted.current) setLoading(false)
     }
   }, [id, toast])
 
   useEffect(() => {
+    onPollCompletedRef.current = onPollCompleted
+  }, [onPollCompleted])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const outcome = claimManualPollOutcome(id, manualPollOwner)
+    if (!outcome) return
+
+    let active = true
+    const finish = async () => {
+      try {
+        if (outcome.kind === 'failed') {
+          if (active) {
+            toast.error(
+              outcome.error instanceof ApiError
+                ? outcome.error.message
+                : 'Gagal memeriksa SNMP OLT',
+            )
+          }
+          return
+        }
+
+        invalidateOltOnusCache(id)
+        if (!active) return
+        setOnuRevision((revision) => revision + 1)
+        await load()
+        if (!active) return
+        await onPollCompletedRef.current?.()
+        if (!active) return
+
+        const result = outcome.result
+        if (result.reachable) {
+          toast.success(`SNMP ${result.oltCode} selesai · ${result.readingCount} ONU terbaca.`)
+        } else {
+          toast.error(`${result.oltCode} tidak merespons SNMP.`)
+        }
+      } catch (err) {
+        if (active) {
+          toast.error(err instanceof ApiError ? err.message : 'Gagal memeriksa SNMP OLT')
+        }
+      } finally {
+        if (active) completeManualPoll(id, manualPollOwner)
+      }
+    }
+
+    void finish()
+    return () => {
+      active = false
+      releaseManualPollOutcome(id, manualPollOwner)
+    }
+  }, [currentManualPoll.completionVersion, id, load, manualPollOwner, toast])
 
   const remove = async () => {
     if (!olt) return
@@ -144,6 +310,11 @@ export function OltDetail({
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus OLT')
     }
+  }
+
+  const pollNow = () => {
+    if (!olt || olt.status !== 'ACTIVE' || !olt.pollable || polling) return
+    startManualPoll(olt.id)
   }
 
   if (loading) {
@@ -178,6 +349,15 @@ export function OltDetail({
       onClick: () =>
         onShowOnMap ? onShowOnMap() : navigate('/map', mapFocusState('olt', olt.id, olt.location)),
     })
+  if (canDiagnose)
+    commands.push({
+      key: 'poll',
+      label: polling ? 'Memeriksa…' : 'Cek SNMP',
+      icon: <RefreshCw size={16} />,
+      onClick: pollNow,
+      disabled: olt.status !== 'ACTIVE' || !olt.pollable || polling,
+      dividerBefore: commands.length > 0,
+    })
   if (canUpdate)
     commands.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: () => setEditing(true), dividerBefore: commands.length > 0 })
   if (canDelete)
@@ -201,7 +381,11 @@ export function OltDetail({
         )}
       </div>
 
-      {commands.length > 0 && <CommandBar actions={commands} />}
+      {commands.length > 0 && (
+        <div aria-busy={polling}>
+          <CommandBar actions={commands} />
+        </div>
+      )}
 
       <Tabs<Tab>
         tabs={[
@@ -219,10 +403,10 @@ export function OltDetail({
       {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
       {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} />}
       {tab === 'onu' && canOnuList && (
-        <OltRegisteredOnus oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
+        <OltRegisteredOnus key={`registered-${onuRevision}`} oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
       )}
-      {tab === 'onuolt' && canDeviceOnus && <OltDeviceOnus oltId={id} />}
-      {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox oltId={olt.id} />}
+      {tab === 'onuolt' && canDeviceOnus && <OltDeviceOnus key={`device-${onuRevision}`} oltId={id} />}
+      {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox key={`discovered-${onuRevision}`} oltId={olt.id} />}
       {tab === 'diagnostik' && canDiagnose && <SnmpDiagnosticPanel oltId={olt.id} />}
 
       {editing && (
