@@ -19,7 +19,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 ## M03: reservation task14
 
 Task14 reserves `V175_11__warehouse_issue_snapshots.sql` before SQL creation.
-Inventory will persist immutable issue/line snapshots, explicit unpick records,
+Inventory persists immutable issue/line snapshots, explicit unpick records,
 and dispatched quantities in demand supply snapshots. The migration extends the
 existing posting/reservation model without changing any predecessor or V176+.
 
