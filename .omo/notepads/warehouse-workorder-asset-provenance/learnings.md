@@ -162,3 +162,16 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Task14 is confirmed complete by verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` with verdict `confirmed` and high confidence at product head `3a4f2f1ffbb0343066b503a305ef540800e508b0`.
 - Issue dispatch preserves immutable substitution and transit bindings across restart and revocation; exact issue35, reservation26, bounded808, and packaged boot verification passed.
 - The exact next action is task15 technician custody acknowledgement; task15 remains unchecked and not started.
+
+## 2026-09-11 - Task15 execution evidence
+
+- Baseline dispatch characterization passed before production edits: warehouse900000MM/transit100000MM/technician0/accepted0/no received issue. Authorized feature red reached unavailable acknowledge route; original failures preserved under task-15.
+- Receiver acknowledgement uses public fulfillment-to-inventory APIs and the existing posting pipeline. Partial MM custody requires one conserved split; remainder stays in persisted transit. Discrepancies remain observations, not stock availability or closure.
+- Exact receipt29 passed twice; concurrency4/isolation5; final regression archives contain907 unique tests,869 prior and38 task15. Packaged real HTTP/PostgreSQL verified60/40, exact serials, duplicate, wrong actor, overreceipt, revocation, final remainder, and two SIGKILL/restarts.
+- V175.14 applied hash391da11be6b5704402b02d1d47d2f02ffe3027c2b07ea49251d797e318595e5c. All earlier migration bytes preserved. Main plan checkbox remains for independent orchestrator verification.
+
+## 2026-09-11 - Task15 independent verification receipt
+
+- Executor `ses_f6e4cc107ffeee5YCvm3LNHQjo` completed custody acknowledgement at product head `b3294ba3c5f7cafdf3508294ce88266ef9ab8964`.
+- Verifier `ses_f6d70ecd9ffeZ8bbAtuczW5Nk4` independently returned `confirmed`/`high`, with `safe_to_mark_task_15_complete: true` and 483 distinct tests.
+- V175.14 SHA256 remains `391da11be6b5704402b02d1d47d2f02ffe3027c2b07ea49251d797e318595e5c`; exact next action is task16 physical use, not started here.

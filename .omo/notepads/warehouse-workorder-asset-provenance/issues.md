@@ -76,3 +76,15 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Initial split comparison used an Int zero in a Long equality and rejected a legitimate zero parent; explicit0L corrected it. Original failing numeric log retained. No stock arithmetic uses floating point.
 - Standalone test runtime classpath initially included simulator jars and attempted a denied bind on port161. Final manual runner excludes simulator/collector artifacts; completed isolated proof has no simulator startup. Self-terminated JDBC connection logs expected Hibernate cleanup exceptions, but fresh connections prove rollback.
 - CodeGraph/LSP unavailable in worktree as instructed. Real Kotlin compiler, PostgreSQL, Spring contexts and executable artifact used instead; no clean-LSP claim.
+
+## 2026-09-11 - Task15 resolved execution issues
+
+- Initial red attempts hit fixture prerequisites (TECHNICIAN custodianId, assignment before planning, explicit warehouse scopes). They are retained separately and are not feature-red claims.
+- A PL/pgSQL CASE expression required parentheses inside IF; initial migration failed atomically before application. V175.14 was corrected before successful application, then frozen.
+- Expanded rejection tests exposed missing MaterialReceiptController registration in shared error advice. Registered it without changing domain errors;29-case matrix passed twice.
+- Old task13 future-route assertion was updated from unavailable409 to strict malformed400 for acknowledge{}, retaining report-use409. A combined regression exceeded30minutes; no test process remained and split reruns all passed. Timeout output is not counted as success.
+
+## 2026-09-11 - Task15 final verification boundary
+
+- The independent receipt retained both bounded exact runs after one tool timeout; 483 distinct tests, exact29 twice, and the real 100-to-60/40-to-100/0 custody journey are the accepted boundary.
+- Discrepancies remain observations and do not mint stock; task16 must consume immutable task15 acceptance totals rather than task14 issue-line fields.

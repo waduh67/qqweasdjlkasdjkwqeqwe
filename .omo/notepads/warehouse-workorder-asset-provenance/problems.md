@@ -60,3 +60,9 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 - Verifier confirmed the preceding picked/identity corrections but found retained40m could produce a returned fact beside moved60m. Correction is executor-verified and pushed at0a63ac1d9ea74c6c723b4375b3daebc59056f2ec. Resume ses_f8358f7b9ffezDBYdyrjPqXgXG before marking task05 complete.
 - Additive evidence: task-5/forward-fix/retained-facts/DoneClaim.json. Old erroneous history is not rewritten; no migration/task6 or production test-hook changes beyond removal-preserving checks.
+
+## 2026-09-11 - Task15 boundaries for verification
+
+- CodeGraph and LSP still cannot target this external worktree; compiler, schema, Spring and packaged HTTP are the validation channels, not a clean-LSP claim.
+- Task15 discrepancy facts do not settle loss/rejection and discrepancy-only commands remain unavailable. Task16 must consume immutable receipt acceptance totals rather than frozen task14 document-line accepted_base. No use/return/settlement/customer assignment was added.
+- Local notepad appends intentionally remain unstaged under the instruction forbidding .omo staging. Product delivery status must distinguish those local notes from product changes; independent task15 verification remains required before advancing the plan.
