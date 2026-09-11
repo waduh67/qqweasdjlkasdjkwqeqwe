@@ -295,6 +295,18 @@ memasang apa pun, dan OLT-nya toh sudah terjangkau lewat IP publik atau terowong
 VPN kita. Sudah diadu dengan perangkat sungguhan (HSGQ EPON — perhatikan port SNMP
 non-standarnya, 1161).
 
+Operator juga bisa menjalankan satu putaran saat itu juga: buka detail OLT dari
+`/inventory` atau `/map`, lalu pilih **Cek SNMP**. Aksi bersama ini memanggil
+`POST /api/monitoring/olts/{id}/poll` dan menjalankan pipeline penuh yang sama
+dengan penjadwal — probe, walk ONU, simpan metrik/status, tangkap ONU baru, serta
+evaluasi alarm — tanpa mengubah cadence otomatis lima menit. Aksi hanya terlihat
+bagi pengguna dengan izin `monitoring.collector.manage`; tombol dinonaktifkan bila
+OLT tidak `ACTIVE`, konfigurasi SNMP belum siap, atau permintaan manual OLT yang
+sama sedang berjalan di UI. Tabrakan dengan polling terjadwal ditolak server dengan
+`409`. Setelah selesai, UI menyegarkan detail dan data ONU terkait; dari peta, hanya
+overlay dampak/alarm yang dimuat ulang, bukan seluruh tile. Kill-switch di atas
+mematikan penjadwal otomatis, bukan endpoint manual.
+
 Jalur **B tetap ada di repo dan tetap diuji, tapi tidak di-deploy** — disiapkan
 untuk ISP yang OLT-nya sama sekali tak boleh dijangkau dari luar. Bedanya cuma
 siapa yang menjalankan walk-nya: adapter SNMP-nya satu dan sama (module `:snmp`),
@@ -539,6 +551,7 @@ sungguhan, bukan pada tampilan:
 | `GET /api/monitoring/alarms` · `/{id}/acknowledge` · `/clear` | `monitoring.alarm.view` / `.ack` |
 | `GET /api/monitoring/onus/{id}/history` | `monitoring.metric.view` |
 | `GET/POST /api/monitoring/discovered-onus` · `/auto-provision-policy` | `monitoring.provisioning.*` |
+| `POST /api/monitoring/olts/{id}/poll` | `monitoring.collector.manage` |
 | `GET /api/monitoring/olts/{id}/snmp-check` · `/snmp-walk` | `monitoring.collector.manage` |
 | `POST /api/collector/heartbeat` · `/metrics` | API key collector (bukan RBAC) |
 | `GET /api/cables/{id}/otdr` · `POST` · `DELETE` | `network.otdr.*` |

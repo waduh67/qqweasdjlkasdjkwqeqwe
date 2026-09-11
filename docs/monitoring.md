@@ -9,9 +9,11 @@ sering bikin "kok gak muncul-muncul".
 ## Model mental
 
 Server kita yang **langsung** nanya ke OLT lewat SNMP — tidak perlu agen/collector
-di lokasi ISP. Tiap ~5 menit server:
+di lokasi ISP. Secara otomatis tiap ~5 menit, atau segera saat operator memilih
+**Cek SNMP**, server:
 
-1. Ambil daftar OLT tiap tenant yang punya IP + community.
+1. Pilih semua OLT siap-polling per tenant untuk siklus otomatis, atau satu OLT
+   yang dipilih operator untuk polling manual.
 2. **Probe** dulu (baca `sysDescr`) buat mastiin nyambung, lalu **walk** tabel ONU
    vendor tsb.
 3. Setiap ONU yang **terlihat OLT tapi belum terdaftar** sebagai ONU pelanggan →
@@ -48,8 +50,9 @@ Server cuma polling OLT yang **punya IP manajemen**. Form OLT:
 | **SNMP community** | community read (mis. `public`) | wajib biar SNMP jalan |
 | **SNMP port** | default `161` | **HSGQ sering di `1161`** — lihat Jebakan |
 
-Begitu OLT disimpan dengan IP + community yang benar, discovery pertama tinggal
-nunggu **satu siklus polling (≤5 menit)**. Gak instan.
+Begitu OLT disimpan dengan konfigurasi yang benar, discovery pertama bisa dipicu
+langsung lewat **Cek SNMP** di detail OLT. Kalau tidak dipicu manual, penjadwal
+tetap mengambilnya pada siklus otomatis berikutnya (maksimal sekitar 5 menit).
 
 ### Vendor mana yang beneran dipolling
 
@@ -134,11 +137,58 @@ apa adanya. Tidak ada OID password atau aksi konfigurasi dalam profil ini.
 - Terjadwal server-side, `OltPollingScheduler`, tiap `ftth.monitoring.poll-interval`
   (default **`PT5M`** = 5 menit).
 - Kill-switch: `ftth.monitoring.server-poll-enabled` (default **true**). Set `false`
-  buat matiin polling total (mis. lagi maintenance).
+  buat matiin siklus otomatis (mis. lagi maintenance); endpoint manual tetap bisa
+  dipakai oleh operator berizin selama OLT siap dipolling.
 - Per OLT: probe `sysDescr` → kalau gagal nyambung, naikin alarm **OLT_UNREACHABLE**
   dan ONU-nya dianggap hilang; kalau sukses, walk tabel ONU dan simpan pembacaan
   (redaman/status) + ONU liar ke kotak masuk.
 - Tiap OLT jalan di transaksinya sendiri — satu OLT error tak menjatuhkan yang lain.
+
+### Polling manual: **Cek SNMP**
+
+Buka detail OLT dari `/inventory` atau `/map`, lalu pilih **Cek SNMP**. Keduanya
+memakai aksi detail OLT yang sama dan memanggil:
+
+```http
+POST /api/monitoring/olts/{id}/poll
+```
+
+Izin yang diperlukan adalah `monitoring.collector.manage`. Tanpa izin itu, aksi
+tidak ditampilkan dan API mengembalikan `403`. Tombol dinonaktifkan ketika:
+
+- status OLT bukan `ACTIVE`;
+- kanal SNMP dinonaktifkan;
+- vendor belum didukung, IP manajemen belum diisi, atau community belum tersimpan;
+- permintaan manual untuk OLT yang sama masih berjalan di UI. Jika penjadwal
+  ternyata sedang memproses OLT itu, server menolak permintaan dengan `409`.
+
+Ini bukan sekadar tes koneksi. Permintaan langsung menjalankan pipeline penuh yang
+sama dengan penjadwal: probe `sysDescr`, walk ONU, simpan metrik dan status ONU
+pelanggan, tangkap ONU belum dikenal ke kotak masuk Provisioning, lalu evaluasi
+alarm OLT/ONU. Respons baru selesai setelah hasil pipeline berhasil disimpan.
+Cadence otomatis tetap lima menit; polling manual tidak menggeser atau menggantikan
+jadwal berikutnya.
+
+Setelah respons selesai, UI melakukan penyegaran terarah: detail OLT dimuat ulang,
+cache **ONU di OLT** dibuang, dan tab ONU yang sedang terbuka dimuat ulang. Jika
+detail dibuka dari `/map`, overlay dampak/alarm juga disegarkan, tanpa memuat ulang
+seluruh vector tile. Daftar OLT `/inventory` juga tidak dimuat ulang seluruhnya.
+Tab **ONU di OLT** yang belum terbuka akan melewati cache lama saat nanti dibuka.
+Respons `4xx`/`5xx` tidak memicu penyegaran tersebut.
+
+Respons sukses selalu `200`, termasuk ketika perangkat tidak menjawab:
+
+| HTTP | Arti |
+|---|---|
+| `200`, `reachable: true` | Probe dan walk selesai; `readingCount` berisi jumlah ONU yang dibaca, `failureReason` bernilai `null`. |
+| `200`, `reachable: false` | Putaran selesai dan kondisi gagal sudah dipersist untuk alarm; biasanya `readingCount: 0`, dengan alasan aman seperti `OLT tidak dapat dijangkau` atau `Polling SNMP gagal`. Ini hasil operasional, bukan kegagalan HTTP. |
+| `400` | OLT belum siap: tidak aktif, SNMP dinonaktifkan, vendor tak didukung, IP manajemen kosong, atau community kosong. |
+| `404` | OLT tidak ditemukan pada tenant pengguna. |
+| `409` | OLT yang sama sedang dipolling, baik oleh penjadwal maupun permintaan manual lain. |
+| `500` | Hasil polling gagal diproses/disimpan; detail publik disanitasi menjadi `Polling OLT gagal diproses`. |
+
+Body `200` memuat `oltId`, `oltCode`, `reachable`, `readingCount`,
+`failureReason`, dan `checkedAt`.
 
 ---
 
@@ -273,7 +323,8 @@ Status ONU pelanggan: `PENDING` → `ONLINE`/`OFFLINE`/`LOS` (dari pembacaan) �
   di detail OLT dan jalankan uji peta OID (lihat bagian Diagnostik SNMP di atas).
 - **Vendor NOKIA/OTHER dilewati diam-diam.** Gak ada ONU, gak ada alarm. Ganti ke
   vendor yang ada adapternya (ZTE/HUAWEI/FIBERHOME/HSGQ).
-- **Discovery gak instan.** Setelah daftar OLT, tunggu satu siklus (≤5 menit).
+- **Discovery bisa dipicu langsung.** Pilih **Cek SNMP** bila tidak mau menunggu
+  siklus otomatis berikutnya (≤5 menit).
 - **Hapus baris kotak masuk ≠ menyembunyikan ONU.** ONU yang masih nyala bakal
   ke-detect lagi setelah dihapus. Mau sembunyiin permanen → **Abaikan**.
 - **Hapus ONU pelanggan ditolak kalau masih terpasang.** Lepas dari ODP dulu, atau
@@ -285,6 +336,9 @@ Status ONU pelanggan: `PENDING` → `ONLINE`/`OFFLINE`/`LOS` (dari pembacaan) �
 
 - Server polling OLT via SNMP tiap ~5 menit; OLT wajib reachable + punya IP,
   community, dan **port** yang benar (HSGQ = **1161**).
+- Operator berizin `monitoring.collector.manage` bisa memilih **Cek SNMP** dari
+  detail OLT di `/inventory` atau `/map` untuk menjalankan pipeline penuh segera;
+  jadwal otomatis tetap berjalan tiap lima menit.
 - Adapter ada buat **ZTE/HUAWEI/FIBERHOME (GPON)** + **HSGQ (EPON MAC / G01ID GPON serial)**;
   NOKIA/OTHER dilewati diam-diam.
 - **ONU nol padahal OLT nyambung** → tab **Diagnostik** di detail OLT: uji peta OID
