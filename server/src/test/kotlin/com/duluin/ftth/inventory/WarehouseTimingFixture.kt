@@ -110,6 +110,7 @@ internal class WarehouseTimingFixture(database: WarehouseSchemaDatabase, serial:
         sql("INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id) VALUES ('$plan','$tenant','$workOrder',1,0,'MATERIAL_REQUIRED','$actor')")
         sql("INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit) VALUES ('${UUID.randomUUID()}','$tenant','$plan',1,'$sku',1,'MM')")
         sql("UPDATE inventory_material_plan SET state='SUBMITTED',submitted_at=now(),revision=1 WHERE id='$plan'")
+        materialPlanBindingSql(plan).forEach(::sql)
         if (valid) sql("INSERT INTO inventory_movement(id,tenant_id,operation_namespace,operation_key,payload_hash,actor_id,reason,server_received_at,kind,state,document_id,document_revision,operation_id) VALUES ('$posting','$tenant','use','use','${"a".repeat(64)}','$actor','Use',now(),'CONSUME','APPLIED','$document',1,'$operation')")
         sql("INSERT INTO inventory_usage_snapshot(id,tenant_id,work_order_id,use_revision,plan_id,work_order_revision,operation_id,posting_ids,frozen_snapshot) VALUES ('${UUID.randomUUID()}','$tenant','$workOrder',1,'$plan',0,'$operation',ARRAY['$posting'::uuid],'{}')")
     }

@@ -113,6 +113,7 @@ class WarehouseSchemaITConstraints {
         sql("INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id,reason) VALUES ('$plan','$tenant','${UUID.randomUUID()}',1,0,'NONE','$actor','No material required')")
         reject("23514", "INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit) VALUES ('${UUID.randomUUID()}','$tenant','$plan',1,'$sku',1,'MM')")
         sql("UPDATE inventory_material_plan SET state='SUBMITTED',submitted_at=now(),revision=1 WHERE id='$plan'")
+        materialPlanBindingSql(plan).forEach(::sql)
         reject("23514", "UPDATE inventory_material_plan SET reason='Rewritten',revision=2 WHERE id='$plan'")
     }
 
