@@ -6,6 +6,7 @@ import com.duluin.ftth.inventory.domain.model.*
 
 internal class PostingReservations(private val sql: PostingSql) {
     fun apply(command: WarehousePost, result: WarehousePostResult) {
+        val partitions = ReservationPartitions(sql).validate(command)
         command.reservations.sortedBy { it.dimension.orderKey()+it.id }.forEach { change ->
             val dimension=change.dimension
             val total=change.unpicked+change.picked
@@ -34,7 +35,16 @@ internal class PostingReservations(private val sql: PostingSql) {
                     change.unpicked.unit,dimension.locationId,dimension.custodianId,dimension.custodianKind,dimension.condition,dimension.legalOwner,
                     change.unpicked.quantityBase,change.picked.quantityBase,change.state,result.recordedAt,change.expiresAt)
             } else {
-                if(change.state==ReservationState.DISPATCHED) {
+                if (change.partitionFrom != null) {
+                    require(change.id in partitions)
+                } else if(command.kind in setOf(MovementKind.ISSUE, MovementKind.ISSUE_EXCEPTION) &&
+                    command.legs.any { it.direction==LegDirection.OUT && it.dimension==dimension }) {
+                    val dispatched=command.legs.filter { it.direction==LegDirection.OUT && it.dimension==dimension }
+                        .fold(StockQuantity.of(0,total.unit)) { sum,leg -> sum+leg.quantity }
+                    require(change.unpicked.quantityBase==before.second &&
+                        Math.addExact(change.picked.quantityBase,dispatched.quantityBase)==before.third && dispatched.quantityBase>0)
+                    require(change.state==if(total.quantityBase==0L) ReservationState.DISPATCHED else ReservationState.OPEN)
+                } else if(change.state==ReservationState.DISPATCHED) {
                     val dispatched=command.legs.filter { it.direction==LegDirection.OUT && it.dimension==dimension }.fold(StockQuantity.of(0,total.unit)) { sum,leg -> sum+leg.quantity }
                     require(dispatched.quantityBase==Math.addExact(before.second,before.third) && total.quantityBase==0L)
                 } else if(command.splits.any { it.parentId==dimension.stockIdentityId }) {
@@ -44,10 +54,10 @@ internal class PostingReservations(private val sql: PostingSql) {
                     require(children.fold(StockQuantity.of(0,total.unit)) { sum,child -> sum+child.unpicked }.quantityBase==before.second)
                     require(children.fold(StockQuantity.of(0,total.unit)) { sum,child -> sum+child.picked }.quantityBase==before.third)
                 } else require(command.legs.none { it.direction==LegDirection.OUT && it.dimension==dimension }) { "Physical dispatch must consume its reservation" }
-                check(sql.update("""UPDATE inventory_reservation SET reserved_unpicked_base=?,reserved_picked_base=?,state=?,expires_at=?,revision=revision+1
+                check(sql.update("""UPDATE inventory_reservation SET stock_identity_id=?,reserved_unpicked_base=?,reserved_picked_base=?,state=?,expires_at=?,revision=revision+1
                     WHERE tenant_id=? AND id=? AND sku_id=? AND stock_identity_id=? AND lot_id IS NOT DISTINCT FROM ? AND location_id=? AND custodian_id=?
-                    AND custodian_kind=? AND condition=? AND legal_owner=? AND document_line_id=? AND base_unit=?""",change.unpicked.quantityBase,change.picked.quantityBase,change.state,change.expiresAt,
-                    sql.tenant,change.id,dimension.skuId,dimension.stockIdentityId,dimension.lotId,dimension.locationId,dimension.custodianId,dimension.custodianKind,
+                    AND custodian_kind=? AND condition=? AND legal_owner=? AND document_line_id=? AND base_unit=?""",dimension.stockIdentityId,change.unpicked.quantityBase,change.picked.quantityBase,change.state,change.expiresAt,
+                    sql.tenant,change.id,dimension.skuId,partitions[change.id] ?: dimension.stockIdentityId,dimension.lotId,dimension.locationId,dimension.custodianId,dimension.custodianKind,
                     dimension.condition,dimension.legalOwner,change.documentLineId,total.unit)==1)
             }
         }

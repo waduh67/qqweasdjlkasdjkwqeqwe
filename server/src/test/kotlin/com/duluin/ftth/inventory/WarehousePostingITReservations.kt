@@ -60,4 +60,53 @@ class WarehousePostingITReservations {
             assertThat(scalar("SELECT stock_identity_id FROM inventory_reservation WHERE state='OPEN'")).isEqualTo(cut.stockIdentityId.toString())
         }
     }
+
+    @Test fun `cut and pick rebind the original reservation without a second encumbrance`() {
+        val fixture=WarehousePostingFixture(context).also { it.setup() }
+        fixture.transaction {
+            val piece=receipt(StockQuantity.metres("1000"))
+            val reserve=reservation(piece,StockQuantity.metres("100"))
+            post(reserve)
+            val old=reserve.reservations.single()
+            val cut=piece.copy(stockIdentityId=UUID.randomUUID())
+            val rest=piece.copy(stockIdentityId=UUID.randomUUID())
+            val split=PostingSplit(piece.stockIdentityId,0,listOf(
+                SegmentChild(cut.stockIdentityId,StockQuantity.metres("100"),SegmentKind.CUT),
+                SegmentChild(rest.stockIdentityId,StockQuantity.metres("900"),SegmentKind.REMNANT)))
+            val command=move(piece,cut,StockQuantity.metres("100"),splits=listOf(split),extra=listOf(rest to StockQuantity.metres("900")))
+            post(command.copy(reservations=listOf(old.copy(expectedRevision=0,dimension=cut,
+                unpicked=StockQuantity.metres("0"),picked=StockQuantity.metres("100"),partitionFrom=old.id))))
+            assertThat(scalar("SELECT count(*) FROM inventory_reservation")).isEqualTo("1")
+            assertThat(scalar("SELECT stock_identity_id FROM inventory_reservation")).isEqualTo(cut.stockIdentityId.toString())
+            assertThat(scalar("SELECT reserved_picked_base FROM inventory_reservation")).isEqualTo("100000")
+            assertThat(total(warehouse)).isEqualTo(1000000)
+        }
+    }
+
+    @Test fun `reservation partition cannot inflate or silently release reserved quantity`() {
+        for (amount in listOf("99", "101")) {
+            val fixture=WarehousePostingFixture(context).also { it.setup() }
+            val piece=fixture.transaction { receipt(StockQuantity.metres("1000")) }
+            val reserve=fixture.transaction { reservation(piece,StockQuantity.metres("100")).also { post(it) } }
+            val old=reserve.reservations.single()
+            val cut=piece.copy(stockIdentityId=UUID.randomUUID())
+            val rest=piece.copy(stockIdentityId=UUID.randomUUID())
+            val before=fixture.transaction { counts() }
+            assertThatThrownBy {
+                fixture.transaction {
+                    val split=PostingSplit(piece.stockIdentityId,0,listOf(
+                        SegmentChild(cut.stockIdentityId,StockQuantity.metres("100"),SegmentKind.CUT),
+                        SegmentChild(rest.stockIdentityId,StockQuantity.metres("900"),SegmentKind.REMNANT)))
+                    val command=move(piece,cut,StockQuantity.metres("100"),splits=listOf(split),extra=listOf(rest to StockQuantity.metres("900")))
+                    post(command.copy(reservations=listOf(old.copy(expectedRevision=0,dimension=cut,
+                        unpicked=StockQuantity.metres("0"),picked=StockQuantity.metres(amount),partitionFrom=old.id))))
+                }
+            }.hasRootCauseInstanceOf(IllegalArgumentException::class.java)
+            fixture.transaction {
+                assertThat(counts()).isEqualTo(before)
+                assertThat(scalar("SELECT stock_identity_id FROM inventory_reservation")).isEqualTo(piece.stockIdentityId.toString())
+                assertThat(total(warehouse)).isEqualTo(1000000)
+            }
+        }
+    }
 }
