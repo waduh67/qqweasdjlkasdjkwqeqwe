@@ -61,7 +61,7 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
                     val type = row.getString("type")
                     val action = when (type) {
                         "PSB" -> WorkOrderMaterialAction.INSTALL
-                        "REPAIR" -> if (customer == null) WorkOrderMaterialAction.NETWORK else WorkOrderMaterialAction.REPAIR
+                        "REPAIR" -> WorkOrderMaterialAction.REPAIR
                         "MIGRATION" -> WorkOrderMaterialAction.REPLACE
                         "DISMANTLE" -> WorkOrderMaterialAction.REMOVE
                         "PREVENTIVE" -> WorkOrderMaterialAction.PREVENTIVE
