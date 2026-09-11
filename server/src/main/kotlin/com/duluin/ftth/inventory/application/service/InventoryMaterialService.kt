@@ -27,9 +27,13 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
         physical.assertBound(context.workOrderId)
         val rows = demand?.let { reservationStore.rows(it.id) }.orEmpty()
         val demandLines = demand?.let { reservationStore.lines(it, ReservationValidationMode.HISTORICAL_READ) }.orEmpty()
+        if (demand != null && demandLines.size != plan?.lines?.size) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (rows.isNotEmpty()) reservations.allocations(context.workOrderId)
         val totals = plan?.lines.orEmpty().map { line ->
             val demandLine = demandLines.singleOrNull { it.planLineId == line.id }
+            if (demand != null && (demandLine == null || demandLine.sku != line.sku.id || demandLine.unit.name != line.sku.baseUnit.name ||
+                    demandLine.requested.toString() != line.quantityBase || demandLine.tracking != line.sku.tracking.name || demandLine.continuous != line.continuousCut))
+                masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             val allocated = rows.filter { it.documentLineId == demandLine?.id }
             val unpicked = allocated.fold(0L) { sum, row -> Math.addExact(sum, row.unpicked.quantityBase) }
             val picked = allocated.fold(0L) { sum, row -> Math.addExact(sum, row.picked.quantityBase) }

@@ -11,22 +11,25 @@ class MaterialPlanningStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
     fun now(): Instant = jdbc.execute { sql -> sql.query("SELECT clock_timestamp()") { it.getTimestamp(1).toInstant() }.single() }
     fun current(workOrder: UUID): MaterialPlanHistory? = jdbc.execute { sql ->
-        sql.query("""SELECT snapshot.snapshot,plan.state,submission.document_id FROM inventory_material_plan plan
+        sql.query("""SELECT plan.id binding_plan_id,snapshot.snapshot,plan.state,submission.document_id FROM inventory_material_plan plan
             LEFT JOIN inventory_material_plan_snapshot snapshot ON snapshot.tenant_id=plan.tenant_id AND snapshot.id=plan.id
             LEFT JOIN inventory_material_submission submission ON submission.tenant_id=plan.tenant_id AND submission.id=plan.id
             WHERE plan.tenant_id=? AND plan.work_order_id=? ORDER BY plan.plan_revision DESC LIMIT 1""", sql.tenant, workOrder) {
+            sql.value("SELECT warehouse_assert_material_submission(?,?)", sql.tenant, it.uuid("binding_plan_id"))
             val snapshot = it.getString("snapshot") ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             MaterialPlanHistory(mapper.readValue(snapshot, MaterialPlanSnapshot::class.java), it.getString("state"), it.optionalUuid("document_id"))
         }.singleOrNull()
     }
     fun history(workOrder: UUID, page: WarehousePageRequest): WarehousePage<MaterialPlanHistory> = jdbc.execute { sql ->
         val total = sql.value("SELECT count(*) FROM inventory_material_plan WHERE tenant_id=? AND work_order_id=?", sql.tenant, workOrder)!!.toLong()
-        val rows = sql.query("""SELECT snapshot.snapshot,plan.state,submission.document_id FROM inventory_material_plan plan
-            JOIN inventory_material_plan_snapshot snapshot ON snapshot.tenant_id=plan.tenant_id AND snapshot.id=plan.id
+        val rows = sql.query("""SELECT plan.id binding_plan_id,snapshot.snapshot,plan.state,submission.document_id FROM inventory_material_plan plan
+            LEFT JOIN inventory_material_plan_snapshot snapshot ON snapshot.tenant_id=plan.tenant_id AND snapshot.id=plan.id
             LEFT JOIN inventory_material_submission submission ON submission.tenant_id=plan.tenant_id AND submission.id=plan.id
             WHERE plan.tenant_id=? AND plan.work_order_id=? ORDER BY plan.plan_revision DESC,plan.id LIMIT ? OFFSET ?""",
             sql.tenant, workOrder, page.size, page.page.toLong() * page.size) {
-            MaterialPlanHistory(mapper.readValue(it.getString("snapshot"), MaterialPlanSnapshot::class.java), it.getString("state"), it.optionalUuid("document_id"))
+            sql.value("SELECT warehouse_assert_material_submission(?,?)", sql.tenant, it.uuid("binding_plan_id"))
+            val snapshot = it.getString("snapshot") ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            MaterialPlanHistory(mapper.readValue(snapshot, MaterialPlanSnapshot::class.java), it.getString("state"), it.optionalUuid("document_id"))
         }
         WarehousePage(rows, page.page, page.size, total)
     }
