@@ -37,6 +37,7 @@ abstract class WarehouseReservationFixture : WarehouseReceiptHttpFixture() {
             sql("INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,work_order_id,work_order_revision,plan_revision,submitted_at,cutover_epoch,authority_epoch) VALUES ('$document','$tenant','$document','DEMAND','$actor','$workOrder',0,1,now(),0,0)")
             for (number in 1..lineCount) sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,quantity_base,base_unit,tracking,continuous_cut) VALUES ('${if (number == 1) line else UUID.randomUUID()}','$tenant','$document',$number,0,'$selectedSku',$quantity,'$unit','$tracking',$continuous)")
             sql("UPDATE inventory_document SET state='SUBMITTED',revision=1 WHERE id='$document'")
+            materialPlanBindingSql(plan, document).forEach(::sql)
         }
         return Demand(fixture, token, document, line, workOrder)
     }

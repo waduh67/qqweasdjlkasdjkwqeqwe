@@ -23,6 +23,7 @@ class WarehouseReservationIT : WarehouseReceiptHttpFixture() {
             sql("INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,work_order_id,work_order_revision,plan_revision,submitted_at,cutover_epoch,authority_epoch) VALUES ('$document','$tenant','$document','DEMAND','$actor','$workOrder',0,1,now(),0,0)")
             sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,quantity_base,base_unit,tracking,continuous_cut) VALUES (gen_random_uuid(),'$tenant','$document',1,0,'$sku',100000,'MM','LOT',false)")
             sql("UPDATE inventory_document SET state='SUBMITTED',revision=1 WHERE id='$document'")
+            materialPlanBindingSql(plan, document).forEach(::sql)
         }
         val legs = fixture.transaction { scalar("SELECT count(*) FROM inventory_movement_leg") }
         val body = """{"expectedRevision":1,"workOrderRevision":0,"planRevision":1}"""
