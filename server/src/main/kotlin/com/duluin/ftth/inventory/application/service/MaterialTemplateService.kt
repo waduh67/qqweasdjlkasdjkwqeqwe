@@ -22,7 +22,7 @@ class MaterialTemplateService(private val authority: CurrentAuthorityApi, privat
     @Transactional(timeout = 30, rollbackFor = [Exception::class])
     override fun publish(workType: String, action: String, request: MaterialTemplateRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
         if (workType to action !in setOf("PSB" to "INSTALL", "REPAIR" to "REPAIR", "REPAIR" to "NETWORK", "MIGRATION" to "REPLACE",
-                "DISMANTLE" to "REMOVE", "PREVENTIVE" to "PREVENTIVE") || request.expectedRevision !in 0 until Long.MAX_VALUE || request.lines.any { it.substitution != null })
+                "DISMANTLE" to "REMOVE", "PREVENTIVE" to "PREVENTIVE", "REPAIR" to "RETURN_CUSTOMER_RMA") || request.expectedRevision !in 0 until Long.MAX_VALUE || request.lines.any { it.substitution != null })
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         receiptKey(metadata.idempotencyKey)
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
