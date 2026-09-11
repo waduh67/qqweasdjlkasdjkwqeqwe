@@ -45,4 +45,5 @@ data class ReservationDemandSupply(
     val snapshotId: UUID, val operationId: UUID, val documentRevision: Long, val planRevision: Long,
     val requestedBase: String, val reservedUnpickedBase: String, val reservedPickedBase: String,
     val totalReservedBase: String, val backorderBase: String, val baseUnit: WarehouseBaseUnit, val demandState: MaterialDemandState,
+    val issuedBase: String = "0",
 )
