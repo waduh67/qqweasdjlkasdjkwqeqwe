@@ -70,6 +70,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
             return prior.receipt
         }
         checkDemand(preview, request.expectedRevision, request.planRevision, contexts.getValue(preview.workOrder), request.workOrderRevision, action)
+        store.assertNotIssueBound(request.allocations.map { it.reservationId })
         store.lines(preview, if (action == ReservationAction.RESERVE) ReservationValidationMode.NEW_ALLOCATION else ReservationValidationMode.BOUND_LIFECYCLE)
         if (targetPreview != null) {
             val input = requireNotNull(request.target)
@@ -142,6 +143,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
         rows: List<ReservationChange>, candidates: List<ReservationCandidate>, cutover: TenantCutoverFence, actor: UUID, authorityEpoch: Long,
         namespace: String, key: String, canonical: WarehouseCanonicalPayload, reason: String?, now: Instant, session: String?,
         event: WarehouseEventKind? = null): WarehouseOperationReceipt {
+        store.assertNotIssueBound(changes.map { it.id })
         val supplies = ReservationPlanning.supplies(lines, rows.filter { old -> changes.none { it.id == old.id } } + changes)
         val state = ReservationPlanning.state(supplies)
         val id = UUID.randomUUID()

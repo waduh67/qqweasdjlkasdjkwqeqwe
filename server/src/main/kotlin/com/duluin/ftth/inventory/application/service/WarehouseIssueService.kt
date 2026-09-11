@@ -116,7 +116,7 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
             destinations = legs.filter { it.direction == LegDirection.IN }.map { it.dimension })
         val body = mapper.writeValueAsString(result)
         val operation = operation(context, action, metadata, canonical, body)
-        posting.post(WarehousePost(snapshot.issueId, state.second, if (dispatch) "DISPATCHED" else "PICKED", operation,
+        posting.post(WarehousePost(snapshot.issueId, state.second, result.state, operation,
             if (dispatch) MovementKind.ISSUE else MovementKind.RESERVE, request.reason, legs, changes,
             events = listOf(PostingEvent(UUID.randomUUID(), if (dispatch) WarehouseEventKind.DISPATCHED else WarehouseEventKind.UNPICKED, body))), context.cutover)
         if (!dispatch) issues.unpicked(snapshot.issueId, operation.id)

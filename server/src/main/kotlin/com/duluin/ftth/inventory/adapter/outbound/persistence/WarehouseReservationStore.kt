@@ -13,6 +13,15 @@ enum class ReservationValidationMode { NEW_ALLOCATION, BOUND_LIFECYCLE, HISTORIC
 @Repository
 class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc, private val physical: MaterialPhysicalTotalsStore) {
     fun now(): Instant = jdbc.execute { sql -> sql.query("SELECT clock_timestamp()") { it.getTimestamp(1).toInstant() }.single() }
+    fun issueBound(ids: Collection<UUID>): Set<UUID> = jdbc.execute { sql ->
+        if (ids.isEmpty()) return@execute emptySet()
+        sql.query("SELECT DISTINCT reservation_id FROM inventory_live_issue_reservation WHERE tenant_id=? AND reservation_id=ANY(?)",
+            sql.tenant, sql.connection.createArrayOf("uuid", ids.distinct().toTypedArray())) { it.uuid("reservation_id") }.toSet()
+    }
+    fun assertNotIssueBound(ids: Collection<UUID>) {
+        if (issueBound(ids).isNotEmpty()) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.STALE_REVISION,
+            "Reservation belongs to a live PICKED issue; use the issue unpick or dispatch transition"))
+    }
     fun demand(id: UUID): ReservationDemand = jdbc.execute { sql ->
         sql.query("SELECT * FROM inventory_document WHERE tenant_id=? AND id=? AND kind='DEMAND'", sql.tenant, id) {
             ReservationDemand(id, it.getLong("revision"), it.optionalUuid("work_order_id") ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED),
@@ -126,6 +135,8 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc, private 
         sql.query("""SELECT line.document_id FROM inventory_reservation reservation JOIN inventory_document_line line
             ON line.tenant_id=reservation.tenant_id AND line.id=reservation.document_line_id
             WHERE reservation.tenant_id=? AND reservation.state='OPEN' AND reservation.reserved_unpicked_base>0
-            AND reservation.expires_at<=clock_timestamp() ORDER BY reservation.expires_at,reservation.id LIMIT 1""", sql.tenant) { it.uuid("document_id") }.singleOrNull()
+            AND reservation.expires_at<=clock_timestamp() AND NOT EXISTS (SELECT FROM inventory_live_issue_reservation live
+                WHERE live.tenant_id=reservation.tenant_id AND live.reservation_id=reservation.id)
+            ORDER BY reservation.expires_at,reservation.id LIMIT 1""", sql.tenant) { it.uuid("document_id") }.singleOrNull()
     }
 }

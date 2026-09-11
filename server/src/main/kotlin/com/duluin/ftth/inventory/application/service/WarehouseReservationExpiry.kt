@@ -35,7 +35,8 @@ class WarehouseReservationExpiry(private val cutovers: InventoryTenantCutoverApi
         val document = store.demand(id)
         val rows = store.rows(id)
         val now = store.now()
-        val changes = rows.filter { it.state == ReservationState.OPEN && it.unpicked.quantityBase > 0 && it.expiresAt <= now }.map { row ->
+        val issueBound = store.issueBound(rows.map { it.id })
+        val changes = rows.filter { it.id !in issueBound && it.state == ReservationState.OPEN && it.unpicked.quantityBase > 0 && it.expiresAt <= now }.map { row ->
             row.copy(unpicked = StockQuantity.of(0, row.unpicked.unit), state = if (row.picked.quantityBase == 0L) ReservationState.EXPIRED else ReservationState.OPEN)
         }
         if (changes.isEmpty()) return false
