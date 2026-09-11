@@ -146,6 +146,7 @@ internal class WarehousePostingFixture(val context: ConfigurableApplicationConte
         sql("INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id) VALUES ('$plan','$tenant','$usageWorkOrder',1,0,'MATERIAL_REQUIRED','$actor')")
         sql("INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit) VALUES ('${UUID.randomUUID()}','$tenant','$plan',1,'${piece.skuId}',1,'EA')")
         sql("UPDATE inventory_material_plan SET state='SUBMITTED',submitted_at=now(),revision=1 WHERE id='$plan'")
+        materialPlanBindingSql(plan).forEach(::sql)
         return PostingUsage(UUID.randomUUID(),usageWorkOrder,0,plan,1,"{\"used\":\"1\"}")
     }
 }
