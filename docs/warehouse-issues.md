@@ -3,7 +3,8 @@
 Task14 mengaktifkan picking, unpick dan dispatch melalui `WarehouseIssueService`
 milik inventory. Fulfillment hanya memperoleh konteks terkunci dari workorder dan
 memanggil `InventoryIssueApi`; stok tetap ditulis oleh `WarehousePostingService`.
-Task15 acknowledgement, pemakaian, pemasangan dan settlement **belum diaktifkan**.
+Task15 acknowledgement tersedia melalui [receipt teknisi](warehouse-material-receipts.md).
+Pemakaian, pemasangan dan settlement **belum diaktifkan**.
 
 ## Prasyarat dan otorisasi
 
