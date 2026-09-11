@@ -6,6 +6,10 @@ diwarisi `InventoryMaterialApi`. Task13 tetap memiliki pembuatan/submission plan
 dan orkestrasi UI WO. Task14 tetap memiliki pemotongan fisik dan dispatch.
 Tidak ada receipt, customer, issue atau pergerakan fisik palsu untuk reservasi.
 
+Task14 sekarang menyediakan picking fisik dan dispatch melalui route material WO;
+lihat [warehouse-issues.md](warehouse-issues.md). Route pick/unpick task10 tetap
+merupakan transisi encumbrance, bukan penerbitan slip atau pengakuan custody.
+
 ## Prasyarat dan kontrak
 
 Demand `inventory_document` harus `DEMAND`, sudah `SUBMITTED`, dan memiliki WO,
@@ -132,6 +136,13 @@ Nilai line yang sama dapat berulang pada beberapa links dan tidak boleh dijumlah
 ulang oleh consumer. Field reserved pada link sendiri tetap quantity reservation
 tersebut. Snapshot terkini yang hilang/mismatched gagal eksplisit, bukan fallback
 ke snapshot lama atau nullable legacy count.
+
+Mulai task14, `demandSupply.issuedBase` membawa jumlah yang sudah didispatch.
+Konservasi supply menjadi requested = unpicked + picked + issued + backorder.
+Planner mengurangi issued sebelum reserve tambahan; barang yang sudah dikirim
+tidak muncul sebagai backorder baru dan tidak dapat direservasi untuk kedua kali.
+PART_ISSUED tetap kuantitatif saat reserve/release berikutnya. Kolom issued
+ditambahkan forward-only pada V175.11, tanpa menulis ulang snapshot historis.
 
 Contoh100m/60m: requested100000, unpicked60000, picked0, totalReserved60000,
 backorder40000, PART_RESERVED. Pick20m mengubah unpicked40000/picked20000 tetapi

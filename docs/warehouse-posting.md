@@ -130,6 +130,24 @@ Bagian ini memperketat implementasi task 5 di atas; bukan implementasi task 6.
 Tidak ada byte migrasi yang sudah diterapkan, RLS, admission, provenance,
 lot-capacity, atau deferred tenant-scope guard yang diubah untuk koreksi ini.
 
+## Picking fisik task14
+
+`ReservationChange.partitionFrom` adalah kontrak posting internal, bukan field
+HTTP. Split dapat memindahkan **ID reservasi asal yang sama** ke child yang dipick.
+Validator mewajibkan parent pada split yang sama, dimensi selain identitas tetap,
+binding line/unit tetap, revision cocok, dan total encumbrance persis sama.
+Picked yang sudah ada tidak boleh dipotong ulang. Reservasi WO lain pada reel
+yang sama ikut berpindah ke remnant dengan ID dan jumlah tetap; tidak mengissue
+material milik WO tersebut. Posting/outbox menyimpan jejak partisi.
+
+Jika hanya sebagian reservasi kabel dipick, sisa encumbrance dipartisi ke row
+remnant dengan binding origin/plan yang sama. Ini bukan reserve bisnis kedua:
+jumlah picked + unpicked sebelum/sesudah tetap sama. Pick100m dari1000m dengan
+reservasi100m tetap mempunyai **satu row reservasi100m**, child100m dan remnant900m.
+Serial pick tidak mempunyai leg fisik. Leg split kabel tetap pada lokasi/custody
+semula. Dispatch ISSUE hanya menghabiskan picked yang sama dengan OUT; unpicked
+yang masih ada tidak dikurangi lagi. Task15 baru boleh mengakui custody teknisi.
+
 ## Pengikatan aktual dan transisi pick
 
 - Eligibility diperiksa bila total encumbrance **atau picked** meningkat. Pick
