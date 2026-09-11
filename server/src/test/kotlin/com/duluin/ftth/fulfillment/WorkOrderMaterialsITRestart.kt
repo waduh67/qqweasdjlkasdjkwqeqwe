@@ -66,6 +66,41 @@ class WorkOrderMaterialsITRestart : MaterialWorkflowFixture() {
             }
         } finally { stop(second.first) }
     }
+    @Test fun `revoked warehouse scope denies outer reserve replay after SIGKILL and restored scope replays exactly`() {
+        val setup = setupReceipt()
+        receiveStock(setup)
+        val actor = technician(setup.token)
+        val scopePath = "/api/v1/warehouse/settings/scopes/${actor.second}/${setup.bin}"
+        assertThat(request("PUT", scopePath, setup.token, """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+        val id = workOrder(setup.token)
+        assign(setup.token, id, actor.second)
+        putPlan(setup.token, id, plan(setup.token, id, "[${line(setup.cable, "120000")}]"))
+        val payload = command(setup.token, id, 1)
+        action(setup.token, id, "submit-request", payload)
+        val first = start("reserve-scope")
+        val original: String
+        try {
+            val response = reserveHttp(first.second, id, actor.first, payload)
+            assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(200)
+            original = response.body()
+        } finally { stop(first.first) }
+        assertThat(request("PUT", scopePath, setup.token, """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+        val second = start("revoked-scope")
+        try {
+            val denied = reserveHttp(second.second, id, actor.first, payload)
+            assertThat(denied.statusCode()).withFailMessage(denied.body()).isEqualTo(404)
+            assertThat(denied.body()).isNotEqualTo(original)
+            assertThat(request("PUT", scopePath, setup.token, """{"expectedRevision":2,"active":true}""").status).isEqualTo(200)
+            val restored = reserveHttp(second.second, id, actor.first, payload)
+            assertThat(restored.statusCode()).isEqualTo(200)
+            assertThat(restored.body()).isEqualTo(original)
+            fixture(setup.token).transaction { assertThat(scalar("SELECT count(*) FROM inventory_material_command WHERE action='RESERVE'")).isEqualTo("1") }
+        } finally { stop(second.first) }
+    }
+    private fun reserveHttp(port: Int, id: String, token: String, payload: String) = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build().send(
+        HttpRequest.newBuilder(URI("http://127.0.0.1:$port/api/work-orders/$id/materials/reserve"))
+            .timeout(Duration.ofSeconds(30)).header("Authorization", "Bearer $token").header("Idempotency-Key", "reserve-restart-scope")
+            .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(payload)).build(), HttpResponse.BodyHandlers.ofString())
     private fun start(name: String): Pair<Process, Int> {
         val database = context.getBean(DataSource::class.java).connection.use { it.metaData.url to it.schema }
         val port = temporary.resolve("$name.port")
