@@ -136,8 +136,8 @@ V176+ tidak berubah. SHA256 V175.11:
 
 ## Bukti verifikasi
 
-Exact command berikut lulus dua kali: **13 test, nol failure/error/skipped**,
-10m43s dan7m38s:
+Exact command berikut lulus dua kali: **16 test, nol failure/error/skipped**,
+8m3s dan8m6s:
 
 ```sh
 scripts/warehouse/qa.sh server --tests '*WarehouseIssueIT*' --rerun-tasks --no-parallel
@@ -145,8 +145,8 @@ scripts/warehouse/qa.sh server --tests '*WarehouseIssueIT*' --rerun-tasks --no-p
 
 Gabungan owner task1-14 dijalankan dalam batch serial bounded: schema/Modularity132,
 foundation/posting/concurrency/planning300, master/query87, receipt93,
-policy/approval65, material69, reservation/planning29, issue13, lalu owner-context/
-Modularity4. Setelah deduplikasi test yang berulang: **786 test unik lulus**.
+policy/approval65, material69, reservation/planning29, issue16, lalu owner-context/
+Modularity4. Setelah deduplikasi test yang berulang: **789 test unik lulus**.
 Run reservation selesai dengan BUILD SUCCESSFUL10m5s meskipun tool menampilkan
 timeout10menit; laporan29 test lengkap dan tidak ada proses tertinggal. Run gagal
 awal tetap dicatat dan tidak dijadikan bukti PASS.
@@ -166,7 +166,8 @@ Technician custody0 dan received issue0. SIGKILL/restart replay serta slip ident
 
 Suite juga membuktikan shared-parent/last-serial races, same-key replay/new-key
 conflict, scanner error, spoofed authority, partial demand, current scope revocation,
-reassignment/cancellation, dirty state, immutable label reprint dan tiga JVM dengan
+reassignment/cancellation, balapan picking melawan scope revocation/reassignment/
+cancellation, dirty state, immutable label reprint dan tiga JVM dengan
 response loss + SIGKILL. Evidence lokal:
 `.omo/evidence/warehouse-workorder-asset-provenance/task-14/`.
 
