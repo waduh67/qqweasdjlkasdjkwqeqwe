@@ -15,6 +15,7 @@ data class IssueSnapshot(val issueId: UUID, val code: String, val revision: Long
     val workOrderId: UUID, val workOrderCode: String, val workOrderRevision: Long,
     val customerId: UUID?, val customerLabelSnapshot: String?, val demandDocumentId: UUID,
     val demandRevision: Long, val planId: UUID, val planRevision: Long,
-    val sender: IssuePerson, val receiver: IssuePerson, val lines: List<IssuePickedLine>, val recordedAt: Instant)
+    val sender: IssuePerson, val receiver: IssuePerson, val lines: List<IssuePickedLine>, val recordedAt: Instant,
+    val destinations: List<PostingDimension> = emptyList())
 data class PreparedIssuePick(val lines: List<IssuePickedLine>, val legs: List<PostingLeg>,
     val splits: List<PostingSplit>, val reservations: List<ReservationChange>, val candidates: List<ReservationCandidate>)

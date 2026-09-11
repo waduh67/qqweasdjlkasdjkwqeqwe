@@ -2,6 +2,8 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.service.*
+import com.duluin.ftth.inventory.application.port.outbound.PostingDimension
+import com.duluin.ftth.inventory.domain.model.OwnerKind
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
@@ -54,6 +56,20 @@ class WarehouseIssueStore(private val jdbc: WarehouseCommandJdbc) {
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
     fun wasUnpicked(id: UUID): Boolean = jdbc.execute { it.value("SELECT id FROM inventory_issue_unpick WHERE tenant_id=? AND id=?", it.tenant, id) != null }
+    fun dispatchDestinations(id: UUID): List<PostingDimension> = jdbc.execute { sql ->
+        sql.query("""SELECT leg.* FROM inventory_operation operation JOIN inventory_movement movement
+            ON movement.tenant_id=operation.tenant_id AND movement.operation_id=operation.id
+            JOIN inventory_movement_leg leg ON leg.tenant_id=movement.tenant_id AND leg.movement_id=movement.id
+            WHERE operation.tenant_id=? AND operation.document_id=? AND operation.business_action='DISPATCH'
+                AND movement.state='APPLIED' AND leg.direction='IN' AND leg.status='IN_TRANSIT' ORDER BY leg.id""", sql.tenant, id) {
+            PostingDimension(it.uuid("sku_id"), it.uuid("stock_identity_id"), it.optionalUuid("lot_id"), it.uuid("location_id"),
+                it.uuid("custody_owner_id"), OwnerKind.valueOf(it.getString("custody_owner_kind")),
+                WarehouseCondition.valueOf(it.getString("condition")), AssetLegalOwner.valueOf(it.getString("legal_owner")))
+        }.also { destinations ->
+            if (destinations.isEmpty() && sql.value("SELECT id FROM inventory_operation WHERE tenant_id=? AND document_id=? AND business_action='DISPATCH'", sql.tenant, id) != null)
+                sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        }
+    }
     fun unpicked(id: UUID, operation: UUID) = jdbc.execute { it.update("INSERT INTO inventory_issue_unpick(id,tenant_id,operation_id) VALUES (?,?,?)", id, it.tenant, operation) }
     fun print(id: UUID): String = jdbc.execute { sql ->
         sql.value("SELECT original_body FROM inventory_operation WHERE tenant_id=? AND document_id=? AND business_action IN ('DISPATCH','UNPICK') ORDER BY document_revision DESC LIMIT 1", sql.tenant, id)
