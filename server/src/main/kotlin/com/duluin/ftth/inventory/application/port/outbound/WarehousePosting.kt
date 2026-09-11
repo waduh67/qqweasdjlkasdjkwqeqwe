@@ -68,6 +68,7 @@ data class ReservationChange(
     val picked: StockQuantity,
     val expiresAt: Instant,
     val state: ReservationState = ReservationState.OPEN,
+    val partitionFrom: UUID? = null,
 )
 
 enum class ReservationState { OPEN, DISPATCHED, RELEASED, EXPIRED }
