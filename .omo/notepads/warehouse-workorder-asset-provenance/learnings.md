@@ -150,3 +150,9 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 - Task 13 was independently approved by verifier `ses_f726d8e9cffelvc6sK35yHPdt6`; implementation head `df33cce4209ce6bb1ecd87ff9b566cadaca6d2e3` includes migrations `V175.8` through `V175.10` and 762 regression tests.
 - Durable recovery state now keeps tasks 1-13 checked and Task 14 next. Safe OMO checkpoint excludes product/task14 changes, runtime, evidence, logs, archives, environment, Boulder state, and secrets.
+
+## 2026-09-11 - Task 14 re-verification pause
+
+- User requested compaction pause before any task transition. Implementation boundary is `3a4f2f1ffbb0343066b503a305ef540800e508b0`, executed by `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`.
+- Verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` has partial evidence only: prior failures reject correctly, first exact run 35/35, and immutable snapshot/destination probes pass; no final verdict exists.
+- Resume that verifier, then check task14 only after confirmation; otherwise return findings to the executor. Task15 must not start.

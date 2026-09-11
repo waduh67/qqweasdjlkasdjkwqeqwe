@@ -1,21 +1,22 @@
-# Warehouse Workorder Asset Provenance Wave 2 Checkpoint
+# Warehouse Workorder Asset Provenance Task 14 Pause Checkpoint
 
 ## Resume
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Implementation SHA: `ca71af1fd5a103c81dfefbea0ad72e30da26a570`
-- Wave 2: complete through task 12
+- Implementation SHA: `3a4f2f1ffbb0343066b503a305ef540800e508b0`
+- Tasks 1-13: checked; task 14: unchecked; task 15: not started
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: immediate push
-- Resume command: `/start-work warehouse-workorder-asset-provenance`
-- Task 12 verifier: `ses_f73a315e5ffeibNLVDMKoYmrnu`
-- Next task: task 13, unchecked; begin Wave 3.
+- Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
+- Executor: `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`
+- Task 14 verifier: `ses_f6fd0321cffeCyHsPe5gpV05FO` (partial evidence only; no final verdict)
+- Next action: resume that verifier; confirm then mark task14, otherwise return findings to executor.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-12 are checked in the tracked plan and have trusted ledger receipts:
+Tasks 1-13 are checked in the tracked plan and have trusted ledger receipts. Task 14 is still unchecked. This is a user-requested pause for compaction at the re-verification boundary.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -33,7 +34,7 @@ Tasks 1-12 are checked in the tracked plan and have trusted ledger receipts:
 
 ## Exact Next Action
 
-Resume with `/start-work warehouse-workorder-asset-provenance`. Task 13 is next; do not check or implement task13 as part of this checkpoint.
+Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`. Resume verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` for its final verdict. Prior failures reject correctly, the first exact run was 35/35, and extra immutable snapshot/destination probes pass; this remains partial evidence only. Confirm then check task14, otherwise return findings to executor `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`.
 
 ## Continuation Policy
 
