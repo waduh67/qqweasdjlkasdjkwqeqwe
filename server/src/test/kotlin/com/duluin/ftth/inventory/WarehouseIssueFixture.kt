@@ -36,7 +36,7 @@ abstract class WarehouseIssueFixture : MaterialWorkflowFixture() {
         val response = request("GET", "/api/v1/warehouse/material-requests/allocations/${setup.workOrder}", setup.stock.token)
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
         val allocations = mapper.readTree(response.contentAsString).filter { it.path("state").asString() == "OPEN" && it.path("reservedUnpickedBase").asString() != "0" }
-        return mapper.writeValueAsString(mapOf("expectedRevision" to 1,
+        return mapper.writeValueAsString(mapOf("expectedRevision" to summary.path("revisions").path("planRevision").asLong(),
             "workOrderRevision" to summary.path("revisions").path("workOrderRevision").asLong(), "demandRevision" to summary.path("demandRevision").asLong(),
             "lines" to allocations.map { line -> mapOf("reservationId" to line.path("reservationId").asString(),
                 "expectedRevision" to line.path("reservationRevision").asLong(), "stockIdentityId" to line.path("stockIdentityId").asString(),
@@ -45,7 +45,7 @@ abstract class WarehouseIssueFixture : MaterialWorkflowFixture() {
     protected fun transitionBody(setup: IssueSetup, issue: JsonNode, partial: Boolean = false): String {
         val state = summary(setup.stock.token, setup.workOrder)
         return mapper.writeValueAsString(mapOf("issueId" to issue.path("issueId").asString(), "expectedRevision" to issue.path("revision").asLong(),
-            "workOrderRevision" to state.path("revisions").path("workOrderRevision").asLong(), "planRevision" to 1,
+            "workOrderRevision" to state.path("revisions").path("workOrderRevision").asLong(), "planRevision" to state.path("revisions").path("planRevision").asLong(),
             "demandRevision" to state.path("demandRevision").asLong(), "partial" to partial, "reason" to "Verified handover"))
     }
     protected fun issueRequest(setup: IssueSetup, action: String, body: String, key: String = java.util.UUID.randomUUID().toString()) =
