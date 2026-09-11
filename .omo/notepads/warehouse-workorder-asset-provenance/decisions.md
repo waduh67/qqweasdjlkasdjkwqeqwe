@@ -87,3 +87,8 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Tasks 1-12 are independently confirmed complete. Task 12 verifier `ses_f73a315e5ffeibNLVDMKoYmrnu` approved implementation `ca71af1fd5a103c81dfefbea0ad72e30da26a570` through migrations `V175.3`-`V175.7`.
 - Wave 2 is complete; Task 13 is next in Wave 3 and remains unchecked until its own implementation and independent approval.
 - Recovery remains immediate-push and no-merge: resume with `/start-work warehouse-workorder-asset-provenance`, push normal fast-forward after each approved checkpoint, and never merge from checkpoint sync.
+
+## 2026-09-11 - Task 13 checkpoint identity policy
+
+- Task 13 approval is recorded against verifier `ses_f726d8e9cffelvc6sK35yHPdt6`, implementation `df33cce4209ce6bb1ecd87ff9b566cadaca6d2e3`, and migrations `V175.8`-`V175.10`; Task 14 remains the next unchecked task.
+- Future checkpoint and implementation commits must use the effective global Git identity `fajarxfce <fajaralamsyah000@gmail.com>` with no conflicting per-command identity override. Resume with `/start-work warehouse-workorder-asset-provenance`.

@@ -145,3 +145,8 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 - Task 12 was independently approved by verifier `ses_f73a315e5ffeibNLVDMKoYmrnu`; implementation head is `ca71af1fd5a103c81dfefbea0ad72e30da26a570`, covering `V175.3` through `V175.7`, with 818 regression tests confirmed.
 - Durable recovery state keeps tasks 1-12 checked, task 13 unchecked, and Wave 3 explicitly next. Checkpoint commits contain only safe OMO state; runtime, evidence, logs, archives, environment, Boulder state, and secrets stay excluded.
+
+## 2026-09-11 - Task 13 approval checkpoint
+
+- Task 13 was independently approved by verifier `ses_f726d8e9cffelvc6sK35yHPdt6`; implementation head `df33cce4209ce6bb1ecd87ff9b566cadaca6d2e3` includes migrations `V175.8` through `V175.10` and 762 regression tests.
+- Durable recovery state now keeps tasks 1-13 checked and Task 14 next. Safe OMO checkpoint excludes product/task14 changes, runtime, evidence, logs, archives, environment, Boulder state, and secrets.
