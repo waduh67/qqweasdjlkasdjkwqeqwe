@@ -1,11 +1,18 @@
 package com.duluin.ftth.monitoring.application.service
 
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuReading
 import com.duluin.ftth.monitoring.AlarmsChangedEvent
+import com.duluin.ftth.monitoring.application.port.inbound.ManualOltPollResult
+import com.duluin.ftth.monitoring.application.port.inbound.ManualOltPollUseCase
+import com.duluin.ftth.monitoring.application.port.inbound.OltPollPersistenceException
 import com.duluin.ftth.monitoring.domain.model.AlarmKind
 import com.duluin.ftth.network.NetworkApi
+import com.duluin.ftth.network.OltPollingReadiness
 import com.duluin.ftth.network.OltPollingTarget
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.GponSnmpAdapter
@@ -25,6 +32,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -60,7 +68,7 @@ class OltPollingScheduler(
             runCatching {
                 TenantContext.runAs(tenantId) { poller.pollTenant(tenantId) }
             }.onFailure {
-                log.warn("Polling OLT server-side tenant {} gagal: {}", tenantId, it.message)
+                log.warn("Polling OLT server-side tenant {} gagal", tenantId)
             }
         }
     }
@@ -81,24 +89,59 @@ class ServerSideOltPoller(
     private val networkApi: NetworkApi,
     private val adapterRegistry: AdapterRegistry,
     private val persister: OltReadingPersister,
-) {
+    private val singleFlight: OltPollSingleFlight = OltPollSingleFlight(),
+) : ManualOltPollUseCase {
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun pollTenant(tenantId: UUID) {
         val targets = networkApi.findPollingTargets(networkApi.listAllOltIds())
-            // OLT tanpa alamat manajemen tak punya apa pun untuk dihubungi.
-            .filter { it.pollable }
         if (targets.isEmpty()) return
 
         for (target in targets) {
-            val adapter = adapterRegistry.forVendor(target.vendor)
-            if (adapter == null) {
-                // Vendor tak dikenal: perangkat boleh tetap ada di inventory, hanya
-                // belum bisa dimonitor otomatis. Ini BUKAN "tak terjangkau" — jangan alarm.
-                log.debug("OLT {} vendor {} belum didukung, dilewati", target.code, target.vendor)
-                continue
+            val adapter = when (val readiness = readyAdapter(target)) {
+                is AdapterReadiness.Ready -> readiness.adapter
+                is AdapterReadiness.Invalid -> {
+                    log.debug("OLT {} dilewati dari polling terjadwal: {}", target.code, readiness.message)
+                    continue
+                }
             }
-            val outcome = poll(adapter, target.toWire())
+
+            try {
+                when (singleFlight.run(tenantId, target.id) { executePoll(tenantId, target, adapter) }) {
+                    is OltPollSingleFlight.Result.Completed -> Unit
+                    OltPollSingleFlight.Result.Busy ->
+                        log.debug("OLT {} sedang dipolling, siklus terjadwal dilewati", target.code)
+                }
+            } catch (_: Exception) {
+                log.error("Polling terjadwal OLT {} gagal", target.code)
+            }
+        }
+    }
+
+    override fun pollOlt(oltId: UUID): ManualOltPollResult {
+        val tenantId = TenantContext.tenantId()
+        val target = networkApi.findPollingTarget(oltId)
+            ?: throw NotFoundException("OLT $oltId tidak ditemukan")
+        val adapter = when (val readiness = readyAdapter(target)) {
+            is AdapterReadiness.Ready -> readiness.adapter
+            is AdapterReadiness.Invalid -> throw ValidationException(readiness.message)
+        }
+
+        try {
+            return when (val attempt = singleFlight.run(tenantId, oltId) { executePoll(tenantId, target, adapter) }) {
+                is OltPollSingleFlight.Result.Completed -> attempt.value
+                OltPollSingleFlight.Result.Busy ->
+                    throw ConflictException("Polling OLT ${target.code} sedang berjalan")
+            }
+        } catch (ex: OltPollPersistenceException) {
+            log.error("Polling manual OLT {} gagal disimpan", target.code)
+            throw ex
+        }
+    }
+
+    private fun executePoll(tenantId: UUID, target: OltPollingTarget, adapter: OltAdapter): ManualOltPollResult {
+        val outcome = poll(adapter, target.toWire())
+        try {
             persister.persist(
                 tenantId = tenantId,
                 target = target,
@@ -106,7 +149,30 @@ class ServerSideOltPoller(
                 readings = outcome.readings,
                 failureReason = outcome.failureReason,
             )
+        } catch (_: Exception) {
+            throw OltPollPersistenceException()
         }
+        return ManualOltPollResult(
+            oltId = target.id,
+            oltCode = target.code,
+            reachable = outcome.reachable,
+            readingCount = outcome.readings.size,
+            failureReason = outcome.failureReason,
+            checkedAt = Instant.now(),
+        )
+    }
+
+    private fun readyAdapter(target: OltPollingTarget): AdapterReadiness {
+        val adapter = adapterRegistry.forVendor(target.vendor)
+        val message = when (target.pollingReadiness(adapter != null)) {
+            OltPollingReadiness.READY -> return AdapterReadiness.Ready(requireNotNull(adapter))
+            OltPollingReadiness.INACTIVE -> "OLT ${target.code} tidak aktif"
+            OltPollingReadiness.SNMP_DISABLED -> "SNMP OLT ${target.code} dinonaktifkan"
+            OltPollingReadiness.UNSUPPORTED_VENDOR -> "Vendor ${target.vendor} belum punya adapter SNMP"
+            OltPollingReadiness.MISSING_HOST -> "OLT ${target.code} belum punya alamat manajemen"
+            OltPollingReadiness.MISSING_COMMUNITY -> "OLT ${target.code} belum punya community string SNMP"
+        }
+        return AdapterReadiness.Invalid(message)
     }
 
     /**
@@ -116,24 +182,36 @@ class ServerSideOltPoller(
      */
     private fun poll(adapter: OltAdapter, wire: OltTarget): PollOutcome =
         try {
-            when (val probe = adapter.probe(wire)) {
-                is ProbeResult.Unreachable -> PollOutcome(reachable = false, readings = emptyList(), failureReason = probe.reason)
+            when (adapter.probe(wire)) {
+                is ProbeResult.Unreachable -> PollOutcome(
+                    reachable = false,
+                    readings = emptyList(),
+                    failureReason = PollFailureReason.UNREACHABLE.publicMessage,
+                )
                 is ProbeResult.Reachable -> PollOutcome(reachable = true, readings = adapter.pollOnus(wire), failureReason = null)
             }
-        } catch (ex: Exception) {
-            log.warn("Polling OLT {} gagal: {}", wire.oltCode, ex.message)
-            PollOutcome(reachable = false, readings = emptyList(), failureReason = ex.message)
+        } catch (_: Exception) {
+            log.warn("Polling OLT {} gagal", wire.oltCode)
+            PollOutcome(
+                reachable = false,
+                readings = emptyList(),
+                failureReason = PollFailureReason.ADAPTER_FAILURE.publicMessage,
+            )
         }
 
     private fun OltPollingTarget.toWire() = OltTarget(
         oltId = id.toString(),
         oltCode = code,
         vendor = vendor,
-        // Aman: sudah disaring [OltPollingTarget.pollable] (host tak kosong).
         host = host!!,
         snmpPort = snmpPort,
         snmpCommunity = snmpCommunity,
     )
+
+    private sealed interface AdapterReadiness {
+        data class Ready(val adapter: OltAdapter) : AdapterReadiness
+        data class Invalid(val message: String) : AdapterReadiness
+    }
 }
 
 /** Hasil satu putaran polling satu OLT, menyeberang dari jalur I/O ke jalur tulis. */
@@ -142,6 +220,11 @@ private class PollOutcome(
     val readings: List<OnuReading>,
     val failureReason: String?,
 )
+
+private enum class PollFailureReason(val publicMessage: String) {
+    UNREACHABLE("OLT tidak dapat dijangkau"),
+    ADAPTER_FAILURE("Polling SNMP gagal"),
+}
 
 /**
  * Menuliskan hasil polling satu OLT dalam transaksinya sendiri.

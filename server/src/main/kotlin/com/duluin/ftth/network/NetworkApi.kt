@@ -95,6 +95,16 @@ interface NetworkApi {
     fun findPollingTargets(oltIds: Set<UUID>): List<OltPollingTarget>
 
     /**
+     * Satu target polling tanpa menyembunyikan OLT yang belum siap dipolling.
+     *
+     * Implementasi baku menjaga kompatibilitas adapter/test lama, sedangkan implementasi
+     * persistence mengoverride method ini agar OLT nonaktif tetap dapat dibedakan dari OLT
+     * yang benar-benar tidak ada.
+     */
+    fun findPollingTarget(oltId: UUID): OltPollingTarget? =
+        findPollingTargets(setOf(oltId)).firstOrNull { it.id == oltId }
+
+    /**
      * Kabel yang salah satu ujungnya menyentuh sebuah simpul dalam [nodeIds],
      * beserta geometrinya. Dipakai gis untuk mewarnai kabel yang hilirnya
      * bermasalah tanpa module lain menyentuh tabel kabel langsung.
@@ -235,9 +245,30 @@ data class OltPollingTarget(
     val host: String?,
     val snmpCommunity: String?,
     val snmpPort: Int = 161,
+    val active: Boolean = true,
+    val snmpEnabled: Boolean = true,
+    val vendorSupported: Boolean = true,
 ) {
     /** Tanpa alamat, collector tidak punya apa pun untuk dihubungi. */
     val pollable: Boolean get() = !host.isNullOrBlank()
+
+    fun pollingReadiness(adapterSupported: Boolean = vendorSupported): OltPollingReadiness = when {
+        !active -> OltPollingReadiness.INACTIVE
+        !snmpEnabled -> OltPollingReadiness.SNMP_DISABLED
+        !vendorSupported || !adapterSupported -> OltPollingReadiness.UNSUPPORTED_VENDOR
+        host.isNullOrBlank() -> OltPollingReadiness.MISSING_HOST
+        snmpCommunity.isNullOrBlank() -> OltPollingReadiness.MISSING_COMMUNITY
+        else -> OltPollingReadiness.READY
+    }
+}
+
+enum class OltPollingReadiness {
+    READY,
+    INACTIVE,
+    SNMP_DISABLED,
+    UNSUPPORTED_VENDOR,
+    MISSING_HOST,
+    MISSING_COMMUNITY,
 }
 
 /** Pandangan ringkas sebuah ODP untuk konsumen lintas-module. */

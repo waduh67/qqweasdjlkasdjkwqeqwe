@@ -191,17 +191,11 @@ class NetworkApiService(
             // OLT yang sedang dinonaktifkan tidak perlu di-polling; alarmnya justru
             // akan menutupi gangguan sungguhan di perangkat lain.
             .filter { it.status.acceptsService() }
-            .map { olt ->
-                OltPollingTarget(
-                    id = olt.id,
-                    code = olt.code,
-                    vendor = olt.vendor.name,
-                    host = olt.managementIp?.value,
-                    snmpCommunity = olt.snmpCommunity,
-                    snmpPort = olt.snmpPort,
-                )
-            }
+            .map(Olt::toPollingTarget)
     }
+
+    override fun findPollingTarget(oltId: UUID): OltPollingTarget? =
+        oltRepository.findById(oltId)?.toPollingTarget()
 
     override fun findOdp(id: UUID): OdpRef? = odpRepository.findById(id)?.toRef()
 
@@ -282,6 +276,18 @@ private fun Olt.toRef() = OltRef(
     vendor = vendor.name,
     siteId = siteId,
     active = status.acceptsService(),
+)
+
+private fun Olt.toPollingTarget() = OltPollingTarget(
+    id = id,
+    code = code,
+    vendor = vendor.name,
+    host = managementIp?.value,
+    snmpCommunity = snmpCommunity,
+    snmpPort = snmpPort,
+    active = status.acceptsService(),
+    snmpEnabled = snmpEnabled,
+    vendorSupported = vendor.monitoringSupported(),
 )
 
 private fun Odp.toRef() = OdpRef(

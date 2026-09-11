@@ -55,7 +55,11 @@ class MetricIngestionService(
             return IngestResult(accepted = 0, unknownSerialNumbers = emptyList(), duplicate = true)
         }
 
-        return ingestReadings(tenantId, batch.readings)
+        val result = ingestReadings(tenantId, batch.readings)
+        if (result.accepted > 0) {
+            events.publishEvent(AlarmsChangedEvent(tenantId))
+        }
+        return result
     }
 
     /**
@@ -108,10 +112,6 @@ class MetricIngestionService(
             )
 
             matched.forEach { (reading, onu) -> evaluateAlarms(tenantId, reading, onu) }
-            // Alarm mungkin berubah → picu korelasi ulang insiden untuk tenant ini,
-            // sekali setelah seluruh batch dinilai (bukan per ONU).
-            events.publishEvent(AlarmsChangedEvent(tenantId))
-
             // Serial yang kini dikenal tapi masih menggantung di kotak masuk
             // (didaftarkan lewat jalur lain) dituntaskan sendiri.
             discoveredOnuRecorder.resolveKnown(knownOnus.keys)
