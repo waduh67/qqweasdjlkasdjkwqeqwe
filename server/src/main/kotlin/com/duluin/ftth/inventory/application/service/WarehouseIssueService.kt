@@ -76,6 +76,7 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
         replay(context, action, metadata, canonical, current)?.let { return it }
         val snapshot = issues.snapshot(request.issueId)
         if (snapshot.workOrderId != context.workOrderId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+        authorizeSubstitution(snapshot, current)
         authorize(snapshot.lines.map { it.dimension.locationId }, current)
         val rows = reservations.rows(snapshot.demandDocumentId)
         reservations.lockDocuments(listOf(snapshot.issueId, snapshot.demandDocumentId) + reservations.originDocuments(rows))
@@ -111,7 +112,8 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
                     quantity, line.id, InventoryStatus.IN_TRANSIT))
         }
         val result = snapshot.copy(revision = Math.addExact(state.second, 1), state = if (dispatch) "DISPATCHED" else "UNPICKED",
-            sender = person(context.authority.identity.userId), recordedAt = reservations.now())
+            sender = person(context.authority.identity.userId), recordedAt = reservations.now(),
+            destinations = legs.filter { it.direction == LegDirection.IN }.map { it.dimension })
         val body = mapper.writeValueAsString(result)
         val operation = operation(context, action, metadata, canonical, body)
         posting.post(WarehousePost(snapshot.issueId, state.second, if (dispatch) "DISPATCHED" else "PICKED", operation,
@@ -127,7 +129,8 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
         val current = current(context, false)
         val snapshot = issues.snapshot(issueId)
         if (snapshot.workOrderId != context.workOrderId) masterFailure(WarehouseErrorCode.NOT_FOUND)
-        authorize(snapshot.lines.map { it.dimension.locationId }, current)
+        authorizeSubstitution(snapshot, current)
+        authorize(snapshot.lines.map { it.dimension.locationId } + issues.dispatchDestinations(issueId).map { it.locationId }, current)
         return issues.print(issueId)
     }
 
@@ -153,9 +156,15 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
         if (prior.resourceId != context.workOrderId || prior.hash != canonical.hash) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
         if (prior.cutoverEpoch != context.cutover.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
         val snapshot = issues.snapshot(prior.receipt.documentId)
-        authorize(snapshot.lines.map { it.dimension.locationId }, current)
+        authorizeSubstitution(snapshot, current)
+        val destinations = if (action == "DISPATCH") issues.dispatchDestinations(snapshot.issueId).map { it.locationId } else emptyList()
+        if (action == "DISPATCH" && destinations.isEmpty()) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        authorize(snapshot.lines.map { it.dimension.locationId } + destinations, current)
         reservations.lines(reservations.demand(snapshot.demandDocumentId), ReservationValidationMode.REPLAY)
         return prior.receipt
+    }
+    private fun authorizeSubstitution(snapshot: IssueSnapshot, current: CurrentAuthority) {
+        if (snapshot.lines.any { it.substitution != null || it.originalSku != null }) receiptPermission(current, "inventory.request.override")
     }
     private fun supply(context: MaterialPlanningContext, demand: ReservationDemand, metadata: WarehouseMutationMetadata, canonical: WarehouseCanonicalPayload) {
         val lines = reservations.lines(demand, ReservationValidationMode.BOUND_LIFECYCLE)
