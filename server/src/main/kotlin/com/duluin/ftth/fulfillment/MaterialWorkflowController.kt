@@ -26,7 +26,18 @@ class MaterialWorkflowController(private val workflow: MaterialWorkflowService) 
     @PostMapping("/release")
     fun release(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         response(workflow.release(id, MaterialWorkflowJson.decode(body, MaterialPlanCommand::class.java), key))
-    @PostMapping("/pick", "/dispatch", "/acknowledge", "/report-use", "/return", "/reallocate", "/settlement")
+    @PostMapping("/pick")
+    fun pick(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        response(workflow.pick(id, MaterialWorkflowJson.decode(body, WarehousePickRequest::class.java), key))
+    @PostMapping("/dispatch")
+    fun dispatch(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        response(workflow.issueTransition(id, MaterialWorkflowJson.decode(body, WarehouseIssueRequest::class.java), key, true))
+    @PostMapping("/unpick")
+    fun unpick(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        response(workflow.issueTransition(id, MaterialWorkflowJson.decode(body, WarehouseIssueRequest::class.java), key, false))
+    @GetMapping("/issues/{issueId}/slip")
+    fun slip(@PathVariable id: UUID, @PathVariable issueId: UUID) = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(workflow.issueSlip(id, issueId))
+    @PostMapping("/acknowledge", "/report-use", "/return", "/reallocate", "/settlement")
     fun unavailable(@PathVariable id: UUID): Nothing {
         workflow.summary(id)
         throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Material transition not available in task13"))
