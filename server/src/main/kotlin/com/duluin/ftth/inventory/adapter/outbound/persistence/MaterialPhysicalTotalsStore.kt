@@ -17,7 +17,7 @@ class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
         val issues = sql.query("""SELECT issue.id FROM inventory_document_line issue JOIN inventory_document document
             ON document.tenant_id=issue.tenant_id AND document.id=issue.document_id
             WHERE issue.tenant_id=? AND issue.source_line_id=? AND document.work_order_id=? AND document.kind='ISSUE'
-            AND document.state NOT IN ('DRAFT','PICKED') ORDER BY issue.id""", sql.tenant, demandLine, workOrder) { it.uuid("id") }
+            AND document.state NOT IN ('DRAFT','PICKED','UNPICKED') ORDER BY issue.id""", sql.tenant, demandLine, workOrder) { it.uuid("id") }
         var issued = 0L
         var used = 0L
         var returned = 0L
@@ -64,7 +64,7 @@ class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
             ON issue.tenant_id=document.tenant_id AND issue.document_id=document.id
             LEFT JOIN inventory_document_line demand ON demand.tenant_id=issue.tenant_id AND demand.id=issue.source_line_id
             LEFT JOIN inventory_document source ON source.tenant_id=demand.tenant_id AND source.id=demand.document_id
-            WHERE document.tenant_id=? AND document.work_order_id=? AND document.kind='ISSUE' AND document.state NOT IN ('DRAFT','PICKED')
+            WHERE document.tenant_id=? AND document.work_order_id=? AND document.kind='ISSUE' AND document.state NOT IN ('DRAFT','PICKED','UNPICKED')
             AND (source.kind IS DISTINCT FROM 'DEMAND' OR source.work_order_id IS DISTINCT FROM document.work_order_id) LIMIT 1""",
                 sql.tenant, workOrder) != null) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }

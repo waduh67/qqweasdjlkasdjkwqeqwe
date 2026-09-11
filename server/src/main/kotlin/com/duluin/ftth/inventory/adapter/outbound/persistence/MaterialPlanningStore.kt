@@ -51,7 +51,7 @@ class MaterialPlanningStore(private val jdbc: WarehouseCommandJdbc) {
         assertNoPhysicalFacts(workOrder)
     }
     fun assertNoPhysicalFacts(workOrder: UUID) = jdbc.execute { sql ->
-        if (sql.value("""SELECT id FROM inventory_document WHERE tenant_id=? AND work_order_id=? AND kind='ISSUE' AND state NOT IN ('DRAFT','PICKED') LIMIT 1""",
+        if (sql.value("""SELECT id FROM inventory_document WHERE tenant_id=? AND work_order_id=? AND kind='ISSUE' AND state NOT IN ('DRAFT','PICKED','UNPICKED') LIMIT 1""",
                 sql.tenant, workOrder) != null ||
             sql.value("SELECT id FROM inventory_usage_snapshot WHERE tenant_id=? AND work_order_id=? LIMIT 1", sql.tenant, workOrder) != null ||
             sql.value("SELECT id FROM inventory_customer_material_fact WHERE tenant_id=? AND work_order_id=? LIMIT 1", sql.tenant, workOrder) != null)
