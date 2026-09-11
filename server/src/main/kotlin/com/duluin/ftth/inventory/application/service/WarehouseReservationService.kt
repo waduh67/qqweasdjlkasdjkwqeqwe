@@ -192,7 +192,7 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
 
     private fun checkDemand(document: ReservationDemand, revision: Long, plan: Long, workOrder: ReservationWorkOrder, workOrderRevision: Long, action: ReservationAction) {
         if (document.revision != revision || document.planRevision != plan || workOrder.revision != workOrderRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
-        if (document.state !in setOf("SUBMITTED", "PART_RESERVED", "RESERVED") || (!workOrder.active && action !in setOf(ReservationAction.RELEASE, ReservationAction.UNPICK)))
+        if (document.state !in setOf("SUBMITTED", "PART_RESERVED", "RESERVED", "PART_ISSUED") || (!workOrder.active && action !in setOf(ReservationAction.RELEASE, ReservationAction.UNPICK)))
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
     private fun validate(action: ReservationAction, request: ReservationRequest) {

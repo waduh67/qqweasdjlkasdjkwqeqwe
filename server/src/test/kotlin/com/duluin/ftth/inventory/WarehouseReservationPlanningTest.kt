@@ -39,4 +39,16 @@ class WarehouseReservationPlanningTest {
         assertThat(summary.single().backorderBase).isEqualTo("5000")
         assertThat(ReservationPlanning.state(summary)).isEqualTo("PART_RESERVED")
     }
+    @Test fun `dispatched quantity is neither a new backorder nor a second reservation`() {
+        val partial = line.copy(issued = 10000)
+        assertThat(ReservationPlanning.wanted(partial, null, emptyList())).isEqualTo(5000)
+        val supplied = ReservationPlanning.allocate(partial, null, listOf(candidate(100000)), emptyList(), now.plusSeconds(86400))
+        assertThat(supplied.single().unpicked.quantityBase).isEqualTo(5000)
+        val totals = ReservationPlanning.supplies(listOf(partial), supplied)
+        assertThat(totals.single().issuedBase).isEqualTo("10000")
+        assertThat(totals.single().backorderBase).isEqualTo("0")
+        assertThat(ReservationPlanning.state(totals)).isEqualTo("PART_ISSUED")
+        val complete = ReservationPlanning.supplies(listOf(line.copy(issued = 15000)), emptyList())
+        assertThat(ReservationPlanning.state(complete)).isEqualTo("ISSUED")
+    }
 }

@@ -11,7 +11,7 @@ import java.util.UUID
 enum class ReservationValidationMode { NEW_ALLOCATION, BOUND_LIFECYCLE, HISTORICAL_READ, REPLAY }
 
 @Repository
-class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
+class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc, private val physical: MaterialPhysicalTotalsStore) {
     fun now(): Instant = jdbc.execute { sql -> sql.query("SELECT clock_timestamp()") { it.getTimestamp(1).toInstant() }.single() }
     fun demand(id: UUID): ReservationDemand = jdbc.execute { sql ->
         sql.query("SELECT * FROM inventory_document WHERE tenant_id=? AND id=? AND kind='DEMAND'", sql.tenant, id) {
@@ -22,6 +22,15 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
     }
     fun documents(workOrder: UUID): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_document WHERE tenant_id=? AND work_order_id=? AND kind='DEMAND' ORDER BY id LIMIT 101", sql.tenant, workOrder) { it.uuid("id") }
+    }
+    fun relatedDocuments(identities: List<UUID>): List<UUID> = jdbc.execute { sql ->
+        if (identities.isEmpty()) return@execute emptyList()
+        sql.query("""SELECT DISTINCT line.document_id FROM inventory_reservation reservation JOIN inventory_document_line line
+            ON line.tenant_id=reservation.tenant_id AND line.id=reservation.document_line_id
+            WHERE reservation.tenant_id=? AND reservation.state='OPEN' AND reservation.stock_identity_id=ANY(?)
+            ORDER BY line.document_id LIMIT 101""", sql.tenant, sql.connection.createArrayOf("uuid", identities.distinct().toTypedArray())) {
+            it.uuid("document_id")
+        }.also { if (it.size > 100) sql.fail(WarehouseErrorCode.MALFORMED_REQUEST) }
     }
     fun lockDocuments(ids: Collection<UUID>) = jdbc.execute { sql ->
         ids.distinct().sortedBy(UUID::toString).forEach { id ->
@@ -41,7 +50,7 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
         }
         val count = sql.value("SELECT count(*) FROM inventory_document_line WHERE tenant_id=? AND document_id=?", sql.tenant, document.id)!!.toLong()
         if (rows.isEmpty() || rows.size > 100 || rows.size.toLong() != count) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        rows
+        rows.map { it.copy(issued = physical.forDemand(document.workOrder, it.id).issued) }
     }
     fun rows(document: UUID): List<ReservationChange> = jdbc.execute { sql ->
         sql.query("""SELECT reservation.* FROM inventory_reservation reservation JOIN inventory_document_line line
@@ -82,13 +91,13 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
     }
     fun snapshot(operation: UUID, lines: List<ReservationLineSupply>) = jdbc.execute { sql ->
         lines.forEach { line -> sql.update("""INSERT INTO inventory_demand_supply_snapshot(id,tenant_id,operation_id,document_line_id,plan_line_id,
-            requested_base,reserved_unpicked_base,reserved_picked_base,backorder_base) VALUES (?,?,?,?,?,?,?,?,?)""", UUID.randomUUID(), sql.tenant, operation,
-            line.demandLineId, line.planLineId, line.requestedBase.toLong(), line.reservedUnpickedBase.toLong(), line.reservedPickedBase.toLong(), line.backorderBase.toLong()) }
+            requested_base,reserved_unpicked_base,reserved_picked_base,backorder_base,issued_base) VALUES (?,?,?,?,?,?,?,?,?,?)""", UUID.randomUUID(), sql.tenant, operation,
+            line.demandLineId, line.planLineId, line.requestedBase.toLong(), line.reservedUnpickedBase.toLong(), line.reservedPickedBase.toLong(), line.backorderBase.toLong(), line.issuedBase.toLong()) }
     }
     fun allocations(document: ReservationDemand): List<ReservationAllocation> = jdbc.execute { sql ->
         val bindings = sql.query("""SELECT allocation.*,reservation.*,allocation.id allocation_id,reservation.revision reservation_revision,
             document.customer_id,operation.actor_id,sku.name item_category,supply.id supply_id,supply.operation_id supply_operation_id,
-            supply.requested_base,supply.reserved_unpicked_base demand_unpicked,supply.reserved_picked_base demand_picked,supply.backorder_base
+            supply.requested_base,supply.reserved_unpicked_base demand_unpicked,supply.reserved_picked_base demand_picked,supply.backorder_base,supply.issued_base
             FROM inventory_reservation_allocation allocation
             JOIN inventory_reservation reservation ON reservation.tenant_id=allocation.tenant_id AND reservation.id=allocation.reservation_id
             JOIN inventory_document_line line ON line.tenant_id=reservation.tenant_id AND line.id=reservation.document_line_id
@@ -108,7 +117,7 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc) {
                 ReservationDemandSupply(it.uuid("supply_id"), it.uuid("supply_operation_id"), document.revision, document.planRevision,
                     it.getLong("requested_base").toString(), it.getLong("demand_unpicked").toString(), it.getLong("demand_picked").toString(),
                     Math.addExact(it.getLong("demand_unpicked"), it.getLong("demand_picked")).toString(), it.getLong("backorder_base").toString(),
-                    WarehouseBaseUnit.valueOf(it.getString("base_unit")), MaterialDemandState.valueOf(document.state)))
+                     WarehouseBaseUnit.valueOf(it.getString("base_unit")), MaterialDemandState.valueOf(document.state), it.getLong("issued_base").toString()))
         }
         if (bindings.size != rows(document.id).size) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         bindings
