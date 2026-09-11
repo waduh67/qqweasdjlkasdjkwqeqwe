@@ -89,6 +89,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
 
     private fun transition(context: MaterialPlanningContext, request: MaterialPlanCommand, metadata: WarehouseMutationMetadata, action: String): WarehouseOperationReceipt {
         val current = current(context, "inventory.request.manage")
+        receiptPermission(current, "inventory.request.view")
         revisions(context, request.expectedRevision, request.workOrderRevision)
         reason(request.reason)
         val canonical = canonical(context.workOrderId, request)
@@ -136,6 +137,11 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
     private fun canonical(workOrder: UUID, request: Any) = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("workOrderId" to workOrder, "request" to request)))
     private fun replay(context: MaterialPlanningContext, action: String, metadata: WarehouseMutationMetadata, canonical: WarehouseCanonicalPayload): WarehouseOperationReceipt? {
         receiptKey(metadata.idempotencyKey)
-        return commands.replay(context.workOrderId, action, metadata.idempotencyKey, canonical, context.authority, context.cutover)
+        val prior = commands.replay(context.workOrderId, action, metadata.idempotencyKey, canonical, context.authority, context.cutover) ?: return null
+        if (action in setOf("RESERVE", "RELEASE")) {
+            val owner = reservations.replay(prior.documentId, ReservationAction.valueOf(action), WarehouseMutationMetadata("material:${metadata.idempotencyKey}"))
+            if (owner.documentRevision != prior.documentRevision) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        }
+        return prior
     }
 }
