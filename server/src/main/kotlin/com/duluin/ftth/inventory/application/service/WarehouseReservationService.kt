@@ -27,6 +27,17 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
     private val mapper = jacksonObjectMapper()
 
     @Transactional(timeout = 30, rollbackFor = [Exception::class])
+    override fun replay(documentId: UUID, action: ReservationAction, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
+        receiptKey(metadata.idempotencyKey)
+        val prior = operations.findKey("warehouse.reservation.${action.name.lowercase()}", metadata.idempotencyKey)
+            ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (prior.resourceId != documentId) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val canonical = mapper.readTree(operations.identity(prior.receipt.operationId))
+        val request = mapper.treeToValue(canonical.path("request"), ReservationRequest::class.java)
+        return execute(documentId, action, request, metadata)
+    }
+
+    @Transactional(timeout = 30, rollbackFor = [Exception::class])
     override fun execute(documentId: UUID, action: ReservationAction, request: ReservationRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
         validate(action, request)
         receiptKey(metadata.idempotencyKey)

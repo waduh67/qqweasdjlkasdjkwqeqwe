@@ -6,6 +6,7 @@ import java.util.UUID
 
 interface InventoryReservationApi {
     fun execute(documentId: UUID, action: ReservationAction, request: ReservationRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    fun replay(documentId: UUID, action: ReservationAction, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun allocations(workOrderId: UUID): List<ReservationAllocation>
 }
 
