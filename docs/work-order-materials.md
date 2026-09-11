@@ -22,9 +22,23 @@ melalui route material belum diaktifkan oleh task ini.
   tetap diperiksa oleh pemilik inventory, termasuk saat membaca alokasi lama.
 
 Tidak ada dependensi inventory ke implementation workorder/fulfillment. Adapter
-workorder hanya menggunakan kontrak inventory/IAM/customer publik. Pekerjaan
-standalone `REPAIR` tanpa pelanggan dipetakan ke action `NETWORK`; `PREVENTIVE`
-juga tidak membutuhkan pelanggan atau langganan palsu.
+workorder hanya menggunakan kontrak inventory/IAM/customer publik. Customer dan
+subscription adalah tautan nullable yang independen dari action. `REPAIR` tetap
+`REPAIR` dengan maupun tanpa customer; tidak ada inferensi `NETWORK` dari null.
+
+| Tipe WO saat ini | Action/default template |
+| --- | --- |
+| PSB | INSTALL |
+| REPAIR | REPAIR |
+| MIGRATION | REPLACE |
+| DISMANTLE | REMOVE |
+| PREVENTIVE | PREVENTIVE |
+
+Template `REPAIR/NETWORK` tetap dapat dikonfigurasi tetapi tidak dipilih oleh
+heuristik customer; penggunaannya memerlukan discriminator eksplisit dari pemilik
+WO yang belum disediakan tipe WO saat ini. Template `REPAIR/RETURN_CUSTOMER_RMA`
+juga dapat dipublikasikan secara durable tanpa mengubah default REPAIR atau
+mengaktifkan workflow fisik RMA. Tidak ada customer/subscription palsu.
 
 ## HTTP
 
@@ -112,6 +126,22 @@ berpindah atomik. SKU pada template aktif tidak dapat diarsipkan.
   resource, revision dan body asli atomik dengan perubahan. Replay memeriksa
   current authority dan WO lebih dahulu; key lain dengan expected plan lama
   tidak membuat plan/demand kedua.
+- Outer reserve/release replay memanggil `InventoryReservationApi.replay` sebelum
+  mengembalikan body tersimpan. Pemilik reservasi memuat canonical command asli
+  dan menjalankan ulang jalur otorisasi replay yang sama dengan `execute`, termasuk
+  source allocation/location, warehouse/site/area scope dan izin action saat ini.
+  Tidak ada rekonstruksi alokasi dari plan terbaru atau validasi scope duplikat
+  yang lebih lemah. Izin request view/manage diperiksa sebelum outer response.
+- SUBMITTED membutuhkan tepat satu submission/deklarasi. MATERIAL_REQUIRED
+  membutuhkan satu demand tenant/WO/plan/revisi yang sama, seluruh line SKU/unit/
+  quantity/tracking/continuousCut cocok, dan initial demand-line revision0.
+  Revisi header demand dapat maju melalui reservasi tanpa menulis ulang line.
+  NONE membutuhkan declaration dengan demand null, reason dan nol line.
+- V175.10 memeriksa final state secara deferred, dengan tenant assertion internal
+  pada validator, bukan companion trigger saja. Submission dapat dibuat sebelum
+  atau sesudah update state plan dalam transaksi yang akhirnya lengkap. Validator
+  yang sama dipanggil summary/history; missing/ambiguous binding menghasilkan
+  `409 SOURCE_NOT_VERIFIED`, bukan requested/backorder nol. Data lama tidak direpair.
 
 Route `/pick`, `/dispatch`, `/acknowledge`, `/report-use`, `/return`, `/reallocate`
 dan `/settlement` tetap conflict409 untuk pemanggil yang dapat membaca WO. Nilai
@@ -121,24 +151,28 @@ binding aktual sebelum suatu keputusan dapat memposting.
 
 ## Migrasi dan verifikasi
 
-Manifest diperbarui sebelum V175.8 dan V175.9 dibuat. Seluruh predecessor tetap
+Manifest diperbarui sebelum V175.8, V175.9 dan koreksi V175.10 dibuat. Seluruh predecessor tetap
 byte-identical; V176+ tidak disentuh. Hash SHA256:
 
 | Migration | SHA256 |
 | --- | --- |
 | V175.8 | `0e81d6a61f60e77a390731d495ad8e875ce94d04f5a1b8d6e0bfe18b88aaf891` |
 | V175.9 | `dd300b99c171951220ff2ee60e62dceefa4dc8882d3f355482e1bddc67a468e9` |
+| V175.10 | `88e9e481dc51c759d43f01407e115705463a6a159cd1cf2080f4d73c3f6c3407` |
 
-Gate exact dijalankan dua kali: masing-masing34 test, zero failure/skipped:
+Gate exact sesudah koreksi AV13 dijalankan dua kali: masing-masing69 test,
+zero failure/skipped (8m51s dan8m34s):
 
 ```sh
 scripts/warehouse/qa.sh server --tests '*WorkOrderMaterialsIT*' --rerun-tasks --no-parallel
 ```
 
-Regresi task1-13 dijalankan sebagai tiga command bounded/sequential:422 test
-foundation/schema/posting/concurrency/contracts,206 master/receipt/query/reservation,
-dan99 approval/policy/material. Total727, zero failure/skipped, termasuk
-ModularityTests dan M03/schema gates. WO context adapter juga diuji langsung.
+Regresi task1-13 dijalankan bounded/sequential:422 test foundation/schema/posting/
+concurrency/contracts,87 master/query,93 receipt,26 reservation,65 approval/policy
+dan69 material. Total762 test unik, zero failure/skipped, termasuk ModularityTests
+dan M03/schema gates. Batch master/receipt/query/reservation gabungan sempat mencapai
+batas30menit sebelum laporan final; run terinterupsi tidak dihitung sebagai lulus,
+dan seluruh keluarga tersebut diulang dalam batch lebih kecil yang lulus.
 
 Clean artifact:
 
@@ -146,19 +180,30 @@ Clean artifact:
 ./gradlew :server:clean :server:bootJar --no-build-cache --rerun-tasks --no-parallel
 ```
 
-Build berhasil37s. SHA256 bootJar yang digunakan untuk packaged HTTP:
-`168a9945a7abd10d7817eb6a85694c63b2ca2c1bbf7c3cd33d9a80739ed6f110`.
+Build koreksi berhasil43s. SHA256 bootJar yang digunakan untuk packaged HTTP:
+`b8f4231f13276f50dbe168f482b3aef2fdd49f49f7fc45786518dd2561dc35e4`.
 
 Manual packaged HTTP memakai schema baru pada `warehouse_test`, application role
 `warehouse_app` non-owner/NOSUPERUSER/NOBYPASSRLS, tanpa SQL seed material plan.
 Signup, area, master, receipt/putaway, customer dan WO dibuat melalui HTTP.
 Template lalu manual revision menghasilkan120000mm requested,60000 reserved dan
-60000 backorder; SQL menunjukkan satu reservation60000 dan satu demand. SIGKILL
-lalu restart memberi exact replay; release, bounded history, empty-required400,
-future409 dan network NONE tanpa customer juga diuji. SMTP health eksternal
-dimatikan hanya pada harness lokal karena tidak ada kredensial SMTP.
+60000 backorder; SQL menunjukkan satu reservation60000 dan satu demand. Scope
+operator dicabut: summary, task10 owner replay dan outer replay semuanya404.
+SIGKILL/restart tetap404; setelah scope dikembalikan, replay byte-identical.
+REPAIR tanpa customer memilih11000, bukan template NETWORK22000. Publication RMA,
+release, bounded history, empty-required400, future409 dan NONE tanpa customer lulus.
+
+Harness awalnya boot pada175.9, membuat plan melalui HTTP, lalu mereproduksi raw
+`warehouse_app` UPDATE SUBMITTED tanpa submission yang berhasil COMMIT. Setelah
+upgrade175.10 tanpa repair/disable trigger, GET summary/history plan itu409.
+Percobaan UPDATE yang sama pada plan baru setelah upgrade gagal saat commit dengan
+SQLSTATE23514 `warehouse_material_submission_ck`. SMTP health eksternal dimatikan
+hanya pada harness lokal karena tidak ada kredensial SMTP.
 
 Evidence lokal berada di `.omo/evidence/warehouse-workorder-asset-provenance/task-13/`.
+Koreksi verifier disimpan pada subdirektori `av13/`, termasuk raw SQLSTATE dan
+observasi upgrade/corruption. Counterexample verifier tetap didokumentasikan;
+gate34 lama bukan bukti bahwa ketiga bug tersebut tidak pernah ada.
 Test posted-fact projection memakai posting owner task5 dengan dokumen fixture,
 bukan implementasi HTTP picking/usage task14-16. Invalidation pending/terminal
 dibuktikan melalui owner port dengan approval receipt task12 yang nyata.
