@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.application.port.outbound.InventoryApprovalAuditRepository
 import com.duluin.ftth.inventory.application.port.outbound.InventoryApprovalPolicyRepository
 import com.duluin.ftth.inventory.application.port.outbound.InventoryApprovalRepository
@@ -268,4 +269,28 @@ class FakeSerializedAssets : com.duluin.ftth.inventory.application.port.outbound
 
     override fun findByOperation(tenantId: UUID, operationKey: String): SerializedAsset? =
         operationKeys[tenantId to operationKey]?.let { rows[it] }
+}
+
+/**
+ * [IamApi] yang MENOLAK dipanggil, dipakai unit test kebijakan persetujuan.
+ *
+ * Unit test di modul ini berjalan TANPA `TenantContext`, dan dalam keadaan itu
+ * `InventoryApprovalPolicyService` memang tidak boleh menanyakan pemegang peran ke `iam` —
+ * jawaban atas "siapa Kepala Gudang" tanpa tenant aktif adalah jawaban milik tenant yang
+ * salah, atau tidak ada.
+ *
+ * Ganda yang mengembalikan daftar kosong akan membuat pelanggaran aturan itu LOLOS diam-diam:
+ * tesnya tetap hijau, dan tidak ada yang tahu bahwa jalur produksinya baru saja meresolusi
+ * peran di luar konteks tenant. Yang melempar mengubahnya jadi kegagalan yang menunjuk persis
+ * ke barisnya.
+ */
+object RefusingIamApi : IamApi {
+    override fun findUser(id: UUID) = fail()
+    override fun usersByIds(ids: Set<UUID>) = fail()
+    override fun usersWithRole(roleName: String) = fail()
+    override fun primaryEmailForTenant(tenantId: UUID) = fail()
+    override fun areasByIds(ids: Set<UUID>) = fail()
+
+    private fun fail(): Nothing =
+        error("IamApi dipanggil tanpa TenantContext — resolusi peran approval tidak boleh menempuh jalur ini")
 }

@@ -13,13 +13,13 @@ keadaan sebenarnya.
 ./gradlew :server:test --rerun          # ~18 menit
 ```
 
-**Garis dasar yang SEHAT: 1733 tes, 3 gagal.**
+**Garis dasar yang SEHAT: 1735 tes, 2–3 gagal.**
 
 | Tes yang gagal | Sifat |
 | --- | --- |
 | `ProvisioningMigrationCompatibilityIT > v125 ...` | **Pra-ada**, gagal identik di `main`. Tesnya memigrasi sampai V124 lalu memakai kolom yang baru lahir di V125. |
 | `ProvisioningMigrationCompatibilityIT > v127 ...` | **Pra-ada**, sama, untuk V126/V127. |
-| `VpnIT > provisioning end-to-end ...` | **Flaky.** Lulus di sebagian run, gagal di sebagian lain, tanpa perubahan kode. Belum ditelusuri. |
+| `VpnIT > provisioning end-to-end ...` | **Flaky.** Lulus di sebagian run, gagal di sebagian lain, tanpa perubahan kode. Belum ditelusuri — jadi 2 kegagalan pada run yang beruntung, 3 pada yang tidak. |
 
 Kalau ada kegagalan DI LUAR tiga ini, itu regresi — jangan lanjut sebelum beres.
 
@@ -58,6 +58,7 @@ Dua jebakan kecil yang sudah memakan korban:
 | Hapus buku unit berserial | **Selesai.** ONT hilang/rusak/write-off punya jalur, lewat `/adjustments`. |
 | `AWAITING_RECEIPT` | **Selesai** (V188). Aset terdaftar tapi belum jadi stok — satu-satunya status yang tidak pernah punya baris di proyeksi saldo. |
 | Pemisahan izin transfer | **Selesai.** `inventory.movement.transfer` terpisah dari `.issue`. |
+| Approver dari peran | **Selesai.** Tier boleh berbunyi "Kepala Gudang" saja; pemegangnya diresolusi ke `iam` setiap kali dibaca dan tidak pernah ikut tersimpan. Pemegang nonaktif otomatis gugur. |
 | Layar/UI gudang | **BELUM ADA.** Seluruhnya baru API. |
 
 ### Poin 4 — Pesanan & pelanggan
@@ -105,8 +106,6 @@ Dua jebakan kecil yang sudah memakan korban:
 ## 4. Celah yang diketahui (bukan keputusan, memang belum dikerjakan)
 
 **Gudang**
-- `IamApi.usersWithRole` sudah ada di `iam` tapi **belum disambungkan** ke matriks
-  approval. Selama belum, tenant tetap harus menyebut UUID approver satu per satu.
 - `REVERSAL` tidak membatalkan perpindahan status aset (`settlesSerialTo` null). Belum bisa
   terjadi — `ledger.reverse()` tidak punya satu pun pemanggil di kode produksi — tapi begitu
   jalurnya dibuka lewat endpoint, celah ini ikut terbuka.
@@ -170,9 +169,10 @@ Lompatan nomor TIDAK masalah bagi Flyway.
 
 ## 6. Langkah berikutnya yang disarankan, berurutan
 
-1. Sambungkan `IamApi.usersWithRole` ke matriks approval gudang (pondasinya sudah ada).
-2. UI gudang: stok per lokasi, permintaan restock + antrean approval, material per WO dengan
-   scan serial.
-3. UI pesanan: antrean, layar impor CSV (pratinjau → commit), daftar pesanan bertanda sistem.
-4. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
-5. Uji poin 1 (PPPoE/BRAS) end-to-end.
+1. UI gudang: stok per lokasi, permintaan restock + antrean approval, material per WO dengan
+   scan serial. Layar pengaturan persetujuan harus menampilkan `approverIds` dan
+   `roleHolderIds` TERPISAH — yang kedua tidak bisa dihapus dari layar itu, melainkan dari
+   pengaturan pengguna.
+2. UI pesanan: antrean, layar impor CSV (pratinjau → commit), daftar pesanan bertanda sistem.
+3. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
+4. Uji poin 1 (PPPoE/BRAS) end-to-end.

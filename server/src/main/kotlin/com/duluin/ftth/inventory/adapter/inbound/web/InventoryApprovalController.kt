@@ -141,15 +141,35 @@ data class ApprovalPolicyView(
     companion object {
         fun of(matrix: InventoryApprovalPolicyMatrix) = ApprovalPolicyView(
             matrix.type, matrix.expiry.toHours(), matrix.emergencyAllowed,
-            // Tier bawaan belum punya approver konkret; bendera ini yang memberi tahu UI bahwa
-            // permintaan bertipe ini akan DITOLAK sampai administrator mengisinya.
-            matrix.tiers.all { it.approverIds.isNotEmpty() },
-            matrix.tiers.map { ApprovalTierView(it.number, it.minimumAmount, it.approverRole, it.approverIds) },
+            // Bendera ini yang memberi tahu UI bahwa permintaan bertipe ini akan DITOLAK sampai
+            // ada yang mengisinya. Dihitung dari penyetuju EFEKTIF: tier yang daftar namanya
+            // kosong tapi perannya sudah dipegang orang adalah tier yang SIAP PAKAI, dan
+            // menandainya "belum dikonfigurasi" akan mengirim administrator mengetik UUID
+            // yang tidak ia butuhkan.
+            matrix.tiers.all { it.effectiveApproverIds.isNotEmpty() },
+            matrix.tiers.map {
+                ApprovalTierView(it.number, it.minimumAmount, it.approverRole, it.approverIds, it.roleHolderIds)
+            },
         )
     }
 }
 
-data class ApprovalTierView(val number: Int, val minimumAmount: Long, val approverRole: String, val approverIds: Set<UUID>)
+/**
+ * Kedua daftar penyetuju dikirim TERPISAH, bukan sudah tergabung.
+ *
+ * UI pengaturan perlu membedakannya: [approverIds] boleh dihapus administrator di layar itu,
+ * [roleHolderIds] tidak — yang terakhir berubah dengan menugaskan peran di pengaturan
+ * pengguna. Kalau keduanya tiba sebagai satu daftar, layar akan menampilkan tombol hapus di
+ * sebelah nama yang tak bisa dihapus dari sana, dan administrator akan menyimpulkan
+ * penyimpanannya gagal.
+ */
+data class ApprovalTierView(
+    val number: Int,
+    val minimumAmount: Long,
+    val approverRole: String,
+    val approverIds: Set<UUID>,
+    val roleHolderIds: Set<UUID>,
+)
 
 data class EmergencyOverrideView(
     val approvalId: UUID,

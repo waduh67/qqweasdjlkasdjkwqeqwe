@@ -44,7 +44,7 @@ class InventoryApprovalServiceTest {
         configuredTypes: List<InventoryApprovalType> = InventoryApprovalType.entries,
     ): Fixture {
         val audit = FakeInventoryApprovalAudit()
-        val policies = InventoryApprovalPolicyService(FakeInventoryApprovalPolicies(), audit)
+        val policies = InventoryApprovalPolicyService(FakeInventoryApprovalPolicies(), audit, RefusingIamApi)
         configuredTypes.forEach { type ->
             policies.configure(InventoryApprovalPolicyMatrix(tenant, type, expiry, emergencyAllowed, tiers))
         }

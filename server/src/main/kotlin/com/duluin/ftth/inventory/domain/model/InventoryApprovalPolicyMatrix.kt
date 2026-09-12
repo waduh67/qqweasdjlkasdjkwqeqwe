@@ -7,17 +7,37 @@ import java.util.UUID
 /**
  * Satu baris matriks persetujuan: "mulai nilai sekian, peran ini harus ikut menyetujui".
  *
- * [approverRole] adalah nama peran yang berwenang, [approverIds] adalah orang-orang yang
- * saat ini memegang peran itu. Keduanya disimpan SENGAJA: nama peran yang menjelaskan
- * MENGAPA seseorang boleh menyetujui (dibaca manusia saat audit, tidak ikut basi ketika
- * personel berganti), daftar id yang dipakai mesin untuk benar-benar menguji wewenang.
+ * [approverRole] menjelaskan MENGAPA seseorang boleh menyetujui — kalimat yang tetap benar
+ * saat dibaca auditor dua tahun lagi, ketika orangnya sudah pindah bagian. Siapa orangnya
+ * datang dari dua sumber yang SENGAJA dipisah dan tidak pernah dilebur:
+ *
+ * - [approverIds]: orang yang DITUNJUK NAMANYA oleh administrator. Tersimpan di jsonb.
+ * - [roleHolderIds]: pemegang [approverRole] yang aktif, hasil resolusi ke modul `iam`
+ *   setiap kali matriks ini dibaca. TIDAK PERNAH ikut tersimpan.
+ *
+ * Peleburannya jadi satu kolom terlihat menggoda dan justru merusak: begitu pemegang peran
+ * ikut tertulis ke jsonb, ia BEKU di sana. Orang yang besok resign tetap tercatat sebagai
+ * penyetuju yang sah, dan orang yang besok diangkat jadi Kepala Gudang tidak pernah masuk —
+ * persis kebasian yang membuat resolusi lewat peran ini dibangun. Maka yang disimpan hanya
+ * yang diketik manusia; sisanya dihitung ulang terus-menerus.
  */
 data class ApprovalTierRule(
     val number: Int,
     val minimumAmount: Long,
     val approverRole: String,
-    val approverIds: Set<UUID>,
-)
+    val approverIds: Set<UUID> = emptySet(),
+    val roleHolderIds: Set<UUID> = emptySet(),
+) {
+    /**
+     * Gabungan keduanya — inilah yang benar-benar diuji saat seseorang menyetujui.
+     *
+     * Gabungan, BUKAN "peran kalau ada, kalau tidak baru daftar nama". Bentuk berjenjang
+     * membuat penunjukan manual seorang pengganti diam-diam tak berlaku begitu perannya
+     * kebetulan punya pemegang, dan administrator yang baru saja menambahkan namanya tidak
+     * akan mendapat satu pun pesan yang menjelaskan kenapa ia tetap tak bisa menyetujui.
+     */
+    val effectiveApproverIds: Set<UUID> get() = approverIds + roleHolderIds
+}
 
 /**
  * Kebijakan persetujuan milik SERVER untuk satu jenis permintaan gudang di satu tenant.
@@ -78,7 +98,7 @@ data class InventoryApprovalPolicyMatrix(
      * kepala gudang dan tidak ada yang menyadarinya sampai barangnya hilang.
      */
     fun toPolicy(): InventoryApprovalPolicy {
-        val empty = tiers.filter { it.approverIds.isEmpty() }
+        val empty = tiers.filter { it.effectiveApproverIds.isEmpty() }
         if (empty.isNotEmpty()) {
             throw ValidationException(
                 "Matriks persetujuan ${type.name} belum menunjuk approver untuk tier " +
@@ -88,7 +108,7 @@ data class InventoryApprovalPolicyMatrix(
         }
         return InventoryApprovalPolicy(
             version,
-            tiers.sortedBy { it.minimumAmount }.map { ApprovalTier(it.number, it.minimumAmount, it.approverIds) },
+            tiers.sortedBy { it.minimumAmount }.map { ApprovalTier(it.number, it.minimumAmount, it.effectiveApproverIds) },
             expiry,
             emergencyAllowed,
         )

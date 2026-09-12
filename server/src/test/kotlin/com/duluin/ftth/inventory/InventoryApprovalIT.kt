@@ -416,4 +416,110 @@ class InventoryApprovalIT {
         assertThat(JsonPath.read<List<Int>>(overrides, "$[0].bypassedTiers")).containsExactly(1, 2)
         assertThat(JsonPath.read<String>(overrides, "$[0].reason")).contains("gardu")
     }
+
+    /**
+     * Tier yang menyebut PERAN mengambil penyetujunya sendiri dari modul iam.
+     *
+     * Perhatikan bahwa administrator di tes ini tidak pernah mengetik satu pun UUID penyetuju:
+     * ia membuat peran "Kepala Gudang", menugaskannya ke seseorang, lalu menulis kebijakan yang
+     * berbunyi persis seperti kalimat di ruang rapat. Sampai sebelum ini, bentuk itu MUSTAHIL —
+     * kebijakan hanya bisa menunjuk orang, jadi setiap pergantian personel menuntut seseorang
+     * ingat membuka layar persetujuan gudang dan menyunting daftar UUID di sana. Yang lupa
+     * tidak mendapat peringatan apa pun; permintaan restock-nya sekadar menggantung PENDING
+     * sampai kedaluwarsa, karena dari sudut pandang sistem approver-nya memang "ada".
+     */
+    @Test
+    fun `tier yang menyebut peran mengambil penyetujunya dari iam tanpa satu pun uuid diketik`() {
+        val admin = admin("appr-role")
+        val kepalaGudang = role(admin.token, "Kepala Gudang")
+        val budi = user(admin.token, kepalaGudang)
+
+        configure(admin.token, "ADJUSTMENT", roleTier(1, 0, "Kepala Gudang"))
+
+        val policies = getJson("/api/inventory/approvals/policies", admin.token)
+        val adjustment = "$[?(@.type=='ADJUSTMENT')]"
+        // Yang TERSIMPAN memang kosong — dan wajib tetap kosong. Kalau pemegang peran ikut
+        // tertulis ke sini, ia beku: Budi tetap jadi penyetuju sah setelah resign, dan
+        // penggantinya tidak pernah masuk.
+        assertThat(JsonPath.read<List<String>>(policies, "$adjustment.tiers[*].approverIds[*]")).isEmpty()
+        assertThat(JsonPath.read<List<String>>(policies, "$adjustment.tiers[*].roleHolderIds[*]"))
+            .containsExactly(budi.toString())
+        // Dan tier tanpa satu pun UUID tersimpan itu tetap dilaporkan SIAP PAKAI.
+        assertThat(JsonPath.read<List<Boolean>>(policies, "$adjustment.configured")).containsExactly(true)
+
+        val location = warehouse(admin.token)
+        val kabel = item(admin.token)
+        val result = post(
+            "/api/inventory/adjustments", admin.token,
+            """{"locationId":"$location","custodianId":"$custodian","kind":"CORRECTION","increase":true,
+                "reason":"koreksi hitung","operationKey":"adj-${uniq()}","payloadHash":"adj-hash",
+                "lines":[{"itemId":"$kabel","quantity":12}]}""",
+            expected = 201,
+        )
+        // Snapshot yang dibekukan di permintaan berisi orangnya, bukan nama perannya: audit
+        // dua tahun lagi harus bisa menjawab "siapa yang BOLEH menyetujui saat itu", dan peran
+        // yang sudah berganti pemegang tidak bisa menjawabnya.
+        assertThat(JsonPath.read<List<String>>(result, "$.approval.policy.tiers[*].approverIds[*]"))
+            .containsExactly(budi.toString())
+
+        val approvalId = JsonPath.read<String>(result, "$.approval.approvalId")
+        assertThat(decide(admin.tenantId, approvalId, budi, InventoryApprovalDecision.APPROVE, "d-role").status.name)
+            .isEqualTo("APPROVED")
+        assertThat(balance(admin.token, kabel)).isEqualTo(12)
+    }
+
+    /**
+     * Pemegang peran yang DINONAKTIFKAN berhenti menjadi penyetuju, dan penolakannya menyebut
+     * sebab itu.
+     *
+     * Sebabnya yang penting, bukan penolakannya. "Tier 1 belum punya approver" akan mengirim
+     * administrator ke layar persetujuan gudang, dan di sana ia menemukan peran "Kepala Gudang"
+     * terpasang rapi persis seperti yang ia setel — lalu menyimpulkan sistemnya yang rusak.
+     * Yang harus ia baca adalah bahwa orangnya sudah nonaktif, karena itu yang menentukan ia
+     * pergi ke pengaturan pengguna, bukan ke sini.
+     */
+    @Test
+    fun `pemegang peran yang nonaktif tidak lagi menyetujui dan penolakannya menyebut sebabnya`() {
+        val admin = admin("appr-off")
+        val kepalaGudang = role(admin.token, "Kepala Gudang")
+        val budi = user(admin.token, kepalaGudang)
+        configure(admin.token, "ADJUSTMENT", roleTier(1, 0, "Kepala Gudang"))
+
+        post("/api/users/$budi/disable", admin.token, "")
+
+        val policies = getJson("/api/inventory/approvals/policies", admin.token)
+        val adjustment = "$[?(@.type=='ADJUSTMENT')]"
+        assertThat(JsonPath.read<List<String>>(policies, "$adjustment.tiers[*].roleHolderIds[*]")).isEmpty()
+        assertThat(JsonPath.read<List<Boolean>>(policies, "$adjustment.configured")).containsExactly(false)
+
+        val location = warehouse(admin.token)
+        val kabel = item(admin.token)
+        val ditolak = post(
+            "/api/inventory/adjustments", admin.token,
+            """{"locationId":"$location","custodianId":"$custodian","kind":"CORRECTION","increase":true,
+                "reason":"koreksi hitung","operationKey":"adj-${uniq()}","payloadHash":"adj-hash",
+                "lines":[{"itemId":"$kabel","quantity":12}]}""",
+            expected = 400,
+        )
+        assertThat(ditolak).contains("nonaktif").contains("Kepala Gudang")
+        assertThat(balance(admin.token, kabel)).isZero()
+    }
+
+    private fun role(token: String, name: String): String =
+        JsonPath.read(post("/api/roles", token, """{"name":"$name"}""", expected = 201), "$.id")
+
+    /** Pengguna baru pemegang [roleId], dikembalikan sebagai id — itu yang dipakai jalur approval. */
+    private fun user(token: String, roleId: String): UUID {
+        val handle = "gudang${uniq()}"
+        val created = post(
+            "/api/users", token,
+            """{"email":"$handle@gudang.test","name":"Budi $handle","password":"$pass","roleIds":["$roleId"]}""",
+            expected = 201,
+        )
+        return UUID.fromString(JsonPath.read(created, "$.id"))
+    }
+
+    /** Tier yang HANYA menyebut peran — tanpa `approverIds` sama sekali. Itu intinya. */
+    private fun roleTier(number: Int, minimumAmount: Long, role: String) =
+        """{"number":$number,"minimumAmount":$minimumAmount,"approverRole":"$role"}"""
 }
