@@ -83,8 +83,10 @@ class MaterialUsageStore(private val jdbc: WarehouseCommandJdbc) {
     fun get(id: UUID): MaterialUsageSnapshot = mapper.readValue(body(id), MaterialUsageSnapshot::class.java)
 
     fun body(id: UUID): String = jdbc.execute { sql ->
-        sql.value("""SELECT snapshot.frozen_snapshot FROM inventory_usage_snapshot snapshot JOIN inventory_material_usage usage
+        val body = sql.value("""SELECT snapshot.frozen_snapshot FROM inventory_usage_snapshot snapshot JOIN inventory_material_usage usage
             ON usage.tenant_id=snapshot.tenant_id AND usage.id=snapshot.id WHERE snapshot.tenant_id=? AND snapshot.id=?""", sql.tenant, id)
             ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+        sql.value("SELECT warehouse_assert_material_usage(?,?)", sql.tenant, id)
+        body
     }
 }

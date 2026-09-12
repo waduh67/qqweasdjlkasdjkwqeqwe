@@ -87,7 +87,10 @@ Flag fakta material `installed` yang sudah ada berarti material fisik terpakai,
 bukan assignment perangkat. Settlement task17, return/transfer/closure task18,
 scrap, customer topology, provisioning, UI dan mobile tetap di luar task16.
 
-Migrasi forward V175.15-V175.20 mengikuti manifest. Tabel baru FORCE RLS,
+Migrasi forward V175.15-V175.21 mengikuti manifest. Tabel baru FORCE RLS,
 append-only dan composite tenant references; validator deferred memeriksa tenant
 di dalam fungsi serta exact receipt/posting/fact/snapshot binding. V175.14 dan
 seluruh predecessor tidak diubah.
+Penambahan header movement, leg, atau fakta pada posting usage juga memeriksa
+ulang snapshot lengkap. Satu operation hanya boleh mempunyai satu movement;
+pembacaan/replay menolak binding yang tidak lengkap tanpa memperbaiki histori.
