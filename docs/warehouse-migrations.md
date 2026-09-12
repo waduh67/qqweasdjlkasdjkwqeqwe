@@ -16,12 +16,16 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 usage extension | V175.15, V175.16, V175.17, V175.18, V175.19, V175.20, V175.21 | 16 | Immutable acknowledged physical usage lines, standalone material facts and explicit NONE snapshots; internally tenant-scoped receipt/posting/fact bindings; projection-rebuild-safe consumed guard and terminal consumption fence; separate source-plan and current WO revisions; final-state projection validation and sealed posting graph |
 | M03 consumed truth correction | V175.22 | 16 | Immutable-history-anchored consumed projection and terminal lineage validation, including DELETE and exact transactional rebuild |
 | M03 fulfillment settlement | V175.23, V175.24, V175.25, V175.26, V175.27, V175.28, V175.29 | 17 | Immutable approval applicability and usage snapshots; non-posting settlement receipts and internally scoped completion constraints; normalized SQL applicability array comparison; explicit BNG applicability, replay binding, terminal checkpoint seal, visit-link insertion fence and canonical deferred scope entry |
-| M03 fulfillment owner correction | V175.30, V175.31, V175.32, V175.33 | 17 | Authoritative order/customer and visit bindings, owner-local subscription/BNG/visit receipts, captured owner transitions, complete effect and outbox lineage validation with internal tenant assertions; explicit parameter binding on reads |
+| M03 fulfillment owner correction | V175.30, V175.31, V175.32, V175.33, V175.34 | 17 | Authoritative order/customer and visit bindings, owner-local subscription/BNG/visit receipts, captured owner transitions, complete effect and outbox lineage validation with internal tenant assertions; explicit read parameters and transaction-correlated BNG handoff fingerprints |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M03: reservation task17
+
+`V175_34__warehouse_fulfillment_bng_handoffs.sql` is reserved before SQL creation.
+Detached DEPROVISION and shared SYNC_GROUP handoffs are bound to their approval
+transaction and immutable payload fingerprints, not an optional access FK alone.
 
 `V175_33__warehouse_fulfillment_owner_read_binding.sql` is reserved before SQL
 creation to disambiguate the read validator parameter from checkpoint.target_id.
