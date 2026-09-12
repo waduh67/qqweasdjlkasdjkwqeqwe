@@ -20,10 +20,15 @@ import { WarehouseCountPanel } from './WarehouseCountPanel'
 import { WarehouseMasterDataPanel } from './WarehouseMasterDataPanel'
 
 /**
- * Data acuan yang dipakai SEMUA panel gudang untuk menerjemahkan id jadi nama.
+ * Data acuan untuk PEMILIH FORM dan panel master data gudang.
+ *
+ * Bukan lagi untuk menamai baris daftar: read model gudang membawa sendiri nama item, jenis
+ * lokasi, dan nama orangnya, jadi tabel stok/ledger/persetujuan TIDAK bergantung pada isi
+ * acuan ini sama sekali. Yang tersisa adalah daftar pilihan — item mana yang boleh diterima,
+ * lokasi mana yang boleh dituju, siapa yang boleh dipilih jadi pemegang custody.
  *
  * Dimuat sekali di kulit halaman lalu diturunkan, bukan diambil ulang tiap panel: pindah tab
- * berarti tiga request master data lagi, dan di jaringan lapangan itu membuat tabel berkedip
+ * berarti tiga request master data lagi, dan di jaringan lapangan itu membuat formulir berkedip
  * kosong setiap kali petugas bolak-balik antara "Stok" dan "Mutasi".
  */
 export interface WarehouseReference {
@@ -62,7 +67,8 @@ export function WarehouseOperationsPage() {
     }
     // Direktori pengguna DISENGAJA di luar Promise.all dan kegagalannya ditelan: petugas
     // gudang sering tidak punya `iam.user.view`, dan 403 di sini tidak boleh membuat seluruh
-    // layar stok ikut kosong. Tanpa direktori, id penyetuju/custodian tampil apa adanya.
+    // layar stok ikut kosong. Tanpa direktori yang hilang hanya isi pemilih "pemegang custody"
+    // di formulir — daftar baca tetap bernama lengkap karena namanya datang dari read model.
     try {
       setUsers(await listUserDirectory())
     } catch {
@@ -151,7 +157,11 @@ const ALL_TABS: readonly { readonly key: Tab; readonly label: string; readonly p
   },
   { key: 'ledger', label: 'Riwayat mutasi', permissions: ['inventory.movement.view'] },
   { key: 'approvals', label: 'Persetujuan', permissions: ['inventory.approval.view'] },
-  { key: 'counts', label: 'Stock opname', permissions: ['inventory.count.perform', 'inventory.count.approve'] },
+  // `inventory.count.view` dulu tidak ada: daftar opname dijaga `.perform`, sehingga pemegang
+  // `.approve` saja melihat tabnya tapi kena 403 di isinya. Ketiganya didaftarkan karena izin
+  // di repo ini di-seed dari kode dan peran rakitan tangan TIDAK di-backfill — menghapus dua
+  // yang lama justru akan menutup tab bagi petugas yang hari ini memakainya.
+  { key: 'counts', label: 'Stock opname', permissions: ['inventory.count.view', 'inventory.count.perform', 'inventory.count.approve'] },
   { key: 'master', label: 'Master data', permissions: ['inventory.location.view', 'inventory.item.view'] },
 ]
 

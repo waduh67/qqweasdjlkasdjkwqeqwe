@@ -3,9 +3,12 @@ package com.duluin.ftth.inventory
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.duluin.ftth.inventory.application.service.CreateInventoryApproval
 import com.duluin.ftth.inventory.application.service.DecideInventoryApproval
 import com.duluin.ftth.inventory.application.service.InventoryApprovalService
 import com.duluin.ftth.inventory.domain.model.InventoryApprovalDecision
+import com.duluin.ftth.inventory.domain.model.InventoryApprovalRequest
+import com.duluin.ftth.inventory.domain.model.InventoryApprovalType
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.inventory.domain.model.InventoryApprovalStatus
 import com.duluin.ftth.inventory.domain.model.InventoryInsufficientBalance
@@ -53,7 +56,11 @@ class InventoryApprovalIT {
 
     private fun uniq() = UUID.randomUUID().toString().replace("-", "").substring(0, 8)
 
-    private data class Admin(val token: String, val tenantId: UUID)
+    /**
+     * [userId] dan [name] ikut dibawa karena jalur persetujuan sekarang memulangkan NAMA, dan
+     * tes yang membandingkan nama harus tahu nama sebenarnya — bukan menebaknya dari slug.
+     */
+    private data class Admin(val token: String, val tenantId: UUID, val userId: UUID, val name: String)
 
     private fun admin(prefix: String): Admin {
         val slug = "$prefix${uniq()}"
@@ -63,7 +70,9 @@ class InventoryApprovalIT {
             post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
         ).andReturn().response.contentAsString
-        return Admin(JsonPath.read(json, "$.accessToken"), result.tenant.id)
+        val token = JsonPath.read<String>(json, "$.accessToken")
+        val me = getJson("/api/me", token)
+        return Admin(token, result.tenant.id, UUID.fromString(JsonPath.read(me, "$.id")), JsonPath.read(me, "$.name"))
     }
 
     private fun post(url: String, token: String, body: String, expected: Int = 200): String =
@@ -509,14 +518,167 @@ class InventoryApprovalIT {
         JsonPath.read(post("/api/roles", token, """{"name":"$name"}""", expected = 201), "$.id")
 
     /** Pengguna baru pemegang [roleId], dikembalikan sebagai id — itu yang dipakai jalur approval. */
-    private fun user(token: String, roleId: String): UUID {
+    private fun user(token: String, roleId: String): UUID = person(token, roleId).id
+
+    /** Seorang pengguna beserta NAMANYA — dipakai tes yang memeriksa resolusi nama di view. */
+    private data class Person(val id: UUID, val name: String)
+
+    private fun person(token: String, roleId: String, panggilan: String = "Budi"): Person {
         val handle = "gudang${uniq()}"
+        val name = "$panggilan $handle"
         val created = post(
             "/api/users", token,
-            """{"email":"$handle@gudang.test","name":"Budi $handle","password":"$pass","roleIds":["$roleId"]}""",
+            """{"email":"$handle@gudang.test","name":"$name","password":"$pass","roleIds":["$roleId"]}""",
             expected = 201,
         )
-        return UUID.fromString(JsonPath.read(created, "$.id"))
+        return Person(UUID.fromString(JsonPath.read(created, "$.id")), name)
+    }
+
+    /**
+     * Ajukan permintaan LANGSUNG lewat service, dengan pemohon yang bukan pemanggil HTTP.
+     *
+     * Lewat `POST /api/inventory/approvals` pemohonnya selalu pemilik token — server memaksa
+     * `requesterId` sama dengan aktor sesi, dan itu memang benar. Tapi kasus yang mau diuji di
+     * sini justru sebaliknya: approver membuka antrean dan harus melihat nama ORANG LAIN yang
+     * memintanya. Tanpa jalur ini tesnya cuma bisa membuktikan approver mengenali namanya
+     * sendiri, yang tidak membuktikan apa pun.
+     */
+    private fun requestAs(
+        tenantId: UUID,
+        requesterId: UUID,
+        custodianId: UUID?,
+        amount: Long = 10,
+    ): InventoryApprovalRequest = TenantContext.runAs(tenantId) {
+        val key = "ap-${uniq()}"
+        approvals.request(
+            CreateInventoryApproval(
+                tenantId, InventoryApprovalType.ADJUSTMENT, amount, requesterId, custodianId, key, key,
+            ),
+        )
+    }
+
+    private fun approvalRow(token: String, approvalId: UUID): Map<String, Any?> =
+        JsonPath.read(getJson("/api/inventory/approvals/$approvalId", token), "$")
+
+    /**
+     * Antrean persetujuan menyebut NAMA pemohon, bukan UUID-nya.
+     *
+     * Sebelum ini kolom "Pemohon" diisi klien dengan memanggil `GET /api/users` — endpoint
+     * modul iam yang dijaga izin `iam.user.view`. Petugas gudang lazimnya TIDAK memegang izin
+     * itu: dia cuma punya `inventory.approval.*`. Layarnya menelan 403 tanpa suara lalu
+     * mencetak UUID mentah, sehingga approver diminta menyetujui pelepasan aset tanpa satu
+     * pun cara untuk tahu siapa yang memintanya — kontrol empat-mata yang kehilangan mata
+     * keduanya. Resolusinya sekarang di server, in-process, tanpa melewati izin web itu.
+     */
+    @Test
+    fun `antrean persetujuan membawa nama pemohon bukan uuid telanjang`() {
+        val admin = admin("appr-nama")
+        // Admin-lah approver-nya; pemohonnya orang lain, kalau tidak permintaan ini justru
+        // DISARING keluar dari antrean (seseorang tidak boleh menyetujui permintaannya sendiri).
+        configure(admin.token, "ADJUSTMENT", tier(1, 0, "Kepala Gudang", admin.userId))
+        val staf = role(admin.token, "Staf Gudang")
+        val pemohon = person(admin.token, staf, "Sari")
+
+        val approval = requestAs(admin.tenantId, pemohon.id, custodianId = null)
+
+        val antrean: List<Map<String, Any?>> =
+            JsonPath.read(getJson("/api/inventory/approvals/pending", admin.token), "$")
+        val baris = antrean.single { it["approvalId"] == approval.approvalId.toString() }
+
+        assertThat(baris["requesterId"]).isEqualTo(pemohon.id.toString())
+        assertThat(baris["requesterName"]).isEqualTo(pemohon.name)
+        assertThat(baris["requesterName"] as String).doesNotContain("-")
+    }
+
+    /**
+     * Riwayat keputusan menyebut nama penyetujunya.
+     *
+     * "UUID menyetujui pada 14:03" tidak bisa dibaca approver berikutnya maupun auditor;
+     * yang dibutuhkan adalah nama orang yang sudah menandatangani tier sebelumnya.
+     */
+    @Test
+    fun `keputusan yang sudah dibuat membawa nama penyetujunya`() {
+        val admin = admin("appr-decnama")
+        configure(
+            admin.token, "ADJUSTMENT",
+            // Dua tier supaya keputusan pertama TIDAK langsung menutup permintaannya — riwayat
+            // keputusan harus terbaca justru selagi permintaannya masih menggantung.
+            tier(1, 0, "Kepala Gudang", admin.userId) + "," + tier(2, 5, "Manajer Operasional", approverB),
+        )
+        val staf = role(admin.token, "Staf Gudang")
+        val pemohon = person(admin.token, staf, "Sari")
+
+        val approval = requestAs(admin.tenantId, pemohon.id, custodianId = null)
+        decide(admin.tenantId, approval.approvalId.toString(), admin.userId, InventoryApprovalDecision.APPROVE, "d-nama")
+
+        val detail = approvalRow(admin.token, approval.approvalId)
+
+        @Suppress("UNCHECKED_CAST")
+        val keputusan = (detail["decisions"] as List<Map<String, Any?>>).single()
+        assertThat(keputusan["approverId"]).isEqualTo(admin.userId.toString())
+        assertThat(keputusan["approverName"]).isEqualTo(admin.name)
+        // Tak ada delegasi di sini, jadi keduanya WAJIB null — bukan string kosong yang akan
+        // dibaca layar sebagai "didelegasikan oleh seseorang yang tak diketahui".
+        assertThat(keputusan["delegatedFrom"]).isNull()
+        assertThat(keputusan["delegatedFromName"]).isNull()
+    }
+
+    /**
+     * `custodianName` null HANYA kalau memang tidak ada penanggung jawabnya.
+     *
+     * Bedanya penting di layar: kolom kosong berarti "permintaan ini tidak menunjuk penanggung
+     * jawab", dan itu keterangan yang sah. Kalau nama yang gagal diresolusi juga jadi kosong,
+     * kedua keadaan itu tampak identik dan approver kehilangan satu-satunya petunjuk bahwa ada
+     * yang perlu ditelusuri.
+     */
+    @Test
+    fun `nama penanggung jawab null saat tak ditunjuk dan terisi saat ada`() {
+        val admin = admin("appr-custnama")
+        configure(admin.token, "ADJUSTMENT", tier(1, 0, "Kepala Gudang", admin.userId))
+        val staf = role(admin.token, "Staf Gudang")
+        val pemohon = person(admin.token, staf, "Sari")
+        val penanggungJawab = person(admin.token, staf, "Joko")
+
+        val tanpa = requestAs(admin.tenantId, pemohon.id, custodianId = null)
+        val dengan = requestAs(admin.tenantId, pemohon.id, custodianId = penanggungJawab.id)
+
+        val barisTanpa = approvalRow(admin.token, tanpa.approvalId)
+        assertThat(barisTanpa["custodianId"]).isNull()
+        assertThat(barisTanpa["custodianName"]).isNull()
+
+        val barisDengan = approvalRow(admin.token, dengan.approvalId)
+        assertThat(barisDengan["custodianId"]).isEqualTo(penanggungJawab.id.toString())
+        assertThat(barisDengan["custodianName"]).isEqualTo(penanggungJawab.name)
+    }
+
+    /**
+     * Id yang TIDAK teresolusi memulangkan UUID-nya apa adanya — bukan string kosong, bukan 500.
+     *
+     * Ini bukan kasus karangan: pengguna yang sudah dihapus meninggalkan permintaan lama yang
+     * `requesterId`-nya tidak menunjuk siapa pun lagi. Dua kegagalan yang harus dicegah
+     * sekaligus. Pertama, meledak 500 akan mengunci SELURUH antrean karena satu baris busuk —
+     * approver tidak bisa memutuskan permintaan lain yang sama sekali sehat. Kedua,
+     * mengosongkan selnya akan terbaca "permintaan ini tidak punya peminta", padahal UUID yang
+     * tercetak masih bisa ditelusuri di basis data.
+     */
+    @Test
+    fun `pemohon yang tak teresolusi memulangkan uuid bukan sel kosong`() {
+        val admin = admin("appr-hilang")
+        configure(admin.token, "ADJUSTMENT", tier(1, 0, "Kepala Gudang", admin.userId))
+        val hantu = UUID.randomUUID()
+
+        val approval = requestAs(admin.tenantId, hantu, custodianId = null)
+
+        val detail = approvalRow(admin.token, approval.approvalId)
+        assertThat(detail["requesterId"]).isEqualTo(hantu.toString())
+        assertThat(detail["requesterName"]).isEqualTo(hantu.toString())
+
+        // Dan antreannya tetap bisa dibuka — satu baris yang namanya tak teresolusi TIDAK
+        // boleh menjatuhkan seluruh layar persetujuan.
+        val antrean: List<Map<String, Any?>> =
+            JsonPath.read(getJson("/api/inventory/approvals/pending", admin.token), "$")
+        assertThat(antrean.single { it["approvalId"] == approval.approvalId.toString() }["requesterName"])
+            .isEqualTo(hantu.toString())
     }
 
     /** Tier yang HANYA menyebut peran — tanpa `approverIds` sama sekali. Itu intinya. */

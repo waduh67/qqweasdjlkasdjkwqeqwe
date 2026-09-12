@@ -2,11 +2,16 @@
  * Permukaan gudang (module `inventory`): master data, mutasi stok, ledger, dan approval.
  *
  * Bentuk tipe di sini diturunkan dari controller Kotlin apa adanya. Satu hal yang WAJIB
- * diingat pemakainya: baik `StockBalanceView` maupun `MovementLegView` hanya membawa KODE
- * item (`itemCode`), tidak pernah nama. Nama hanya ada di `/item-master`, jadi layar yang
- * ingin menampilkan "ONT ZTE F660" harus menggabungkannya sendiri lewat `itemId`. Tanpa
- * gabungan itu petugas gudang cuma melihat `ONT-001` — atau, seperti halaman lama, UUID
- * mentah yang tidak bisa dicocokkan dengan apa pun di rak.
+ * diingat pemakainya: read model gudang (`StockBalanceView`, `MovementLegView`, van stock,
+ * laporan selisih, dan antrean persetujuan) MEMBAWA SENDIRI nama item, jenis lokasi, dan nama
+ * orangnya. JANGAN menggabungkannya lagi di klien terhadap `/item-master` atau `/api/users`:
+ * dua endpoint itu menuntut `inventory.item.view` dan `iam.user.view`, izin yang petugas gudang
+ * biasa TIDAK punya — gabungan di klien membuat permintaannya kena 403, direktorinya kosong,
+ * dan layarnya kembali mencetak kode barang serta UUID orang telanjang. Server meresolusinya
+ * in-process tanpa pemeriksaan izin itu.
+ *
+ * `locationKind` nullable SENGAJA: lokasi yang sudah terhapus tidak dipalsukan jadi jenis
+ * tertentu hanya supaya selnya terisi.
  */
 
 import { api } from './client'
@@ -101,9 +106,12 @@ export interface UpdateItemBody {
 export interface StockBalanceView {
   readonly itemId: string
   readonly itemCode: string
+  readonly itemName: string
   readonly locationId: string
   readonly locationCode: string
+  readonly locationKind: LocationKind | null
   readonly custodyOwnerId: string
+  readonly custodyOwnerName: string
   readonly custodyOwnerKind: OwnerKind
   readonly status: InventoryStatus
   readonly quantity: number
@@ -113,11 +121,14 @@ export interface MovementLegView {
   readonly direction: LegDirection
   readonly itemId: string
   readonly itemCode: string
+  readonly itemName: string
   readonly locationId: string
   readonly locationCode: string
+  readonly locationKind: LocationKind | null
   readonly quantity: number
   readonly status: InventoryStatus
   readonly custodyOwnerId: string
+  readonly custodyOwnerName: string
   readonly custodyOwnerKind: OwnerKind
   readonly assetId: string | null
   readonly serialNumber: string | null
@@ -129,6 +140,7 @@ export interface MovementEntryView {
   readonly state: MovementState
   readonly reason: string
   readonly actorId: string
+  readonly actorName: string
   readonly occurredAt: string
   readonly operationKey: string
   readonly compensatesMovementId: string | null
@@ -138,8 +150,10 @@ export interface MovementEntryView {
 export interface VanStockLineView {
   readonly itemId: string
   readonly itemCode: string
+  readonly itemName: string
   readonly locationId: string
   readonly locationCode: string
+  readonly locationKind: LocationKind | null
   readonly status: InventoryStatus
   readonly quantity: number
   readonly serialNumbers: readonly string[]
@@ -147,6 +161,7 @@ export interface VanStockLineView {
 
 export interface VanStockView {
   readonly technicianId: string
+  readonly technicianName: string
   readonly lines: readonly VanStockLineView[]
 }
 
@@ -154,12 +169,17 @@ export interface OpenCountView {
   readonly countId: string
   readonly itemId: string
   readonly itemCode: string
+  readonly itemName: string
   readonly locationId: string
   readonly locationCode: string
+  readonly locationKind: LocationKind | null
   readonly priorQuantity: number
   readonly observedQuantity: number
   readonly delta: number
   readonly custodianId: string
+  readonly custodianName: string
+  /** Keterangan petugas opname — penyetuju menilai angka DAN alasannya, bukan angkanya saja. */
+  readonly reason: string
   readonly state: DiscrepancyState
   readonly countedAt: string
 }
@@ -167,8 +187,10 @@ export interface OpenCountView {
 export interface BalanceAnomalyView {
   readonly itemId: string
   readonly itemCode: string
+  readonly itemName: string
   readonly locationId: string
   readonly locationCode: string
+  readonly locationKind: LocationKind | null
   readonly status: InventoryStatus
   readonly projectedQuantity: number
   readonly serializedAssetCount: number
@@ -352,7 +374,9 @@ export interface InventoryApprovalDecisionSnapshot {
   readonly decisionId: string
   readonly tier: number
   readonly approverId: string
+  readonly approverName: string
   readonly delegatedFrom: string | null
+  readonly delegatedFromName: string | null
   readonly decision: InventoryApprovalDecision
   readonly reason: string | null
   readonly decidedAt: string
@@ -375,7 +399,9 @@ export interface InventoryApprovalRequest {
   readonly type: InventoryApprovalType
   readonly amount: number
   readonly requesterId: string
+  readonly requesterName: string
   readonly custodianId: string | null
+  readonly custodianName: string | null
   readonly movementId: string | null
   readonly policy: InventoryApprovalPolicy
   readonly policySnapshotHash: string
@@ -432,7 +458,9 @@ export interface EmergencyOverrideView {
   readonly type: InventoryApprovalType
   readonly amount: number
   readonly requesterId: string
+  readonly requesterName: string
   readonly custodianId: string | null
+  readonly custodianName: string | null
   readonly reason: string
   readonly bypassedTiers: readonly number[]
   readonly occurredAt: string
@@ -611,7 +639,14 @@ export const adjustStock = (body: AdjustmentBody) =>
 
 export const createCycleCount = (body: CycleCountBody) => api.post<CycleCount>('/api/inventory/counts', body)
 
-export const listOpenCounts = () => api.get<CycleCount[]>('/api/inventory/counts/open')
+/**
+ * Read model, bukan agregat `CycleCount`. Barisnya sudah bernama lengkap — JANGAN gabungkan
+ * lagi `itemId`/`custodianId`-nya ke `/item-master` atau `/api/users`: dua endpoint itu minta
+ * izin yang tidak dipegang petugas gudang biasa, dan justru itu yang dulu membuat tabel ini
+ * memajang UUID. Yang menulis (`createCycleCount`/`approveCycleCount`) tetap memulangkan
+ * agregatnya karena pemanggilnya cuma perlu tahu operasinya jadi, lalu memuat ulang daftar ini.
+ */
+export const listOpenCounts = () => api.get<OpenCountView[]>('/api/inventory/counts/open')
 
 export const approveCycleCount = (id: string, envelope: OperationEnvelope) =>
   api.post<CycleCount>(`/api/inventory/counts/${id}/approval`, envelope)

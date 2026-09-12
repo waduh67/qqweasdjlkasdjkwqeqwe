@@ -84,16 +84,43 @@ const user = (id: string, name: string) => ({
 
 const users = [user(USER_BUDI, 'Budi Santoso'), user(USER_SARI, 'Sari Melati'), user(USER_TONO, 'Tono Wijaya')]
 
+// Bentuk baris saldo ini mencerminkan read model server SETELAH resolusi nama: `itemName`,
+// `locationKind`, dan `custodyOwnerName` datang dari server, BUKAN dari `/item-master` atau
+// `/api/users`. Kalau fixture ini dipangkas kembali jadi id saja, tes di bawah akan gagal —
+// itu memang gunanya.
 const balances = [
   {
     itemId: ITEM_ONT,
     itemCode: 'ONT-001',
+    itemName: 'ONT ZTE F660',
     locationId: LOC_GUDANG,
     locationCode: 'GD-PUSAT',
+    locationKind: 'WAREHOUSE',
     custodyOwnerId: USER_BUDI,
+    custodyOwnerName: 'Budi Santoso',
     custodyOwnerKind: 'WAREHOUSE',
     status: 'AVAILABLE',
     quantity: 12,
+  },
+]
+
+const vanStock = [
+  {
+    technicianId: USER_SARI,
+    technicianName: 'Sari Melati',
+    lines: [
+      {
+        itemId: ITEM_DROP,
+        itemCode: 'DRP-150',
+        itemName: 'Dropcore 150 meter',
+        locationId: LOC_VAN,
+        locationCode: 'VAN-01',
+        locationKind: 'VEHICLE',
+        status: 'ISSUED',
+        quantity: 2,
+        serialNumbers: [],
+      },
+    ],
   },
 ]
 
@@ -131,7 +158,9 @@ const pendingApprovals = [
     type: 'WRITE_OFF',
     amount: 3,
     requesterId: USER_TONO,
+    requesterName: 'Tono Wijaya',
     custodianId: USER_BUDI,
+    custodianName: 'Budi Santoso',
     movementId: null,
     policy: { version: 1, tiers: [], expiry: 'PT24H', emergencyAllowed: false },
     policySnapshotHash: 'hash',
@@ -143,6 +172,27 @@ const pendingApprovals = [
     status: 'PENDING',
     revision: 1,
     decisions: [],
+  },
+]
+
+/** Bentuk `OpenCountView` — read model, bukan agregat `CycleCount`: bernama dan `delta`-nya dari server. */
+const openCounts = [
+  {
+    countId: '88888888-8888-8888-8888-888888888888',
+    itemId: ITEM_ONT,
+    itemCode: 'ONT-001',
+    itemName: 'ONT ZTE F660',
+    locationId: LOC_GUDANG,
+    locationCode: 'GD-PUSAT',
+    locationKind: 'WAREHOUSE',
+    priorQuantity: 10,
+    observedQuantity: 7,
+    delta: -3,
+    custodianId: USER_BUDI,
+    custodianName: 'Budi Santoso',
+    reason: 'Rusak kena air saat banjir',
+    state: 'OPEN',
+    countedAt: '2026-09-01T02:00:00Z',
   },
 ]
 
@@ -214,6 +264,96 @@ describe('daftar stok', () => {
     await renderPage()
 
     expect(await screen.findByText('ONT ZTE F660')).toBeDefined()
+  })
+
+  it('menamai item, pemegang, dan teknisi dari baris saldo meski master item dan direktori pengguna kosong', async () => {
+    // Ini potret petugas gudang sungguhan: TANPA `inventory.item.view` (jadi `/item-master`
+    // tidak pernah dipanggil) dan TANPA `iam.user.view` (jadi `/api/users` menjawab 403).
+    // Dua direktori yang dulu dipakai menggabungkan id → nama karenanya kosong melompong.
+    // Kalau seseorang kelak mengembalikan penggabungan di klien, layar ini kembali mencetak
+    // UUID untuk orang ini — dan tes inilah yang gagal duluan, bukan petugasnya yang mengeluh.
+    can.mockImplementation((permission: string) => permission !== 'inventory.item.view')
+    apiGet.mockImplementation((path: string) => {
+      if (path.startsWith('/api/users')) return Promise.reject(new Error('forbidden'))
+      if (path.startsWith('/api/inventory/item-master')) return Promise.reject(new Error('forbidden'))
+      if (path.startsWith('/api/inventory/locations')) return Promise.resolve(locations)
+      if (path.startsWith('/api/inventory/balances')) return Promise.resolve(balances)
+      if (path.startsWith('/api/inventory/van-stock')) return Promise.resolve(vanStock)
+      return Promise.reject(new Error(`tak terduga: ${path}`))
+    })
+    await renderPage()
+
+    expect(await screen.findByText('ONT ZTE F660')).toBeDefined()
+    expect(screen.getByText('Budi Santoso')).toBeDefined()
+    expect(screen.getByText('Sari Melati')).toBeDefined()
+    expect(screen.getByText('Dropcore 150 meter')).toBeDefined()
+    expect(screen.queryByText(ITEM_ONT)).toBeNull()
+    expect(screen.queryByText(ITEM_DROP)).toBeNull()
+    expect(screen.queryByText(USER_BUDI)).toBeNull()
+    expect(screen.queryByText(USER_SARI)).toBeNull()
+  })
+
+  it('menulis em dash untuk jenis lokasi yang sudah terhapus, bukan menebak jenisnya', async () => {
+    // `locationKind` null berarti lokasinya sudah tidak ada lagi di master. Menebak "Gudang"
+    // di situ membuat petugas mencari barang di rak yang sudah dibongkar.
+    mockApi({
+      '/api/inventory/balances': [{ ...balances[0], locationKind: null }],
+    })
+    await renderPage()
+
+    const row = (await screen.findByText('GD-PUSAT')).parentElement
+    expect(row?.textContent).toContain('—')
+    expect(row?.textContent).not.toContain('Gudang')
+  })
+})
+
+describe('stock opname', () => {
+  it('menamai selisih dari read model meski master item dan direktori pengguna ditolak', async () => {
+    // Penyetuju selisih justru yang paling jarang punya `inventory.item.view`/`iam.user.view`:
+    // tugasnya menilai, bukan mengelola master data. Kalau baris ini kembali digabungkan di
+    // klien, dialah yang membaca UUID — lalu menyetujui angka tanpa tahu barang apa.
+    can.mockImplementation((permission: string) => permission !== 'inventory.item.view')
+    apiGet.mockImplementation((path: string) => {
+      if (path.startsWith('/api/users')) return Promise.reject(new Error('forbidden'))
+      if (path.startsWith('/api/inventory/item-master')) return Promise.reject(new Error('forbidden'))
+      if (path.startsWith('/api/inventory/locations')) return Promise.resolve(locations)
+      if (path.startsWith('/api/inventory/counts/open')) return Promise.resolve(openCounts)
+      if (path.startsWith('/api/inventory/variance-report')) return Promise.resolve({ openCounts: [], anomalies: [] })
+      if (path.startsWith('/api/inventory/balances')) return Promise.resolve(balances)
+      if (path.startsWith('/api/inventory/van-stock')) return Promise.resolve([])
+      return Promise.reject(new Error(`tak terduga: ${path}`))
+    })
+    const actor = await renderPage()
+    await actor.click(screen.getByRole('tab', { name: 'Stock opname' }))
+
+    expect(await screen.findByText('ONT ZTE F660')).toBeDefined()
+    expect(screen.getByText('Budi Santoso')).toBeDefined()
+    expect(screen.getByText('Rusak kena air saat banjir')).toBeDefined()
+    // `delta` dari server, BUKAN hasil pengurangan di klien.
+    expect(screen.getByText('-3')).toBeDefined()
+    expect(screen.queryByText(ITEM_ONT)).toBeNull()
+    expect(screen.queryByText(USER_BUDI)).toBeNull()
+  })
+
+  it('membuka tab opname untuk pemegang izin menyetujui saja', async () => {
+    // Penyetuju murni: tidak boleh menghitung, tapi WAJIB bisa membaca apa yang harus ia sahkan.
+    // Dulu tab dan daftarnya sama-sama dijaga `inventory.count.perform`, jadi ia melihat layar
+    // kosong yang terbaca "tidak ada selisih" — kontrol empat-mata yang mati tanpa suara.
+    can.mockImplementation((permission: string) => permission === 'inventory.count.approve')
+    apiGet.mockImplementation((path: string) => {
+      // Direktori pengguna tetap dipanggil kulit halaman dan tetap 403 — kegagalannya memang
+      // ditelan supaya tab ini tidak ikut kosong karena izin yang tak ada hubungannya.
+      if (path.startsWith('/api/users')) return Promise.reject(new Error('forbidden'))
+      if (path.startsWith('/api/inventory/counts/open')) return Promise.resolve(openCounts)
+      if (path.startsWith('/api/inventory/variance-report')) return Promise.resolve({ openCounts: [], anomalies: [] })
+      return Promise.reject(new Error(`tak terduga: ${path}`))
+    })
+    const actor = userEvent.setup()
+    render(<MemoryRouter><WarehouseOperationsPage /></MemoryRouter>)
+    await actor.click(await screen.findByRole('tab', { name: 'Stock opname' }))
+
+    expect(await screen.findByText('ONT ZTE F660')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Setujui selisih' })).toBeDefined()
   })
 })
 

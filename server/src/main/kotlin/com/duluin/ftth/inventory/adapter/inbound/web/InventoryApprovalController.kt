@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.application.service.*
 import com.duluin.ftth.inventory.domain.model.*
 import jakarta.validation.Valid
@@ -20,29 +21,70 @@ class InventoryApprovalController(
     private val approvals: InventoryApprovalService,
     private val policies: InventoryApprovalPolicyService,
     private val currentUser: CurrentUserProvider,
+    private val iam: IamApi,
 ) {
     @GetMapping("/pending")
     @PreAuthorize("@authz.can('inventory.approval.view')")
-    fun pending(): List<InventoryApprovalRequest> = approvals.pendingForCurrentActor()
+    fun pending(): List<InventoryApprovalRequestView> = withNames(approvals.pendingForCurrentActor())
 
     @PostMapping
     @PreAuthorize("@authz.can('inventory.approval.request')")
-    fun request(@Valid @RequestBody body: ApprovalRequestBody): InventoryApprovalRequest {
+    fun request(@Valid @RequestBody body: ApprovalRequestBody): InventoryApprovalRequestView {
         val actor = currentUser.current()
-        return approvals.request(body.toCommand(actor.tenantId, actor.userId))
+        return withNames(approvals.request(body.toCommand(actor.tenantId, actor.userId)))
     }
 
     @PostMapping("/{id}/decision")
     @PreAuthorize("@authz.can('inventory.approval.decide')")
-    fun decide(@PathVariable id: UUID, @Valid @RequestBody body: ApprovalDecisionBody): InventoryApprovalRequest {
+    fun decide(@PathVariable id: UUID, @Valid @RequestBody body: ApprovalDecisionBody): InventoryApprovalRequestView {
         val actor = currentUser.current()
-        return approvals.decide(id, DecideInventoryApproval(actor.tenantId, actor.userId, body.decision, body.operationKey, body.operationHash, body.reason))
+        return withNames(
+            approvals.decide(id, DecideInventoryApproval(actor.tenantId, actor.userId, body.decision, body.operationKey, body.operationHash, body.reason)),
+        )
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('inventory.approval.view')")
-    fun get(@PathVariable id: UUID): InventoryApprovalRequest =
-        approvals.get(id) ?: throw NotFoundException("Permintaan persetujuan tidak ditemukan")
+    fun get(@PathVariable id: UUID): InventoryApprovalRequestView =
+        withNames(approvals.get(id) ?: throw NotFoundException("Permintaan persetujuan tidak ditemukan"))
+
+    /**
+     * SATU-SATUNYA tempat permintaan persetujuan diterjemahkan jadi bentuk web.
+     *
+     * Seluruh id — pemohon, penanggung jawab, setiap penyetuju, dan setiap pendelegasi di
+     * dalam keputusan — dikumpulkan dulu ke satu himpunan lalu diresolusi SEKALI per
+     * permintaan HTTP. Meresolusi per baris akan melahirkan N+1 yang tumbuh persis seiring
+     * ramainya antrean: `GET /pending` di gudang yang sibuk memulangkan puluhan permintaan
+     * yang masing-masing sudah punya beberapa keputusan, dan layar antrean itulah yang
+     * pertama kali melambat justru pada hari yang paling butuh cepat.
+     *
+     * Himpunan kosong (antrean kosong) SENGAJA tidak memanggil `usersByIds` sama sekali —
+     * query `IN ()` untuk nol id adalah perjalanan bolak-balik ke basis data yang hasilnya
+     * sudah pasti kosong.
+     */
+    private fun withNames(requests: List<InventoryApprovalRequest>): List<InventoryApprovalRequestView> {
+        val ids = HashSet<UUID>()
+        requests.forEach { request ->
+            ids += request.requesterId
+            request.custodianId?.let { ids += it }
+            request.decisions.forEach { decision ->
+                ids += decision.approverId
+                decision.delegatedFrom?.let { ids += it }
+            }
+        }
+        val names = if (ids.isEmpty()) emptyMap() else iam.usersByIds(ids).associate { it.id to it.name }
+        return requests.map { InventoryApprovalRequestView.of(it, names) }
+    }
+
+    /**
+     * Permintaan tunggal lewat jalur yang PERSIS sama dengan daftar.
+     *
+     * Bukan sekadar kerapian: kalau pemetaan tunggal punya salinannya sendiri, cepat atau
+     * lambat `GET /{id}` dan `GET /pending` akan berbeda bentuk — dan layar detail yang
+     * dibuka dari antrean tiba-tiba menampilkan UUID untuk baris yang barusan bernama.
+     */
+    private fun withNames(request: InventoryApprovalRequest): InventoryApprovalRequestView =
+        withNames(listOf(request)).first()
 
     /**
      * Matriks yang BERLAKU, bukan sekadar yang tersimpan: tipe yang belum pernah dikonfigurasi
@@ -72,9 +114,30 @@ class InventoryApprovalController(
     @PreAuthorize("@authz.can('inventory.approval.view')")
     fun emergencyOverrides(): List<EmergencyOverrideView> {
         val actor = currentUser.current()
-        return policies.emergencyOverrides(actor.tenantId).map { EmergencyOverrideView.of(it) }
+        val entries = policies.emergencyOverrides(actor.tenantId)
+        // Satu resolusi untuk seluruh laporan, sama seperti antrean persetujuan: laporan
+        // override adalah daftar yang tumbuh terus dan tidak pernah dipangkas.
+        val ids = HashSet<UUID>()
+        entries.forEach { entry ->
+            ids += entry.requesterId
+            entry.custodianId?.let { ids += it }
+        }
+        val names = if (ids.isEmpty()) emptyMap() else iam.usersByIds(ids).associate { it.id to it.name }
+        return entries.map { EmergencyOverrideView.of(it, names) }
     }
 }
+
+/**
+ * Fallback nama: id yang TIDAK teresolusi dikembalikan sebagai UUID-nya sendiri.
+ *
+ * JANGAN diganti string kosong. Sel kosong di layar terbaca "permintaan ini tidak punya
+ * peminta" — padahal yang sebenarnya terjadi adalah pengguna itu sudah dihapus atau
+ * dipindahkan tenant, dan itu justru temuan yang harus bisa ditelusuri approver, bukan
+ * disembunyikan. UUID yang tercetak masih bisa dicari di basis data; kekosongan tidak.
+ */
+private fun Map<UUID, String>.nameOf(id: UUID): String = this[id] ?: id.toString()
+
+private fun Map<UUID, String>.nameOrNull(id: UUID?): String? = id?.let { nameOf(it) }
 
 /**
  * Permintaan persetujuan hanya menyebut APA yang diminta.
@@ -176,15 +239,115 @@ data class EmergencyOverrideView(
     val type: InventoryApprovalType,
     val amount: Long,
     val requesterId: UUID,
+    val requesterName: String,
     val custodianId: UUID?,
+    val custodianName: String?,
     val reason: String,
     val bypassedTiers: List<Int>,
     val occurredAt: Instant,
 ) {
     companion object {
-        fun of(entry: EmergencyOverrideAudit) = EmergencyOverrideView(
-            entry.approvalId, entry.type, entry.amount, entry.requesterId, entry.custodianId,
+        fun of(entry: EmergencyOverrideAudit, names: Map<UUID, String>) = EmergencyOverrideView(
+            entry.approvalId, entry.type, entry.amount,
+            entry.requesterId, names.nameOf(entry.requesterId),
+            entry.custodianId, names.nameOrNull(entry.custodianId),
             entry.reason, entry.bypassedTiers, entry.occurredAt,
+        )
+    }
+}
+
+/**
+ * Permintaan persetujuan dalam bentuk yang SUDAH membawa nama.
+ *
+ * Alasannya sebuah 403 yang tidak pernah terlihat sebagai 403. Agregat domainnya hanya
+ * menyimpan UUID telanjang, dan layar persetujuan gudang dulu meresolusinya sendiri lewat
+ * `GET /api/users` — endpoint milik modul iam yang dijaga izin `iam.user.view`. Izin itu
+ * LAZIM TIDAK dipegang petugas gudang: yang ia butuhkan cuma `inventory.approval.*`.
+ * Akibatnya layar menelan 403-nya diam-diam lalu mencetak UUID di kolom "Pemohon", dan
+ * approver diminta menyetujui pelepasan aset tanpa cara apa pun untuk tahu siapa yang
+ * memintanya — yang mana persis kebalikan dari gunanya kontrol empat-mata.
+ *
+ * Resolusinya sekarang terjadi di sisi server lewat [IamApi], yang IN-PROCESS sehingga
+ * tidak melewati pemeriksaan izin web `iam.user.view` sama sekali. Nama yang ikut adalah
+ * nama yang memang dibutuhkan untuk membaca permintaan ini; ia tidak membuka direktori
+ * pengguna bagi siapa pun.
+ *
+ * [InventoryApprovalRequest] dan [InventoryApprovalDecisionSnapshot] SENGAJA tidak ikut
+ * diubah. Keduanya tipe kontrak [com.duluin.ftth.inventory.InventoryApprovalApi] lintas
+ * modul sekaligus bentuk yang dibaca-tulis repository; menyelipkan nama ke dalamnya berarti
+ * setiap pemanggil non-web dan setiap pembacaan dari basis data harus ikut mengarang nama
+ * yang tidak ia punya — dan nama yang ikut tersimpan akan MEMBEKU, menampilkan nama lama
+ * seseorang selamanya setelah ia ganti nama. Nama adalah urusan tampilan, dan hidupnya
+ * berakhir di lapisan web ini.
+ */
+data class InventoryApprovalRequestView(
+    val approvalId: UUID,
+    val tenantId: UUID,
+    val type: InventoryApprovalType,
+    val amount: Long,
+    val requesterId: UUID,
+    val requesterName: String,
+    val custodianId: UUID?,
+    /** Null HANYA kalau [custodianId] null; id yang tak teresolusi jadi UUID-nya, bukan kosong. */
+    val custodianName: String?,
+    val movementId: UUID?,
+    val policy: InventoryApprovalPolicy,
+    val policySnapshotHash: String,
+    val operationKey: String,
+    val operationHash: String,
+    val emergencyReason: String?,
+    val requestedAt: Instant,
+    val expiresAt: Instant,
+    val status: InventoryApprovalStatus,
+    val revision: Long,
+    val decisions: List<InventoryApprovalDecisionView>,
+) {
+    companion object {
+        fun of(request: InventoryApprovalRequest, names: Map<UUID, String>) = InventoryApprovalRequestView(
+            request.approvalId, request.tenantId, request.type, request.amount,
+            request.requesterId, names.nameOf(request.requesterId),
+            request.custodianId, names.nameOrNull(request.custodianId),
+            request.movementId,
+            // `policy` diteruskan APA ADANYA: daftar penyetuju di dalamnya adalah snapshot
+            // audit, bukan kolom yang dibaca manusia di layar antrean.
+            request.policy,
+            request.policySnapshotHash, request.operationKey, request.operationHash,
+            request.emergencyReason, request.requestedAt, request.expiresAt,
+            request.status, request.revision,
+            request.decisions.map { InventoryApprovalDecisionView.of(it, names) },
+        )
+    }
+}
+
+/**
+ * Satu keputusan, dengan nama penyetujunya ikut.
+ *
+ * [delegatedFromName] penting terpisah dari [approverName]: riwayat yang hanya menyebut satu
+ * nama tidak bisa membedakan "Budi menyetujui" dari "Budi menyetujui atas delegasi Sari" —
+ * dan pertanyaan yang diajukan audit setahun kemudian justru yang kedua.
+ */
+data class InventoryApprovalDecisionView(
+    val decisionId: UUID,
+    val tier: Int,
+    val approverId: UUID,
+    val approverName: String,
+    val delegatedFrom: UUID?,
+    /** Null HANYA kalau [delegatedFrom] null. */
+    val delegatedFromName: String?,
+    val decision: InventoryApprovalDecision,
+    val reason: String?,
+    val decidedAt: Instant,
+    val revision: Long,
+    val operationKey: String,
+    val operationHash: String,
+) {
+    companion object {
+        fun of(snapshot: InventoryApprovalDecisionSnapshot, names: Map<UUID, String>) = InventoryApprovalDecisionView(
+            snapshot.decisionId, snapshot.tier,
+            snapshot.approverId, names.nameOf(snapshot.approverId),
+            snapshot.delegatedFrom, names.nameOrNull(snapshot.delegatedFrom),
+            snapshot.decision, snapshot.reason, snapshot.decidedAt, snapshot.revision,
+            snapshot.operationKey, snapshot.operationHash,
         )
     }
 }

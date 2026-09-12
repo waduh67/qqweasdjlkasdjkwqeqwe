@@ -24,10 +24,12 @@ const STATUSES = Object.keys(INVENTORY_STATUS_LABEL) as InventoryStatus[]
 /**
  * Saldo per item per lokasi.
  *
- * Kolom Item menampilkan NAMA, bukan UUID dan bukan sekadar kode. `GET /balances` hanya
- * mengirim `itemCode`, jadi namanya digabungkan di sini dari master data — inilah perbedaan
- * antara petugas yang bisa mencari "ONT ZTE F660" di rak dan petugas yang membaca
- * `9f3c…-a1` dan menyerah.
+ * Kolom Item, Lokasi, dan Pemegang dibaca LANGSUNG dari baris saldo — `GET /balances` sudah
+ * membawa `itemName`, `locationKind`, dan `custodyOwnerName`. JANGAN dikembalikan ke gabungan
+ * klien terhadap `/item-master` dan `/api/users`: petugas gudang lazim tidak punya
+ * `inventory.item.view` maupun `iam.user.view`, gabungannya kena 403, dan layar ini kembali ke
+ * keadaan lamanya — kode barang telanjang dan UUID orang yang tidak bisa dicocokkan dengan
+ * apa pun di rak.
  */
 export function WarehouseStockPanel({ reference }: { reference: WarehouseReference }) {
   const toast = useToast()
@@ -60,20 +62,18 @@ export function WarehouseStockPanel({ reference }: { reference: WarehouseReferen
     void load()
   }, [load])
 
-  const { names } = reference
-
   const rows = useMemo(() => {
     const term = query.trim().toLowerCase()
     return balances.filter((row) => {
       if (status && row.status !== status) return false
       if (!term) return true
       return (
-        names.itemName(row.itemId).toLowerCase().includes(term) ||
+        row.itemName.toLowerCase().includes(term) ||
         row.itemCode.toLowerCase().includes(term) ||
         row.locationCode.toLowerCase().includes(term)
       )
     })
-  }, [balances, names, query, status])
+  }, [balances, query, status])
 
   const totalUnits = useMemo(() => rows.reduce((sum, row) => sum + row.quantity, 0), [rows])
 
@@ -81,10 +81,10 @@ export function WarehouseStockPanel({ reference }: { reference: WarehouseReferen
     {
       key: 'item',
       header: 'Item',
-      sortValue: (row) => names.itemName(row.itemId),
+      sortValue: (row) => row.itemName,
       cell: (row) => (
         <div className="stack" style={{ gap: 0 }}>
-          <Text as="span">{names.itemName(row.itemId)}</Text>
+          <Text as="span">{row.itemName}</Text>
           <Text as="span" className="muted" size={200}>{row.itemCode}</Text>
         </div>
       ),
@@ -96,17 +96,21 @@ export function WarehouseStockPanel({ reference }: { reference: WarehouseReferen
       cell: (row) => (
         <div className="stack" style={{ gap: 0 }}>
           <Text as="span">{row.locationCode}</Text>
-          <Text as="span" className="muted" size={200}>{locationKindLabel(reference, row.locationId)}</Text>
+          {/* Lokasi yang sudah terhapus tetap punya kode di ledger tapi tidak punya jenis lagi;
+              em dash lebih jujur daripada menebak "Gudang" untuk rak yang tidak ada. */}
+          <Text as="span" className="muted" size={200}>
+            {row.locationKind ? LOCATION_KIND_LABEL[row.locationKind] : '—'}
+          </Text>
         </div>
       ),
     },
     {
       key: 'custodian',
       header: 'Pemegang',
-      sortValue: (row) => names.user(row.custodyOwnerId),
+      sortValue: (row) => row.custodyOwnerName,
       cell: (row) => (
         <div className="stack" style={{ gap: 0 }}>
-          <Text as="span">{names.user(row.custodyOwnerId)}</Text>
+          <Text as="span">{row.custodyOwnerName}</Text>
           <Text as="span" className="muted" size={200}>{OWNER_KIND_LABEL[row.custodyOwnerKind]}</Text>
         </div>
       ),
@@ -179,10 +183,10 @@ export function WarehouseStockPanel({ reference }: { reference: WarehouseReferen
         ) : (
           vanStock.map((van) => (
             <div className="stack" key={van.technicianId} style={{ gap: '0.25rem' }}>
-              <Text as="strong">{names.user(van.technicianId)}</Text>
+              <Text as="strong">{van.technicianName}</Text>
               {van.lines.map((line) => (
                 <div className="spread wrap" key={`${line.itemId}:${line.locationId}:${line.status}`}>
-                  <Text as="span">{names.itemName(line.itemId)}</Text>
+                  <Text as="span">{line.itemName}</Text>
                   <Text as="span" className="muted" size={200}>
                     {line.locationCode} · {INVENTORY_STATUS_LABEL[line.status]}
                     {line.serialNumbers.length > 0 && ` · SN ${line.serialNumbers.join(', ')}`}
@@ -196,11 +200,6 @@ export function WarehouseStockPanel({ reference }: { reference: WarehouseReferen
       </section>
     </div>
   )
-}
-
-function locationKindLabel(reference: WarehouseReference, locationId: string): string {
-  const location = reference.locations.find((entry) => entry.id === locationId)
-  return location ? LOCATION_KIND_LABEL[location.kind] : '—'
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

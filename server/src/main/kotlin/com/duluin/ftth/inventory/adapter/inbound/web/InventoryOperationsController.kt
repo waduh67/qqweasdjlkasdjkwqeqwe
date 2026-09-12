@@ -38,6 +38,7 @@ import java.util.UUID
 class InventoryOperationsController(
     private val operations: InventoryOperationsService,
     private val counts: InventoryReconciliationService,
+    private val stock: InventoryStockQueryService,
     private val currentUser: CurrentUserProvider,
 ) {
     @PostMapping("/receipts")
@@ -96,9 +97,33 @@ class InventoryOperationsController(
         return counts.createCount(body.toCommand(actor.tenantId))
     }
 
+    /**
+     * Daftar opname yang masih menggantung.
+     *
+     * Penjaganya `inventory.count.view` — bukan `.perform` — karena ini permukaan BACA, dan
+     * repo ini memakai akhiran izin sebagai penanda baca/tulis (lihat `AccessChecker`). Dulu
+     * dijaga `.perform`, dan akibatnya dua: pemegang `inventory.count.approve` saja kena 403
+     * di daftar yang berisi persis pekerjaannya, dan tenant yang langganannya tertunggak kena
+     * 402 saat sekadar membaca.
+     *
+     * Dua izin lama ikut diterima SEBAGAI JEMBATAN, bukan sebagai desain. Izin di repo ini
+     * di-seed dari kode dan hanya role sistem "Tenant Admin" yang otomatis ikut diperbarui;
+     * peran rakitan tangan TIDAK di-backfill (aturan yang sama dipakai saat
+     * `inventory.movement.transfer` dipisah). Tanpa jembatan ini, menambahkan izin baru justru
+     * MENUTUP daftar opname bagi petugas yang hari ini bisa membukanya — regresi yang lebih
+     * buruk daripada celah yang sedang diperbaiki. Jembatannya boleh dicabut setelah peran
+     * custom tiap tenant diberi `inventory.count.view`.
+     *
+     * Yang dikembalikan read model, BUKAN agregat `CycleCount`. Agregatnya sudah membawa nama
+     * barang/lokasi/petugasnya sendiri lewat [InventoryStockQueryService] — tanpa itu web harus
+     * memanggil `/item-master` dan `/api/users` hanya untuk membaca satu baris, dan petugas
+     * gudang yang tidak punya `inventory.item.view` / `iam.user.view` kena 403 di panggilan
+     * tambahan itu lalu menatap UUID telanjang. Sekalian menutup kebocoran kecil: agregatnya
+     * menyiarkan `skuId`, `operationHash`, dan `tenantId` yang tidak dipakai layar mana pun.
+     */
     @GetMapping("/counts/open")
-    @PreAuthorize("@authz.can('inventory.count.perform')")
-    fun openCounts(): List<CycleCount> = counts.open(currentUser.current().tenantId)
+    @PreAuthorize("@authz.canAny('inventory.count.view', 'inventory.count.perform', 'inventory.count.approve')")
+    fun openCounts(): List<OpenCountView> = stock.openCounts(currentUser.current().tenantId)
 
     /**
      * Pengesahan selisih opname. Empat mata dijaga di domain: pemegang barang tidak bisa

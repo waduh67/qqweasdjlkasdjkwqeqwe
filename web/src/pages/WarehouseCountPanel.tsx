@@ -8,7 +8,7 @@ import {
   listOpenCounts,
   listStockBalances,
   operationEnvelope,
-  type CycleCount,
+  type OpenCountView,
   type StockBalanceView,
   type VarianceReportView,
 } from '@/api/inventory'
@@ -30,7 +30,7 @@ import { DISCREPANCY_STATE_LABEL, INVENTORY_STATUS_LABEL, LOCATION_KIND_LABEL } 
 export function WarehouseCountPanel({ reference }: { reference: WarehouseReference }) {
   const { can } = useCan()
   const toast = useToast()
-  const [counts, setCounts] = useState<readonly CycleCount[]>([])
+  const [counts, setCounts] = useState<readonly OpenCountView[]>([])
   const [variance, setVariance] = useState<VarianceReportView | null>(null)
   const [balances, setBalances] = useState<readonly StockBalanceView[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,12 +39,22 @@ export function WarehouseCountPanel({ reference }: { reference: WarehouseReferen
   const canPerform = can('inventory.count.perform')
   const canApprove = can('inventory.count.approve')
   const canReadMovements = can('inventory.movement.view')
+  /**
+   * MEMBACA daftar opname bukan hanya urusan yang menghitungnya.
+   *
+   * Dulu daftarnya hanya dimuat untuk `inventory.count.perform`, jadi penyetuju murni membuka
+   * tab ini dan melihat tabel KOSONG — bukan pesan "tak berizin" — lalu menyimpulkan tidak ada
+   * selisih yang menunggu keputusannya. Kontrol empat-mata yang mati tanpa suara. Server kini
+   * menjaganya dengan `inventory.count.view` plus dua izin lama sebagai jembatan; ketiganya
+   * disebut di sini supaya klien dan server menjawab pertanyaan yang sama.
+   */
+  const canReadCounts = can('inventory.count.view') || canPerform || canApprove
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const [nextCounts, nextVariance, nextBalances] = await Promise.all([
-        canPerform ? listOpenCounts() : Promise.resolve([] as CycleCount[]),
+        canReadCounts ? listOpenCounts() : Promise.resolve([] as OpenCountView[]),
         canReadMovements ? getVarianceReport() : Promise.resolve(null),
         canReadMovements ? listStockBalances() : Promise.resolve([] as StockBalanceView[]),
       ])
@@ -56,13 +66,13 @@ export function WarehouseCountPanel({ reference }: { reference: WarehouseReferen
     } finally {
       setLoading(false)
     }
-  }, [canPerform, canReadMovements, toast])
+  }, [canReadCounts, canReadMovements, toast])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const approve = async (count: CycleCount) => {
+  const approve = async (count: OpenCountView) => {
     setDeciding(count.countId)
     try {
       const envelope = await operationEnvelope({ countId: count.countId, decision: 'APPROVE' })
@@ -76,17 +86,23 @@ export function WarehouseCountPanel({ reference }: { reference: WarehouseReferen
     }
   }
 
-  const { names } = reference
-
-  const columns: Column<CycleCount>[] = [
+  // Semua nama di tabel ini datang DARI SERVER. JANGAN kembalikan ke penggabungan id di klien:
+  // `/item-master` dan `/api/users` minta izin yang tidak dipegang petugas gudang biasa, jadi
+  // baris ini akan kembali jadi UUID telanjang justru bagi orang yang paling sering membacanya.
+  const columns: Column<OpenCountView>[] = [
     {
       key: 'item',
       header: 'Item',
-      sortValue: (row) => names.itemName(row.itemId),
+      sortValue: (row) => row.itemName,
       cell: (row) => (
         <div className="stack" style={{ gap: 0 }}>
-          <Text as="span">{names.itemName(row.itemId)}</Text>
-          <Text as="span" className="muted" size={200}>{names.location(row.locationId)}</Text>
+          <Text as="span">{row.itemName}</Text>
+          <Text as="span" className="muted" size={200}>
+            {/* Lokasi yang sudah terhapus masih punya kode di catatan opname tapi tidak punya
+                jenis lagi; kodenya saja lebih jujur daripada menebak kategorinya. */}
+            {row.locationCode}
+            {row.locationKind ? ` · ${LOCATION_KIND_LABEL[row.locationKind]}` : ''}
+          </Text>
         </div>
       ),
     },
@@ -108,27 +124,26 @@ export function WarehouseCountPanel({ reference }: { reference: WarehouseReferen
       key: 'delta',
       header: 'Selisih',
       align: 'right',
-      sortValue: (row) => row.observedQuantity - row.priorQuantity,
-      cell: (row) => {
-        const delta = row.observedQuantity - row.priorQuantity
-        return (
-          <Badge tone={delta === 0 ? 'neutral' : delta > 0 ? 'good' : 'critical'}>
-            {delta > 0 ? `+${delta}` : String(delta)}
-          </Badge>
-        )
-      },
+      // `delta` dihitung SERVER, tidak lagi dikurangkan di sini. Dua tempat yang menghitung
+      // selisih yang sama adalah dua tempat yang bisa berbeda jawabannya.
+      sortValue: (row) => row.delta,
+      cell: (row) => (
+        <Badge tone={row.delta === 0 ? 'neutral' : row.delta > 0 ? 'good' : 'critical'}>
+          {row.delta > 0 ? `+${row.delta}` : String(row.delta)}
+        </Badge>
+      ),
     },
     {
       key: 'state',
       header: 'Status',
-      cell: (row) => <Badge tone="warning">{DISCREPANCY_STATE_LABEL[row.discrepancy]}</Badge>,
+      cell: (row) => <Badge tone="warning">{DISCREPANCY_STATE_LABEL[row.state]}</Badge>,
     },
     {
       key: 'counter',
       header: 'Penghitung',
       cell: (row) => (
         <div className="stack" style={{ gap: 0 }}>
-          <Text as="span">{names.user(row.custodianId)}</Text>
+          <Text as="span">{row.custodianName}</Text>
           <Text as="span" className="muted" size={200}>{row.reason}</Text>
         </div>
       ),
@@ -166,7 +181,10 @@ export function WarehouseCountPanel({ reference }: { reference: WarehouseReferen
           empty={
             <EmptyState
               title="Tidak ada selisih terbuka"
-              hint={canPerform ? 'Hasil hitung yang sama dengan saldo tidak masuk daftar ini.' : 'Butuh izin melakukan opname untuk melihat daftar ini.'}
+              // Petunjuknya dulu bergantung pada `canPerform`, jadi penyetuju murni dibilang
+              // "butuh izin melakukan opname" padahal daftarnya memang boleh ia baca dan memang
+              // sedang kosong — pesan yang menyuruh orang mengejar izin yang tidak ia perlukan.
+              hint={canReadCounts ? 'Hasil hitung yang sama dengan saldo tidak masuk daftar ini.' : 'Butuh izin membaca stock opname untuk melihat daftar ini.'}
             />
           }
         />
@@ -181,7 +199,7 @@ export function WarehouseCountPanel({ reference }: { reference: WarehouseReferen
           </Text>
           {variance.anomalies.map((anomaly) => (
             <div className="spread wrap" key={`${anomaly.itemId}:${anomaly.locationId}:${anomaly.status}`}>
-              <Text as="span">{names.itemName(anomaly.itemId)}</Text>
+              <Text as="span">{anomaly.itemName}</Text>
               <Text as="span" className="muted" size={200}>
                 {anomaly.locationCode} · {INVENTORY_STATUS_LABEL[anomaly.status]} · saldo {anomaly.projectedQuantity} vs{' '}
                 {anomaly.serializedAssetCount} unit berserial

@@ -11,7 +11,7 @@ keadaan sebenarnya.
 
 ```bash
 ./gradlew :server:test --rerun          # ~18 menit
-cd web && ./node_modules/.bin/vitest run # ~1 menit — 65 berkas, 407 tes, SEMUA lulus
+cd web && ./node_modules/.bin/vitest run # ~1,5 menit — 65 berkas, 411 tes, SEMUA lulus
 cd web && ./node_modules/.bin/tsc --noEmit -p tsconfig.app.json
 ```
 
@@ -19,7 +19,7 @@ Panggil binernya langsung dari `node_modules/.bin`. `npx` di lingkungan ini di-s
 MENELAN perintahnya: ia mencetak `npm notice run 'tsc'` lalu keluar dengan status 0 tanpa
 menjalankan apa pun — persis bentuk kegagalan yang paling berbahaya, yaitu terlihat lulus.
 
-**Garis dasar yang SEHAT: 1741 tes, 2–3 gagal.**
+**Garis dasar yang SEHAT: 1755 tes, 2–3 gagal.**
 
 | Tes yang gagal | Sifat |
 | --- | --- |
@@ -66,6 +66,10 @@ Dua jebakan kecil yang sudah memakan korban:
 | Pemisahan izin transfer | **Selesai.** `inventory.movement.transfer` terpisah dari `.issue`. |
 | Penarikan aset saat DISMANTLE (P2.6) | **Selesai.** V197 `work_order_recovered_asset`. Teknisi men-scan ONT yang dicabut; saldo baru bergerak saat WO disetujui, dan mendaratnya di van teknisi berstatus `RETURNED` — BUKAN langsung jadi stok layak jual. Dari van, unitnya naik ke rak lewat `POST /api/inventory/returns` biasa. |
 | Approver dari peran | **Selesai.** Tier boleh berbunyi "Kepala Gudang" saja; pemegangnya diresolusi ke `iam` setiap kali dibaca dan tidak pernah ikut tersimpan. Pemegang nonaktif otomatis gugur. |
+| Read model gudang membawa namanya sendiri | **Selesai.** `MovementLegView`, `MovementEntryView`, `StockBalanceView`, `VanStockLineView`/`VanStockView`, `OpenCountView`, `BalanceAnomalyView`, plus seluruh permukaan `/api/inventory/approvals` kini memulangkan `itemName`, `locationKind`, dan nama orang (`actorName`, `custodyOwnerName`, `technicianName`, `custodianName`, `requesterName`, `approverName`, `delegatedFromName`). Klien TIDAK BOLEH menggabungkan id→nama lagi: `/item-master` dan `/api/users` menuntut `inventory.item.view`/`iam.user.view` yang lazim tidak dipegang petugas gudang, dan itulah yang dulu membuat layarnya mencetak UUID. Resolusi orang lewat `IamApi` in-process (tanpa `@PreAuthorize`), SATU panggilan per request, id yang ternyata id lokasi tidak ditanyakan. |
+| `locationKind` boleh `null` | **Sengaja.** `inventory_location` tidak punya kolom nama, hanya `code` + `kind` — yang dibawa `kind` karena persis itu yang digabungkan klien. Lokasi yang sudah terhapus dipulangkan `null`, bukan ditebak jadi `WAREHOUSE`; klien menulis em dash. Menebaknya membuat saldo yatim terlihat seperti stok yang jelas tempatnya. |
+| `custodyOwnerName` untuk `OwnerKind.CUSTOMER` | **Sengaja UUID.** Resolusinya mencoba kamus lokasi lalu kamus pengguna, tidak bercabang pada `kind`. Menanyakan id pelanggan ke modul `customer` melahirkan siklus modul (alur fulfillment sudah berjalan ke arah sebaliknya). |
+| Izin baca stock opname | **Selesai.** `inventory.count.view` baru di `PermissionCatalog`. `GET /counts/open` dijaga `@authz.canAny('inventory.count.view','inventory.count.perform','inventory.count.approve')` dan memulangkan `OpenCountView`, bukan agregat `CycleCount`. Dua izin lama itu **JEMBATAN, bukan desain**: izin di-seed dari kode dan hanya peran sistem "Tenant Admin" yang di-backfill, jadi mengandalkan izin baru saja justru MENUTUP daftar bagi petugas yang hari ini memakainya. Boleh dicabut setelah peran custom tiap tenant diberi `inventory.count.view`. Dijaga `InventoryCountAccessIT` dari dua sisi, termasuk tes negatif agar `canAny` tidak jadi stempel karet. |
 | Layar/UI gudang | **Selesai.** `/warehouse`, enam tab: stok, mutasi, riwayat, persetujuan, stock opname, master data. Penjaga rutenya DITURUNKAN dari tabel tab (`WAREHOUSE_VIEW_PERMISSIONS`), jadi menambah tab otomatis melebarkan izinnya. Editor kebijakan merender `approverIds` dan `roleHolderIds` sebagai dua kelompok terpisah dan tidak pernah mengirim yang kedua. |
 
 ### Poin 4 — Pesanan & pelanggan
@@ -151,17 +155,16 @@ Dua jebakan kecil yang sudah memakan korban:
 - Ambang diam `/unreachable` tidak berlaku untuk pesanan tanpa baris audit ACCEPT (data lama
   pra-V178).
 
-**Read model yang menyulitkan UI** (ditemukan saat membangun layarnya, belum diperbaiki)
-- **Tidak ada nama item di read model gudang.** `StockBalanceView`, `MovementLegView`,
-  `VanStockLineView`, `OpenCountView`, `BalanceAnomalyView` hanya membawa `itemCode`/`locationCode`.
-  Setiap layar harus menggabungkan sendiri terhadap `/item-master`; pengguna tanpa
-  `inventory.item.view` kembali membaca kode tanpa nama.
-- **Tidak ada resolusi nama orang.** Custodian, teknisi, pemohon, approver semuanya UUID mentah
-  dan satu-satunya jalan resolusi adalah `/api/users` (iam) — yang justru lazim TIDAK dipegang
-  petugas gudang. Layarnya menelan 403 dan mencetak UUID.
-- **Approver stock opname tak bisa melihat yang harus ia setujui.** `GET /api/inventory/counts/open`
-  menuntut `inventory.count.perform`, sementara menyetujui menuntut `inventory.count.approve`.
-  Pemegang izin approve saja kena 403 di daftarnya dan tak punya jalan ke `/counts/{id}/approval`.
+**Read model yang menyulitkan UI** (ditemukan saat membangun layarnya)
+- **Izin non-`.view` yang menjaga permukaan BACA juga memicu 402, bukan cuma 403.**
+  `AccessChecker.isWrite(code) = !code.endsWith(".view")`, dan izin tulis melewati
+  `assertNotLocked` — jadi endpoint baca yang dijaga izin tanpa akhiran `.view` menolak tenant
+  yang langganannya tertunggak saat sekadar MEMBACA. Sudah diperbaiki untuk `/counts/open`;
+  permukaan lain belum disisir satu per satu. **ATURAN repo: hanya izin `*.view` yang boleh
+  menjaga pembacaan.**
+- **`custodianName` sudah dipulangkan permintaan approval tapi belum dipakai layar mana pun.**
+  Bukan bug, tapi kolom "pemegang custody yang diminta" itu justru konteks yang dibutuhkan
+  approver sebelum memutuskan.
 - **Nama field sidik payload tidak konsisten.** Semua body mutasi memakai `payloadHash`, tapi
   `ApprovalDecisionBody` dan `CountApprovalBody` memakai `operationHash`.
 - `/api/inventory/balances` tanpa paging/pencarian/urutan — seluruh tabel saldo dikirim tiap muat.
@@ -224,13 +227,9 @@ Lompatan nomor TIDAK masalah bagi Flyway.
 
 ## 6. Langkah berikutnya yang disarankan, berurutan
 
-1. Bawa nama item/lokasi/orang ke read model gudang (§4), supaya penggabungan id→nama di klien
-   bisa dibuang dan petugas tanpa `inventory.item.view` berhenti membaca kode telanjang.
-2. Benahi izin daftar stock opname (§4) — approver yang tak bisa melihat antreannya itu kontrol
-   yang mati diam-diam, bukan sekadar layar kosong.
-3. Belum ada layar material per WO dengan scan serial; API-nya sudah lengkap
+1. Belum ada layar material per WO dengan scan serial; API-nya sudah lengkap
    (`InventoryAllocationApi`), tinggal layarnya. Layar yang sama harus memuat tab **penarikan
    aset** untuk WO DISMANTLE — tanpa itu jalur P2.6 hanya bisa dipakai lewat curl, dan teknisi
    di lapangan tidak punya cara mencatat ONT yang dia cabut.
-4. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
-5. Uji poin 1 (PPPoE/BRAS) end-to-end.
+2. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
+3. Uji poin 1 (PPPoE/BRAS) end-to-end.

@@ -169,12 +169,18 @@ export interface WarehouseNameBook {
 }
 
 /**
- * Penerjemah id → nama untuk seluruh layar gudang.
+ * Penerjemah id → nama untuk PEMILIH FORM dan panel master data — bukan untuk daftar baca.
  *
- * ALASAN keberadaannya: `/balances` dan `/ledger` hanya mengirim KODE item (`itemCode`) dan
- * kode lokasi, tidak pernah nama — nama cuma ada di `/item-master`. Halaman gudang versi lama
- * malah menampilkan UUID mentah, dan petugas tidak bisa mencocokkan satu barispun dengan rak
- * fisik. Penggabungan ini dilakukan di klien karena server memang tidak menyediakannya.
+ * Read model gudang (`/balances`, `/ledger`, `/van-stock`, `/variance-report`, antrean
+ * persetujuan) sekarang MEMBAWA SENDIRI nama item, jenis lokasi, dan nama orangnya, jadi tidak
+ * satu pun daftar itu boleh memakai buku nama ini lagi. Alasannya bukan kerapian: menggabungkan
+ * di klien berarti layarnya menuntut `inventory.item.view` dan `iam.user.view`, dua izin yang
+ * petugas gudang biasa TIDAK punya — permintaannya kena 403, direktorinya kosong, dan tabelnya
+ * mencetak UUID telanjang persis seperti halaman gudang versi lama.
+ *
+ * Yang tersisa di sini memang butuh direktori: formulir yang menyusun daftar pilihan penyetuju
+ * atau pemegang custody, dan panel master data yang izinnya memang `inventory.item.view`.
+ * Keduanya hanya terbuka untuk orang yang sudah punya izin itu, jadi direktorinya pasti termuat.
  *
  * Fallback SENGAJA mengembalikan id/kode apa adanya, bukan string kosong: baris yang itemnya
  * sudah dinonaktifkan tetap harus bisa dilacak orang, dan sel kosong akan terbaca sebagai

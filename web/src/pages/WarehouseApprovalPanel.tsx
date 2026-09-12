@@ -35,16 +35,21 @@ export function WarehouseApprovalPanel({ reference }: { reference: WarehouseRefe
         <Button variant={section === 'policies' ? 'primary' : 'default'} onClick={() => setSection('policies')}>Kebijakan</Button>
         <Button variant={section === 'overrides' ? 'primary' : 'default'} onClick={() => setSection('overrides')}>Override darurat</Button>
       </div>
-      {section === 'queue' && <ApprovalQueue reference={reference} />}
+      {/* Hanya bagian kebijakan yang menerima acuan: ia menyusun daftar pilihan penyetuju dari
+          direktori pengguna. Antrean dan laporan override membaca nama dari read model-nya
+          sendiri, jadi keduanya SENGAJA tidak diberi akses ke direktori — supaya tidak ada yang
+          diam-diam menggabungkan id di sana lagi dan mengembalikan UUID untuk petugas tanpa
+          `iam.user.view`. */}
+      {section === 'queue' && <ApprovalQueue />}
       {section === 'policies' && <ApprovalPolicySection reference={reference} />}
-      {section === 'overrides' && <EmergencyOverrideSection reference={reference} />}
+      {section === 'overrides' && <EmergencyOverrideSection />}
     </div>
   )
 }
 
 // ————————————————————————————— antrean —————————————————————————————
 
-function ApprovalQueue({ reference }: { reference: WarehouseReference }) {
+function ApprovalQueue() {
   const { can } = useCan()
   const toast = useToast()
   const canDecide = can('inventory.approval.decide')
@@ -106,7 +111,7 @@ function ApprovalQueue({ reference }: { reference: WarehouseReference }) {
               <Badge tone={APPROVAL_STATUS_TONE[approval.status]}>{APPROVAL_STATUS_LABEL[approval.status]}</Badge>
             </div>
             <Text as="span" className="muted" size={200}>
-              Jumlah {approval.amount} · diminta {reference.names.user(approval.requesterId)} · berakhir{' '}
+              Jumlah {approval.amount} · diminta {approval.requesterName} · berakhir{' '}
               {new Date(approval.expiresAt).toLocaleString('id-ID')}
             </Text>
             {approval.emergencyReason && (
@@ -116,7 +121,7 @@ function ApprovalQueue({ reference }: { reference: WarehouseReference }) {
               <div className="stack" style={{ gap: '0.15rem' }}>
                 {approval.decisions.map((decision) => (
                   <Text as="span" className="muted" size={200} key={decision.decisionId}>
-                    Tier {decision.tier} · {reference.names.user(decision.approverId)} ·{' '}
+                    Tier {decision.tier} · {decision.approverName} ·{' '}
                     {decision.decision === 'APPROVE' ? 'menyetujui' : 'menolak'}
                     {decision.reason ? ` — ${decision.reason}` : ''}
                   </Text>
@@ -422,7 +427,7 @@ function toDraft(tier: ApprovalTierView): TierDraft {
 
 // ————————————————————————————— override darurat —————————————————————————————
 
-function EmergencyOverrideSection({ reference }: { reference: WarehouseReference }) {
+function EmergencyOverrideSection() {
   const toast = useToast()
   const [overrides, setOverrides] = useState<readonly EmergencyOverrideView[]>([])
   const [loading, setLoading] = useState(true)
@@ -457,7 +462,7 @@ function EmergencyOverrideSection({ reference }: { reference: WarehouseReference
             <Badge tone="serious">Tier dilangkahi: {entry.bypassedTiers.join(', ') || '—'}</Badge>
           </div>
           <Text as="span" className="muted" size={200}>
-            Jumlah {entry.amount} · {reference.names.user(entry.requesterId)} ·{' '}
+            Jumlah {entry.amount} · {entry.requesterName} ·{' '}
             {new Date(entry.occurredAt).toLocaleString('id-ID')}
           </Text>
           <Text as="span">{entry.reason}</Text>

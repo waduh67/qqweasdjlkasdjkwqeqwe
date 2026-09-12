@@ -134,6 +134,13 @@ object PermissionCatalog {
         perm("inventory.movement.transfer", "Pindahkan barang antar gudang/bin")
         perm("inventory.movement.return", "Terima retur barang ke gudang")
         perm("inventory.movement.adjust", "Sesuaikan stok gudang (koreksi, susut, hapus buku)")
+        // Membaca daftar opname dipisah dari melakukannya. Selama daftarnya dijaga
+        // `inventory.count.perform`, pemegang `inventory.count.approve` — yang tugasnya justru
+        // MENYETUJUI selisih — kena 403 di daftarnya dan tak punya jalan menemukan id yang harus
+        // ia sahkan. Lebih halus lagi: `perform` bukan akhiran `.view`, sehingga `AccessChecker`
+        // menghitungnya sebagai izin TULIS dan tenant yang langganannya tertunggak menerima 402
+        // saat sekadar MEMBACA hasil opname.
+        perm("inventory.count.view", "Lihat stock opname terbuka dan selisihnya")
         perm("inventory.count.perform", "Lakukan stock opname")
         perm("inventory.count.approve", "Setujui hasil stock opname")
 

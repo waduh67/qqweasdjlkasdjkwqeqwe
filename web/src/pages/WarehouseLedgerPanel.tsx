@@ -66,8 +66,6 @@ export function WarehouseLedgerPanel({ reference }: { reference: WarehouseRefere
     setPage(0)
   }
 
-  const { names } = reference
-
   const columns: Column<MovementEntryView>[] = [
     {
       key: 'occurredAt',
@@ -98,7 +96,7 @@ export function WarehouseLedgerPanel({ reference }: { reference: WarehouseRefere
         <div className="stack" style={{ gap: '0.15rem' }}>
           {row.legs.map((leg, index) => (
             <Text as="span" size={200} key={`${leg.itemId}:${leg.locationId}:${leg.direction}:${index}`}>
-              {leg.direction === 'IN' ? '↓ masuk' : '↑ keluar'} {names.itemName(leg.itemId)} × {leg.quantity} @{' '}
+              {leg.direction === 'IN' ? '↓ masuk' : '↑ keluar'} {leg.itemName} × {leg.quantity} @{' '}
               {leg.locationCode}
               {leg.serialNumber ? ` · SN ${leg.serialNumber}` : ''}
             </Text>
@@ -111,7 +109,7 @@ export function WarehouseLedgerPanel({ reference }: { reference: WarehouseRefere
       header: 'Pelaku',
       cell: (row) => (
         <div className="stack" style={{ gap: 0 }}>
-          <Text as="span">{names.user(row.actorId)}</Text>
+          <Text as="span">{row.actorName}</Text>
           <Text as="span" className="muted" size={200}>{row.reason}</Text>
         </div>
       ),
