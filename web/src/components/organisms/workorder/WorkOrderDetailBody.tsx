@@ -36,6 +36,8 @@ import {
 } from '@/utils/woLabels'
 import { AssigneeChips, WoField } from './views'
 import { WorkOrderFiberWork } from './WorkOrderFiberWork'
+import { WorkOrderMaterials } from './WorkOrderMaterials'
+import { WorkOrderRecoveredAssets } from './WorkOrderRecoveredAssets'
 import { ProofOfWorkCompletion } from './ProofOfWorkCompletion'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
@@ -243,6 +245,26 @@ export function WorkOrderDetailBody({
       {/* Kerja serat yang dibukukan ke tiket ini — kartunya menampilkan diri sendiri
           hanya bila ada isinya (lihat komponennya). */}
       <WorkOrderFiberWork workOrderId={id} />
+
+      {/* Barang yang dibawa teknisi untuk tiket ini: rencana, pengeluaran dari gudang, dan
+          nasib tiap unit berserial. Ditaruh SEBELUM riwayat karena ia berisi aksi yang masih
+          harus dikerjakan, sedangkan riwayat hanya bacaan. */}
+      <WorkOrderMaterials workOrderId={id} status={wo.status} />
+
+      {/* Unit yang DICABUT dari rumah pelanggan (jalur DISMANTLE). Kartu terpisah, bukan
+          section di dalam Material, karena arah barangnya berlawanan: material mengalir
+          gudang → pelanggan, penarikan mengalir pelanggan → van. Menyatukannya membuat
+          kolom "keluar" dan "masuk" bersebelahan tanpa penanda arah — persis cara selisih
+          stok lahir. Ia juga menyembunyikan diri sendiri bila memang tak relevan. */}
+      <WorkOrderRecoveredAssets
+        workOrderId={id}
+        type={wo.type}
+        status={wo.status}
+        // Roster tiket ini, bukan direktori pengguna: yang mencabut ONT adalah orang yang
+        // memang dikirim ke rumah pelanggan, dan `/api/users` menuntut izin yang justru
+        // tidak dipegang teknisi lapangan.
+        assignees={wo.assignees}
+      />
 
       <div className="card stack" style={{ gap: '0.5rem' }}>
         <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Riwayat</Text>
