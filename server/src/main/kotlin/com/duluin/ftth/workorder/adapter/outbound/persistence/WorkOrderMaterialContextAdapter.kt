@@ -19,7 +19,26 @@ import java.util.UUID
 
 @Component
 class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, private val authority: CurrentAuthorityApi,
-    private val cutovers: InventoryTenantCutoverApi, private val users: IamApi, private val customers: CustomerApi) : WorkOrderMaterialContextApi {
+    private val cutovers: InventoryTenantCutoverApi, private val users: IamApi, private val customers: CustomerApi) : WorkOrderMaterialContextApi, WorkOrderSettlementApi {
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun lockApproved(id: UUID, authority: CurrentAuthority): ApprovedWorkOrderContext {
+        authority.fence.assertHeld()
+        if (!authority.platformAdmin && "workorder.order.approve" !in authority.permissions) fail(WarehouseErrorCode.FORBIDDEN)
+        entityManager.flush()
+        val material = snapshot(id, authority)
+        return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+            connection.prepareStatement("SELECT approved_by,completed_by,proof_of_work_hash FROM work_order WHERE tenant_id=? AND id=? AND status='DONE' AND approval_status='APPROVED'").use { query ->
+                query.setObject(1, TenantContext.tenantId()); query.setObject(2, id)
+                query.executeQuery().use { row ->
+                    if (!row.next()) fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                    val approver = row.getObject("approved_by", UUID::class.java) ?: fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                    val completer = row.getObject("completed_by", UUID::class.java) ?: fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                    if (approver == completer || approver != authority.fence.identity.userId) fail(WarehouseErrorCode.FORBIDDEN)
+                    ApprovedWorkOrderContext(material, approver, completer, row.getString("proof_of_work_hash") ?: fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED))
+                }
+            }
+        }
+    }
     @Transactional(timeout = 30)
     override fun read(workOrderId: UUID): WorkOrderMaterialContext {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
