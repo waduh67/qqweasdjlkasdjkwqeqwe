@@ -5,6 +5,7 @@ import com.duluin.ftth.onboarding.MigrationImportApproved
 import com.duluin.ftth.workorder.FulfillmentApproved
 import com.duluin.ftth.tenancy.TenantApi
 import java.util.UUID
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -50,6 +51,14 @@ class FulfillmentOutboxWorker(
     private val coordinator: FulfillmentCoordinator,
     private val outbox: FulfillmentOutboxRepository,
     private val tenants: TenantApi? = null,
+    /**
+     * Rujukan ke diri sendiri lewat proxy Spring, `@Lazy` supaya bukan dependensi melingkar.
+     * [drain] WAJIB memanggil [processNext] lewat ini: panggilan langsung `this.processNext(...)`
+     * melewati proxy, sehingga `@Transactional(REQUIRES_NEW)` DIAM-DIAM tidak berlaku dan klaim
+     * baris outbox ikut commit walau pemrosesannya gagal. Jalur listener tidak kena karena
+     * mereka memanggil lewat bean yang sudah ter-proxy.
+     */
+    @Lazy private val self: FulfillmentOutboxWorker? = null,
 ) {
     fun process(request: FulfillmentRequest): FulfillmentOutcome =
         TenantContext.runAs(request.tenantId) { coordinator.process(request) }
@@ -57,8 +66,9 @@ class FulfillmentOutboxWorker(
     @org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "\${ftth.fulfillment.worker-delay:PT5S}")
     fun drain() {
         val workerId = "fulfillment-${UUID.randomUUID()}"
+        val proxied = self ?: this
         tenants?.findActiveTenantIds()?.forEach { tenantId ->
-            processNext(tenantId, workerId)
+            proxied.processNext(tenantId, workerId)
         }
     }
 
