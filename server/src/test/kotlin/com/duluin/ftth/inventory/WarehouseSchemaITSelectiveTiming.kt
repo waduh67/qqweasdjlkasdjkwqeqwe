@@ -111,7 +111,8 @@ class WarehouseSchemaITSelectiveTiming {
                 }
                 assertThat(names).containsExactlyInAnyOrderElementsOf(WarehouseTimingFamily.entries.map { it.function } +
                     listOf("warehouse_approval_terminal_guard", "warehouse_approval_decision_binding", "warehouse_material_submission_binding_guard",
-                        "warehouse_live_issue_binding_guard", "warehouse_issue_dispatch_binding_guard", "warehouse_material_receipt_guard"))
+                        "warehouse_live_issue_binding_guard", "warehouse_issue_dispatch_binding_guard", "warehouse_material_receipt_guard",
+                        "warehouse_material_usage_bound_guard", "warehouse_consumed_balance_guard"))
             }
         } }
     }
