@@ -1,118 +1,169 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Text } from '@fluentui/react-components'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError } from '@/api/client'
 import {
-  decideInventoryApproval,
-  listCustody,
-  listInventoryItems,
-  listInventoryStock,
-  listPendingApprovals,
-  listReservations,
-  listWarehouses,
-  type InventoryApprovalRequest,
-  type InventoryCustodyView,
-  type InventoryItemView,
-  type InventoryLocationView,
-  type InventoryReservationView,
-  type InventoryStockView,
+  listInventoryLocations,
+  listItemMaster,
+  listUserDirectory,
+  type InventoryItemMasterView,
+  type LocationView,
 } from '@/api/inventory'
+import type { User } from '@/api/types'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, EmptyState, Spinner, TextareaField } from '@/components/atoms'
-import { Tabs } from '@/components/molecules'
-import { useToast } from '@/system'
+import { Button, EmptyState, SkeletonRows } from '@/components/atoms'
+import { PageHeader, Tabs } from '@/components/molecules'
+import { createNameBook, type WarehouseNameBook } from './WarehouseLabels'
+import { WarehouseStockPanel } from './WarehouseStockPanel'
+import { WarehouseMovementPanel } from './WarehouseMovementPanel'
+import { WarehouseLedgerPanel } from './WarehouseLedgerPanel'
+import { WarehouseApprovalPanel } from './WarehouseApprovalPanel'
+import { WarehouseCountPanel } from './WarehouseCountPanel'
+import { WarehouseMasterDataPanel } from './WarehouseMasterDataPanel'
 
-type Tab = 'stock' | 'custody' | 'approvals'
+/**
+ * Data acuan yang dipakai SEMUA panel gudang untuk menerjemahkan id jadi nama.
+ *
+ * Dimuat sekali di kulit halaman lalu diturunkan, bukan diambil ulang tiap panel: pindah tab
+ * berarti tiga request master data lagi, dan di jaringan lapangan itu membuat tabel berkedip
+ * kosong setiap kali petugas bolak-balik antara "Stok" dan "Mutasi".
+ */
+export interface WarehouseReference {
+  readonly locations: readonly LocationView[]
+  /** Termasuk item nonaktif — ledger lama tetap menunjuk item yang sudah dipensiunkan. */
+  readonly items: readonly InventoryItemMasterView[]
+  readonly users: readonly User[]
+  readonly names: WarehouseNameBook
+  readonly reload: () => Promise<void>
+}
 
-const TABS: readonly { readonly key: Tab; readonly label: string; readonly permission: string }[] = [
-  { key: 'stock', label: 'Stok gudang', permission: 'inventory.item.view' },
-  { key: 'custody', label: 'Custody', permission: 'inventory.custody.view' },
-  { key: 'approvals', label: 'Persetujuan', permission: 'inventory.approval.view' },
-]
+type Tab = 'stock' | 'movements' | 'ledger' | 'approvals' | 'counts' | 'master'
 
 export function WarehouseOperationsPage() {
-  const { can } = useCan()
-  const toast = useToast()
-  const visible = TABS.filter((tab) => can(tab.permission))
-  const [tab, setTab] = useState<Tab>(visible[0]?.key ?? 'stock')
+  const { can, canAny } = useCan()
+  const [tab, setTab] = useState<Tab | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [warehouses, setWarehouses] = useState<readonly InventoryLocationView[]>([])
-  const [items, setItems] = useState<readonly InventoryItemView[]>([])
-  const [stock, setStock] = useState<readonly InventoryStockView[]>([])
-  const [reservations, setReservations] = useState<readonly InventoryReservationView[]>([])
-  const [custody, setCustody] = useState<readonly InventoryCustodyView[]>([])
-  const [approvals, setApprovals] = useState<readonly InventoryApprovalRequest[]>([])
+  const [locations, setLocations] = useState<readonly LocationView[]>([])
+  const [items, setItems] = useState<readonly InventoryItemMasterView[]>([])
+  const [users, setUsers] = useState<readonly User[]>([])
 
-  const load = useCallback(async () => {
+  const loadReference = useCallback(async () => {
+    setError(null)
     try {
-      setError(null)
-      const [nextWarehouses, nextItems, nextStock, nextReservations, nextCustody, nextApprovals] = await Promise.all([
-        can('inventory.location.view') ? listWarehouses() : Promise.resolve([]),
-        can('inventory.item.view') ? listInventoryItems() : Promise.resolve([]),
-        can('inventory.item.view') ? listInventoryStock() : Promise.resolve([]),
-        can('inventory.custody.view') ? listReservations() : Promise.resolve([]),
-        can('inventory.custody.view') ? listCustody() : Promise.resolve([]),
-        can('inventory.approval.view') ? listPendingApprovals() : Promise.resolve([]),
+      const [nextLocations, nextItems] = await Promise.all([
+        can('inventory.location.view') ? listInventoryLocations() : Promise.resolve([]),
+        can('inventory.item.view') ? listItemMaster(true) : Promise.resolve([]),
       ])
-      setWarehouses(nextWarehouses)
+      setLocations(nextLocations)
       setItems(nextItems)
-      setStock(nextStock)
-      setReservations(nextReservations)
-      setCustody(nextCustody)
-      setApprovals(nextApprovals)
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Gagal memuat operasi gudang')
+      setError(caught instanceof ApiError ? caught.message : 'Gagal memuat master data gudang')
     } finally {
       setLoading(false)
     }
+    // Direktori pengguna DISENGAJA di luar Promise.all dan kegagalannya ditelan: petugas
+    // gudang sering tidak punya `iam.user.view`, dan 403 di sini tidak boleh membuat seluruh
+    // layar stok ikut kosong. Tanpa direktori, id penyetuju/custodian tampil apa adanya.
+    try {
+      setUsers(await listUserDirectory())
+    } catch {
+      setUsers([])
+    }
   }, [can])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    void loadReference()
+  }, [loadReference])
 
-  if (visible.length === 0) return <div className="card"><EmptyState title="Akses ditolak" hint="Kamu tidak punya izin operasi gudang." /></div>
-  if (loading) return <div className="card" style={{ display: 'grid', placeItems: 'center', padding: '3rem' }}><Spinner /></div>
-  if (error) return <div className="card stack" role="alert"><Text as="strong" className="error">Gagal memuat operasi gudang</Text><Text as="span" className="muted">{error}</Text><Button onClick={() => void load()}>Coba lagi</Button></div>
+  const names = useMemo(() => createNameBook(items, locations, users), [items, locations, users])
+  const reference = useMemo<WarehouseReference>(
+    () => ({ locations, items, users, names, reload: loadReference }),
+    [locations, items, users, names, loadReference],
+  )
+
+  const visible = useMemo(
+    () =>
+      ALL_TABS.filter((entry) => canAny(...entry.permissions)),
+    [canAny],
+  )
+  const active = tab && visible.some((entry) => entry.key === tab) ? tab : visible[0]?.key
+
+  if (visible.length === 0) {
+    return (
+      <div className="card">
+        <EmptyState title="Akses ditolak" hint="Kamu tidak punya izin operasi gudang." />
+      </div>
+    )
+  }
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
-      <div><Text as="h1" className="page-title" size={700} weight="semibold">Operasi gudang</Text><Text as="p" className="page-sub">Pantau stok, custody material, dan persetujuan yang menjadi tugasmu.</Text></div>
-      <Tabs tabs={visible} active={tab} onChange={setTab} />
-      {tab === 'stock' && <StockPanel warehouses={warehouses} items={items} stock={stock} />}
-      {tab === 'custody' && <CustodyPanel custody={custody} reservations={reservations} />}
-      {tab === 'approvals' && <ApprovalPanel approvals={approvals} canDecide={can('inventory.approval.decide')} onDone={() => { toast.success('Keputusan persetujuan disimpan'); void load() }} />}
+      <PageHeader
+        title="Operasi gudang"
+        subtitle="Master data, stok, mutasi, dan persetujuan material lapangan."
+      />
+      {error && (
+        <div className="card stack" role="alert">
+          <span className="error">{error}</span>
+          <div>
+            <Button onClick={() => void loadReference()}>Coba lagi</Button>
+          </div>
+        </div>
+      )}
+      <Tabs tabs={visible.map((entry) => ({ key: entry.key, label: entry.label }))} active={active as Tab} onChange={setTab} />
+      {loading ? (
+        <div className="card">
+          <SkeletonRows rows={5} cols={5} />
+        </div>
+      ) : (
+        <>
+          {active === 'stock' && <WarehouseStockPanel reference={reference} />}
+          {active === 'movements' && <WarehouseMovementPanel reference={reference} />}
+          {active === 'ledger' && <WarehouseLedgerPanel reference={reference} />}
+          {active === 'approvals' && <WarehouseApprovalPanel reference={reference} />}
+          {active === 'counts' && <WarehouseCountPanel reference={reference} />}
+          {active === 'master' && <WarehouseMasterDataPanel reference={reference} />}
+        </>
+      )}
     </div>
   )
 }
 
-function StockPanel({ warehouses, items, stock }: { warehouses: readonly InventoryLocationView[]; items: readonly InventoryItemView[]; stock: readonly InventoryStockView[] }) {
-  return <div className="stack"><div className="stat-grid"><Metric label="Lokasi" value={warehouses.length} /><Metric label="Aset serial" value={items.length} /><Metric label="Posisi stok" value={stock.length} /></div><div className="card stack">{stock.length === 0 ? <EmptyState title="Belum ada stok" hint="Posisi stok akan muncul setelah penerimaan material." /> : stock.map((row) => <div className="spread wrap" key={`${row.skuId}:${row.locationId}`}><Text as="span" className="tnum">SKU {row.skuId}</Text><Text as="span">{Object.entries(row.quantities).map(([status, quantity]) => `${status}: ${quantity}`).join(' · ')}</Text></div>)}</div></div>
-}
+/**
+ * Satu tab tampil bila pengguna punya SALAH SATU izinnya. Dipakai `canAny`, bukan `can`
+ * tunggal, karena tab "Mutasi" memang dihuni enam aksi dengan izin berbeda-beda: gudang
+ * sungguhan memisahkan orang yang menggeser barang antar rak dari orang yang menyerahkannya
+ * ke teknisi, dan menyembunyikan seluruh tab hanya karena satu izin kurang akan mengunci
+ * petugas dari aksi yang sebenarnya boleh ia lakukan.
+ */
+const ALL_TABS: readonly { readonly key: Tab; readonly label: string; readonly permissions: readonly string[] }[] = [
+  { key: 'stock', label: 'Stok', permissions: ['inventory.movement.view'] },
+  {
+    key: 'movements',
+    label: 'Mutasi',
+    permissions: [
+      'inventory.restock.request',
+      'inventory.restock.receive',
+      'inventory.movement.transfer',
+      'inventory.movement.issue',
+      'inventory.movement.return',
+      'inventory.movement.adjust',
+    ],
+  },
+  { key: 'ledger', label: 'Riwayat mutasi', permissions: ['inventory.movement.view'] },
+  { key: 'approvals', label: 'Persetujuan', permissions: ['inventory.approval.view'] },
+  { key: 'counts', label: 'Stock opname', permissions: ['inventory.count.perform', 'inventory.count.approve'] },
+  { key: 'master', label: 'Master data', permissions: ['inventory.location.view', 'inventory.item.view'] },
+]
 
-function CustodyPanel({ custody, reservations }: { custody: readonly InventoryCustodyView[]; reservations: readonly InventoryReservationView[] }) {
-  return <div className="stack"><div className="stat-grid"><Metric label="Custody aktif" value={custody.length} /><Metric label="Reservasi" value={reservations.length} /></div><div className="card stack">{custody.length === 0 ? <EmptyState title="Tidak ada custody aktif" hint="Material yang diterbitkan akan terlihat di sini." /> : custody.map((row) => <div className="spread wrap" key={row.assetId}><Text as="span" className="tnum">Aset {row.assetId}</Text><Badge tone="accent">{row.status}</Badge><Text as="span" className="muted">{row.ownerKind}</Text></div>)}</div></div>
-}
-
-function ApprovalPanel({ approvals, canDecide, onDone }: { approvals: readonly InventoryApprovalRequest[]; canDecide: boolean; onDone: () => void }) {
-  const toast = useToast()
-  const [notes, setNotes] = useState<Record<string, string>>({})
-  const [busy, setBusy] = useState<string | null>(null)
-  const decide = async (approval: InventoryApprovalRequest, decision: 'APPROVE' | 'REJECT') => {
-    if (decision === 'REJECT' && !(notes[approval.approvalId] ?? '').trim()) return
-    setBusy(approval.approvalId)
-    try {
-      const reason = notes[approval.approvalId]?.trim() || null
-      const operationKey = crypto.randomUUID()
-      const payload = JSON.stringify({ decision, reason, movementId: null })
-      const bytes = new TextEncoder().encode(payload)
-      const digest = await crypto.subtle.digest('SHA-256', bytes)
-      const operationHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-      await decideInventoryApproval(approval.approvalId, decision, reason, operationKey, operationHash)
-      onDone()
-    } catch (caught) {
-      toast.error(caught instanceof ApiError ? caught.message : 'Keputusan tidak dapat disimpan')
-    } finally { setBusy(null) }
-  }
-  return <div className="stack">{approvals.length === 0 ? <div className="card"><EmptyState title="Tidak ada persetujuan" hint="Antrean hanya memuat permintaan yang boleh kamu tinjau." /></div> : approvals.map((approval) => <article className="card stack" key={approval.approvalId}><div className="spread wrap"><Text as="strong">{approval.type}</Text><Badge tone="warning">Menunggu keputusan</Badge></div><Text as="span" className="muted">Jumlah: {approval.amount} · berakhir {new Date(approval.expiresAt).toLocaleString('id-ID')}</Text><TextareaField label="Catatan keputusan" value={notes[approval.approvalId] ?? ''} onChange={(_, data) => setNotes((current) => ({ ...current, [approval.approvalId]: data.value }))} rows={2} disabled={!canDecide || busy === approval.approvalId} /><div className="row wrap"><Button disabled={!canDecide || busy === approval.approvalId} onClick={() => void decide(approval, 'APPROVE')}>Setujui</Button><Button variant="danger" disabled={!canDecide || busy === approval.approvalId || !(notes[approval.approvalId] ?? '').trim()} onClick={() => void decide(approval, 'REJECT')}>Tolak</Button></div></article>)}</div>
-}
-
-function Metric({ label, value }: { label: string; value: number }) { return <div className="card stack" style={{ gap: '0.25rem' }}><Text as="span" className="muted" size={200}>{label}</Text><Text as="strong" size={600}>{value}</Text></div> }
+/**
+ * Izin yang membuka pintu halaman ini — DITURUNKAN dari [ALL_TABS], bukan diketik ulang.
+ *
+ * Penjaga rutenya dulu satu izin tetap, `inventory.item.view`. Bentuk itu mengunci keluar
+ * petugas stok yang hanya punya `inventory.movement.view`: ia ditolak di depan pintu padahal
+ * ada dua tab yang sebenarnya boleh ia buka. Diturunkan begini supaya kesalahan itu tidak bisa
+ * lahir lagi — menambah tab baru otomatis melebarkan penjaganya, dan tidak ada daftar kedua
+ * yang bisa ketinggalan.
+ */
+export const WAREHOUSE_VIEW_PERMISSIONS: string[] = [
+  ...new Set(ALL_TABS.flatMap((entry) => entry.permissions)),
+]

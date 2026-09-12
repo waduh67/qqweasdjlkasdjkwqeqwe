@@ -27,6 +27,12 @@ const LABELS: Record<string, string> = {
   provisioning: 'Provisioning',
   'express-psb': 'PSB Ekspres',
   customers: 'Pelanggan',
+  orders: 'Pesanan',
+  // Segmen "leads" dan "import" hanya pernah muncul di bawah /orders, jadi labelnya boleh
+  // spesifik. Kalau kelak ada /something/import lain, pecah peta ini per-jalur — jangan
+  // biarkan "Impor Pesanan" nongol di remah-remah modul yang bukan pesanan.
+  leads: 'Calon Pelanggan',
+  import: 'Impor Pesanan',
   'import-pppoe': 'Impor PPPoE',
   'import-customers': 'Impor Pelanggan',
   invoices: 'Tagihan',

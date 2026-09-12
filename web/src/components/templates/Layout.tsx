@@ -34,6 +34,7 @@ import {
   IconWorkOrder,
 } from '@/components/atoms/icons'
 import { HOTSPOT_VIEW_PERMISSIONS } from '@/api/hotspot'
+import { WAREHOUSE_VIEW_PERMISSIONS } from '@/pages/WarehouseOperationsPage'
 /**
  * Navigasi dikelompokkan menurut alur kerja (operasi jaringan vs administrasi),
  * bukan sekadar daftar datar — pada belasan menu, pengelompokan membuat operator
@@ -54,7 +55,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
       { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
-      { to: '/warehouse', label: 'Operasi Gudang', permission: 'inventory.item.view', icon: IconInventory },
+      { to: '/warehouse', label: 'Operasi Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: IconInventory },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
       { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
@@ -67,6 +68,17 @@ const GROUPS: NavGroup[] = [
     label: 'Layanan Pelanggan',
     items: [
       { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: IconPlus },
+      // Pesanan mendahului Pelanggan karena memang begitu urutan hidupnya: orang memesan dulu,
+      // baru jadi pelanggan setelah pesanannya diterima.
+      //
+      // `end: true` WAJIB di sini, bukan gaya penulisan. Tanpa itu NavLink mencocokkan awalan,
+      // jadi "/orders" ikut menyala saat pengguna berada di "/orders/leads" — dua item menyala
+      // sekaligus dan tak satu pun menunjukkan halaman yang sedang dibuka. Harganya: layar
+      // detail "/orders/:id" tidak menyalakan apa pun. Itu dipilih sadar — detail selalu
+      // dicapai dari antreannya dan punya jalan kembali sendiri, sementara dua sorotan
+      // berbarengan salah SETIAP saat.
+      { to: '/orders', label: 'Pesanan', permission: 'order.order.view', icon: IconInbox, end: true },
+      { to: '/orders/leads', label: 'Calon Pelanggan', permission: 'order.lead.view', icon: IconCustomers },
       // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
       // (menyatu dengan rencana impor/ekspor pelanggan via CSV). Rute /import-pppoe tetap ada.
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },

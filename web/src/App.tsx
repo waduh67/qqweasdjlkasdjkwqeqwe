@@ -15,13 +15,17 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { PlatformJobsPage } from './pages/PlatformJobsPage'
 import { InventoryPage } from './pages/InventoryPage'
-import { WarehouseOperationsPage } from './pages/WarehouseOperationsPage'
+import { WarehouseOperationsPage, WAREHOUSE_VIEW_PERMISSIONS } from './pages/WarehouseOperationsPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { InvoicesPage } from './pages/InvoicesPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
 import { ImportPppoePage } from './pages/ImportPppoePage'
 import { ImportCustomersPage } from './pages/ImportCustomersPage'
+import { OrdersPage } from './pages/OrdersPage'
+import { OrderDetailPage } from './pages/OrderDetailPage'
+import { ImportOrdersPage } from './pages/ImportOrdersPage'
+import { OrderLeadsPage } from './pages/OrderLeadsPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { NetworkProvisioningPage } from './pages/NetworkProvisioningPage'
@@ -199,9 +203,9 @@ function OperatorApp() {
             <Route
               path="warehouse"
               element={
-                <RequirePermission permission="inventory.item.view">
+                <RequireAnyPermission permissions={WAREHOUSE_VIEW_PERMISSIONS}>
                   <WarehouseOperationsPage />
-                </RequirePermission>
+                </RequireAnyPermission>
               }
             />
             <Route
@@ -241,6 +245,44 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="customer.customer.create">
                   <ImportCustomersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="orders"
+              element={
+                <RequirePermission permission="order.order.view">
+                  <OrdersPage />
+                </RequirePermission>
+              }
+            />
+            {/*
+              Dua rute statis ini SENGAJA ditulis sebelum `orders/:id`. React Router v7 memang
+              memeringkat segmen statis di atas segmen dinamis, jadi urutannya tidak menentukan —
+              tapi pembaca berikutnya yang memindahkan `orders/:id` ke atas tidak akan sadar
+              bahwa "import" dan "leads" adalah kata yang juga cocok sebagai id.
+            */}
+            <Route
+              path="orders/import"
+              element={
+                <RequirePermission permission="order.import.manage">
+                  <ImportOrdersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="orders/leads"
+              element={
+                <RequirePermission permission="order.lead.view">
+                  <OrderLeadsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="orders/:id"
+              element={
+                <RequirePermission permission="order.order.view">
+                  <OrderDetailPage />
                 </RequirePermission>
               }
             />
