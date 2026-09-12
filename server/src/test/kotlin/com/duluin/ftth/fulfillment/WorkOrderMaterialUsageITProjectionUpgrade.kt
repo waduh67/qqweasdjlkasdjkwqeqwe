@@ -38,7 +38,7 @@ class WorkOrderMaterialUsageITProjectionUpgrade : MaterialUsageProjectionFixture
         val before = cases.map { usageAccounting(it.usage) }
         cases.forEach { assertThat(use(it.usage).status).isEqualTo(200) }
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(1)
+        assertThat(database.migrate("175.22").migrationsExecuted).isEqualTo(1)
 
         cases.forEachIndexed { index, case ->
             val replay = use(case.usage)
