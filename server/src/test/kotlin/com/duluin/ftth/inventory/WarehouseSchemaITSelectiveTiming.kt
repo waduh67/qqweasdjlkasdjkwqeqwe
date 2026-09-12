@@ -106,13 +106,16 @@ class WarehouseSchemaITSelectiveTiming {
                 while (rows.next()) {
                     names.add(rows.getString(1))
                     assertThat(rows.getBoolean(3)).isFalse()
+                    val assertion = if (rows.getString(1) == "warehouse_consumed_truth_guard")
+                        "PERFORM warehouse_assert_deferred_scope(CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END);"
+                    else "PERFORM warehouse_assert_deferred_scope(NEW.tenant_id);"
                     assertThat(rows.getString(2).substringAfter("BEGIN").trimStart())
-                        .describedAs(rows.getString(1)).startsWith("PERFORM warehouse_assert_deferred_scope(NEW.tenant_id);")
+                        .describedAs(rows.getString(1)).startsWith(assertion)
                 }
                 assertThat(names).containsExactlyInAnyOrderElementsOf(WarehouseTimingFamily.entries.map { it.function } +
                     listOf("warehouse_approval_terminal_guard", "warehouse_approval_decision_binding", "warehouse_material_submission_binding_guard",
                         "warehouse_live_issue_binding_guard", "warehouse_issue_dispatch_binding_guard", "warehouse_material_receipt_guard",
-                        "warehouse_material_usage_bound_guard", "warehouse_consumed_balance_guard"))
+                        "warehouse_material_usage_bound_guard", "warehouse_consumed_balance_guard", "warehouse_consumed_truth_guard"))
             }
         } }
     }
