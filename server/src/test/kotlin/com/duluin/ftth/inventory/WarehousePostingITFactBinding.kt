@@ -21,7 +21,7 @@ class WarehousePostingITFactBinding : WarehousePostingRegressionSupport() {
             var fact=fact(piece)
             if(mode=="CUSTOMER") fact=fact.copy(customerId=foreignCustomer)
             if(mode in setOf("WORK_ORDER","USAGE")) fact=fact.copy(workOrderId=foreignWorkOrder)
-            val target=piece.copy(locationId=consumed,custodianId=if(mode=="SINK_CUSTOMER") foreignCustomer else fact.customerId,
+            val target=piece.copy(locationId=consumed,custodianId=if(mode=="SINK_CUSTOMER") foreignCustomer else requireNotNull(fact.customerId),
                 custodianKind=if(mode=="SINK_KIND") OwnerKind.TECHNICIAN else OwnerKind.CUSTOMER)
             var command=move(piece,target,StockQuantity.each("1"),MovementKind.CONSUME,facts=listOf(fact))
             if(mode=="USAGE") command=command.copy(usage=usage(piece,foreignWorkOrder))

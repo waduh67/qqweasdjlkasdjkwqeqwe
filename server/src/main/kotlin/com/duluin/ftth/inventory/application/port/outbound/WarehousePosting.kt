@@ -80,7 +80,7 @@ data class PostingSplit(val parentId: UUID, val expectedRevision: Long, val chil
 data class PostingMaterialFact(
     val id: UUID,
     val stockIdentityId: UUID,
-    val customerId: UUID,
+    val customerId: UUID?,
     val workOrderId: UUID,
     val itemCategory: String,
     val quantity: StockQuantity,
@@ -89,6 +89,7 @@ data class PostingMaterialFact(
     val returned: Boolean,
     val fulfillmentTargetId: UUID? = null,
     val compensatesFactId: UUID? = null,
+    val usageId: UUID? = null,
 )
 
 data class PostingUsage(
