@@ -13,10 +13,10 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.util.concurrent.atomic.AtomicInteger
 
-enum class TestPostingPhase { DOCUMENT, HEADER, LEGS, BALANCES, RESERVATIONS, CUSTODY, FACTS, EVENTS }
+enum class TestPostingPhase { DOCUMENT, HEADER, LEGS, BALANCES, RESERVATIONS, CUSTODY, MATERIAL_FACT, FACTS, EVENTS }
 
 internal class PostingJdbcProbe(context: ConfigurableApplicationContext, private val phase: TestPostingPhase,
-    private val occurrence: Int = 1, private val action: () -> Unit) : AutoCloseable {
+    private val occurrence: Int = 1, private val omitWrite: Boolean = false, private val action: () -> Unit) : AutoCloseable {
     private val target=AopTestUtils.getUltimateTargetObject<WarehousePostingPersistence>(context.getBean(WarehousePostingPersistence::class.java))
     private val field=WarehousePostingPersistence::class.java.getDeclaredField("entityManager").apply { isAccessible=true }
     private val original=field.get(target) as EntityManager
@@ -44,9 +44,15 @@ internal class PostingJdbcProbe(context: ConfigurableApplicationContext, private
     }
 
     private fun statement(statement: PreparedStatement,sql: String): PreparedStatement = proxy(PreparedStatement::class.java,statement) { method,args ->
-        val result=invoke(statement,method,args)
-        if(method.name=="executeUpdate" && matches(sql) && hits.incrementAndGet()==occurrence) action()
-        result
+        if (omitWrite && method.name=="executeUpdate" && matches(sql)) {
+            hits.incrementAndGet()
+            action()
+            1
+        } else {
+            val result=invoke(statement,method,args)
+            if(method.name=="executeUpdate" && matches(sql) && hits.incrementAndGet()==occurrence) action()
+            result
+        }
     }
 
     private fun matches(sql: String): Boolean {
@@ -58,6 +64,7 @@ internal class PostingJdbcProbe(context: ConfigurableApplicationContext, private
             TestPostingPhase.BALANCES -> normalized.startsWith("update inventory_balance_projection set")
             TestPostingPhase.RESERVATIONS -> normalized.startsWith("update inventory_reservation set") || normalized.startsWith("insert into inventory_reservation(")
             TestPostingPhase.CUSTODY -> normalized.startsWith("update inventory_serialized_asset set")
+            TestPostingPhase.MATERIAL_FACT -> normalized.startsWith("insert into inventory_customer_material_fact(")
             TestPostingPhase.FACTS -> normalized.startsWith("insert into inventory_usage_snapshot(")
             TestPostingPhase.EVENTS -> normalized.startsWith("insert into inventory_outbox(")
         }
