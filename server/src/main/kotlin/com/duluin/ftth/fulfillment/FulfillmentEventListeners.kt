@@ -21,7 +21,12 @@ class WorkOrderFulfillmentListener(
     @Transactional
     fun on(event: FulfillmentApproved) {
         TenantContext.runAs(event.tenantId) {
-            coordinator.accept(if (event.verifiedMaterialRequired) approvals.freeze(event) else FulfillmentCoordinator.forWorkOrder(event))
+            val request = if (event.verifiedMaterialRequired) {
+                try { approvals.freeze(event) } catch (failure: FulfillmentExecutionFailure) {
+                    throw com.duluin.ftth.common.domain.error.ConflictException(failure.message ?: "FULFILLMENT_SOURCE_CONFLICT")
+                }
+            } else FulfillmentCoordinator.forWorkOrder(event)
+            coordinator.accept(request)
         }
     }
 

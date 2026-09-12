@@ -9,6 +9,25 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class WarehouseFulfillmentITBinding : WarehouseFulfillmentFixture() {
+    @Test fun `ambiguous current visit links reject approval with a stable conflict`() {
+        val case = usageCase()
+        used(case)
+        completeJob(case.receipt.workOrder, case.receipt.receiver.first)
+        fixture(case.receipt.stock.token).transaction {
+            repeat(2) { sql("""INSERT INTO fieldservice_visit(id,tenant_id,order_id,work_order_id,technician_id,state,revision,assignment_active)
+                VALUES ('${UUID.randomUUID()}','$tenant','${UUID.randomUUID()}','${case.receipt.workOrder}',
+                    '${case.receipt.receiver.second}','PLANNED',0,true)""") }
+        }
+
+        val response = request("POST", "/api/work-orders/${case.receipt.workOrder}/approve", case.receipt.stock.token, "{}")
+
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(409)
+        fixture(case.receipt.stock.token).transaction {
+            assertThat(scalar("SELECT approval_status FROM work_order WHERE id='${case.receipt.workOrder}'")).isEqualTo("PENDING")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_checkpoint")).isEqualTo("0")
+        }
+    }
+
     @ParameterizedTest @ValueSource(strings = ["malformed", "unsupported-event", "foreign-tenant"])
     fun `untrusted outbox envelope enters durable reconciliation`(kind: String) {
         val token = tenant()
