@@ -34,6 +34,10 @@ class OrderJpaEntity(
     // yang sudah ada tak perlu diubah — dan supaya pesanan lama lahir tanpa penanda.
     @Column(name = "portal_flag", length = 24) var portalFlag: String? = null,
     @Column(name = "portal_flag_reason", length = 300) var portalFlagReason: String? = null,
+    // Asal penanda (V194). WAJIB sinkron dengan `portalFlag`: DB menegakkan
+    // ck_order_record_portal_flag_source_pair, jadi menyalin salah satunya saja akan meledak
+    // sebagai DataIntegrityViolationException di flush — jauh dari baris yang salah.
+    @Column(name = "portal_flag_source", length = 16) var portalFlagSource: String? = null,
     @Version @Column(name = "persistence_revision", nullable = false) var persistenceRevision: Long? = null,
 ) : TenantAwareJpaEntity(id)
 

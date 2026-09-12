@@ -1,6 +1,7 @@
 package com.duluin.ftth.fieldservice.adapter.inbound.web
 
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.fieldservice.VisitCancellationCause
 import com.duluin.ftth.fieldservice.application.port.inbound.CreateVisitCommand
 import com.duluin.ftth.fieldservice.application.port.inbound.FieldServiceUseCase
 import com.duluin.ftth.fieldservice.domain.model.AttendanceDecision
@@ -19,6 +20,7 @@ import com.duluin.ftth.iam.IamApi
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.access.prepost.PreAuthorize
@@ -94,6 +96,24 @@ class FieldServiceController(
     fun submit(@PathVariable id: UUID, @Valid @RequestBody request: OperationRequest): VisitResponse =
         fieldService.submit(id, metadata(request.namespace, request.operationKey, request.payloadHash, request.revision), Instant.now()).toResponse()
 
+    /**
+     * Kunjungan gagal di lapangan. Izinnya sama dengan check-in/submit: yang melaporkan gagalnya
+     * adalah teknisi yang berdiri di depan rumah terkunci itu, bukan dispatcher di kantor.
+     *
+     * `cause` WAJIB dan berupa enum — lihat `VisitCancellationCause`. Catatan bebas teknisi tetap
+     * masuk lewat `reason`, tapi ia TIDAK PERNAH sampai ke halaman lacak pelanggan.
+     */
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("@authz.canAny('workorder.order.field','fieldservice.visit.manage')")
+    fun cancel(@PathVariable id: UUID, @Valid @RequestBody request: CancelVisitRequest): VisitResponse =
+        fieldService.cancel(
+            id,
+            metadata(request.namespace, request.operationKey, request.payloadHash, request.revision),
+            request.cause,
+            request.reason,
+            Instant.now(),
+        ).toResponse()
+
     private fun metadata(namespace: String, key: String, hash: String, revision: Long) =
         CommandMetadata(currentUser.current().tenantId, currentUser.current().userId, namespace, key, hash, revision,
             supervisor = currentUser.current().hasPermission("fieldservice.visit.manage"))
@@ -103,8 +123,13 @@ class FieldServiceController(
 @Configuration
 class FieldServiceHttpConfiguration {
     @Bean
-    fun fieldServiceService(visits: VisitRepository, outcomes: CommandOutcomeStore, workorders: WorkorderApi, iam: IamApi) =
-        FieldServiceService(visits, outcomes, workorders, iam::findUser)
+    fun fieldServiceService(
+        visits: VisitRepository,
+        outcomes: CommandOutcomeStore,
+        workorders: WorkorderApi,
+        iam: IamApi,
+        events: ApplicationEventPublisher,
+    ) = FieldServiceService(visits, outcomes, workorders, iam::findUser, events)
 
     @Bean
     fun fieldServiceUseCase(service: FieldServiceService): FieldServiceUseCase = service
@@ -115,6 +140,15 @@ data class OperationRequest(
     @field:NotBlank val operationKey: String,
     @field:NotBlank val payloadHash: String,
     @field:NotNull val revision: Long,
+)
+
+data class CancelVisitRequest(
+    @field:NotBlank val namespace: String,
+    @field:NotBlank val operationKey: String,
+    @field:NotBlank val payloadHash: String,
+    @field:NotNull val revision: Long,
+    @field:NotNull val cause: VisitCancellationCause,
+    @field:NotBlank val reason: String,
 )
 
 private fun Visit.toResponse() = VisitResponse(id, state.name, revision, attendance?.decision, attendance?.serverReceivedAt)

@@ -2,6 +2,7 @@ package com.duluin.ftth.fieldservice.domain.model
 
 import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.fieldservice.VisitCancellationCause
 import java.time.Instant
 import java.util.UUID
 
@@ -24,6 +25,19 @@ data class Attendance(
     val serverReceivedAt: Instant,
 )
 
+/**
+ * Hasil kunjungan yang GAGAL. Sebelum V191 `Visit.cancel` menerima alasan lalu membuangnya:
+ * adapter tidak pernah menyimpannya dan tak ada endpoint yang memanggilnya, sehingga kunjungan
+ * yang gagal karena rumah terkunci tampak persis sama dengan yang dibatalkan dispatcher.
+ *
+ * [reason] catatan internal teknisi; [cause] yang dibaca mesin. Lihat [VisitCancellationCause].
+ */
+data class VisitCancellation(
+    val cause: VisitCancellationCause,
+    val reason: String,
+    val cancelledAt: Instant,
+)
+
 data class VisitEvent(
     val tenantId: UUID,
     val visitId: UUID,
@@ -44,6 +58,7 @@ class Visit private constructor(
     var assignmentActive: Boolean,
     var attendance: Attendance?,
     private val eventLog: MutableList<VisitEvent>,
+    var cancellation: VisitCancellation? = null,
 ) {
     val events: List<VisitEvent> get() = eventLog.toList()
 
@@ -62,7 +77,18 @@ class Visit private constructor(
         assignmentActive = false
     }
 
-    fun cancel(command: CommandMetadata, reason: String) {
+    /**
+     * [cause] SENGAJA nullable dengan default null: jalur pembatalan yang sudah ada (dispatcher
+     * membatalkan penugasan yang salah) tidak punya sebab lapangan untuk dilaporkan, dan
+     * memaksanya mengarang sebab justru mencemari laporan "berapa kunjungan gagal karena
+     * pelanggan". Endpoint lapangan yang baru MEWAJIBKANNYA.
+     */
+    fun cancel(
+        command: CommandMetadata,
+        reason: String,
+        cause: VisitCancellationCause? = null,
+        at: Instant = Instant.now(),
+    ) {
         if (reason.isBlank()) throw ConflictException("Cancellation reason is required")
         if (!command.supervisor && (command.actorId != technicianId || !assignmentActive)) {
             throw AccessDeniedException("Only assigned technician may cancel an active visit")
@@ -74,6 +100,7 @@ class Visit private constructor(
             throw AccessDeniedException("Checked-in cancellation requires supervisor")
         }
         state = VisitState.CANCELLED
+        cancellation = cause?.let { VisitCancellation(it, reason.trim().take(MAX_CANCELLATION_REASON), at) }
         revision += 1
     }
 
@@ -109,6 +136,9 @@ class Visit private constructor(
     }
 
     companion object {
+        /** Sepadan dengan `fieldservice_visit.cancellation_reason varchar(500)` (V191). */
+        private const val MAX_CANCELLATION_REASON = 500
+
         fun plan(tenantId: UUID, orderId: UUID, workOrderId: UUID, technicianId: UUID, plannedAt: Instant): Visit =
             Visit(UUID.randomUUID(), tenantId, orderId, workOrderId, technicianId, VisitState.PLANNED, 0, true, null, mutableListOf())
 
@@ -122,6 +152,8 @@ class Visit private constructor(
             revision: Long,
             assignmentActive: Boolean,
             attendance: Attendance?,
-        ): Visit = Visit(id, tenantId, orderId, workOrderId, technicianId, state, revision, assignmentActive, attendance, mutableListOf())
+            cancellation: VisitCancellation? = null,
+        ): Visit = Visit(id, tenantId, orderId, workOrderId, technicianId, state, revision, assignmentActive, attendance,
+            mutableListOf(), cancellation)
     }
 }

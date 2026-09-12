@@ -6,6 +6,7 @@ import com.duluin.ftth.order.*
 import com.duluin.ftth.order.ServiceAddress as OrderServiceAddress
 import com.duluin.ftth.order.application.port.inbound.AcceptOrderCommand
 import com.duluin.ftth.order.application.port.inbound.FlagOrderCommand
+import com.duluin.ftth.order.application.port.inbound.MarkUnreachableCommand
 import com.duluin.ftth.order.application.port.inbound.OrderAcceptanceUseCase
 import com.duluin.ftth.order.application.port.inbound.OrderAttentionUseCase
 import com.duluin.ftth.order.application.port.inbound.OrderQuery
@@ -110,6 +111,21 @@ class OrderController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: AttentionRequest,
     ): OrderView = attention.flag(request.toCommand(id))
+
+    /**
+     * "Pelanggan tidak bisa dihubungi." Terpisah dari `/attention` karena di sini operator TIDAK
+     * menulis kalimatnya — ia hanya menyatakan faktanya, dan sistem yang menyusun kalimat baku
+     * untuk halaman lacak. Lihat `OrderAttentionUseCase.markUnreachable`.
+     *
+     * Ditolak 409 kalau pesanannya belum diterima, sudah punya janji temu, atau baru saja
+     * diterima — ketiganya berarti bola masih di tangan KAMI, bukan pelanggan.
+     */
+    @PostMapping("/{id}/unreachable")
+    @PreAuthorize("@authz.can('order.order.manage')")
+    fun unreachable(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UnreachableRequest,
+    ): OrderView = attention.markUnreachable(request.toCommand(id))
 }
 
 /**
@@ -187,4 +203,15 @@ data class AttentionRequest(
     @field:Valid val operation: OperationRequest,
 ) {
     fun toCommand(id: UUID) = FlagOrderCommand(id, flag, reason, operation.toCommand())
+}
+
+/**
+ * SENGAJA tidak punya field `reason` yang tampil ke pelanggan — itulah bedanya dengan
+ * [AttentionRequest]. [note] adalah catatan INTERNAL yang hanya masuk riwayat pesanan.
+ */
+data class UnreachableRequest(
+    @field:Size(max = 300) val note: String? = null,
+    @field:Valid val operation: OperationRequest,
+) {
+    fun toCommand(id: UUID) = MarkUnreachableCommand(id, note, operation.toCommand())
 }

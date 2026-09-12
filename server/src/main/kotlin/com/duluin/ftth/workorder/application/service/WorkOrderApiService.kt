@@ -44,6 +44,8 @@ class WorkOrderApiService(
 
     override fun scheduledAt(workOrderId: UUID): Instant? = workOrderRepository.findById(workOrderId)?.scheduledAt
 
+    override fun orderIdOf(workOrderId: UUID): UUID? = workOrderRepository.findById(workOrderId)?.orderId
+
     override fun openPsbByCustomer(): Map<UUID, WorkOrderRef> =
         workOrderRepository.findOpenByType(WorkOrderType.PSB)
             .filter { it.customerId != null }

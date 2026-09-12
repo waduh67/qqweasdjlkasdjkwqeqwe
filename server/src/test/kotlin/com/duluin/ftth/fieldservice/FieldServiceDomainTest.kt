@@ -97,7 +97,7 @@ class FieldServiceDomainTest {
             override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef = error("unused")
             override fun fieldOpsReport(from: LocalDate, to: LocalDate): FieldOpsReport = error("unused")
         }
-        val service = FieldServiceService(repository, InMemoryCommandOutcomeStore(), workorders) { UserRef(technician, "Revoked", "x", false, true) }
+        val service = FieldServiceService(repository, InMemoryCommandOutcomeStore(), workorders, { UserRef(technician, "Revoked", "x", false, true) }, {})
         val create = CreateVisitCommand(tenant, order, workOrder, technician, Instant.now(), metadata.copy(namespace = "visit.create"))
         assertThatThrownBy { service.create(create) }.isInstanceOf(ConflictException::class.java)
     }
@@ -120,7 +120,7 @@ class FieldServiceDomainTest {
             override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef = error("unused")
             override fun fieldOpsReport(from: LocalDate, to: LocalDate): FieldOpsReport = error("unused")
         }
-        val service = FieldServiceService(repository, InMemoryCommandOutcomeStore(), workorders) { UserRef(technician, "Tech", "x", true, true) }
+        val service = FieldServiceService(repository, InMemoryCommandOutcomeStore(), workorders, { UserRef(technician, "Tech", "x", true, true) }, {})
         val actor = AuthenticatedUser(technician, tenant, "tech@example.test", "Tech", false, setOf("workorder.order.field"), emptySet())
 
         val result = service.listForHttp(actor, VisitListScope.SELF, null, PageRequest(page = 0, size = 1))

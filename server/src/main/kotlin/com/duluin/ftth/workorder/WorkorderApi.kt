@@ -17,6 +17,23 @@ interface WorkorderApi {
     fun scheduledAt(workOrderId: UUID): Instant? = null
 
     /**
+     * PESANAN yang melahirkan work order ini; `null` bila WO-nya tidak lahir dari pesanan
+     * (REPAIR dari helpdesk, DISMANTLE, preventif).
+     *
+     * ADA SENDIRI, TIDAK memakai [WorkOrderAssignmentRef.orderId]. Field itu — meski namanya
+     * `orderId` — sebenarnya diisi `customerId` work order-nya (lihat `WorkOrderApiService.
+     * assignment`), dan seluruh pemanggil yang ada sudah terlanjur menyesuaikan diri dengan
+     * kenyataan itu: `FieldServiceService.create` mencocokkannya dengan `Visit.orderId`, yang
+     * karenanya juga berisi id PELANGGAN. Membetulkan field itu sekarang akan menjatuhkan
+     * pembuatan kunjungan di seluruh sistem; menambah jalan yang jujur di sebelahnya tidak.
+     *
+     * Siapa pun yang butuh id pesanan SUNGGUHAN — misalnya pemicu penanda portal saat kunjungan
+     * gagal — WAJIB lewat sini. Memakai `Visit.orderId` akan mencari pesanan memakai id pelanggan
+     * dan selalu tidak menemukan apa pun, tanpa error, selamanya.
+     */
+    fun orderIdOf(workOrderId: UUID): UUID? = null
+
+    /**
      * WO PSB (pasang baru) yang masih terbuka, dipetakan per pelanggan yang dituju.
      *
      * Sinyal kuat untuk auto-link: ONU liar yang muncul mendadak saat ada order

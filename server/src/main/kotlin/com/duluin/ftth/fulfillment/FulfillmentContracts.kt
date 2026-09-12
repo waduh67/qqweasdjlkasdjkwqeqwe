@@ -7,6 +7,8 @@ import com.duluin.ftth.fieldservice.VisitFulfillmentCommand
 import com.duluin.ftth.inventory.InventoryApi
 import com.duluin.ftth.inventory.InventoryFulfillmentCommand
 import com.duluin.ftth.order.OrderApi
+import com.duluin.ftth.order.OrderFulfillmentStallResolved
+import com.duluin.ftth.order.OrderFulfillmentStalled
 import com.duluin.ftth.order.OrderFulfillmentCommand
 import com.duluin.ftth.order.OrderTransition
 import com.duluin.ftth.workorder.FulfillmentApproved
@@ -17,6 +19,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -315,6 +318,14 @@ class FulfillmentCoordinator(
     private val checkpoints: FulfillmentCheckpointRepository,
     private val effects: FulfillmentEffectExecutor,
     private val now: () -> Instant = { Instant.now() },
+    /**
+     * SENGAJA punya default kosong: sejumlah tes unit merakit koordinator ini langsung tanpa
+     * konteks Spring, dan memaksa mereka menyediakan publisher hanya untuk menguji mesin
+     * status-nya adalah biaya tanpa imbalan. Di dalam konteks Spring parameter ini SELALU
+     * terisi publisher sungguhan — ApplicationEventPublisher selalu bisa di-resolve, sehingga
+     * default Kotlin tidak pernah terpakai di produksi.
+     */
+    private val events: ApplicationEventPublisher = ApplicationEventPublisher {},
 ) {
     @Transactional
     fun accept(request: FulfillmentRequest): FulfillmentOutcome {
@@ -364,12 +375,14 @@ class FulfillmentCoordinator(
             FulfillmentOutcome(saved.state, replayed = false, saved.outcome)
         } catch (failure: FulfillmentExecutionFailure.ReconciliationRequired) {
             val saved = checkpoints.save(checkpoint.copy(state = FulfillmentState.REQUIRES_RECONCILIATION, outcome = failure.message, updatedAt = now()))
+            announceReconciliation(request, saved.outcome)
             FulfillmentOutcome(saved.state, replayed = false, saved.outcome)
         } catch (failure: FulfillmentExecutionFailure.Permanent) {
             val saved = checkpoints.save(checkpoint.copy(state = FulfillmentState.FAILED_PERMANENT, outcome = failure.message, updatedAt = now()))
             FulfillmentOutcome(saved.state, replayed = false, saved.outcome)
         } catch (failure: RuntimeException) {
             val saved = checkpoints.save(checkpoint.copy(state = FulfillmentState.REQUIRES_RECONCILIATION, outcome = failure.message ?: "FULFILLMENT_OWNER_REJECTED", updatedAt = now()))
+            announceReconciliation(request, saved.outcome)
             FulfillmentOutcome(saved.state, replayed = false, saved.outcome)
         }
     }
@@ -380,7 +393,36 @@ class FulfillmentCoordinator(
         require(existing.canonicalHash == request.canonicalHash) { "FULFILLMENT_OPERATION_HASH_CONFLICT" }
         require(existing.state == FulfillmentState.REQUIRES_RECONCILIATION) { "FULFILLMENT_MANUAL_RESOLUTION_NOT_REQUIRED" }
         val saved = checkpoints.save(existing.copy(state = FulfillmentState.MANUAL_RESOLVED, outcome = outcome, updatedAt = now()))
+        request.orderId?.let {
+            events.publishEvent(
+                OrderFulfillmentStallResolved(request.tenantId, it, request.namespace, request.operationKey, now()),
+            )
+        }
         return FulfillmentOutcome(saved.state, replayed = false, saved.outcome)
+    }
+
+    /*
+     * Diterbitkan sebagai event, BUKAN dengan memanggil module order langsung dari sini.
+     *
+     * Dua alasan, keduanya soal transaksi. Pertama, kita berada di dalam blok catch: exception
+     * yang membawa kita ke sini kemungkinan besar keluar dari bean ber-@Transactional (efek
+     * ORDER/SUBSCRIPTION), yang berarti TransactionInterceptor sudah memanggil setRollbackOnly()
+     * dan transaksi ini sudah divonis mati. Menulis penanda portal di sini akan ikut hilang saat
+     * commit meledak jadi UnexpectedRollbackException — tanpa jejak apa pun.
+     *
+     * Kedua, pendengarnya memakai AFTER_COMMIT: penanda hanya dipasang kalau checkpoint
+     * REQUIRES_RECONCILIATION-nya BENAR-BENAR tersimpan. Menandai pesanan karena rekonsiliasi
+     * yang ternyata di-rollback berarti pesanan sehat yang selamanya berkata "sedang diperiksa".
+     *
+     * KONSEKUENSI YANG DITERIMA SADAR: kalau pemasangan penanda sendiri gagal setelah commit,
+     * checkpoint-nya tetap tersimpan dan penandanya tidak terpasang. Itu persis keadaan sebelum
+     * fitur ini ada — jauh lebih murah daripada kehilangan checkpoint-nya.
+     */
+    private fun announceReconciliation(request: FulfillmentRequest, outcome: String?) {
+        val orderId = request.orderId ?: return
+        events.publishEvent(
+            OrderFulfillmentStalled(request.tenantId, orderId, request.namespace, request.operationKey, outcome, now()),
+        )
     }
 
     companion object {

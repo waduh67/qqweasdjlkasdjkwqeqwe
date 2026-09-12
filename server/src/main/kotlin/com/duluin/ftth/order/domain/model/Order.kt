@@ -15,10 +15,27 @@ enum class OrderStatus { DRAFT, SUBMITTED, ACCEPTED, SCHEDULED, FULFILLING, FULF
  * setiap mesin transisi — termasuk jalur saga fulfillment — harus tahu cara keluar dari sana,
  * dan setiap penanda baru melipatgandakan pasangan transisi yang harus dijaga.
  *
- * ATURAN BISNIS kapan penanda ini dipasang BELUM diputuskan pemilik produk. Tidak ada satu pun
- * otomasi yang memasangnya; untuk sekarang hanya operator, lewat `POST /api/orders/{id}/attention`.
+ * Sejak V191–V194 penanda ini punya TIGA pemicu otomatis selain tombol operator:
+ *  - kunjungan teknisi gagal karena pelanggan (rumah terkunci / tak ada orang / titik ditolak)
+ *    → [WAITING_CUSTOMER];
+ *  - operator menandai pelanggan tak bisa dihubungi → [WAITING_CUSTOMER];
+ *  - saga fulfillment mendarat di `REQUIRES_RECONCILIATION` → [REQUIRES_ATTENTION].
  */
 enum class OrderPortalFlag { WAITING_CUSTOMER, REQUIRES_ATTENTION }
+
+/**
+ * SIAPA yang memasang penanda. Dipakai untuk satu aturan saja, tapi aturan itu penting:
+ * **sistem tidak pernah melepas penanda yang dipasang manusia.**
+ *
+ * Operator yang menulis "menunggu konfirmasi titik pemasangan" tahu sesuatu yang tidak
+ * diketahui sistem — ia baru saja menelepon pelanggannya. Kalau saga yang akhirnya pulih
+ * diam-diam melepas penanda itu, pesanan kembali tampak normal padahal masih benar-benar
+ * menunggu jawaban pelanggan, dan operator tak akan pernah tahu penandanya hilang.
+ *
+ * Arah sebaliknya bebas: [OPERATOR] boleh menimpa dan melepas apa pun, termasuk penanda
+ * [SYSTEM] — ia yang bertanggung jawab atas pesanannya.
+ */
+enum class OrderPortalFlagSource { OPERATOR, SYSTEM }
 
 @Suppress("LongParameterList")
 class Order private constructor(
@@ -46,6 +63,8 @@ class Order private constructor(
     /** Lihat [OrderPortalFlag]. Default null = portal menampilkan status apa adanya. */
     var portalFlag: OrderPortalFlag? = null,
     var portalFlagReason: String? = null,
+    /** Selalu terisi bersama [portalFlag] dan selalu kosong tanpanya (ck_order_record_portal_flag_source_pair). */
+    var portalFlagSource: OrderPortalFlagSource? = null,
 ) {
     companion object {
         fun create(command: CreateOrderCommand, tenantId: UUID, actorId: UUID?, orderNumber: String): Order {
@@ -93,8 +112,10 @@ class Order private constructor(
             lastOperation: OperationCommand,
             portalFlag: OrderPortalFlag? = null,
             portalFlagReason: String? = null,
+            portalFlagSource: OrderPortalFlagSource? = null,
         ) = Order(id, tenantId, customerId, leadId, orderNumber, lines, serviceAddress, appointment, status,
-            cancellationReason, rejectionReason, revision, lastActorId, lastOperation, portalFlag, portalFlagReason)
+            cancellationReason, rejectionReason, revision, lastActorId, lastOperation, portalFlag, portalFlagReason,
+            portalFlagSource)
 
         private const val MAX_FLAG_REASON = 300
 
@@ -156,12 +177,12 @@ class Order private constructor(
         if (status in TERMINAL || status == OrderStatus.DRAFT) {
             throw ConflictException("Pesanan berstatus ${status.name} tidak bisa diberi penanda portal")
         }
-        val trimmed = reason?.trim()?.ifBlank { null }
-        if (trimmed != null && trimmed.length > MAX_FLAG_REASON) {
-            throw ValidationException("Alasan penanda maksimal $MAX_FLAG_REASON karakter")
-        }
         portalFlag = flag
-        portalFlagReason = trimmed
+        portalFlagReason = validReason(reason)
+        // Jalur ini HANYA dipakai tombol operator. Otomasi memakai [applySystemFlag] supaya
+        // asal-usulnya tak bisa salah tulis: satu pemanggil yang lupa mengoper sumbernya sudah
+        // cukup untuk membuat saga melepas penanda yang ditulis manusia.
+        portalFlagSource = OrderPortalFlagSource.OPERATOR
         bump(actorId, operation)
     }
 
@@ -172,9 +193,58 @@ class Order private constructor(
         bump(actorId, operation)
     }
 
+    /**
+     * Pemasangan penanda oleh OTOMASI. Sengaja mengembalikan `false` alih-alih melempar untuk
+     * SEMUA keadaan "tidak berlaku", karena pemanggilnya bukan manusia yang bisa membaca pesan
+     * kesalahan: ia listener event dan saga fulfillment.
+     *
+     * Kalau ini melempar, kegagalan yang tak berbahaya (pesanan sudah selesai; operator sudah
+     * memasang penandanya sendiri) akan membatalkan transaksi PEMANGGILNYA — checkpoint saga
+     * yang seharusnya tersimpan sebagai REQUIRES_RECONCILIATION ikut hilang, dan pesanannya
+     * justru jadi lebih tak terlihat daripada sebelum fitur ini ada. Lebih buruk lagi, di
+     * Spring kegagalan itu tak bisa "ditangkap saja": begitu bean ber-@Transactional melempar,
+     * TransactionInterceptor sudah menandai transaksinya rollback-only dan commit pemanggil
+     * meledak jadi UnexpectedRollbackException meski exception-nya sudah ditelan.
+     *
+     * @return true kalau penanda benar-benar berubah, false kalau sengaja tidak diapa-apakan.
+     */
+    fun applySystemFlag(flag: OrderPortalFlag, reason: String?, actorId: UUID?, operation: OperationCommand): Boolean {
+        if (status in TERMINAL || status == OrderStatus.DRAFT) return false
+        if (portalFlagSource == OrderPortalFlagSource.OPERATOR) return false
+        val trimmed = validReason(reason)
+        if (portalFlag == flag && portalFlagReason == trimmed) return false
+        portalFlag = flag
+        portalFlagReason = trimmed
+        portalFlagSource = OrderPortalFlagSource.SYSTEM
+        bump(actorId, operation)
+        return true
+    }
+
+    /**
+     * Pelepasan penanda oleh OTOMASI — hanya penanda yang ia pasang sendiri. Lihat
+     * [OrderPortalFlagSource] untuk alasan kenapa penanda operator tak boleh disentuh.
+     *
+     * @return true kalau penanda benar-benar dilepas.
+     */
+    fun releaseSystemFlag(flag: OrderPortalFlag, actorId: UUID?, operation: OperationCommand): Boolean {
+        if (portalFlagSource != OrderPortalFlagSource.SYSTEM || portalFlag != flag) return false
+        clearFlag()
+        bump(actorId, operation)
+        return true
+    }
+
+    private fun validReason(reason: String?): String? {
+        val trimmed = reason?.trim()?.ifBlank { null }
+        if (trimmed != null && trimmed.length > MAX_FLAG_REASON) {
+            throw ValidationException("Alasan penanda maksimal $MAX_FLAG_REASON karakter")
+        }
+        return trimmed
+    }
+
     private fun clearFlag() {
         portalFlag = null
         portalFlagReason = null
+        portalFlagSource = null
     }
 
     private fun bump(actorId: UUID?, operation: OperationCommand) {

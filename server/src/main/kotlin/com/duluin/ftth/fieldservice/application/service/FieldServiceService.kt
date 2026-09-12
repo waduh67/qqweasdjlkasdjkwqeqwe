@@ -11,7 +11,10 @@ import com.duluin.ftth.fieldservice.domain.model.Visit
 import com.duluin.ftth.fieldservice.domain.model.VisitState
 import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.common.security.AuthenticatedUser
+import com.duluin.ftth.fieldservice.VisitCancellationCause
+import com.duluin.ftth.fieldservice.VisitCancelled
 import com.duluin.ftth.workorder.WorkorderApi
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
@@ -24,6 +27,7 @@ class FieldServiceService(
     private val outcomes: CommandOutcomeStore,
     private val workorders: WorkorderApi,
     private val actorLookup: (UUID) -> UserRef?,
+    private val events: ApplicationEventPublisher,
 ) : FieldServiceUseCase {
     fun visitForHttp(tenantId: UUID, visitId: UUID): Visit? = visits.findById(tenantId, visitId)
     fun workSessionForHttp(tenantId: UUID, visitId: UUID) = visits.findWorkSession(tenantId, visitId)
@@ -86,6 +90,48 @@ class FieldServiceService(
     override fun onSite(visitId: UUID, command: CommandMetadata, receivedAt: Instant): Visit = synchronizedMutate(visitId, command) { it.onSite(command, receivedAt) }
     override fun checkOut(visitId: UUID, command: CommandMetadata, receivedAt: Instant): Visit = synchronizedMutate(visitId, command) { it.checkOut(command, receivedAt) }
     override fun submit(visitId: UUID, command: CommandMetadata, receivedAt: Instant): Visit = synchronizedMutate(visitId, command) { it.submit(command, receivedAt) }
+
+    /**
+     * Pembatalan kunjungan DENGAN sebab. Tidak lewat [synchronizedMutate] karena di sini kita
+     * harus tahu apakah mutasinya benar-benar terjadi atau cuma replay operation key: menerbitkan
+     * [VisitCancelled] pada replay berarti pesanan ditandai ulang di portal setiap kali teknisi
+     * yang sinyalnya buruk mengirim ulang permintaan yang sama.
+     */
+    override fun cancel(visitId: UUID, command: CommandMetadata, cause: VisitCancellationCause, reason: String, receivedAt: Instant): Visit =
+        synchronized(this) {
+            val visit = visits.findById(command.tenantId, visitId) ?: throw ConflictException("Visit is not available in this tenant")
+            if (outcomes.find(command) != null) return@synchronized visit
+            visit.cancel(command, reason, cause, receivedAt)
+            outcomes.record(command, visit.state.name)
+            val saved = visits.save(visit)
+            /*
+             * `Visit.orderId` SENGAJA TIDAK dipakai di sini. Namanya berbohong: `create`
+             * mencocokkannya dengan `WorkOrderAssignmentRef.orderId`, yang diisi `customerId`
+             * work order-nya, sehingga setiap kunjungan yang lolos dibuat menyimpan id PELANGGAN
+             * di kolom bernama `order_id`. Menerbitkannya apa adanya membuat module order mencari
+             * pesanan memakai id pelanggan — nol baris, tanpa error, dan pemicunya tampak "sudah
+             * jalan" padahal tak pernah menandai apa pun. Id pesanan yang benar hanya dipegang
+             * work order-nya.
+             */
+            val orderId = workorders.orderIdOf(visit.workOrderId)
+            /*
+             * Diterbitkan di DALAM transaksi, dan pendengarnya (module order) memakai
+             * BEFORE_COMMIT: penanda portal dan pembatalan kunjungan harus jadi satu fakta.
+             * Kalau penandanya ditulis setelah commit dan gagal, kunjungannya tercatat gagal
+             * tapi portal pelanggan tetap berkata "sedang dijadwalkan" — persis keadaan yang
+             * fitur ini dibuat untuk menghapusnya, hanya kini lebih sulit dilacak.
+             *
+             * WO tanpa pesanan (REPAIR dari helpdesk, DISMANTLE) tidak menerbitkan apa pun:
+             * tidak ada pesanan untuk ditandai, dan event ber-`orderId` palsu hanya memindahkan
+             * kebingungannya ke pendengar.
+             */
+            if (orderId != null) {
+                events.publishEvent(
+                    VisitCancelled(visit.tenantId, visit.id, orderId, visit.workOrderId, visit.technicianId, cause, reason, receivedAt),
+                )
+            }
+            return saved
+        }
 
     private fun synchronizedMutate(visitId: UUID, command: CommandMetadata, action: (Visit) -> Unit): Visit = synchronized(this) {
         val visit = visits.findById(command.tenantId, visitId) ?: throw ConflictException("Visit is not available in this tenant")
