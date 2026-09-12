@@ -183,6 +183,11 @@ class InventoryOperationsService(
      * skema gudang saat ini, jadi ambang kebijakan hanya bisa jujur dinyatakan dalam jumlah
      * unit. Begitu harga item ada, ambangnya bisa pindah ke nilai tanpa mengubah bentuk
      * kebijakan — itu sebabnya kolomnya dinamai `minimum_amount`, bukan `minimum_quantity`.
+     *
+     * KETERBATASAN yang perlu diketahui sebelum menyetel ambang: satu ambang berlaku untuk
+     * seluruh item dalam satu jenis persetujuan, padahal satuannya bercampur. Ambang yang pas
+     * untuk 200 METER dropcore jadi terlalu longgar untuk 200 PCS ONT — barang mahal justru
+     * yang paling mudah lolos di bawah ambang yang disetel untuk barang murah.
      */
     private fun withApproval(
         movement: InventoryMovement,
@@ -197,7 +202,7 @@ class InventoryOperationsService(
         }
         val approval = approvals.request(
             CreateInventoryApproval(
-                movement.tenantId, type, movement.legs.sumOf { it.quantity.toLong() }, requesterId, custodianId,
+                movement.tenantId, type, approvalAmount(movement), requesterId, custodianId,
                 "${movement.operationKey}:approval", movement.payloadHash, movement.movementId, emergencyReason,
             ),
         )
@@ -205,6 +210,23 @@ class InventoryOperationsService(
         // efeknya SUDAH memberlakukan mutasi di dalam panggilan di atas. Mengembalikan objek
         // lama akan melaporkan PENDING_APPROVAL untuk mutasi yang saldonya sudah bergerak.
         return InventoryOperationResult(ledger.movement(movement.movementId) ?: movement, approval)
+    }
+
+    /**
+     * Besaran yang diadu dengan ambang kebijakan: sisi TERBESAR dari mutasi, bukan jumlah
+     * seluruh leg.
+     *
+     * Menjumlahkan semua leg benar untuk mutasi satu arah (restock/penyesuaian hanya punya
+     * satu sisi), tapi MELIPATGANDAKAN mutasi berpasangan — pengeluaran 100 unit tercatat
+     * sebagai 200 karena leg OUT dan IN sama-sama ikut dihitung. Hari ini hanya jalur satu
+     * arah yang memanggil [withApproval], jadi kesalahannya belum terlihat; begitu
+     * ISSUE_EXCEPTION dibuka lewat endpoint, setiap pengeluaran akan melompati ambang dua kali
+     * lebih cepat dari yang disetel tenant. Ditutup sekarang, selagi murah.
+     */
+    private fun approvalAmount(movement: InventoryMovement): Long {
+        val inbound = movement.legs.filter { it.direction == LegDirection.IN }.sumOf { it.quantity.toLong() }
+        val outbound = movement.legs.filter { it.direction == LegDirection.OUT }.sumOf { it.quantity.toLong() }
+        return maxOf(inbound, outbound)
     }
 
     /**

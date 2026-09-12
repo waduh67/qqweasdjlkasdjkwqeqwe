@@ -7,8 +7,11 @@ import com.duluin.ftth.inventory.application.service.DecideInventoryApproval
 import com.duluin.ftth.inventory.application.service.InventoryApprovalService
 import com.duluin.ftth.inventory.domain.model.InventoryApprovalDecision
 import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.inventory.domain.model.InventoryApprovalStatus
+import com.duluin.ftth.inventory.domain.model.InventoryInsufficientBalance
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -90,6 +93,12 @@ class InventoryApprovalIT {
     private fun warehouse(token: String): String =
         JsonPath.read(
             post("/api/inventory/locations", token, """{"code":"WH-${uniq()}","kind":"WAREHOUSE"}""", expected = 201),
+            "$.id",
+        )
+
+    private fun technician(token: String): String =
+        JsonPath.read(
+            post("/api/inventory/locations", token, """{"code":"TEK-${uniq()}","kind":"TECHNICIAN"}""", expected = 201),
             "$.id",
         )
 
@@ -279,6 +288,64 @@ class InventoryApprovalIT {
         decide(admin.tenantId, approvalId, approverA, InventoryApprovalDecision.APPROVE, "d-loss")
 
         assertThat(balance(admin.token, kabel)).isEqualTo(26)
+    }
+
+    /**
+     * Saldo bisa habis SELAGI permintaan susut menggantung — teknisi mengambil barang yang sama
+     * sebelum approver sempat memutuskan. Ini bukan kasus teoretis: jeda antara pengajuan dan
+     * persetujuan memang berjam-jam, dan gudang tetap melayani pengeluaran selama itu.
+     *
+     * Yang diuji di sini adalah bagaimana kegagalan itu KELUAR. Approver harus menerima
+     * kesalahan bisnis yang bisa dibaca, dan permintaannya harus tetap PENDING supaya bisa
+     * diputuskan lagi setelah stoknya benar. Kalau kegagalan efek ditelan diam-diam, dua hal
+     * buruk terjadi sekaligus: transaksi sudah terlanjur ditandai rollback-only oleh proxy
+     * `@Transactional` milik ledger, sehingga keputusan approval ikut hilang saat commit dan
+     * approver justru menerima UnexpectedRollbackException yang tak berarti apa-apa baginya.
+     */
+    @Test
+    fun `susut yang stoknya keburu diambil gagal bersih dan permintaannya tetap bisa diputuskan`() {
+        val admin = admin("appr-drain")
+        configure(admin.token, "LOSS", tier(1, 0, "Kepala Gudang", approverA))
+        val gudang = warehouse(admin.token)
+        val tasTeknisi = technician(admin.token)
+        val kabel = item(admin.token)
+
+        post(
+            "/api/inventory/receipts", admin.token,
+            """{"locationId":"$gudang","custodianId":"$custodian","reason":"terima awal",
+                "operationKey":"grn-${uniq()}","payloadHash":"grn-hash",
+                "lines":[{"itemId":"$kabel","quantity":30}]}""",
+            expected = 201,
+        )
+
+        val result = post(
+            "/api/inventory/adjustments", admin.token,
+            """{"locationId":"$gudang","custodianId":"$custodian","kind":"LOSS","increase":false,
+                "reason":"kabel hilang di lapangan","operationKey":"loss-${uniq()}","payloadHash":"loss-hash",
+                "lines":[{"itemId":"$kabel","quantity":25}]}""",
+            expected = 201,
+        )
+        val approvalId = JsonPath.read<String>(result, "$.approval.approvalId")
+
+        // Teknisi mengambil 20 selagi permintaan susut masih menggantung: sisa di gudang 10,
+        // sementara permintaan susut 25 sudah terlanjur diajukan.
+        post(
+            "/api/inventory/issues", admin.token,
+            """{"fromLocationId":"$gudang","custodianId":"$custodian","technicianId":"${UUID.randomUUID()}",
+                "technicianLocationId":"$tasTeknisi","reason":"pemasangan pelanggan",
+                "operationKey":"iss-${uniq()}","payloadHash":"iss-hash",
+                "lines":[{"itemId":"$kabel","quantity":20}]}""",
+            expected = 201,
+        )
+
+        assertThatThrownBy { decide(admin.tenantId, approvalId, approverA, InventoryApprovalDecision.APPROVE, "d-drain") }
+            .isInstanceOf(InventoryInsufficientBalance::class.java)
+
+        // Keputusannya batal seluruhnya: permintaan masih PENDING, bukan APPROVED tanpa mutasi.
+        val stored = TenantContext.runAs(admin.tenantId) { approvals.get(UUID.fromString(approvalId)) }
+        assertThat(stored?.status).isEqualTo(InventoryApprovalStatus.PENDING)
+        // Dan tak sebatang kabel pun ikut hilang karena percobaan yang gagal itu.
+        assertThat(balance(admin.token, kabel)).isEqualTo(30)
     }
 
     /**

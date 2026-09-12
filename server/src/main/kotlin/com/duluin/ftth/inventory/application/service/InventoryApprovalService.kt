@@ -213,21 +213,26 @@ class InventoryApprovalService(
      */
     private fun executeEffect(request: InventoryApprovalRequest) {
         val movementId = request.movementId ?: return
-        // runCatching: mutasi yang sudah tidak PENDING_APPROVAL (mis. sudah disahkan jalur
-        // lain, atau saldo sudah keburu tidak cukup) tidak boleh MEMBATALKAN keputusan
-        // approval yang sah — keputusannya adalah bukti audit dan wajib tetap tersimpan.
-        // Kegagalannya dicatat supaya operator tahu ada mutasi yang butuh tindakan manual.
-        runCatching {
-            when (request.status) {
-                InventoryApprovalStatus.APPROVED -> ledger.approvePending(movementId)
-                InventoryApprovalStatus.REJECTED, InventoryApprovalStatus.EXPIRED -> ledger.rejectPending(movementId)
-                else -> null
-            }
-        }.onFailure {
-            log.warn(
-                "Efek persetujuan {} ({}) gagal diterapkan pada mutasi {}: {}",
-                request.approvalId, request.status, movementId, it.message,
-            )
+        // Kegagalan di sini SENGAJA dibiarkan naik, tidak ditelan.
+        //
+        // Menelannya tidak pernah bisa bekerja: [ledger] adalah bean ter-proxy dan
+        // `approvePending`/`rejectPending` bertanda `@Transactional` propagasi default, jadi
+        // keduanya IKUT transaksi milik pemanggil. Begitu salah satunya melempar, proxy-nya
+        // memanggil `setRollbackOnly()` pada transaksi bersama itu. Menangkap exception-nya
+        // hanya menyembunyikan sebabnya: method ini selesai seolah sukses, lalu commit-nya
+        // meledak `UnexpectedRollbackException` — keputusan approval TETAP hilang (justru
+        // yang mau diselamatkan), dan approver menerima pesan yang tak berarti apa pun
+        // baginya alih-alih "stok tidak cukup".
+        //
+        // Dengan dibiarkan naik, seluruh keputusan batal secara utuh: permintaannya tetap
+        // PENDING dan bisa diputuskan lagi setelah stoknya benar. Tidak ada celah audit —
+        // approval yang efeknya tak pernah berlaku bukan bukti apa-apa selain percobaan
+        // yang gagal, dan itu tempatnya di log, bukan di mesin status approval.
+        log.debug("Menerapkan efek persetujuan {} ({}) pada mutasi {}", request.approvalId, request.status, movementId)
+        when (request.status) {
+            InventoryApprovalStatus.APPROVED -> ledger.approvePending(movementId)
+            InventoryApprovalStatus.REJECTED, InventoryApprovalStatus.EXPIRED -> ledger.rejectPending(movementId)
+            else -> null
         }
     }
 
