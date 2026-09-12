@@ -7,12 +7,12 @@ import {
   ORDER_STATUS_LABEL,
   ORDER_TRANSITION_LABEL,
   canTransition,
-  derivePortalFlag,
   flagOrder,
   getOrder,
   getOrderTimeline,
   markOrderUnreachable,
   newOrderOperation,
+  portalFlagSetAt,
   transitionOrder,
   type OrderOperation,
   type OrderPortalFlag,
@@ -176,7 +176,10 @@ export function OrderDetailPage() {
     )
   }
 
-  const flag = derivePortalFlag(timeline)
+  // Penandanya datang dari PESANANNYA, bukan disimpulkan dari riwayat. Riwayat dipakai hanya untuk
+  // stempel waktunya — satu-satunya bagian yang memang tidak disimpan di baris pesanan.
+  const flag = order.portalFlag
+  const flagSetAt = flag ? portalFlagSetAt(timeline) : null
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -189,7 +192,7 @@ export function OrderDetailPage() {
       <div className="card stack">
         <div className="row wrap" style={{ alignItems: 'center', gap: '0.5rem' }}>
           <Badge tone={ORDER_STATUS_TONE[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
-          {flag && <Badge tone={flag.flag === 'REQUIRES_ATTENTION' ? 'critical' : 'warning'}>{ORDER_PORTAL_FLAG_LABEL[flag.flag]}</Badge>}
+          {flag && <Badge tone={flag === 'REQUIRES_ATTENTION' ? 'critical' : 'warning'}>{ORDER_PORTAL_FLAG_LABEL[flag]}</Badge>}
           <Text as="span" className="muted" size={200}>Revisi {order.revision}</Text>
         </div>
         <dl className="stack" style={{ gap: '0.35rem', margin: 0 }}>
@@ -232,8 +235,16 @@ export function OrderDetailPage() {
         <Text as="h3" style={{ ...typographyStyles.subtitle2, margin: 0 }}>Penanda perhatian</Text>
         {flag ? (
           <Text as="p" size={200} style={{ margin: 0 }}>
-            Terpasang {fmt(flag.occurredAt)}: <strong>{ORDER_PORTAL_FLAG_LABEL[flag.flag]}</strong>
-            {flag.reason ? ` — "${flag.reason}"` : ''}
+            {flagSetAt ? `Terpasang ${fmt(flagSetAt)}` : 'Terpasang'}
+            {' '}oleh {order.portalFlagSource === 'SYSTEM' ? 'sistem' : 'operator'}:{' '}
+            <strong>{ORDER_PORTAL_FLAG_LABEL[flag]}</strong>
+            {order.portalFlagReason ? ` — "${order.portalFlagReason}"` : ''}
+            {/*
+              Asal penandanya disebut TERANG-TERANGAN karena menentukan apa yang terjadi setelah
+              tombol "Lepas penanda" ditekan: penanda sistem dipasang ulang sendiri begitu keadaan
+              yang memicunya masih berlaku, penanda operator tidak. Tanpa kalimat ini operator
+              mencabut penanda sistem, melihatnya kembali, dan mengira konsolnya rusak.
+            */}
           </Text>
         ) : (
           <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Pesanan ini tidak sedang bertanda.</Text>

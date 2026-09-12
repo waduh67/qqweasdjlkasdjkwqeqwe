@@ -25,6 +25,15 @@ export type OrderTransition = 'SUBMIT' | 'ACCEPT' | 'SCHEDULE' | 'START_FULFILLI
 /** Penanda yang MENIMPA tampilan status di halaman lacak pelanggan; ortogonal terhadap [OrderStatus]. */
 export type OrderPortalFlag = 'WAITING_CUSTOMER' | 'REQUIRES_ATTENTION'
 
+/**
+ * SIAPA yang memasang penandanya.
+ *
+ * Bukan hiasan: penanda SYSTEM dicabut sendiri begitu keadaan yang memicunya berubah, penanda
+ * OPERATOR hanya lepas kalau manusia mencabutnya. Tanpa pembedanya operator mencabut penanda
+ * sistem, melihatnya muncul lagi beberapa menit kemudian, dan menyimpulkan konsolnya rusak.
+ */
+export type OrderPortalFlagSource = 'OPERATOR' | 'SYSTEM'
+
 export interface OrderSummaryView {
   readonly id: string
   readonly orderNumber: string
@@ -37,6 +46,10 @@ export interface OrderSummaryView {
   readonly address: string
   readonly city: string
   readonly appointmentStartsAt: string | null
+  /** Null = tidak sedang bertanda. Ikut di baris antrean, jadi tak perlu memindai riwayat. */
+  readonly portalFlag: OrderPortalFlag | null
+  readonly portalFlagReason: string | null
+  readonly portalFlagSource: OrderPortalFlagSource | null
   readonly revision: number
   readonly createdAt: string
   readonly updatedAt: string
@@ -76,6 +89,17 @@ export interface OrderView {
   readonly lastActorId: string | null
   readonly leadId: string | null
   readonly orderNumber: string | null
+  /**
+   * Penanda portal APA ADANYA dari agregat.
+   *
+   * PERINGATAN: bentuk ini juga dipulangkan sebagai hasil REPLAY operation key yang dibekukan
+   * server. Outcome yang dibekukan sebelum ketiga field ini ada akan memulangkan null walau
+   * pesanannya bertanda. Jadi jangan pernah menyimpulkan penanda dari respons sebuah tulisan
+   * yang mungkin diulang — muat ulang pesanannya lewat [getOrder].
+   */
+  readonly portalFlag: OrderPortalFlag | null
+  readonly portalFlagReason: string | null
+  readonly portalFlagSource: OrderPortalFlagSource | null
 }
 
 /**
@@ -195,6 +219,10 @@ export interface OrderListParams {
   status?: OrderStatus | ''
   createdFrom?: string
   createdTo?: string
+  /** `true` = hanya yang bertanda, `false` = hanya yang bersih, tak diisi = semua. */
+  flagged?: boolean
+  /** Penyaring tanda TERTENTU, dikerjakan server supaya berlaku lintas halaman. */
+  portalFlag?: OrderPortalFlag | ''
   page?: number
   size?: number
 }
@@ -205,6 +233,10 @@ export function listOrders(params: OrderListParams = {}): Promise<PageResponse<O
   if (params.status) search.set('status', params.status)
   if (params.createdFrom) search.set('createdFrom', params.createdFrom)
   if (params.createdTo) search.set('createdTo', params.createdTo)
+  // `!== undefined`, bukan truthy: `flagged=false` adalah penyaring yang SAH ("hanya yang
+  // bersih"). Pemeriksaan truthy diam-diam membuangnya dan memulangkan seluruh antrean.
+  if (params.flagged !== undefined) search.set('flagged', String(params.flagged))
+  if (params.portalFlag) search.set('portalFlag', params.portalFlag)
   search.set('page', String(params.page ?? 0))
   search.set('size', String(params.size ?? 20))
   return api.get<PageResponse<OrderSummaryView>>(`/api/orders?${search}`)
@@ -243,51 +275,25 @@ export const flagOrder = (id: string, body: { flag: OrderPortalFlag | null; reas
 export const markOrderUnreachable = (id: string, body: { note: string | null; operation: OrderOperation }) =>
   api.post<OrderView>(`/api/orders/${id}/unreachable`, body)
 
-/** Penanda portal yang sedang terpasang, hasil rekonstruksi dari riwayat. Lihat [derivePortalFlag]. */
-export interface DerivedPortalFlag {
-  readonly flag: OrderPortalFlag
-  readonly reason: string | null
-  readonly occurredAt: string
-  readonly actorId: string | null
-}
-
-const TERMINAL_STATUSES: readonly string[] = ['FULFILLED', 'CANCELLED', 'REJECTED']
-
 /**
- * Menyimpulkan penanda portal yang sedang terpasang DARI RIWAYAT pesanan.
+ * Kapan penanda yang SEDANG terpasang itu dipasang — satu-satunya bagian penanda yang memang
+ * hanya ada di riwayat.
  *
- * Ini tambalan, bukan desain: `OrderSummaryView` MAUPUN `OrderView` tidak memulangkan
- * `portalFlag`/`portalFlagReason`/`portalFlagSource` sama sekali, padahal penanda bisa dipasang
- * OTOMATIS (kunjungan gagal karena pelanggan, saga fulfillment macet). Tanpa rekonstruksi ini
- * operator tak punya satu pun permukaan yang memberitahunya bahwa pesanan sedang bertanda —
- * pelanggan membaca "kami belum berhasil menghubungi Anda" di halaman lacak sementara antrean
- * operator menampilkannya sebagai pesanan diterima yang biasa saja.
+ * Dulu SELURUH keadaan penanda direkonstruksi di sini karena server tak memulangkannya sama
+ * sekali. Sekarang penandanya ada di `portalFlag`/`portalFlagReason`/`portalFlagSource`, dan yang
+ * tersisa hanyalah stempel waktunya. Bedanya penting: fungsi ini TIDAK memutuskan apakah pesanan
+ * bertanda — ia hanya menjawab "sejak kapan", dan pemanggilnya wajib sudah tahu jawabannya dari
+ * pesanan itu sendiri.
  *
- * ATURAN yang ditiru dari agregat: transisi ke status akhir (FULFILLED/CANCELLED/REJECTED)
- * MELEPAS penanda tanpa menulis `ORDER_UNFLAGGED`, jadi kejadian itu harus ikut me-reset.
- *
- * Yang TIDAK bisa disimpulkan di sini: SIAPA yang memasang (`portalFlagSource`). `actorId` bukan
- * penandanya — jalur otomatis pun mengoper pelaku manusia yang memicunya (mis. teknisi yang
- * melaporkan kunjungan gagal).
+ * Null kalau riwayatnya tak memuat `ORDER_FLAGGED` sama sekali (mis. riwayat gagal dimuat).
+ * Pemanggilnya harus tetap menampilkan penandanya tanpa tanggal, bukan menyembunyikannya.
  */
-export function derivePortalFlag(timeline: readonly OrderTimelineEntryView[]): DerivedPortalFlag | null {
-  let current: DerivedPortalFlag | null = null
-  // Riwayat datang urut-naik menurut revisi; entri terbaru menang.
-  for (const entry of timeline) {
-    if (entry.eventType === 'ORDER_FLAGGED') {
-      current = {
-        flag: entry.toStatus as OrderPortalFlag,
-        reason: entry.reason,
-        occurredAt: entry.occurredAt,
-        actorId: entry.actorId,
-      }
-    } else if (entry.eventType === 'ORDER_UNFLAGGED') {
-      current = null
-    } else if (TERMINAL_STATUSES.includes(entry.toStatus)) {
-      current = null
-    }
+export function portalFlagSetAt(timeline: readonly OrderTimelineEntryView[]): string | null {
+  // Riwayat datang urut-naik menurut revisi; pemasangan TERAKHIR yang berlaku.
+  for (let index = timeline.length - 1; index >= 0; index -= 1) {
+    if (timeline[index].eventType === 'ORDER_FLAGGED') return timeline[index].occurredAt
   }
-  return current
+  return null
 }
 
 // ---------------------------------------------------------------------------------------

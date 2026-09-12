@@ -6,6 +6,8 @@ import com.duluin.ftth.order.application.port.outbound.OrderListRow
 import com.duluin.ftth.order.application.port.outbound.OrderSearchFilter
 import com.duluin.ftth.order.application.port.outbound.OrderSearchPort
 import com.duluin.ftth.order.application.port.outbound.OrderTrackRow
+import com.duluin.ftth.order.domain.model.OrderPortalFlag
+import com.duluin.ftth.order.domain.model.OrderPortalFlagSource
 import com.duluin.ftth.order.domain.model.OrderStatus
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -35,6 +37,12 @@ class OrderSearchPersistenceAdapter : OrderSearchPort {
             if (filter.status != null) add("o.status = :status")
             if (filter.createdFrom != null) add("o.created_at >= :createdFrom")
             if (filter.createdTo != null) add("o.created_at <= :createdTo")
+            // IS NOT NULL / IS NULL, bukan `= :flag`: "bertanda" berarti bertanda apa pun, dan
+            // menuliskannya sebagai perbandingan nilai akan diam-diam melewatkan tanda baru yang
+            // kelak ditambahkan ke enum-nya.
+            if (filter.flagged == true) add("o.portal_flag IS NOT NULL")
+            if (filter.flagged == false) add("o.portal_flag IS NULL")
+            if (filter.portalFlag != null) add("o.portal_flag = :portalFlag")
             if (!filter.query.isNullOrBlank()) {
                 add(
                     """(o.order_number ILIKE :q OR o.address_text ILIKE :q
@@ -52,7 +60,9 @@ class OrderSearchPersistenceAdapter : OrderSearchPort {
 
         val rows = entityManager.createNativeQuery(
             """SELECT o.id, o.order_number, o.status, o.customer_id, o.lead_id, l.name, l.phone,
-                      o.address_text, o.city, o.appointment_starts_at, o.revision, o.created_at, o.updated_at
+                      o.address_text, o.city, o.appointment_starts_at,
+                      o.portal_flag, o.portal_flag_reason, o.portal_flag_source,
+                      o.revision, o.created_at, o.updated_at
                FROM order_record o
                LEFT JOIN order_lead l ON l.id = o.lead_id
                $where
@@ -74,9 +84,12 @@ class OrderSearchPersistenceAdapter : OrderSearchPort {
                     address = row[7] as String,
                     city = row[8] as String,
                     appointmentStartsAt = row[9]?.toInstantValue(),
-                    revision = (row[10] as Number).toLong(),
-                    createdAt = row[11].toInstantValue(),
-                    updatedAt = row[12].toInstantValue(),
+                    portalFlag = (row[10] as String?)?.let { OrderPortalFlag.valueOf(it) },
+                    portalFlagReason = row[11] as String?,
+                    portalFlagSource = (row[12] as String?)?.let { OrderPortalFlagSource.valueOf(it) },
+                    revision = (row[13] as Number).toLong(),
+                    createdAt = row[14].toInstantValue(),
+                    updatedAt = row[15].toInstantValue(),
                 )
             }
         return Page(rows, pageRequest.page, pageRequest.size, total)
@@ -131,6 +144,7 @@ class OrderSearchPersistenceAdapter : OrderSearchPort {
         filter.status?.let { setParameter("status", it.name) }
         filter.createdFrom?.let { setParameter("createdFrom", Timestamp.from(it)) }
         filter.createdTo?.let { setParameter("createdTo", Timestamp.from(it)) }
+        filter.portalFlag?.let { setParameter("portalFlag", it.name) }
         if (!filter.query.isNullOrBlank()) setParameter("q", "%${filter.query.trim()}%")
         return this
     }

@@ -5,6 +5,8 @@ import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.order.application.port.outbound.OrderAuditEntry
 import com.duluin.ftth.order.application.port.outbound.OrderListRow
 import com.duluin.ftth.order.application.port.outbound.OrderSearchFilter
+import com.duluin.ftth.order.domain.model.OrderPortalFlag
+import com.duluin.ftth.order.domain.model.OrderPortalFlagSource
 import com.duluin.ftth.order.domain.model.OrderStatus
 import java.time.Instant
 import java.util.UUID
@@ -32,6 +34,15 @@ data class OrderSummaryView(
     val address: String,
     val city: String,
     val appointmentStartsAt: Instant?,
+    /**
+     * Penanda portal apa adanya. [portalFlagSource] ikut karena layar HARUS bisa membedakan tanda
+     * yang dipasang operator dari yang dipasang sistem: yang pertama hanya boleh dicabut manusia,
+     * yang kedua dicabut sendiri begitu keadaannya berubah. Tanpa pembedanya, operator mencabut
+     * tanda sistem dan heran kenapa ia muncul lagi.
+     */
+    val portalFlag: OrderPortalFlag?,
+    val portalFlagReason: String?,
+    val portalFlagSource: OrderPortalFlagSource?,
     val revision: Long,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -48,6 +59,9 @@ data class OrderSummaryView(
             address = row.address,
             city = row.city,
             appointmentStartsAt = row.appointmentStartsAt,
+            portalFlag = row.portalFlag,
+            portalFlagReason = row.portalFlagReason,
+            portalFlagSource = row.portalFlagSource,
             revision = row.revision,
             createdAt = row.createdAt,
             updatedAt = row.updatedAt,

@@ -242,6 +242,55 @@ class OrderIT {
         assertThat(JsonPath.read<List<Any>>(get("/api/orders?status=FULFILLED", tenant.token), "$.content[*]")).isEmpty()
     }
 
+    /**
+     * Penanda portal HARUS ikut di baris antrean, bukan digali per pesanan.
+     *
+     * Sebelum ini `GET /api/orders` tak memulangkan penanda sama sekali, jadi konsol menjawab
+     * "mana pesanan yang menunggu pelanggan?" dengan memuat riwayat SETIAP baris satu per satu —
+     * 20 permintaan untuk satu halaman, dan tetap buta terhadap halaman lain. Tes ini menjaga dua
+     * hal yang membuat akal-akalan itu bisa dibuang: penandanya ada di barisnya, DAN penyaringnya
+     * bekerja lintas halaman di sisi server.
+     */
+    @Test
+    fun `antrean memulangkan penanda portal dan bisa disaring menurutnya`() {
+        val tenant = newTenantAdmin("orfl")
+        val flaggedId = JsonPath.read<String>(createOrder(tenant, """"leadId":"${createLead(tenant, "Siti Tertahan")}""""), "$.id")
+        val cleanId = JsonPath.read<String>(createOrder(tenant, """"leadId":"${createLead(tenant, "Andi Lancar")}""""), "$.id")
+        // DRAFT tidak boleh diberi penanda portal — pesanan yang belum diajukan tak punya pelanggan
+        // yang sedang menunggu apa pun. Jadi keduanya diajukan dulu.
+        transition(tenant, flaggedId, "SUBMIT", 0)
+        transition(tenant, cleanId, "SUBMIT", 0)
+
+        val flagged = post(
+            "/api/orders/$flaggedId/attention", tenant.token,
+            """{"flag":"WAITING_CUSTOMER","reason":"Menunggu konfirmasi titik pemasangan",
+                "operation":{"namespace":"order.attention","key":"${uniq()}","payloadHash":"${uniq()}"}}""",
+            expected = 200,
+        )
+        // Pesanan yang dimuat ulang ikut membawa penandanya — layar detail tak perlu menebak.
+        assertThat(JsonPath.read<String>(flagged, "$.portalFlag")).isEqualTo("WAITING_CUSTOMER")
+        assertThat(JsonPath.read<String>(flagged, "$.portalFlagSource")).isEqualTo("OPERATOR")
+
+        val all = get("/api/orders", tenant.token)
+        assertThat(JsonPath.read<List<String>>(all, "$.content[?(@.id=='$flaggedId')].portalFlag"))
+            .containsExactly("WAITING_CUSTOMER")
+        assertThat(JsonPath.read<List<String>>(all, "$.content[?(@.id=='$flaggedId')].portalFlagReason"))
+            .containsExactly("Menunggu konfirmasi titik pemasangan")
+
+        assertThat(JsonPath.read<List<String>>(get("/api/orders?flagged=true", tenant.token), "$.content[*].id"))
+            .containsExactly(flaggedId)
+        assertThat(JsonPath.read<List<String>>(get("/api/orders?flagged=false", tenant.token), "$.content[*].id"))
+            .containsExactly(cleanId)
+        assertThat(
+            JsonPath.read<List<String>>(get("/api/orders?portalFlag=WAITING_CUSTOMER", tenant.token), "$.content[*].id"),
+        ).containsExactly(flaggedId)
+        // Tanda yang TIDAK terpasang harus memulangkan kosong, bukan seluruh antrean. Penyaring
+        // yang diam-diam tak terpasang paling gampang lolos justru lewat kasus ini.
+        assertThat(
+            JsonPath.read<List<Any>>(get("/api/orders?portalFlag=REQUIRES_ATTENTION", tenant.token), "$.content[*]"),
+        ).isEmpty()
+    }
+
     @Test
     fun `a prospect becomes a real customer exactly once`() {
         val tenant = newTenantAdmin("orpr")

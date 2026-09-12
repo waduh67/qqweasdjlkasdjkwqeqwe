@@ -2,6 +2,8 @@ package com.duluin.ftth.order.application.port.outbound
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.order.domain.model.OrderPortalFlag
+import com.duluin.ftth.order.domain.model.OrderPortalFlagSource
 import com.duluin.ftth.order.domain.model.OrderStatus
 import java.time.Instant
 import java.util.UUID
@@ -22,6 +24,17 @@ data class OrderListRow(
     val address: String,
     val city: String,
     val appointmentStartsAt: Instant?,
+    /**
+     * Penanda portal ikut di baris antrean, bukan digali per pesanan.
+     *
+     * "Mana pesanan yang sedang menunggu pelanggan?" adalah pertanyaan paling sering ditanyakan
+     * operator, dan sebelum ini satu-satunya jawabannya adalah membuka riwayat SETIAP baris satu
+     * per satu — 20 permintaan untuk satu halaman. Kolomnya sudah ada di `order_record` dan sudah
+     * ikut terbaca query ini; tidak membawanya naik hanya memindahkan pekerjaan ke klien.
+     */
+    val portalFlag: OrderPortalFlag?,
+    val portalFlagReason: String?,
+    val portalFlagSource: OrderPortalFlagSource?,
     val revision: Long,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -40,6 +53,16 @@ data class OrderSearchFilter(
     val status: OrderStatus? = null,
     val createdFrom: Instant? = null,
     val createdTo: Instant? = null,
+    /**
+     * `true` = hanya yang BERTANDA (apa pun tandanya), `false` = hanya yang bersih, `null` = semua.
+     *
+     * Terpisah dari [portalFlag] karena menjawab pertanyaan yang berbeda: "apa yang tertahan?"
+     * bukan "mana yang menunggu pelanggan?". Menggabungkannya jadi satu parameter berarti operator
+     * yang cuma mau melihat seluruh tumpukan tertahan harus tahu lebih dulu ada tanda apa saja.
+     */
+    val flagged: Boolean? = null,
+    /** Penyaring tanda TERTENTU. Menyaring per halaman di klien tidak cukup — barisnya tersebar. */
+    val portalFlag: OrderPortalFlag? = null,
 )
 
 /**

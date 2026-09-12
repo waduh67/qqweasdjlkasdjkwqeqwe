@@ -19,7 +19,7 @@ Panggil binernya langsung dari `node_modules/.bin`. `npx` di lingkungan ini di-s
 MENELAN perintahnya: ia mencetak `npm notice run 'tsc'` lalu keluar dengan status 0 tanpa
 menjalankan apa pun — persis bentuk kegagalan yang paling berbahaya, yaitu terlihat lulus.
 
-**Garis dasar yang SEHAT: 1740 tes, 2–3 gagal.**
+**Garis dasar yang SEHAT: 1741 tes, 2–3 gagal.**
 
 | Tes yang gagal | Sifat |
 | --- | --- |
@@ -75,6 +75,7 @@ Dua jebakan kecil yang sudah memakan korban:
 | Portal pesan & lacak publik | **Selesai.** `/api/public/orders/{tenantSlug}`. Slug/nomor/HP salah dijawab kalimat identik supaya tak ada enumerasi. |
 | WO PSB otomatis saat ACCEPT | **Selesai**, satu transaksi dengan gerbang idempotensi. |
 | Penanda portal otomatis | **Selesai.** Tiga pemicu; kalimat untuk pelanggan ditulis sistem, bukan operator/teknisi. |
+| Penanda portal di antrean operator | **Selesai.** `portalFlag`/`portalFlagReason`/`portalFlagSource` ikut di `OrderSummaryView` DAN `OrderView`, dengan penyaring server `?flagged=` dan `?portalFlag=`. Akal-akalan lama (memindai `GET /{id}/timeline` satu per satu untuk tiap baris) sudah dibuang; `portalFlagSetAt` yang tersisa hanya membaca STEMPEL WAKTU, bukan memutuskan keadaannya. |
 | Impor CSV massal | **Selesai.** Pratinjau sebelum commit, alasan per baris, idempotensi dua lapis, batas 2 MiB / 1000 baris, berkas ekspor Excel diterima apa adanya. |
 | Layar/UI pesanan | **Selesai.** `/orders` (antrean), `/orders/:id` (detail + lini masa, hanya transisi yang sah), `/orders/import` (pratinjau → commit), `/orders/leads`. Tidak ada form "buat pesanan" operator — jalur masuk nyatanya lead + impor; `POST /api/orders` butuh `customerId` + id baris katalog sehingga form mentah hanya akan menghasilkan 400. |
 
@@ -151,13 +152,6 @@ Dua jebakan kecil yang sudah memakan korban:
   pra-V178).
 
 **Read model yang menyulitkan UI** (ditemukan saat membangun layarnya, belum diperbaiki)
-- **Penanda perhatian tak terlihat di antrean.** `OrderSummaryView` tidak punya `portalFlag`,
-  `OrderSearchFilter` tidak punya filternya. Pertanyaan "pesanan mana yang menunggu pelanggan?"
-  TIDAK bisa dijawab `GET /api/orders`. UI mengakalinya dengan tombol opt-in yang menyusun ulang
-  penanda dari `GET /{id}/timeline` untuk ≤20 baris halaman berjalan — sengaja dibatasi satu
-  halaman, dan komentarnya menyuruh menghapus seluruh blok itu begitu server mengeksposnya.
-  `OrderView` juga tidak punya `portalFlag`/`portalFlagSource`, jadi layar detail pun tak bisa
-  membedakan penanda dari OPERATOR dan dari SISTEM.
 - **Tidak ada nama item di read model gudang.** `StockBalanceView`, `MovementLegView`,
   `VanStockLineView`, `OpenCountView`, `BalanceAnomalyView` hanya membawa `itemCode`/`locationCode`.
   Setiap layar harus menggabungkan sendiri terhadap `/item-master`; pengguna tanpa
@@ -230,17 +224,13 @@ Lompatan nomor TIDAK masalah bagi Flyway.
 
 ## 6. Langkah berikutnya yang disarankan, berurutan
 
-1. Ekspos `portalFlag` + `portalFlagSource` di `OrderSummaryView`/`OrderView` dan filternya di
-   `OrderSearchFilter`, lalu HAPUS blok akal-akalan lini masa di `OrdersPage.tsx` (komentarnya
-   sudah menandai blok mana). Ini yang paling menyakitkan sekarang: operator tidak punya cara
-   melihat pesanan mana yang menunggu pelanggan.
-2. Bawa nama item/lokasi/orang ke read model gudang (§4), supaya penggabungan id→nama di klien
+1. Bawa nama item/lokasi/orang ke read model gudang (§4), supaya penggabungan id→nama di klien
    bisa dibuang dan petugas tanpa `inventory.item.view` berhenti membaca kode telanjang.
-3. Benahi izin daftar stock opname (§4) — approver yang tak bisa melihat antreannya itu kontrol
+2. Benahi izin daftar stock opname (§4) — approver yang tak bisa melihat antreannya itu kontrol
    yang mati diam-diam, bukan sekadar layar kosong.
-4. Belum ada layar material per WO dengan scan serial; API-nya sudah lengkap
+3. Belum ada layar material per WO dengan scan serial; API-nya sudah lengkap
    (`InventoryAllocationApi`), tinggal layarnya. Layar yang sama harus memuat tab **penarikan
    aset** untuk WO DISMANTLE — tanpa itu jalur P2.6 hanya bisa dipakai lewat curl, dan teknisi
    di lapangan tidak punya cara mencatat ONT yang dia cabut.
-5. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
-6. Uji poin 1 (PPPoE/BRAS) end-to-end.
+4. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
+5. Uji poin 1 (PPPoE/BRAS) end-to-end.

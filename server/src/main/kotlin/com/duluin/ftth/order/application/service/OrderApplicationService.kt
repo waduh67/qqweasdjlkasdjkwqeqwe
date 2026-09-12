@@ -188,6 +188,7 @@ class OrderApplicationService(
         order.appointment, order.cancellationReason, order.rejectionReason, order.revision, order.lastActorId,
         order.lastOperation.namespace, order.lastOperation.key, order.lastOperation.payloadHash,
         order.leadId, order.orderNumber,
+        order.portalFlag?.name, order.portalFlagReason, order.portalFlagSource?.name,
     )
 
     companion object {

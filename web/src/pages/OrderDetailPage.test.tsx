@@ -17,7 +17,7 @@ const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() }
 
 vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can }) }))
 vi.mock('@/system', () => ({ useToast: () => toast }))
-// Hanya fungsi jaringannya yang dipalsukan; [canTransition] dan [derivePortalFlag] tetap asli
+// Hanya fungsi jaringannya yang dipalsukan; [canTransition] dan [portalFlagSetAt] tetap asli
 // supaya uji ini menguji tabel transisi yang sebenarnya, bukan tiruannya.
 vi.mock('@/api/order', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api/order')>()),
@@ -44,6 +44,9 @@ const view = (overrides: Partial<OrderView> = {}): OrderView => ({
   lastActorId: null,
   leadId: 'lead-1',
   orderNumber: 'ORD-2609-0001',
+  portalFlag: null,
+  portalFlagReason: null,
+  portalFlagSource: null,
   ...overrides,
 })
 
@@ -156,22 +159,32 @@ describe('detail pesanan operator', () => {
     expect(first[2].expectedRevision).toBe(4)
   })
 
-  it('menampilkan penanda portal hasil rekonstruksi riwayat beserta kalimatnya', async () => {
-    mount(view(), [
-      entry(),
-      entry({ revision: 5, eventType: 'ORDER_FLAGGED', toStatus: 'WAITING_CUSTOMER', reason: 'Mohon hubungi kami' }),
-    ])
+  it('menampilkan penanda portal dari pesanannya beserta kalimat dan asal-usulnya', async () => {
+    mount(
+      view({ portalFlag: 'WAITING_CUSTOMER', portalFlagReason: 'Mohon hubungi kami', portalFlagSource: 'SYSTEM' }),
+      [entry(), entry({ revision: 5, eventType: 'ORDER_FLAGGED', toStatus: 'WAITING_CUSTOMER', reason: 'Mohon hubungi kami' })],
+    )
 
     // Penandanya tampil dua kali dan itu memang disengaja: lencana di kepala kartu (terlihat
     // sekilas) dan kartu penanda (dengan kalimat serta waktunya).
     await screen.findByText(/Terpasang/)
     expect(screen.getAllByText('Menunggu pelanggan')).toHaveLength(2)
     expect(screen.getAllByText(/Mohon hubungi kami/).length).toBeGreaterThan(0)
+    // Asal penandanya HARUS terbaca: penanda sistem dipasang ulang sendiri setelah dilepas.
+    // getAllByText: kalimatnya dipecah jadi beberapa simpul teks, jadi induknya ikut cocok.
+    expect(screen.getAllByText(/oleh sistem/).length).toBeGreaterThan(0)
     expect(button('Lepas penanda').disabled).toBe(false)
   })
 
-  it('mematikan "lepas penanda" ketika pesanan memang tidak bertanda', async () => {
-    mount(view(), [entry(), entry({ revision: 5, eventType: 'ORDER_UNFLAGGED', toStatus: 'ACCEPTED' })])
+  /**
+   * Riwayat yang MASIH memuat `ORDER_FLAGGED` lama tidak boleh membuat pesanan tampak bertanda.
+   *
+   * Dulu penandanya disimpulkan dari riwayat, jadi kasus ini menguji aturan rekonstruksi. Sekarang
+   * pesanannya sendiri yang menjawab, dan riwayat lama justru jadi jebakan terbaik untuk
+   * membuktikan tak ada sisa rekonstruksi yang tertinggal.
+   */
+  it('mematikan "lepas penanda" ketika pesanan memang tidak bertanda, walau riwayatnya pernah bertanda', async () => {
+    mount(view(), [entry(), entry({ revision: 5, eventType: 'ORDER_FLAGGED', toStatus: 'WAITING_CUSTOMER' })])
     await screen.findByText('Pesanan ini tidak sedang bertanda.')
 
     expect(button('Lepas penanda').disabled).toBe(true)

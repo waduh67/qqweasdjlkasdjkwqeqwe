@@ -55,11 +55,21 @@ class OrderController(
         @RequestParam(required = false) status: OrderStatus?,
         @RequestParam(required = false) createdFrom: Instant?,
         @RequestParam(required = false) createdTo: Instant?,
+        /** `true` = hanya yang bertanda, `false` = hanya yang bersih, tak diisi = semua. */
+        @RequestParam(required = false) flagged: Boolean?,
+        @RequestParam(required = false) portalFlag: OrderPortalFlag?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): PageResponse<OrderSummaryView> = PageResponse.from(
         this.query.search(
-            OrderSearchFilter(query = query, status = status, createdFrom = createdFrom, createdTo = createdTo),
+            OrderSearchFilter(
+                query = query,
+                status = status,
+                createdFrom = createdFrom,
+                createdTo = createdTo,
+                flagged = flagged,
+                portalFlag = portalFlag,
+            ),
             // Yang paling baru masuk di atas: antrean pesanan dikerjakan dari ujung terbaru.
             PageRequest(page, size),
         ),

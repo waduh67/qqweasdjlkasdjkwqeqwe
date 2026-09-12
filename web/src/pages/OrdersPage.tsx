@@ -6,16 +6,14 @@ import {
   ORDER_PORTAL_FLAG_LABEL,
   ORDER_STATUSES,
   ORDER_STATUS_LABEL,
-  derivePortalFlag,
-  getOrderTimeline,
   listOrders,
-  type DerivedPortalFlag,
+  type OrderPortalFlag,
   type OrderStatus,
   type OrderSummaryView,
 } from '@/api/order'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, EmptyState, SelectField, Toolbar, type Tone } from '@/components/atoms'
-import { IconAlert, IconInbox, IconUpload, IconUsers } from '@/components/atoms/icons'
+import { IconInbox, IconUpload, IconUsers } from '@/components/atoms/icons'
 import { PageHeader, SearchInput } from '@/components/molecules'
 import { DataTable, type Column } from '@/components/organisms'
 import { useToast } from '@/system'
@@ -54,32 +52,40 @@ export function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<OrderStatus | ''>('')
-  // Penanda portal per pesanan, hasil pindai riwayat. Lihat [scanFlags].
-  const [flags, setFlags] = useState<Record<string, DerivedPortalFlag | null>>({})
-  const [scanning, setScanning] = useState(false)
-  const [scanned, setScanned] = useState(false)
-  const [onlyFlagged, setOnlyFlagged] = useState(false)
+  /**
+   * `''` = semua, `'ANY'` = bertanda apa pun, sisanya = satu tanda tertentu.
+   *
+   * Satu kendali, bukan dua: "semua / bertanda / menunggu pelanggan / perlu perhatian" adalah satu
+   * pertanyaan yang menyempit, dan memecahnya jadi sakelar + dropdown melahirkan kombinasi yang
+   * saling bertentangan (sakelar mati + tanda terpilih) yang harus dijelaskan ke operator.
+   */
+  const [flagFilter, setFlagFilter] = useState<'' | 'ANY' | OrderPortalFlag>('')
 
   const canView = can('order.order.view')
 
   const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await listOrders({ query, status, page, size: PAGE_SIZE })
+      const response = await listOrders({
+        query,
+        status,
+        // Penyaringnya dikerjakan SERVER. Menyaringnya di klien hanya akan menyaring 20 baris yang
+        // kebetulan sedang tampil, jadi "hanya yang bertanda" memulangkan halaman setengah kosong
+        // sementara pesanan bertanda di halaman lain tak pernah terlihat.
+        flagged: flagFilter === 'ANY' ? true : undefined,
+        portalFlag: flagFilter === 'ANY' ? '' : flagFilter,
+        page,
+        size: PAGE_SIZE,
+      })
       setRows(response.content)
       setTotalPages(response.totalPages)
       setTotalElements(response.totalElements)
-      // Hasil pindai milik halaman SEBELUMNYA. Membiarkannya berarti baris baru mewarisi
-      // penanda dari pesanan yang kebetulan menempati posisi yang sama.
-      setFlags({})
-      setScanned(false)
-      setOnlyFlagged(false)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : 'Gagal memuat antrean pesanan')
     } finally {
       setLoading(false)
     }
-  }, [query, status, page, toast])
+  }, [query, status, flagFilter, page, toast])
 
   useEffect(() => {
     if (canView) void reload()
@@ -96,38 +102,9 @@ export function OrdersPage() {
     setStatus(value)
     setPage(0)
   }
-
-  /**
-   * Memindai penanda portal untuk baris di halaman ini — SATU permintaan riwayat per baris.
-   *
-   * Mahal dan SENGAJA tidak otomatis: `GET /api/orders` tidak memulangkan `portalFlag` sama
-   * sekali dan tak punya filter untuknya, jadi tak ada jalan lain untuk menjawab pertanyaan
-   * yang paling sering ditanyakan operator — "mana pesanan yang sedang menunggu pelanggan?".
-   * Begitu server menambahkan penanda ke baris antrean, seluruh blok ini HARUS dibuang.
-   *
-   * Dibatasi pada halaman yang sedang tampil (maksimal 20 baris), bukan seluruh hasil: memindai
-   * antrean 800 pesanan berarti 800 permintaan yang membuat konsol tampak menggantung.
-   */
-  const scanFlags = async () => {
-    if (scanning || rows.length === 0) return
-    setScanning(true)
-    try {
-      const entries = await Promise.all(
-        rows.map(async (row) => {
-          try {
-            return [row.id, derivePortalFlag(await getOrderTimeline(row.id))] as const
-          } catch {
-            // Satu riwayat yang gagal tidak boleh menggagalkan pindaian 19 baris lain;
-            // barisnya sekadar tampil tanpa penanda.
-            return [row.id, null] as const
-          }
-        }),
-      )
-      setFlags(Object.fromEntries(entries))
-      setScanned(true)
-    } finally {
-      setScanning(false)
-    }
+  const changeFlagFilter = (value: '' | 'ANY' | OrderPortalFlag) => {
+    setFlagFilter(value)
+    setPage(0)
   }
 
   if (!canView) {
@@ -137,8 +114,6 @@ export function OrdersPage() {
       </div>
     )
   }
-
-  const visible = onlyFlagged ? rows.filter((row) => flags[row.id]) : rows
 
   const columns: Column<OrderSummaryView>[] = [
     {
@@ -175,29 +150,27 @@ export function OrdersPage() {
       cell: (order) => <Badge tone={ORDER_STATUS_TONE[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>,
     },
     {
+      key: 'flag',
+      header: 'Penanda',
+      sortValue: (order) => order.portalFlag ?? '',
+      // Kolomnya SELALU ada sekarang, bukan muncul setelah ditekan tombol. Penanda yang harus
+      // dicari dulu adalah penanda yang tak pernah dilihat siapa pun.
+      cell: (order) =>
+        order.portalFlag ? (
+          <Badge tone={order.portalFlag === 'REQUIRES_ATTENTION' ? 'critical' : 'warning'}>
+            {ORDER_PORTAL_FLAG_LABEL[order.portalFlag]}
+          </Badge>
+        ) : (
+          <span className="muted">—</span>
+        ),
+    },
+    {
       key: 'createdAt',
       header: 'Masuk',
       sortValue: (order) => order.createdAt,
       cell: (order) => fmt(order.createdAt),
     },
   ]
-
-  if (scanned) {
-    columns.splice(5, 0, {
-      key: 'flag',
-      header: 'Penanda',
-      sortValue: (order) => flags[order.id]?.flag ?? '',
-      cell: (order) => {
-        const flag = flags[order.id]
-        if (!flag) return <span className="muted">—</span>
-        return (
-          <Badge tone={flag.flag === 'REQUIRES_ATTENTION' ? 'critical' : 'warning'}>
-            {ORDER_PORTAL_FLAG_LABEL[flag.flag]}
-          </Badge>
-        )
-      },
-    })
-  }
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -226,34 +199,28 @@ export function OrdersPage() {
             </option>
           ))}
         </SelectField>
-        <Button variant="subtle" onClick={() => void scanFlags()} disabled={scanning || loading || rows.length === 0}>
-          <IconAlert size={16} /> {scanning ? 'Memeriksa…' : 'Periksa penanda perhatian'}
-        </Button>
-        {scanned && (
-          <Button variant={onlyFlagged ? 'primary' : 'subtle'} onClick={() => setOnlyFlagged((value) => !value)}>
-            Hanya yang bertanda
-          </Button>
-        )}
+        <SelectField
+          value={flagFilter}
+          onChange={(_, data) => changeFlagFilter(data.value as '' | 'ANY' | OrderPortalFlag)}
+          aria-label="Saring penanda"
+        >
+          <option value="">Semua penanda</option>
+          <option value="ANY">Hanya yang bertanda</option>
+          <option value="WAITING_CUSTOMER">{ORDER_PORTAL_FLAG_LABEL.WAITING_CUSTOMER}</option>
+          <option value="REQUIRES_ATTENTION">{ORDER_PORTAL_FLAG_LABEL.REQUIRES_ATTENTION}</option>
+        </SelectField>
       </Toolbar>
-
-      {scanned && (
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Penanda dibaca dari riwayat tiap pesanan di halaman ini saja; server belum menyertakannya di antrean.
-          Pesanan bisa ditandai sistem (kunjungan gagal karena pelanggan, pemenuhan yang macet) maupun operator.
-        </Text>
-      )}
 
       <DataTable
         columns={columns}
-        rows={visible}
+        rows={rows}
         rowKey={(order) => order.id}
         loading={loading}
         presentation="resource"
         initialSort={{ key: 'createdAt', dir: 'desc' }}
         empty={
           <EmptyState
-            title={query || status || onlyFlagged ? 'Tidak ada pesanan yang cocok' : 'Belum ada pesanan'}
-            hint={onlyFlagged ? 'Tak ada pesanan bertanda di halaman ini.' : undefined}
+            title={query || status || flagFilter ? 'Tidak ada pesanan yang cocok' : 'Belum ada pesanan'}
             icon={<IconInbox size={32} />}
           />
         }

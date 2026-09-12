@@ -107,6 +107,20 @@ data class OrderView(
     val lastOperationHash: String,
     val leadId: UUID? = null,
     val orderNumber: String? = null,
+    /**
+     * Penanda portal. `String?` — bukan enum — dengan alasan yang sama seperti [status]: bentuk ini
+     * lintas-module dan `ModularityTests` hanya meloloskan primitif/UUID/Instant.
+     *
+     * Bawaan null WAJIB, seperti [leadId]/[orderNumber] di atasnya: bentuk ini ikut dibekukan jadi
+     * JSON di `order_operation.outcome_json`, dan baris yang ditulis sebelum field ini ada harus
+     * tetap bisa dibaca ulang saat operation key-nya diputar lagi. Konsekuensinya jujur disebut di
+     * sini: replay outcome LAMA memulangkan penanda null walau pesanannya kini bertanda. Untuk
+     * keadaan penanda yang mutakhir, baca antreannya (`OrderSummaryView`) atau muat ulang
+     * pesanannya — bukan hasil replay.
+     */
+    val portalFlag: String? = null,
+    val portalFlagReason: String? = null,
+    val portalFlagSource: String? = null,
 )
 
 data class OrderLineView(val catalogItemId: UUID, val description: String, val quantity: Int)
