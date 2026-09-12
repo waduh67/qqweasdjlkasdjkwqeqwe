@@ -15,12 +15,16 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 custody extension | V175.14 | 15 | Immutable receiver acknowledgement, quantitative receipt lines, exact posting and issue lifecycle binding |
 | M03 usage extension | V175.15, V175.16, V175.17, V175.18, V175.19, V175.20, V175.21 | 16 | Immutable acknowledged physical usage lines, standalone material facts and explicit NONE snapshots; internally tenant-scoped receipt/posting/fact bindings; projection-rebuild-safe consumed guard and terminal consumption fence; separate source-plan and current WO revisions; final-state projection validation and sealed posting graph |
 | M03 consumed truth correction | V175.22 | 16 | Immutable-history-anchored consumed projection and terminal lineage validation, including DELETE and exact transactional rebuild |
-| M03 fulfillment settlement | V175.23, V175.24 | 17 | Immutable approval applicability and usage snapshots; non-posting settlement receipts and internally scoped completion constraints |
+| M03 fulfillment settlement | V175.23, V175.24, V175.25 | 17 | Immutable approval applicability and usage snapshots; non-posting settlement receipts and internally scoped completion constraints; normalized SQL applicability array comparison |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M03: reservation task17
+
+Task17 reserves `V175_25__warehouse_fulfillment_effect_arrays.sql` before SQL
+creation to normalize varchar/text array comparison in the new validators.
+V175.23/V175.24 have been applied in isolated QA and remain unchanged.
 
 Task17 reserves `V175_23__warehouse_fulfillment_snapshots.sql` and
 `V175_24__warehouse_fulfillment_binding.sql` before SQL creation.
