@@ -13,7 +13,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 | V175, V175.1, V175.2, V175.3, V175.4, V175.5, V175.6, V175.7, V175.8, V175.9, V175.10 | 11 / 12 / 13 | Versioned policy/rules/tiers/approvers, warehouse applicability, durable settings replay, delegation lifecycle; approval/count source snapshots and repair/replenishment foundations; table-specific policy child validation and exact-value compatibility; sealed approval queue, candidate requirements and command receipts; atomic terminal/effect constraints and deferred tenant assertion; attempted-decision replay context and durable decision bindings; immutable material templates and SKU-bound lines, sealed plan snapshots, demand bindings and material command receipts; deferred complete material submission binding |
 | M03 issue extension | V175.11, V175.12, V175.13 | 14 | Immutable issue snapshots and unpick records; issued supply quantities; deferred live issue/reservation binding and explicit UNPICKED lifecycle; terminal dispatch posting proof |
 | M03 custody extension | V175.14 | 15 | Immutable receiver acknowledgement, quantitative receipt lines, exact posting and issue lifecycle binding |
-| M03 usage extension | V175.15, V175.16, V175.17, V175.18 | 16 | Immutable acknowledged physical usage lines, standalone material facts and explicit NONE snapshots; internally tenant-scoped receipt/posting/fact bindings; projection-rebuild-safe consumed guard and terminal consumption fence |
+| M03 usage extension | V175.15, V175.16, V175.17, V175.18, V175.19 | 16 | Immutable acknowledged physical usage lines, standalone material facts and explicit NONE snapshots; internally tenant-scoped receipt/posting/fact bindings; projection-rebuild-safe consumed guard and terminal consumption fence; separate source-plan and current WO revisions |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
@@ -40,6 +40,12 @@ Task16 reserves `V175_18__warehouse_terminal_consumption.sql` before SQL creatio
 after a rolled-back app-role probe reproduced zero-quantity reclassification of
 consumed stock. Terminal consumption must survive multi-step updates and
 projection replacement; all earlier migration bytes remain unchanged.
+
+Task16 reserves `V175_19__warehouse_usage_work_order_revision.sql` before SQL
+creation. Starting an acknowledged job advances the owner WO revision without
+changing its immutable source plan. Usage binds the current expected WO revision
+and the unchanged source-plan revision separately; current assignment, customer,
+type and action remain required. All predecessors remain byte-identical.
 
 ## M03: reservation task15
 
