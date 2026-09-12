@@ -1,6 +1,6 @@
 # Serah terima — Gudang (poin 3) & Pesanan (poin 4)
 
-Status per commit `58b202f0`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
+Status per commit `42cd29c4`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
 Dokumen ini ditulis supaya sesi atau agen lain bisa melanjutkan tanpa mengulang penggalian.
 Rencana aslinya ada di `docs/rencana-gudang-pesanan.md`; dokumen INI yang menggambarkan
 keadaan sebenarnya.
@@ -11,7 +11,8 @@ keadaan sebenarnya.
 
 ```bash
 ./gradlew :server:test --rerun          # ~24 menit
-cd web && ./node_modules/.bin/vitest run # ~1,5 menit — 68 berkas, 441 tes, SEMUA lulus
+cd web && ./node_modules/.bin/vitest run # ~1 menit — 68 berkas, 452 tes, SEMUA lulus
+cd web && ./node_modules/.bin/oxlint src # 0 error, 4 peringatan `react(refs)` yang memang pra-ada
 cd web && ./node_modules/.bin/tsc --noEmit -p tsconfig.app.json
 ```
 
@@ -19,7 +20,12 @@ Panggil binernya langsung dari `node_modules/.bin`. `npx` di lingkungan ini di-s
 MENELAN perintahnya: ia mencetak `npm notice run 'tsc'` lalu keluar dengan status 0 tanpa
 menjalankan apa pun — persis bentuk kegagalan yang paling berbahaya, yaitu terlihat lulus.
 
-**Garis dasar yang SEHAT: 1758 tes, 2–3 gagal.**
+**Garis dasar yang SEHAT: 1774 tes, 2–3 gagal.**
+
+Perhatikan: pada garis dasar sehat pun Gradle mencetak **`BUILD FAILED`**, karena dua kegagalan
+pra-ada di bawah ini memang gagal. Jangan panik melihatnya, dan jangan pula memakainya sebagai
+alasan mengabaikan kegagalan lain — nilai run dari daftar nama tes yang gagal, bukan dari kata
+`FAILED`.
 
 | Tes yang gagal | Sifat |
 | --- | --- |
@@ -78,6 +84,12 @@ Dua jebakan kecil yang sudah memakan korban:
 | `custodyOwnerName` untuk `OwnerKind.CUSTOMER` | **Sengaja UUID.** Resolusinya mencoba kamus lokasi lalu kamus pengguna, tidak bercabang pada `kind`. Menanyakan id pelanggan ke modul `customer` melahirkan siklus modul (alur fulfillment sudah berjalan ke arah sebaliknya). |
 | Izin baca stock opname | **Selesai.** `inventory.count.view` baru di `PermissionCatalog`. `GET /counts/open` dijaga `@authz.canAny('inventory.count.view','inventory.count.perform','inventory.count.approve')` dan memulangkan `OpenCountView`, bukan agregat `CycleCount`. Dua izin lama itu **JEMBATAN, bukan desain**: izin di-seed dari kode dan hanya peran sistem "Tenant Admin" yang di-backfill, jadi mengandalkan izin baru saja justru MENUTUP daftar bagi petugas yang hari ini memakainya. Boleh dicabut setelah peran custom tiap tenant diberi `inventory.count.view`. Dijaga `InventoryCountAccessIT` dari dua sisi, termasuk tes negatif agar `canAny` tidak jadi stempel karet. |
 | Layar material & penarikan aset per WO | **Selesai.** Dua kartu di `WorkOrderDetailBody`: `WorkOrderMaterials` (rencana/BOM, keluarkan dari gudang, pemakaian curah, scan nomor seri) dan `WorkOrderRecoveredAssets` (scan unit yang dicabut + pembatalannya). **Kartu terpisah, bukan satu**, karena arah barangnya berlawanan: material mengalir gudang→pelanggan, penarikan mengalir pelanggan→van; menyatukannya menaruh kolom "keluar" dan "masuk" bersebelahan tanpa penanda arah. Keduanya menyembunyikan diri sendiri (mengikuti `WorkOrderFiberWork`) dan BUKAN tab — halaman detail WO sengaja satu kolom yang di-scroll. `unscannedQuantity` dipajang sebagai badge peringatan DI ATAS tabel karena itulah satu-satunya hal yang menahan tombol "Selesai"; tanpa itu teknisi hanya melihat penolakan berulang tanpa tahu sebabnya. Pemilih teknisi di kartu penarikan diisi dari roster WO, bukan `/api/users`. Daftar item di formulir dirakit dari baris material + template, bukan `/item-master`. Kartu penarikan tidak menembak server sama sekali bila `workorder.material.view` tidak dipegang, dan saat itu ia MENGAKU tak bisa membaca daftarnya alih-alih bilang "belum ada" — klaim yang tak pernah diverifikasi akan meyakinkan teknisi bahwa scan-nya gagal. |
+| Catatan material beku setelah WO disetujui | **Selesai.** `WorkOrderService.requireMaterialWritable` menolak 409 pada SEMUA jalur tulis (`planMaterial`, `issueMaterial`, `recordMaterialUsage`, `scanMaterialSerial`, `recoverAsset`, `cancelRecoveredAsset`) ketika `approvalStatus == APPROVED`. Persetujuan penyelia adalah titik saga memotong saldo; tulisan sesudahnya mengubah angka yang sudah dipakai memotong dan tak ada yang membukukan selisihnya. Lahir di `workorder`, BUKAN `inventory` — status & persetujuan WO tidak terlihat dari sana — dan di service, BUKAN controller, supaya jalur non-HTTP ikut terjaga. Hanya `APPROVED` yang mengunci: `null`, `PENDING`, dan terutama `REJECTED` tetap bisa ditulis, karena WO yang ditolak memang dikembalikan ke lapangan untuk DIPERBAIKI dan saldonya belum bergerak. Menggantikan penutupan sisi-klien yang lama (tombol batal dimatikan saat `DONE`), yang jalur curl-nya masih terbuka. Dijaga `WorkOrderMaterialAfterApprovalIT` (4 tes), termasuk bukti bahwa tiga jalur BACA tetap 200. |
+| Pemilih van tanpa izin gudang | **Selesai.** `GET /api/work-orders/{id}/materials/van-locations`, dijaga `@authz.canAny('workorder.material.view','workorder.material.record')`, memulangkan `WorkOrderVanLocationView(id, code)` terurut kode. Dibuat karena teknisi lapangan TIDAK memegang `inventory.location.view` — dan memberikannya akan sekaligus membuka gudang, bin, serta master data gudang, jauh lebih lebar dari sekadar "van mana yang boleh kupilih". Menyaring `VEHICLE` **dan** `TECHNICIAN`: repo ini konsisten menyebut van stock sebagai dua-duanya (lihat `InventoryOperationsService`), jadi menyaring VEHICLE saja membuat tenant yang memodelkan van sebagai TECHNICIAN dapat daftar kosong. Penyaringan jenis ada di sisi `inventory` karena `LocationKind` milik modul itu. `vanLocations` SENGAJA tidak memakai `requireReadAccess` (yang menuntut `workorder.order.view`) — itu akan mengembalikan kebuntuan yang sama; yang tetap ditegakkan cuma tenant (RLS → WO tenant lain 404) dan cakupan area. Dijaga `WorkOrderVanLocationIT` (6 tes). |
+| Kode van di baris penarikan | **Selesai.** `WorkOrderRecoveredAssetView.technicianLocationCode` diisi di jalur baca **dan** kedua jalur tulis. SATU pembacaan lokasi untuk seluruh daftar (id dikumpulkan ke `Set` dulu); `recoverAsset` malah **nol** query tambahan karena kodenya datang dari `holder` yang sudah dibaca untuk penjaga D6c. Kolom "Van" di layar memakainya langsung. |
+| Koreksi scan nomor seri | **Selesai (layar saja — server sudah bisa sejak awal).** Tombol "Koreksi" per baris serial mengisi formulir scan dengan serial + nasib baris itu lalu memindahkan fokus ke pemilih nasib, dengan badge "Mode koreksi" yang menyebut nasib LAMA apa adanya. Gerbangnya SAMA dengan bagian scan (`canRecord && !terminal`), bukan gerbang kedua yang bisa menyimpang. Tidak ada endpoint baru dan JANGAN dibuat — lihat catatan koreksi di §4. |
+| Mengosongkan rencana material | **Selesai.** `PUT .../materials` menerima `clear: true`; `lines` diabaikan saat itu. Bidang TERSENDIRI, bukan disimpulkan dari `lines` kosong, karena bentuk itu sudah berarti "pakai BOM apa adanya" sejak awal — kalau disamakan, dispatcher yang menghapus baris terakhir lalu menyimpan justru mendapat rencana PENUH kembali, tanpa satu pun pesan kesalahan. Tidak ada jalur hapus terpisah di server: `requested` kosong membuat seluruh baris jadi yatim dan jatuh ke penjaga yang memang sudah menolak baris ber-`issuedQuantity > 0`. Di layar: tombol merah + konfirmasi wajib, penolakan server ditampilkan apa adanya. Pengosongan juga TIDAK menuntut pelanggan (`customerId` di `PlanWorkOrderMaterialCommand` kini nullable, dan penjaganya pindah ke titik PEMBUATAN baris di `planMaterial`): `WorkOrder.update` boleh menulis `customerId = null` pada WO non-terminal, jadi menuntutnya di pintu masuk membuat WO yang pelanggannya dilepas setelah rencananya tersusun menolak pengosongan selamanya dengan alasan yang tak berhubungan. Efek sampingnya disengaja — `replan` baris yang sudah ada kini juga boleh tanpa pelanggan, karena ia tidak melahirkan efek saga baru. Dijaga `WorkOrderMaterialPlanClearIT` (6 tes), termasuk bukti barisnya benar-benar terhapus dari tabel (query native di dalam `TenantContext.runAs`) dan bahwa penolakan 409 meninggalkan rencana UTUH, bukan setengah terhapus. |
+| N+1 master barang di read model material | **Selesai.** `InventoryItemRepository.findAllByIds(ids)` baru; `materials()` dan `recoveredAssets()` menyusun katalognya SEKALI per request. Bukan `findAll(tenantId)` — itu menyeret seluruh katalog tenant demi belasan baris dan pada tenant ber-ribuan SKU ongkosnya lebih besar dari N+1 yang mau dihindari. Himpunan kosong tidak menyentuh basis data. Item yang hilang TETAP melempar `NotFoundException`, sama seperti `itemOf` yang digantikannya: baris material menunjuk item lewat FK, jadi id tak teresolusi berarti master barangnya rusak. |
 | Layar/UI gudang | **Selesai.** `/warehouse`, enam tab: stok, mutasi, riwayat, persetujuan, stock opname, master data. Penjaga rutenya DITURUNKAN dari tabel tab (`WAREHOUSE_VIEW_PERMISSIONS`), jadi menambah tab otomatis melebarkan izinnya. Editor kebijakan merender `approverIds` dan `roleHolderIds` sebagai dua kelompok terpisah dan tidak pernah mengirim yang kedua. |
 
 ### Poin 4 — Pesanan & pelanggan
@@ -139,40 +151,39 @@ Dua jebakan kecil yang sudah memakan korban:
   kunjungan `fieldservice`, dan `workorder` tidak bisa menanyakannya tanpa melahirkan siklus
   modul. Kalau dipaksa, **SETIAP** approval WO ditolak. Pemicunya harus datang dari sisi
   `fieldservice`.
-- Pembatalan baris penarikan (`POST .../recovered-assets/{id}/cancel`) TIDAK ditolak setelah
-  WO-nya disetujui. Saldo sudah terlanjur bergerak, jadi barisnya berbunyi "dibatalkan" sementara
-  unitnya nyata-nyata sudah bertambah di van teknisi — persis kebalikan dari pertanyaan yang mau
-  dijawab pembatalan ("kenapa saldo TIDAK bertambah"). Bukan kebocoran: penarikan ulang atas unit
-  yang sama tetap tertutup karena `recoverAsset` menuntut status `CONSUMED` dan unit yang sudah
-  diproses berada di `RETURNED`. Bentuknya sama dengan perubahan material setelah approval, yang
-  juga belum dijaga. Penjaganya harus lahir di sisi `workorder` (status WO tidak terlihat dari
-  `inventory`). **Sudah ditutup DARI SISI KLIEN saja**: tombol batalnya ditampilkan tapi MATI saat
-  WO `DONE`, dengan keterangan bahwa koreksinya lewat penyesuaian stok. Dimatikan, bukan
-  disembunyikan — tombol yang lenyap tidak mengajarkan langkah penggantinya. Jalur curl-nya tetap
-  terbuka, jadi celah ini BELUM benar-benar tertutup.
-- Pemilih van teknisi di layar penarikan aset menuntut `inventory.location.view`
-  (`listInventoryLocations('VEHICLE')`), izin yang teknisi lapangan lazimnya TIDAK pegang. Bagi
-  mereka formulir itu praktis tak bisa disubmit — layarnya hanya memberi tahu izin apa yang
-  kurang, tidak diam-diam rusak. Tidak bisa diperbaiki dari web: server menuntut
-  `technicianLocationId` eksplisit dan belum ada endpoint "van saya sendiri" yang boleh dibaca
-  pemegang `workorder.material.record` saja. Hal yang sama berlaku untuk formulir pengeluaran
-  barang, yang juga butuh `iam.user.view` untuk memilih pemegang custody.
-- Tidak ada jalur mengoreksi scan nomor seri yang salah. `POST .../materials/serials` hanya bisa
-  MENAMBAH; teknisi yang terlanjur memilih `INSTALLED` padahal `RETURNED` tak punya jalan keluar,
-  padahal jalur penarikan aset punya `cancel` persis untuk kebutuhan ini. Kemungkinan lubang
-  nyata, bukan sekadar layar yang belum ada.
-- `lines: []` pada `PUT .../materials` berarti "pakai BOM apa adanya", sehingga TIDAK ADA cara
-  mengosongkan rencana lewat kontrak ini. Tombol "kosongkan rencana" akan butuh jalur server baru.
-- `WorkOrderMaterialTemplateView` dideklarasikan dua kali di klien — `@/api/workorderMaterial.ts`
-  dan `@/api/inventory.ts` — identik field demi field. Kompatibel struktural hari ini, jadi TSC
-  diam sampai salah satunya berubah.
-- `materials()` dan `recoveredAssets()` masih memanggil `itemOf(...)` per baris: N+1 terhadap
-  master barang. **Pra-ada**, bukan bawaan penamaan orang (yang justru satu panggilan per
-  request). Terasa saat satu WO punya banyak baris material.
-- `WorkOrderRecoveredAssetView` membawa `technicianLocationId` dan `customerId` sebagai UUID
-  telanjang, tanpa `technicianLocationCode`/`customerName`. Karena klien dilarang menggabungkan
-  id→nama, kolom "unit ini mendarat di van mana" dan "dicabut dari pelanggan siapa" TIDAK
-  ditampilkan sama sekali — padahal keduanya pertanyaan wajar saat menyelisik stok.
+- Formulir PENGELUARAN barang (`IssueSection`) masih butuh `iam.user.view` untuk memilih pemegang
+  custody: daftar calonnya datang dari `/api/users`. Berbeda dari pemilih van yang sudah dibereskan
+  — aktornya di sini petugas GUDANG, yang memang lazim memegang izin itu, jadi ini jauh lebih
+  jinak. Kalau kelak ada tenant yang membatasinya, polanya sudah ada: bikin endpoint sempit di
+  bawah namespace work order, jangan melebarkan izin.
+- **KOREKSI atas revisi dokumen sebelumnya — baca ini sebelum membangun apa pun soal serial.**
+  Versi lalu menulis "tidak ada jalur mengoreksi scan nomor seri yang salah" dan menaruhnya
+  sebagai langkah nomor satu di §6. Itu SALAH, dan siapa pun yang mempercayainya akan membangun
+  endpoint yang tidak perlu. `WorkOrderMaterialLine.attachSerial` sudah melakukan UPSERT sejak
+  awal — `serials.filterNot { it.assetId == serial.assetId } + serial` — dan
+  `usedQuantity`/`returnedQuantity`/`lostQuantity` SELALU dihitung ulang dari daftar serial, bukan
+  ditambah inkremental, persis supaya koreksi tidak melenceng. Id baris serialnya pun sengaja
+  dipertahankan (`priorId`) karena itulah `targetId` saga; id baru akan memotong saldo dua kali.
+  Jadi: men-scan ulang nomor seri yang sama di WO yang sama dengan nasib berbeda MENGGANTI catatan
+  lama. Yang kurang cuma di layar, dan **itu sudah ditutup** (tombol "Koreksi" per baris serial).
+  JANGAN tambahkan endpoint "hapus serial": ia justru merusak idempotensi yang sekarang jalan.
+- `WorkOrderRecoveredAssetView` masih membawa `customerId` sebagai UUID telanjang, tanpa
+  `customerName`. **Ini bukan kelalaian, ini tembok arsitektur**: `inventory` tidak boleh
+  bergantung pada modul `customer` (`ModularityTests` menolaknya, dan arahnya akan melahirkan
+  siklus karena `customer` sudah menyentuh permukaan gudang). Klien juga dilarang menggabungkan
+  id→nama sendiri. Jalan keluarnya kelak salah satu dari: `CustomerApi` base-package bertipe
+  `namesByIds` yang dipanggil in-process seperti `IamApi`, ATAU membawa nama pelanggan ikut serta
+  sejak baris penarikan dibuat. Sampai itu diputuskan, kolom "dicabut dari pelanggan siapa"
+  memang TIDAK ditampilkan — lebih baik hilang daripada memajang UUID.
+- `issueMaterial` memulangkan status berbeda untuk kekeliruan yang SAMA: mengeluarkan item yang
+  tidak ada di rencana menjawab **400** kalau itemnya ada di master, tapi **404** kalau UUID-nya
+  tak dikenal — karena pesan 400-nya dirakit lewat `itemOf(...)`, yang melempar `NotFoundException`
+  lebih dulu. Dari sisi pemanggil keduanya sama-sama "item ini tidak ada di rencana". **Pra-ada.**
+- `PlanMaterialLineBody.quantity` memakai `@PositiveOrZero`, jadi baris rencana berkuantitas 0
+  diterima dan tersimpan sebagai baris hidup. Akibatnya "0" dan "tidak ada" jadi dua keadaan
+  berbeda di rencana, dan layar akan memajang baris yang tak menjanjikan barang apa pun.
+  **Pra-ada**; belum jelas apakah disengaja (merencanakan nol = "sengaja tidak dibawa") atau
+  kelalaian. Putuskan sebelum ada laporan yang menjumlahkannya.
 - Jalur consume saat approve tidak memvalidasi saldo negatif. Yang menahannya CHECK
   `work_order_material_realized_ck` + mutasi ISSUE yang sudah tervalidasi saat barang keluar.
 
@@ -259,15 +270,15 @@ Lompatan nomor TIDAK masalah bagi Flyway.
 
 ## 6. Langkah berikutnya yang disarankan, berurutan
 
-1. Beri jalur mengoreksi scan nomor seri yang salah (§4). Sekarang `POST .../materials/serials`
-   hanya bisa menambah, jadi teknisi yang terlanjur memilih nasib yang keliru tidak punya jalan
-   keluar sama sekali — sementara penarikan aset sudah punya `cancel` untuk kebutuhan yang persis
-   sama. Ini yang paling mungkin jadi keluhan pertama begitu layar materialnya dipakai orang.
-2. Tutup pembatalan penarikan setelah WO disetujui DARI SISI SERVER (§4). Klien sudah
-   mematikan tombolnya, tapi jalur curl-nya masih terbuka dan saldonya sudah terlanjur bergerak.
-   Penjaganya harus lahir di `workorder` — status WO tidak terlihat dari `inventory`.
-3. Bereskan agar teknisi lapangan bisa memakai formulir penarikan tanpa `inventory.location.view`
-   (§4): butuh endpoint "van saya sendiri" yang boleh dibaca pemegang `workorder.material.record`,
-   atau server yang menurunkan sendiri `technicianLocationId` dari penugasan WO.
-4. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
-5. Uji poin 1 (PPPoE/BRAS) end-to-end.
+Tiga butir teratas revisi lalu (koreksi scan, pembatalan setelah approval, pemilih van) SUDAH
+tertutup — lihat §2. Yang tersisa:
+
+1. Putuskan `customerName` di baris penarikan aset (§4). Ini keputusan ARSITEKTUR, bukan
+   pekerjaan menyalin kolom: `inventory` tidak boleh bergantung pada `customer`, jadi pilihannya
+   `CustomerApi.namesByIds` in-process seperti `IamApi`, atau menitipkan nama pelanggan sejak
+   baris penarikan dibuat. Sampai diputuskan, kolomnya sengaja tidak ditampilkan.
+2. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
+3. Uji poin 1 (PPPoE/BRAS) end-to-end.
+4. Telusuri `VpnIT > provisioning end-to-end` yang flaky (§1). Selama ia masih berkedip, setiap
+   run penuh menuntut pembacanya menebak apakah 3 kegagalan itu normal atau regresi — dan tebakan
+   semacam itu cepat atau lambat akan menelan regresi sungguhan.
