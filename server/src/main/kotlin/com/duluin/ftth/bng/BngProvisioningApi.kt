@@ -10,7 +10,10 @@ interface BngProvisioningApi {
     fun isolate(subscriptionId: UUID)
     fun disconnect(subscriptionId: UUID): BngSubscriberAccessRef?
     fun terminate(subscriptionId: UUID)
+    fun applyFulfillment(subscriptionId: UUID, action: BngFulfillmentAction)
 }
+
+enum class BngFulfillmentAction { ACTIVATE, TERMINATE }
 
 data class BngNasRef(
     val id: UUID,
