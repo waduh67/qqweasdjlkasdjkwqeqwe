@@ -3,8 +3,9 @@
 Task13 menambahkan perencanaan dan demand, bukan lifecycle WO kedua. Fulfillment
 mengorkestrasi kontrak publik workorder dan inventory dalam satu transaksi lokal.
 Picking fisik, unpick dan dispatch kini disediakan task14 melalui pemilik inventory;
-lihat [pengeluaran material WO](warehouse-issues.md). Acknowledgement, pelaporan
-penggunaan dan settlement tetap bukan bagian task13/task14.
+lihat [pengeluaran material WO](warehouse-issues.md). Task15 menambahkan
+[acknowledgement custody](warehouse-material-receipts.md), dan task16 menambahkan
+[pemakaian fisik sebelum QA](warehouse-material-usage.md). Settlement tetap terpisah.
 
 ## Pemilik dan penguncian
 
@@ -148,11 +149,11 @@ berpindah atomik. SKU pada template aktif tidak dapat diarsipkan.
   yang sama dipanggil summary/history; missing/ambiguous binding menghasilkan
   `409 SOURCE_NOT_VERIFIED`, bukan requested/backorder nol. Data lama tidak direpair.
 
-Route `/acknowledge`, `/report-use`, `/return`, `/reallocate` dan `/settlement`
+Route `/correct-use`, `/return`, `/reallocate` dan `/settlement`
 tetap conflict409 untuk pemanggil yang dapat membaca WO. Route pick/dispatch task14
 mempunyai DTO ketat tersendiri; body kosong dispatch kini malformed400. Nilai
 QA/provisioning/settlement di summary task13 bukan izin untuk menjalankan efek
-task15-18. Approval demand/effect owners berikutnya tetap harus menyediakan
+task17-18. Approval demand/effect owners berikutnya tetap harus menyediakan
 binding aktual sebelum suatu keputusan dapat memposting.
 
 ## Migrasi dan verifikasi
