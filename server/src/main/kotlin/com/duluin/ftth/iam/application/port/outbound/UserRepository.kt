@@ -16,6 +16,17 @@ interface UserRepository {
     /** Muat sekumpulan user sekaligus (mis. saat menampilkan nama teknisi di daftar work order). */
     fun findAllByIds(ids: Set<UUID>): List<User>
 
+    /**
+     * Semua pemegang sebuah peran di tenant aktif, TERMASUK yang sudah nonaktif.
+     *
+     * Yang nonaktif SENGAJA ikut dikembalikan: pemanggilnya (matriks persetujuan gudang) harus
+     * bisa membedakan "peran ini memang belum diisi siapa pun" dari "pemegangnya ada tapi sudah
+     * resign". Kalau di sini sudah disaring, kedua keadaan itu sampai ke pemanggil sebagai
+     * daftar kosong yang sama persis, dan permintaan restock akan menggantung sampai kedaluwarsa
+     * dengan pesan yang tak menolong siapa pun.
+     */
+    fun findAllByRoleId(roleId: UUID): List<User>
+
     fun findByEmail(email: Email): User?
 
     fun existsByEmail(email: Email): Boolean

@@ -272,6 +272,7 @@ class ReportServiceTest {
             ids.filter { it == areaBekasi }.map { AreaRef(it, "BKS", "Bekasi") }
 
         override fun findUser(id: UUID) = throw UnsupportedOperationException()
+        override fun usersWithRole(roleName: String): List<UserRef> = throw UnsupportedOperationException()
         override fun primaryEmailForTenant(tenantId: UUID) = throw UnsupportedOperationException()
     }
 

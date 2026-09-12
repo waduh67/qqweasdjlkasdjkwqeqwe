@@ -620,6 +620,7 @@ class PlatformInvoiceGeneratorRenewTest {
     private class FakeIamApi(private val email: String?) : IamApi {
         override fun findUser(id: UUID): UserRef? = null
         override fun usersByIds(ids: Set<UUID>): List<UserRef> = emptyList()
+        override fun usersWithRole(roleName: String): List<UserRef> = emptyList()
         override fun primaryEmailForTenant(tenantId: UUID): String? = email
         override fun areasByIds(ids: Set<UUID>) = emptyList<com.duluin.ftth.iam.AreaRef>()
     }

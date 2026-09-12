@@ -27,6 +27,11 @@ class IamApiService(
     override fun usersByIds(ids: Set<UUID>): List<UserRef> =
         userRepository.findAllByIds(ids).map { it.toRef() }
 
+    override fun usersWithRole(roleName: String): List<UserRef> {
+        val role = roleRepository.findByName(roleName.trim()) ?: return emptyList()
+        return userRepository.findAllByRoleId(role.id).map { it.toRef() }
+    }
+
     override fun primaryEmailForTenant(tenantId: UUID): String? =
         userDirectory.primaryEmailForTenant(tenantId)
 

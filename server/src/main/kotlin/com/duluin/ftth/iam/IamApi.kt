@@ -19,6 +19,27 @@ interface IamApi {
     fun usersByIds(ids: Set<UUID>): List<UserRef>
 
     /**
+     * Pemegang sebuah peran di tenant aktif, dikenali dari NAMA perannya.
+     *
+     * Ada supaya kebijakan lintas modul bisa berkata "yang menyetujui adalah Kepala Gudang"
+     * alih-alih menyebut UUID orangnya satu per satu. Bedanya bukan kenyamanan: matriks yang
+     * menunjuk orang akan basi diam-diam begitu orangnya pindah bagian atau resign — permintaan
+     * restock menggantung sampai kedaluwarsa dan tak ada satu pun pesan yang menjelaskan
+     * kenapa, karena dari sudut pandang sistem approvernya memang "ada".
+     *
+     * Pemegang yang NONAKTIF ikut dikembalikan, bertanda `active = false`. Menyaringnya di sini
+     * akan meratakan "peran ini belum diisi siapa pun" dan "pemegangnya sudah resign" menjadi
+     * daftar kosong yang sama — padahal keduanya menuntut tindakan yang sama sekali berbeda dari
+     * pemilik tenant. Pemanggilnya yang memutuskan, dan dia yang punya kalimatnya.
+     *
+     * Nama peran dicocokkan persis. Peran yang tidak ada mengembalikan daftar kosong, bukan
+     * lemparan: nama peran datang dari kebijakan yang disimpan tenant, dan kebijakan yang
+     * menyebut peran yang sudah dihapus adalah kesalahan konfigurasi yang harus dilaporkan
+     * pemanggilnya dengan konteksnya sendiri — bukan pecah sebagai 500 di tengah alur.
+     */
+    fun usersWithRole(roleName: String): List<UserRef>
+
+    /**
      * Email kontak penagihan sebuah tenant (login admin onboarding pertama), atau `null` bila
      * tenant tak punya user. Aman dipanggil dari konteks platform tanpa tenant aktif (mis.
      * scheduler langganan) — resolusi lewat indeks login non-RLS, bukan agregat user ter-scope.
