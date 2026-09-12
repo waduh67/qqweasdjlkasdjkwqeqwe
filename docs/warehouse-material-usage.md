@@ -94,3 +94,18 @@ seluruh predecessor tidak diubah.
 Penambahan header movement, leg, atau fakta pada posting usage juga memeriksa
 ulang snapshot lengkap. Satu operation hanya boleh mempunyai satu movement;
 pembacaan/replay menolak binding yang tidak lengkap tanpa memperbaiki histori.
+
+## Kebenaran proyeksi consumed
+
+V175.22 mengikat proyeksi akhir ke histori posting consumed yang immutable.
+Kuantitas nol, baris yang dihapus, dimensi/identitas pengganti yang salah, atau
+child dari identitas consumed tidak boleh lolos commit. Validator berjalan dari
+mutasi balance, segment/lineage dan posting, termasuk DELETE, dengan pemeriksaan
+tenant internal. Replay memeriksa kebenaran yang sama dan tidak memperbaiki data.
+
+Delete/reinsert dengan surrogate ID baru dan zero-then-restore dalam transaksi
+yang sama tetap valid bila posisi akhir persis sama dengan histori. Rebuild
+harus selesai dalam transaksi yang menghapus proyeksi consumed, bukan commit
+keadaan hilang lalu memperbaikinya belakangan. EA fungible mempertahankan posisi
+consumed agregat dan sisa EA pada identitas yang sama; material consumed tidak
+dapat menghasilkan descendant yang reusable.
