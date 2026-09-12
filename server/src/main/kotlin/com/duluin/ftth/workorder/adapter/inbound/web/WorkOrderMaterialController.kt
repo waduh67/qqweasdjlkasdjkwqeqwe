@@ -4,7 +4,10 @@ import com.duluin.ftth.inventory.IssuedMaterialLineInput
 import com.duluin.ftth.inventory.PlannedMaterialLineInput
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
+import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderMaterialUseCase
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryCancelRequest
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryRequest
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialIssueRequest
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialScanRequest
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialUsageRequest
@@ -90,6 +93,49 @@ class WorkOrderMaterialController(private val materials: ManageWorkOrderMaterial
     @PreAuthorize("@authz.can('workorder.material.record')")
     fun scan(@PathVariable id: UUID, @Valid @RequestBody body: MaterialSerialBody): WorkOrderMaterialView =
         materials.scanMaterialSerial(id, WorkOrderMaterialScanRequest(body.serialNumber, body.outcome, body.macAddress))
+
+    // ------------------------------------------------- Penarikan aset (P2.6)
+
+    /*
+     * Izinnya SENGAJA memakai `workorder.material.record`/`.view` yang SUDAH ADA, bukan izin baru.
+     *
+     * Aktornya identik dengan scan material: teknisi yang sedang berdiri di rumah pelanggan.
+     * Izin baru berarti seed peran baru, dan setiap peran lama yang belum diperbarui akan
+     * menghasilkan teknisi yang boleh mencatat pemakaian tapi ditolak saat mencatat ONT yang dia
+     * cabut — dan ONT itu tetap dibawa pulang, hanya tanpa jejak di pembukuan. Yang menjaga
+     * penarikan bukan izinnya, melainkan persetujuan WO-nya (D7) dan penjaga di service (D6).
+     */
+
+    @GetMapping("/recovered-assets")
+    @PreAuthorize("@authz.can('workorder.material.view')")
+    fun recoveredAssets(@PathVariable id: UUID): List<WorkOrderRecoveredAssetView> = materials.recoveredAssets(id)
+
+    /** Scan unit yang dicabut dari rumah pelanggan. Saldo baru bergerak saat WO disetujui. */
+    @PostMapping("/recovered-assets")
+    @PreAuthorize("@authz.can('workorder.material.record')")
+    fun recoverAsset(@PathVariable id: UUID, @Valid @RequestBody body: RecoverAssetBody): WorkOrderRecoveredAssetView =
+        materials.recoverAsset(
+            id,
+            WorkOrderAssetRecoveryRequest(
+                body.serialNumber, body.technicianId, body.technicianLocationId, body.condition, body.note,
+            ),
+        )
+
+    /**
+     * Batalkan satu baris penarikan (salah scan).
+     *
+     * POST, bukan DELETE: barisnya TIDAK dihapus. Jejak "pernah tercatat ditarik lalu dibatalkan,
+     * oleh siapa, dengan alasan apa" justru bagian yang paling perlu dibaca saat menyelisik
+     * selisih stok. DELETE akan membuat pembaca mengira barisnya lenyap.
+     */
+    @PostMapping("/recovered-assets/{recoveredId}/cancel")
+    @PreAuthorize("@authz.can('workorder.material.record')")
+    fun cancelRecoveredAsset(
+        @PathVariable id: UUID,
+        @PathVariable recoveredId: UUID,
+        @RequestBody(required = false) body: CancelRecoveredAssetBody?,
+    ): WorkOrderRecoveredAssetView =
+        materials.cancelRecoveredAsset(id, recoveredId, WorkOrderAssetRecoveryCancelRequest(body?.reason))
 }
 
 data class PlanMaterialLineBody(val itemId: UUID, @field:PositiveOrZero val quantity: Int)
@@ -132,3 +178,14 @@ data class MaterialSerialBody(
     @field:NotBlank val outcome: String,
     val macAddress: String? = null,
 )
+
+data class RecoverAssetBody(
+    @field:NotBlank val serialNumber: String,
+    val technicianId: UUID,
+    val technicianLocationId: UUID,
+    /** GOOD / DAMAGED. Default GOOD supaya klien lama tidak perlu tahu bidang ini. */
+    @field:NotBlank val condition: String = "GOOD",
+    val note: String? = null,
+)
+
+data class CancelRecoveredAssetBody(val reason: String? = null)

@@ -206,7 +206,7 @@ class PublicApiFulfillmentEffectExecutor(
         if (allocations.isEmpty()) throw FulfillmentExecutionFailure.ReconciliationRequired("INVENTORY_ALLOCATIONS_NOT_FOUND")
         try {
             allocations.forEach { allocation ->
-                val result = inventory.consumeFulfillment(InventoryFulfillmentCommand(
+                val command = InventoryFulfillmentCommand(
                     tenantId = request.tenantId,
                     targetId = allocation.targetId,
                     itemId = allocation.itemId,
@@ -216,7 +216,17 @@ class PublicApiFulfillmentEffectExecutor(
                     workOrderId = workOrderId,
                     quantity = allocation.quantity,
                     serialized = allocation.serialized,
-                    installed = request.workOrderKind != "DISMANTLE",
+                    /*
+                     * `installed` = "unit ini berakhir TERPASANG di rumah pelanggan".
+                     *
+                     * Alokasi tarikan (`returned`) jelas bukan: arahnya justru mencabut. Dan WO
+                     * DISMANTLE tidak memasang apa pun walau materialnya dikonsumsi — patch cord
+                     * yang habis dipakai membongkar tetap habis, tapi tidak "terpasang di
+                     * pelanggan". Kalau bendera ini salah, `inventory_customer_material_fact`
+                     * akan mengaku pelanggan yang baru saja diputus justru baru dipasangi
+                     * perangkat baru.
+                     */
+                    installed = !allocation.returned && request.workOrderKind != "DISMANTLE",
                     actorId = allocation.actorId,
                     namespace = request.namespace,
                     operationKey = "${request.operationKey}:${allocation.targetId}",
@@ -230,7 +240,24 @@ class PublicApiFulfillmentEffectExecutor(
                     // dipotong dari saldo — alokasinya benar, hanya SN-nya yang hilang di jalan.
                     assetId = allocation.assetId,
                     serialNumber = allocation.serialNumber,
-                ))
+                )
+                /*
+                 * Satu daftar alokasi, dua arah. Alokasi tarikan (P2.6) memakai jalur retur yang
+                 * SUDAH ADA — `returnFulfillment` sudah lengkap idempotensi, ledger, dan proyeksi
+                 * saldonya sejak lama, hanya tidak pernah punya satu pun pemanggil produksi.
+                 *
+                 * Bentuk ini SENGAJA: satu preflight, satu daftar alokasi, satu skema idempotensi
+                 * (`"${operationKey}:${targetId}"`). Karena itu satu WO DISMANTLE boleh sekaligus
+                 * MEMAKAI patch cord baru DAN MENARIK ONT lama, dan keduanya berhasil atau gagal
+                 * sebagai satu kesatuan. Jalur efek terpisah untuk penarikan akan melahirkan
+                 * keadaan separuh jadi — ONT sudah masuk saldo, patch cord belum keluar — yang
+                 * tidak terwakili di checkpoint mana pun.
+                 */
+                val result = if (allocation.returned) {
+                    inventory.returnFulfillment(command)
+                } else {
+                    inventory.consumeFulfillment(command)
+                }
                 if (!result.applied) throw FulfillmentExecutionFailure.Retryable("INVENTORY_EFFECT_NOT_APPLIED")
             }
         } catch (failure: FulfillmentExecutionFailure) {

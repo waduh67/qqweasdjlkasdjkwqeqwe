@@ -86,7 +86,7 @@ class InventoryOperationsService(
 
         val legs = command.lines.flatMap { line ->
             val item = items.requireActive(line.itemId, command.tenantId)
-            val moved = resolveAssets(command.tenantId, item, line, source.id, InventoryStatus.AVAILABLE)
+            val moved = resolveAssets(command.tenantId, item, line, source.id, setOf(InventoryStatus.AVAILABLE))
             moved.forEach { asset ->
                 assets.save(asset.relocate(destination, CustodyClaim(command.toCustodianId, OwnerKind.WAREHOUSE, destination.id)))
             }
@@ -106,7 +106,7 @@ class InventoryOperationsService(
         val holder = requireLocation(command.tenantId, command.technicianLocationId)
         val legs = command.lines.flatMap { line ->
             val item = items.requireActive(line.itemId, command.tenantId)
-            val moved = resolveAssets(command.tenantId, item, line, source.id, InventoryStatus.AVAILABLE)
+            val moved = resolveAssets(command.tenantId, item, line, source.id, setOf(InventoryStatus.AVAILABLE))
             moved.forEach { asset ->
                 assets.save(asset.transition(InventoryStatus.ISSUED, holder, CustodyClaim(command.technicianId, OwnerKind.TECHNICIAN, holder.id)))
             }
@@ -133,20 +133,39 @@ class InventoryOperationsService(
         val arrivalStatus = if (command.quarantine) InventoryStatus.QUARANTINE else InventoryStatus.AVAILABLE
         val legs = command.lines.flatMap { line ->
             val item = items.requireActive(line.itemId, command.tenantId)
-            val moved = resolveAssets(command.tenantId, item, line, holder.id, InventoryStatus.ISSUED)
+            val moved = resolveAssets(command.tenantId, item, line, holder.id, RETURNABLE_FROM)
+            val custody = CustodyClaim(command.custodianId, OwnerKind.WAREHOUSE, destination.id)
             moved.forEach { asset ->
-                // Dua langkah karena tabel transisi memang mengharuskannya: ISSUED -> RETURNED
-                // mencatat bahwa barang kembali, RETURNED -> AVAILABLE/QUARANTINE mencatat
-                // hasil pemeriksaannya. Melompati yang pertama menghapus jejak bahwa unit ini
-                // pernah dipegang teknisi.
-                val returned = asset.transition(InventoryStatus.RETURNED, destination, CustodyClaim(command.custodianId, OwnerKind.WAREHOUSE, destination.id))
-                assets.save(returned.transition(arrivalStatus, destination, CustodyClaim(command.custodianId, OwnerKind.WAREHOUSE, destination.id)))
+                // Unit yang masih ISSUED butuh DUA langkah karena tabel transisi memang
+                // mengharuskannya: ISSUED -> RETURNED mencatat bahwa barang kembali,
+                // RETURNED -> AVAILABLE/QUARANTINE mencatat hasil pemeriksaannya. Melompati yang
+                // pertama menghapus jejak bahwa unit ini pernah dipegang teknisi.
+                //
+                // Unit hasil penarikan WO DISMANTLE sudah berada di RETURNED — langkah pertamanya
+                // sudah terjadi saat WO-nya disetujui. Memaksakan transisi itu sekali lagi akan
+                // ditolak mentah-mentah (RETURNED -> RETURNED dilarang), dan gerbang rak jadi
+                // tertutup bagi satu-satunya jenis barang yang paling perlu diperiksa.
+                val returned = if (asset.status == InventoryStatus.RETURNED) asset
+                else asset.transition(InventoryStatus.RETURNED, destination, custody)
+                assets.save(returned.transition(arrivalStatus, destination, custody))
             }
-            legPair(
-                item, line, moved,
-                out = LegEnd(holder.id, command.technicianId, OwnerKind.TECHNICIAN, InventoryStatus.ISSUED),
-                into = LegEnd(destination.id, command.custodianId, OwnerKind.WAREHOUSE, arrivalStatus),
-            )
+            val into = LegEnd(destination.id, command.custodianId, OwnerKind.WAREHOUSE, arrivalStatus)
+            if (moved.isEmpty()) {
+                legPair(item, line, moved, out = LegEnd(holder.id, command.technicianId, OwnerKind.TECHNICIAN, InventoryStatus.ISSUED), into = into)
+            } else {
+                /*
+                 * Leg OUT dikelompokkan menurut status ASAL tiap unit, bukan disamaratakan ISSUED.
+                 *
+                 * Proyeksi saldo menyimpan kuantitas PER status. Kalau unit yang berada di ember
+                 * RETURNED dikurangkan dari ember ISSUED, ember ISSUED jadi minus sementara unit
+                 * RETURNED di van teknisi tidak pernah berkurang — barangnya sudah nyata-nyata di
+                 * rak gudang, tapi laporan van stock tetap menghitungnya selamanya. Satu retur
+                 * boleh memuat campuran keduanya, jadi pengelompokan ini bukan kasus langka.
+                 */
+                moved.groupBy { it.status }.flatMap { (sourceStatus, group) ->
+                    legPair(item, line, group, out = LegEnd(holder.id, command.technicianId, OwnerKind.TECHNICIAN, sourceStatus), into = into)
+                }
+            }
         }
         return applyLedger(command.toMovement(MovementKind.RETURN, legs))
     }
@@ -360,7 +379,13 @@ class InventoryOperationsService(
         item: InventoryItem,
         line: StockLine,
         locationId: UUID,
-        expected: InventoryStatus,
+        /**
+         * Status asal yang SAH, jamak karena satu operasi bisa punya lebih dari satu asal yang
+         * benar. Retur ke gudang menerima ISSUED (barang yang dibawa teknisi tapi tak jadi
+         * dipakai) MAUPUN RETURNED (unit yang ditarik dari rumah pelanggan lewat WO DISMANTLE,
+         * lihat `WorkOrderAssetRecoveryService`).
+         */
+        expected: Set<InventoryStatus>,
     ): List<SerializedAsset> {
         if (line.quantity <= 0) throw ValidationException("Jumlah harus lebih dari nol")
         if (!item.serialized) {
@@ -375,7 +400,11 @@ class InventoryOperationsService(
                 ?: throw NotFoundException("Nomor seri ${serial.trim()} tidak terdaftar")
             if (asset.skuId != item.id) throw ValidationException("Nomor seri ${asset.serialNumber} bukan milik item ${item.code}")
             if (asset.locationId != locationId) throw ConflictException("Nomor seri ${asset.serialNumber} tidak berada di lokasi asal")
-            if (asset.status != expected) throw ConflictException("Nomor seri ${asset.serialNumber} berstatus ${asset.status}, bukan $expected")
+            if (asset.status !in expected) {
+                throw ConflictException(
+                    "Nomor seri ${asset.serialNumber} berstatus ${asset.status}, bukan ${expected.joinToString(" atau ")}",
+                )
+            }
             asset
         }
     }
@@ -400,6 +429,18 @@ class InventoryOperationsService(
     }
 
     private data class LegEnd(val locationId: UUID, val ownerId: UUID, val ownerKind: OwnerKind, val status: InventoryStatus)
+
+    private companion object {
+        /**
+         * Status asal yang sah untuk retur ke gudang.
+         *
+         * ISSUED = barang dibawa teknisi tapi tak jadi dipakai. RETURNED = unit yang ditarik dari
+         * rumah pelanggan lewat WO DISMANTLE dan sudah mendarat di van teknisi saat WO-nya
+         * disetujui. Tanpa yang kedua, unit tarikan MENUMPUK di van tanpa satu pun jalan kembali
+         * ke rak: jalur penarikannya lengkap, tapi ujungnya buntu.
+         */
+        private val RETURNABLE_FROM = setOf(InventoryStatus.ISSUED, InventoryStatus.RETURNED)
+    }
 }
 
 /** Satu baris barang dalam sebuah operasi gudang. */

@@ -4,6 +4,7 @@ import com.duluin.ftth.inventory.IssuedMaterialLineInput
 import com.duluin.ftth.inventory.PlannedMaterialLineInput
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
+import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
 import java.util.UUID
 
 /**
@@ -28,7 +29,45 @@ interface ManageWorkOrderMaterialUseCase {
     fun recordMaterialUsage(workOrderId: UUID, request: WorkOrderMaterialUsageRequest): WorkOrderMaterialView
 
     fun scanMaterialSerial(workOrderId: UUID, request: WorkOrderMaterialScanRequest): WorkOrderMaterialView
+
+    // ------------------------------------------------- Penarikan aset (P2.6)
+
+    /**
+     * Scan unit yang DICABUT dari rumah pelanggan (lazimnya WO DISMANTLE).
+     *
+     * Kontrol aksesnya sama persis dengan [scanMaterialSerial] dan itu disengaja: yang men-scan
+     * adalah orang yang sama, di WO yang sama, di hari yang sama. Membedakannya hanya akan
+     * melahirkan WO yang teknisinya boleh mencatat pemakaian tapi tidak boleh mencatat barang
+     * yang dia bawa pulang — dan barang itu akan tetap dibawa pulang, cuma tanpa jejak.
+     */
+    fun recoverAsset(workOrderId: UUID, request: WorkOrderAssetRecoveryRequest): WorkOrderRecoveredAssetView
+
+    fun recoveredAssets(workOrderId: UUID): List<WorkOrderRecoveredAssetView>
+
+    fun cancelRecoveredAsset(
+        workOrderId: UUID,
+        recoveredAssetId: UUID,
+        request: WorkOrderAssetRecoveryCancelRequest,
+    ): WorkOrderRecoveredAssetView
 }
+
+/**
+ * [technicianId] + [technicianLocationId] WAJIB disebut klien, meniru [WorkOrderMaterialIssueRequest].
+ *
+ * Tidak disimpulkan dari WO: satu WO bisa ditugaskan ke lebih dari satu teknisi, dan menebak
+ * "teknisi pertama" berarti saldo unit tarikan mendarat di van orang yang tidak membawanya.
+ * Selisihnya baru ketahuan saat opname van, berbulan-bulan kemudian, di dua tempat sekaligus.
+ */
+data class WorkOrderAssetRecoveryRequest(
+    val serialNumber: String,
+    val technicianId: UUID,
+    val technicianLocationId: UUID,
+    /** GOOD / DAMAGED. */
+    val condition: String = "GOOD",
+    val note: String? = null,
+)
+
+data class WorkOrderAssetRecoveryCancelRequest(val reason: String? = null)
 
 data class WorkOrderMaterialIssueRequest(
     val fromLocationId: UUID,

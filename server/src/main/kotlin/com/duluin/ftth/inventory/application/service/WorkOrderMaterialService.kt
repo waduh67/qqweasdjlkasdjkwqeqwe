@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.inventory.CancelWorkOrderRecoveredAssetCommand
 import com.duluin.ftth.inventory.InventoryAllocationApi
 import com.duluin.ftth.inventory.InventoryFulfillmentAllocation
 import com.duluin.ftth.inventory.IssueWorkOrderMaterialCommand
@@ -11,11 +12,13 @@ import com.duluin.ftth.inventory.MaterialTemplateLineInput
 import com.duluin.ftth.inventory.PlanWorkOrderMaterialCommand
 import com.duluin.ftth.inventory.PlannedMaterialLineInput
 import com.duluin.ftth.inventory.RecordWorkOrderMaterialUsageCommand
+import com.duluin.ftth.inventory.RecoverWorkOrderAssetCommand
 import com.duluin.ftth.inventory.SaveMaterialTemplateCommand
 import com.duluin.ftth.inventory.ScanWorkOrderMaterialSerialCommand
 import com.duluin.ftth.inventory.WorkOrderMaterialSerialView
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
+import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
 import com.duluin.ftth.inventory.application.port.outbound.InventoryItemRepository
 import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
 import com.duluin.ftth.inventory.application.port.outbound.WorkOrderMaterialRepository
@@ -52,6 +55,14 @@ class WorkOrderMaterialService(
     private val itemService: InventoryItemService,
     private val assets: SerializedAssetRepository,
     private val operations: InventoryOperationsService,
+    /*
+     * Penarikan aset WO DISMANTLE (celah "P2.6") punya tabelnya sendiri dan service-nya sendiri,
+     * tapi PINTU MASUKNYA tetap satu: [InventoryAllocationApi]. Modul `workorder` tidak boleh
+     * kenal dua bean gudang untuk satu persetujuan WO yang sama — begitu ia memanggil dua sumber
+     * alokasi, ada urutan pemanggilan di mana material terpotong tapi tarikan tidak, dan tidak
+     * satu pun checkpoint tahu bahwa persetujuan itu baru separuh jadi.
+     */
+    private val recovery: WorkOrderAssetRecoveryService,
     private val clock: Clock = Clock.systemUTC(),
 ) : InventoryAllocationApi {
 
@@ -269,6 +280,27 @@ class WorkOrderMaterialService(
         return materials.save(updated).toView(itemOf(tenantId, line.itemId))
     }
 
+    // ------------------------------------------------- Penarikan aset (P2.6)
+
+    /*
+     * Tiga jalur di bawah hanya meneruskan ke [WorkOrderAssetRecoveryService]. Logikanya SENGAJA
+     * tidak ditulis di sini: penarikan bukan baris material (D1). Baris material berarti "diambil
+     * DARI gudang untuk WO ini", sedangkan ONT yang dicabut dari rumah pelanggan tidak pernah
+     * diambil dari gudang untuk WO ini. Memaksanya masuk ke tabel yang sama membuat
+     * plannedQuantity/issuedQuantity kehilangan arti dan membuat [assertMaterialReadyForCompletion]
+     * menuntut rencana untuk barang yang memang tidak punya rencana.
+     */
+
+    override fun recoverAsset(command: RecoverWorkOrderAssetCommand): WorkOrderRecoveredAssetView =
+        recovery.recoverAsset(command)
+
+    @Transactional(readOnly = true)
+    override fun recoveredAssets(tenantId: UUID, workOrderId: UUID): List<WorkOrderRecoveredAssetView> =
+        recovery.recoveredAssets(tenantId, workOrderId)
+
+    override fun cancelRecoveredAsset(command: CancelWorkOrderRecoveredAssetCommand): WorkOrderRecoveredAssetView =
+        recovery.cancelRecoveredAsset(command)
+
     // -------------------------------------------------------------- Penjaga
 
     @Transactional(readOnly = true)
@@ -299,6 +331,19 @@ class WorkOrderMaterialService(
      */
     @Transactional(readOnly = true)
     fun allocationsFor(tenantId: UUID, workOrderId: UUID): List<InventoryFulfillmentAllocation> =
+        consumptionAllocations(tenantId, workOrderId) +
+            /*
+             * Alokasi arah MASUK dari aset yang ditarik saat WO DISMANTLE ikut di daftar YANG SAMA.
+             *
+             * Digabung di sini, bukan dipanggil terpisah oleh modul `workorder`, supaya seluruh
+             * hilir ikut benar dengan sendirinya: [hasFulfillableMaterial] jadi `true` untuk WO
+             * DISMANTLE yang cuma menarik ONT tanpa memakai material apa pun (tanpa ini efek
+             * INVENTORY-nya tidak pernah dijadwalkan dan tarikannya menguap), dan satu persetujuan
+             * WO tetap menghasilkan satu preflight dengan satu skema idempotensi.
+             */
+            recovery.allocationsFor(tenantId, workOrderId)
+
+    private fun consumptionAllocations(tenantId: UUID, workOrderId: UUID): List<InventoryFulfillmentAllocation> =
         materials.findByWorkOrder(tenantId, workOrderId).flatMap { line ->
             val locationId = line.technicianLocationId
             val technicianId = line.technicianId

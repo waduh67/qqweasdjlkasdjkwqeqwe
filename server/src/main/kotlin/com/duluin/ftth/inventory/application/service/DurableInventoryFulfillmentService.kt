@@ -13,6 +13,7 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.InventoryMovementL
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLedgerRepository
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLocationRepository
 import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
+import com.duluin.ftth.inventory.domain.model.CustodyClaim
 import com.duluin.ftth.inventory.domain.model.InventoryStatus
 import com.duluin.ftth.inventory.domain.model.LegDirection
 import com.duluin.ftth.inventory.domain.model.MovementKind
@@ -96,7 +97,7 @@ class DurableInventoryFulfillmentService(
             ),
             now,
         )
-        if (!returned) consumeAsset(command.assetId)
+        if (returned) returnAsset(command) else consumeAsset(command.assetId)
         return InventoryFulfillmentResult(command.tenantId, command.operationKey, command.targetId, true, false, now)
     }
 
@@ -124,5 +125,42 @@ class DurableInventoryFulfillmentService(
         val location = locations.findById(asset.locationId)
             ?: error("Lokasi ${asset.locationId} milik aset $assetId tidak ditemukan")
         assets.save(asset.transition(InventoryStatus.CONSUMED, location, asset.custody))
+    }
+
+    /**
+     * Kembar simetris [consumeAsset] untuk arah sebaliknya: tandai unitnya RETURNED.
+     *
+     * Tanpa ini, penarikan aset WO DISMANTLE menghasilkan persis kerusakan yang dikutuk panjang
+     * lebar di berkas ini: proyeksi saldo mendapat baris RETURNED di van teknisi sementara baris
+     * asetnya MASIH bilang CONSUMED di rumah pelanggan. Ledger rapi, saldo bohong, dan tidak ada
+     * satu error pun yang menunjukkan keduanya bertentangan — sampai ada yang mencoba meretur
+     * unit itu ke gudang dan ditolak karena "statusnya CONSUMED".
+     *
+     * Unitnya dipindahkan ke `command.locationId` (van stock teknisi yang membawanya pulang),
+     * BUKAN dibiarkan di lokasi lamanya. Ini beda halus dari [consumeAsset], yang memang tidak
+     * memindahkan apa-apa karena barangnya tidak ke mana-mana. Di sini barangnya BENAR-BENAR
+     * berpindah tangan, dan leg IN-nya sudah mendarat di lokasi baru itu: kalau baris asetnya
+     * ditinggal di lokasi lama, saldo RETURNED ada di van teknisi sementara asetnya mengaku ada
+     * di tempat lain — dan jalur retur gudang, yang mencocokkan lokasi asal dengan baris aset,
+     * tidak akan pernah menemukannya. Perpecahan yang sama, hanya berpindah dari kolom status
+     * ke kolom lokasi.
+     *
+     * Kegagalan di sini TIDAK ditelan, alasannya sama persis dengan [consumeAsset].
+     */
+    private fun returnAsset(command: InventoryFulfillmentCommand) {
+        val assetId = command.assetId ?: return
+        val asset = assets.findById(assetId) ?: error("Aset $assetId tidak ditemukan saat menarik material")
+        val destination = locations.findById(command.locationId)
+            ?: error("Lokasi ${command.locationId} tujuan penarikan aset $assetId tidak ditemukan")
+        // Replay yang sudah terlanjur mendarat: barisnya sudah RETURNED di tempat yang benar,
+        // dan transisi ke diri sendiri memang ditolak tabel transisi.
+        if (asset.status == InventoryStatus.RETURNED && asset.locationId == destination.id) return
+        assets.save(
+            asset.transition(
+                InventoryStatus.RETURNED,
+                destination,
+                CustodyClaim(command.actorId, OwnerKind.TECHNICIAN, destination.id),
+            ),
+        )
     }
 }

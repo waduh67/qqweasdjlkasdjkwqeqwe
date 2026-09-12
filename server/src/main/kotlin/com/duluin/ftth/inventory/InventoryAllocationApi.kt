@@ -58,7 +58,87 @@ interface InventoryAllocationApi {
      * approval WO-nya, bukan hanya bagian gudangnya.
      */
     fun hasFulfillableMaterial(tenantId: UUID, workOrderId: UUID): Boolean
+
+    // ------------------------------------------------- Penarikan aset (P2.6)
+
+    /**
+     * Tarik satu unit BERSERIAL dari pelanggan ke van stock teknisi (WO DISMANTLE).
+     *
+     * Arahnya kebalikan dari [issueMaterial]/[scanMaterialSerial]: yang ini tidak mengambil
+     * apa pun dari gudang, ia MENGEMBALIKAN barang yang bertahun-tahun lalu sudah dikonsumsi.
+     * Karena itu ia TIDAK lewat [WorkOrderMaterialView] — baris material memodelkan "diambil
+     * dari gudang untuk WO ini", dan memaksa aset tarikan ke sana membuat
+     * `plannedQuantity`/`issuedQuantity` tak bermakna (lihat V197).
+     *
+     * Saldo TIDAK bergerak di sini. Yang terjadi hanya pencatatan; pemotongan/penambahan
+     * saldonya baru komitmen saat WO-nya DISETUJUI, lewat saga fulfillment yang sama dengan
+     * material biasa. Persetujuan WO itulah mata keduanya (D7).
+     */
+    fun recoverAsset(command: RecoverWorkOrderAssetCommand): WorkOrderRecoveredAssetView
+
+    /** Termasuk baris yang sudah dibatalkan — jejaknya justru yang menjelaskan kenapa saldo tak bertambah. */
+    fun recoveredAssets(tenantId: UUID, workOrderId: UUID): List<WorkOrderRecoveredAssetView>
+
+    /**
+     * Batalkan satu baris penarikan (salah scan).
+     *
+     * Penanda batal, bukan penghapusan: baris yang dibatalkan berhenti ikut dipotong saga tapi
+     * tetap bisa menjawab "kenapa unit ini pernah tercatat ditarik lalu tidak jadi".
+     */
+    fun cancelRecoveredAsset(command: CancelWorkOrderRecoveredAssetCommand): WorkOrderRecoveredAssetView
 }
+
+/**
+ * Permintaan menarik satu unit dari pelanggan.
+ *
+ * [technicianId] + [technicianLocationId] WAJIB, meniru [IssueWorkOrderMaterialCommand] (D6c):
+ * barang yang dicabut dari rumah pelanggan langsung ada di tangan seseorang, dan saldo yang
+ * bertambah saat approval harus mendarat di van stock ORANG ITU. Tanpa keduanya, penambahan
+ * saldo jatuh ke dimensi yang tak pernah diisi dan unitnya kembali jadi barang yang ada di
+ * pembukuan tapi tidak ada pemegangnya.
+ */
+data class RecoverWorkOrderAssetCommand(
+    val tenantId: UUID,
+    val workOrderId: UUID,
+    val actorId: UUID,
+    val customerId: UUID,
+    val serialNumber: String,
+    val technicianId: UUID,
+    val technicianLocationId: UUID,
+    /** GOOD / DAMAGED. */
+    val condition: String = "GOOD",
+    val note: String? = null,
+)
+
+data class CancelWorkOrderRecoveredAssetCommand(
+    val tenantId: UUID,
+    val workOrderId: UUID,
+    val recoveredAssetId: UUID,
+    val actorId: UUID,
+    val reason: String? = null,
+)
+
+data class WorkOrderRecoveredAssetView(
+    val id: UUID,
+    val workOrderId: UUID,
+    val assetId: UUID,
+    val serialNumber: String,
+    val macAddress: String?,
+    val itemId: UUID,
+    val itemCode: String,
+    val itemName: String,
+    val itemCategory: String,
+    val customerId: UUID,
+    val technicianId: UUID,
+    val technicianLocationId: UUID,
+    val condition: String,
+    val note: String?,
+    val recoveredAt: Instant,
+    val recoveredBy: UUID,
+    val cancelledAt: Instant?,
+    val cancelledBy: UUID?,
+    val cancelReason: String?,
+)
 
 data class PlannedMaterialLineInput(val itemId: UUID, val quantity: Int)
 

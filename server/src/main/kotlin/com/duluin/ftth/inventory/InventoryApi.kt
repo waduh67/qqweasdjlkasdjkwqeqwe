@@ -39,6 +39,21 @@ data class InventoryFulfillmentAllocation(
     /** Unit fisik yang dialokasikan; WAJIB terisi kalau [serialized] (lihat V174). */
     val assetId: UUID? = null,
     val serialNumber: String? = null,
+    /**
+     * Arah alokasi: `false` = barang KELUAR dari saldo (dipakai di pelanggan), `true` = barang
+     * MASUK kembali (unit yang ditarik dari rumah pelanggan saat WO DISMANTLE).
+     *
+     * SENGAJA sekadar satu bendera di daftar alokasi yang SAMA, bukan jalur efek tersendiri.
+     * Satu WO DISMANTLE yang nyata lazimnya melakukan keduanya sekaligus — memakai patch cord
+     * baru DAN menarik ONT lama — dan dua jalur terpisah berarti dua preflight, dua daftar
+     * alokasi, dan dua skema idempotensi untuk satu persetujuan WO yang sama. Begitu keduanya
+     * bisa berhasil sendiri-sendiri, ada keadaan di mana ONT-nya sudah masuk saldo sementara
+     * patch cord-nya belum keluar, dan tidak ada satu pun checkpoint yang tahu itu separuh jadi.
+     *
+     * Tipe primitif dengan SENGAJA: kelas ini ada di package dasar modul `inventory`, dan
+     * `ModularityTests` menolak DTO lintas-modul yang membocorkan enum internal.
+     */
+    val returned: Boolean = false,
 )
 
 data class InventoryFulfillmentCommand(

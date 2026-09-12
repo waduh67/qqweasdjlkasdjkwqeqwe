@@ -221,7 +221,35 @@ data class SerializedAsset(
                 // memang dihapus (lihat InventoryMovementLedgerService.releaseSerialAssets).
                 InventoryStatus.AWAITING_RECEIPT -> to == InventoryStatus.AVAILABLE
                 InventoryStatus.QUARANTINE, InventoryStatus.LOST -> false
-                InventoryStatus.CONSUMED, InventoryStatus.DISPOSED -> false
+                /*
+                 * CONSUMED -> RETURNED MEMBUKA KEMBALI STATUS YANG TADINYA TERMINAL. Ditulis
+                 * terang-terangan karena itu memang yang terjadi, dan konsekuensinya harus
+                 * terlihat oleh siapa pun yang membaca tabel ini.
+                 *
+                 * Kenapa harus dibuka: ONT yang terpasang di rumah pelanggan berstatus CONSUMED.
+                 * Selama CONSUMED benar-benar terminal, WO DISMANTLE TIDAK PUNYA CARA APA PUN
+                 * mengembalikan unit itu ke pembukuan — perangkatnya dicabut, dibawa pulang
+                 * teknisi, dan selamanya tercatat "terpakai di rumah pelanggan yang sudah
+                 * berhenti berlangganan". Aset nyata yang lenyap dari sistem, bukan selisih
+                 * yang nanti ketahuan.
+                 *
+                 * Kenapa ini TIDAK jadi lubang: yang menahan penyalahgunaannya BUKAN tabel ini,
+                 * melainkan penjaga di jalur penarikan (lihat V197 dan `WorkOrderAssetRecoveryService`):
+                 *   * hanya unit berstatus CONSUMED yang bisa di-scan — unit AVAILABLE di rak
+                 *     bukan unit yang terpasang di rumah siapa pun;
+                 *   * satu aset hanya boleh ditarik SEKALI, dijaga indeks unik parsial
+                 *     `work_order_recovered_asset_active_uq`;
+                 *   * saldo baru bergerak setelah WO-nya DISETUJUI orang lain.
+                 *
+                 * Tanpa ketiganya, transisi ini jadi cara termudah menutupi selisih stok:
+                 * "menarik" unit yang sebenarnya sudah terjual, berkali-kali, sampai angka
+                 * pembukuan cocok dengan rak.
+                 *
+                 * Tujuannya SENGAJA hanya RETURNED, bukan langsung AVAILABLE: unitnya baru ada
+                 * di tangan teknisi, belum di rak (D3).
+                 */
+                InventoryStatus.CONSUMED -> to == InventoryStatus.RETURNED
+                InventoryStatus.DISPOSED -> false
             }
         }
     }

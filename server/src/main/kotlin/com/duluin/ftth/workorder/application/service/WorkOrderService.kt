@@ -10,16 +10,21 @@ import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.inventory.CancelWorkOrderRecoveredAssetCommand
 import com.duluin.ftth.inventory.InventoryAllocationApi
 import com.duluin.ftth.inventory.IssueWorkOrderMaterialCommand
+import com.duluin.ftth.inventory.RecoverWorkOrderAssetCommand
 import com.duluin.ftth.inventory.PlanWorkOrderMaterialCommand
 import com.duluin.ftth.inventory.PlannedMaterialLineInput
 import com.duluin.ftth.inventory.RecordWorkOrderMaterialUsageCommand
 import com.duluin.ftth.inventory.ScanWorkOrderMaterialSerialCommand
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
+import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
 import com.duluin.ftth.workorder.WorkOrderAssigned
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderMaterialUseCase
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryCancelRequest
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryRequest
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialIssueRequest
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialScanRequest
@@ -414,6 +419,62 @@ class WorkOrderService(
                 serialNumber = request.serialNumber,
                 outcome = request.outcome,
                 macAddress = request.macAddress,
+            ),
+        )
+    }
+
+    // ------------------------------------------------- Penarikan aset (P2.6)
+
+    @Transactional
+    override fun recoverAsset(
+        workOrderId: UUID,
+        request: WorkOrderAssetRecoveryRequest,
+    ): WorkOrderRecoveredAssetView {
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        // Teknisi penerima tetap divalidasi, persis seperti [issueMaterial]: unit yang ditarik
+        // masuk ke van stock orang itu, dan orang yang tidak ditugaskan di WO ini tidak punya
+        // alasan apa pun untuk memegangnya. Tanpa pemeriksaan ini, aset pelanggan bisa
+        // "ditarik" ke van siapa saja yang id-nya diketik di body request.
+        if (!workOrder.isAssignedTo(request.technicianId)) {
+            throw ConflictException("Teknisi penarik tidak ditugaskan di work order ${workOrder.code}")
+        }
+        return materials.recoverAsset(
+            RecoverWorkOrderAssetCommand(
+                tenantId = workOrder.tenantId,
+                workOrderId = workOrderId,
+                actorId = currentUser.current().userId,
+                customerId = requireMaterialCustomer(workOrder),
+                serialNumber = request.serialNumber,
+                technicianId = request.technicianId,
+                technicianLocationId = request.technicianLocationId,
+                condition = request.condition,
+                note = request.note,
+            ),
+        )
+    }
+
+    override fun recoveredAssets(workOrderId: UUID): List<WorkOrderRecoveredAssetView> {
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
+        return materials.recoveredAssets(workOrder.tenantId, workOrderId)
+    }
+
+    @Transactional
+    override fun cancelRecoveredAsset(
+        workOrderId: UUID,
+        recoveredAssetId: UUID,
+        request: WorkOrderAssetRecoveryCancelRequest,
+    ): WorkOrderRecoveredAssetView {
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        return materials.cancelRecoveredAsset(
+            CancelWorkOrderRecoveredAssetCommand(
+                tenantId = workOrder.tenantId,
+                workOrderId = workOrderId,
+                recoveredAssetId = recoveredAssetId,
+                actorId = currentUser.current().userId,
+                reason = request.reason,
             ),
         )
     }
