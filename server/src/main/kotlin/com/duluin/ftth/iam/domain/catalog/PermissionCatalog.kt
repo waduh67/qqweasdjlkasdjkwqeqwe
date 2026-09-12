@@ -100,6 +100,12 @@ object PermissionCatalog {
         perm("order.order.view", "Lihat order")
         perm("order.order.create", "Buat order")
         perm("order.order.manage", "Kelola status order")
+        // Calon pelanggan (lead) sengaja dipisah dari `customer.*`: prospek belum boleh
+        // muncul di tagihan, langganan, maupun laporan pelanggan aktif. Baru dipromosikan
+        // jadi customer saat order-nya diterima.
+        perm("order.lead.view", "Lihat calon pelanggan")
+        perm("order.lead.manage", "Kelola calon pelanggan")
+        perm("order.import.manage", "Impor massal pesanan dan calon pelanggan")
 
         perm("inventory.location.view", "Lihat gudang dan bin")
         perm("inventory.location.manage", "Kelola gudang dan bin")
@@ -112,6 +118,18 @@ object PermissionCatalog {
          perm("inventory.approval.decide", "Setujui/tolak pergerakan inventory")
          perm("inventory.approval.emergency", "Gunakan override darurat persetujuan inventory")
          perm("inventory.approval.manage", "Kelola matriks persetujuan inventory")
+        // Mutasi stok dipisah per aksi, bukan satu `inventory.stock.manage`, karena tiga
+        // peran yang berbeda menyentuhnya: petugas gudang mengeluarkan/menerima, dispatcher
+        // hanya mengeluarkan untuk work order, dan hanya supervisor boleh menyesuaikan
+        // (adjust = satu-satunya jalan stok berubah tanpa barang bergerak fisik).
+        perm("inventory.restock.request", "Ajukan permintaan restock gudang")
+        perm("inventory.restock.receive", "Terima barang masuk gudang")
+        perm("inventory.movement.view", "Lihat riwayat mutasi stok")
+        perm("inventory.movement.issue", "Keluarkan barang dari gudang")
+        perm("inventory.movement.return", "Terima retur barang ke gudang")
+        perm("inventory.movement.adjust", "Sesuaikan stok gudang (koreksi, susut, hapus buku)")
+        perm("inventory.count.perform", "Lakukan stock opname")
+        perm("inventory.count.approve", "Setujui hasil stock opname")
 
         // Portal self-service pelanggan (operator menyiapkan/mereset kredensial login pelanggan)
         perm("portal.credential.view", "Lihat status kredensial portal pelanggan")
@@ -147,6 +165,12 @@ object PermissionCatalog {
         perm("workorder.order.field", "Kerjakan work order lapangan yang ditugaskan ke diri sendiri")
         perm("workorder.evidence.view", "Lihat bukti pengerjaan")
         perm("workorder.evidence.manage", "Unggah/hapus bukti pengerjaan")
+        // Material work order dipisah dari `inventory.*` karena aktornya beda: teknisi
+        // lapangan boleh MENCATAT pemakaian di WO-nya sendiri tanpa boleh menyentuh gudang,
+        // sedangkan petugas gudang yang MENGELUARKAN barangnya.
+        perm("workorder.material.view", "Lihat material work order")
+        perm("workorder.material.record", "Catat pemakaian material work order di lapangan")
+        perm("workorder.material.issue", "Keluarkan material gudang untuk work order")
         perm("fieldservice.visit.view", "Lihat kunjungan lapangan")
         perm("fieldservice.visit.manage", "Jalankan perintah kunjungan lapangan")
         perm("fieldservice.session.view", "Lihat sesi kerja lapangan")
