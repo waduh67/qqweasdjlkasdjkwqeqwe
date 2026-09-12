@@ -1,6 +1,6 @@
 # Serah terima — Gudang (poin 3) & Pesanan (poin 4)
 
-Status per commit `ba099e04`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
+Status per commit `f637ccb7`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
 Dokumen ini ditulis supaya sesi atau agen lain bisa melanjutkan tanpa mengulang penggalian.
 Rencana aslinya ada di `docs/rencana-gudang-pesanan.md`; dokumen INI yang menggambarkan
 keadaan sebenarnya.
@@ -19,7 +19,7 @@ Panggil binernya langsung dari `node_modules/.bin`. `npx` di lingkungan ini di-s
 MENELAN perintahnya: ia mencetak `npm notice run 'tsc'` lalu keluar dengan status 0 tanpa
 menjalankan apa pun — persis bentuk kegagalan yang paling berbahaya, yaitu terlihat lulus.
 
-**Garis dasar yang SEHAT: 1735 tes, 2–3 gagal.**
+**Garis dasar yang SEHAT: 1740 tes, 2–3 gagal.**
 
 | Tes yang gagal | Sifat |
 | --- | --- |
@@ -64,6 +64,7 @@ Dua jebakan kecil yang sudah memakan korban:
 | Hapus buku unit berserial | **Selesai.** ONT hilang/rusak/write-off punya jalur, lewat `/adjustments`. |
 | `AWAITING_RECEIPT` | **Selesai** (V188). Aset terdaftar tapi belum jadi stok — satu-satunya status yang tidak pernah punya baris di proyeksi saldo. |
 | Pemisahan izin transfer | **Selesai.** `inventory.movement.transfer` terpisah dari `.issue`. |
+| Penarikan aset saat DISMANTLE (P2.6) | **Selesai.** V197 `work_order_recovered_asset`. Teknisi men-scan ONT yang dicabut; saldo baru bergerak saat WO disetujui, dan mendaratnya di van teknisi berstatus `RETURNED` — BUKAN langsung jadi stok layak jual. Dari van, unitnya naik ke rak lewat `POST /api/inventory/returns` biasa. |
 | Approver dari peran | **Selesai.** Tier boleh berbunyi "Kepala Gudang" saja; pemegangnya diresolusi ke `iam` setiap kali dibaca dan tidak pernah ikut tersimpan. Pemegang nonaktif otomatis gugur. |
 | Layar/UI gudang | **Selesai.** `/warehouse`, enam tab: stok, mutasi, riwayat, persetujuan, stock opname, master data. Penjaga rutenya DITURUNKAN dari tabel tab (`WAREHOUSE_VIEW_PERMISSIONS`), jadi menambah tab otomatis melebarkan izinnya. Editor kebijakan merender `approverIds` dan `roleHolderIds` sebagai dua kelompok terpisah dan tidak pernah mengirim yang kedua. |
 
@@ -125,7 +126,16 @@ Dua jebakan kecil yang sudah memakan korban:
   kunjungan `fieldservice`, dan `workorder` tidak bisa menanyakannya tanpa melahirkan siklus
   modul. Kalau dipaksa, **SETIAP** approval WO ditolak. Pemicunya harus datang dari sisi
   `fieldservice`.
-- P2.6 (DISMANTLE → `returnFulfillment`) belum dikerjakan.
+- Pembatalan baris penarikan (`POST .../recovered-assets/{id}/cancel`) TIDAK ditolak setelah
+  WO-nya disetujui. Saldo sudah terlanjur bergerak, jadi barisnya berbunyi "dibatalkan" sementara
+  unitnya nyata-nyata sudah bertambah di van teknisi — persis kebalikan dari pertanyaan yang mau
+  dijawab pembatalan ("kenapa saldo TIDAK bertambah"). Bukan kebocoran: penarikan ulang atas unit
+  yang sama tetap tertutup karena `recoverAsset` menuntut status `CONSUMED` dan unit yang sudah
+  diproses berada di `RETURNED`. Bentuknya sama dengan perubahan material setelah approval, yang
+  juga belum dijaga. Penjaganya harus lahir di sisi `workorder` (status WO tidak terlihat dari
+  `inventory`).
+- Belum ada layar untuk penarikan aset — endpoint-nya lengkap
+  (`GET|POST /api/work-orders/{id}/materials/recovered-assets`), klien-nya belum ada.
 - Jalur consume saat approve tidak memvalidasi saldo negatif. Yang menahannya CHECK
   `work_order_material_realized_ck` + mutasi ISSUE yang sudah tervalidasi saat barang keluar.
 
@@ -169,6 +179,22 @@ Dua jebakan kecil yang sudah memakan korban:
   untuk baris FAILED setelah commit.
 
 **Lain-lain**
+- **`CONSUMED` bukan lagi status terminal.** Tabel transisi di `InventoryModels.kt` kini
+  mengizinkan `CONSUMED -> RETURNED`, dan HANYA itu. Harus begitu: ONT yang sudah terpasang di
+  rumah pelanggan berstatus `CONSUMED`, jadi tanpa pintu ini tidak ada cara apa pun
+  mengembalikannya ke pembukuan setelah dibongkar. Yang menahan penyalahgunaannya bukan tabel
+  transisinya melainkan tiga penjaga di atasnya: hanya unit `CONSUMED` yang bisa di-scan, satu
+  unit hanya boleh ditarik sekali (indeks parsial `work_order_recovered_asset_active_uq`), dan
+  saldo tidak bergerak sebelum orang LAIN menyetujui WO-nya. `CONSUMED -> LOST/DISPOSED` tetap
+  tertutup karena cabang `WRITE_OFF_SOURCES` dievaluasi lebih dulu.
+- **`returnToWarehouse` sekarang menerima DUA status asal, bukan satu.** Dulu `resolveAssets(...)`
+  menuntut `ISSUED` persis. Unit hasil penarikan DISMANTLE tiba di van sudah berstatus `RETURNED`,
+  jadi bentuk lama menolaknya dan unitnya MENUMPUK di van tanpa satu pun jalan kembali ke rak —
+  jalur penarikannya lengkap, ujungnya buntu. Sekarang `RETURNABLE_FROM = {ISSUED, RETURNED}`, dan
+  leg OUT dikelompokkan menurut status asal TIAP unit. Pengelompokan itu bukan hiasan: proyeksi
+  saldo menyimpan kuantitas per status, jadi menyamaratakan semuanya sebagai `ISSUED` membuat ember
+  `ISSUED` minus sementara ember `RETURNED` di van tak pernah berkurang. Satu retur boleh memuat
+  campuran keduanya. Ada tesnya di `WorkOrderAssetRecoveryIT` ("…bukan mandek di van").
 - Poin 1 (PPPoE/BRAS) sudah dibangun tapi **belum diuji end-to-end**.
 - Poin 2 (aplikasi teknisi mobile) masih boilerplate.
 - Approval PSB tidak pernah bisa menuntaskan saga pada percobaan pertama: `PROVISIONING`
@@ -182,7 +208,7 @@ Dua jebakan kecil yang sudah memakan korban:
 
 ## 5. Peta migrasi
 
-Tertinggi: **V194**. Flyway forward-only, `outOfOrder=false` — versi lebih rendah yang belum
+Tertinggi: **V197**. Flyway forward-only, `outOfOrder=false` — versi lebih rendah yang belum
 pernah diterapkan akan menggagalkan boot.
 
 | Versi | Isi |
@@ -195,6 +221,7 @@ pernah diterapkan akan menggagalkan boot.
 | V191 | Sebab pembatalan kunjungan |
 | V192–V193 | Batch & baris impor CSV |
 | V194 | Asal penanda portal (SISTEM vs OPERATOR) |
+| V197 | `work_order_recovered_asset` — unit berserial yang ditarik dari pelanggan saat WO DISMANTLE |
 
 V189, V190, V195, V196 sengaja kosong — dicadangkan untuk agen paralel dan tidak terpakai.
 Lompatan nomor TIDAK masalah bagi Flyway.
@@ -212,6 +239,8 @@ Lompatan nomor TIDAK masalah bagi Flyway.
 3. Benahi izin daftar stock opname (§4) — approver yang tak bisa melihat antreannya itu kontrol
    yang mati diam-diam, bukan sekadar layar kosong.
 4. Belum ada layar material per WO dengan scan serial; API-nya sudah lengkap
-   (`InventoryAllocationApi`), tinggal layarnya.
+   (`InventoryAllocationApi`), tinggal layarnya. Layar yang sama harus memuat tab **penarikan
+   aset** untuk WO DISMANTLE — tanpa itu jalur P2.6 hanya bisa dipakai lewat curl, dan teknisi
+   di lapangan tidak punya cara mencatat ONT yang dia cabut.
 5. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
 6. Uji poin 1 (PPPoE/BRAS) end-to-end.
