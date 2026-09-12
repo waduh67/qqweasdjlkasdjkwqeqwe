@@ -15,7 +15,7 @@ import java.util.UUID
 @Table(name = "inventory_customer_material_fact")
 class WarehouseMaterialFactJpaEntity(
     id: UUID,
-    @Column(nullable = false) val customerId: UUID,
+    val customerId: UUID?,
     @Column(nullable = false) val workOrderId: UUID,
     @Column(nullable = false) val itemCategory: String,
     @Column(nullable = false) val installed: Boolean,
@@ -31,5 +31,6 @@ class WarehouseMaterialFactJpaEntity(
     val postingId: UUID? = null,
     val useRevision: Long? = null,
     val compensationId: UUID? = null,
+    val usageId: UUID? = null,
     @Enumerated(EnumType.STRING) @Column(nullable = false) val warehouseAdmission: WarehouseAdmission = WarehouseAdmission.VERIFIED,
 ) : WarehouseVersionedEntity(id)
