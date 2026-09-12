@@ -23,7 +23,7 @@ class InventoryMovementLedgerTest {
 
     @Test
     fun `receive reserve issue consume and return conserve ledger projection`() {
-        val service = InventoryMovementLedgerService()
+        val service = InventoryMovementLedgerService(FakeInventoryLedger())
         service.apply(command("receive", MovementKind.RECEIVE, listOf(leg(LegDirection.IN, 4))))
         service.apply(command("reserve", MovementKind.RESERVE, listOf(leg(LegDirection.OUT, 2), leg(LegDirection.IN, 2, InventoryStatus.RESERVED))))
         service.apply(command("issue", MovementKind.ISSUE, listOf(leg(LegDirection.OUT, 1, InventoryStatus.RESERVED), leg(LegDirection.IN, 1, InventoryStatus.ISSUED, technician, OwnerKind.TECHNICIAN))))
@@ -37,7 +37,7 @@ class InventoryMovementLedgerTest {
 
     @Test
     fun `negative balance serialized mismatch replay conflict and pending adjustment are deterministic`() {
-        val service = InventoryMovementLedgerService()
+        val service = InventoryMovementLedgerService(FakeInventoryLedger())
         assertThatThrownBy { service.apply(command("issue", MovementKind.ISSUE, listOf(leg(LegDirection.OUT), leg(LegDirection.IN, owner = technician, ownerKind = OwnerKind.TECHNICIAN, status = InventoryStatus.ISSUED)))) }.isInstanceOf(InventoryInsufficientBalance::class.java)
         assertThatThrownBy { MovementLeg(LegDirection.IN, item, sku, warehouse, 2, true, actor, OwnerKind.WAREHOUSE, InventoryStatus.AVAILABLE) }.isInstanceOf(IllegalArgumentException::class.java)
         val receive = service.apply(command("receive", MovementKind.RECEIVE, listOf(leg(LegDirection.IN))))
@@ -49,7 +49,7 @@ class InventoryMovementLedgerTest {
 
     @Test
     fun `transfer has paired legs and reversal appends opposite legs`() {
-        val service = InventoryMovementLedgerService()
+        val service = InventoryMovementLedgerService(FakeInventoryLedger())
         service.apply(command("receive", MovementKind.RECEIVE, listOf(leg(LegDirection.IN))))
         val transfer = service.apply(command("transfer", MovementKind.TRANSFER, listOf(leg(LegDirection.OUT), leg(LegDirection.IN, owner = technician, ownerKind = OwnerKind.TRANSIT))))
         val reversal = service.reverse(transfer.movementId, command("reverse", MovementKind.REVERSAL, transfer.legs))
@@ -59,7 +59,7 @@ class InventoryMovementLedgerTest {
 
     @Test
     fun `concurrent same operation produces one movement`() {
-        val service = InventoryMovementLedgerService()
+        val service = InventoryMovementLedgerService(FakeInventoryLedger())
         val pool = Executors.newFixedThreadPool(2)
         val start = CountDownLatch(1)
         val jobs = (1..2).map { pool.submit { start.await(); service.apply(command("same", MovementKind.RECEIVE, listOf(leg(LegDirection.IN)))) } }

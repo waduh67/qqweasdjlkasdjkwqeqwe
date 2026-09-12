@@ -22,10 +22,10 @@ class InventoryMaterialAndReconciliationTest {
 
     @Test
     fun `issued material is consumed once and returned material is customer safe`() {
-        val ledger = InventoryMovementLedgerService()
+        val ledger = InventoryMovementLedgerService(FakeInventoryLedger())
         ledger.apply(movement("receive", MovementKind.RECEIVE, MovementLeg(LegDirection.IN, item, sku, location, 2, false, actor, OwnerKind.WAREHOUSE, InventoryStatus.AVAILABLE)))
         ledger.apply(movement("issue", MovementKind.ISSUE, MovementLeg(LegDirection.OUT, item, sku, location, 1, false, actor, OwnerKind.WAREHOUSE, InventoryStatus.AVAILABLE), MovementLeg(LegDirection.IN, item, sku, location, 1, false, actor, OwnerKind.TECHNICIAN, InventoryStatus.ISSUED)))
-        val service = MaterialConsumptionService(ledger)
+        val service = MaterialConsumptionService(ledger, FakeMaterialFacts())
         val command = material("consume", installed = true)
 
         val first = service.consume(command)
@@ -41,9 +41,9 @@ class InventoryMaterialAndReconciliationTest {
 
     @Test
     fun `count variance records evidence and custodian cannot approve`() {
-        val ledger = InventoryMovementLedgerService()
+        val ledger = InventoryMovementLedgerService(FakeInventoryLedger())
         ledger.apply(movement("receive", MovementKind.RECEIVE, MovementLeg(LegDirection.IN, item, sku, location, 5, false, actor, OwnerKind.WAREHOUSE, InventoryStatus.AVAILABLE)))
-        val reconciliation = InventoryReconciliationService(ledger)
+        val reconciliation = InventoryReconciliationService(ledger, FakeCycleCounts())
         val count = reconciliation.createCount(CycleCountCommand(tenant, tenant, location, item, sku, 3, actor, "damaged two", "evidence://count-1", "count-1", "count-hash"))
 
         assertThat(count.priorQuantity).isEqualTo(5)

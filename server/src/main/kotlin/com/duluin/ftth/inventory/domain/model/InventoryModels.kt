@@ -14,19 +14,10 @@ data class InventoryLocation(val id: UUID, val tenantId: UUID, val code: String,
     }
 }
 
-data class Sku(val id: UUID, val tenantId: UUID, val code: String, val name: String) {
-    init {
-        require(code.matches(Regex("[A-Z0-9][A-Z0-9._-]{1,63}"))) { "invalid SKU" }
-        require(name.trim().isNotEmpty()) { "item name is required" }
-    }
-}
-
-data class Lot(val id: UUID, val tenantId: UUID, val skuId: UUID, val lotNumber: String, val quantity: Int) {
-    init {
-        require(lotNumber.trim().isNotEmpty()) { "lot number is required" }
-        require(quantity >= 0) { "lot quantity cannot be negative" }
-    }
-}
+// Master data barang gudang sekarang tinggal di `InventoryItem` (tabel `inventory_item`,
+// V173). `Sku` dan `Lot` yang dulu di sini DIHAPUS: keduanya tidak punya tabel, tidak punya
+// repository, dan tidak pernah direferensikan satu baris kode pun — membiarkannya hanya
+// membuat pembaca mengira master data gudang sudah ada padahal belum.
 
 data class CustodyClaim(
     val ownerId: UUID,

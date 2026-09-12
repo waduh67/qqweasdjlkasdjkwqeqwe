@@ -17,6 +17,7 @@ data class WorkOrderInventoryConsumed(
     val serverReceivedAt: java.time.Instant,
 )
 
+@org.springframework.stereotype.Component
 class InventoryMovementApiAdapter(
     private val ledger: InventoryMovementLedgerService,
 ) : InventoryMovementApi {

@@ -36,6 +36,9 @@ data class InventoryFulfillmentAllocation(
     val serialized: Boolean,
     val actorId: UUID,
     val itemCategory: String,
+    /** Unit fisik yang dialokasikan; WAJIB terisi kalau [serialized] (lihat V174). */
+    val assetId: UUID? = null,
+    val serialNumber: String? = null,
 )
 
 data class InventoryFulfillmentCommand(
@@ -55,6 +58,12 @@ data class InventoryFulfillmentCommand(
     val payloadHash: String,
     val reason: String,
     val itemCategory: String = targetId.toString(),
+    /**
+     * Unit fisik yang dipakai. WAJIB terisi untuk [serialized]: sejak V174 leg berserial
+     * harus menunjuk aset, kalau tidak stok berkurang tanpa ada yang tahu SN mana yang keluar.
+     */
+    val assetId: UUID? = null,
+    val serialNumber: String? = null,
 )
 
 data class InventoryFulfillmentResult(

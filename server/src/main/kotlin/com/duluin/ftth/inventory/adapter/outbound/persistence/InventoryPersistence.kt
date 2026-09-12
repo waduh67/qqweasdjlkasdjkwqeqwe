@@ -55,7 +55,15 @@ interface SerializedAssetJpaRepository : JpaRepository<SerializedAssetJpaEntity,
 class InventoryLocationPersistenceAdapter(private val repository: InventoryLocationJpaRepository) : InventoryLocationRepository {
     override fun findById(id: UUID): InventoryLocation? = repository.findById(id).orElse(null)?.toDomain()
     override fun findAll(tenantId: UUID): List<InventoryLocation> = repository.findAllByTenantId(tenantId).map { it.toDomain() }
-    override fun save(location: InventoryLocation): InventoryLocation = repository.save(location.toEntity()).toDomain()
+    /**
+     * Mengembalikan [location] apa adanya, BUKAN hasil `toDomain()` dari entity yang baru
+     * di-persist: Hibernate baru mengisi `@TenantId` saat INSERT-nya di-flush, jadi entity
+     * yang baru lahir masih bertenant null dan `tenantId!!` meledak NPE.
+     */
+    override fun save(location: InventoryLocation): InventoryLocation {
+        repository.save(location.toEntity())
+        return location
+    }
     private fun InventoryLocationJpaEntity.toDomain() = InventoryLocation(id, tenantId!!, code, kind)
     private fun InventoryLocation.toEntity() = InventoryLocationJpaEntity(id, code, kind)
 }
@@ -66,10 +74,35 @@ class SerializedAssetPersistenceAdapter(private val repository: SerializedAssetJ
     override fun findAll(tenantId: UUID): List<SerializedAsset> = repository.findAllByTenantId(tenantId).map { it.toDomain() }
     override fun findBySerial(tenantId: UUID, serialNumber: String): SerializedAsset? = repository.findByTenantIdAndSerialNumber(tenantId, serialNumber)?.toDomain()
     override fun findByMac(tenantId: UUID, macAddress: String): SerializedAsset? = repository.findByTenantIdAndMacAddress(tenantId, macAddress)?.toDomain()
-    override fun save(asset: SerializedAsset): SerializedAsset = repository.save(asset.toEntity()).toDomain()
+    /**
+     * Baris yang sudah ada DIMUAT lalu diubah, bukan dibuat ulang: [SerializedAssetJpaEntity]
+     * mewarisi `Persistable.isNew()` yang selalu `true` untuk instance baru, jadi menyimpan
+     * objek baru dengan id lama membuat Hibernate memanggil `persist` dan gagal dengan
+     * duplicate key — bukan meng-update seperti yang diharapkan pemanggil.
+     */
+    override fun save(asset: SerializedAsset, operationKey: String?): SerializedAsset {
+        val existing = repository.findById(asset.id).orElse(null)
+            // Jalur sisipan mengembalikan [asset] apa adanya: `@TenantId` baru terisi saat INSERT
+            // di-flush, jadi `toDomain()` di sini akan menabrak `tenantId!!` yang masih null.
+            ?: run {
+                repository.save(asset.toEntity(operationKey))
+                return asset
+            }
+        existing.skuId = asset.skuId
+        existing.status = asset.status
+        existing.locationId = asset.locationId
+        existing.custodyOwnerId = asset.custody.ownerId
+        existing.custodyOwnerKind = asset.custody.ownerKind
+        existing.installedOnuId = asset.installedOnuId
+        // Kunci lama hanya ditimpa kalau pemanggil membawa kunci baru; menimpanya dengan null
+        // akan menghapus jejak idempotency operasi sebelumnya.
+        if (operationKey != null) existing.lastOperationKey = operationKey
+        return repository.save(existing).toDomain()
+    }
     override fun existsHistoricalSerial(tenantId: UUID, serialNumber: String): Boolean = repository.findByTenantIdAndSerialNumber(tenantId, serialNumber) != null
     override fun existsHistoricalMac(tenantId: UUID, macAddress: String): Boolean = repository.findByTenantIdAndMacAddress(tenantId, macAddress) != null
     override fun findByOperation(tenantId: UUID, operationKey: String): SerializedAsset? = repository.findByTenantIdAndLastOperationKey(tenantId, operationKey)?.toDomain()
     private fun SerializedAssetJpaEntity.toDomain() = SerializedAsset(id, tenantId!!, skuId, serialNumber, macAddress, status, locationId, CustodyClaim(custodyOwnerId, custodyOwnerKind, locationId), installedOnuId)
-    private fun SerializedAsset.toEntity() = SerializedAssetJpaEntity(id, skuId, serialNumber, macAddress, status, locationId, custody.ownerId, custody.ownerKind, installedOnuId, null)
+    private fun SerializedAsset.toEntity(operationKey: String?) =
+        SerializedAssetJpaEntity(id, skuId, serialNumber, macAddress, status, locationId, custody.ownerId, custody.ownerKind, installedOnuId, operationKey)
 }

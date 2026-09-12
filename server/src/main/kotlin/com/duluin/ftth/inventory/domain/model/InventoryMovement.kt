@@ -11,6 +11,14 @@ enum class MovementKind {
 enum class LegDirection { IN, OUT }
 enum class MovementState { APPLIED, PENDING_APPROVAL, FAILED_PERMANENT, REQUIRES_MANUAL_REPAIR }
 
+/**
+ * Satu sisi mutasi stok.
+ *
+ * [assetId] dan [serialNumber] SENGAJA ditambahkan (V174) supaya mutasi kuantitas dan
+ * mutasi aset serial berhenti jadi dua pulau terpisah: tanpa keduanya, saldo bisa bilang
+ * "3 ONT di gudang" sementara daftar aset bilang 2 dan tidak ada baris mana pun yang bisa
+ * menunjukkan unit mana yang hilang.
+ */
 data class MovementLeg(
     val direction: LegDirection,
     val itemId: UUID,
@@ -21,10 +29,22 @@ data class MovementLeg(
     val custodyOwnerId: UUID,
     val custodyOwnerKind: OwnerKind,
     val status: InventoryStatus,
+    val assetId: UUID? = null,
+    /**
+     * Disalin dari aset saat mutasi terjadi, bukan di-join belakangan: ledger adalah catatan
+     * historis dan nomor seri yang tercatat tidak boleh ikut berubah kalau baris asetnya
+     * kelak diperbaiki.
+     */
+    val serialNumber: String? = null,
 ) {
     init {
         require(quantity > 0) { "movement leg quantity must be positive" }
         require(!serialized || quantity == 1) { "serialized movement quantity must be one" }
+        // Cermin dari CHECK `inventory_leg_serial_identity_ck`. Divalidasi di domain juga
+        // supaya kegagalan muncul sebagai invariant yang terbaca, bukan error SQL mentah
+        // jauh di dalam flush Hibernate.
+        require(!serialized || assetId != null) { "mutasi barang berserial WAJIB menyebut aset (assetId)" }
+        require(assetId != null || serialNumber == null) { "nomor seri tanpa aset tidak bisa direkonsiliasi" }
     }
 }
 

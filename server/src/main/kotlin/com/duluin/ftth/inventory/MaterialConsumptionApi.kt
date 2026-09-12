@@ -11,6 +11,12 @@ interface MaterialConsumptionApi {
     fun forCustomer(tenantId: UUID, customerId: UUID): List<CustomerMaterialFactRef>
 }
 
+/**
+ * WAJIB jadi bean: modul lain (mis. Subscriber 360) menerima [MaterialConsumptionApi] sebagai
+ * dependensi opsional, jadi tanpa pendaftaran ini ia diam-diam ter-inject `null` dan riwayat
+ * material pelanggan hilang dari layar TANPA error apa pun.
+ */
+@org.springframework.stereotype.Component
 class MaterialConsumptionApiAdapter(
     private val service: MaterialConsumptionService,
 ) : MaterialConsumptionApi {

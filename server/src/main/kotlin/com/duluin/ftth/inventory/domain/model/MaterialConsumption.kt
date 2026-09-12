@@ -18,11 +18,18 @@ data class MaterialConsumptionCommand(
     val reason: String,
     val itemCategory: String,
     val installed: Boolean = true,
+    /**
+     * Unit fisik yang dipakai, WAJIB untuk material berserial (V174). Tanpa ini, "1 ONT
+     * terpasang di pelanggan X" tak pernah bisa dicocokkan dengan aset SN berapa.
+     */
+    val assetId: UUID? = null,
+    val serialNumber: String? = null,
 ) {
     init {
         require(operationKey.isNotBlank() && payloadHash.isNotBlank() && reason.isNotBlank())
         require(quantity > 0)
         require(!serialized || quantity == 1)
+        require(!serialized || assetId != null) { "material berserial WAJIB menyebut aset (assetId)" }
     }
 }
 

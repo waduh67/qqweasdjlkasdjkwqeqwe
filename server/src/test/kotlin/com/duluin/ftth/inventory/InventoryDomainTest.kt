@@ -2,7 +2,6 @@ package com.duluin.ftth.inventory
 
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLocationRepository
-import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
 import com.duluin.ftth.inventory.application.service.InventoryRegistryService
 import com.duluin.ftth.inventory.domain.model.CustodyClaim
 import com.duluin.ftth.inventory.domain.model.InventoryLocation
@@ -22,7 +21,7 @@ class InventoryDomainTest {
 
     @Test
     fun `serial and MAC are unique and historical values cannot be reused`() {
-        val registry = InventoryRegistryService(FakeAssets(), FakeLocations(warehouse, bin))
+        val registry = InventoryRegistryService(FakeSerializedAssets(), FakeLocations(warehouse, bin))
         TenantContext.runAs(tenant) {
             registry.register(tenant, UUID.randomUUID(), "ONT-0001", "AA:BB:CC:DD:EE:01", warehouse.id, UUID.randomUUID())
             assertThatThrownBy { registry.register(tenant, UUID.randomUUID(), "ONT-0001", "AA:BB:CC:DD:EE:02", warehouse.id, UUID.randomUUID()) }
@@ -53,7 +52,7 @@ class InventoryDomainTest {
 
     @Test
     fun `tenant context prevents spoofing`() {
-        val registry = InventoryRegistryService(FakeAssets(), FakeLocations(warehouse, bin))
+        val registry = InventoryRegistryService(FakeSerializedAssets(), FakeLocations(warehouse, bin))
         val other = UUID.randomUUID()
         assertThatThrownBy {
             TenantContext.runAs(other) { registry.register(tenant, UUID.randomUUID(), "ONT-0009", null, warehouse.id, UUID.randomUUID()) }
@@ -66,16 +65,5 @@ class InventoryDomainTest {
         private val values = values.associateBy { it.id }.toMutableMap()
         override fun findById(id: UUID) = values[id]
         override fun save(location: InventoryLocation) = location.also { values[it.id] = it }
-    }
-
-    private class FakeAssets : SerializedAssetRepository {
-        private val values = mutableListOf<SerializedAsset>()
-        override fun findById(id: UUID) = values.firstOrNull { it.id == id }
-        override fun findBySerial(tenantId: UUID, serialNumber: String) = values.firstOrNull { it.tenantId == tenantId && it.serialNumber == serialNumber }
-        override fun findByMac(tenantId: UUID, macAddress: String) = values.firstOrNull { it.tenantId == tenantId && it.macAddress == macAddress }
-        override fun save(asset: SerializedAsset) = asset.also { values.removeIf { old -> old.id == asset.id }; values += asset }
-        override fun existsHistoricalSerial(tenantId: UUID, serialNumber: String) = findBySerial(tenantId, serialNumber) != null
-        override fun existsHistoricalMac(tenantId: UUID, macAddress: String) = findByMac(tenantId, macAddress) != null
-        override fun findByOperation(tenantId: UUID, operationKey: String) = null
     }
 }

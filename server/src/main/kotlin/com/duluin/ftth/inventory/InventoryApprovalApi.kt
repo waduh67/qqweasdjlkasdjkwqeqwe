@@ -11,6 +11,7 @@ interface InventoryApprovalApi {
     fun effects(tenantId: UUID): List<InventoryApprovalEffect>
 }
 
+@org.springframework.stereotype.Component
 class InventoryApprovalApiAdapter(private val service: InventoryApprovalService) : InventoryApprovalApi {
     override fun request(command: CreateInventoryApproval) = service.request(command)
     override fun decide(approvalId: UUID, command: DecideInventoryApproval) = service.decide(approvalId, command)

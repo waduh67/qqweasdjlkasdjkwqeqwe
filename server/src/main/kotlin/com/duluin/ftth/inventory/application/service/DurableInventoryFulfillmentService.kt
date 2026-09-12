@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.inventory.InventoryFulfillmentCommand
 import com.duluin.ftth.inventory.InventoryFulfillmentResult
 import com.duluin.ftth.inventory.adapter.outbound.persistence.InventoryFulfillmentEffectJpaEntity
@@ -27,6 +28,12 @@ class DurableInventoryFulfillmentService(
 ) {
     @Transactional
     fun apply(command: InventoryFulfillmentCommand, returned: Boolean): InventoryFulfillmentResult {
+        // Dicek SEBELUM efek idempotency ditulis: kalau baris efek keburu tersimpan lalu leg-nya
+        // ditolak CHECK `inventory_leg_serial_identity_ck`, percobaan ulang dengan data yang
+        // benar akan dianggap replay dan mutasi stoknya TIDAK PERNAH terjadi.
+        if (command.serialized && command.assetId == null) {
+            throw ValidationException("Pemakaian barang berserial WAJIB menyebutkan aset (assetId)")
+        }
         val prior = effects.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)
         if (prior != null) {
             if (prior.payloadHash != command.payloadHash || prior.targetId != command.targetId) throw ConflictException("Operation key was used with a different payload")
@@ -43,7 +50,7 @@ class DurableInventoryFulfillmentService(
         }
         val movementId = UUID.randomUUID()
         movements.save(InventoryMovementJpaEntity(movementId, command.namespace, command.operationKey, command.payloadHash, command.actorId, command.reason, now, if (returned) MovementKind.RETURN else MovementKind.CONSUME, MovementState.APPLIED, null))
-        legs.save(InventoryMovementLegJpaEntity(UUID.randomUUID(), movementId, if (returned) LegDirection.IN else LegDirection.OUT, command.itemId, command.skuId, command.locationId, command.quantity, command.serialized, command.actorId, OwnerKind.TECHNICIAN, if (returned) InventoryStatus.RETURNED else InventoryStatus.ISSUED))
+        legs.save(InventoryMovementLegJpaEntity(UUID.randomUUID(), movementId, if (returned) LegDirection.IN else LegDirection.OUT, command.itemId, command.skuId, command.locationId, command.quantity, command.serialized, command.actorId, OwnerKind.TECHNICIAN, if (returned) InventoryStatus.RETURNED else InventoryStatus.ISSUED, command.assetId, command.serialNumber))
         return InventoryFulfillmentResult(command.tenantId, command.operationKey, command.targetId, true, false, now)
     }
 }

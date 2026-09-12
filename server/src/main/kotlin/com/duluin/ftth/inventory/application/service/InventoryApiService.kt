@@ -51,7 +51,7 @@ class InventoryApiService(
         val asset = assets.findById(assetId) ?: error("serialized asset not found")
         require(asset.tenantId == tenantId) { "asset belongs to another tenant" }
         require(asset.installedOnuId == null || asset.installedOnuId == onuId) { "ONU already owns another asset" }
-        val saved = assets.save(asset.linkInstalledOnu(onuId))
+        val saved = assets.save(asset.linkInstalledOnu(onuId), operationKey)
         return saved.toRef()
     }
 
