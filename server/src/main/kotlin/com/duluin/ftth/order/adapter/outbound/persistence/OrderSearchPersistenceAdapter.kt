@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.order.application.port.outbound.OrderListRow
 import com.duluin.ftth.order.application.port.outbound.OrderSearchFilter
 import com.duluin.ftth.order.application.port.outbound.OrderSearchPort
+import com.duluin.ftth.order.application.port.outbound.OrderTrackRow
 import com.duluin.ftth.order.domain.model.OrderStatus
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -79,6 +80,38 @@ class OrderSearchPersistenceAdapter : OrderSearchPort {
                 )
             }
         return Page(rows, pageRequest.page, pageRequest.size, total)
+    }
+
+    /**
+     * Pencarian untuk halaman lacak publik. Hanya kolom yang benar-benar dibutuhkan yang diambil
+     * — alamat, koordinat, dan alasan penolakan internal SENGAJA tak ikut supaya tak pernah ada
+     * di memori pada jalur yang melayani pengunjung anonim.
+     */
+    @Suppress("UNCHECKED_CAST")
+    @Transactional(readOnly = true)
+    override fun findByNumber(tenantId: UUID, orderNumber: String): OrderTrackRow? {
+        val row = entityManager.createNativeQuery(
+            """SELECT o.id, o.order_number, o.status, o.portal_flag, o.portal_flag_reason,
+                      o.customer_id, l.phone, o.appointment_starts_at, o.appointment_ends_at,
+                      o.created_at, o.updated_at
+               FROM order_record o
+               LEFT JOIN order_lead l ON l.id = o.lead_id
+               WHERE o.tenant_id = :tenant AND o.order_number = :number""",
+        ).setParameter("tenant", tenantId).setParameter("number", orderNumber)
+            .resultList.firstOrNull() as Array<*>? ?: return null
+        return OrderTrackRow(
+            id = row[0] as UUID,
+            orderNumber = row[1] as String,
+            status = OrderStatus.valueOf(row[2] as String),
+            portalFlag = row[3] as String?,
+            portalFlagReason = row[4] as String?,
+            customerId = row[5] as UUID?,
+            leadPhone = row[6] as String?,
+            appointmentStartsAt = row[7]?.toInstantValue(),
+            appointmentEndsAt = row[8]?.toInstantValue(),
+            createdAt = row[9].toInstantValue(),
+            updatedAt = row[10].toInstantValue(),
+        )
     }
 
     /**

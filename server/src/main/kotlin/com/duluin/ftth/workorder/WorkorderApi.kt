@@ -110,16 +110,28 @@ data class TechnicianProductivity(
     val avgResolutionHours: Double?,
 )
 
-/** Perintah membuka WO PSB dari orkestrasi onboarding; selalu bertaut ke pelanggan + langganannya. */
+/**
+ * Perintah membuka WO PSB dari orkestrasi onboarding; selalu bertaut ke pelanggan.
+ *
+ * [subscriptionId] nullable sejak P5.4. Jalur onboarding ekspres memang selalu tahu langganannya
+ * (ia baru saja membuatnya), tapi jalur penerimaan PESANAN tidak: pesanan dari pelanggan LAMA
+ * diterima tanpa langganan baru dibuat, dan memaksa nilai palsu di sana akan menautkan WO ke
+ * langganan yang bukan miliknya — lalu saga fulfillment mengaktifkan langganan yang salah.
+ *
+ * [orderId] menautkan WO ke pesanan asalnya. Inilah yang membuat approval WO menutup pesanannya
+ * (efek `ORDER` di saga, P5.6); tanpa taut ini pesanan menggantung di status "sedang ditinjau"
+ * selamanya meski pemasangannya sudah selesai.
+ */
 data class RaisePsbCommand(
     val customerId: UUID,
-    val subscriptionId: UUID,
+    val subscriptionId: UUID?,
     val title: String,
     val description: String?,
     val areaId: UUID?,
     val scheduledAt: Instant?,
     /** Roster teknisi awal (tim datar); kosong = WO lahir belum ditugaskan. */
     val assignees: Set<UUID> = emptySet(),
+    val orderId: UUID? = null,
 )
 
 /**

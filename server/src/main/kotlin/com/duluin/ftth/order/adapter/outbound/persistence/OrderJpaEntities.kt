@@ -30,6 +30,10 @@ class OrderJpaEntity(
     @Column(name = "last_operation_namespace", nullable = false, length = 120) var lastOperationNamespace: String,
     @Column(name = "last_operation_key", nullable = false, length = 240) var lastOperationKey: String,
     @Column(name = "last_operation_hash", nullable = false, length = 128) var lastOperationHash: String,
+    // Penanda portal (V184). SENGAJA di akhir dengan default null supaya pemanggil posisional
+    // yang sudah ada tak perlu diubah — dan supaya pesanan lama lahir tanpa penanda.
+    @Column(name = "portal_flag", length = 24) var portalFlag: String? = null,
+    @Column(name = "portal_flag_reason", length = 300) var portalFlagReason: String? = null,
     @Version @Column(name = "persistence_revision", nullable = false) var persistenceRevision: Long? = null,
 ) : TenantAwareJpaEntity(id)
 

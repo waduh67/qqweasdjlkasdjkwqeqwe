@@ -65,6 +65,7 @@ class WorkOrderApiService(
                 areaId = command.areaId,
                 scheduledAt = command.scheduledAt,
                 assignees = command.assignees,
+                orderId = command.orderId,
             ),
         )
         return WorkOrderRef(

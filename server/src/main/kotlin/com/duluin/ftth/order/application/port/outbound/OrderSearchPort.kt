@@ -42,6 +42,37 @@ data class OrderSearchFilter(
     val createdTo: Instant? = null,
 )
 
+/**
+ * Satu pesanan yang dicari lewat NOMOR-nya, untuk halaman lacak publik.
+ *
+ * SENGAJA bukan agregat: pemanggilnya anonim dan hanya boleh menerima status ringkas. Kalau ia
+ * memuat agregat penuh, alamat layanan, koordinat, alasan penolakan internal, dan id pemesan ikut
+ * terbawa ke lapisan yang pengunjungnya tak pernah kita kenali — satu kelalaian pemetaan di
+ * controller sudah cukup untuk membocorkannya.
+ *
+ * [leadPhone]/[customerId] ada HANYA untuk memverifikasi penelepon, tak pernah dikembalikan.
+ */
+data class OrderTrackRow(
+    val id: UUID,
+    val orderNumber: String,
+    val status: OrderStatus,
+    val portalFlag: String?,
+    val portalFlagReason: String?,
+    val customerId: UUID?,
+    val leadPhone: String?,
+    val appointmentStartsAt: Instant?,
+    val appointmentEndsAt: Instant?,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+)
+
 interface OrderSearchPort {
     fun search(tenantId: UUID, filter: OrderSearchFilter, pageRequest: PageRequest): Page<OrderListRow>
+
+    /**
+     * Pencocokan nomor pesanan PERSIS dalam satu tenant. [tenantId] wajib ikut di WHERE meski RLS
+     * sudah menyaring: nomor `ORD-YYMM-NNNN` hanya unik per tenant, jadi tanpa itu satu kelalaian
+     * memasang konteks tenant berubah menjadi pengunjung yang melacak pesanan tenant lain.
+     */
+    fun findByNumber(tenantId: UUID, orderNumber: String): OrderTrackRow?
 }

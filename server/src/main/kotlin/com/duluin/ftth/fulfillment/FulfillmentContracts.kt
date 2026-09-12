@@ -244,6 +244,9 @@ class PublicApiFulfillmentEffectExecutor(
                     namespace = request.namespace,
                     operationKey = request.operationKey,
                     payloadHash = request.canonicalHash,
+                    // Worker outbox tak punya principal; tanpa ini riwayat pesanan yang
+                    // selesai tak menunjuk siapa pun padahal penyetuju WO-nya diketahui.
+                    actorId = request.approvalActorId,
                 ),
             )
         } catch (failure: FulfillmentExecutionFailure) {

@@ -172,7 +172,17 @@ class WorkOrderService(
         requireArea(workOrder)
         workOrder.approve(note, Instant.now(), currentUser.current().userId)
         val saved = repository.save(workOrder)
-        events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER")))
+        /*
+         * Efek `ORDER` hanya diminta bila WO ini memang lahir dari sebuah pesanan (P5.6).
+         * Memintanya tanpa syarat membuat saga menolak SETIAP approval WO biasa dengan
+         * `ORDER_LINK_NOT_FOUND` di preflight — seluruh alur approval mati, bukan hanya
+         * bagian pesanannya.
+         */
+        val effects = buildSet {
+            addAll(setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER"))
+            if (saved.orderId != null) add("ORDER")
+        }
+        events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, effects))
         return saved.toView()
     }
 

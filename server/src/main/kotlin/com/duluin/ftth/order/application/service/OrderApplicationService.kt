@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.order.*
+import com.duluin.ftth.order.application.port.inbound.SystemOrderUseCase
 import com.duluin.ftth.order.application.port.outbound.OrderAuditEntry
 import com.duluin.ftth.order.application.port.outbound.OrderAuditStore
 import com.duluin.ftth.order.application.port.outbound.OrderCustomerProjection
@@ -25,41 +26,57 @@ class OrderApplicationService(
     private val numbers: OrderNumberGenerator,
     private val audit: OrderAuditStore,
     private val outbox: OrderOutboxStore,
-) : OrderApi {
+) : OrderApi, SystemOrderUseCase {
 
     @Transactional
     override fun create(command: CreateOrderCommand): OrderView {
         val user = currentUser.current()
-        return replayOrConflict(user.tenantId, command.operation) {
-            val now = Instant.now()
-            val order = Order.create(command, user.tenantId, user.userId, numbers.next(user.tenantId, now))
-            orders.save(order)
-            record(order, previous = null, reason = null, eventType = ORDER_CREATED, at = now)
-            outbox.enqueue(OrderCreated(order.id, order.tenantId, order.revision, user.userId, command.operation, now))
-            toView(order)
-        }
+        return create(user.tenantId, user.userId, command)
     }
 
     @Transactional
     override fun transition(command: OrderTransitionCommand): OrderView {
         val user = currentUser.current()
-        return replayOrConflict(user.tenantId, command.operation) {
+        return transition(user.tenantId, user.userId, command)
+    }
+
+    /**
+     * Inti pembuatan pesanan, dengan tenant & pelaku DIBERIKAN pemanggil.
+     *
+     * Jalur ber-JWT di atas hanya membaca keduanya dari token lalu masuk ke sini; jalur publik
+     * dan worker outbox memasoknya sendiri karena `SecurityContextHolder` di sana kosong.
+     * Memisahkannya begini menjaga satu-satunya salinan aturan pembuatan pesanan tetap satu:
+     * duplikat untuk "versi anonim" pasti akan menyimpang diam-diam saat salah satunya diubah.
+     */
+    @Transactional
+    override fun create(tenantId: UUID, actorId: UUID?, command: CreateOrderCommand): OrderView =
+        replayOrConflict(tenantId, command.operation) {
+            val now = Instant.now()
+            val order = Order.create(command, tenantId, actorId, numbers.next(tenantId, now))
+            orders.save(order)
+            record(order, previous = null, reason = null, eventType = ORDER_CREATED, at = now)
+            outbox.enqueue(OrderCreated(order.id, order.tenantId, order.revision, actorId, command.operation, now))
+            toView(order)
+        }
+
+    @Transactional
+    override fun transition(tenantId: UUID, actorId: UUID?, command: OrderTransitionCommand): OrderView =
+        replayOrConflict(tenantId, command.operation) {
             val order = orders.find(command.orderId) ?: throw NotFoundException("Order tidak ditemukan")
-            if (order.tenantId != user.tenantId) throw NotFoundException("Order tidak ditemukan")
+            if (order.tenantId != tenantId) throw NotFoundException("Order tidak ditemukan")
             val previous = order.status.name
             val now = Instant.now()
-            order.transition(command, user.userId)
+            order.transition(command, actorId)
             orders.save(order)
             record(order, previous, command.reason, ORDER_STATE_CHANGED, now)
             outbox.enqueue(
                 OrderStateChanged(
                     order.id, order.tenantId, order.revision, previous, order.status.name,
-                    user.userId, command.operation, now, command.reason,
+                    actorId, command.operation, now, command.reason,
                 ),
             )
             toView(order)
         }
-    }
 
     @Transactional(readOnly = true)
     override fun find(id: UUID): OrderView? {
@@ -83,8 +100,23 @@ class OrderApplicationService(
         require(command.transition == OrderTransition.START_FULFILLING || command.transition == OrderTransition.FULFILL) {
             "FULFILLMENT_ORDER_TRANSITION_NOT_ALLOWED"
         }
-        val user = currentUser.current()
-        if (user.tenantId != command.tenantId) throw NotFoundException("Order tidak ditemukan")
+        /*
+         * SENGAJA `currentOrNull`, bukan `current`.
+         *
+         * Efek fulfillment dijalankan oleh worker outbox di thread-nya sendiri — di sana
+         * `SecurityContextHolder` kosong, dan `current()` melempar `IllegalStateException`
+         * mentah. Dibungkus `runCatching` di saga, kegagalan itu muncul sebagai
+         * `ORDER_EFFECT_REJECTED` yang menuntut rekonsiliasi manual, padahal tak ada yang
+         * salah selain tak adanya token. Artinya efek `ORDER` TIDAK PERNAH bisa berhasil
+         * lewat jalur asinkron sebelum ini.
+         *
+         * Kalau memang ada principal (jalur sinkron dari permintaan operator), tenant-nya
+         * tetap WAJIB cocok: itu satu-satunya pemeriksaan yang bisa menangkap perintah
+         * fulfillment yang menyeberang tenant.
+         */
+        val user = currentUser.currentOrNull()
+        if (user != null && user.tenantId != command.tenantId) throw NotFoundException("Order tidak ditemukan")
+        val actorId = command.actorId ?: user?.userId
         val operation = OperationCommand(command.namespace, command.operationKey, command.payloadHash)
         val replayed = orders.findOutcome(command.tenantId, command.namespace, command.operationKey) != null
         val view = replayOrConflict(command.tenantId, operation) {
@@ -99,14 +131,14 @@ class OrderApplicationService(
                     expectedRevision = command.expectedRevision ?: order.revision,
                     operation = operation,
                 ),
-                user.userId,
+                actorId,
             )
             orders.save(order)
             record(order, previous, reason = null, eventType = ORDER_STATE_CHANGED, at = now)
             outbox.enqueue(
                 OrderStateChanged(
                     order.id, order.tenantId, order.revision, previous, order.status.name,
-                    user.userId, operation, now,
+                    actorId, operation, now,
                 ),
             )
             toView(order)

@@ -22,14 +22,16 @@ class OrderPersistenceAdapter(
                 order.serviceAddress.address, order.serviceAddress.city, order.serviceAddress.postalCode,
                 order.serviceAddress.latitude, order.serviceAddress.longitude,
                 order.appointment?.startsAt, order.appointment?.endsAt, order.cancellationReason, order.rejectionReason, order.lastActorId,
-                order.lastOperation.namespace, order.lastOperation.key, order.lastOperation.payloadHash)
+                order.lastOperation.namespace, order.lastOperation.key, order.lastOperation.payloadHash,
+                order.portalFlag?.name, order.portalFlagReason)
         orders.save(entity)
         lines.deleteAllByOrderId(order.id)
         lines.saveAll(order.lines.map { OrderLineJpaEntity(UUID.randomUUID(), order.id, it.catalogItemId, it.description, it.quantity) })
     }
     override fun find(id: UUID): Order? = orders.findById(id).orElse(null)?.toDomain()
     override fun findForFulfillment(id: UUID): Order? = orders.findForFulfillmentById(id)?.toDomain()
-    override fun findByCustomer(customerId: UUID): List<Order> = orders.findAllByCustomerIdOrderById(customerId).map { it.toDomain() }
+    override fun findByCustomer(customerId: UUID): List<Order> = orders.findAllOwnedBy(customerId).map { it.toDomain() }
+    override fun findOwnedBy(customerId: UUID, orderId: UUID): Order? = orders.findOwnedBy(customerId, orderId)?.toDomain()
     override fun findOutcome(tenantId: UUID, namespace: String, key: String): StoredOrderOutcome? =
         operations.findByTenantIdAndNamespaceAndOperationKey(tenantId, namespace, key)?.let {
             StoredOrderOutcome(it.payloadHash, mapper.readValue(it.outcomeJson, OrderView::class.java))
@@ -44,10 +46,11 @@ class OrderPersistenceAdapter(
     }
     // `customerId`, `leadId`, dan `orderNumber` SENGAJA tidak ikut disalin: ketiganya
     // `updatable = false` di entity dan tidak boleh berubah setelah pesanan lahir.
-    private fun OrderJpaEntity.copyFrom(o: Order) { status=o.status.name; revision=o.revision; address=o.serviceAddress.address; city=o.serviceAddress.city; postalCode=o.serviceAddress.postalCode; latitude=o.serviceAddress.latitude; longitude=o.serviceAddress.longitude; appointmentStartsAt=o.appointment?.startsAt; appointmentEndsAt=o.appointment?.endsAt; cancellationReason=o.cancellationReason; rejectionReason=o.rejectionReason; lastActorId=o.lastActorId; lastOperationNamespace=o.lastOperation.namespace; lastOperationKey=o.lastOperation.key; lastOperationHash=o.lastOperation.payloadHash }
+    private fun OrderJpaEntity.copyFrom(o: Order) { status=o.status.name; revision=o.revision; address=o.serviceAddress.address; city=o.serviceAddress.city; postalCode=o.serviceAddress.postalCode; latitude=o.serviceAddress.latitude; longitude=o.serviceAddress.longitude; appointmentStartsAt=o.appointment?.startsAt; appointmentEndsAt=o.appointment?.endsAt; cancellationReason=o.cancellationReason; rejectionReason=o.rejectionReason; lastActorId=o.lastActorId; lastOperationNamespace=o.lastOperation.namespace; lastOperationKey=o.lastOperation.key; lastOperationHash=o.lastOperation.payloadHash; portalFlag=o.portalFlag?.name; portalFlagReason=o.portalFlagReason }
     private fun OrderJpaEntity.toDomain() = Order.rehydrate(id, tenantId ?: TenantContext.tenantId(), customerId, leadId, orderNumber,
         lines.findAllByOrderIdOrderById(id).map { OrderLineCommand(it.catalogItemId, it.description, it.quantity) },
         ServiceAddress(address, city, postalCode, latitude, longitude), appointmentStartsAt?.let { Appointment(it, requireNotNull(appointmentEndsAt)) },
         OrderStatus.valueOf(status), cancellationReason, rejectionReason, revision, lastActorId,
-        OperationCommand(lastOperationNamespace, lastOperationKey, lastOperationHash))
+        OperationCommand(lastOperationNamespace, lastOperationKey, lastOperationHash),
+        portalFlag?.let { OrderPortalFlag.valueOf(it) }, portalFlagReason)
 }

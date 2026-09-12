@@ -15,6 +15,12 @@ interface OrderApi {
     fun fulfillmentRevision(orderId: UUID): Long?
 }
 
+/**
+ * [actorId] adalah pelaku yang DICATAT di riwayat pesanan. Ia dikirim eksplisit karena efek
+ * fulfillment dijalankan worker outbox tanpa `SecurityContext`; tanpa ini riwayat pesanan yang
+ * berubah jadi `FULFILLED` tak menunjuk siapa pun, padahal yang menyetujui work order-nya
+ * jelas orangnya. `null` diperbolehkan untuk sumber yang memang tak punya pelaku manusia.
+ */
 data class OrderFulfillmentCommand(
     val tenantId: UUID,
     val orderId: UUID,
@@ -23,6 +29,7 @@ data class OrderFulfillmentCommand(
     val namespace: String,
     val operationKey: String,
     val payloadHash: String,
+    val actorId: UUID? = null,
 )
 
 data class OrderFulfillmentResult(

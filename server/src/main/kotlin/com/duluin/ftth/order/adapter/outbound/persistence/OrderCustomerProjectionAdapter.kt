@@ -41,7 +41,7 @@ class OrderCustomerProjectionAdapter(
      */
     @Transactional(readOnly = true)
     override fun find(tenantId: UUID, customerId: UUID, orderId: UUID): PortalOrderView? =
-        orders.find(orderId)
-            ?.takeIf { it.tenantId == tenantId && it.customerId == customerId }
+        orders.findOwnedBy(customerId, orderId)
+            ?.takeIf { it.tenantId == tenantId }
             ?.toPortalView()
 }
