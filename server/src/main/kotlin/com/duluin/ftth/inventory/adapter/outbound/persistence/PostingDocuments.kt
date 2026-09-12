@@ -58,7 +58,11 @@ internal class PostingDocuments(private val sql: PostingSql) {
             require(fact.customerId==document.customer && fact.workOrderId==document.workOrder) { "Material fact and posting document context mismatch" }
             if(fact.installed) {
                 val sink=command.legs.single { it.direction==LegDirection.IN && it.dimension.stockIdentityId==fact.stockIdentityId }.dimension
-                require(sink.custodianKind==OwnerKind.CUSTOMER && sink.custodianId==fact.customerId) { "Consumed sink must retain the document customer custody" }
+                if (fact.customerId == null) {
+                    require(fact.usageId != null && sink.custodianKind==OwnerKind.TECHNICIAN && sink.custodianId==command.operation.actorId) {
+                        "Standalone consumption must retain its reporting technician attribution"
+                    }
+                } else require(sink.custodianKind==OwnerKind.CUSTOMER && sink.custodianId==fact.customerId) { "Consumed sink must retain the document customer custody" }
             }
         }
         command.usage?.let { require(it.workOrderId==document.workOrder) { "Usage snapshot and posting document context mismatch" } }
@@ -70,7 +74,11 @@ internal class PostingDocuments(private val sql: PostingSql) {
         val accountable=command.facts.isNotEmpty() || command.usage!=null
         command.legs.map { it.documentLineId }.distinct().sortedBy(UUID::toString).forEach { line ->
             val source=sql.query("""SELECT line.stock_identity_id current_identity,line.sku_id current_sku,line.base_unit current_unit,line.quantity_base,
-                source.stock_identity_id issued_identity,source.sku_id issued_sku,source.base_unit issued_unit,source.accepted_base,source.quantity_base issued_quantity,
+                source.stock_identity_id issued_identity,source.sku_id issued_sku,source.base_unit issued_unit,
+                CASE WHEN EXISTS (SELECT FROM inventory_issue_snapshot binding WHERE binding.tenant_id=source.tenant_id AND binding.id=source.document_id)
+                    THEN (SELECT coalesce(sum(receipt.accepted_base::numeric),0) FROM inventory_material_receipt_line receipt
+                        WHERE receipt.tenant_id=source.tenant_id AND receipt.issue_line_id=source.id)
+                    ELSE source.accepted_base END accepted_base,source.quantity_base issued_quantity,
                 source.id issued_line,source.document_id issued_document,document.kind,document.state
                 FROM inventory_document_line line LEFT JOIN inventory_document_line source ON source.tenant_id=line.tenant_id AND source.id=line.source_line_id
                 LEFT JOIN inventory_document document ON document.tenant_id=source.tenant_id AND document.id=source.document_id

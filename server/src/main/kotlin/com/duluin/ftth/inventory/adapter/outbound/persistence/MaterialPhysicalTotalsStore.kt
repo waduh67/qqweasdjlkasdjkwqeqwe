@@ -28,6 +28,8 @@ class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
                 JOIN inventory_movement_leg leg ON leg.tenant_id=movement.tenant_id AND leg.movement_id=movement.id
                 JOIN inventory_document_line line ON line.tenant_id=leg.tenant_id AND line.id=leg.document_line_id
                 WHERE movement.tenant_id=? AND movement.state='APPLIED' AND leg.direction='IN'
+                AND NOT EXISTS (SELECT FROM inventory_operation operation WHERE operation.tenant_id=movement.tenant_id
+                    AND operation.id=movement.operation_id AND operation.namespace='warehouse.material.acknowledge')
                 AND (line.id=? OR line.source_line_id=?) AND NOT EXISTS (
                     SELECT FROM inventory_movement_leg debit WHERE debit.tenant_id=leg.tenant_id AND debit.movement_id=leg.movement_id
                     AND debit.document_line_id=leg.document_line_id AND debit.direction='OUT' AND debit.location_id=leg.location_id
