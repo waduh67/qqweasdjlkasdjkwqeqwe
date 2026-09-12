@@ -33,4 +33,5 @@ data class FulfillmentApproved(
     val orderId: UUID? = null,
     val approvalActorId: UUID? = null,
     val applicableEffects: Set<String> = emptySet(),
+    val verifiedMaterialRequired: Boolean = false,
 )
