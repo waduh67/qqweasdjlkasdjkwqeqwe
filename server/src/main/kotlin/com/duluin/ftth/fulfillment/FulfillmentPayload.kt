@@ -38,7 +38,7 @@ fun String.decodeFulfillmentRequest(defaultTenantId: UUID?, legacyHash: String?)
             workOrderId = values[3].let(UUID::fromString).takeIf { source == FulfillmentSource.WORK_ORDER },
             workOrderKind = null,
             approved = true,
-            requiredEffects = if (source == FulfillmentSource.WORK_ORDER) FulfillmentEffectType.entries.toSet() else emptySet(),
+            requiredEffects = emptySet(),
         )
     }
     require(values.size == 13) { "FULFILLMENT_PAYLOAD_INVALID" }

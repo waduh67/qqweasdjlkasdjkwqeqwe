@@ -58,6 +58,7 @@ class WorkOrderService(
     private val signatures: WorkOrderSignatureRepository,
     private val cutovers: com.duluin.ftth.inventory.InventoryTenantCutoverApi,
     private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
+    private val approvals: WorkOrderApprovalService,
 ) : ManageWorkOrderUseCase, WorkOrderQuery {
 
     @Transactional
@@ -174,14 +175,7 @@ class WorkOrderService(
     }
 
     @Transactional
-    override fun approve(id: UUID, note: String?): WorkOrderView {
-        val current = commandFence("workorder.order.approve")
-        val workOrder = require(id, current)
-        workOrder.approve(note, Instant.now(), current.fence.identity.userId)
-        val saved = repository.save(workOrder)
-        events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER")))
-        return saved.toView()
-    }
+    override fun approve(id: UUID, note: String?): WorkOrderView = approvals.approve(id, note).toView()
 
     @Transactional
     override fun reject(id: UUID, reason: String): WorkOrderView {

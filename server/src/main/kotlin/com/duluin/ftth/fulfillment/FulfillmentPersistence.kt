@@ -119,7 +119,7 @@ class FulfillmentCheckpointPersistenceAdapter(
         ).setParameter("tenant", checkpoint.tenantId).setParameter("hash", checkpoint.canonicalHash).executeUpdate()
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     override fun claimPending(tenantId: UUID, workerId: String, now: Instant, leaseUntil: Instant): FulfillmentOutboxRecord? {
         cutoverFence()
         val row = entityManager.createNativeQuery(
@@ -135,11 +135,23 @@ class FulfillmentCheckpointPersistenceAdapter(
                SET claimed_by = :worker, lease_until = :lease, attempts = o.attempts + 1
                FROM candidate c
                WHERE o.id = c.id
-               RETURNING o.id, o.tenant_id, o.payload_hash, o.payload""",
+                RETURNING o.id, o.tenant_id, o.payload_hash, o.payload, o.event_type""",
         ).setParameter("tenant", tenantId).setParameter("worker", workerId)
             .setParameter("now", now).setParameter("lease", leaseUntil).resultList.firstOrNull() as? Array<*>
             ?: return null
-        return FulfillmentOutboxRecord(row[0] as UUID, row[1] as UUID, row[2] as String, row[3] as String, workerId, leaseUntil)
+        return FulfillmentOutboxRecord(row[0] as UUID, row[1] as UUID, row[2] as String, row[3] as String, workerId, leaseUntil, row[4] as String)
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    override fun reconcile(delivery: FulfillmentOutboxRecord, reason: String): FulfillmentOutcome {
+        cutoverFence()
+        entityManager.createNativeQuery("""UPDATE fulfillment_checkpoint checkpoint SET state='REQUIRES_RECONCILIATION',
+            outcome=:reason,checkpoint_updated_at=clock_timestamp() FROM fulfillment_outbox outbox
+            WHERE outbox.tenant_id=:tenant AND outbox.id=:id AND outbox.claimed_by=:worker
+                AND checkpoint.tenant_id=outbox.tenant_id AND checkpoint.id=outbox.fulfillment_id AND checkpoint.state<>'APPLIED'""")
+            .setParameter("tenant", delivery.tenantId).setParameter("id", delivery.id).setParameter("worker", delivery.claimedBy)
+            .setParameter("reason", reason).executeUpdate()
+        return FulfillmentOutcome(FulfillmentState.REQUIRES_RECONCILIATION, false, reason)
     }
 
     @Transactional

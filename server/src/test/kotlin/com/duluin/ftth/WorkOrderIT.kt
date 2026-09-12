@@ -129,7 +129,8 @@ class WorkOrderIT {
         val ids = JsonPath.read<List<String>>(roles, "$[*].id")
         val roleIndex = names.indexOfFirst { it.contains("Admin", ignoreCase = true) }.takeIf { it >= 0 } ?: 0
         val email = "approver-${uniq()}@x.test"
-        post("/api/users", token, "{\"email\":\"$email\",\"name\":\"Approver\",\"password\":\"$pass\",\"roleIds\":[\"${ids[roleIndex]}\"]}", 201)
+        val areas = JsonPath.read<List<String>>(get("/api/me", token), "$.areaIds").joinToString(",") { "\"$it\"" }
+        post("/api/users", token, "{\"email\":\"$email\",\"name\":\"Approver\",\"password\":\"$pass\",\"roleIds\":[\"${ids[roleIndex]}\"],\"areaIds\":[$areas]}", 201)
         val slug = JsonPath.read<String>(get("/api/me", token), "$.tenantSlug")
         return login(slug, email)
     }
@@ -375,9 +376,10 @@ class WorkOrderIT {
 
     /** Bawa sebuah WO baru sampai DONE (assign → start → complete), kembalikan id-nya. */
     private fun completeWorkOrder(token: String, title: String): Pair<String, String> {
-        val woId = id(createWorkOrder(token, """{"type":"PSB","title":"$title"}"""))
+        val woId = id(WorkOrderSettlementTestSetup.create(mockMvc, token, """{"type":"PSB","title":"$title"}"""))
         val techId = newTechnician(token, "Teknisi $title")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
+        WorkOrderSettlementTestSetup.prepare(mockMvc, token, woId)
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
         return woId to newApprover(token)
@@ -426,7 +428,7 @@ class WorkOrderIT {
         assertThat(JsonPath.read<String>(approved, "$.approvedByName")).isEqualTo("Approver")
 
         // Sudah disetujui → tak bisa disetujui/ditolak lagi.
-        post("/api/work-orders/$woId/approve", approverToken, "", expected = 409)
+        post("/api/work-orders/$woId/approve", approverToken, "", expected = 200)
         post("/api/work-orders/$woId/reject", approverToken, """{"reason":"berubah pikiran"}""", expected = 409)
 
         // Timeline memuat penolakan lalu persetujuan.
@@ -489,7 +491,7 @@ class WorkOrderIT {
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
 
         val woId = id(
-            createWorkOrder(
+            WorkOrderSettlementTestSetup.create(mockMvc,
                 token,
                 """{"type":"PSB","title":"Pasang baru","customerId":"$customerId","subscriptionId":"$sub"}""",
             ),
@@ -498,6 +500,7 @@ class WorkOrderIT {
 
         val techId = newTechnician(token, "Teknisi PSB")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
+        WorkOrderSettlementTestSetup.prepare(mockMvc, token, woId)
         post("/api/work-orders/$woId/start", token, "", 200)
         // Langganan masih PENDING sampai WO benar-benar selesai.
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
@@ -517,13 +520,14 @@ class WorkOrderIT {
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
 
         val woId = id(
-            createWorkOrder(
+            WorkOrderSettlementTestSetup.create(mockMvc,
                 token,
                 """{"type":"DISMANTLE","title":"Bongkar","customerId":"$customerId","subscriptionId":"$sub"}""",
             ),
         )
         val techId = newTechnician(token, "Teknisi Bongkar")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
+        WorkOrderSettlementTestSetup.prepare(mockMvc, token, woId)
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
 

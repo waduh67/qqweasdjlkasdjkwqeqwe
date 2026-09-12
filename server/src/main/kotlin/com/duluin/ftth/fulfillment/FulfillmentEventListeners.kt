@@ -15,11 +15,14 @@ import org.springframework.transaction.annotation.Transactional
 class WorkOrderFulfillmentListener(
     private val coordinator: FulfillmentCoordinator,
     private val worker: FulfillmentOutboxWorker,
+    private val approvals: FulfillmentApprovalService,
 ) {
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     @Transactional
     fun on(event: FulfillmentApproved) {
-        TenantContext.runAs(event.tenantId) { coordinator.accept(FulfillmentCoordinator.forWorkOrder(event)) }
+        TenantContext.runAs(event.tenantId) {
+            coordinator.accept(if (event.verifiedMaterialRequired) approvals.freeze(event) else FulfillmentCoordinator.forWorkOrder(event))
+        }
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -62,11 +65,14 @@ class FulfillmentOutboxWorker(
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun processNext(tenantId: java.util.UUID, workerId: String, now: java.time.Instant = java.time.Instant.now()): FulfillmentOutcome? =
         TenantContext.runAs(tenantId) {
             val delivery = outbox.claimPending(tenantId, workerId, now, now.plusSeconds(60)) ?: return@runAs null
-            val request = delivery.payload.decodeFulfillmentRequest(tenantId, delivery.payloadHash)
+            if (delivery.eventType != "FULFILLMENT_APPLY") return@runAs outbox.reconcile(delivery, "FULFILLMENT_EVENT_UNSUPPORTED")
+            val request = try { delivery.payload.decodeFulfillmentRequest(tenantId, delivery.payloadHash) }
+                catch (failure: IllegalArgumentException) { return@runAs outbox.reconcile(delivery, "FULFILLMENT_PAYLOAD_INVALID") }
+            if (request.tenantId != tenantId || request.canonicalHash != delivery.payloadHash)
+                return@runAs outbox.reconcile(delivery, "FULFILLMENT_ENVELOPE_MISMATCH")
             val outcome = coordinator.process(request)
             if (outcome.state == FulfillmentState.APPLIED || outcome.state == FulfillmentState.MANUAL_RESOLVED) {
                 outbox.markOutboxConsumed(delivery.id, workerId)

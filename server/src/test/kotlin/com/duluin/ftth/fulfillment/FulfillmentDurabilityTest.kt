@@ -127,6 +127,8 @@ class FulfillmentDurabilityTest {
             return FulfillmentOutboxRecord(UUID.randomUUID(), tenantId, request.canonicalHash, request.encode(), workerId, leaseUntil)
         }
         override fun markOutboxConsumed(id: UUID, workerId: String) = Unit
+        override fun reconcile(delivery: FulfillmentOutboxRecord, reason: String) =
+            FulfillmentOutcome(FulfillmentState.REQUIRES_RECONCILIATION, false, reason)
         override fun completedEffects(tenantId: UUID, namespace: String, operationKey: String) = completed.toSet()
         override fun markEffectCompleted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
             completed += effect
