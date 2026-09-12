@@ -220,6 +220,13 @@ class PublicApiFulfillmentEffectExecutor(
                     payloadHash = request.canonicalHash,
                     reason = "FULFILLMENT_${request.workOrderKind ?: request.source.name}",
                     itemCategory = allocation.itemCategory,
+                    // Identitas unit fisik WAJIB ikut untuk barang berserial. Tanpa dua baris
+                    // ini `DurableInventoryFulfillmentService` menolak setiap alokasi
+                    // berserial ("WAJIB menyebutkan aset"), efeknya jatuh jadi
+                    // INVENTORY_EFFECT_REJECTED, dan tidak ada satu ONT pun yang pernah bisa
+                    // dipotong dari saldo — alokasinya benar, hanya SN-nya yang hilang di jalan.
+                    assetId = allocation.assetId,
+                    serialNumber = allocation.serialNumber,
                 ))
                 if (!result.applied) throw FulfillmentExecutionFailure.Retryable("INVENTORY_EFFECT_NOT_APPLIED")
             }

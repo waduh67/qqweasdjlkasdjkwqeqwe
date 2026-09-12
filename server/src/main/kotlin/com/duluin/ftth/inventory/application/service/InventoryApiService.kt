@@ -18,6 +18,12 @@ class InventoryApiService(
     private val assets: SerializedAssetRepository,
     private val durableFulfillment: DurableInventoryFulfillmentService,
     private val locations: InventoryLocationRepository? = null,
+    /**
+     * Opsional dengan nilai default SENGAJA: unit test membangun service ini dengan dua
+     * argumen saja, dan parameter wajib baru akan memutus mereka tanpa menambah jaminan apa
+     * pun — Spring tetap menyuntikkan bean-nya di runtime.
+     */
+    private val workOrderMaterials: WorkOrderMaterialService? = null,
 ) : InventoryApi {
     @Transactional(readOnly = true)
     fun locations(): List<InventoryLocationView> = (locations ?: error("inventory location query is not configured")).findAll(TenantContext.tenantId()).map { InventoryLocationView(it.id, it.code, it.kind.name) }
@@ -63,7 +69,24 @@ class InventoryApiService(
     override fun returnFulfillment(command: InventoryFulfillmentCommand): InventoryFulfillmentResult =
         durableFulfillment.apply(command, returned = true)
 
-    override fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> = emptyList()
+    /**
+     * Alokasi material yang harus dipotong saga fulfillment untuk WO ini.
+     *
+     * Dulu selalu mengembalikan daftar kosong. Akibatnya `applyInventory` di saga — yang
+     * sudah matang lengkap dengan idempotensi, retry, dan rekonsiliasi — SELALU berhenti di
+     * preflight dengan `INVENTORY_ALLOCATIONS_NOT_FOUND`: kabel dan ONT yang dipakai teknisi
+     * tidak pernah keluar dari saldo gudang, dan tidak ada satu baris pun yang menunjukkan
+     * bahwa itu terjadi.
+     *
+     * Tenant diambil dari [TenantContext], bukan dari parameter, karena jalur pemanggilnya
+     * SELALU sudah di dalam `TenantContext.runAs` — baik listener `FulfillmentEventListeners`
+     * maupun `FulfillmentOutboxWorker.processNext`. Tanpa itu RLS akan memulangkan nol baris
+     * TANPA error dan gejalanya identik dengan stub lama.
+     */
+    @Transactional(readOnly = true)
+    override fun fulfillmentAllocations(workOrderId: UUID): List<InventoryFulfillmentAllocation> =
+        (workOrderMaterials ?: error("work order material query is not configured"))
+            .allocationsFor(TenantContext.tenantId(), workOrderId)
 
     private fun com.duluin.ftth.inventory.domain.model.SerializedAsset.toRef() = InventoryAssetRef(
         id, tenantId, skuId, serialNumber, macAddress, status, locationId, custody.ownerId, installedOnuId,

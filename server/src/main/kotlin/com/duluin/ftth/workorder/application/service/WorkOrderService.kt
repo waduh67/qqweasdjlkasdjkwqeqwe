@@ -10,8 +10,20 @@ import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.inventory.InventoryAllocationApi
+import com.duluin.ftth.inventory.IssueWorkOrderMaterialCommand
+import com.duluin.ftth.inventory.PlanWorkOrderMaterialCommand
+import com.duluin.ftth.inventory.PlannedMaterialLineInput
+import com.duluin.ftth.inventory.RecordWorkOrderMaterialUsageCommand
+import com.duluin.ftth.inventory.ScanWorkOrderMaterialSerialCommand
+import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
+import com.duluin.ftth.inventory.WorkOrderMaterialView
 import com.duluin.ftth.workorder.WorkOrderAssigned
+import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderMaterialUseCase
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialIssueRequest
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialScanRequest
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderMaterialUsageRequest
 import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.TechnicianWorkloadView
@@ -54,7 +66,12 @@ class WorkOrderService(
     private val events: ApplicationEventPublisher,
     private val evidence: WorkOrderEvidenceRepository,
     private val signatures: WorkOrderSignatureRepository,
-) : ManageWorkOrderUseCase, WorkOrderQuery {
+    /**
+     * Satu-satunya jalan modul ini menyentuh gudang. WO TIDAK PERNAH menulis ledger sendiri —
+     * lihat komentar di [com.duluin.ftth.inventory.InventoryAllocationApi].
+     */
+    private val materials: InventoryAllocationApi,
+) : ManageWorkOrderUseCase, ManageWorkOrderMaterialUseCase, WorkOrderQuery {
 
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
@@ -145,6 +162,22 @@ class WorkOrderService(
             throw ConflictException("Proof of Work sudah berubah; muat ulang bukti sebelum mengirim")
         }
         ProofArtifactCompatibility.requireMatching(packet.artifacts, authoritativeArtifacts)
+        /*
+         * Penjaga material. WO TIDAK BOLEH ditutup selama masih ada unit berserial yang
+         * sudah keluar gudang tapi belum di-scan nomor serinya.
+         *
+         * Alasannya bukan kerapian data: unit yang tidak pernah dideklarasikan nasibnya tetap
+         * tercatat ISSUED di van stock teknisi selamanya. Saldo teknisi terus menggelembung,
+         * setiap opname menyalahkan orang yang berbeda, dan saat pelanggan komplain tidak ada
+         * yang bisa menjawab ONT mana yang terpasang di rumahnya. Kalau dilonggarkan jadi
+         * peringatan, ia akan selalu diabaikan — WO yang tidak bisa ditutup adalah satu-satunya
+         * bentuk yang benar-benar memaksa scan terjadi.
+         *
+         * Exception-nya SENGAJA dibiarkan merambat: menangkapnya berarti menandai transaksi
+         * bersama rollback-only lalu tetap mencoba commit, dan kegagalannya muncul sebagai
+         * `UnexpectedRollbackException` yang tidak menjelaskan apa pun.
+         */
+        materials.assertMaterialReadyForCompletion(workOrder.tenantId, id)
         workOrder.complete(resolutionNote, packet, Instant.now(), currentUser.current().userId)
         return repository.save(workOrder).toView()
     }
@@ -178,9 +211,24 @@ class WorkOrderService(
          * `ORDER_LINK_NOT_FOUND` di preflight — seluruh alur approval mati, bukan hanya
          * bagian pesanannya.
          */
+        /*
+         * `INVENTORY` mengikuti pola pengaman yang sama seperti `ORDER`: diminta HANYA kalau
+         * WO ini benar-benar punya material yang bisa dipotong. Syaratnya sengaja
+         * "ada alokasi", bukan "ada baris material" — preflight saga menolak permintaan efek
+         * INVENTORY yang alokasinya kosong dengan `INVENTORY_ALLOCATIONS_NOT_FOUND`, dan
+         * penolakan itu mematikan SELURUH approval WO-nya.
+         *
+         * `VISIT` SENGAJA TIDAK ditambahkan di sini walau executornya sudah ada. Preflight-nya
+         * menuntut tepat satu kunjungan `fieldservice` yang tertaut ke WO ini, dan modul
+         * `workorder` tidak bisa menanyakannya tanpa melahirkan siklus modul
+         * (`fieldservice` sudah mengimpor `workorder`). Memintanya tanpa syarat akan menolak
+         * SETIAP approval dengan `VISIT_LINK_NOT_UNIQUE` — persis perangkap yang dulu dipasang
+         * efek ORDER. Pemicunya kelak harus datang dari sisi `fieldservice`.
+         */
         val effects = buildSet {
             addAll(setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER"))
             if (saved.orderId != null) add("ORDER")
+            if (materials.hasFulfillableMaterial(saved.tenantId, saved.id)) add("INVENTORY")
         }
         events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, effects))
         return saved.toView()
@@ -277,6 +325,107 @@ class WorkOrderService(
             workloads = workloads,
         )
     }
+
+    // ------------------------------------------------------- Material (P2)
+
+    override fun materialTemplate(workOrderId: UUID): List<WorkOrderMaterialTemplateView> {
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
+        return materials.materialTemplate(workOrder.tenantId, workOrder.type.name)
+    }
+
+    override fun materials(workOrderId: UUID): List<WorkOrderMaterialView> {
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
+        return materials.materials(workOrder.tenantId, workOrderId)
+    }
+
+    @Transactional
+    override fun planMaterial(workOrderId: UUID, lines: List<PlannedMaterialLineInput>): List<WorkOrderMaterialView> {
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        return materials.planMaterial(
+            PlanWorkOrderMaterialCommand(
+                tenantId = workOrder.tenantId,
+                workOrderId = workOrderId,
+                workOrderType = workOrder.type.name,
+                customerId = requireMaterialCustomer(workOrder),
+                actorId = currentUser.current().userId,
+                lines = lines,
+            ),
+        )
+    }
+
+    @Transactional
+    override fun issueMaterial(workOrderId: UUID, request: WorkOrderMaterialIssueRequest): List<WorkOrderMaterialView> {
+        val workOrder = require(workOrderId)
+        requireArea(workOrder)
+        requireActiveActor()
+        // Petugas GUDANG yang mengeluarkan barang, bukan teknisi pemilik WO — jadi di sini
+        // yang dipakai adalah cakupan area, bukan kepemilikan WO. Teknisi penerimanya tetap
+        // divalidasi: barang tidak boleh keluar ke orang yang tidak ditugaskan di WO ini.
+        if (!workOrder.isAssignedTo(request.technicianId)) {
+            throw ConflictException("Teknisi tujuan tidak ditugaskan di work order ${workOrder.code}")
+        }
+        return materials.issueMaterial(
+            IssueWorkOrderMaterialCommand(
+                tenantId = workOrder.tenantId,
+                workOrderId = workOrderId,
+                actorId = currentUser.current().userId,
+                fromLocationId = request.fromLocationId,
+                custodianId = request.custodianId,
+                technicianId = request.technicianId,
+                technicianLocationId = request.technicianLocationId,
+                lines = request.lines,
+                reason = request.reason,
+                operationKey = request.operationKey,
+                payloadHash = request.payloadHash,
+            ),
+        )
+    }
+
+    @Transactional
+    override fun recordMaterialUsage(workOrderId: UUID, request: WorkOrderMaterialUsageRequest): WorkOrderMaterialView {
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        return materials.recordMaterialUsage(
+            RecordWorkOrderMaterialUsageCommand(
+                tenantId = workOrder.tenantId,
+                workOrderId = workOrderId,
+                actorId = currentUser.current().userId,
+                itemId = request.itemId,
+                usedQuantity = request.usedQuantity,
+                returnedQuantity = request.returnedQuantity,
+                lostQuantity = request.lostQuantity,
+                varianceReason = request.varianceReason,
+            ),
+        )
+    }
+
+    @Transactional
+    override fun scanMaterialSerial(workOrderId: UUID, request: WorkOrderMaterialScanRequest): WorkOrderMaterialView {
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        return materials.scanMaterialSerial(
+            ScanWorkOrderMaterialSerialCommand(
+                tenantId = workOrder.tenantId,
+                workOrderId = workOrderId,
+                actorId = currentUser.current().userId,
+                serialNumber = request.serialNumber,
+                outcome = request.outcome,
+                macAddress = request.macAddress,
+            ),
+        )
+    }
+
+    /**
+     * Material WAJIB punya pelanggan. `inventory_fulfillment_effect.customer_id` dan
+     * `inventory_customer_material_fact.customer_id` keduanya NOT NULL, jadi material yang
+     * direncanakan untuk WO tanpa pelanggan tidak akan pernah bisa di-commit saga — ia hanya
+     * jadi efek yang selalu gagal dan WO-nya tersangkut REQUIRES_RECONCILIATION selamanya.
+     */
+    private fun requireMaterialCustomer(workOrder: WorkOrder): UUID = workOrder.customerId
+        ?: throw ConflictException("Work order ${workOrder.code} belum punya pelanggan; material tidak bisa direncanakan")
 
     private fun require(id: UUID): WorkOrder =
         repository.findById(id) ?: throw NotFoundException("Work order $id tidak ditemukan")
