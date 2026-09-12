@@ -11,7 +11,7 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
     protected data class ReceiptCase(val stock: Setup, val workOrder: String, val receiver: Pair<String, String>,
         val transit: String, val field: String, val input: MaterialReceiptRequest)
 
-    protected fun receiptCase(serial: Boolean = false): ReceiptCase {
+    protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false): ReceiptCase {
         val stock = setupReceipt()
         if (serial) {
             assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
@@ -23,11 +23,19 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
                 mapOf("lineId" to line.path("id").asString(), "stockIdentityId" to piece.path("stockIdentityId").asString(), "quantityBase" to "1", "baseUnit" to "EA")
             } }.toList()
             transition(stock, receipt, "putaway", mapper.writeValueAsString(mapOf("expectedRevision" to 1, "destinationLocationId" to stock.bin, "lines" to pieces)))
+        } else if (fungible) {
+            assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
+                """{"expectedRevision":0,"code":"ONU","name":"Consumable","tracking":"BULK","baseUnit":"EA","inspectionRequired":false}""").status).isEqualTo(200)
+            val receipt = draft(stock, """{"skuId":"${stock.onu}","quantityBase":"100","lotCode":"CONSUMABLE"}""").path("id").asString()
+            transition(stock, receipt, "receive", """{"expectedRevision":0}""")
+            val received = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$receipt", stock.token).contentAsString).path("lines")[0]
+            transition(stock, receipt, "putaway", """{"expectedRevision":1,"destinationLocationId":"${stock.bin}","lines":[{"lineId":"${received.path("id").asString()}",
+                "stockIdentityId":"${received.path("pieces")[0].path("stockIdentityId").asString()}","quantityBase":"100","baseUnit":"EA"}]}""")
         } else receiveStock(stock, "1000000")
         val receiver = technician(stock.token)
         val workOrder = workOrder(stock.token)
         assign(stock.token, workOrder, receiver.second)
-        val planned = if (serial) line(stock.onu, "2", "EA") else line(stock.cable)
+        val planned = if (serial) line(stock.onu, "2", "EA") else if (fungible) line(stock.onu, "100", "EA") else line(stock.cable)
         putPlan(stock.token, workOrder, plan(stock.token, workOrder, "[$planned]"))
         action(stock.token, workOrder, "submit-request", command(stock.token, workOrder, 1))
         action(stock.token, workOrder, "reserve", command(stock.token, workOrder, 1))
@@ -44,8 +52,8 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
         val input = MaterialReceiptRequest(UUID.fromString(issue.path("issueId").asString()), issue.path("revision").asLong(),
             issue.path("workOrderRevision").asLong(), "signed-paper-handover", listOf(MaterialReceiptSelection(
                 UUID.fromString(line.path("id").asString()), UUID.fromString(line.path("dimension").path("stockIdentityId").asString()),
-                if (serial) WarehouseBaseUnit.EA else WarehouseBaseUnit.MM, if (serial) "1" else "60000",
-                missingBase = if (serial) "0" else "40000", reason = "Remaining delivery pending",
+                if (serial || fungible) WarehouseBaseUnit.EA else WarehouseBaseUnit.MM, if (serial) "1" else if (fungible) "60" else "60000",
+                missingBase = if (serial) "0" else if (fungible) "40" else "40000", reason = "Remaining delivery pending",
                 serial = if (serial) line.path("serial").asString() else null)))
         return ReceiptCase(stock, workOrder, receiver, transit, field, input)
     }
