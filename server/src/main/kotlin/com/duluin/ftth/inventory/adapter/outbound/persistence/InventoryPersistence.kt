@@ -24,6 +24,8 @@ class InventoryLocationJpaEntity(
     id: UUID,
     @Column(nullable = false, length = 64) var code: String,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 24) var kind: LocationKind,
+    // V181.
+    @Column var parentId: UUID? = null,
 ) : TenantAwareJpaEntity(id)
 
 @Entity
@@ -43,6 +45,7 @@ class SerializedAssetJpaEntity(
 
 interface InventoryLocationJpaRepository : JpaRepository<InventoryLocationJpaEntity, UUID> {
     fun findAllByTenantId(tenantId: UUID): List<InventoryLocationJpaEntity>
+    fun findByTenantIdAndCode(tenantId: UUID, code: String): InventoryLocationJpaEntity?
 }
 interface SerializedAssetJpaRepository : JpaRepository<SerializedAssetJpaEntity, UUID> {
     fun findAllByTenantId(tenantId: UUID): List<SerializedAssetJpaEntity>
@@ -55,17 +58,34 @@ interface SerializedAssetJpaRepository : JpaRepository<SerializedAssetJpaEntity,
 class InventoryLocationPersistenceAdapter(private val repository: InventoryLocationJpaRepository) : InventoryLocationRepository {
     override fun findById(id: UUID): InventoryLocation? = repository.findById(id).orElse(null)?.toDomain()
     override fun findAll(tenantId: UUID): List<InventoryLocation> = repository.findAllByTenantId(tenantId).map { it.toDomain() }
+    override fun findByCode(tenantId: UUID, code: String): InventoryLocation? =
+        repository.findByTenantIdAndCode(tenantId, code.trim().uppercase())?.toDomain()
     /**
-     * Mengembalikan [location] apa adanya, BUKAN hasil `toDomain()` dari entity yang baru
-     * di-persist: Hibernate baru mengisi `@TenantId` saat INSERT-nya di-flush, jadi entity
-     * yang baru lahir masih bertenant null dan `tenantId!!` meledak NPE.
+     * Baris yang sudah ada DIMUAT lalu diubah; hanya baris baru yang disisipkan.
+     *
+     * Menyimpan instance entity baru dengan id lama TIDAK meng-update: [TenantAwareJpaEntity]
+     * mewarisi `Persistable.isNew()` yang selalu true untuk objek yang belum pernah dimuat,
+     * jadi Spring Data memanggil `persist` dan Postgres menolaknya dengan duplicate key.
+     * Sebelum ada jalur ubah di sini, kesalahan itu belum pernah muncul karena lokasi memang
+     * belum pernah bisa diubah siapa pun.
+     *
+     * Jalur sisipan mengembalikan [location] apa adanya, BUKAN hasil `toDomain()`: Hibernate
+     * baru mengisi `@TenantId` saat INSERT-nya di-flush, jadi entity yang baru lahir masih
+     * bertenant null dan `tenantId!!` meledak NPE.
      */
     override fun save(location: InventoryLocation): InventoryLocation {
-        repository.save(location.toEntity())
-        return location
+        val existing = repository.findById(location.id).orElse(null)
+            ?: run {
+                repository.save(location.toEntity())
+                return location
+            }
+        existing.code = location.code
+        existing.kind = location.kind
+        existing.parentId = location.parentId
+        return repository.save(existing).toDomain()
     }
-    private fun InventoryLocationJpaEntity.toDomain() = InventoryLocation(id, tenantId!!, code, kind)
-    private fun InventoryLocation.toEntity() = InventoryLocationJpaEntity(id, code, kind)
+    private fun InventoryLocationJpaEntity.toDomain() = InventoryLocation(id, tenantId!!, code, kind, parentId)
+    private fun InventoryLocation.toEntity() = InventoryLocationJpaEntity(id, code, kind, parentId)
 }
 
 @Component

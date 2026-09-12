@@ -1,10 +1,13 @@
 package com.duluin.ftth.inventory.application.service
 
+import com.duluin.ftth.common.domain.Page
+import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLedgerRepository
+import com.duluin.ftth.inventory.application.port.outbound.MovementFilter
 import com.duluin.ftth.inventory.domain.model.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -34,7 +37,10 @@ class InventoryMovementLedgerService(
         if (prior != null) return replayOrConflict(prior, command)
 
         require(command.legs.all { it.quantity > 0 }) { "movement quantity must be positive" }
-        val state = if (command.kind in APPROVAL_REQUIRED) MovementState.PENDING_APPROVAL else MovementState.APPLIED
+        // Sumber kebenarannya ada di enum-nya sendiri (`MovementKind.requiresApproval`), bukan
+        // daftar terpisah di sini: daftar yang terpisah pasti ketinggalan saat jenis mutasi baru
+        // lahir, dan jenis baru yang kelewat akan LANGSUNG BERLAKU tanpa pernah minta persetujuan.
+        val state = if (command.kind.requiresApproval) MovementState.PENDING_APPROVAL else MovementState.APPLIED
         val movement = InventoryMovement(
             UuidV7.generate(), command.tenantId, command.namespace, command.operationKey, command.payloadHash,
             command.actorId, command.reason, Instant.now(clock), command.kind, command.legs, state,
@@ -91,6 +97,23 @@ class InventoryMovementLedgerService(
     @Transactional(readOnly = true)
     fun movements(tenantId: UUID): List<InventoryMovement> = ledger.findAll(tenantId)
 
+    /**
+     * Riwayat ber-halaman untuk layar dan laporan. [movements] TIDAK boleh dipakai di sana:
+     * ledger gudang tidak pernah dipangkas, jadi memuat seluruh riwayat tenant hanya untuk
+     * menampilkan 20 baris akan menghabiskan heap server begitu mutasinya puluhan ribu.
+     */
+    @Transactional(readOnly = true)
+    fun movementPage(tenantId: UUID, filter: MovementFilter, page: PageRequest): Page<InventoryMovement> =
+        ledger.findPage(tenantId, filter, page)
+
+    /** Cari mutasi lewat identitas operasinya — dipakai pemanggil yang perlu mendeteksi replay-nya sendiri. */
+    @Transactional(readOnly = true)
+    fun movementByOperation(tenantId: UUID, namespace: String, operationKey: String): InventoryMovement? =
+        ledger.findByOperation(tenantId, namespace, operationKey)
+
+    @Transactional(readOnly = true)
+    fun movement(movementId: UUID): InventoryMovement? = ledger.findById(movementId)
+
     @Transactional(readOnly = true)
     fun balances(tenantId: UUID): List<InventoryBalance> = ledger.balances(tenantId)
 
@@ -140,11 +163,4 @@ class InventoryMovementLedgerService(
         val status: InventoryStatus,
     )
 
-    private companion object {
-        /** Jenis mutasi yang menunggu persetujuan dulu — semuanya bisa menutupi kebocoran aset. */
-        val APPROVAL_REQUIRED = setOf(
-            MovementKind.RESTOCK, MovementKind.ISSUE_EXCEPTION, MovementKind.ADJUSTMENT,
-            MovementKind.LOSS, MovementKind.SCRAP, MovementKind.WRITE_OFF, MovementKind.COUNT_VARIANCE,
-        )
-    }
 }

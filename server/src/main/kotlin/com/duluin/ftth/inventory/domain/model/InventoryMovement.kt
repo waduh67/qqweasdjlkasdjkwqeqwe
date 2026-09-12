@@ -3,9 +3,80 @@ package com.duluin.ftth.inventory.domain.model
 import java.time.Instant
 import java.util.UUID
 
-enum class MovementKind {
-    RESTOCK, RECEIVE, RESERVE, RELEASE, ISSUE, ISSUE_EXCEPTION, TRANSFER, TRANSFER_RECEIPT, RETURN,
-    REPAIR, QUARANTINE, ADJUSTMENT, LOSS, SCRAP, WRITE_OFF, COUNT_VARIANCE, DISPOSAL, CONSUME, REVERSAL,
+/**
+ * Bentuk leg yang sah untuk satu jenis mutasi.
+ *
+ * Dulu aturan ini ditulis sebagai daftar pengecualian di dalam `require` ("semua jenis
+ * WAJIB seimbang KECUALI A, B, C..."). Bentuk itu gagal diam-diam saat jenis baru lahir:
+ * RESTOCK tidak ikut terdaftar, padahal barang yang dijanjikan datang memang hanya punya
+ * leg IN — akibatnya SETIAP permintaan restock ditolak invariant-nya sendiri. LOSS, SCRAP,
+ * dan WRITE_OFF menyimpan bom yang sama. Sebagai properti enum, jenis mutasi baru TIDAK
+ * BISA ditambahkan tanpa menyatakan bentuknya.
+ */
+enum class LegShape {
+    /**
+     * Stok berpindah DI DALAM sistem: jumlah leg IN dan OUT wajib sama. Barang yang keluar
+     * dari satu dimensi saldo harus muncul di dimensi lain, kalau tidak mutasi "pindah rak"
+     * diam-diam berubah jadi mutasi yang memusnahkan stok.
+     */
+    PAIRED,
+
+    /**
+     * Stok MENYEBERANGI batas sistem — datang dari pemasok, atau lenyap jadi susut/hapus buku.
+     * Leg satu arah SAH di sini. Bentuk berpasangan tetap diterima (retur teknisi memakai
+     * sepasang leg) karena aturannya hanya melarang yang timpang, bukan mewajibkan timpang.
+     */
+    BOUNDARY,
+}
+
+/**
+ * Jenis mutasi stok, lengkap dengan dua sifat yang menentukan cara sistem memperlakukannya:
+ * bentuk leg-nya ([legShape]) dan apakah ia butuh mata kedua ([requiresApproval]).
+ *
+ * Keduanya SENGAJA menempel di sini, bukan tersebar jadi `setOf(...)` di service: dua daftar
+ * terpisah yang sama-sama dikunci pada enum ini pasti akan menyimpang begitu ada jenis baru,
+ * dan penyimpangannya baru ketahuan saat petugas gudang gagal menyimpan transaksi.
+ */
+enum class MovementKind(val legShape: LegShape, val requiresApproval: Boolean) {
+    /** Barang dijanjikan masuk dari pemasok — leg IN saja, dan wajib disetujui dulu. */
+    RESTOCK(LegShape.BOUNDARY, requiresApproval = true),
+
+    /** Barang benar-benar diterima di gudang. Leg IN saja. */
+    RECEIVE(LegShape.BOUNDARY, requiresApproval = false),
+
+    RESERVE(LegShape.PAIRED, requiresApproval = false),
+    RELEASE(LegShape.PAIRED, requiresApproval = false),
+    ISSUE(LegShape.PAIRED, requiresApproval = false),
+
+    /** Pengeluaran di luar pagu/di luar prosedur — pindahnya berpasangan, tapi wajib disetujui. */
+    ISSUE_EXCEPTION(LegShape.PAIRED, requiresApproval = true),
+
+    TRANSFER(LegShape.PAIRED, requiresApproval = false),
+    TRANSFER_RECEIPT(LegShape.PAIRED, requiresApproval = false),
+
+    /** Retur teknisi. BOUNDARY karena barang bisa kembali tanpa jejak pengeluaran yang cocok. */
+    RETURN(LegShape.BOUNDARY, requiresApproval = false),
+
+    REPAIR(LegShape.BOUNDARY, requiresApproval = false),
+    QUARANTINE(LegShape.BOUNDARY, requiresApproval = false),
+
+    /** Koreksi stok. Bisa menambah maupun mengurangi, jadi selalu lewat persetujuan. */
+    ADJUSTMENT(LegShape.BOUNDARY, requiresApproval = true),
+
+    LOSS(LegShape.BOUNDARY, requiresApproval = true),
+    SCRAP(LegShape.BOUNDARY, requiresApproval = true),
+    WRITE_OFF(LegShape.BOUNDARY, requiresApproval = true),
+    COUNT_VARIANCE(LegShape.BOUNDARY, requiresApproval = true),
+
+    DISPOSAL(LegShape.BOUNDARY, requiresApproval = false),
+    CONSUME(LegShape.BOUNDARY, requiresApproval = false),
+
+    /**
+     * Pembalik mutasi lain. BOUNDARY karena bentuknya MENGIKUTI mutasi yang dibalik: membalik
+     * penerimaan barang menghasilkan leg OUT saja, dan memaksanya berpasangan membuat
+     * penerimaan yang salah input jadi mustahil dikoreksi.
+     */
+    REVERSAL(LegShape.BOUNDARY, requiresApproval = false),
 }
 
 enum class LegDirection { IN, OUT }
@@ -67,7 +138,10 @@ data class InventoryMovement(
         require(payloadHash.isNotBlank()) { "payload hash is required" }
         require(reason.isNotBlank()) { "movement reason is required" }
         require(legs.isNotEmpty()) { "movement must have legs" }
-        require(legs.count { it.direction == LegDirection.IN } == legs.count { it.direction == LegDirection.OUT } || kind in setOf(MovementKind.RECEIVE, MovementKind.RETURN, MovementKind.REPAIR, MovementKind.QUARANTINE, MovementKind.DISPOSAL, MovementKind.CONSUME, MovementKind.ADJUSTMENT, MovementKind.COUNT_VARIANCE)) {
+        require(
+            kind.legShape != LegShape.PAIRED ||
+                legs.count { it.direction == LegDirection.IN } == legs.count { it.direction == LegDirection.OUT },
+        ) {
             "paired movement must have balanced IN and OUT legs"
         }
     }

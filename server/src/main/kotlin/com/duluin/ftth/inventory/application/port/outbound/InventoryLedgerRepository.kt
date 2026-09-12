@@ -1,11 +1,28 @@
 package com.duluin.ftth.inventory.application.port.outbound
 
+import com.duluin.ftth.common.domain.Page
+import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.inventory.domain.model.InventoryBalance
 import com.duluin.ftth.inventory.domain.model.InventoryMovement
+import com.duluin.ftth.inventory.domain.model.MovementKind
 import com.duluin.ftth.inventory.domain.model.MovementLeg
 import com.duluin.ftth.inventory.domain.model.MovementState
 import java.time.Instant
 import java.util.UUID
+
+/**
+ * Penyaring riwayat mutasi. Semua field opsional — null berarti "jangan saring".
+ * [itemId]/[locationId] menyaring lewat leg-nya, karena itulah satu-satunya tempat barang
+ * dan lokasi tercatat pada sebuah mutasi.
+ */
+data class MovementFilter(
+    val kind: MovementKind? = null,
+    val state: MovementState? = null,
+    val itemId: UUID? = null,
+    val locationId: UUID? = null,
+    val from: Instant? = null,
+    val until: Instant? = null,
+)
 
 /**
  * Penyimpanan ledger mutasi stok beserta proyeksi saldonya.
@@ -21,6 +38,16 @@ interface InventoryLedgerRepository {
     fun findById(movementId: UUID): InventoryMovement?
 
     fun findAll(tenantId: UUID): List<InventoryMovement>
+
+    /**
+     * Riwayat mutasi ber-halaman, terbaru dulu.
+     *
+     * [findAll] SENGAJA tidak dipakai layar riwayat: ledger gudang tumbuh selamanya dan tidak
+     * pernah dipangkas, jadi memuat seluruhnya hanya untuk menampilkan 20 baris pertama akan
+     * menghabiskan heap server begitu satu tenant melewati puluhan ribu mutasi — dan
+     * kegagalannya akan terlihat sebagai "aplikasi lambat", bukan sebagai query yang salah.
+     */
+    fun findPage(tenantId: UUID, filter: MovementFilter, page: PageRequest): Page<InventoryMovement>
 
     /**
      * Sisipkan mutasi baru. Mengembalikan `null` kalau sisipannya berhasil, atau mutasi yang

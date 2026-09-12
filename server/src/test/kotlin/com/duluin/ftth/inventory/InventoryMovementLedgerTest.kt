@@ -68,4 +68,36 @@ class InventoryMovementLedgerTest {
         pool.shutdown()
         assertThat(service.movements(tenant)).hasSize(1)
     }
+
+    /**
+     * Regresi: RESTOCK dulu tidak terdaftar sebagai mutasi satu arah, jadi SETIAP permintaan
+     * restock mati oleh invariant-nya sendiri ("paired movement must have balanced IN and OUT
+     * legs") padahal barang yang dijanjikan datang memang hanya punya leg IN. LOSS, SCRAP, dan
+     * WRITE_OFF menyimpan bom yang sama dan belum pernah tersentuh tes.
+     *
+     * Tes ini SENGAJA menyapu seluruh [MovementKind], bukan menyebut satu per satu: jenis mutasi
+     * baru yang salah menyatakan bentuk leg-nya akan gagal di sini, bukan di tangan petugas gudang.
+     */
+    @Test
+    fun `setiap jenis mutasi satu arah diterima sesuai bentuk leg yang dinyatakannya`() {
+        MovementKind.entries.forEach { kind ->
+            val service = InventoryMovementLedgerService(FakeInventoryLedger())
+            // Stok awal supaya leg OUT satu arah tidak tertolak sebagai saldo negatif.
+            service.apply(command("seed-$kind", MovementKind.RECEIVE, listOf(leg(LegDirection.IN, 10))))
+
+            val oneWay = { service.apply(command("one-way-$kind", kind, listOf(leg(LegDirection.OUT)))) }
+            when (kind.legShape) {
+                LegShape.BOUNDARY -> {
+                    val movement = oneWay()
+                    // Bentuk leg dan kebutuhan persetujuan harus konsisten dengan deklarasi enum-nya.
+                    assertThat(movement.state).isEqualTo(
+                        if (kind.requiresApproval) MovementState.PENDING_APPROVAL else MovementState.APPLIED,
+                    )
+                }
+                LegShape.PAIRED -> assertThatThrownBy { oneWay() }
+                    .describedAs("mutasi $kind berpasangan, leg timpang WAJIB ditolak")
+                    .isInstanceOf(IllegalArgumentException::class.java)
+            }
+        }
+    }
 }

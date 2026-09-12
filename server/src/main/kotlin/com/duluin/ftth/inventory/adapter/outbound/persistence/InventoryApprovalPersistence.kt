@@ -23,6 +23,9 @@ class InventoryApprovalJpaEntity(
     @Column(nullable = false, updatable = false) var amount: Long,
     @Column(nullable = false, updatable = false) var requesterId: UUID,
     @Column(updatable = false) var custodianId: UUID?,
+    // V180. Diikat saat permintaan dibuat, bukan saat diputuskan — lihat KDoc
+    // `InventoryApprovalRequest.movementId`.
+    @Column(updatable = false) var movementId: UUID?,
     @Column(nullable = false, updatable = false) var policyVersion: Long,
     @Column(nullable = false, columnDefinition = "jsonb", updatable = false) var policySnapshot: String,
     @Column(nullable = false, updatable = false) var policySnapshotHash: String,
@@ -90,11 +93,11 @@ interface InventoryApprovalJpaRepository : JpaRepository<InventoryApprovalJpaEnt
     @Query(
         value = """
             INSERT INTO inventory_approval (
-                id, tenant_id, approval_type, amount, requester_id, custodian_id, policy_version,
+                id, tenant_id, approval_type, amount, requester_id, custodian_id, movement_id, policy_version,
                 policy_snapshot, policy_snapshot_hash, operation_key, operation_hash, emergency_reason,
                 requested_at, expires_at, status, revision
             ) VALUES (
-                :id, :tenantId, :approvalType, :amount, :requesterId, :custodianId, :policyVersion,
+                :id, :tenantId, :approvalType, :amount, :requesterId, :custodianId, :movementId, :policyVersion,
                 CAST(:policySnapshot AS jsonb), :policySnapshotHash, :operationKey, :operationHash, :emergencyReason,
                 :requestedAt, :expiresAt, :status, :revision
             )
@@ -110,6 +113,7 @@ interface InventoryApprovalJpaRepository : JpaRepository<InventoryApprovalJpaEnt
         amount: Long,
         requesterId: UUID,
         custodianId: UUID?,
+        movementId: UUID?,
         policyVersion: Long,
         policySnapshot: String,
         policySnapshotHash: String,

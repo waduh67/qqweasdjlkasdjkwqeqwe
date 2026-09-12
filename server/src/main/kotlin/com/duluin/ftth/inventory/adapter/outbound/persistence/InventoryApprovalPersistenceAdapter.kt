@@ -46,7 +46,7 @@ class InventoryApprovalPersistenceAdapter(
     override fun appendIfAbsent(request: InventoryApprovalRequest): InventoryApprovalRequest? {
         val inserted = approvals.insertIfAbsent(
             request.approvalId, request.tenantId, request.type.name, request.amount, request.requesterId,
-            request.custodianId, request.policy.version, mapper.writeValueAsString(request.policy.toSnapshot()),
+            request.custodianId, request.movementId, request.policy.version, mapper.writeValueAsString(request.policy.toSnapshot()),
             request.policySnapshotHash, request.operationKey, request.operationHash, request.emergencyReason,
             request.requestedAt, request.expiresAt, request.status.name, request.revision,
         )
@@ -123,7 +123,7 @@ class InventoryApprovalPersistenceAdapter(
     private fun InventoryApprovalJpaEntity.toDomain(): InventoryApprovalRequest {
         val snapshot = mapper.readValue(policySnapshot, PolicySnapshotJson::class.java)
         return InventoryApprovalRequest(
-            id, tenantId!!, approvalType, amount, requesterId, custodianId, snapshot.toPolicy(),
+            id, tenantId!!, approvalType, amount, requesterId, custodianId, movementId, snapshot.toPolicy(),
             policySnapshotHash, operationKey, operationHash, emergencyReason, requestedAt, expiresAt,
             status, revision,
             decisions.findAllForApproval(tenantId!!, id).map {

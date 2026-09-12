@@ -7,6 +7,12 @@ import java.util.UUID
 interface InventoryLocationRepository {
     fun findById(id: UUID): InventoryLocation?
     fun findAll(tenantId: UUID): List<InventoryLocation> = emptyList()
+    /**
+     * Dipakai untuk menolak kode ganda dengan pesan yang bisa dibaca operator. UNIQUE
+     * `inventory_location_tenant_code_uq` tetap penjaga terakhirnya — pemeriksaan ini bisa
+     * disalip request bersamaan, dan yang kalah memang harus gagal di basis data.
+     */
+    fun findByCode(tenantId: UUID, code: String): InventoryLocation? = null
     fun save(location: InventoryLocation): InventoryLocation
 }
 

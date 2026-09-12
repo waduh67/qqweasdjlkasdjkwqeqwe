@@ -5,6 +5,7 @@ import com.duluin.ftth.iam.domain.catalog.PermissionCatalog
 import com.duluin.ftth.inventory.application.port.outbound.InventoryItemRepository
 import com.duluin.ftth.inventory.application.service.CycleCountCommand
 import com.duluin.ftth.inventory.application.service.CreateInventoryApproval
+import com.duluin.ftth.inventory.application.service.InventoryApprovalPolicyService
 import com.duluin.ftth.inventory.application.service.InventoryApprovalService
 import com.duluin.ftth.inventory.application.service.InventoryMovementLedgerService
 import com.duluin.ftth.inventory.application.service.InventoryReconciliationService
@@ -41,6 +42,7 @@ class InventoryIT {
     @Autowired private lateinit var materials: MaterialConsumptionService
     @Autowired private lateinit var reconciliation: InventoryReconciliationService
     @Autowired private lateinit var approvals: InventoryApprovalService
+    @Autowired private lateinit var policies: InventoryApprovalPolicyService
 
     // Dependensi opsional modul lain WAJIB benar-benar ter-inject; lihat tes di bawah.
     @Autowired private lateinit var movementApi: InventoryMovementApi
@@ -139,11 +141,18 @@ class InventoryIT {
                 ),
             )
 
+            // Kebijakan disetel DULU lewat matriks tenant. Permintaannya sendiri tidak lagi
+            // membawa tier — itulah perubahan P1: server yang menentukan siapa penyetujunya.
+            policies.configure(
+                InventoryApprovalPolicyMatrix(
+                    tenantA, InventoryApprovalType.RESTOCK, java.time.Duration.ofHours(24), false,
+                    listOf(ApprovalTierRule(1, 0, "Kepala Gudang", setOf(UUID.randomUUID()))),
+                ),
+            )
             val approval = approvals.request(
                 CreateInventoryApproval(
                     tenantA, InventoryApprovalType.RESTOCK, 500, actor, technician,
-                    InventoryApprovalPolicy(1, listOf(ApprovalTier(1, 0, setOf(UUID.randomUUID())))),
-                    "policy-hash", "approval-${unique()}", "approval-hash",
+                    "approval-${unique()}", "approval-hash",
                 ),
             )
 

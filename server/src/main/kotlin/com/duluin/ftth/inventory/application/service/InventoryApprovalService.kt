@@ -3,10 +3,13 @@ package com.duluin.ftth.inventory.application.service
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.inventory.InventoryApprovalDecisionEvent
+import com.duluin.ftth.inventory.application.port.outbound.InventoryApprovalAuditRepository
 import com.duluin.ftth.inventory.application.port.outbound.InventoryApprovalRepository
 import com.duluin.ftth.inventory.domain.model.*
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,14 +24,30 @@ import java.util.UUID
  * satu restart di tengah rantai approval menghapus jejak siapa sudah menyetujui apa —
  * padahal justru jejak itulah alasan fitur ini ada. Sekarang semuanya lewat
  * [InventoryApprovalRepository].
+ *
+ * Perubahan kedua, yang lebih penting: TIER DITENTUKAN SERVER. `request()` tidak lagi
+ * menerima [InventoryApprovalPolicy] dari pemanggil — ia membacanya dari
+ * [InventoryApprovalPolicyService]. Selama kebijakan datang dari body request, orang yang
+ * mengajukan penghapusbukuan aset juga menuliskan sendiri siapa yang boleh menyetujuinya.
  */
 @Service
 class InventoryApprovalService(
     private val approvals: InventoryApprovalRepository,
+    private val policyService: InventoryApprovalPolicyService,
+    private val emergencyAudit: InventoryApprovalAuditRepository,
+    /**
+     * Ledger ikut disuntik supaya status terminal LANGSUNG mengeksekusi efek yang dijanjikan.
+     * Tanpa ini, "disetujui" hanyalah label di tabel approval dan stoknya tidak pernah
+     * bergerak — lihat [executeEffect].
+     */
+    private val ledger: InventoryMovementLedgerService,
     private val clock: Clock = Clock.systemUTC(),
     private val events: ApplicationEventPublisher? = null,
     private val currentUser: CurrentUserProvider? = null,
+    private val auditor: AuditRecorder? = null,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     fun registerDelegation(delegation: ApproverDelegation) = approvals.saveDelegation(delegation)
 
@@ -43,18 +62,33 @@ class InventoryApprovalService(
         }
         val prior = approvals.findByOperation(command.tenantId, command.operationKey)
         if (prior != null) return replayOrConflict(prior, command.operationHash)
-        if (command.emergencyReason != null && !command.policy.emergencyAllowed) throw ValidationException("emergency approval is not enabled")
+
+        // Matriks dibaca di sini, dari server. Perhatikan bahwa `command` tidak punya satu pun
+        // field kebijakan — itu memang intinya: klien tidak bisa mengarang tier-nya sendiri.
+        val matrix = policyService.effectiveFor(command.tenantId, command.type)
+        val policy = matrix.toPolicy()
+        if (command.emergencyReason != null && !policy.emergencyAllowed) throw ValidationException("emergency approval is not enabled")
 
         val now = Instant.now(clock)
+        // Override darurat MELANGKAHI seluruh rantai tier — itulah arti "override". Karena
+        // kontrol empat-mata benar-benar dipotong, jejaknya ditulis di bawah dalam transaksi
+        // yang SAMA: kalau auditnya gagal, overridenya ikut gagal.
+        val emergency = command.emergencyReason != null
         val request = InventoryApprovalRequest(
             UuidV7.generate(), command.tenantId, command.type, command.amount, command.requesterId,
-            command.custodianId, command.policy, command.policySnapshotHash, command.operationKey,
-            command.operationHash, command.emergencyReason, now, now.plus(command.policy.expiry),
+            command.custodianId, command.movementId, policy,
+            InventoryApprovalPolicyService.snapshotHash(matrix), command.operationKey,
+            command.operationHash, command.emergencyReason, now, now.plus(policy.expiry),
+            if (emergency) InventoryApprovalStatus.APPROVED else InventoryApprovalStatus.PENDING,
         )
         // Penjaga sebenarnya terhadap dua request bersamaan adalah UNIQUE
         // (tenant_id, operation_key); yang kalah menerima baris pemenang sebagai replay.
-        val raced = approvals.appendIfAbsent(request) ?: return request
-        return replayOrConflict(raced, command.operationHash)
+        val raced = approvals.appendIfAbsent(request)
+        if (raced != null) return replayOrConflict(raced, command.operationHash)
+
+        if (emergency) recordEmergency(request, matrix, now)
+        if (request.status == InventoryApprovalStatus.APPROVED) emitEffect(request, now)
+        return request
     }
 
     @Transactional
@@ -106,16 +140,28 @@ class InventoryApprovalService(
         approvals.appendDecision(approvalId, snapshot)
         approvals.updateStatus(approvalId, updated)
 
-        if (status != InventoryApprovalStatus.PENDING) {
-            val effect = InventoryApprovalEffect(approvalId, updated.tenantId, updated.type, status, command.movementId, updated.operationKey, now)
-            // UNIQUE (tenant_id, approval_id) pada `inventory_approval_effect` yang menjamin
-            // satu approval memancarkan efek TEPAT sekali; event hanya ikut kalau baris efeknya
-            // memang baru, supaya retry tidak memicu mutasi stok dua kali.
-            if (approvals.recordEffect(effect)) {
-                events?.publishEvent(InventoryApprovalDecisionEvent(updated.tenantId, approvalId, updated.type, status, command.movementId, updated.operationKey))
-            }
-        }
+        if (status != InventoryApprovalStatus.PENDING) emitEffect(updated, now)
         return updated
+    }
+
+    /**
+     * Sapu permintaan yang sudah lewat tenggat menjadi EXPIRED dan batalkan mutasi yang
+     * digantungnya.
+     *
+     * Tanpa ini, permintaan yang tak pernah disentuh approver menggantung PENDING selamanya
+     * di antrean — dan yang lebih berbahaya, mutasi stok terkaitnya tetap PENDING_APPROVAL
+     * sehingga barangnya tidak pernah benar-benar masuk MAUPUN dilepaskan. Dipanggil
+     * [InventoryApprovalExpiryWorker] per tenant.
+     */
+    @Transactional
+    fun expireOverdue(tenantId: UUID, now: Instant = Instant.now(clock)): List<UUID> {
+        val overdue = approvals.findPending(tenantId).filter { now >= it.expiresAt }
+        return overdue.mapNotNull { request ->
+            approvals.markExpired(request.approvalId, request.revision + 1)
+            val expired = request.copy(status = InventoryApprovalStatus.EXPIRED, revision = request.revision + 1)
+            emitEffect(expired, now)
+            request.approvalId
+        }
     }
 
     @Transactional(readOnly = true)
@@ -133,16 +179,119 @@ class InventoryApprovalService(
     @Transactional(readOnly = true)
     fun effects(tenantId: UUID): List<InventoryApprovalEffect> = approvals.effects(tenantId)
 
+    /**
+     * Terbitkan efek TEPAT sekali, lalu jalankan akibatnya pada ledger.
+     *
+     * UNIQUE (tenant_id, approval_id) pada `inventory_approval_effect` yang menjamin
+     * ketepatan sekali itu; mutasi stok hanya digerakkan kalau baris efeknya memang baru,
+     * supaya retry tidak memotong stok dua kali.
+     */
+    private fun emitEffect(request: InventoryApprovalRequest, at: Instant) {
+        val effect = InventoryApprovalEffect(
+            request.approvalId, request.tenantId, request.type, request.status, request.movementId,
+            request.operationKey, at,
+        )
+        if (!approvals.recordEffect(effect)) return
+        executeEffect(request)
+        events?.publishEvent(
+            InventoryApprovalDecisionEvent(
+                request.tenantId, request.approvalId, request.type, request.status,
+                request.movementId, request.operationKey,
+            ),
+        )
+    }
+
+    /**
+     * Tutup loop approval -> mutasi: APPROVED memberlakukan mutasi yang digantung,
+     * REJECTED/EXPIRED mematikannya.
+     *
+     * Kalau langkah ini tidak ada, "disetujui" cuma label. Mutasi restock tetap
+     * PENDING_APPROVAL, saldo tidak bertambah sebaris pun, dan petugas gudang baru sadar
+     * saat barang fisik di rak tidak cocok dengan angka di layar — berbulan-bulan kemudian.
+     * Sebaliknya penolakan yang tidak mematikan mutasi meninggalkan mutasi hantu yang bisa
+     * disahkan siapa saja lewat jalur lain.
+     */
+    private fun executeEffect(request: InventoryApprovalRequest) {
+        val movementId = request.movementId ?: return
+        // runCatching: mutasi yang sudah tidak PENDING_APPROVAL (mis. sudah disahkan jalur
+        // lain, atau saldo sudah keburu tidak cukup) tidak boleh MEMBATALKAN keputusan
+        // approval yang sah — keputusannya adalah bukti audit dan wajib tetap tersimpan.
+        // Kegagalannya dicatat supaya operator tahu ada mutasi yang butuh tindakan manual.
+        runCatching {
+            when (request.status) {
+                InventoryApprovalStatus.APPROVED -> ledger.approvePending(movementId)
+                InventoryApprovalStatus.REJECTED, InventoryApprovalStatus.EXPIRED -> ledger.rejectPending(movementId)
+                else -> null
+            }
+        }.onFailure {
+            log.warn(
+                "Efek persetujuan {} ({}) gagal diterapkan pada mutasi {}: {}",
+                request.approvalId, request.status, movementId, it.message,
+            )
+        }
+    }
+
+    /**
+     * Tulis jejak override darurat SEBELUM efeknya berlaku, di transaksi yang sama.
+     *
+     * `AuditRecorder` juga dipanggil supaya override muncul di linimasa audit global, tapi
+     * ia TIDAK cukup sendirian: publikasinya ditulis modul audit pada fase AFTER_COMMIT dan
+     * kegagalannya SENGAJA ditelan agar tidak menggagalkan operasi bisnis. Untuk audit biasa
+     * itu benar; untuk satu-satunya jejak bahwa empat-mata dilangkahi, itu berarti override
+     * bisa berhasil tanpa bekas.
+     */
+    private fun recordEmergency(request: InventoryApprovalRequest, matrix: InventoryApprovalPolicyMatrix, at: Instant) {
+        val reason = request.emergencyReason ?: return
+        val bypassed = matrix.bypassedTiers(request.amount)
+        emergencyAudit.recordEmergency(
+            EmergencyOverrideAudit(
+                request.tenantId, request.approvalId, request.type, request.amount,
+                request.requesterId, request.custodianId, reason, bypassed, at,
+            ),
+        )
+        auditor?.record(
+            "inventory.approval.emergency", "InventoryApproval", request.approvalId, request.tenantId,
+            mapOf(
+                "type" to request.type.name,
+                "amount" to request.amount,
+                "reason" to reason,
+                "bypassedTiers" to bypassed,
+                "movementId" to request.movementId?.toString(),
+            ),
+        )
+    }
+
     private fun replayOrConflict(stored: InventoryApprovalRequest, operationHash: String): InventoryApprovalRequest {
         if (stored.operationHash != operationHash) throw ConflictException("approval operation key was used with a different payload")
         return stored
     }
 }
 
+/**
+ * Permintaan persetujuan: hanya menyebut APA yang diminta.
+ *
+ * Perhatikan yang HILANG dibanding versi sebelumnya: `policy` dan `policySnapshotHash`.
+ * Keduanya sekarang milik server ([InventoryApprovalPolicyService]) — itu inti dari
+ * perubahan ini, bukan efek samping refactor.
+ */
 data class CreateInventoryApproval(
-    val tenantId: UUID, val type: InventoryApprovalType, val amount: Long, val requesterId: UUID, val custodianId: UUID?, val policy: InventoryApprovalPolicy, val policySnapshotHash: String, val operationKey: String, val operationHash: String, val emergencyReason: String? = null,
+    val tenantId: UUID,
+    val type: InventoryApprovalType,
+    val amount: Long,
+    val requesterId: UUID,
+    val custodianId: UUID?,
+    val operationKey: String,
+    val operationHash: String,
+    /** Mutasi PENDING_APPROVAL yang akan diberlakukan begitu permintaan ini disetujui. */
+    val movementId: UUID? = null,
+    val emergencyReason: String? = null,
 )
 
 data class DecideInventoryApproval(
-    val tenantId: UUID, val approverId: UUID, val decision: InventoryApprovalDecision, val operationKey: String, val operationHash: String, val reason: String? = null, val movementId: UUID? = null,
+    val tenantId: UUID,
+    val approverId: UUID,
+    val decision: InventoryApprovalDecision,
+    val operationKey: String,
+    val operationHash: String,
+    val reason: String? = null,
 )

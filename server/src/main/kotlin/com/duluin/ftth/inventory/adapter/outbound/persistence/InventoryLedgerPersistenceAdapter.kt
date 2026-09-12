@@ -1,16 +1,21 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
+import com.duluin.ftth.common.domain.Page
+import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLedgerRepository
+import com.duluin.ftth.inventory.application.port.outbound.MovementFilter
 import com.duluin.ftth.inventory.domain.model.InventoryBalance
 import com.duluin.ftth.inventory.domain.model.InventoryMovement
 import com.duluin.ftth.inventory.domain.model.LegDirection
 import com.duluin.ftth.inventory.domain.model.MovementLeg
 import com.duluin.ftth.inventory.domain.model.MovementState
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
+import org.springframework.data.domain.PageRequest as SpringPageRequest
 
 /**
  * Menyimpan ledger mutasi stok ke `inventory_movement` + `inventory_movement_leg` dan
@@ -41,6 +46,27 @@ class InventoryLedgerPersistenceAdapter(
         // per-baris akan melahirkan N+1 query yang persis sebesar panjang riwayat gudang.
         val legsByMovement = legs.findAllForMovements(tenantId, rows.map { it.id }).groupBy { it.movementId }
         return rows.map { it.toDomain(legsByMovement[it.id].orEmpty()) }
+    }
+
+    /**
+     * Halaman riwayat. Leg-nya diambil dengan SATU query untuk seluruh isi halaman, bukan
+     * per baris: versi per-baris melahirkan N+1 query yang jumlahnya tepat sebesar ukuran
+     * halaman, dan layar riwayat adalah halaman yang paling sering dibuka petugas gudang.
+     */
+    override fun findPage(tenantId: UUID, filter: MovementFilter, page: PageRequest): Page<InventoryMovement> {
+        // Urutan SENGAJA dipaksa di sini, bukan diambil dari `page.sort`: paginasi tanpa
+        // urutan yang deterministik membuat baris yang sama bisa muncul di dua halaman
+        // berbeda, dan `id` (UUIDv7, monoton naik) jadi pemecah seri waktu yang identik.
+        val pageable = SpringPageRequest.of(page.page, page.size, Sort.by(Sort.Direction.DESC, "serverReceivedAt", "id"))
+        val rows = movements.search(
+            tenantId, filter.kind, filter.state, filter.itemId, filter.locationId, filter.from, filter.until, pageable,
+        )
+        if (rows.isEmpty) return Page(emptyList(), rows.number, rows.size, rows.totalElements)
+        val legsByMovement = legs.findAllForMovements(tenantId, rows.content.map { it.id }).groupBy { it.movementId }
+        return Page(
+            rows.content.map { it.toDomain(legsByMovement[it.id].orEmpty()) },
+            rows.number, rows.size, rows.totalElements,
+        )
     }
 
     override fun appendIfAbsent(movement: InventoryMovement): InventoryMovement? {

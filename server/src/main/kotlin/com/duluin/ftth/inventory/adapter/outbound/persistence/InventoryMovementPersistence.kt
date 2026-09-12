@@ -73,6 +73,41 @@ interface InventoryMovementJpaRepository : JpaRepository<InventoryMovementJpaEnt
     fun findAllForTenant(tenantId: UUID): List<InventoryMovementJpaEntity>
 
     /**
+     * Riwayat ber-halaman dengan penyaring opsional.
+     *
+     * Saringan item/lokasi memakai EXISTS pada leg, bukan JOIN: satu mutasi transfer punya
+     * dua leg untuk item yang sama, dan JOIN akan memunculkan mutasi itu dua kali di halaman
+     * — operator akan mengira barangnya berpindah dua kali.
+     */
+    @Query(
+        """
+        select m from InventoryMovementJpaEntity m
+        where m.tenantId = :tenantId
+          and (:kind is null or m.kind = :kind)
+          and (:state is null or m.state = :state)
+          and (cast(:from as timestamp) is null or m.serverReceivedAt >= :from)
+          and (cast(:until as timestamp) is null or m.serverReceivedAt <= :until)
+          and (:itemId is null or exists (
+                select 1 from InventoryMovementLegJpaEntity l
+                where l.movementId = m.id and l.tenantId = m.tenantId and l.itemId = :itemId))
+          and (:locationId is null or exists (
+                select 1 from InventoryMovementLegJpaEntity l2
+                where l2.movementId = m.id and l2.tenantId = m.tenantId and l2.locationId = :locationId))
+        """,
+    )
+    @Suppress("LongParameterList")
+    fun search(
+        tenantId: UUID,
+        kind: MovementKind?,
+        state: MovementState?,
+        itemId: UUID?,
+        locationId: UUID?,
+        from: Instant?,
+        until: Instant?,
+        pageable: org.springframework.data.domain.Pageable,
+    ): org.springframework.data.domain.Page<InventoryMovementJpaEntity>
+
+    /**
      * Sisipan yang aman terhadap lomba: UNIQUE (tenant_id, operation_namespace, operation_key)
      * yang memutuskan pemenangnya, bukan pemeriksaan baca-dulu di aplikasi. ON CONFLICT DO
      * NOTHING SENGAJA dipakai alih-alih membiarkan constraint melempar, supaya pihak yang

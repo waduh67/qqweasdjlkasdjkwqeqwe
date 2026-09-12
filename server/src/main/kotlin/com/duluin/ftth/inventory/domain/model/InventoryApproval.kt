@@ -32,6 +32,16 @@ data class InventoryApprovalRequest(
     val amount: Long,
     val requesterId: UUID,
     val custodianId: UUID?,
+    /**
+     * Mutasi stok yang diotorisasi permintaan ini, diikat SAAT PERMINTAAN DIBUAT.
+     *
+     * Dulu id mutasi hanya muncul di keputusan — dikirim approver bersama klik "setuju".
+     * Akibatnya approval yang disetujui tapi pemanggilnya lupa mengisinya tidak pernah
+     * memberlakukan apa pun: mutasinya diam di PENDING_APPROVAL selamanya, restock tercatat
+     * "disetujui" tapi saldo tidak pernah bertambah, dan selisihnya baru ketahuan saat stok
+     * fisik diadu dengan sistem. Null hanya untuk permintaan yang memang belum punya mutasi.
+     */
+    val movementId: UUID?,
     val policy: InventoryApprovalPolicy,
     val policySnapshotHash: String,
     val operationKey: String,
