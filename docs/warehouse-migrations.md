@@ -14,11 +14,20 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 issue extension | V175.11, V175.12, V175.13 | 14 | Immutable issue snapshots and unpick records; issued supply quantities; deferred live issue/reservation binding and explicit UNPICKED lifecycle; terminal dispatch posting proof |
 | M03 custody extension | V175.14 | 15 | Immutable receiver acknowledgement, quantitative receipt lines, exact posting and issue lifecycle binding |
 | M03 usage extension | V175.15, V175.16, V175.17, V175.18, V175.19, V175.20, V175.21 | 16 | Immutable acknowledged physical usage lines, standalone material facts and explicit NONE snapshots; internally tenant-scoped receipt/posting/fact bindings; projection-rebuild-safe consumed guard and terminal consumption fence; separate source-plan and current WO revisions; final-state projection validation and sealed posting graph |
+| M03 consumed truth correction | V175.22 | 16 | Immutable-history-anchored consumed projection and terminal lineage validation, including DELETE and exact transactional rebuild |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M03: reservation task16
+
+The independent T16-CONSUMED-PROJECTION-LINEAGE correction reserves
+`V175_22__warehouse_consumed_projection_lineage.sql` before SQL creation.
+Consumed posting history, not a currently positive projection, anchors exact
+final positions and terminal identities. Balance and segment mutation sides
+must revalidate captured identities even after zero/delete; replay validates
+the same truth without repair. Exact same-transaction rebuild remains valid.
+V175.21 and every predecessor remain byte-identical; V176+ is untouched.
 
 Task16 reserves `V175_15__warehouse_material_usage.sql` and
 `V175_16__warehouse_material_usage_binding.sql` before SQL creation.
