@@ -109,8 +109,7 @@ class WorkOrderMaterialsITRestart : MaterialWorkflowFixture() {
             requireNotNull(System.getProperty("warehouse.test.classpath")), WarehouseReceiptRestartProcess::class.java.name,
             port.toString(), "material-$name", database.first, database.second).redirectErrorStream(true).redirectOutput(log.toFile()).start()
         try {
-            await().atMost(Duration.ofSeconds(180)).until { check(process.isAlive) { Files.readString(log) }; Files.exists(port) }
-            return process to Files.readString(port).toInt()
+            return process to com.duluin.ftth.inventory.ChildProcessPort.await(process,port,log)
         } catch (failure: Exception) { stop(process); throw AssertionError("Child startup failed: ${Files.readString(log)}", failure) }
     }
     private fun stop(process: Process) { process.destroyForcibly(); assertThat(process.waitFor(15, TimeUnit.SECONDS)).isTrue() }

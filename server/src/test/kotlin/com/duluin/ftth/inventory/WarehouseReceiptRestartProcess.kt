@@ -20,6 +20,6 @@ object WarehouseReceiptRestartProcess {
                 check(!rows.getBoolean(4) && !rows.getBoolean(5))
             }
         } }
-        Files.writeString(Path.of(args[0]), requireNotNull((context as WebServerApplicationContext).webServer).port.toString())
+        ChildProcessPort.publish(Path.of(args[0]), requireNotNull((context as WebServerApplicationContext).webServer).port)
     }
 }
