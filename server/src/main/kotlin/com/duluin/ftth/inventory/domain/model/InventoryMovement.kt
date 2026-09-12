@@ -37,9 +37,30 @@ enum class LegShape {
  * terpisah yang sama-sama dikunci pada enum ini pasti akan menyimpang begitu ada jenis baru,
  * dan penyimpangannya baru ketahuan saat petugas gudang gagal menyimpan transaksi.
  */
-enum class MovementKind(val legShape: LegShape, val requiresApproval: Boolean) {
+enum class MovementKind(
+    val legShape: LegShape,
+    val requiresApproval: Boolean,
+    /**
+     * Status yang WAJIB dipakai baris aset berserial begitu mutasi ini benar-benar berlaku —
+     * atau null kalau ledger tidak boleh menyentuh aset sama sekali.
+     *
+     * Null BUKAN berarti "aset tidak berpindah". Untuk ISSUE/TRANSFER/RETURN, perpindahan
+     * asetnya sudah dikerjakan `InventoryOperationsService` di transaksi yang sama karena
+     * mutasi-mutasi itu berlaku SEKETIKA; memindahkannya sekali lagi di sini akan menabrak
+     * tabel transisi ("invalid inventory transition ISSUED -> ISSUED") dan menggagalkan
+     * pengeluaran barang yang sebenarnya sudah benar.
+     *
+     * Yang terdaftar di sini justru yang TIDAK berlaku seketika: keempatnya menunggu
+     * persetujuan. Di sana status aset TIDAK BOLEH berpindah saat permintaan diajukan — kalau
+     * ONT sudah ditandai DISPOSED begitu formulir hapus buku dikirim, penolakan approval
+     * meninggalkan unit sehat yang tidak bisa dikeluarkan lagi oleh siapa pun. Jadi ledger yang
+     * memindahkannya, TEPAT saat leg-nya dibukukan, di transaksi yang sama: saldo dan status
+     * aset tidak punya celah untuk berbeda arah.
+     */
+    val settlesSerialTo: InventoryStatus? = null,
+) {
     /** Barang dijanjikan masuk dari pemasok — leg IN saja, dan wajib disetujui dulu. */
-    RESTOCK(LegShape.BOUNDARY, requiresApproval = true),
+    RESTOCK(LegShape.BOUNDARY, requiresApproval = true, settlesSerialTo = InventoryStatus.AVAILABLE),
 
     /** Barang benar-benar diterima di gudang. Leg IN saja. */
     RECEIVE(LegShape.BOUNDARY, requiresApproval = false),
@@ -63,9 +84,14 @@ enum class MovementKind(val legShape: LegShape, val requiresApproval: Boolean) {
     /** Koreksi stok. Bisa menambah maupun mengurangi, jadi selalu lewat persetujuan. */
     ADJUSTMENT(LegShape.BOUNDARY, requiresApproval = true),
 
-    LOSS(LegShape.BOUNDARY, requiresApproval = true),
-    SCRAP(LegShape.BOUNDARY, requiresApproval = true),
-    WRITE_OFF(LegShape.BOUNDARY, requiresApproval = true),
+    /** Barang hilang. Unit berserial berakhir LOST — masih bisa ditutup jadi DISPOSED nanti. */
+    LOSS(LegShape.BOUNDARY, requiresApproval = true, settlesSerialTo = InventoryStatus.LOST),
+
+    /** Barang rusak dan dimusnahkan; DISPOSED bersifat terminal. */
+    SCRAP(LegShape.BOUNDARY, requiresApproval = true, settlesSerialTo = InventoryStatus.DISPOSED),
+
+    /** Hapus buku. Sama terminalnya dengan SCRAP; yang membedakan hanya alasan akuntansinya. */
+    WRITE_OFF(LegShape.BOUNDARY, requiresApproval = true, settlesSerialTo = InventoryStatus.DISPOSED),
     COUNT_VARIANCE(LegShape.BOUNDARY, requiresApproval = true),
 
     DISPOSAL(LegShape.BOUNDARY, requiresApproval = false),

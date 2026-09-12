@@ -93,6 +93,24 @@ class InventoryCatalogController(
         val actor = currentUser.current()
         return registration.registerBulk(body.toCommand(actor.tenantId, actor.userId))
     }
+
+    /**
+     * Permintaan restock untuk barang BERSERIAL — padanan `/restock-requests` yang selama ini
+     * hanya melayani barang curah (jalur itu menolak item berserial mentah-mentah).
+     *
+     * Izinnya `inventory.restock.request`, sama dengan restock curah, BUKAN
+     * `inventory.item.manage` seperti pendaftaran biasa: yang dilakukan di sini adalah
+     * mengajukan barang masuk, bukan merapikan master data. Menaruhnya di bawah izin master
+     * data akan memberi hak mengajukan kiriman kepada setiap orang yang boleh mengubah nama
+     * item.
+     */
+    @PostMapping("/serialized/restock-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@authz.can('inventory.restock.request')")
+    fun requestSerialRestock(@Valid @RequestBody body: BulkSerialBody): BulkSerialRegistrationResult {
+        val actor = currentUser.current()
+        return registration.requestRestock(body.toCommand(actor.tenantId, actor.userId))
+    }
 }
 
 data class LocationBody(
@@ -157,11 +175,12 @@ data class BulkSerialBody(
     @field:NotBlank val reason: String,
     @field:NotBlank val operationKey: String,
     @field:NotBlank val payloadHash: String,
+    val emergencyReason: String? = null,
 ) {
     fun toCommand(tenantId: UUID, actorId: UUID) = BulkSerialRegistration(
         tenantId, actorId, itemId, locationId, custodianId,
         serials.map { SerialRegistrationLine(it.serialNumber, it.macAddress) },
-        reason, operationKey, payloadHash,
+        reason, operationKey, payloadHash, emergencyReason,
     )
 }
 

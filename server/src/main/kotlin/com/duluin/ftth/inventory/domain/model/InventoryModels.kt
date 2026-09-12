@@ -3,7 +3,44 @@ package com.duluin.ftth.inventory.domain.model
 import java.util.UUID
 
 enum class InventoryStatus {
-    AVAILABLE, RESERVED, ISSUED, IN_TRANSIT, CONSUMED, RETURNED, QUARANTINE, LOST, DISPOSED
+    AVAILABLE, RESERVED, ISSUED, IN_TRANSIT, CONSUMED, RETURNED, QUARANTINE, LOST, DISPOSED,
+
+    /**
+     * Unit sudah TERDAFTAR tapi belum jadi stok: nomor serinya sudah tercatat (dan karena itu
+     * sudah ikut diadu dengan seluruh SN/MAC yang pernah ada), namun barangnya belum masuk rak.
+     * Dipakai restock berserial yang persetujuannya masih menggantung.
+     *
+     * Kenapa keadaan ini WAJIB ada, bukan sekadar memakai AVAILABLE dulu lalu dikoreksi:
+     * pendaftaran serial adalah satu-satunya tempat duplikat SN/MAC tertangkap, dan itu harus
+     * terjadi SEBELUM kiriman disetujui — kalau tidak, duplikatnya baru ketahuan setelah
+     * approval selesai dan seluruh batch harus dibatalkan mundur. Tapi mendaftarkannya sebagai
+     * AVAILABLE berarti gudang mengaku punya barang yang belum pernah datang, dan kalau
+     * restock-nya kemudian DITOLAK, unit hantu itu tetap berdiri di daftar aset sampai ada yang
+     * membandingkannya dengan rak fisik berbulan-bulan kemudian.
+     *
+     * Namanya menyebut apa yang sedang ditunggu (PENERIMAAN barang), bukan apa yang sedang
+     * diproses (persetujuan): unit ini tetap belum jadi stok walaupun approval-nya sudah lewat
+     * tapi barangnya belum sampai, dan nama seperti `PENDING_APPROVAL` akan berbohong di sana.
+     *
+     * ATURAN yang menempel padanya: AWAITING_RECEIPT adalah SATU-SATUNYA status aset yang tidak
+     * pernah punya baris di proyeksi saldo. Itulah yang membuat saldo dan daftar aset tidak
+     * pernah berbeda arah selama masa tunggu — keduanya sama-sama menghitung nol.
+     */
+    AWAITING_RECEIPT,
+}
+
+/**
+ * Custody yang WAJIB menyertai sebuah status, atau null kalau statusnya tidak memaksa apa pun.
+ *
+ * Dipakai dua tempat yang harus sepakat: pembangun leg mutasi (dimensi saldo tujuan) dan
+ * [SerializedAsset.settle] (baris asetnya). Kalau keduanya menghitung sendiri-sendiri, saldo
+ * bisa mendarat di dimensi `(DISPOSED, WAREHOUSE)` sementara asetnya di `(DISPOSED, DISPOSED)`
+ * — dua baris yang tidak akan pernah bisa direkonsiliasi lagi.
+ */
+fun InventoryStatus.requiredOwnerKind(): OwnerKind? = when (this) {
+    InventoryStatus.LOST -> OwnerKind.LOST
+    InventoryStatus.DISPOSED -> OwnerKind.DISPOSED
+    else -> null
 }
 
 enum class LocationKind { WAREHOUSE, BIN, VEHICLE, TECHNICIAN, CUSTOMER_SITE, QUARANTINE, LOST, DISPOSED, TRANSIT }
@@ -91,11 +128,46 @@ data class SerializedAsset(
         require(nextCustody.locationId == destination.id || nextCustody.ownerKind == OwnerKind.TRANSIT) {
             "custody does not claim destination"
         }
-        require(status != InventoryStatus.CONSUMED && status != InventoryStatus.DISPOSED) {
-            "consumed or disposed asset cannot be relocated"
+        // LOST dan AWAITING_RECEIPT ikut ditolak (bukan hanya CONSUMED/DISPOSED): unit yang
+        // dinyatakan hilang atau yang barangnya belum datang TIDAK ADA di rak mana pun, jadi
+        // "memindahkannya" hanya memindahkan kebohongan ke lokasi lain — dan begitu ia tercatat
+        // di gudang tujuan, tidak ada lagi yang ingat bahwa ia sebenarnya tak pernah ditemukan.
+        require(
+            status != InventoryStatus.CONSUMED && status != InventoryStatus.DISPOSED &&
+                status != InventoryStatus.LOST && status != InventoryStatus.AWAITING_RECEIPT,
+        ) {
+            "consumed, disposed, lost, or awaiting-receipt asset cannot be relocated"
         }
         return copy(locationId = destination.id, custody = nextCustody)
     }
+
+    /**
+     * Pindah STATUS tanpa pindah tempat — penghapusbukuan (LOSS/SCRAP/WRITE_OFF) dan penerimaan
+     * restock berserial yang akhirnya disetujui.
+     *
+     * Tidak bisa memakai [transition]: ia menuntut [InventoryLocation] tujuan, padahal unit yang
+     * dihapusbukukan TIDAK KE MANA-MANA — ia tetap di rak yang sama, hanya berhenti dihitung
+     * sebagai barang sehat. Memaksa jalur itu berarti memuat baris lokasi hanya untuk
+     * membuktikan bahwa tujuannya sama dengan asalnya.
+     *
+     * Custody ikut berpindah kalau statusnya memaksa ([requiredOwnerKind]) — aset DISPOSED yang
+     * custody-nya masih WAREHOUSE akan ditolak invariant konstruktornya sendiri.
+     */
+    fun settle(to: InventoryStatus): SerializedAsset {
+        require(isAllowed(status, to)) { "invalid inventory transition $status -> $to" }
+        val ownerKind = to.requiredOwnerKind() ?: custody.ownerKind
+        return copy(status = to, custody = custody.copy(ownerKind = ownerKind))
+    }
+
+    /**
+     * Bisakah unit ini dipindahkan ke [to]?
+     *
+     * Ada supaya permukaan tulis bisa MENOLAK DI MUKA memakai tabel transisi yang SAMA dengan
+     * yang dipakai saat mutasinya benar-benar berlaku. Tanpa ini, permintaan hapus buku atas
+     * unit yang sudah dihapusbukukan lolos sampai ke antrean approval, lalu meledak berjam-jam
+     * kemudian di tangan approver — yang tidak bisa berbuat apa-apa selain menolaknya.
+     */
+    fun canSettleTo(to: InventoryStatus): Boolean = isAllowed(status, to)
 
     fun linkInstalledOnu(onuId: UUID): SerializedAsset {
         require(status == InventoryStatus.ISSUED || status == InventoryStatus.CONSUMED) {
@@ -107,14 +179,50 @@ data class SerializedAsset(
 
     companion object {
         private val MAC = Regex("(?i)^[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$")
-        private fun isAllowed(from: InventoryStatus, to: InventoryStatus): Boolean = when (from) {
-            InventoryStatus.AVAILABLE -> to in setOf(InventoryStatus.RESERVED, InventoryStatus.ISSUED, InventoryStatus.IN_TRANSIT, InventoryStatus.QUARANTINE, InventoryStatus.LOST)
-            InventoryStatus.RESERVED -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.ISSUED, InventoryStatus.IN_TRANSIT)
-            InventoryStatus.ISSUED -> to in setOf(InventoryStatus.CONSUMED, InventoryStatus.RETURNED, InventoryStatus.QUARANTINE, InventoryStatus.LOST)
-            InventoryStatus.IN_TRANSIT -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.ISSUED, InventoryStatus.RETURNED, InventoryStatus.QUARANTINE, InventoryStatus.LOST)
-            InventoryStatus.RETURNED -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.QUARANTINE)
-            InventoryStatus.QUARANTINE, InventoryStatus.LOST -> to == InventoryStatus.DISPOSED
-            InventoryStatus.CONSUMED, InventoryStatus.DISPOSED -> false
+
+        /**
+         * Keadaan yang masih MEMEGANG barang fisik, jadi masih bisa dihapusbukukan.
+         *
+         * LOST ikut di sini karena unit yang hilang memang lazim ditutup jadi DISPOSED setelah
+         * pencarian dihentikan. Yang TIDAK ikut: CONSUMED dan DISPOSED (sudah terminal —
+         * menghapusbukukan dua kali akan memotong saldo dua kali untuk satu unit yang sama) dan
+         * AWAITING_RECEIPT (barangnya belum pernah datang; yang batal itu kirimannya, dan
+         * jalurnya adalah penolakan restock, bukan penghapusbukuan aset).
+         */
+        private val WRITE_OFF_SOURCES = setOf(
+            InventoryStatus.AVAILABLE, InventoryStatus.RESERVED, InventoryStatus.ISSUED,
+            InventoryStatus.IN_TRANSIT, InventoryStatus.RETURNED, InventoryStatus.QUARANTINE,
+            InventoryStatus.LOST,
+        )
+
+        private fun isAllowed(from: InventoryStatus, to: InventoryStatus): Boolean = when {
+            // Tidak ada transisi ke diri sendiri: perpindahan tempat tanpa ganti status punya
+            // jalurnya sendiri ([relocate]). Aturan ini juga yang menutup LOST -> LOST.
+            from == to -> false
+            /*
+             * Hapus buku bisa terjadi dari keadaan hidup MANA PUN, bukan hanya dari karantina.
+             *
+             * Dulu DISPOSED hanya bisa dicapai dari QUARANTINE/LOST. Bentuk itu masuk akal di
+             * atas kertas — "periksa dulu, baru musnahkan" — tapi ia membuat kasus paling umum
+             * mustahil: ONT yang jelas-jelas hancur di rak (terlindas forklift, kena banjir)
+             * harus lebih dulu dikarantina lewat mutasi yang tak pernah benar-benar terjadi,
+             * hanya supaya mutasi berikutnya diterima. Mata kedua tetap dijaga di tempat yang
+             * benar: LOSS/SCRAP/WRITE_OFF semuanya `requiresApproval = true`.
+             */
+            to == InventoryStatus.LOST || to == InventoryStatus.DISPOSED -> from in WRITE_OFF_SOURCES
+            else -> when (from) {
+                InventoryStatus.AVAILABLE -> to in setOf(InventoryStatus.RESERVED, InventoryStatus.ISSUED, InventoryStatus.IN_TRANSIT, InventoryStatus.QUARANTINE)
+                InventoryStatus.RESERVED -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.ISSUED, InventoryStatus.IN_TRANSIT)
+                InventoryStatus.ISSUED -> to in setOf(InventoryStatus.CONSUMED, InventoryStatus.RETURNED, InventoryStatus.QUARANTINE)
+                InventoryStatus.IN_TRANSIT -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.ISSUED, InventoryStatus.RETURNED, InventoryStatus.QUARANTINE)
+                InventoryStatus.RETURNED -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.QUARANTINE)
+                // Restock berserial yang disetujui: barangnya sampai, unitnya jadi stok. Satu-satunya
+                // jalan keluar AWAITING_RECEIPT — kiriman yang DITOLAK tidak berpindah status, barisnya
+                // memang dihapus (lihat InventoryMovementLedgerService.releaseSerialAssets).
+                InventoryStatus.AWAITING_RECEIPT -> to == InventoryStatus.AVAILABLE
+                InventoryStatus.QUARANTINE, InventoryStatus.LOST -> false
+                InventoryStatus.CONSUMED, InventoryStatus.DISPOSED -> false
+            }
         }
     }
 }

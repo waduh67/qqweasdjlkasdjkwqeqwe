@@ -28,6 +28,16 @@ interface SerializedAssetRepository {
      * berlaku kalau kuncinya benar-benar mendarat di baris aset.
      */
     fun save(asset: SerializedAsset, operationKey: String? = null): SerializedAsset
+    /**
+     * Hapus baris aset. SATU-SATUNYA pemakainya adalah pembatalan restock berserial: unit yang
+     * dijanjikan pemasok tapi kirimannya ditolak tidak pernah ada secara fisik, dan
+     * membiarkannya hidup akan membakar nomor serinya selamanya di [existsHistoricalSerial].
+     *
+     * BUKAN jalan untuk membuang barang: barang nyata dihapusbukukan lewat mutasi
+     * LOSS/SCRAP/WRITE_OFF supaya ada jejaknya. Riwayat mutasi tidak terganggu — leg menyimpan
+     * salinan nomor serinya sendiri (V174).
+     */
+    fun delete(assetId: UUID)
     fun existsHistoricalSerial(tenantId: UUID, serialNumber: String): Boolean
     fun existsHistoricalMac(tenantId: UUID, macAddress: String): Boolean
     fun findByOperation(tenantId: UUID, operationKey: String): SerializedAsset?

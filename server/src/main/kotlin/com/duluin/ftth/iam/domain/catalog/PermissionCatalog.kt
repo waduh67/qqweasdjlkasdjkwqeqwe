@@ -126,6 +126,12 @@ object PermissionCatalog {
         perm("inventory.restock.receive", "Terima barang masuk gudang")
         perm("inventory.movement.view", "Lihat riwayat mutasi stok")
         perm("inventory.movement.issue", "Keluarkan barang dari gudang")
+        // Pindah antar gudang/bin BUKAN pengeluaran barang: barangnya tetap di tangan
+        // perusahaan, hanya raknya yang berganti. Selama keduanya memakai satu izin, setiap
+        // petugas yang boleh menggeser kardus antar rak otomatis boleh menyerahkannya ke
+        // teknisi — dan penyerahan itulah satu-satunya titik barang keluar dari pengawasan
+        // gudang. Dua pekerjaan, dua tingkat kepercayaan, dua izin.
+        perm("inventory.movement.transfer", "Pindahkan barang antar gudang/bin")
         perm("inventory.movement.return", "Terima retur barang ke gudang")
         perm("inventory.movement.adjust", "Sesuaikan stok gudang (koreksi, susut, hapus buku)")
         perm("inventory.count.perform", "Lakukan stock opname")

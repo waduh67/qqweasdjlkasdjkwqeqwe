@@ -71,6 +71,7 @@ class InventoryIT {
             "inventory.restock.receive",
             "inventory.movement.view",
             "inventory.movement.issue",
+            "inventory.movement.transfer",
             "inventory.movement.return",
             "inventory.movement.adjust",
             "inventory.count.perform",

@@ -22,9 +22,16 @@ import java.util.UUID
  * setiap kali layarnya diam. Tanpa kunci operasi, tekanan kedua menjadi pengeluaran barang
  * kedua — dan selisihnya baru ketahuan saat stok fisik diadu dengan sistem.
  *
- * Izinnya dipisah per aksi (`inventory.movement.issue` / `.return` / `.adjust`) karena
- * ketiganya dipegang orang yang berbeda di gudang sungguhan; menyatukannya berarti siapa pun
- * yang boleh mengeluarkan barang juga boleh menghapusbukukannya.
+ * Izinnya dipisah per aksi (`inventory.movement.transfer` / `.issue` / `.return` / `.adjust`)
+ * karena keempatnya dipegang orang yang berbeda di gudang sungguhan; menyatukannya berarti
+ * siapa pun yang boleh menggeser barang antar rak juga boleh menyerahkannya ke teknisi —
+ * atau menghapusbukukannya.
+ *
+ * CATATAN untuk tenant yang merakit peran sendiri: transfer dulu ikut
+ * `inventory.movement.issue`. Peran bawaan ("Tenant Admin" dan Super Admin) otomatis ikut
+ * mendapat izin baru ini karena keduanya di-backfill seluruh katalog tiap boot, tapi peran
+ * custom yang dulu sengaja hanya diberi `inventory.movement.issue` kehilangan hak transfernya
+ * dan HARUS ditambahi izin baru ini secara manual.
  */
 @RestController
 @RequestMapping("/api/inventory")
@@ -51,7 +58,7 @@ class InventoryOperationsController(
 
     @PostMapping("/transfers")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("@authz.can('inventory.movement.issue')")
+    @PreAuthorize("@authz.can('inventory.movement.transfer')")
     fun transfer(@Valid @RequestBody body: TransferBody): InventoryMovement {
         val actor = currentUser.current()
         return operations.transfer(body.toCommand(actor.tenantId, actor.userId))

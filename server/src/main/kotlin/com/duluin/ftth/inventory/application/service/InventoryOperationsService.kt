@@ -152,28 +152,118 @@ class InventoryOperationsService(
     }
 
     /**
-     * Penyesuaian stok: koreksi, susut, rusak, hapus buku.
+     * Penyesuaian stok: koreksi, susut, rusak, hapus buku — untuk barang curah MAUPUN unit
+     * berserial.
      *
      * Semuanya lahir PENDING_APPROVAL — inilah jenis mutasi yang paling mudah dipakai
      * menutupi kebocoran aset, jadi tidak satu pun boleh berlaku tanpa mata kedua.
+     *
+     * Unit berserial ikut lewat sini, bukan lewat endpoint sendiri, karena keputusannya persis
+     * sama (siapa yang boleh menyatakan barang hilang) dan matriks persetujuannya pun sama.
+     * Yang berbeda hanya bentuk leg-nya: lihat [writeOffLegs].
      */
     @Transactional
     fun adjust(command: AdjustmentCommand): InventoryOperationResult {
         val location = requireLocation(command.tenantId, command.locationId)
         val kind = command.kind.movementKind
-        val legs = command.lines.map { line ->
-            val item = requireBulkItem(command.tenantId, line, "penyesuaian stok")
+        val legs = command.lines.flatMap { line ->
+            val item = items.requireActive(line.itemId, command.tenantId)
+            if (item.serialized) return@flatMap writeOffLegs(command, item, line, location)
+            requireBulkItem(command.tenantId, line, "penyesuaian stok")
             // Hanya ADJUSTMENT yang boleh menambah; susut/rusak/hapus buku SELALU mengurangi.
             // Tanpa aturan ini, "hapus buku" bisa dipakai menambah stok tanpa dokumen masuk
             // apa pun, dan justru itu bentuk kebocoran yang paling sulit dilihat di laporan.
             val direction = if (command.increase && command.kind == AdjustmentKind.CORRECTION) LegDirection.IN else LegDirection.OUT
-            MovementLeg(
-                direction, item.id, item.id, location.id, line.quantity, false,
-                command.custodianId, OwnerKind.WAREHOUSE, command.kind.status,
+            listOf(
+                MovementLeg(
+                    direction, item.id, item.id, location.id, line.quantity, false,
+                    command.custodianId, OwnerKind.WAREHOUSE, command.kind.status,
+                ),
             )
         }
         val movement = applyLedger(command.toMovement(kind, legs))
         return withApproval(movement, command.kind.approvalType, command.actorId, command.custodianId, command.emergencyReason)
+    }
+
+    /**
+     * Leg penghapusbukuan satu unit berserial: OUT dari dimensi tempat unitnya BENAR-BENAR
+     * berdiri, IN ke dimensi terminal di lokasi yang sama.
+     *
+     * Dua keputusan yang perlu dijelaskan:
+     *
+     * 1. Sisi OUT dibaca dari BARIS ASETNYA (lokasi, pemegang, status), bukan dari isi
+     *    permintaan. Petugas boleh saja mengirim custodianId yang berbeda dengan pemegang yang
+     *    tercatat; kalau itu dipakai, saldo dipotong dari dimensi yang tidak pernah berisi unit
+     *    ini — dimensi aslinya tetap penuh dan yang dipotong jadi minus (atau ditolak "stok
+     *    tidak cukup" tanpa alasan yang masuk akal bagi petugas).
+     *
+     * 2. Unitnya TIDAK dilenyapkan dari saldo, melainkan dipindahkan ke dimensi LOST/DISPOSED.
+     *    Barang yang dihapusbukukan tetap harus bisa dihitung — "berapa unit yang hilang di
+     *    gudang ini tahun lalu" adalah pertanyaan audit pertama, dan ia tidak bisa dijawab oleh
+     *    saldo yang hanya berkurang tanpa sisa. Sekaligus inilah yang membuat proyeksi saldo
+     *    dan daftar aset sepakat unit demi unit: dimensi tujuan leg IN persis sama dengan
+     *    status + custody yang akan dipakai baris asetnya.
+     */
+    private fun writeOffLegs(
+        command: AdjustmentCommand,
+        item: InventoryItem,
+        line: StockLine,
+        location: InventoryLocation,
+    ): List<MovementLeg> {
+        // CORRECTION tidak punya status terminal, dan memang tidak boleh punya: menambah atau
+        // mengurangi JUMLAH barang bernomor seri tidak berarti apa-apa — yang ada hanya unit
+        // tertentu yang hilang, rusak, atau dihapusbukukan.
+        val terminal = command.kind.movementKind.settlesSerialTo
+            ?: throw ValidationException(
+                "Item ${item.code} berserial: pakai susut, rusak, atau hapus buku dengan menyebut nomor seri, bukan koreksi jumlah",
+            )
+        val units = resolveWriteOffAssets(command.tenantId, item, line, location.id, terminal)
+        return units.flatMap { asset ->
+            listOf(
+                MovementLeg(
+                    LegDirection.OUT, item.id, item.id, asset.locationId, 1, true,
+                    asset.custody.ownerId, asset.custody.ownerKind, asset.status, asset.id, asset.serialNumber,
+                ),
+                MovementLeg(
+                    LegDirection.IN, item.id, item.id, asset.locationId, 1, true,
+                    asset.custody.ownerId, terminal.requiredOwnerKind() ?: asset.custody.ownerKind, terminal,
+                    asset.id, asset.serialNumber,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Ambil unit yang akan dihapusbukukan dan tolak di muka yang tidak mungkin.
+     *
+     * Bedanya dengan [resolveAssets]: di sini status asal TIDAK dipatok satu nilai — barang bisa
+     * hilang dari rak, dari tas teknisi, maupun dari karantina. Yang menentukan sah atau tidak
+     * adalah tabel transisi aset itu sendiri ([SerializedAsset.canSettleTo]), tabel yang SAMA
+     * yang nanti dipakai ledger saat mutasinya benar-benar berlaku. Kalau pemeriksaan ini
+     * memakai daftar status sendiri, permintaan bisa lolos hari ini lalu meledak berjam-jam
+     * kemudian di tangan approver — yang tidak bisa berbuat apa-apa selain menolaknya.
+     */
+    private fun resolveWriteOffAssets(
+        tenantId: UUID,
+        item: InventoryItem,
+        line: StockLine,
+        locationId: UUID,
+        terminal: InventoryStatus,
+    ): List<SerializedAsset> {
+        if (line.quantity <= 0) throw ValidationException("Jumlah harus lebih dari nol")
+        if (line.serialNumbers.size != line.quantity) {
+            throw ValidationException("Item ${item.code} berserial: jumlah nomor seri harus sama dengan kuantitas")
+        }
+        return line.serialNumbers.map { serial ->
+            val asset = assets.findBySerial(tenantId, serial.trim())
+                ?: throw NotFoundException("Nomor seri ${serial.trim()} tidak terdaftar")
+            if (asset.skuId != item.id) throw ValidationException("Nomor seri ${asset.serialNumber} bukan milik item ${item.code}")
+            if (asset.locationId != locationId) throw ConflictException("Nomor seri ${asset.serialNumber} tidak berada di lokasi yang disebut")
+            if (!asset.canSettleTo(terminal)) {
+                throw ConflictException("Nomor seri ${asset.serialNumber} berstatus ${asset.status} dan tidak bisa dinyatakan $terminal")
+            }
+            asset
+        }
     }
 
     /**

@@ -258,6 +258,10 @@ class FakeSerializedAssets : com.duluin.ftth.inventory.application.port.outbound
         return asset
     }
 
+    override fun delete(assetId: UUID) {
+        rows.remove(assetId)
+    }
+
     override fun existsHistoricalSerial(tenantId: UUID, serialNumber: String) = findBySerial(tenantId, serialNumber) != null
 
     override fun existsHistoricalMac(tenantId: UUID, macAddress: String) = findByMac(tenantId, macAddress) != null

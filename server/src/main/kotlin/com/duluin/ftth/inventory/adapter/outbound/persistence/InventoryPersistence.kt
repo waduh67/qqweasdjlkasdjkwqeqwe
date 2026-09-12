@@ -119,6 +119,12 @@ class SerializedAssetPersistenceAdapter(private val repository: SerializedAssetJ
         if (operationKey != null) existing.lastOperationKey = operationKey
         return repository.save(existing).toDomain()
     }
+    /**
+     * `deleteById` diam saja kalau barisnya sudah tidak ada — dan itu memang yang diinginkan:
+     * pembatalan restock bisa dijalankan dua kali (penolakan menyusul penyapu tenggat), dan
+     * percobaan kedua tidak boleh menggagalkan keputusan approval yang sah.
+     */
+    override fun delete(assetId: UUID) = repository.deleteById(assetId)
     override fun existsHistoricalSerial(tenantId: UUID, serialNumber: String): Boolean = repository.findByTenantIdAndSerialNumber(tenantId, serialNumber) != null
     override fun existsHistoricalMac(tenantId: UUID, macAddress: String): Boolean = repository.findByTenantIdAndMacAddress(tenantId, macAddress) != null
     override fun findByOperation(tenantId: UUID, operationKey: String): SerializedAsset? = repository.findByTenantIdAndLastOperationKey(tenantId, operationKey)?.toDomain()

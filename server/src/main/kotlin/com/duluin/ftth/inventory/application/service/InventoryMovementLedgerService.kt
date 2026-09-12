@@ -8,6 +8,7 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLedgerRepository
 import com.duluin.ftth.inventory.application.port.outbound.MovementFilter
+import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
 import com.duluin.ftth.inventory.domain.model.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -30,6 +31,14 @@ import java.util.UUID
 class InventoryMovementLedgerService(
     private val ledger: InventoryLedgerRepository,
     private val clock: Clock = Clock.systemUTC(),
+    /**
+     * Opsional dengan default null SENGAJA: unit test ledger membangun service ini dengan satu
+     * argumen dan parameter wajib baru akan memutus mereka semua tanpa menambah jaminan apa pun
+     * — Spring tetap menyuntikkan bean-nya di runtime. Ketiadaannya TIDAK ditelan diam-diam:
+     * lihat [settleSerialAssets], yang memilih meledak daripada membiarkan saldo bergerak
+     * sementara baris asetnya diam.
+     */
+    private val assets: SerializedAssetRepository? = null,
 ) {
     @Transactional
     fun apply(command: MovementCommand): InventoryMovement {
@@ -58,7 +67,10 @@ class InventoryMovementLedgerService(
         val raced = ledger.appendIfAbsent(movement)
         if (raced != null) return replayOrConflict(raced, command)
 
-        if (state == MovementState.APPLIED) ledger.applyLegs(command.tenantId, command.legs, movement.serverReceivedAt)
+        if (state == MovementState.APPLIED) {
+            ledger.applyLegs(command.tenantId, command.legs, movement.serverReceivedAt)
+            settleSerialAssets(movement)
+        }
         return movement
     }
 
@@ -84,6 +96,11 @@ class InventoryMovementLedgerService(
         // PENDING_APPROVAL belum boleh memotong stok, kalau tidak penolakan approval
         // meninggalkan stok yang sudah terlanjur berkurang.
         ledger.applyLegs(applied.tenantId, applied.legs, Instant.now(clock))
+        // Baris aset berserial berpindah DI SINI juga — satu transaksi, satu keputusan. Kalau
+        // langkah ini dipisah (mis. dikerjakan pemanggil setelah approval sukses), setiap
+        // kegagalan di antaranya meninggalkan saldo yang sudah dipotong sementara daftar aset
+        // masih memajang unitnya sebagai barang sehat di rak.
+        settleSerialAssets(applied)
         return applied
     }
 
@@ -91,6 +108,7 @@ class InventoryMovementLedgerService(
     fun rejectPending(movementId: UUID): InventoryMovement {
         val pending = ledger.findById(movementId) ?: throw NotFoundException("Mutasi stok tidak ditemukan")
         if (pending.state != MovementState.PENDING_APPROVAL) throw ConflictException("Mutasi stok tidak sedang menunggu persetujuan")
+        releaseSerialAssets(pending)
         return ledger.updateState(movementId, MovementState.FAILED_PERMANENT)
     }
 
@@ -142,6 +160,88 @@ class InventoryMovementLedgerService(
             val next = (current[key] ?: 0) + if (leg.direction == LegDirection.IN) leg.quantity else -leg.quantity
             if (next < 0) throw InventoryInsufficientBalance("movement would create a negative balance")
             current[key] = next
+        }
+    }
+
+    /**
+     * Pindahkan baris aset berserial ke status yang dijanjikan jenis mutasinya, di transaksi
+     * yang SAMA dengan pembukuan leg-nya.
+     *
+     * Ini inti dari "saldo dan status aset tidak boleh berbeda arah". Sebelum ada langkah ini,
+     * penghapusbukuan unit berserial hanya memotong angka: ONT yang dinyatakan hancur tetap
+     * berdiri AVAILABLE di daftar aset dan masih bisa dikeluarkan ke teknisi berikutnya —
+     * sementara saldonya sudah nol, sehingga pengeluaran itu justru ditolak "stok tidak cukup"
+     * dan petugas mengira sistemnya yang rusak.
+     *
+     * Aset diambil dari SELURUH leg, bukan hanya leg IN: hapus buku ditulis sebagai sepasang
+     * leg (OUT dari dimensi sehat, IN ke dimensi terminal) dan keduanya menyebut unit yang sama.
+     */
+    private fun settleSerialAssets(movement: InventoryMovement) {
+        val target = movement.kind.settlesSerialTo ?: return
+        val assetIds = movement.legs.filter { it.serialized }.mapNotNull { it.assetId }.distinct()
+        if (assetIds.isEmpty()) return
+        // Bukan `return` diam-diam: kalau repositori aset tidak ada, satu-satunya pilihan yang
+        // tersisa adalah membukukan saldo tanpa memindahkan asetnya — persis perpecahan yang
+        // seluruh method ini dibuat untuk mencegah.
+        val repository = assets ?: throw IllegalStateException("serialized asset repository is not configured")
+        assetIds.forEach { assetId ->
+            val asset = repository.findById(assetId)
+                ?: throw NotFoundException("Aset berserial mutasi ini sudah tidak ada")
+            /*
+             * Aset yang SUDAH berada di status tujuan SENGAJA tidak ditoleransi — ia jatuh ke
+             * cabang konflik di bawah, karena `isAllowed` menolak transisi ke diri sendiri.
+             *
+             * Toleransi di sini pernah dipasang atas nama "penerapan ulang", padahal penerapan
+             * ulang TIDAK PERNAH sampai ke method ini: `apply` sudah keluar lebih dulu lewat
+             * `replayOrConflict` saat kunci operasinya berulang, dan `approvePending` menolak
+             * mutasi yang bukan PENDING_APPROVAL. Jadi satu-satunya cara sebuah unit sudah
+             * berdiri di status tujuan adalah MUTASI LAIN yang sudah menghapusbukukannya.
+             *
+             * Menoleransinya berarti membiarkan hapus buku ganda lolos tanpa suara: dua
+             * permintaan atas serial yang sama sama-sama menggantung (memang mungkin, tidak ada
+             * kunci lintas-permintaan di tingkat aset), keduanya disetujui, dan leg yang kedua
+             * ikut memotong saldo untuk unit yang sudah tidak ada. Kalau kebetulan masih ada
+             * unit lain yang sehat di dimensi itu, pemotongannya bahkan tidak tertahan
+             * `validateProjection` — saldonya cukup. Hasilnya: gudang mengaku kehilangan dua
+             * unit padahal hanya satu yang hilang, dan unit yang masih nyata jadi yatim.
+             */
+            if (!asset.canSettleTo(target)) {
+                // Jeda antara pengajuan dan persetujuan memang berjam-jam, dan gudang tetap
+                // melayani pengeluaran selama itu — unitnya bisa sudah pindah tangan. Keluar
+                // sebagai konflik yang terbaca, bukan IllegalArgumentException telanjang yang
+                // muncul di layar approver sebagai 500.
+                throw ConflictException(
+                    "Nomor seri ${asset.serialNumber} sekarang berstatus ${asset.status} dan tidak bisa dipindahkan ke $target",
+                )
+            }
+            repository.save(asset.settle(target))
+        }
+    }
+
+    /**
+     * Lepaskan aset yang digantung mutasi yang batal.
+     *
+     * Hanya RESTOCK yang punya sesuatu untuk dilepas: unitnya didaftarkan lebih dulu (supaya
+     * duplikat SN/MAC tertangkap sebelum kiriman disetujui) dan berdiri di AWAITING_RECEIPT
+     * selama menunggu. Kalau restock-nya ditolak atau lewat tenggat, barisnya DIHAPUS, bukan
+     * dipindahkan ke status terminal: barang yang dijanjikan itu tidak pernah ada secara fisik,
+     * dan baris terminal yang tertinggal akan membakar nomor serinya selamanya
+     * (`existsHistoricalSerial` menolak pendaftaran ulang) sehingga kiriman yang BENAR-BENAR
+     * datang kemudian tidak bisa didaftarkan siapa pun.
+     *
+     * Riwayatnya tidak ikut hilang: leg menyimpan salinan `serial_number` justru untuk ini (V174).
+     */
+    private fun releaseSerialAssets(movement: InventoryMovement) {
+        if (movement.kind != MovementKind.RESTOCK) return
+        val assetIds = movement.legs.filter { it.serialized }.mapNotNull { it.assetId }.distinct()
+        if (assetIds.isEmpty()) return
+        val repository = assets ?: throw IllegalStateException("serialized asset repository is not configured")
+        assetIds.forEach { assetId ->
+            val asset = repository.findById(assetId) ?: return@forEach
+            // Penjaga SENGAJA ketat: kalau unitnya sudah terlanjur jadi stok (mis. mutasi ini
+            // sempat berlaku lalu dibalik), menghapusnya akan melenyapkan barang nyata dari
+            // daftar aset sementara saldonya tetap berdiri.
+            if (asset.status == InventoryStatus.AWAITING_RECEIPT) repository.delete(assetId)
         }
     }
 
