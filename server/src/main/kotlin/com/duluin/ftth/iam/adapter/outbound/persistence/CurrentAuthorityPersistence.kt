@@ -20,10 +20,16 @@ import java.util.UUID
 class CurrentAuthorityPersistence(
     private val entityManager: EntityManager,
     private val users: CurrentUserProvider,
-) : CurrentAuthorityApi {
+) : CurrentAuthorityApi, com.duluin.ftth.iam.DeliveryAuthorityApi {
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockCurrent(): CurrentAuthority {
         val user = users.currentOrNull() ?: throw com.duluin.ftth.common.domain.error.AuthenticationException("Authentication required")
+        return lockActor(SessionIdentity(user.tenantId, user.userId, user.sessionId))
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun lockActor(identity: SessionIdentity): CurrentAuthority {
+        val user = identity
         if (user.tenantId != TenantContext.tenantId()) denied()
         val transaction = lock(false)
         entityManager.flush()
@@ -39,7 +45,6 @@ class CurrentAuthorityPersistence(
             user.tenantId, user.userId, platform) { it.getString(1) }.toSet()
         val areas = query("""SELECT area.id FROM user_area link JOIN area ON area.id=link.area_id
             WHERE link.user_id=? AND area.tenant_id=?""", user.userId, user.tenantId) { it.getObject(1, UUID::class.java) }.toSet()
-        val identity = SessionIdentity(user.tenantId, user.userId, user.sessionId)
         val epoch = transaction.epoch
         val generation = transaction.generation
         val fence = object : AuthorityFence {
