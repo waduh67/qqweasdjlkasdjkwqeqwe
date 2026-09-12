@@ -7,9 +7,15 @@ import java.util.UUID
 
 @Entity
 @Table(name = "order_record")
+@Suppress("LongParameterList")
 class OrderJpaEntity(
     id: UUID,
-    @Column(name = "customer_id", nullable = false, updatable = false) var customerId: UUID,
+    // Nullable sejak V177: pemesan boleh berupa calon pelanggan yang belum jadi `customer`.
+    // `updatable = false` DIPERTAHANKAN — memindahkan pesanan ke pemilik lain bukan operasi
+    // yang sah; promosi lead→customer membuat pesanan BARU menunjuk customer, bukan menimpa.
+    @Column(name = "customer_id", updatable = false) var customerId: UUID?,
+    @Column(name = "lead_id", updatable = false) var leadId: UUID?,
+    @Column(name = "order_number", nullable = false, updatable = false, length = 20) var orderNumber: String,
     @Column(nullable = false, length = 24) var status: String,
     @Column(nullable = false) var revision: Long,
     @Column(name = "address_text", nullable = false) var address: String,
@@ -47,11 +53,28 @@ class OrderOperationJpaEntity(
     @Column(name = "outcome_json", nullable = false, columnDefinition = "text") var outcomeJson: String,
 ) : TenantAwareJpaEntity(id)
 
+/**
+ * Calon pelanggan.
+ *
+ * `createdAt`/`updatedAt` SENGAJA tidak dideklarasikan di sini: keduanya sudah milik
+ * `BaseJpaEntity`, dan nama field superclass yang ditiru subclass akan DIAM-DIAM diabaikan
+ * Hibernate — kolomnya hilang dari INSERT tanpa peringatan apa pun. Aturan yang sama berlaku
+ * untuk `primaryKey` dan `entityId`.
+ */
 @Entity
-@Table(name = "order_outbox")
-class OrderOutboxJpaEntity(
+@Table(name = "order_lead")
+@Suppress("LongParameterList")
+class OrderLeadJpaEntity(
     id: UUID,
-    @Column(name = "aggregate_id", nullable = false) var aggregateId: UUID,
-    @Column(name = "event_type", nullable = false, length = 120) var eventType: String,
-    @Column(nullable = false, columnDefinition = "text") var payload: String,
+    @Column(nullable = false, length = 150) var name: String,
+    @Column(nullable = false, length = 32) var phone: String,
+    @Column(length = 200) var email: String?,
+    @Column(columnDefinition = "text") var address: String?,
+    var latitude: Double?,
+    var longitude: Double?,
+    @Column(name = "interested_plan_id") var interestedPlanId: UUID?,
+    @Column(nullable = false, length = 16, updatable = false) var source: String,
+    @Column(nullable = false, length = 16) var status: String,
+    @Column(name = "converted_customer_id") var convertedCustomerId: UUID?,
+    @Column(length = 1000) var notes: String?,
 ) : TenantAwareJpaEntity(id)

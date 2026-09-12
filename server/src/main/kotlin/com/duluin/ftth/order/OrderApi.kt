@@ -33,12 +33,18 @@ data class OrderFulfillmentResult(
     val replayed: Boolean,
 )
 
+/**
+ * Pemesan adalah TEPAT SATU dari [customerId] (pelanggan terdaftar) atau [leadId] (calon
+ * pelanggan). Sebelum V177 hanya ada [customerId] dan sifatnya wajib, yang memaksa setiap
+ * penanya didaftarkan dulu sebagai pelanggan dan mengotori laporan langganan.
+ */
 data class CreateOrderCommand(
-    val customerId: UUID,
+    val customerId: UUID?,
     val lines: List<OrderLineCommand>,
     val serviceAddress: ServiceAddress,
     val appointment: Appointment? = null,
     val operation: OperationCommand,
+    val leadId: UUID? = null,
 )
 
 data class OrderLineCommand(val catalogItemId: UUID, val description: String, val quantity: Int)
@@ -70,10 +76,17 @@ data class OrderTransitionCommand(
 
 enum class OrderTransition { SUBMIT, ACCEPT, SCHEDULE, START_FULFILLING, FULFILL, CANCEL, REJECT }
 
+/**
+ * [leadId] dan [orderNumber] SENGAJA nullable meski di DB `order_number` NOT NULL: bentuk ini
+ * juga dibekukan sebagai JSON di `order_operation.outcome_json` untuk replay idempotency, dan
+ * baris yang ditulis sebelum V177 tak memuat kedua field itu. Kalau non-null, setiap replay
+ * operation key lama akan gagal deserialisasi dan permintaan yang seharusnya aman diulang
+ * malah meledak.
+ */
 data class OrderView(
     val id: UUID,
     val tenantId: UUID,
-    val customerId: UUID,
+    val customerId: UUID?,
     val status: String,
     val lines: List<OrderLineView>,
     val serviceAddress: ServiceAddress,
@@ -85,6 +98,8 @@ data class OrderView(
     val lastOperationNamespace: String,
     val lastOperationKey: String,
     val lastOperationHash: String,
+    val leadId: UUID? = null,
+    val orderNumber: String? = null,
 )
 
 data class OrderLineView(val catalogItemId: UUID, val description: String, val quantity: Int)
@@ -92,6 +107,8 @@ data class OrderLineView(val catalogItemId: UUID, val description: String, val q
 /** Customer-safe contract. It intentionally has no technician, GPS, evidence, or approval data. */
 data class PortalOrderView(
     val id: UUID,
+    /** Yang dibacakan pelanggan saat menelepon; UUID tidak pernah dipakai manusia. */
+    val orderNumber: String,
     val status: PortalOrderStatus,
     val lines: List<OrderLineView>,
     val serviceAddress: PortalServiceAddress,

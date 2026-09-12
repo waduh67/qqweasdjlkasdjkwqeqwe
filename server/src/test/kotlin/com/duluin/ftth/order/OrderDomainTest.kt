@@ -15,7 +15,46 @@ class OrderDomainTest {
     private val address = ServiceAddress("Jalan Merdeka 1", "Bekasi", "17111")
     private val line = OrderLineCommand(UuidV7.generate(), "Paket 100 Mbps", 1)
 
-    private fun draft() = Order.create(CreateOrderCommand(UuidV7.generate(), listOf(line), address, operation = operation), UuidV7.generate(), UuidV7.generate())
+    private fun draft() = Order.create(
+        CreateOrderCommand(UuidV7.generate(), listOf(line), address, operation = operation),
+        UuidV7.generate(), UuidV7.generate(), "ORD-2609-0001",
+    )
+
+    @Test
+    fun `order must have exactly one requester`() {
+        val lead = UuidV7.generate()
+        assertThatThrownBy {
+            Order.create(
+                CreateOrderCommand(null, listOf(line), address, operation = operation),
+                UuidV7.generate(), null, "ORD-2609-0002",
+            )
+        }.isInstanceOf(ValidationException::class.java)
+
+        assertThatThrownBy {
+            Order.create(
+                CreateOrderCommand(UuidV7.generate(), listOf(line), address, operation = operation, leadId = lead),
+                UuidV7.generate(), null, "ORD-2609-0003",
+            )
+        }.isInstanceOf(ValidationException::class.java)
+
+        // Pesanan dari calon pelanggan sah tanpa customerId — itulah gunanya `order_lead`.
+        val fromLead = Order.create(
+            CreateOrderCommand(null, listOf(line), address, operation = operation, leadId = lead),
+            UuidV7.generate(), null, "ORD-2609-0004",
+        )
+        assertThat(fromLead.leadId).isEqualTo(lead)
+        assertThat(fromLead.customerId).isNull()
+    }
+
+    @Test
+    fun `order number is mandatory`() {
+        assertThatThrownBy {
+            Order.create(
+                CreateOrderCommand(UuidV7.generate(), listOf(line), address, operation = operation),
+                UuidV7.generate(), null, "  ",
+            )
+        }.isInstanceOf(ValidationException::class.java)
+    }
 
     @Test
     fun `lifecycle reaches fulfilled in authoritative order`() {

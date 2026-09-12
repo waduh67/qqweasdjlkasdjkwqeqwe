@@ -17,3 +17,6 @@ interface OrderLineJpaRepository : JpaRepository<OrderLineJpaEntity, UUID> {
 interface OrderOperationJpaRepository : JpaRepository<OrderOperationJpaEntity, UUID> {
     fun findByTenantIdAndNamespaceAndOperationKey(tenantId: UUID, namespace: String, operationKey: String): OrderOperationJpaEntity?
 }
+interface OrderLeadJpaRepository : JpaRepository<OrderLeadJpaEntity, UUID> {
+    fun findAllByPhoneOrderByCreatedAtDesc(phone: String): List<OrderLeadJpaEntity>
+}

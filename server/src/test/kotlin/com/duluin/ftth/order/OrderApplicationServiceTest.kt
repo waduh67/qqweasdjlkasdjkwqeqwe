@@ -4,8 +4,8 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.security.AuthenticatedUser
 import com.duluin.ftth.common.security.CurrentUserProvider
-import com.duluin.ftth.order.adapter.outbound.persistence.InMemoryOrderCustomerProjection
 import com.duluin.ftth.order.adapter.outbound.persistence.InMemoryOrderRepository
+import com.duluin.ftth.order.adapter.outbound.persistence.OrderCustomerProjectionAdapter
 import com.duluin.ftth.order.application.service.OrderApplicationService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -17,7 +17,17 @@ class OrderApplicationServiceTest {
     private val customer = UuidV7.generate()
     private val user = AuthenticatedUser(UuidV7.generate(), tenant, "operator@example.test", "Operator", false, setOf("order.order.create", "order.order.manage"), emptySet())
     private val current = object : CurrentUserProvider { override fun currentOrNull() = user }
-    private val service = OrderApplicationService(InMemoryOrderRepository(), current, InMemoryOrderCustomerProjection())
+    private val repository = InMemoryOrderRepository()
+    private val audit = InMemoryOrderAuditStore()
+    private val outbox = InMemoryOrderOutboxStore()
+
+    // Proyeksi portal yang diuji di sini adalah adapter PRODUKSI: ia menurunkan pandangan
+    // pelanggan langsung dari `order_record` (di sini: repository), jadi tak ada salinan kedua
+    // yang bisa menyimpang antara test dan jalur sungguhan.
+    private val service = OrderApplicationService(
+        repository, current, OrderCustomerProjectionAdapter(repository),
+        InMemoryOrderNumberGenerator(), audit, outbox,
+    )
 
     @Test
     fun `same operation replays one order and different payload conflicts`() {
@@ -55,6 +65,39 @@ class OrderApplicationServiceTest {
 
         assertThat(addressProperties).doesNotContain("latitude", "longitude")
         assertThat(service.portalOrders(UuidV7.generate())).isEmpty()
+    }
+
+    @Test
+    fun `every transition leaves an audit row and an outbox event`() {
+        val order = service.create(create("audit", "audit-hash"))
+        service.transition(
+            OrderTransitionCommand(order.id, OrderTransition.SUBMIT, 0, operation = OperationCommand("order.submit", "audit", "audit-submit")),
+        )
+        service.transition(
+            OrderTransitionCommand(order.id, OrderTransition.REJECT, 1, reason = "Alamat tidak terlayani", operation = OperationCommand("order.reject", "audit", "audit-reject")),
+        )
+
+        assertThat(audit.timeline(tenant, order.id))
+            .extracting<String> { it.toStatus }
+            .containsExactly("DRAFT", "SUBMITTED", "REJECTED")
+        assertThat(audit.timeline(tenant, order.id).map { it.fromStatus })
+            .containsExactly(null, "DRAFT", "SUBMITTED")
+        // Alasan penolakan WAJIB ikut tercatat: tanpanya riwayat hanya bilang "ditolak" tanpa kenapa.
+        assertThat(audit.timeline(tenant, order.id).last().reason).isEqualTo("Alamat tidak terlayani")
+        assertThat(outbox.enqueued()).hasSize(3)
+    }
+
+    @Test
+    fun `replaying the same operation does not duplicate the timeline`() {
+        val order = service.create(create("replay", "replay-hash"))
+        service.create(create("replay", "replay-hash"))
+        assertThat(audit.timeline(tenant, order.id)).hasSize(1)
+    }
+
+    @Test
+    fun `created order carries a human readable number`() {
+        val order = service.create(create("number", "number-hash"))
+        assertThat(order.orderNumber).matches("ORD-\\d{4}-\\d{4}")
     }
 
     private fun create(key: String, hash: String) = CreateOrderCommand(

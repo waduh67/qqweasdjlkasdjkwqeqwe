@@ -18,8 +18,9 @@ class OrderPersistenceAdapter(
 ) : OrderRepository {
     override fun save(order: Order) {
         val entity = orders.findById(order.id).orElse(null)?.apply { copyFrom(order) }
-            ?: OrderJpaEntity(order.id, order.customerId, order.status.name, order.revision, order.serviceAddress.address,
-                order.serviceAddress.city, order.serviceAddress.postalCode, order.serviceAddress.latitude, order.serviceAddress.longitude,
+            ?: OrderJpaEntity(order.id, order.customerId, order.leadId, order.orderNumber, order.status.name, order.revision,
+                order.serviceAddress.address, order.serviceAddress.city, order.serviceAddress.postalCode,
+                order.serviceAddress.latitude, order.serviceAddress.longitude,
                 order.appointment?.startsAt, order.appointment?.endsAt, order.cancellationReason, order.rejectionReason, order.lastActorId,
                 order.lastOperation.namespace, order.lastOperation.key, order.lastOperation.payloadHash)
         orders.save(entity)
@@ -41,8 +42,10 @@ class OrderPersistenceAdapter(
             if (prior == null || prior.hash != hash) throw IllegalStateException("Operation outcome conflicted concurrently")
         }
     }
+    // `customerId`, `leadId`, dan `orderNumber` SENGAJA tidak ikut disalin: ketiganya
+    // `updatable = false` di entity dan tidak boleh berubah setelah pesanan lahir.
     private fun OrderJpaEntity.copyFrom(o: Order) { status=o.status.name; revision=o.revision; address=o.serviceAddress.address; city=o.serviceAddress.city; postalCode=o.serviceAddress.postalCode; latitude=o.serviceAddress.latitude; longitude=o.serviceAddress.longitude; appointmentStartsAt=o.appointment?.startsAt; appointmentEndsAt=o.appointment?.endsAt; cancellationReason=o.cancellationReason; rejectionReason=o.rejectionReason; lastActorId=o.lastActorId; lastOperationNamespace=o.lastOperation.namespace; lastOperationKey=o.lastOperation.key; lastOperationHash=o.lastOperation.payloadHash }
-    private fun OrderJpaEntity.toDomain() = Order.rehydrate(id, tenantId ?: TenantContext.tenantId(), customerId,
+    private fun OrderJpaEntity.toDomain() = Order.rehydrate(id, tenantId ?: TenantContext.tenantId(), customerId, leadId, orderNumber,
         lines.findAllByOrderIdOrderById(id).map { OrderLineCommand(it.catalogItemId, it.description, it.quantity) },
         ServiceAddress(address, city, postalCode, latitude, longitude), appointmentStartsAt?.let { Appointment(it, requireNotNull(appointmentEndsAt)) },
         OrderStatus.valueOf(status), cancellationReason, rejectionReason, revision, lastActorId,

@@ -21,6 +21,8 @@ data class OrderStateChanged(
     override val actorId: UUID?,
     override val operation: OperationCommand,
     override val at: Instant,
+    /** Alasan pembatalan/penolakan. Ikut di event supaya konsumen hilir tak perlu membaca balik agregatnya. */
+    val reason: String? = null,
 ) : OrderEvent
 
 data class OrderCreated(

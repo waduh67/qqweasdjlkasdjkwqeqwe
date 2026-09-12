@@ -4,29 +4,38 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.order.*
-import com.duluin.ftth.order.adapter.outbound.persistence.InMemoryOrderCustomerProjection
+import com.duluin.ftth.order.application.port.outbound.OrderAuditEntry
+import com.duluin.ftth.order.application.port.outbound.OrderAuditStore
+import com.duluin.ftth.order.application.port.outbound.OrderCustomerProjection
+import com.duluin.ftth.order.application.port.outbound.OrderNumberGenerator
+import com.duluin.ftth.order.application.port.outbound.OrderOutboxStore
 import com.duluin.ftth.order.application.port.outbound.OrderRepository
 import com.duluin.ftth.order.domain.model.Order
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 @Service
+@Suppress("LongParameterList")
 class OrderApplicationService(
     private val orders: OrderRepository,
     private val currentUser: CurrentUserProvider,
-    private val projection: InMemoryOrderCustomerProjection,
+    private val projection: OrderCustomerProjection,
+    private val numbers: OrderNumberGenerator,
+    private val audit: OrderAuditStore,
+    private val outbox: OrderOutboxStore,
 ) : OrderApi {
-    private val eventLog = mutableListOf<OrderEvent>()
 
     @Transactional
     override fun create(command: CreateOrderCommand): OrderView {
         val user = currentUser.current()
         return replayOrConflict(user.tenantId, command.operation) {
-            val order = Order.create(command, user.tenantId, user.userId)
+            val now = Instant.now()
+            val order = Order.create(command, user.tenantId, user.userId, numbers.next(user.tenantId, now))
             orders.save(order)
-            projection.acceptCreated(order)
-            eventLog += OrderCreated(order.id, order.tenantId, order.revision, user.userId, command.operation, java.time.Instant.now())
+            record(order, previous = null, reason = null, eventType = ORDER_CREATED, at = now)
+            outbox.enqueue(OrderCreated(order.id, order.tenantId, order.revision, user.userId, command.operation, now))
             toView(order)
         }
     }
@@ -38,14 +47,21 @@ class OrderApplicationService(
             val order = orders.find(command.orderId) ?: throw NotFoundException("Order tidak ditemukan")
             if (order.tenantId != user.tenantId) throw NotFoundException("Order tidak ditemukan")
             val previous = order.status.name
+            val now = Instant.now()
             order.transition(command, user.userId)
             orders.save(order)
-            projection.acceptStateChanged(order)
-            eventLog += OrderStateChanged(order.id, order.tenantId, order.revision, previous, order.status.name, user.userId, command.operation, java.time.Instant.now())
+            record(order, previous, command.reason, ORDER_STATE_CHANGED, now)
+            outbox.enqueue(
+                OrderStateChanged(
+                    order.id, order.tenantId, order.revision, previous, order.status.name,
+                    user.userId, command.operation, now, command.reason,
+                ),
+            )
             toView(order)
         }
     }
 
+    @Transactional(readOnly = true)
     override fun find(id: UUID): OrderView? {
         val user = currentUser.current()
         return orders.find(id)?.takeIf { it.tenantId == user.tenantId }?.let(::toView)
@@ -54,10 +70,13 @@ class OrderApplicationService(
     @Transactional(readOnly = true)
     override fun fulfillmentRevision(orderId: UUID): Long? = orders.findForFulfillment(orderId)?.revision
 
-    override fun portalOrders(customerId: UUID): List<PortalOrderView> = projection.findByCustomer(customerId)
+    @Transactional(readOnly = true)
+    override fun portalOrders(customerId: UUID): List<PortalOrderView> =
+        projection.findByCustomer(currentUser.current().tenantId, customerId)
 
+    @Transactional(readOnly = true)
     override fun portalOrder(customerId: UUID, orderId: UUID): PortalOrderView? =
-        projection.findByCustomer(customerId).firstOrNull { it.id == orderId }
+        projection.find(currentUser.current().tenantId, customerId, orderId)
 
     @Transactional
     override fun applyFulfillment(command: OrderFulfillmentCommand): OrderFulfillmentResult {
@@ -66,27 +85,58 @@ class OrderApplicationService(
         }
         val user = currentUser.current()
         if (user.tenantId != command.tenantId) throw NotFoundException("Order tidak ditemukan")
+        val operation = OperationCommand(command.namespace, command.operationKey, command.payloadHash)
         val replayed = orders.findOutcome(command.tenantId, command.namespace, command.operationKey) != null
-        val view = replayOrConflict(command.tenantId, OperationCommand(command.namespace, command.operationKey, command.payloadHash)) {
+        val view = replayOrConflict(command.tenantId, operation) {
             val order = orders.findForFulfillment(command.orderId) ?: throw NotFoundException("Order tidak ditemukan")
             if (order.tenantId != command.tenantId) throw NotFoundException("Order tidak ditemukan")
+            val previous = order.status.name
+            val now = Instant.now()
             order.transition(
                 OrderTransitionCommand(
                     orderId = command.orderId,
                     transition = command.transition,
                     expectedRevision = command.expectedRevision ?: order.revision,
-                    operation = OperationCommand(command.namespace, command.operationKey, command.payloadHash),
+                    operation = operation,
                 ),
                 user.userId,
             )
             orders.save(order)
-            projection.acceptStateChanged(order)
+            record(order, previous, reason = null, eventType = ORDER_STATE_CHANGED, at = now)
+            outbox.enqueue(
+                OrderStateChanged(
+                    order.id, order.tenantId, order.revision, previous, order.status.name,
+                    user.userId, operation, now,
+                ),
+            )
             toView(order)
         }
         return OrderFulfillmentResult(command.tenantId, command.orderId, view.status, view.revision, replayed)
     }
 
-    fun publishedEvents(): List<OrderEvent> = synchronized(eventLog) { eventLog.toList() }
+    /**
+     * Riwayat ditulis di transaksi yang SAMA dengan perubahan agregat. Kalau dipisah ke listener
+     * after-commit, sebuah transisi yang berhasil tapi listener-nya gagal akan meninggalkan
+     * pesanan tanpa jejak — dan justru transisi bermasalah itulah yang paling perlu terlacak.
+     */
+    private fun record(order: Order, previous: String?, reason: String?, eventType: String, at: Instant) {
+        audit.append(
+            OrderAuditEntry(
+                tenantId = order.tenantId,
+                orderId = order.id,
+                revision = order.revision,
+                eventType = eventType,
+                fromStatus = previous,
+                toStatus = order.status.name,
+                reason = reason,
+                actorId = order.lastActorId,
+                operationNamespace = order.lastOperation.namespace,
+                operationKey = order.lastOperation.key,
+                payloadHash = order.lastOperation.payloadHash,
+                occurredAt = at,
+            ),
+        )
+    }
 
     private fun replayOrConflict(tenantId: UUID, operation: OperationCommand, effect: () -> OrderView): OrderView {
         require(operation.namespace.isNotBlank() && operation.key.isNotBlank() && operation.payloadHash.isNotBlank())
@@ -105,6 +155,11 @@ class OrderApplicationService(
         order.lines.map { OrderLineView(it.catalogItemId, it.description, it.quantity) }, order.serviceAddress,
         order.appointment, order.cancellationReason, order.rejectionReason, order.revision, order.lastActorId,
         order.lastOperation.namespace, order.lastOperation.key, order.lastOperation.payloadHash,
+        order.leadId, order.orderNumber,
     )
 
+    companion object {
+        const val ORDER_CREATED = "ORDER_CREATED"
+        const val ORDER_STATE_CHANGED = "ORDER_STATE_CHANGED"
+    }
 }
