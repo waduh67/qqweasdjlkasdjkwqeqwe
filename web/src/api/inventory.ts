@@ -466,6 +466,15 @@ export interface EmergencyOverrideView {
   readonly occurredAt: string
 }
 
+/**
+ * Satu baris BOM: barang apa dan berapa banyak yang SEHARUSNYA dibawa untuk satu tipe work order.
+ *
+ * Dideklarasikan DI SINI, bukan di `workorderMaterial.ts`, karena pemiliknya memang master data
+ * gudang — layar template BOM yang menyuntingnya ada di modul inventory. Layar work order cuma
+ * membacanya, dan mengimpor ulang dari sini (lihat re-ekspor di `workorderMaterial.ts`). Dulu
+ * bentuk yang sama ditulis dua kali di dua berkas: menambah kolom di satu sisi membuat sisi lain
+ * tetap dikompilasi dengan senang hati sambil kehilangan kolomnya diam-diam.
+ */
 export interface WorkOrderMaterialTemplateView {
   readonly itemId: string
   readonly itemCode: string

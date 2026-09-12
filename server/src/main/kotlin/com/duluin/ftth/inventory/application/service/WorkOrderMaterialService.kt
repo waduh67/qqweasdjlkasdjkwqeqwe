@@ -20,12 +20,15 @@ import com.duluin.ftth.inventory.WorkOrderMaterialSerialView
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
 import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
+import com.duluin.ftth.inventory.WorkOrderVanLocationView
 import com.duluin.ftth.inventory.application.port.outbound.InventoryItemRepository
+import com.duluin.ftth.inventory.application.port.outbound.InventoryLocationRepository
 import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
 import com.duluin.ftth.inventory.application.port.outbound.WorkOrderMaterialRepository
 import com.duluin.ftth.inventory.application.port.outbound.WorkOrderMaterialTemplateRepository
 import com.duluin.ftth.inventory.domain.model.InventoryItem
 import com.duluin.ftth.inventory.domain.model.InventoryStatus
+import com.duluin.ftth.inventory.domain.model.LocationKind
 import com.duluin.ftth.inventory.domain.model.MaterialOutcome
 import com.duluin.ftth.inventory.domain.model.SerializedAsset
 import com.duluin.ftth.inventory.domain.model.WorkOrderMaterialLine
@@ -64,6 +67,8 @@ class WorkOrderMaterialService(
      * satu pun checkpoint tahu bahwa persetujuan itu baru separuh jadi.
      */
     private val recovery: WorkOrderAssetRecoveryService,
+    /* Dipakai HANYA untuk [vanLocations] — daftar van yang boleh dipilih teknisi. */
+    private val locations: InventoryLocationRepository,
     /*
      * Dipakai HANYA untuk menerjemahkan id orang jadi nama di read model (lihat [WorkOrderPeopleNames]).
      * Berjalan in-process tanpa `@PreAuthorize`, jadi teknisi lapangan dan petugas gudang — yang
@@ -107,7 +112,25 @@ class WorkOrderMaterialService(
         // peng-scan tiap serial) baru lengkap setelah barisnya di tangan. Satu panggilan untuk
         // seluruh WO, bukan satu per serial.
         val names = peopleNames(lines)
-        return lines.map { it.toView(itemOf(tenantId, it.itemId), names) }
+        // Katalog barangnya juga SEKALI untuk seluruh daftar. Sebelumnya baris ini memanggil
+        // `itemOf(...)` di dalam `map`, jadi WO dengan 12 baris material membaca master barang
+        // 12 kali demi satu respons — dan layar detail WO memanggilnya tiap kali dibuka.
+        val catalog = itemsOf(tenantId, lines.map { it.itemId })
+        return lines.map { it.toView(catalog.getValue(it.itemId), names) }
+    }
+
+    /**
+     * Katalog barang untuk SELURUH baris sekaligus, sebanding dengan [peopleNames].
+     *
+     * Item yang hilang TETAP melempar, persis seperti [itemOf]: baris material menunjuk item
+     * lewat FK, jadi id yang tak teresolusi berarti master barangnya rusak — dan memulangkan
+     * baris tanpa nama barang hanya memindahkan kerusakan itu ke layar sebagai kolom kosong.
+     */
+    private fun itemsOf(tenantId: UUID, itemIds: Collection<UUID>): Map<UUID, InventoryItem> {
+        val wanted = itemIds.toSet()
+        val found = items.findAllByIds(wanted).filter { it.tenantId == tenantId }.associateBy { it.id }
+        if (found.size != wanted.size) throw NotFoundException("Item gudang tidak ditemukan")
+        return found
     }
 
     /**
@@ -119,7 +142,9 @@ class WorkOrderMaterialService(
      * hidup di basis data dan terus dianggap harus dibawa.
      *
      * Baris yang barangnya SUDAH keluar gudang tidak bisa dicoret: barangnya nyata, ada di
-     * tangan teknisi, dan harus tetap dipertanggungjawabkan.
+     * tangan teknisi, dan harus tetap dipertanggungjawabkan. Penjaga itu pula yang menahan
+     * [PlanWorkOrderMaterialCommand.clear] — mengosongkan rencana TIDAK boleh menghapus jejak
+     * barang yang sudah dibawa orang.
      */
     @Transactional
     override fun planMaterial(command: PlanWorkOrderMaterialCommand): List<WorkOrderMaterialView> {
@@ -128,8 +153,16 @@ class WorkOrderMaterialService(
         val template = templates.findByType(tenantId, type).associateBy { it.itemId }
         // Daftar kosong = "pakai BOM apa adanya". Inilah bentuk pra-isi yang dijanjikan:
         // dispatcher menekan "buat rencana" dan langsung mendapat daftar standar jenis WO-nya.
-        val requested = command.lines.ifEmpty {
-            template.values.map { PlannedMaterialLineInput(it.itemId, it.plannedQuantity) }
+        //
+        // MENGOSONGKAN rencana karena itu butuh `clear` yang eksplisit, dan hasilnya daftar
+        // kosong sungguhan — bukan BOM. Tidak ada jalur hapus terpisah: dengan `requested`
+        // kosong, SELURUH baris jadi yatim dan jatuh ke penjaga di bawah, yang memang sudah
+        // menolak baris yang barangnya telanjur keluar gudang.
+        val requested = when {
+            command.clear -> emptyList()
+            else -> command.lines.ifEmpty {
+                template.values.map { PlannedMaterialLineInput(it.itemId, it.plannedQuantity) }
+            }
         }
         if (requested.map { it.itemId }.toSet().size != requested.size) {
             throw ValidationException("Satu item hanya boleh muncul sekali dalam rencana material")
@@ -152,8 +185,14 @@ class WorkOrderMaterialService(
             val item = itemService.requireActive(input.itemId, tenantId)
             val current = existing[input.itemId]
             val line = current?.replan(input.quantity, template[input.itemId]?.plannedQuantity)
+                // Pelanggan dituntut TEPAT di titik pembuatan baris, bukan di pintu masuk:
+                // `replan` atas baris yang sudah ada tidak melahirkan efek saga baru, jadi WO
+                // yang pelanggannya telanjur dilepas tetap boleh disunting rencananya — yang
+                // dilarang hanya menambah baris yang kelak tak akan pernah bisa di-commit.
                 ?: WorkOrderMaterialLine.plan(
-                    tenantId, command.workOrderId, type, item, command.customerId,
+                    tenantId, command.workOrderId, type, item,
+                    command.customerId
+                        ?: throw ValidationException("Baris material baru butuh pelanggan; work order ini belum punya"),
                     input.quantity, template[input.itemId]?.plannedQuantity,
                 )
             materials.save(line) to item
@@ -319,6 +358,30 @@ class WorkOrderMaterialService(
 
     override fun cancelRecoveredAsset(command: CancelWorkOrderRecoveredAssetCommand): WorkOrderRecoveredAssetView =
         recovery.cancelRecoveredAsset(command)
+
+    /**
+     * Van yang boleh dipilih teknisi saat mencatat penarikan — SATU query untuk seluruh daftar.
+     *
+     * Penyaringan jenis dilakukan di sini, bukan di pemanggil: modul `workorder` tidak boleh
+     * kenal [LocationKind] sama sekali (enum itu milik `inventory.domain.model`, dan
+     * `ModularityTests` menolak imporannya dari luar modul).
+     *
+     * [LocationKind.TECHNICIAN] ikut, bukan hanya [LocationKind.VEHICLE]. Keduanya sama-sama
+     * berarti "van stock seorang teknisi" di repo ini — lihat KDoc
+     * `IssueWorkOrderMaterialCommand.technicianLocationId` dan `InventoryOperationsService`.
+     * Kalau hanya VEHICLE yang keluar, tenant yang memodelkan vannya sebagai TECHNICIAN
+     * mendapat daftar kosong, dan penarikan aset tetap tak bisa dipakai persis seperti sebelum
+     * endpoint ini ada. Gudang, bin, dan lokasi sistem (LOST/DISPOSED/TRANSIT/QUARANTINE/
+     * CUSTOMER_SITE) TIDAK PERNAH ikut: tak satu pun bisa jadi tujuan sah unit tarikan.
+     */
+    @Transactional(readOnly = true)
+    override fun vanLocations(tenantId: UUID): List<WorkOrderVanLocationView> =
+        locations.findAll(tenantId)
+            .filter { it.kind == LocationKind.VEHICLE || it.kind == LocationKind.TECHNICIAN }
+            // Urutan kode, bukan urutan sisipan: daftar pilihan yang berpindah-pindah posisi
+            // membuat teknisi yang menekan dari hafalan memilih van yang salah.
+            .sortedBy { it.code }
+            .map { WorkOrderVanLocationView(it.id, it.code) }
 
     // -------------------------------------------------------------- Penjaga
 

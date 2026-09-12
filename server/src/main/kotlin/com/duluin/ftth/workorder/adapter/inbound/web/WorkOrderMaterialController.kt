@@ -5,6 +5,7 @@ import com.duluin.ftth.inventory.PlannedMaterialLineInput
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
 import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
+import com.duluin.ftth.inventory.WorkOrderVanLocationView
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderMaterialUseCase
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryCancelRequest
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryRequest
@@ -60,7 +61,11 @@ class WorkOrderMaterialController(private val materials: ManageWorkOrderMaterial
     @PutMapping
     @PreAuthorize("@authz.can('workorder.material.record')")
     fun plan(@PathVariable id: UUID, @Valid @RequestBody body: PlanMaterialBody): List<WorkOrderMaterialView> =
-        materials.planMaterial(id, body.lines.map { PlannedMaterialLineInput(it.itemId, it.quantity) })
+        materials.planMaterial(
+            id,
+            body.lines.map { PlannedMaterialLineInput(it.itemId, it.quantity) },
+            body.clear,
+        )
 
     /**
      * Keluarkan barang gudang ke van stock teknisi.
@@ -110,6 +115,40 @@ class WorkOrderMaterialController(private val materials: ManageWorkOrderMaterial
     @PreAuthorize("@authz.can('workorder.material.view')")
     fun recoveredAssets(@PathVariable id: UUID): List<WorkOrderRecoveredAssetView> = materials.recoveredAssets(id)
 
+    /**
+     * Van yang boleh dipilih sebagai `technicianLocationId` di `POST .../recovered-assets`.
+     * Hanya `id` dan `code` — tidak ada atribut gudang lain yang ikut.
+     *
+     * **Kenapa terpisah dari `GET /api/inventory/locations`?** Karena aktornya teknisi lapangan,
+     * dan daftar itu dijaga `inventory.location.view`. Izin tersebut membuka SELURUH master data
+     * lokasi gudang: gudang, bin di dalamnya beserta hubungan induk-anaknya, lokasi karantina,
+     * dan permukaan yang sama dipakai layar pengaturan gudang. Memberikannya kepada setiap
+     * teknisi hanya supaya ia bisa menjawab "van mana yang boleh kupilih" adalah menukar satu
+     * bidang isian dengan akses baca ke tata letak gudang perusahaan. Endpoint ini memulangkan
+     * PERSIS yang dibutuhkan layar penarikan dan tidak satu bidang pun lebih, jadi izin material
+     * WO yang sudah dipegang teknisi cukup untuk membukanya.
+     *
+     * Tanpa endpoint ini fitur penarikan aset praktis mati: `technicianLocationId` wajib dikirim,
+     * dan satu-satunya cara menemukannya tertutup bagi orang yang justru mencabut ONT-nya.
+     *
+     * **Kenapa `canAny` menyertakan `workorder.material.record` yang notabene izin TULIS untuk
+     * menjaga sebuah PEMBACAAN?** Karena `workorder.material.view` saja tidak cukup: teknisi
+     * lapangan lazim hanya memegang `.record`, dan itu tepat orang yang butuh daftar ini. Yang
+     * dibayar: di repo ini `AccessChecker.isWrite(code) = !code.endsWith(".view")`, dan izin
+     * tulis melewati `assertNotLocked` — jadi pemanggil yang HANYA memegang `.record` menerima
+     * **402** (bukan 403) saat langganan tenantnya menunggak. Jebakan itu tercatat di
+     * `docs/serah-terima-gudang-pesanan.md` §4 dan di sini diterima DENGAN SENGAJA: satu-satunya
+     * tujuan daftar ini adalah mengisi `POST .../recovered-assets`, yang dijaga
+     * `workorder.material.record` dan karenanya SUDAH menolak tenant terkunci dengan 402 yang
+     * sama. Teknisi yang tertahan di sini tidak kehilangan apa pun yang seharusnya bisa ia
+     * kerjakan — tidak ada satu pun mode gagal baru yang lahir dari pilihan ini. (Pemegang
+     * `.view` tidak terpengaruh sama sekali: `canAny` melewati `assertNotLocked` begitu salah
+     * satu izin yang DIMILIKI berupa izin baca.)
+     */
+    @GetMapping("/van-locations")
+    @PreAuthorize("@authz.canAny('workorder.material.view', 'workorder.material.record')")
+    fun vanLocations(@PathVariable id: UUID): List<WorkOrderVanLocationView> = materials.vanLocations(id)
+
     /** Scan unit yang dicabut dari rumah pelanggan. Saldo baru bergerak saat WO disetujui. */
     @PostMapping("/recovered-assets")
     @PreAuthorize("@authz.can('workorder.material.record')")
@@ -140,7 +179,14 @@ class WorkOrderMaterialController(private val materials: ManageWorkOrderMaterial
 
 data class PlanMaterialLineBody(val itemId: UUID, @field:PositiveOrZero val quantity: Int)
 
-data class PlanMaterialBody(val lines: List<PlanMaterialLineBody> = emptyList())
+data class PlanMaterialBody(
+    val lines: List<PlanMaterialLineBody> = emptyList(),
+    /**
+     * `true` = kosongkan rencana; `lines` diabaikan. Bidang tersendiri, BUKAN disimpulkan dari
+     * `lines` kosong — bentuk itu sudah berarti "pakai BOM apa adanya" sejak awal.
+     */
+    val clear: Boolean = false,
+)
 
 data class IssueMaterialLineBody(
     val itemId: UUID,

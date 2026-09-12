@@ -21,6 +21,7 @@ import com.duluin.ftth.inventory.ScanWorkOrderMaterialSerialCommand
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
 import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
+import com.duluin.ftth.inventory.WorkOrderVanLocationView
 import com.duluin.ftth.workorder.WorkOrderAssigned
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderMaterialUseCase
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssetRecoveryCancelRequest
@@ -44,6 +45,7 @@ import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
@@ -346,17 +348,29 @@ class WorkOrderService(
     }
 
     @Transactional
-    override fun planMaterial(workOrderId: UUID, lines: List<PlannedMaterialLineInput>): List<WorkOrderMaterialView> {
+    override fun planMaterial(
+        workOrderId: UUID,
+        lines: List<PlannedMaterialLineInput>,
+        clear: Boolean,
+    ): List<WorkOrderMaterialView> {
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        requireMaterialWritable(workOrder)
         return materials.planMaterial(
             PlanWorkOrderMaterialCommand(
                 tenantId = workOrder.tenantId,
                 workOrderId = workOrderId,
                 workOrderType = workOrder.type.name,
-                customerId = requireMaterialCustomer(workOrder),
+                // MENGOSONGKAN rencana tidak menuntut pelanggan: ia hanya MENGHAPUS baris, dan
+                // tak satu pun efek saga lahir darinya. Menuntutnya di sini pernah jadi jebakan
+                // nyata — `WorkOrder.update` boleh menulis `customerId = null` pada WO non-terminal,
+                // jadi WO yang pelanggannya dilepas SETELAH rencananya tersusun akan menolak
+                // pengosongan selamanya dengan alasan yang sama sekali tak berhubungan, dan
+                // rencananya mandek di sana tanpa jalan keluar.
+                customerId = if (clear) null else requireMaterialCustomer(workOrder),
                 actorId = currentUser.current().userId,
                 lines = lines,
+                clear = clear,
             ),
         )
     }
@@ -366,6 +380,7 @@ class WorkOrderService(
         val workOrder = require(workOrderId)
         requireArea(workOrder)
         requireActiveActor()
+        requireMaterialWritable(workOrder)
         // Petugas GUDANG yang mengeluarkan barang, bukan teknisi pemilik WO — jadi di sini
         // yang dipakai adalah cakupan area, bukan kepemilikan WO. Teknisi penerimanya tetap
         // divalidasi: barang tidak boleh keluar ke orang yang tidak ditugaskan di WO ini.
@@ -393,6 +408,7 @@ class WorkOrderService(
     override fun recordMaterialUsage(workOrderId: UUID, request: WorkOrderMaterialUsageRequest): WorkOrderMaterialView {
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        requireMaterialWritable(workOrder)
         return materials.recordMaterialUsage(
             RecordWorkOrderMaterialUsageCommand(
                 tenantId = workOrder.tenantId,
@@ -411,6 +427,7 @@ class WorkOrderService(
     override fun scanMaterialSerial(workOrderId: UUID, request: WorkOrderMaterialScanRequest): WorkOrderMaterialView {
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        requireMaterialWritable(workOrder)
         return materials.scanMaterialSerial(
             ScanWorkOrderMaterialSerialCommand(
                 tenantId = workOrder.tenantId,
@@ -432,6 +449,7 @@ class WorkOrderService(
     ): WorkOrderRecoveredAssetView {
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        requireMaterialWritable(workOrder)
         // Teknisi penerima tetap divalidasi, persis seperti [issueMaterial]: unit yang ditarik
         // masuk ke van stock orang itu, dan orang yang tidak ditugaskan di WO ini tidak punya
         // alasan apa pun untuk memegangnya. Tanpa pemeriksaan ini, aset pelanggan bisa
@@ -460,6 +478,26 @@ class WorkOrderService(
         return materials.recoveredAssets(workOrder.tenantId, workOrderId)
     }
 
+    /**
+     * Daftar van untuk layar penarikan.
+     *
+     * SENGAJA TIDAK memakai [requireReadAccess]. Penjaga itu menuntut `workorder.order.view`
+     * atau kepemilikan WO sebagai teknisi, sedangkan yang membuka daftar ini justru orang yang
+     * hanya memegang izin material — dan menolaknya di sini mengembalikan persis kebuntuan yang
+     * endpoint ini perbaiki: teknisi tetap tak punya cara menemukan `technicianLocationId`.
+     *
+     * Yang tetap ditegakkan adalah dua hal yang benar-benar melindungi sesuatu: WO-nya harus ada
+     * di tenant pemanggil (RLS pada [require], jadi WO tenant lain = 404) dan cakupan area
+     * pemanggil. Isinya sendiri tidak bertambah rahasia dengan penjaga yang lebih ketat — daftar
+     * van adalah milik tenant, sama untuk setiap WO di dalamnya.
+     */
+    override fun vanLocations(workOrderId: UUID): List<WorkOrderVanLocationView> {
+        val workOrder = require(workOrderId)
+        requireActiveActor()
+        requireArea(workOrder)
+        return materials.vanLocations(workOrder.tenantId)
+    }
+
     @Transactional
     override fun cancelRecoveredAsset(
         workOrderId: UUID,
@@ -468,6 +506,7 @@ class WorkOrderService(
     ): WorkOrderRecoveredAssetView {
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
+        requireMaterialWritable(workOrder)
         return materials.cancelRecoveredAsset(
             CancelWorkOrderRecoveredAssetCommand(
                 tenantId = workOrder.tenantId,
@@ -476,6 +515,35 @@ class WorkOrderService(
                 actorId = currentUser.current().userId,
                 reason = request.reason,
             ),
+        )
+    }
+
+    /**
+     * Setelah hasil kerja DISETUJUI, catatan material & penarikan aset jadi ARSIP — tidak bisa
+     * ditulis lagi lewat jalur mana pun.
+     *
+     * Persetujuan penyelia (D7) adalah titik saga memotong saldo: material ter-consume dari van
+     * teknisi dan unit tarikan mendarat di van sebagai RETURNED. Tulisan yang datang SETELAH itu
+     * mengubah angka yang sudah dipakai memotong, dan tidak ada satu pun yang membukukan
+     * selisihnya — ledger tetap memuat mutasi lama sementara catatan WO-nya sudah berbunyi lain.
+     * Pembatalan baris penarikan adalah bentuk paling tajamnya: barisnya berbunyi "dibatalkan"
+     * sementara unitnya nyata-nyata SUDAH bertambah di van, persis kebalikan dari pertanyaan
+     * yang mau dijawab pembatalan.
+     *
+     * Penjaganya lahir di sini, BUKAN di modul `inventory`: status & persetujuan WO tidak
+     * terlihat dari sana. Dan bukan di controller, supaya jalur non-HTTP ikut terjaga.
+     *
+     * Hanya APPROVED yang mengunci. `null` (belum pernah selesai), PENDING, dan terutama
+     * REJECTED harus tetap bisa ditulis — WO yang ditolak memang dikembalikan ke lapangan untuk
+     * DIPERBAIKI, dan saldonya belum bergerak sama sekali.
+     */
+    private fun requireMaterialWritable(workOrder: WorkOrder) {
+        if (workOrder.approvalStatus != WorkOrderApprovalStatus.APPROVED) return
+        throw ConflictException(
+            "Hasil kerja work order ${workOrder.code} sudah disetujui dan stok gudang sudah bergerak " +
+                "mengikuti catatan ini, jadi catatan material dan penarikan asetnya tidak bisa diubah lagi. " +
+                "Bila ada yang keliru, ajukan penyesuaian stok gudang ke petugas gudang — bukan dengan " +
+                "mengubah catatan work order ini.",
         )
     }
 

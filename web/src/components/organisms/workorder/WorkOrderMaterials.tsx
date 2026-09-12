@@ -32,6 +32,7 @@ import {
 import type { User } from '@/api/types'
 import type { WorkOrderStatus } from '@/api/workorder'
 import {
+  clearWorkOrderMaterialPlan,
   getWorkOrderMaterialTemplate,
   issueWorkOrderMaterial,
   listWorkOrderMaterials,
@@ -46,7 +47,7 @@ import {
 } from '@/api/workorderMaterial'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, SelectField, SkeletonRows, TextField, TextareaField } from '@/components/atoms'
-import { useToast } from '@/system'
+import { useConfirm, useToast } from '@/system'
 import { fmt } from '@/utils/woLabels'
 
 /** Hanya tiga nasib yang dikenal server — menawarkan yang keempat berarti menjanjikan 400. */
@@ -82,6 +83,30 @@ interface MaterialItemOption {
   readonly serialized: boolean
 }
 
+/**
+ * Permintaan koreksi atas satu baris serial yang SUDAH tercatat.
+ *
+ * Koreksi TIDAK butuh endpoint sendiri: cukup men-scan ulang nomor seri yang sama dengan nasib
+ * yang benar. `WorkOrderMaterialLine.attachSerial` di server melakukan UPSERT per aset —
+ * `serials.filterNot { it.assetId == serial.assetId } + serial` — lalu SELALU menghitung ulang
+ * `usedQuantity`/`returnedQuantity`/`lostQuantity` dari daftar serial hasil penggabungan itu.
+ * Jadi scan kedua MENGGANTI scan pertama, bukan menumpuknya, dan angka di tabel material ikut
+ * benar dengan sendirinya tanpa satu pun operasi tambahan.
+ *
+ * Karena itu JANGAN tergoda menambah endpoint "hapus serial" untuk keperluan ini. Id baris
+ * serial sengaja dipertahankan saat upsert supaya saga pemotongan saldo tetap idempoten; hapus
+ * lalu sisipkan ulang melahirkan id baru, dan saga akan memotong saldo unit yang SAMA dua kali.
+ * Yang kurang selama ini cuma di layar: teknisi yang terlanjur memilih nasib yang salah tidak
+ * pernah diberi tahu bahwa jalan keluarnya sesederhana menembak ulang unit yang sama.
+ */
+interface SerialCorrection {
+  readonly serialNumber: string
+  readonly macAddress: string | null
+  /** Nasib yang SEKARANG tercatat — dipajang supaya jelas apa persisnya yang akan diganti. */
+  readonly previousOutcome: MaterialSerialOutcome
+  readonly itemName: string
+}
+
 export function WorkOrderMaterials({ workOrderId, status }: { workOrderId: string; status: WorkOrderStatus }) {
   const { can } = useCan()
   // Tanpa izin baca komponen TIDAK merender apa pun — bukan kartu kosong bertuliskan "akses
@@ -103,6 +128,9 @@ function MaterialsCard({ workOrderId, status }: { workOrderId: string; status: W
   const [template, setTemplate] = useState<readonly WorkOrderMaterialTemplateView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Diangkat ke kartu karena pemicunya ada di TABEL serial sementara formulirnya ada di
+  // bagian scan — dua tempat yang berjauhan di layar dan tidak saling bersarang.
+  const [correction, setCorrection] = useState<SerialCorrection | null>(null)
 
   const reload = useCallback(async () => {
     try {
@@ -178,6 +206,10 @@ function MaterialsCard({ workOrderId, status }: { workOrderId: string; status: W
                       <TableHeaderCell>Nasib</TableHeaderCell>
                       <TableHeaderCell>Waktu</TableHeaderCell>
                       <TableHeaderCell>Oleh</TableHeaderCell>
+                      {/* Kolom aksi ikut gerbang yang SAMA dengan bagian scan: koreksi tak lain
+                          adalah scan ulang, jadi siapa yang boleh mengoreksi = siapa yang boleh
+                          men-scan. Dua gerbang terpisah cepat atau lambat akan berbeda isi. */}
+                      {showScan && <TableHeaderCell>Aksi</TableHeaderCell>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -196,6 +228,24 @@ function MaterialsCard({ workOrderId, status }: { workOrderId: string; status: W
                         <TableCell className="muted">{fmt(serial.scannedAt)}</TableCell>
                         {/* Nama dari read model apa adanya — jangan diambil ulang dari `/api/users`. */}
                         <TableCell className="muted">{serial.scannedByName}</TableCell>
+                        {showScan && (
+                          <TableCell>
+                            <Button
+                              variant="subtle"
+                              aria-label={`Koreksi ${serial.serialNumber}`}
+                              onClick={() =>
+                                setCorrection({
+                                  serialNumber: serial.serialNumber,
+                                  macAddress: serial.macAddress,
+                                  previousOutcome: serial.outcome,
+                                  itemName: row.itemName,
+                                })
+                              }
+                            >
+                              Koreksi
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -213,7 +263,15 @@ function MaterialsCard({ workOrderId, status }: { workOrderId: string; status: W
           {showPlan && <PlanSection workOrderId={workOrderId} rows={rows} template={template} onSaved={reload} toast={toast} />}
           {showIssue && <IssueSection workOrderId={workOrderId} options={options} onSaved={reload} toast={toast} />}
           {showUsage && <UsageSection workOrderId={workOrderId} rows={rows} onSaved={reload} toast={toast} />}
-          {showScan && <ScanSection workOrderId={workOrderId} onSaved={reload} toast={toast} />}
+          {showScan && (
+            <ScanSection
+              workOrderId={workOrderId}
+              correction={correction}
+              onCorrectionEnd={() => setCorrection(null)}
+              onSaved={reload}
+              toast={toast}
+            />
+          )}
         </>
       )}
     </div>
@@ -291,6 +349,7 @@ function PlanSection({
   onSaved: () => Promise<void>
   toast: Toaster
 }) {
+  const confirm = useConfirm()
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
 
@@ -326,9 +385,45 @@ function PlanSection({
 
   // `lines: []` BUKAN "kosongkan rencana": server membacanya sebagai "pakai BOM apa adanya"
   // lalu mengisi rencana dari template WO. Inilah jalur pra-isi yang dipakai dispatcher saat
-  // membuka WO baru. Kalau kelak ada kebutuhan MENGOSONGKAN rencana, ia butuh jalur lain —
-  // menyamakan keduanya berarti satu klik salah menghapus rencana yang sudah disusun.
+  // membuka WO baru.
   const applyTemplateAsIs = () => save([], 'Rencana diisi dari BOM')
+
+  /**
+   * Mengosongkan rencana punya FUNGSI SENDIRI (`clearWorkOrderMaterialPlan`, yang menambahkan
+   * `clear: true`), bukan sekadar mengirim `lines: []` lewat `planWorkOrderMaterial`.
+   *
+   * Sebabnya: di kontrak ini `[]` berarti "pakai BOM apa adanya". Dispatcher yang menghapus
+   * baris terakhir dari layar lalu menekan simpan akan mengirim daftar kosong dan justru
+   * mendapat rencana PENUH kembali dari template — kebalikan persis dari yang ia maksud, dan
+   * tanpa satu pun pesan kesalahan yang memberitahunya. Dua maksud yang berlawanan tidak boleh
+   * memakai bentuk permintaan yang sama, jadi pengosongan dinyatakan eksplisit.
+   *
+   * Konfirmasi wajib karena aksinya membuang pekerjaan menyusun rencana yang tidak bisa
+   * dibatalkan dari layar ini. Penolakan server (ada baris yang sudah keluar gudang) dipajang
+   * APA ADANYA: pesannya sudah ditulis untuk dibaca orangnya, bukan untuk diringkas klien.
+   */
+  const clearPlan = async () => {
+    const approved = await confirm({
+      title: 'Kosongkan rencana material',
+      message:
+        `Seluruh ${rows.length} baris rencana material work order ini dibuang. Baris yang sudah ` +
+        'keluar gudang tidak ikut terbuang — server akan menolak permintaannya.',
+      confirmLabel: 'Kosongkan',
+      danger: true,
+    })
+    if (!approved) return
+    setBusy(true)
+    try {
+      await clearWorkOrderMaterialPlan(workOrderId)
+      setQuantities({})
+      await onSaved()
+      toast.success('Rencana material dikosongkan')
+    } catch (caught) {
+      toast.error(caught instanceof ApiError ? caught.message : 'Rencana material tidak dapat dikosongkan')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <section className="stack" style={{ gap: '0.5rem' }}>
@@ -338,36 +433,46 @@ function PlanSection({
           Tipe work order ini belum punya template BOM.
         </Text>
       ) : (
-        <>
-          <div className="stack" style={{ gap: '0.4rem' }}>
-            {template.map((line) => (
-              <div className="row wrap" key={line.itemId} style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-                <div className="stack" style={{ gap: 0, flex: 1, minWidth: 160 }}>
-                  <Text as="strong" size={200}>{line.itemName}</Text>
-                  <Text as="span" className="muted" size={100}>
-                    {line.itemCode} · BOM {line.plannedQuantity} {line.unit}
-                    {line.serialized ? ' · berserial' : ''}
-                  </Text>
-                  {line.note && <Text as="span" className="muted" size={100}>{line.note}</Text>}
-                </div>
-                <TextField
-                  label={`Rencana ${line.itemName}`}
-                  type="number"
-                  min={0}
-                  value={valueOf(line)}
-                  onChange={(_, data) => setQuantities((prev) => ({ ...prev, [line.itemId]: data.value }))}
-                  style={{ width: 120 }}
-                />
+        <div className="stack" style={{ gap: '0.4rem' }}>
+          {template.map((line) => (
+            <div className="row wrap" key={line.itemId} style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
+              <div className="stack" style={{ gap: 0, flex: 1, minWidth: 160 }}>
+                <Text as="strong" size={200}>{line.itemName}</Text>
+                <Text as="span" className="muted" size={100}>
+                  {line.itemCode} · BOM {line.plannedQuantity} {line.unit}
+                  {line.serialized ? ' · berserial' : ''}
+                </Text>
+                {line.note && <Text as="span" className="muted" size={100}>{line.note}</Text>}
               </div>
-            ))}
-          </div>
-          <div className="row wrap" style={{ gap: '0.5rem' }}>
-            <Button variant="primary" disabled={busy} onClick={() => void saveEdited()}>
-              {busy ? 'Menyimpan…' : 'Simpan rencana'}
-            </Button>
-            <Button disabled={busy} onClick={() => void applyTemplateAsIs()}>Pakai BOM apa adanya</Button>
-          </div>
-        </>
+              <TextField
+                label={`Rencana ${line.itemName}`}
+                type="number"
+                min={0}
+                value={valueOf(line)}
+                onChange={(_, data) => setQuantities((prev) => ({ ...prev, [line.itemId]: data.value }))}
+                style={{ width: 120 }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Tombol dirakit di luar cabang template supaya "Kosongkan rencana" tetap ada saat tipe
+          WO kehilangan template BOM-nya: rencananya sudah telanjur tersusun dan justru itulah
+          keadaan yang paling butuh dibersihkan. */}
+      {(template.length > 0 || rows.length > 0) && (
+        <div className="row wrap" style={{ gap: '0.5rem' }}>
+          {template.length > 0 && (
+            <>
+              <Button variant="primary" disabled={busy} onClick={() => void saveEdited()}>
+                {busy ? 'Menyimpan…' : 'Simpan rencana'}
+              </Button>
+              <Button disabled={busy} onClick={() => void applyTemplateAsIs()}>Pakai BOM apa adanya</Button>
+            </>
+          )}
+          {rows.length > 0 && (
+            <Button variant="danger" disabled={busy} onClick={() => void clearPlan()}>Kosongkan rencana</Button>
+          )}
+        </div>
       )}
     </section>
   )
@@ -723,10 +828,14 @@ function UsageSection({
 
 function ScanSection({
   workOrderId,
+  correction,
+  onCorrectionEnd,
   onSaved,
   toast,
 }: {
   workOrderId: string
+  correction: SerialCorrection | null
+  onCorrectionEnd: () => void
   onSaved: () => Promise<void>
   toast: Toaster
 }) {
@@ -735,24 +844,52 @@ function ScanSection({
   const [macAddress, setMacAddress] = useState('')
   const [busy, setBusy] = useState(false)
   const serialRef = useRef<HTMLInputElement>(null)
+  const outcomeRef = useRef<HTMLSelectElement>(null)
+
+  useEffect(() => {
+    if (!correction) return
+    setSerialNumber(correction.serialNumber)
+    setOutcome(correction.previousOutcome)
+    setMacAddress(correction.macAddress ?? '')
+    // Fokus ke pemilih NASIB, bukan ke kolom serial. Nomor serinya sudah benar — yang salah
+    // justru nasibnya, dan itulah satu-satunya hal yang datang untuk diubah.
+    outcomeRef.current?.focus()
+  }, [correction])
+
+  const cancelCorrection = () => {
+    setSerialNumber('')
+    setMacAddress('')
+    setOutcome('INSTALLED')
+    onCorrectionEnd()
+    serialRef.current?.focus()
+  }
 
   const submit = async () => {
     const trimmed = serialNumber.trim()
     if (!trimmed || busy) return
     setBusy(true)
     try {
+      // Koreksi memakai endpoint yang SAMA dengan scan biasa: server meng-upsert per aset dan
+      // menghitung ulang kuantitas dari daftar serial, jadi scan ulang dengan nasib berbeda
+      // memperbaiki catatan lama alih-alih menambah catatan kedua. Lihat [SerialCorrection].
       await scanWorkOrderMaterialSerial(workOrderId, {
         serialNumber: trimmed,
         outcome,
         macAddress: macAddress.trim() || null,
       })
+      const corrected = correction
       setSerialNumber('')
       setMacAddress('')
+      onCorrectionEnd()
       // Fokus dikembalikan ke kolom serial: pemindai barcode menembakkan unit berikutnya
       // langsung setelah bunyi bip, dan kolom yang kehilangan fokus membuang tembakan itu.
       serialRef.current?.focus()
       await onSaved()
-      toast.success(`${trimmed} dicatat sebagai ${OUTCOME_LABEL[outcome].toLowerCase()}`)
+      toast.success(
+        corrected
+          ? `${trimmed} dikoreksi menjadi ${OUTCOME_LABEL[outcome].toLowerCase()}`
+          : `${trimmed} dicatat sebagai ${OUTCOME_LABEL[outcome].toLowerCase()}`,
+      )
     } catch (caught) {
       toast.error(caught instanceof ApiError ? caught.message : 'Nomor seri tidak dapat dicatat')
     } finally {
@@ -762,7 +899,21 @@ function ScanSection({
 
   return (
     <section className="stack" style={{ gap: '0.5rem' }}>
-      <Text as="h4" size={200} weight="semibold" style={{ margin: 0 }}>Scan nomor seri</Text>
+      <Text as="h4" size={200} weight="semibold" style={{ margin: 0 }}>
+        {correction ? 'Koreksi scan nomor seri' : 'Scan nomor seri'}
+      </Text>
+      {correction && (
+        // Mode koreksi HARUS terbaca sebelum tombol simpan ditekan: tanpa kalimat ini teknisi
+        // mengira ia sedang menambah baris kedua untuk unit yang sama dan malah membatalkannya.
+        <div className="row wrap" role="status" style={{ gap: '0.5rem', alignItems: 'center' }}>
+          <Badge tone="warning">Mode koreksi</Badge>
+          <Text as="span" size={200}>
+            Scan ini akan MENGGANTI catatan {correction.serialNumber} ({correction.itemName}) yang
+            sekarang berbunyi “{OUTCOME_LABEL[correction.previousOutcome]}” — bukan menambah baris baru.
+          </Text>
+          <Button variant="subtle" onClick={cancelCorrection}>Batalkan koreksi</Button>
+        </div>
+      )}
       <div className="row wrap" style={{ alignItems: 'flex-end' }}>
         <TextField
           label="Nomor seri"
@@ -783,6 +934,7 @@ function ScanSection({
         <SelectField
           label="Nasib unit"
           value={outcome}
+          select={{ ref: outcomeRef }}
           onChange={(_, data) => setOutcome(data.value as MaterialSerialOutcome)}
         >
           {OUTCOMES.map((entry) => (
@@ -796,12 +948,13 @@ function ScanSection({
           style={{ minWidth: 160 }}
         />
         <Button variant="primary" disabled={busy || !serialNumber.trim()} onClick={() => void submit()}>
-          {busy ? 'Menyimpan…' : 'Simpan scan'}
+          {busy ? 'Menyimpan…' : correction ? 'Simpan koreksi' : 'Simpan scan'}
         </Button>
       </div>
       <Text as="span" className="muted" size={100}>
         Setiap unit berserial yang keluar gudang harus dinyatakan nasibnya — hanya yang terpasang
-        di pelanggan yang memotong saldo saat work order disetujui.
+        di pelanggan yang memotong saldo saat work order disetujui. Salah pilih nasib bukan jalan
+        buntu: tembak ulang unit yang sama lewat tombol “Koreksi” di tabel di atas.
       </Text>
     </section>
   )

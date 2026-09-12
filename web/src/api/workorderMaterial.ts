@@ -16,6 +16,15 @@
 
 import { api } from './client'
 
+/**
+ * BOM-nya milik inventory — di sanalah layar penyuntingnya. Berkas ini hanya meneruskan supaya
+ * layar work order tak perlu mengimpor seluruh permukaan `inventory.ts`. `import type` terhapus
+ * saat kompilasi, jadi tak ada satu byte pun yang ikut ke bundel.
+ */
+import type { WorkOrderMaterialTemplateView } from './inventory'
+
+export type { WorkOrderMaterialTemplateView }
+
 /** GOOD = masih layak dipakai ulang, DAMAGED = rusak, masuk karantina saat WO disetujui. */
 export type RecoveredAssetCondition = 'GOOD' | 'DAMAGED'
 
@@ -65,17 +74,6 @@ export interface WorkOrderMaterialView {
   readonly serials: readonly WorkOrderMaterialSerialView[]
 }
 
-export interface WorkOrderMaterialTemplateView {
-  readonly itemId: string
-  readonly itemCode: string
-  readonly itemName: string
-  readonly itemCategory: string
-  readonly unit: string
-  readonly serialized: boolean
-  readonly plannedQuantity: number
-  readonly note: string | null
-}
-
 export interface WorkOrderRecoveredAssetView {
   readonly id: string
   readonly workOrderId: string
@@ -90,6 +88,8 @@ export interface WorkOrderRecoveredAssetView {
   readonly technicianId: string
   readonly technicianName: string
   readonly technicianLocationId: string
+  /** Kode van tempat unitnya mendarat — dibawa server supaya klien tak perlu `/locations`. */
+  readonly technicianLocationCode: string
   readonly condition: RecoveredAssetCondition
   readonly note: string | null
   readonly recoveredAt: string
@@ -105,6 +105,19 @@ export interface WorkOrderRecoveredAssetView {
 export interface PlanMaterialLineBody {
   readonly itemId: string
   readonly quantity: number
+}
+
+/**
+ * Van yang boleh dipilih sebagai tujuan barang/tarikan untuk WO ini.
+ *
+ * Ada endpoint TERSENDIRI di bawah namespace work order, bukan `/api/inventory/locations`,
+ * karena aktornya teknisi lapangan: ia memegang `workorder.material.record` tapi TIDAK
+ * memegang `inventory.location.view` — dan izin itu juga akan membuka gudang, bin, serta
+ * permukaan master data gudang, jauh lebih lebar dari sekadar "van mana yang boleh kupilih".
+ */
+export interface WorkOrderVanLocationView {
+  readonly id: string
+  readonly code: string
 }
 
 export interface IssueMaterialLineBody {
@@ -154,12 +167,24 @@ export const listWorkOrderMaterials = (workOrderId: string) =>
 export const getWorkOrderMaterialTemplate = (workOrderId: string) =>
   api.get<WorkOrderMaterialTemplateView[]>(`${base(workOrderId)}/template`)
 
+export const listWorkOrderVanLocations = (workOrderId: string) =>
+  api.get<WorkOrderVanLocationView[]>(`${base(workOrderId)}/van-locations`)
+
 /**
  * Simpan rencana material. `lines: []` berarti "pakai BOM apa adanya" — itulah jalur pra-isi
  * yang dipakai dispatcher saat membuka WO baru, bukan cara mengosongkan rencana.
+ *
+ * MENGOSONGKAN rencana butuh `clear: true` yang eksplisit, bukan daftar kosong. Dua maksud itu
+ * tidak boleh memakai bentuk yang sama: dispatcher yang menghapus baris terakhir dari layar lalu
+ * menyimpan akan mengirim `[]`, dan kalau `[]` berarti "pakai BOM" ia justru mendapat rencana
+ * penuh kembali — kebalikan persis dari yang ia maksud, tanpa satu pun pesan kesalahan.
  */
 export const planWorkOrderMaterial = (workOrderId: string, lines: readonly PlanMaterialLineBody[]) =>
   api.put<WorkOrderMaterialView[]>(base(workOrderId), { lines })
+
+/** Buang seluruh baris rencana yang belum keluar gudang. Baris yang sudah terbit ditolak server. */
+export const clearWorkOrderMaterialPlan = (workOrderId: string) =>
+  api.put<WorkOrderMaterialView[]>(base(workOrderId), { lines: [], clear: true })
 
 export const issueWorkOrderMaterial = (workOrderId: string, body: IssueMaterialBody) =>
   api.post<WorkOrderMaterialView[]>(`${base(workOrderId)}/issues`, body)

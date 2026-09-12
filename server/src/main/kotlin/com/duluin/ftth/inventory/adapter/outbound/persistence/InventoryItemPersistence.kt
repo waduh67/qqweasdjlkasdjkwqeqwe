@@ -40,6 +40,12 @@ interface InventoryItemJpaRepository : JpaRepository<InventoryItemJpaEntity, UUI
 class InventoryItemPersistenceAdapter(private val repository: InventoryItemJpaRepository) : InventoryItemRepository {
     override fun findById(id: UUID): InventoryItem? = repository.findById(id).orElse(null)?.toDomain()
 
+    // Himpunan kosong di-short-circuit: `findAllById(emptyList())` tetap menembakkan satu query
+    // `where id in ()` yang pasti kosong hasilnya. Penyaringan tenant TIDAK diulang di sini —
+    // RLS + `@TenantId` sudah menutupnya di level baris.
+    override fun findAllByIds(ids: Set<UUID>): List<InventoryItem> =
+        if (ids.isEmpty()) emptyList() else repository.findAllById(ids).map { it.toDomain() }
+
     override fun findByCode(tenantId: UUID, code: String): InventoryItem? =
         repository.findByTenantIdAndCode(tenantId, code.trim().uppercase())?.toDomain()
 

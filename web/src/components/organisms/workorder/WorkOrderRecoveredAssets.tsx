@@ -10,22 +10,28 @@
  * cara mencatat ONT yang ia cabut, dan unitnya dibawa pulang tanpa jejak apa pun di pembukuan.
  *
  * Baris penarikannya SUDAH bernama lengkap dari read model (`itemName`, `technicianName`,
- * `recoveredByName`, `cancelledByName`). JANGAN menggabungkan ulang `itemId`/`technicianId`/
- * `recoveredBy` ke `/item-master` atau `/api/users`: dua endpoint itu menuntut
- * `inventory.item.view`/`iam.user.view` yang justru TIDAK dipegang teknisi lapangan, dan
+ * `technicianLocationCode`, `recoveredByName`, `cancelledByName`). JANGAN menggabungkan ulang
+ * `itemId`/`technicianId`/`recoveredBy`/`technicianLocationId` ke `/item-master`, `/api/users`,
+ * atau `/api/inventory/locations`: endpoint-endpoint itu menuntut `inventory.item.view`/
+ * `iam.user.view`/`inventory.location.view` yang justru TIDAK dipegang teknisi lapangan, dan
  * penggabungan semacam itulah yang dulu membuat layar gudang memajang UUID telanjang.
+ *
+ * Pemilih van pun TIDAK lagi menembak `/api/inventory/locations`: daftarnya datang dari
+ * `listWorkOrderVanLocations`, endpoint sempit di bawah namespace work order yang dijaga izin
+ * yang memang dipegang teknisi. Jangan kembalikan yang lama — ada tesnya.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { ApiError } from '@/api/client'
-import { listInventoryLocations, type LocationView } from '@/api/inventory'
 import type { WorkOrderAssigneeView, WorkOrderStatus, WorkOrderType } from '@/api/workorder'
 import {
   cancelRecoveredAsset,
   listRecoveredAssets,
+  listWorkOrderVanLocations,
   recoverWorkOrderAsset,
   type RecoveredAssetCondition,
   type WorkOrderRecoveredAssetView,
+  type WorkOrderVanLocationView,
 } from '@/api/workorderMaterial'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, SelectField, TextField } from '@/components/atoms'
@@ -39,10 +45,19 @@ const CONDITION_LABEL: Record<RecoveredAssetCondition, string> = {
 
 const CONDITIONS: readonly RecoveredAssetCondition[] = ['GOOD', 'DAMAGED']
 
-/** Pesan izin yang menyebut nama izinnya, supaya orangnya tahu persis harus minta apa. */
-const LOCATION_DENIED =
-  'Pencatatan penarikan butuh izin melihat lokasi gudang (inventory.location.view) untuk memilih van teknisi. ' +
-  'Minta izin itu ke administrator, lalu buka ulang halaman ini. Baris yang sudah tercatat tetap bisa dibaca di bawah.'
+/**
+ * Daftar vannya dijaga izin yang MEMANG dipegang pencatat penarikan, jadi kegagalan di sini
+ * bukan lagi "kamu kurang izin melihat master lokasi" — menyuruh orang meminta
+ * `inventory.location.view` sekarang salah alamat dan mengirimnya mengejar izin yang bukan
+ * jawabannya. Yang tersisa: peran yang dipakai memang tak lengkap, atau servernya bermasalah.
+ * Keduanya disebut, karena dari sisi layar keduanya tak bisa dibedakan.
+ */
+const VAN_LOAD_FAILED =
+  'Daftar van teknisi gagal dimuat, jadi tujuan unit yang ditarik belum bisa dipilih. ' +
+  'Pemegang izin workorder.material.record semestinya sudah bisa memuatnya, jadi kemungkinannya ' +
+  'izin itu belum benar-benar terpasang di peranmu, atau server sedang bermasalah. Muat ulang ' +
+  'halaman ini dulu; kalau tetap gagal, laporkan ke administrator. Baris yang sudah tercatat ' +
+  'tetap bisa dibaca di bawah.'
 
 export function WorkOrderRecoveredAssets({
   workOrderId,
@@ -61,10 +76,11 @@ export function WorkOrderRecoveredAssets({
 
   const [rows, setRows] = useState<readonly WorkOrderRecoveredAssetView[]>([])
   const [loading, setLoading] = useState(true)
-  const [vans, setVans] = useState<readonly LocationView[]>([])
-  // Dipisahkan dari `vans.length === 0`: "tidak punya izin" dan "belum ada van terdaftar"
-  // menuntut tindakan yang berbeda dari pembacanya.
-  const [vanDenied, setVanDenied] = useState(false)
+  const [vans, setVans] = useState<readonly WorkOrderVanLocationView[]>([])
+  // Dipisahkan dari `vans.length === 0`: "daftarnya gagal dimuat" dan "belum ada van terdaftar"
+  // menuntut tindakan yang berbeda dari pembacanya — yang satu memuat ulang atau mengadu ke
+  // administrator, yang satu lagi mendaftarkan van di master data gudang.
+  const [vanLoadFailed, setVanLoadFailed] = useState(false)
 
   const [serialNumber, setSerialNumber] = useState('')
   const [technicianId, setTechnicianId] = useState('')
@@ -107,25 +123,28 @@ export function WorkOrderRecoveredAssets({
   useEffect(() => {
     if (!canRecord) return
     let alive = true
-    listInventoryLocations('VEHICLE')
+    // Endpoint sempit di bawah namespace work order, BUKAN `/api/inventory/locations`: yang
+    // mencabut ONT adalah teknisi yang memegang `workorder.material.record` tapi tidak memegang
+    // `inventory.location.view` — dan izin itu akan membuka gudang, bin, serta master data
+    // gudang, jauh lebih lebar dari sekadar "van mana yang boleh kupilih".
+    listWorkOrderVanLocations(workOrderId)
       .then((found) => {
         if (!alive) return
         setVans(found)
-        setVanDenied(false)
+        setVanLoadFailed(false)
       })
-      // 403 DITELAN, bukan dilempar: teknisi lapangan lazimnya tidak punya
-      // `inventory.location.view`. Kartunya tetap utuh dan daftar penarikan tetap terbaca;
-      // yang hilang hanya pemilih van — dan orangnya diberi tahu izin apa yang kurang,
-      // bukan dibiarkan menekan tombol simpan yang diam-diam tak pernah bisa jalan.
+      // Kegagalannya DITELAN, bukan dilempar: kartunya tetap utuh dan daftar penarikan tetap
+      // terbaca. Yang hilang hanya pemilih van — dan orangnya diberi tahu bahwa daftarnya gagal
+      // dimuat, bukan dibiarkan menekan tombol simpan yang diam-diam tak pernah bisa jalan.
       .catch(() => {
         if (!alive) return
         setVans([])
-        setVanDenied(true)
+        setVanLoadFailed(true)
       })
     return () => {
       alive = false
     }
-  }, [canRecord])
+  }, [canRecord, workOrderId])
 
   // Satu teknisi di roster = tak ada yang perlu dipilih. Begitu juga satu van.
   useEffect(() => {
@@ -146,7 +165,7 @@ export function WorkOrderRecoveredAssets({
       return
     }
     if (!locationId) {
-      toast.error(vanDenied ? LOCATION_DENIED : 'Pilih van teknisi tempat unitnya dibawa')
+      toast.error(vanLoadFailed ? VAN_LOAD_FAILED : 'Pilih van teknisi tempat unitnya dibawa')
       return
     }
     setBusy(true)
@@ -227,10 +246,10 @@ export function WorkOrderRecoveredAssets({
         barang retur — belum jadi stok layak jual. Naikkan ke rak lewat retur gudang.
       </Text>
 
-      {showForm && vanDenied && (
-        <Text as="p" className="error" size={200} role="alert" style={{ margin: 0 }}>{LOCATION_DENIED}</Text>
+      {showForm && vanLoadFailed && (
+        <Text as="p" className="error" size={200} role="alert" style={{ margin: 0 }}>{VAN_LOAD_FAILED}</Text>
       )}
-      {showForm && !vanDenied && vans.length === 0 && (
+      {showForm && !vanLoadFailed && vans.length === 0 && (
         <Text as="p" className="error" size={200} role="alert" style={{ margin: 0 }}>
           Belum ada lokasi berjenis kendaraan (van) terdaftar di master data gudang. Unit yang ditarik
           harus mendarat di van teknisi, jadi daftarkan vannya dulu.
@@ -281,7 +300,7 @@ export function WorkOrderRecoveredAssets({
             label="Van teknisi"
             value={locationId}
             onChange={(_, data) => setLocationId(data.value)}
-            disabled={vanDenied}
+            disabled={vanLoadFailed}
             style={{ minWidth: 150 }}
           >
             <option value="">Pilih van…</option>
@@ -310,7 +329,7 @@ export function WorkOrderRecoveredAssets({
             placeholder="mis. casing retak, adaptor tidak ikut"
             style={{ flex: 1, minWidth: 160 }}
           />
-          <Button variant="primary" disabled={busy || vanDenied} onClick={() => void submit()}>
+          <Button variant="primary" disabled={busy || vanLoadFailed} onClick={() => void submit()}>
             {busy ? 'Menyimpan…' : 'Catat penarikan'}
           </Button>
         </div>
@@ -335,6 +354,7 @@ export function WorkOrderRecoveredAssets({
                 <TableHeaderCell>Item</TableHeaderCell>
                 <TableHeaderCell>Kondisi</TableHeaderCell>
                 <TableHeaderCell>Teknisi</TableHeaderCell>
+                <TableHeaderCell>Van</TableHeaderCell>
                 <TableHeaderCell>Ditarik</TableHeaderCell>
                 <TableHeaderCell>Catatan</TableHeaderCell>
                 {canRecord && <TableHeaderCell>Aksi</TableHeaderCell>}
@@ -368,6 +388,11 @@ export function WorkOrderRecoveredAssets({
                       <Badge tone={row.condition === 'GOOD' ? 'good' : 'warning'}>{CONDITION_LABEL[row.condition]}</Badge>
                     </TableCell>
                     <TableCell>{row.technicianName}</TableCell>
+                    {/* Kode vannya dibawa read model. JANGAN menukar `technicianLocationId`
+                        jadi nama lewat `/api/inventory/locations`: endpoint itu menuntut
+                        `inventory.location.view` yang tidak dipegang pembaca layar ini, dan
+                        yang tersisa di layar cuma UUID telanjang. */}
+                    <TableCell>{row.technicianLocationCode}</TableCell>
                     <TableCell>
                       <div className="stack" style={{ gap: '0.15rem' }}>
                         <Text as="span" size={200}>{fmt(row.recoveredAt)}</Text>

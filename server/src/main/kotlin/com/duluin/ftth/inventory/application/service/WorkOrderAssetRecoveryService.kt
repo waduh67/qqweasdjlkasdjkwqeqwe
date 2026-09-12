@@ -136,17 +136,24 @@ class WorkOrderAssetRecoveryService(
         )
         val saved = recovered.save(row)
         // Jalur TULIS pun bernama: tanpa ini layar teknisi berkedip dari nama ke UUID tepat
-        // setelah unitnya di-scan.
-        return saved.toView(item, peopleNames(listOf(saved)))
+        // setelah unitnya di-scan. Kode vannya sudah di tangan — barisnya lahir dari [holder]
+        // yang baru saja dibaca, jadi tidak ada query tambahan untuk menamainya.
+        return saved.toView(item, peopleNames(listOf(saved)), mapOf(holder.id to holder.code))
     }
 
     @Transactional(readOnly = true)
     fun recoveredAssets(tenantId: UUID, workOrderId: UUID): List<WorkOrderRecoveredAssetView> {
         val active = requireTenant(tenantId)
-        // Barisnya DULU, baru SATU panggilan direktori pengguna untuk seluruh daftarnya.
+        // Barisnya DULU, baru SATU panggilan direktori pengguna dan SATU pembacaan lokasi untuk
+        // seluruh daftarnya.
         val rows = recovered.findByWorkOrder(active, workOrderId)
         val names = peopleNames(rows)
-        return rows.map { it.toView(itemOf(active, it.itemId), names) }
+        val vans = locationCodes(active, rows)
+        // Katalog barangnya juga SEKALI untuk seluruh daftar. Sebelumnya baris ini memanggil
+        // `itemOf(...)` di dalam `map`, jadi satu WO dengan 20 unit tertarik membaca master
+        // barang 20 kali hanya untuk menyusun satu respons.
+        val catalog = itemsOf(active, rows)
+        return rows.map { it.toView(catalog.getValue(it.itemId), names, vans) }
     }
 
     @Transactional
@@ -159,7 +166,14 @@ class WorkOrderAssetRecoveryService(
         }
         val cancelled = row.cancel(Instant.now(clock), command.actorId, command.reason)
         val saved = recovered.save(cancelled)
-        return saved.toView(itemOf(tenantId, row.itemId), peopleNames(listOf(saved)))
+        // Jalur tulis KEDUA, dan ia sama wajibnya dengan yang pertama: kalau pembatalan
+        // memulangkan view tanpa kode van, kolom itu berkedip jadi UUID tepat setelah tombol
+        // "batalkan" ditekan lalu benar lagi saat layarnya di-refresh.
+        return saved.toView(
+            itemOf(tenantId, row.itemId),
+            peopleNames(listOf(saved)),
+            locationCodes(tenantId, listOf(saved)),
+        )
     }
 
     /**
@@ -221,6 +235,24 @@ class WorkOrderAssetRecoveryService(
             ?: throw NotFoundException("Item gudang tidak ditemukan")
 
     /**
+     * Katalog barang untuk SELURUH baris penarikan sekaligus, sebanding dengan [peopleNames].
+     *
+     * Dulu [recoveredAssets] memanggil [itemOf] per baris — N+1 terhadap master barang, dan satu
+     * WO DISMANTLE di gedung bertingkat menarik puluhan ONT sekaligus. Satu unit berserial per
+     * baris pula, jadi barisnya tidak pernah diringkas seperti barang curah.
+     *
+     * Item yang hilang TETAP melempar, persis seperti [itemOf]: baris penarikan menunjuk item
+     * lewat FK, jadi id yang tak teresolusi berarti master barangnya rusak — dan memulangkan
+     * baris tanpa nama barang hanya memindahkan kerusakan itu ke layar sebagai kolom kosong.
+     */
+    private fun itemsOf(tenantId: UUID, rows: Collection<WorkOrderRecoveredAsset>): Map<UUID, InventoryItem> {
+        val wanted = rows.mapTo(mutableSetOf()) { it.itemId }
+        val found = items.findAllByIds(wanted).filter { it.tenantId == tenantId }.associateBy { it.id }
+        if (found.size != wanted.size) throw NotFoundException("Item gudang tidak ditemukan")
+        return found
+    }
+
+    /**
      * SATU panggilan direktori pengguna untuk SELURUH baris penarikan yang akan dinamai.
      *
      * Tiap baris menyebut sampai tiga orang (teknisi, peng-scan, pembatal) dan satu WO DISMANTLE
@@ -237,7 +269,29 @@ class WorkOrderAssetRecoveryService(
         },
     )
 
-    private fun WorkOrderRecoveredAsset.toView(item: InventoryItem, names: WorkOrderPeopleNames) = WorkOrderRecoveredAssetView(
+    /**
+     * SATU pembacaan lokasi untuk SELURUH baris yang akan diberi kode van.
+     *
+     * Bentuknya sama dengan [peopleNames]: id-nya dikumpulkan ke satu himpunan dulu, baru satu
+     * panggilan. `findById` per baris adalah N+1 yang persis tumbuh seiring banyaknya unit yang
+     * ditarik dalam satu WO DISMANTLE — dan WO borongan (satu pelanggan pindah alamat, lima ONT
+     * dicabut) adalah kasus yang justru paling sering dibaca.
+     *
+     * Dipakai `findAll` sekali lalu disaring, bukan query "where id in (...)": itu pola yang
+     * sudah dipakai `InventoryStockQueryService.names` untuk keperluan yang sama, dan daftar
+     * lokasi satu tenant memang berukuran puluhan. Himpunan kosong TIDAK memanggil apa pun.
+     */
+    private fun locationCodes(tenantId: UUID, rows: Collection<WorkOrderRecoveredAsset>): Map<UUID, String> {
+        val ids = rows.mapTo(mutableSetOf()) { it.technicianLocationId }
+        if (ids.isEmpty()) return emptyMap()
+        return locations.findAll(tenantId).filter { it.id in ids }.associate { it.id to it.code }
+    }
+
+    private fun WorkOrderRecoveredAsset.toView(
+        item: InventoryItem,
+        names: WorkOrderPeopleNames,
+        vans: Map<UUID, String>,
+    ) = WorkOrderRecoveredAssetView(
         id = id,
         workOrderId = workOrderId,
         assetId = assetId,
@@ -251,6 +305,9 @@ class WorkOrderAssetRecoveryService(
         technicianId = technicianId,
         technicianName = names.person(technicianId),
         technicianLocationId = technicianLocationId,
+        // Fallback UUID, BUKAN string kosong: sel kosong terbaca "unit ini tidak ada vannya",
+        // padahal yang terjadi adalah lokasinya sudah terhapus. UUID yang jelek itu petunjuk.
+        technicianLocationCode = vans[technicianLocationId] ?: technicianLocationId.toString(),
         condition = condition.name,
         note = note,
         recoveredAt = recoveredAt,

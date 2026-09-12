@@ -51,14 +51,15 @@ const USER_BUDI = '55555555-5555-5555-5555-555555555555'
 const USER_TONO = '77777777-7777-7777-7777-777777777777'
 const CUSTOMER = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
 
-const vans = [{ id: LOC_VAN, code: 'VAN-01', kind: 'VEHICLE', parentId: null }]
+/** Bentuk `WorkOrderVanLocationView`: sengaja cuma id + kode, bukan `LocationView` gudang. */
+const vans = [{ id: LOC_VAN, code: 'VAN-01' }]
 
 const assignees = [{ id: USER_SARI, name: 'Sari Melati' }]
 
 /**
  * Bentuk baris ini mencerminkan read model server SETELAH resolusi nama: `itemName`,
- * `technicianName`, `recoveredByName`, dan `cancelledByName` datang dari server. Kalau
- * fixture-nya dipangkas jadi id saja, tes di bawah gagal — itu memang gunanya.
+ * `technicianName`, `technicianLocationCode`, `recoveredByName`, dan `cancelledByName` datang
+ * dari server. Kalau fixture-nya dipangkas jadi id saja, tes di bawah gagal — itu memang gunanya.
  */
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'rec-1',
@@ -74,6 +75,7 @@ const row = (over: Record<string, unknown> = {}) => ({
   technicianId: USER_SARI,
   technicianName: 'Sari Melati',
   technicianLocationId: LOC_VAN,
+  technicianLocationCode: 'VAN-01',
   condition: 'GOOD',
   note: null,
   recoveredAt: '2026-09-01T02:00:00Z',
@@ -86,17 +88,22 @@ const row = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-/** Potret teknisi lapangan sungguhan: `/item-master` dan `/api/users` sama-sama 403. */
+/**
+ * Potret teknisi lapangan sungguhan: `/item-master`, `/api/users`, DAN master lokasi gudang
+ * sama-sama 403. Daftar van hanya dijawab dari endpoint sempit milik work order — kalau
+ * seseorang mengembalikan `/api/inventory/locations`, pemilih vannya langsung mati di sini.
+ */
 function mockApi(rows: unknown[], overrides: Record<string, unknown | Error> = {}) {
   apiGet.mockImplementation((path: string) => {
-    for (const [prefix, value] of Object.entries(overrides)) {
-      if (path.startsWith(prefix)) {
+    for (const [fragment, value] of Object.entries(overrides)) {
+      if (path.includes(fragment)) {
         return value instanceof Error ? Promise.reject(value) : Promise.resolve(value)
       }
     }
     if (path.startsWith('/api/inventory/item-master')) return Promise.reject(new ApiErrorMock(403, 'forbidden'))
     if (path.startsWith('/api/users')) return Promise.reject(new ApiErrorMock(403, 'forbidden'))
-    if (path.startsWith('/api/inventory/locations')) return Promise.resolve(vans)
+    if (path.startsWith('/api/inventory/locations')) return Promise.reject(new ApiErrorMock(403, 'forbidden'))
+    if (path.includes('/van-locations')) return Promise.resolve(vans)
     if (path.includes('/recovered-assets')) return Promise.resolve(rows)
     return Promise.reject(new Error(`tak terduga: ${path}`))
   })
@@ -317,18 +324,72 @@ describe('form scan', () => {
     )
   })
 
-  it('memberi pesan izin yang jelas saat daftar lokasi van ditolak 403', async () => {
-    // Teknisi lapangan lazimnya tidak punya `inventory.location.view`. Kartunya harus tetap
-    // utuh dan orangnya harus tahu izin apa yang kurang — bukan menekan tombol simpan yang
-    // diam-diam tak pernah bisa jalan.
-    mockApi([row()], { '/api/inventory/locations': new ApiErrorMock(403, 'forbidden') })
+  it('memuat daftar van dari endpoint work order, bukan master lokasi gudang', async () => {
+    // Pemilih vannya dijaga `workorder.material.record` — izin yang memang dipegang teknisi.
+    // `/api/inventory/locations` menuntut `inventory.location.view` yang membuka gudang, bin,
+    // dan seluruh master data gudang; menyentuhnya di sini membuat formulir ini tak bisa
+    // disubmit justru oleh orang yang mencabut ONT-nya. Tes ini menjaga agar tak ada yang
+    // diam-diam mengembalikannya.
+    mockApi([])
+    renderPanel()
+
+    const picker = (await screen.findByLabelText('Van teknisi')) as HTMLSelectElement
+    expect(Array.from(picker.options).map((option) => option.textContent)).toEqual(['Pilih van…', 'VAN-01'])
+    // Satu van di daftar = langsung terpilih, tak ada yang perlu diketuk teknisi.
+    expect(picker.value).toBe(LOC_VAN)
+
+    const paths = apiGet.mock.calls.map(([path]) => path as string)
+    expect(paths).toContain(`/api/work-orders/${WO}/materials/van-locations`)
+    expect(paths.some((path) => path.includes('/api/inventory/locations'))).toBe(false)
+    // Tak ada alarm: daftarnya memang berhasil dimuat.
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('mengaku gagal memuat daftar van tanpa menyuruh minta izin yang bukan jawabannya', async () => {
+    // Pemegang `workorder.material.record` semestinya SUDAH bisa memuat daftar ini, jadi
+    // kegagalannya berarti peran yang tak lengkap atau server bermasalah — bukan lagi
+    // `inventory.location.view`, dan menyebut izin itu akan mengirim orangnya mengejar
+    // sesuatu yang tak akan menolongnya. Kartunya tetap utuh.
+    mockApi([row()], { '/van-locations': new ApiErrorMock(403, 'forbidden') })
     renderPanel()
 
     const notice = await screen.findByRole('alert')
-    expect(notice.textContent).toContain('inventory.location.view')
+    expect(notice.textContent).toContain('gagal dimuat')
+    expect(notice.textContent).toContain('workorder.material.record')
+    expect(notice.textContent).not.toContain('inventory.location.view')
+    // Dibedakan dari "belum ada van terdaftar": dua keadaan itu menuntut tindakan berbeda.
+    expect(notice.textContent).not.toContain('Belum ada lokasi berjenis kendaraan')
     // Kartunya tidak rusak: daftar penarikan tetap terbaca.
     expect(screen.getByText('SN-ONT-001')).toBeDefined()
     expect(screen.getByText('ONT ZTE F660')).toBeDefined()
     expect(screen.getByRole('button', { name: 'Catat penarikan' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('membedakan "belum ada van terdaftar" dari "gagal memuat"', async () => {
+    mockApi([], { '/van-locations': [] })
+    renderPanel()
+
+    const notice = await screen.findByRole('alert')
+    expect(notice.textContent).toContain('Belum ada lokasi berjenis kendaraan')
+    expect(notice.textContent).not.toContain('gagal dimuat')
+  })
+})
+
+describe('kolom van', () => {
+  it('menampilkan kode van dari read model, bukan UUID lokasinya', async () => {
+    // `technicianLocationCode` dibawa server justru supaya klien tak perlu menukar
+    // `technicianLocationId` lewat `/api/inventory/locations` — endpoint yang pembacanya
+    // tak punya izinnya, dan yang dulu membuat layar gudang memajang UUID telanjang.
+    mockApi([row()])
+    renderPanel()
+
+    expect(await screen.findByText('SN-ONT-001')).toBeDefined()
+    expect(screen.getByRole('columnheader', { name: 'Van' })).toBeDefined()
+    // Dua kali: di pemilih van (dari endpoint work order) dan di barisnya (dari read model).
+    expect(screen.getAllByText('VAN-01').length).toBe(2)
+    expect(screen.queryByText(LOC_VAN)).toBeNull()
+
+    const paths = apiGet.mock.calls.map(([path]) => path as string)
+    expect(paths.some((path) => path.includes('/api/inventory/locations'))).toBe(false)
   })
 })

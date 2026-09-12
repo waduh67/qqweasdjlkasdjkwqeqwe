@@ -86,6 +86,20 @@ interface InventoryAllocationApi {
      * tetap bisa menjawab "kenapa unit ini pernah tercatat ditarik lalu tidak jadi".
      */
     fun cancelRecoveredAsset(command: CancelWorkOrderRecoveredAssetCommand): WorkOrderRecoveredAssetView
+
+    /**
+     * Van (lokasi van stock) milik tenant ini — HANYA id dan kodenya.
+     *
+     * Ada supaya teknisi punya cara menemukan `technicianLocationId` yang WAJIB disertakan
+     * [RecoverWorkOrderAssetCommand] tanpa harus memegang `inventory.location.view`. Lihat
+     * KDoc endpoint `/van-locations` di `WorkOrderMaterialController` untuk alasan lengkapnya.
+     *
+     * Sengaja BUKAN `List<InventoryLocationView>`: begitu bentuknya sama dengan master data
+     * gudang, lambat laun ia akan ikut membawa `parentId`, jenis, dan atribut gudang lain —
+     * dan permukaan sempit ini berubah jadi salinan kedua `/api/inventory/locations` yang
+     * dijaga izin yang jauh lebih lemah.
+     */
+    fun vanLocations(tenantId: UUID): List<WorkOrderVanLocationView>
 }
 
 /**
@@ -133,6 +147,15 @@ data class WorkOrderRecoveredAssetView(
     /** Nama teknisi pembawa unit tarikan; fallback ke UUID bila id-nya tak teresolusi lagi. */
     val technicianName: String,
     val technicianLocationId: UUID,
+    /**
+     * Kode van tempat unit ini mendarat; fallback ke UUID-nya bila lokasinya sudah terhapus.
+     *
+     * TIDAK disimpan di baris penarikan dan itu disengaja: nilai tersimpan akan beku saat van
+     * yang sama berganti kode, dan dua baris untuk van yang sama akan berbunyi beda tanpa ada
+     * satu pun peristiwa yang menjelaskannya. Diresolusi per permintaan, sekali untuk seluruh
+     * daftar (lihat `WorkOrderAssetRecoveryService.locationCodes`).
+     */
+    val technicianLocationCode: String,
     val condition: String,
     val note: String?,
     val recoveredAt: Instant,
@@ -146,15 +169,38 @@ data class WorkOrderRecoveredAssetView(
     val cancelReason: String?,
 )
 
+/**
+ * Satu van yang boleh dipilih teknisi sebagai tujuan unit tarikan.
+ *
+ * DUA bidang, titik. Yang dibutuhkan layar penarikan cuma "mana yang kupilih" (kode) dan "apa
+ * yang kukirim" (id); segala tambahan di sini — jenis, induk, kapasitas — adalah master data
+ * gudang yang bocor lewat izin material work order, persis yang dihindari endpoint ini.
+ */
+data class WorkOrderVanLocationView(val id: UUID, val code: String)
+
 data class PlannedMaterialLineInput(val itemId: UUID, val quantity: Int)
 
 data class PlanWorkOrderMaterialCommand(
     val tenantId: UUID,
     val workOrderId: UUID,
     val workOrderType: String,
-    val customerId: UUID,
+    /**
+     * Boleh `null` HANYA saat [clear] — pengosongan cuma menghapus baris dan tidak melahirkan
+     * satu pun efek saga. Membuat baris BARU tetap menuntutnya (`inventory_fulfillment_effect
+     * .customer_id` NOT NULL), dan penjaganya ada di `planMaterial` tepat di titik pembuatan.
+     */
+    val customerId: UUID?,
     val actorId: UUID,
     val lines: List<PlannedMaterialLineInput> = emptyList(),
+    /**
+     * `true` = BUANG seluruh rencana. Sengaja bidang tersendiri, bukan disimpulkan dari [lines]
+     * yang kosong: daftar kosong sudah punya arti lain sejak awal ("pakai BOM apa adanya"), dan
+     * dispatcher yang menghapus baris terakhir dari layar lalu menyimpan justru akan mendapat
+     * rencana PENUH kembali. Dua maksud yang berlawanan tidak boleh memakai bentuk yang sama.
+     *
+     * Saat `true`, [lines] diabaikan seluruhnya.
+     */
+    val clear: Boolean = false,
 )
 
 data class IssuedMaterialLineInput(

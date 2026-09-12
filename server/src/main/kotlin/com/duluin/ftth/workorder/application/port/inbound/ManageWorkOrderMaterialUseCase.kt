@@ -5,6 +5,7 @@ import com.duluin.ftth.inventory.PlannedMaterialLineInput
 import com.duluin.ftth.inventory.WorkOrderMaterialTemplateView
 import com.duluin.ftth.inventory.WorkOrderMaterialView
 import com.duluin.ftth.inventory.WorkOrderRecoveredAssetView
+import com.duluin.ftth.inventory.WorkOrderVanLocationView
 import java.util.UUID
 
 /**
@@ -21,8 +22,19 @@ interface ManageWorkOrderMaterialUseCase {
 
     fun materials(workOrderId: UUID): List<WorkOrderMaterialView>
 
-    /** Ganti seluruh rencana. Daftar kosong berarti "pakai BOM jenis WO ini apa adanya". */
-    fun planMaterial(workOrderId: UUID, lines: List<PlannedMaterialLineInput>): List<WorkOrderMaterialView>
+    /**
+     * Ganti seluruh rencana. Daftar kosong berarti "pakai BOM jenis WO ini apa adanya".
+     *
+     * `clear = true` MENGOSONGKAN rencana dan mengabaikan [lines]. Dibedakan dari daftar kosong
+     * dengan sengaja: kalau keduanya sama, dispatcher yang menghapus baris terakhir dari layar
+     * lalu menyimpan justru mendapat rencana penuh kembali dari BOM, tanpa satu pun pesan
+     * kesalahan yang memberitahunya.
+     */
+    fun planMaterial(
+        workOrderId: UUID,
+        lines: List<PlannedMaterialLineInput>,
+        clear: Boolean = false,
+    ): List<WorkOrderMaterialView>
 
     fun issueMaterial(workOrderId: UUID, request: WorkOrderMaterialIssueRequest): List<WorkOrderMaterialView>
 
@@ -49,6 +61,16 @@ interface ManageWorkOrderMaterialUseCase {
         recoveredAssetId: UUID,
         request: WorkOrderAssetRecoveryCancelRequest,
     ): WorkOrderRecoveredAssetView
+
+    /**
+     * Van yang boleh dipilih sebagai `technicianLocationId` saat mencatat penarikan.
+     *
+     * [workOrderId] dipakai untuk MENENTUKAN TENANT dan cakupan areanya, bukan untuk menyaring
+     * daftarnya: van adalah milik tenant, bukan milik satu WO. Mengambilnya dari WO — bukan dari
+     * token — membuat WO tenant lain jatuh ke 404 lewat jalur yang sama dengan pembacaan WO
+     * lainnya, alih-alih diam-diam memulangkan daftar van tenant si pemanggil.
+     */
+    fun vanLocations(workOrderId: UUID): List<WorkOrderVanLocationView>
 }
 
 /**

@@ -2,16 +2,27 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { apiGet, apiPost, apiPut, can } = vi.hoisted(() => ({
+const { apiGet, apiPost, apiPut, can, confirm } = vi.hoisted(() => ({
   apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiPut: vi.fn(),
   can: vi.fn((_permission: string) => true),
+  // Bawaannya MENOLAK: tes yang lupa menyetujui konfirmasi harus gagal karena requestnya tak
+  // pernah berangkat, bukan diam-diam lulus karena dialognya dilewati.
+  confirm: vi.fn(async (_options: unknown) => false),
 }))
 
 vi.mock('@/api/client', () => ({
   api: { get: apiGet, post: apiPost, put: apiPut, del: vi.fn() },
-  ApiError: class ApiError extends Error {},
+  // Bentuknya SETIA pada `ApiError` sungguhan (status lebih dulu, lalu pesan) supaya tes yang
+  // memeriksa pemajangan pesan server tidak diam-diam memajang angka status.
+  ApiError: class ApiErrorMock extends Error {
+    status: number
+    constructor(status: number, message: string) {
+      super(message)
+      this.status = status
+    }
+  },
 }))
 
 vi.mock('@/auth/useCan', () => ({
@@ -25,7 +36,7 @@ vi.mock('@/auth/useCan', () => ({
 const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() }
 
 vi.mock('@/system', () => ({
-  useConfirm: () => vi.fn(),
+  useConfirm: () => confirm,
   useToast: () => toast,
 }))
 
@@ -181,6 +192,8 @@ afterEach(() => {
   apiPut.mockReset()
   can.mockReset()
   can.mockImplementation(() => true)
+  confirm.mockReset()
+  confirm.mockImplementation(async () => false)
   toast.error.mockReset()
   toast.success.mockReset()
   cleanup()
@@ -271,6 +284,50 @@ describe('rencana material', () => {
 
     await waitFor(() => expect(apiPut).toHaveBeenCalled())
     expect(apiPut.mock.calls[0]).toEqual([`/api/work-orders/${WO}/materials`, { lines: [] }])
+  })
+
+  it('meminta konfirmasi sebelum mengosongkan rencana dan tidak mengirim apa pun bila ditolak', async () => {
+    mockApi()
+    confirm.mockResolvedValue(false)
+    const actor = await renderCard()
+
+    await actor.click(screen.getByRole('button', { name: 'Kosongkan rencana' }))
+
+    await waitFor(() => expect(confirm).toHaveBeenCalled())
+    expect(apiPut).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it('mengirim clear yang eksplisit saat pengosongan disetujui — bukan daftar kosong yang berarti "pakai BOM"', async () => {
+    mockApi()
+    confirm.mockResolvedValue(true)
+    apiPut.mockResolvedValue([])
+    const actor = await renderCard()
+
+    await actor.click(screen.getByRole('button', { name: 'Kosongkan rencana' }))
+
+    await waitFor(() => expect(apiPut).toHaveBeenCalled())
+    // `{ lines: [] }` saja akan MENGISI rencana dari BOM — kebalikan persis dari yang diminta.
+    expect(apiPut.mock.calls[0]).toEqual([`/api/work-orders/${WO}/materials`, { lines: [], clear: true }])
+  })
+
+  it('menampilkan penolakan server apa adanya saat rencana tidak boleh dikosongkan', async () => {
+    mockApi()
+    confirm.mockResolvedValue(true)
+    const { ApiError } = await import('@/api/client')
+    apiPut.mockRejectedValue(
+      new ApiError(409, 'Rencana tidak bisa dikosongkan: 2 ONT ZTE F660 sudah keluar gudang.'),
+    )
+    const actor = await renderCard()
+
+    await actor.click(screen.getByRole('button', { name: 'Kosongkan rencana' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    // Pesan server dipajang UTUH: ia sudah menyebut item dan jumlahnya, dan itulah yang
+    // memberi tahu dispatcher apa yang harus dikembalikan dulu ke gudang.
+    expect(toast.error).toHaveBeenCalledWith(
+      'Rencana tidak bisa dikosongkan: 2 ONT ZTE F660 sudah keluar gudang.',
+    )
   })
 })
 
@@ -393,5 +450,71 @@ describe('scan nomor seri', () => {
 
     const outcomes = screen.getByLabelText('Nasib unit') as HTMLSelectElement
     expect([...outcomes.options].map((option) => option.value)).toEqual(['INSTALLED', 'RETURNED', 'LOST'])
+  })
+})
+
+describe('koreksi scan nomor seri', () => {
+  it('mengisi formulir dari baris yang dikoreksi dan menyatakan bahwa catatan lama akan diganti', async () => {
+    mockApi()
+    const actor = await renderCard()
+
+    await actor.click(screen.getByRole('button', { name: 'Koreksi SN-001' }))
+
+    expect((screen.getByLabelText('Nomor seri') as HTMLInputElement).value).toBe('SN-001')
+    expect((screen.getByLabelText('Nasib unit') as HTMLSelectElement).value).toBe('INSTALLED')
+    expect((screen.getByLabelText('MAC address (opsional)') as HTMLInputElement).value).toBe('AA:BB:CC:DD:EE:FF')
+    // Nasib LAMA disebut apa adanya: tanpa itu teknisi tak tahu catatan mana yang akan tertimpa.
+    expect(screen.getByText(/akan MENGGANTI catatan SN-001 .*Terpasang di pelanggan/s)).toBeDefined()
+    // Fokus mendarat di pemilih nasib, bukan di kolom serial: serialnya sudah benar.
+    expect(document.activeElement).toBe(screen.getByLabelText('Nasib unit'))
+  })
+
+  it('mengirim nomor seri yang sama dengan nasib baru — server meng-upsert, bukan menambah baris', async () => {
+    mockApi()
+    apiPost.mockResolvedValue(ontRow)
+    const actor = await renderCard()
+
+    await actor.click(screen.getByRole('button', { name: 'Koreksi SN-001' }))
+    await actor.selectOptions(screen.getByLabelText('Nasib unit'), 'RETURNED')
+    await actor.click(screen.getByRole('button', { name: 'Simpan koreksi' }))
+
+    await waitFor(() => expect(apiPost).toHaveBeenCalled())
+    const [path, body] = apiPost.mock.calls[0] as [string, Record<string, unknown>]
+    // Endpoint yang SAMA dengan scan biasa. Kalau kelak muncul endpoint "hapus serial",
+    // tes inilah yang harus dibaca dulu: id baris serial sengaja dipertahankan supaya saga
+    // pemotongan saldo tidak memotong unit yang sama dua kali.
+    expect(path).toBe(`/api/work-orders/${WO}/materials/serials`)
+    expect(body).toEqual({ serialNumber: 'SN-001', outcome: 'RETURNED', macAddress: 'AA:BB:CC:DD:EE:FF' })
+  })
+
+  it('bisa membatalkan mode koreksi dan mengembalikan formulir ke keadaan kosong', async () => {
+    mockApi()
+    const actor = await renderCard()
+
+    await actor.click(screen.getByRole('button', { name: 'Koreksi SN-001' }))
+    await actor.click(screen.getByRole('button', { name: 'Batalkan koreksi' }))
+
+    expect(screen.queryByText(/akan MENGGANTI catatan SN-001/s)).toBeNull()
+    expect((screen.getByLabelText('Nomor seri') as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText('MAC address (opsional)') as HTMLInputElement).value).toBe('')
+    expect(screen.getByRole('button', { name: 'Simpan scan' })).toBeDefined()
+    expect(apiPost).not.toHaveBeenCalled()
+  })
+
+  it('tidak menawarkan koreksi saat work order sudah terminal — gerbang yang sama dengan scan', async () => {
+    mockApi()
+    await renderCard('DONE')
+
+    expect(screen.getByText('SN-001')).toBeDefined()
+    expect(screen.queryByRole('button', { name: 'Koreksi SN-001' })).toBeNull()
+  })
+
+  it('tidak menawarkan koreksi tanpa izin mencatat material', async () => {
+    can.mockImplementation((permission: string) => permission !== 'workorder.material.record')
+    mockApi()
+    await renderCard()
+
+    expect(screen.getByText('SN-001')).toBeDefined()
+    expect(screen.queryByRole('button', { name: 'Koreksi SN-001' })).toBeNull()
   })
 })
