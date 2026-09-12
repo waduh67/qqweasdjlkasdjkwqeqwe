@@ -86,6 +86,8 @@ tidak ada pemasangan perangkat, penulisan ONU atau jalur konsumsi serial kedua.
 Flag fakta material `installed` yang sudah ada berarti material fisik terpakai,
 bukan assignment perangkat. Settlement task17, return/transfer/closure task18,
 scrap, customer topology, provisioning, UI dan mobile tetap di luar task16.
+Settlement task17 kini tersedia melalui approval WO dan hanya memverifikasi
+graf ini; lihat [verifikasi fulfillment](warehouse-fulfillment.md).
 
 Migrasi forward V175.15-V175.21 mengikuti manifest. Tabel baru FORCE RLS,
 append-only dan composite tenant references; validator deferred memeriksa tenant

@@ -60,8 +60,9 @@ consume memerlukan roster aktif. Caller tenant/actor harus cocok context, namesp
 dan hash lama tidak menjadi authority. Replay merekonstruksi request dari stable
 identity yang tersimpan, bukan mencari issue terbaru. Hasil movement dan waktunya
 dibekukan sebelum posting. Anonymous worker tidak boleh menyamar sebagai teknisi.
-Legacy fulfillment `INVENTORY` effect masuk rekonsiliasi sebelum owner effects,
-bukan consume otomatis saat QA; settlement task17 tidak diaktifkan di sini.
+Legacy fulfillment tanpa snapshot eksplisit masuk rekonsiliasi sebelum owner
+effects, bukan consume otomatis saat QA. Task17 memverifikasi usage immutable
+melalui approval WO; lihat [verifikasi fulfillment](warehouse-fulfillment.md).
 
 ## Dispatcher dan consumer produksi
 
