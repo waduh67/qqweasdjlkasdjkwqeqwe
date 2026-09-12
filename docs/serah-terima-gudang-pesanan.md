@@ -1,6 +1,6 @@
 # Serah terima — Gudang (poin 3) & Pesanan (poin 4)
 
-Status per commit `3a1ca732`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
+Status per commit `ba099e04`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
 Dokumen ini ditulis supaya sesi atau agen lain bisa melanjutkan tanpa mengulang penggalian.
 Rencana aslinya ada di `docs/rencana-gudang-pesanan.md`; dokumen INI yang menggambarkan
 keadaan sebenarnya.
@@ -11,7 +11,13 @@ keadaan sebenarnya.
 
 ```bash
 ./gradlew :server:test --rerun          # ~18 menit
+cd web && ./node_modules/.bin/vitest run # ~1 menit — 65 berkas, 407 tes, SEMUA lulus
+cd web && ./node_modules/.bin/tsc --noEmit -p tsconfig.app.json
 ```
+
+Panggil binernya langsung dari `node_modules/.bin`. `npx` di lingkungan ini di-shim dan
+MENELAN perintahnya: ia mencetak `npm notice run 'tsc'` lalu keluar dengan status 0 tanpa
+menjalankan apa pun — persis bentuk kegagalan yang paling berbahaya, yaitu terlihat lulus.
 
 **Garis dasar yang SEHAT: 1735 tes, 2–3 gagal.**
 
@@ -59,7 +65,7 @@ Dua jebakan kecil yang sudah memakan korban:
 | `AWAITING_RECEIPT` | **Selesai** (V188). Aset terdaftar tapi belum jadi stok — satu-satunya status yang tidak pernah punya baris di proyeksi saldo. |
 | Pemisahan izin transfer | **Selesai.** `inventory.movement.transfer` terpisah dari `.issue`. |
 | Approver dari peran | **Selesai.** Tier boleh berbunyi "Kepala Gudang" saja; pemegangnya diresolusi ke `iam` setiap kali dibaca dan tidak pernah ikut tersimpan. Pemegang nonaktif otomatis gugur. |
-| Layar/UI gudang | **BELUM ADA.** Seluruhnya baru API. |
+| Layar/UI gudang | **Selesai.** `/warehouse`, enam tab: stok, mutasi, riwayat, persetujuan, stock opname, master data. Penjaga rutenya DITURUNKAN dari tabel tab (`WAREHOUSE_VIEW_PERMISSIONS`), jadi menambah tab otomatis melebarkan izinnya. Editor kebijakan merender `approverIds` dan `roleHolderIds` sebagai dua kelompok terpisah dan tidak pernah mengirim yang kedua. |
 
 ### Poin 4 — Pesanan & pelanggan
 
@@ -69,7 +75,7 @@ Dua jebakan kecil yang sudah memakan korban:
 | WO PSB otomatis saat ACCEPT | **Selesai**, satu transaksi dengan gerbang idempotensi. |
 | Penanda portal otomatis | **Selesai.** Tiga pemicu; kalimat untuk pelanggan ditulis sistem, bukan operator/teknisi. |
 | Impor CSV massal | **Selesai.** Pratinjau sebelum commit, alasan per baris, idempotensi dua lapis, batas 2 MiB / 1000 baris, berkas ekspor Excel diterima apa adanya. |
-| Layar/UI pesanan | **BELUM ADA.** Seluruhnya baru API. |
+| Layar/UI pesanan | **Selesai.** `/orders` (antrean), `/orders/:id` (detail + lini masa, hanya transisi yang sah), `/orders/import` (pratinjau → commit), `/orders/leads`. Tidak ada form "buat pesanan" operator — jalur masuk nyatanya lead + impor; `POST /api/orders` butuh `customerId` + id baris katalog sehingga form mentah hanya akan menghasilkan 400. |
 
 ---
 
@@ -134,6 +140,34 @@ Dua jebakan kecil yang sudah memakan korban:
 - Ambang diam `/unreachable` tidak berlaku untuk pesanan tanpa baris audit ACCEPT (data lama
   pra-V178).
 
+**Read model yang menyulitkan UI** (ditemukan saat membangun layarnya, belum diperbaiki)
+- **Penanda perhatian tak terlihat di antrean.** `OrderSummaryView` tidak punya `portalFlag`,
+  `OrderSearchFilter` tidak punya filternya. Pertanyaan "pesanan mana yang menunggu pelanggan?"
+  TIDAK bisa dijawab `GET /api/orders`. UI mengakalinya dengan tombol opt-in yang menyusun ulang
+  penanda dari `GET /{id}/timeline` untuk ≤20 baris halaman berjalan — sengaja dibatasi satu
+  halaman, dan komentarnya menyuruh menghapus seluruh blok itu begitu server mengeksposnya.
+  `OrderView` juga tidak punya `portalFlag`/`portalFlagSource`, jadi layar detail pun tak bisa
+  membedakan penanda dari OPERATOR dan dari SISTEM.
+- **Tidak ada nama item di read model gudang.** `StockBalanceView`, `MovementLegView`,
+  `VanStockLineView`, `OpenCountView`, `BalanceAnomalyView` hanya membawa `itemCode`/`locationCode`.
+  Setiap layar harus menggabungkan sendiri terhadap `/item-master`; pengguna tanpa
+  `inventory.item.view` kembali membaca kode tanpa nama.
+- **Tidak ada resolusi nama orang.** Custodian, teknisi, pemohon, approver semuanya UUID mentah
+  dan satu-satunya jalan resolusi adalah `/api/users` (iam) — yang justru lazim TIDAK dipegang
+  petugas gudang. Layarnya menelan 403 dan mencetak UUID.
+- **Approver stock opname tak bisa melihat yang harus ia setujui.** `GET /api/inventory/counts/open`
+  menuntut `inventory.count.perform`, sementara menyetujui menuntut `inventory.count.approve`.
+  Pemegang izin approve saja kena 403 di daftarnya dan tak punya jalan ke `/counts/{id}/approval`.
+- **Nama field sidik payload tidak konsisten.** Semua body mutasi memakai `payloadHash`, tapi
+  `ApprovalDecisionBody` dan `CountApprovalBody` memakai `operationHash`.
+- `/api/inventory/balances` tanpa paging/pencarian/urutan — seluruh tabel saldo dikirim tiap muat.
+- `/unreachable` tidak bisa ditebak klien: syarat ketiganya (diam ≥ `ftth.order.unreachable-silence`,
+  bawaan P3D) hanya diketahui server, jadi tombolnya bisa aktif lalu tetap gagal.
+- Registrasi serial massal menolak seluruh batch karena satu serial buruk, tanpa daftar terstruktur
+  serial mana yang gagal.
+- Impor tidak punya endpoint untuk membuang batch berstatus PREVIEWED, dan tak ada retry per baris
+  untuk baris FAILED setelah commit.
+
 **Lain-lain**
 - Poin 1 (PPPoE/BRAS) sudah dibangun tapi **belum diuji end-to-end**.
 - Poin 2 (aplikasi teknisi mobile) masih boilerplate.
@@ -169,10 +203,15 @@ Lompatan nomor TIDAK masalah bagi Flyway.
 
 ## 6. Langkah berikutnya yang disarankan, berurutan
 
-1. UI gudang: stok per lokasi, permintaan restock + antrean approval, material per WO dengan
-   scan serial. Layar pengaturan persetujuan harus menampilkan `approverIds` dan
-   `roleHolderIds` TERPISAH — yang kedua tidak bisa dihapus dari layar itu, melainkan dari
-   pengaturan pengguna.
-2. UI pesanan: antrean, layar impor CSV (pratinjau → commit), daftar pesanan bertanda sistem.
-3. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
-4. Uji poin 1 (PPPoE/BRAS) end-to-end.
+1. Ekspos `portalFlag` + `portalFlagSource` di `OrderSummaryView`/`OrderView` dan filternya di
+   `OrderSearchFilter`, lalu HAPUS blok akal-akalan lini masa di `OrdersPage.tsx` (komentarnya
+   sudah menandai blok mana). Ini yang paling menyakitkan sekarang: operator tidak punya cara
+   melihat pesanan mana yang menunggu pelanggan.
+2. Bawa nama item/lokasi/orang ke read model gudang (§4), supaya penggabungan id→nama di klien
+   bisa dibuang dan petugas tanpa `inventory.item.view` berhenti membaca kode telanjang.
+3. Benahi izin daftar stock opname (§4) — approver yang tak bisa melihat antreannya itu kontrol
+   yang mati diam-diam, bukan sekadar layar kosong.
+4. Belum ada layar material per WO dengan scan serial; API-nya sudah lengkap
+   (`InventoryAllocationApi`), tinggal layarnya.
+5. Putuskan `WorkOrderAssignmentRef.orderId` (§3.1) sebelum ada konsumen baru yang ikut salah.
+6. Uji poin 1 (PPPoE/BRAS) end-to-end.
