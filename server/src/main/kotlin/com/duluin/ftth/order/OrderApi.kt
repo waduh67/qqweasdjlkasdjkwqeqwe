@@ -12,6 +12,7 @@ interface OrderApi {
     fun portalOrders(customerId: UUID): List<PortalOrderView>
     fun portalOrder(customerId: UUID, orderId: UUID): PortalOrderView?
     fun applyFulfillment(command: OrderFulfillmentCommand): OrderFulfillmentResult
+    fun applyFulfillment(command: OrderFulfillmentCommand, authority: com.duluin.ftth.common.security.AuthorityFence): OrderFulfillmentResult
     fun fulfillmentRevision(orderId: UUID): Long?
 }
 

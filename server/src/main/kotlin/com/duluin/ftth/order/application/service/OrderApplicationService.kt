@@ -61,10 +61,20 @@ class OrderApplicationService(
 
     @Transactional
     override fun applyFulfillment(command: OrderFulfillmentCommand): OrderFulfillmentResult {
+        val user = currentUser.current()
+        return fulfill(command, com.duluin.ftth.common.security.SessionIdentity(user.tenantId, user.userId, user.sessionId))
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    override fun applyFulfillment(command: OrderFulfillmentCommand, authority: com.duluin.ftth.common.security.AuthorityFence): OrderFulfillmentResult {
+        authority.assertHeld()
+        return fulfill(command, authority.identity)
+    }
+
+    private fun fulfill(command: OrderFulfillmentCommand, user: com.duluin.ftth.common.security.SessionIdentity): OrderFulfillmentResult {
         require(command.transition == OrderTransition.START_FULFILLING || command.transition == OrderTransition.FULFILL) {
             "FULFILLMENT_ORDER_TRANSITION_NOT_ALLOWED"
         }
-        val user = currentUser.current()
         if (user.tenantId != command.tenantId) throw NotFoundException("Order tidak ditemukan")
         val replayed = orders.findOutcome(command.tenantId, command.namespace, command.operationKey) != null
         val view = replayOrConflict(command.tenantId, OperationCommand(command.namespace, command.operationKey, command.payloadHash)) {
