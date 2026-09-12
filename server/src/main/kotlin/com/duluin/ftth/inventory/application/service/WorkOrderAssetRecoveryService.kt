@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.CancelWorkOrderRecoveredAssetCommand
 import com.duluin.ftth.inventory.InventoryFulfillmentAllocation
 import com.duluin.ftth.inventory.RecoverWorkOrderAssetCommand
@@ -46,6 +47,8 @@ class WorkOrderAssetRecoveryService(
     private val assets: SerializedAssetRepository,
     private val items: InventoryItemRepository,
     private val locations: InventoryLocationRepository,
+    /* Hanya untuk menamai id orang di read model — lihat [WorkOrderPeopleNames]. */
+    private val iam: IamApi,
     private val clock: Clock = Clock.systemUTC(),
 ) {
 
@@ -131,13 +134,19 @@ class WorkOrderAssetRecoveryService(
             recoveredAt = Instant.now(clock),
             recoveredBy = command.actorId,
         )
-        return recovered.save(row).toView(item)
+        val saved = recovered.save(row)
+        // Jalur TULIS pun bernama: tanpa ini layar teknisi berkedip dari nama ke UUID tepat
+        // setelah unitnya di-scan.
+        return saved.toView(item, peopleNames(listOf(saved)))
     }
 
     @Transactional(readOnly = true)
     fun recoveredAssets(tenantId: UUID, workOrderId: UUID): List<WorkOrderRecoveredAssetView> {
         val active = requireTenant(tenantId)
-        return recovered.findByWorkOrder(active, workOrderId).map { it.toView(itemOf(active, it.itemId)) }
+        // Barisnya DULU, baru SATU panggilan direktori pengguna untuk seluruh daftarnya.
+        val rows = recovered.findByWorkOrder(active, workOrderId)
+        val names = peopleNames(rows)
+        return rows.map { it.toView(itemOf(active, it.itemId), names) }
     }
 
     @Transactional
@@ -149,7 +158,8 @@ class WorkOrderAssetRecoveryService(
             throw ValidationException("Baris penarikan ini bukan milik work order yang diminta")
         }
         val cancelled = row.cancel(Instant.now(clock), command.actorId, command.reason)
-        return recovered.save(cancelled).toView(itemOf(tenantId, row.itemId))
+        val saved = recovered.save(cancelled)
+        return saved.toView(itemOf(tenantId, row.itemId), peopleNames(listOf(saved)))
     }
 
     /**
@@ -210,7 +220,24 @@ class WorkOrderAssetRecoveryService(
         items.findById(itemId)?.takeIf { it.tenantId == tenantId }
             ?: throw NotFoundException("Item gudang tidak ditemukan")
 
-    private fun WorkOrderRecoveredAsset.toView(item: InventoryItem) = WorkOrderRecoveredAssetView(
+    /**
+     * SATU panggilan direktori pengguna untuk SELURUH baris penarikan yang akan dinamai.
+     *
+     * Tiap baris menyebut sampai tiga orang (teknisi, peng-scan, pembatal) dan satu WO DISMANTLE
+     * bisa menarik banyak unit; menanyakannya per baris langsung jadi N+1.
+     */
+    private fun peopleNames(rows: Collection<WorkOrderRecoveredAsset>) = WorkOrderPeopleNames.resolve(
+        iam,
+        buildSet {
+            rows.forEach { row ->
+                add(row.technicianId)
+                add(row.recoveredBy)
+                row.cancelledBy?.let { add(it) }
+            }
+        },
+    )
+
+    private fun WorkOrderRecoveredAsset.toView(item: InventoryItem, names: WorkOrderPeopleNames) = WorkOrderRecoveredAssetView(
         id = id,
         workOrderId = workOrderId,
         assetId = assetId,
@@ -222,13 +249,17 @@ class WorkOrderAssetRecoveryService(
         itemCategory = itemCategory,
         customerId = customerId,
         technicianId = technicianId,
+        technicianName = names.person(technicianId),
         technicianLocationId = technicianLocationId,
         condition = condition.name,
         note = note,
         recoveredAt = recoveredAt,
         recoveredBy = recoveredBy,
+        recoveredByName = names.person(recoveredBy),
         cancelledAt = cancelledAt,
         cancelledBy = cancelledBy,
+        // `null` HANYA kalau barisnya memang belum dibatalkan.
+        cancelledByName = names.personOrNull(cancelledBy),
         cancelReason = cancelReason,
     )
 }

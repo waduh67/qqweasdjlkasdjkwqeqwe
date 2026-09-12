@@ -130,13 +130,19 @@ data class WorkOrderRecoveredAssetView(
     val itemCategory: String,
     val customerId: UUID,
     val technicianId: UUID,
+    /** Nama teknisi pembawa unit tarikan; fallback ke UUID bila id-nya tak teresolusi lagi. */
+    val technicianName: String,
     val technicianLocationId: UUID,
     val condition: String,
     val note: String?,
     val recoveredAt: Instant,
     val recoveredBy: UUID,
+    /** Nama peng-scan penarikan; fallback ke UUID bila id-nya tak teresolusi lagi. */
+    val recoveredByName: String,
     val cancelledAt: Instant?,
     val cancelledBy: UUID?,
+    /** `null` HANYA bila barisnya memang belum dibatalkan ([cancelledBy] kosong). */
+    val cancelledByName: String?,
     val cancelReason: String?,
 )
 
@@ -220,6 +226,13 @@ data class WorkOrderMaterialSerialView(
     val outcome: String,
     val scannedAt: Instant,
     val scannedBy: UUID,
+    /**
+     * Nama peng-scan, sudah teresolusi di server.
+     *
+     * Fallback-nya UUID, BUKAN string kosong: sel kosong terbaca "tidak ada orangnya", padahal
+     * yang terjadi adalah id yang tak teresolusi (pengguna terhapus). UUID jelek itu petunjuk.
+     */
+    val scannedByName: String,
 )
 
 data class WorkOrderMaterialView(
@@ -241,6 +254,11 @@ data class WorkOrderMaterialView(
     /** Unit berserial yang sudah keluar gudang tapi belum di-scan nasibnya. */
     val unscannedQuantity: Int,
     val technicianId: UUID?,
+    /**
+     * Nama teknisi pemegang barisnya; `null` HANYA bila [technicianId] memang belum terisi
+     * (baris yang belum pernah keluar gudang). Id yang ada tapi tak teresolusi jatuh ke UUID-nya.
+     */
+    val technicianName: String?,
     val technicianLocationId: UUID?,
     val varianceReason: String?,
     val serials: List<WorkOrderMaterialSerialView>,

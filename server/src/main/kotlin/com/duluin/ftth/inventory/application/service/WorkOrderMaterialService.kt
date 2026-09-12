@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.CancelWorkOrderRecoveredAssetCommand
 import com.duluin.ftth.inventory.InventoryAllocationApi
 import com.duluin.ftth.inventory.InventoryFulfillmentAllocation
@@ -63,6 +64,12 @@ class WorkOrderMaterialService(
      * satu pun checkpoint tahu bahwa persetujuan itu baru separuh jadi.
      */
     private val recovery: WorkOrderAssetRecoveryService,
+    /*
+     * Dipakai HANYA untuk menerjemahkan id orang jadi nama di read model (lihat [WorkOrderPeopleNames]).
+     * Berjalan in-process tanpa `@PreAuthorize`, jadi teknisi lapangan dan petugas gudang — yang
+     * tidak memegang `iam.user.view` — tetap melihat nama, bukan UUID telanjang.
+     */
+    private val iam: IamApi,
     private val clock: Clock = Clock.systemUTC(),
 ) : InventoryAllocationApi {
 
@@ -96,7 +103,11 @@ class WorkOrderMaterialService(
     @Transactional(readOnly = true)
     override fun materials(tenantId: UUID, workOrderId: UUID): List<WorkOrderMaterialView> {
         val lines = materials.findByWorkOrder(tenantId, workOrderId)
-        return lines.map { it.toView(itemOf(tenantId, it.itemId)) }
+        // Barisnya DULU, kamus namanya belakangan: himpunan id orangnya (teknisi tiap baris plus
+        // peng-scan tiap serial) baru lengkap setelah barisnya di tangan. Satu panggilan untuk
+        // seluruh WO, bukan satu per serial.
+        val names = peopleNames(lines)
+        return lines.map { it.toView(itemOf(tenantId, it.itemId), names) }
     }
 
     /**
@@ -135,7 +146,9 @@ class WorkOrderMaterialService(
             materials.deleteLine(tenantId, orphan.id)
         }
 
-        return requested.map { input ->
+        // Disimpan DULU semuanya, baru dinamai sekali: jalur tulis pun harus memulangkan nama,
+        // kalau tidak layarnya berkedip dari nama ke UUID tepat setelah tombol simpan ditekan.
+        val saved = requested.map { input ->
             val item = itemService.requireActive(input.itemId, tenantId)
             val current = existing[input.itemId]
             val line = current?.replan(input.quantity, template[input.itemId]?.plannedQuantity)
@@ -143,8 +156,10 @@ class WorkOrderMaterialService(
                     tenantId, command.workOrderId, type, item, command.customerId,
                     input.quantity, template[input.itemId]?.plannedQuantity,
                 )
-            materials.save(line).toView(item)
+            materials.save(line) to item
         }
+        val names = peopleNames(saved.map { (line, _) -> line })
+        return saved.map { (line, item) -> line.toView(item, names) }
     }
 
     // ----------------------------------------------------- Keluar dari gudang
@@ -201,12 +216,14 @@ class WorkOrderMaterialService(
             ),
         )
 
-        return command.lines.map { line ->
+        val saved = command.lines.map { line ->
             val item = itemOf(tenantId, line.itemId)
             val updated = planned.getValue(line.itemId)
                 .markIssued(line.quantity, command.technicianId, command.technicianLocationId)
-            materials.save(updated).toView(item)
+            materials.save(updated) to item
         }
+        val names = peopleNames(saved.map { (line, _) -> line })
+        return saved.map { (line, item) -> line.toView(item, names) }
     }
 
     // ------------------------------------------------------------- Realisasi
@@ -218,7 +235,8 @@ class WorkOrderMaterialService(
         val updated = line.recordBulkUsage(
             command.usedQuantity, command.returnedQuantity, command.lostQuantity, command.varianceReason,
         )
-        return materials.save(updated).toView(itemOf(command.tenantId, line.itemId))
+        val saved = materials.save(updated)
+        return saved.toView(itemOf(command.tenantId, line.itemId), peopleNames(listOf(saved)))
     }
 
     /**
@@ -277,7 +295,8 @@ class WorkOrderMaterialService(
         )
         val updated = line.attachSerial(serial)
         materials.saveSerial(serial)
-        return materials.save(updated).toView(itemOf(tenantId, line.itemId))
+        val saved = materials.save(updated)
+        return saved.toView(itemOf(tenantId, line.itemId), peopleNames(listOf(saved)))
     }
 
     // ------------------------------------------------- Penarikan aset (P2.6)
@@ -434,7 +453,24 @@ class WorkOrderMaterialService(
         note = note,
     )
 
-    private fun WorkOrderMaterialLine.toView(item: InventoryItem) = WorkOrderMaterialView(
+    /**
+     * SATU panggilan direktori pengguna untuk SELURUH baris yang akan dinamai.
+     *
+     * Teknisi baris dan peng-scan tiap serial dikumpulkan ke satu himpunan lebih dulu. Memanggil
+     * `findUser` per baris — apalagi per serial — melahirkan N+1: satu WO bisa punya belasan baris
+     * material dengan puluhan serial, masing-masing dengan `scannedBy` sendiri.
+     */
+    private fun peopleNames(lines: Collection<WorkOrderMaterialLine>) = WorkOrderPeopleNames.resolve(
+        iam,
+        buildSet {
+            lines.forEach { line ->
+                line.technicianId?.let { add(it) }
+                line.serials.forEach { add(it.scannedBy) }
+            }
+        },
+    )
+
+    private fun WorkOrderMaterialLine.toView(item: InventoryItem, names: WorkOrderPeopleNames) = WorkOrderMaterialView(
         id = id,
         workOrderId = workOrderId,
         itemId = itemId,
@@ -451,10 +487,15 @@ class WorkOrderMaterialService(
         lostQuantity = lostQuantity,
         unscannedQuantity = unscannedQuantity,
         technicianId = technicianId,
+        // `null` HANYA kalau barisnya memang belum punya teknisi (belum keluar gudang).
+        technicianName = names.personOrNull(technicianId),
         technicianLocationId = technicianLocationId,
         varianceReason = varianceReason,
         serials = serials.map {
-            WorkOrderMaterialSerialView(it.id, it.assetId, it.serialNumber, it.macAddress, it.outcome.name, it.scannedAt, it.scannedBy)
+            WorkOrderMaterialSerialView(
+                it.id, it.assetId, it.serialNumber, it.macAddress, it.outcome.name,
+                it.scannedAt, it.scannedBy, names.person(it.scannedBy),
+            )
         },
     )
 
