@@ -1,6 +1,6 @@
 # Serah terima — Gudang (poin 3) & Pesanan (poin 4)
 
-Status per commit `3b6596bd`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
+Status per commit `058277fd`, branch `feat/gudang-dan-pesanan` (dicabang dari `main`).
 Dokumen ini ditulis supaya sesi atau agen lain bisa melanjutkan tanpa mengulang penggalian.
 Rencana aslinya ada di `docs/rencana-gudang-pesanan.md`; dokumen INI yang menggambarkan
 keadaan sebenarnya.
