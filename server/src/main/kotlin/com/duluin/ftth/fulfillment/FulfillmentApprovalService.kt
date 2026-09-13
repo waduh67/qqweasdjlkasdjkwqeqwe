@@ -14,7 +14,8 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
     private val deliveryAuthority: DeliveryAuthorityApi, private val cutovers: InventoryTenantCutoverApi,
     private val orders: com.duluin.ftth.order.OrderApi, private val visits: com.duluin.ftth.fieldservice.FieldServiceApi,
     private val customers: com.duluin.ftth.customer.CustomerApi, private val bng: com.duluin.ftth.bng.BngProvisioningApi,
-    private val customerLocks: com.duluin.ftth.customer.CustomerFulfillmentLockApi) {
+    private val customerLocks: com.duluin.ftth.customer.CustomerFulfillmentLockApi,
+    private val bngOwner: com.duluin.ftth.bng.BngFulfillmentApi) {
 
     fun freeze(event: FulfillmentApproved): FulfillmentRequest {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
@@ -28,11 +29,15 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
         }
         val linkedVisits = visits.visitsByWorkOrder(workOrder.workOrderId)
         if (linkedVisits.size > 1) fail("VISIT_LINK_NOT_UNIQUE")
-        val visit = linkedVisits.singleOrNull()?.let { visits.visit(it.id) ?: fail("VISIT_NOT_FOUND") }
-        val orderRevision = workOrder.orderId?.let { orders.fulfillmentRevision(it) ?: fail("ORDER_NOT_FOUND") }
+        val visit = linkedVisits.singleOrNull()?.let { visits.lockFulfillment(it.id,workOrder.workOrderId) }
+        if (visit != null && visit.technicianId !in workOrder.activeAssigneeIds) fail("FULFILLMENT_VISIT_BINDING")
+        val orderBinding = workOrder.orderId?.let { orders.lockFulfillment(com.duluin.ftth.order.OrderFulfillmentTarget(it,
+            workOrder.customerId ?: fail("FULFILLMENT_ORDER_BINDING"))) }
+        val orderRevision = orderBinding?.revision
         val customerBinding = workOrder.customerId?.let { customerLocks.lock(it, workOrder.subscriptionId) }
         val subscription = workOrder.subscriptionId?.let { customers.findSubscription(it) ?: fail("SUBSCRIPTION_NOT_FOUND") }
-        val bngAccessId = subscription?.let { bng.findAccess(it.id)?.id }
+        val bngBinding = subscription?.let { bngOwner.lock(it.id,workOrder.customerId ?: fail("FULFILLMENT_BNG_BINDING")) }
+        val bngAccessId = bngBinding?.accessId
         val effects = buildSet {
             add(FulfillmentEffectType.INVENTORY)
             add(FulfillmentEffectType.WORK_ORDER)
@@ -47,7 +52,7 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
             workOrder.workOrderRevision, workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover)
         val material = inventory.freeze(context)
         return store.save(FulfillmentApprovalSnapshot(UUID.randomUUID(), current.fence.identity, cutover.snapshot.epoch,
-            approved, material, effects, orderRevision, visit, subscription, bngAccessId, customerBinding), key).request
+            approved, material, effects, orderRevision, visit, subscription, bngAccessId, customerBinding, orderBinding, bngBinding), key).request
     }
 
     fun lock(request: FulfillmentRequest) {
@@ -58,6 +63,7 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
         store.lock(frozen.snapshot.id)
         if (request != frozen.request || workOrder != frozen.snapshot.workOrder || cutover.snapshot.epoch != frozen.snapshot.cutoverEpoch)
             fail("FULFILLMENT_SNAPSHOT_STALE")
+        store.validateOwners(frozen.snapshot.id)
     }
 
     fun preflight(request: FulfillmentRequest) {
@@ -66,11 +72,13 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
         val workOrder = snapshot.workOrder.material
         if (workOrder.customerId?.let { customerLocks.lock(it, workOrder.subscriptionId) } != snapshot.customerBinding)
             fail("FULFILLMENT_CUSTOMER_STALE")
-        snapshot.visit?.let { if (visits.visit(it.id) != it) fail("FULFILLMENT_VISIT_STALE") }
-        if (workOrder.orderId?.let(orders::fulfillmentRevision) != snapshot.orderRevision ||
+        snapshot.visit?.let { if (visits.lockFulfillment(it.id,workOrder.workOrderId) != it) fail("FULFILLMENT_VISIT_STALE") }
+        val order = workOrder.orderId?.let { orders.lockFulfillment(com.duluin.ftth.order.OrderFulfillmentTarget(it,
+            workOrder.customerId ?: fail("FULFILLMENT_ORDER_BINDING"),snapshot.orderRevision)) }
+        if (order != snapshot.orderBinding ||
             visits.visitsByWorkOrder(workOrder.workOrderId) != listOfNotNull(snapshot.visit) ||
             workOrder.subscriptionId?.let(customers::findSubscription) != snapshot.subscription ||
-            snapshot.subscription?.let { bng.findAccess(it.id)?.id } != snapshot.bngAccessId)
+            snapshot.subscription?.let { bngOwner.lock(it.id,workOrder.customerId ?: fail("FULFILLMENT_BNG_BINDING")) } != snapshot.bngBinding)
             fail("FULFILLMENT_LINK_STALE")
         if (inventory.freeze(context(snapshot)) != snapshot.material) fail("FULFILLMENT_USAGE_STALE")
     }

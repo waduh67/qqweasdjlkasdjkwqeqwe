@@ -9,6 +9,14 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class WarehouseFulfillmentITBinding : WarehouseFulfillmentFixture() {
+    @Test fun `after commit delivery closes its lease in a live transaction`() {
+        val case = approvedCable()
+
+        fixture(case.receipt.stock.token).transaction {
+            assertThat(scalar("SELECT bool_and(published_at IS NOT NULL AND claimed_by IS NULL AND lease_until IS NULL) FROM fulfillment_outbox")).isEqualTo("t")
+        }
+    }
+
     @Test fun `ambiguous current visit links reject approval with a stable conflict`() {
         val case = usageCase()
         used(case)

@@ -154,7 +154,7 @@ class FulfillmentCheckpointPersistenceAdapter(
         return FulfillmentOutcome(FulfillmentState.REQUIRES_RECONCILIATION, false, reason)
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     override fun markOutboxConsumed(id: UUID, workerId: String) {
         entityManager.createNativeQuery(
             "UPDATE fulfillment_outbox SET published_at = now(), claimed_by = NULL, lease_until = NULL WHERE id = :id AND claimed_by = :worker",

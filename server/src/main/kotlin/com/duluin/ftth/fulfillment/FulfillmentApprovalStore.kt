@@ -24,6 +24,15 @@ class FulfillmentApprovalStore(private val entityManager: EntityManager) {
             .setParameter("tenant", TenantContext.tenantId()).setParameter("id", id).singleResult
     }
 
+    fun validateOwners(id: UUID) {
+        try {
+            entityManager.createNativeQuery("SELECT warehouse_assert_fulfillment_owners(:tenant,:id)")
+                .setParameter("tenant",TenantContext.tenantId()).setParameter("id",id).singleResult
+        } catch (failure: org.hibernate.exception.ConstraintViolationException) {
+            throw com.duluin.ftth.common.domain.error.ConflictException("FULFILLMENT_OWNER_RECONCILIATION_REQUIRED")
+        }
+    }
+
     fun forWorkOrder(id: UUID): FrozenFulfillment? {
         val key = entityManager.createNativeQuery("SELECT operation_key FROM fulfillment_approval_snapshot WHERE tenant_id=:tenant AND work_order_id=:id ORDER BY work_order_revision DESC LIMIT 1")
             .setParameter("tenant", TenantContext.tenantId()).setParameter("id", id).resultList.singleOrNull() as? String ?: return null

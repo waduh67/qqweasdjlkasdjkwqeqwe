@@ -9,13 +9,14 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal enum class FulfillmentSqlPhase { SNAPSHOT, COMPLETED_EFFECT }
+internal enum class FulfillmentSqlPhase { SNAPSHOT, COMPLETED_EFFECT, VISIT_RECEIPT }
 
 internal class FulfillmentSqlProbe(context: ConfigurableApplicationContext, phase: FulfillmentSqlPhase,
     action: () -> Unit) : AutoCloseable {
     private val type = when (phase) {
         FulfillmentSqlPhase.SNAPSHOT -> FulfillmentApprovalStore::class.java
         FulfillmentSqlPhase.COMPLETED_EFFECT -> FulfillmentCheckpointPersistenceAdapter::class.java
+        FulfillmentSqlPhase.VISIT_RECEIPT -> com.duluin.ftth.fieldservice.adapter.outbound.persistence.VisitFulfillmentReceiptStore::class.java
     }
     private val target = AopTestUtils.getUltimateTargetObject<Any>(context.getBean(type))
     private val field = type.getDeclaredField("entityManager").apply { isAccessible = true }
@@ -29,6 +30,7 @@ internal class FulfillmentSqlProbe(context: ConfigurableApplicationContext, phas
             val matches = when (phase) {
                 FulfillmentSqlPhase.SNAPSHOT -> sql.startsWith("INSERT INTO fulfillment_approval_snapshot")
                 FulfillmentSqlPhase.COMPLETED_EFFECT -> sql.startsWith("UPDATE fulfillment_effect_progress p SET status = 'COMPLETED'")
+                FulfillmentSqlPhase.VISIT_RECEIPT -> sql.startsWith("INSERT INTO fieldservice_fulfillment_receipt")
             }
             if (method.name == "createNativeQuery" && matches) {
                 val query = Query::class.java.cast(result)
