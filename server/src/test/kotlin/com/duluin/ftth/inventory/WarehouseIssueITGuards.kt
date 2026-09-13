@@ -43,14 +43,15 @@ class WarehouseIssueITGuards : WarehouseIssueFixture() {
         val picked = issueRequest(setup, "pick", body)
         assertThat(picked.status).withFailMessage(picked.contentAsString).isEqualTo(200)
         val issue = mapper.readTree(picked.contentAsString)
-        assertThat(request("POST", "/api/work-orders/${setup.workOrder}/cancel", setup.stock.token, """{"reason":"Cancelled before handover"}""").status).isEqualTo(200)
+        assertThat(request("POST", "/api/work-orders/${setup.workOrder}/cancel", setup.stock.token, """{"reason":"Cancelled before handover"}""").status).isEqualTo(409)
         val transition = transitionBody(setup, issue)
-        assertThat(issueRequest(setup, "dispatch", transition).status).isEqualTo(409)
         val unpick = issueRequest(setup, "unpick", transition)
         assertThat(unpick.status).withFailMessage(unpick.contentAsString).isEqualTo(200)
+        assertThat(request("POST", "/api/work-orders/${setup.workOrder}/cancel", setup.stock.token, """{"reason":"Unpicked before cancellation"}""").status).isEqualTo(200)
+        assertThat(issueRequest(setup, "dispatch", transition).status).isEqualTo(409)
         fixture(setup.stock.token).transaction {
             assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='ISSUE'")).isEqualTo("0")
-            assertThat(scalar("SELECT sum(reserved_unpicked_base) FROM inventory_reservation")).isEqualTo("1")
+            assertThat(scalar("SELECT sum(reserved_unpicked_base) FROM inventory_reservation")).isEqualTo("0")
         }
     }
 

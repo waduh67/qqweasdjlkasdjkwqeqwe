@@ -53,10 +53,14 @@ class WarehouseIssueITRevocationRaces : WarehouseIssueFixture() {
             }
             gate.countDown()
             val result = pick.get(40, TimeUnit.SECONDS)
-            assertThat(change.get(40, TimeUnit.SECONDS)).isEqualTo(200)
+            val pickedBeforeCancel = mode == "CANCEL" && result.first == 200
+            assertThat(change.get(40, TimeUnit.SECONDS)).isEqualTo(if (pickedBeforeCancel) 409 else 200)
             assertThat(result.first).withFailMessage("$mode: ${result.second}").isIn(200, 403, 404, 409)
             val replay = request("POST", path, actor, body, "authority-race")
-            assertThat(replay.status).withFailMessage(replay.contentAsString).isIn(403, 404, 409)
+            if (pickedBeforeCancel) {
+                assertThat(replay.status).withFailMessage(replay.contentAsString).isEqualTo(200)
+                assertThat(replay.contentAsString).isEqualTo(result.second)
+            } else assertThat(replay.status).withFailMessage(replay.contentAsString).isIn(403, 404, 409)
             fixture(setup.stock.token).transaction {
                 assertThat(scalar("SELECT count(*) FROM inventory_document WHERE kind='ISSUE'")).isEqualTo(if (result.first == 200) "1" else "0")
                 assertThat(scalar("SELECT sum(reserved_picked_base) FROM inventory_reservation")).isEqualTo(if (result.first == 200) "1" else "0")
