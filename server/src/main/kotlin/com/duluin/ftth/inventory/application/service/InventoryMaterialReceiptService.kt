@@ -8,6 +8,7 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialReceiptSto
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseIssueStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReservationStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialReworkStore
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.MovementKind
@@ -31,6 +32,7 @@ class InventoryMaterialReceiptService(
     private val operations: WarehouseOperationStore,
     private val preparation: MaterialReceiptPreparation,
     private val posting: WarehousePosting,
+    private val reworks: MaterialReworkStore,
 ) : InventoryMaterialReceiptApi {
     private val mapper = jacksonObjectMapper()
 
@@ -49,6 +51,7 @@ class InventoryMaterialReceiptService(
             request.lines.isEmpty() || request.lines.size > 100 || request.lines.distinctBy { it.issueLineId }.size != request.lines.size)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val issue = issues.snapshot(request.issueId)
+        reworks.assertLive(issue.planId)
         if (issue.workOrderId != context.workOrderId || issue.customerId != context.customerId) masterFailure(WarehouseErrorCode.NOT_FOUND)
         if (issue.receiver.id != actor) masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(request))

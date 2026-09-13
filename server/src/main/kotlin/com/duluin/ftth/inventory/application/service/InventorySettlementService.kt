@@ -4,6 +4,7 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialPlanningStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialSettlementStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialUsageStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialReworkStore
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -13,7 +14,7 @@ import java.security.MessageDigest
 @Service
 @Transactional(propagation = Propagation.MANDATORY, rollbackFor = [Exception::class])
 class InventorySettlementService(private val plans: MaterialPlanningStore, private val usage: MaterialUsageStore,
-    private val store: MaterialSettlementStore) : InventorySettlementApi {
+    private val store: MaterialSettlementStore, private val reworks: MaterialReworkStore) : InventorySettlementApi {
     override fun freeze(context: MaterialPlanningContext): MaterialSettlementSource {
         context.cutover.assertHeld()
         context.authority.assertHeld()
@@ -35,9 +36,13 @@ class InventorySettlementService(private val plans: MaterialPlanningStore, priva
         when (plan.materialMode) {
             MaterialMode.NONE -> if (plan.reason.isNullOrBlank() || snapshot.reason.isNullOrBlank() || snapshot.lines.isNotEmpty())
                 masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-            MaterialMode.MATERIAL_REQUIRED -> if (snapshot.lines.isEmpty() ||
-                snapshot.lines.map { it.planLineId }.toSet() != plan.lines.map { it.id }.toSet())
-                masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            MaterialMode.MATERIAL_REQUIRED -> {
+                val rework = reworks.get(plan.id)
+                val expected = (plan.lines + rework?.inheritedLines.orEmpty()).map { it.id }.toSet()
+                val reported = if (rework == null) snapshot.lines.map { it.planLineId }.toSet()
+                    else reworks.usageIds(context.workOrderId, reworks.planIds(plan.id)).flatMap { usage.get(it).lines }.map { it.planLineId }.toSet()
+                if (snapshot.lines.isEmpty() || reported != expected) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            }
         }
         val hash = MessageDigest.getInstance("SHA-256").digest(body.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         return MaterialSettlementSource(plan.id, plan.planRevision, plan.materialMode, plan.reason, id, snapshot.useRevision, hash, body, documents)

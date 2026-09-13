@@ -16,7 +16,8 @@ import java.util.UUID
 class InventoryMaterialService(private val authority: CurrentAuthorityApi, private val store: MaterialPlanningStore,
     private val templates: MaterialTemplateStore, private val commands: MaterialCommandStore, private val validation: MaterialPlanValidation,
     private val reservations: InventoryReservationApi, private val reservationStore: WarehouseReservationStore,
-    private val invalidation: InventoryApprovalInvalidationApi, private val physical: MaterialPhysicalTotalsStore) : UnavailableMaterialActions() {
+    private val invalidation: InventoryApprovalInvalidationApi, private val physical: MaterialPhysicalTotalsStore,
+    private val reworks: MaterialReworkStore) : UnavailableMaterialActions() {
     private val mapper = jacksonObjectMapper()
 
     override fun summary(context: MaterialPlanningContext): MaterialSummary {
@@ -25,13 +26,16 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
         val plan = history?.plan
         val demand = history?.demandDocumentId?.let { reservationStore.demand(it) }
         physical.assertBound(context.workOrderId)
-        val rows = demand?.let { reservationStore.rows(it.id) }.orEmpty()
-        val demandLines = demand?.let { reservationStore.lines(it, ReservationValidationMode.HISTORICAL_READ) }.orEmpty()
-        if (demand != null && demandLines.size != plan?.lines?.size) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if (rows.isNotEmpty()) reservations.allocations(context.workOrderId)
-        val totals = plan?.lines.orEmpty().map { line ->
+        val histories = plan?.let { reworks.planIds(it.id).map(store::get) }.orEmpty()
+        val totals = histories.flatMap { source ->
+            val sourceDemand = source.demandDocumentId?.let { reservationStore.demand(it) }
+            val rows = sourceDemand?.let { reservationStore.rows(it.id) }.orEmpty()
+            val demandLines = sourceDemand?.let { reservationStore.lines(it, ReservationValidationMode.HISTORICAL_READ) }.orEmpty()
+            if (sourceDemand != null && demandLines.size != source.plan.lines.size) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            if (rows.isNotEmpty()) reservations.allocations(context.workOrderId)
+            source.plan.lines.map { line ->
             val demandLine = demandLines.singleOrNull { it.planLineId == line.id }
-            if (demand != null && (demandLine == null || demandLine.sku != line.sku.id || demandLine.unit.name != line.sku.baseUnit.name ||
+            if (sourceDemand != null && (demandLine == null || demandLine.sku != line.sku.id || demandLine.unit.name != line.sku.baseUnit.name ||
                     demandLine.requested.toString() != line.quantityBase || demandLine.tracking != line.sku.tracking.name || demandLine.continuous != line.continuousCut))
                 masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             val allocated = rows.filter { it.documentLineId == demandLine?.id }
@@ -44,6 +48,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
             MaterialLineTotals(line.id, line.sku.id, line.sku.baseUnit, requested.toString(), unpicked.toString(), picked.toString(),
                 facts.issued.toString(), facts.used.toString(), facts.returned.toString(), facts.transferred.toString(), facts.disposed.toString(),
                 facts.accountable.toString(), backorder.toString())
+            }
         }
         return MaterialSummary(context.workOrderId, plan?.materialMode ?: MaterialMode.MATERIAL_REQUIRED, plan?.reason,
             MaterialRevisions(context.workOrderRevision, plan?.planRevision ?: 0, physical.useRevision(context.workOrderId), 0),
@@ -97,6 +102,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
         revisions(context, request.expectedRevision, request.workOrderRevision)
         reason(request.reason)
         val canonical = canonical(context.workOrderId, request)
+        if (action == "RESERVE") store.current(context.workOrderId)?.plan?.let { reworks.assertLive(it.id) }
         replay(context, action, metadata, canonical)?.let { return it }
         val history = store.current(context.workOrderId) ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val plan = history.plan

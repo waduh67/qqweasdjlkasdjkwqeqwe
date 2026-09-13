@@ -7,6 +7,7 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReservati
 import com.duluin.ftth.inventory.adapter.outbound.persistence.ReservationValidationMode
 import com.duluin.ftth.inventory.adapter.outbound.persistence.ReservationStockQueries
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAccess
+import com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialReworkStore
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.network.SiteReferenceApi
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
@@ -23,7 +24,8 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
     private val scopes: InventoryWarehouseScopeApi, private val workOrders: InventoryReservationWorkOrderPort,
     private val masters: WarehouseMasterStore, private val receipts: WarehouseReceiptService,
     private val store: WarehouseReservationStore, private val operations: WarehouseOperationStore, private val posting: WarehousePosting,
-    private val planning: ReservationAllocationPlanning, private val stock: ReservationStockQueries, private val sites: SiteReferenceApi) : InventoryReservationApi {
+    private val planning: ReservationAllocationPlanning, private val stock: ReservationStockQueries, private val sites: SiteReferenceApi,
+    private val reworks: MaterialReworkStore) : InventoryReservationApi {
     private val mapper = jacksonObjectMapper()
 
     @Transactional(timeout = 30, rollbackFor = [Exception::class])
@@ -51,6 +53,8 @@ class WarehouseReservationService(private val cutovers: InventoryTenantCutoverAp
         val targetPreview = request.target?.let { store.demand(it.documentId) }
         val contexts = (listOf(preview) + listOfNotNull(targetPreview)).distinctBy { it.workOrder }.sortedBy { it.workOrder.toString() }
             .associate { it.workOrder to workOrders.lock(it.workOrder, current, null) }
+        if (action in setOf(ReservationAction.RESERVE, ReservationAction.PICK)) reworks.assertDocumentLive(documentId)
+        targetPreview?.let { reworks.assertDocumentLive(it.id) }
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)
         val rows = store.rows(documentId)

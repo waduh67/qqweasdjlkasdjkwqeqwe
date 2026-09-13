@@ -20,6 +20,7 @@ class InventoryMaterialLifecycleService(
     private val deltas: MaterialUsageDeltaService,
     private val scopes: InventoryWarehouseScopeApi,
     private val locations: WarehouseReceiptService,
+    private val reworks: com.duluin.ftth.inventory.adapter.outbound.persistence.MaterialReworkStore,
 ) : InventoryMaterialLifecycleApi {
     private val mapper = jacksonObjectMapper()
 
@@ -68,7 +69,7 @@ class InventoryMaterialLifecycleService(
         val hash = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(request)).hash
         store.replay(context, metadata.idempotencyKey, hash)?.let { return it }
         val summary = store.summary(context.workOrderId)
-        if (summary.outstandingBase != "0" || summary.reservedUnpickedBase != "0" || summary.pickedBase != "0")
+        if (summary.outstandingBase != "0" || summary.reservedUnpickedBase != "0" || summary.pickedBase != "0" || reworks.hasUnissuedDemand(context.workOrderId))
             masterFailure(WarehouseErrorCode.MATERIAL_OBLIGATION_OUTSTANDING)
         if (summary.revision != request.expectedRevision || request.workOrderRevision != context.workOrderRevision || summary.materialState == ResidualSettlementState.CLOSED)
             masterFailure(WarehouseErrorCode.STALE_REVISION)

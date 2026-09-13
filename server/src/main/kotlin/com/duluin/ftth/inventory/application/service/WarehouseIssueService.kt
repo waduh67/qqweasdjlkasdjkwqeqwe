@@ -20,11 +20,13 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
     private val users: IamApi, private val masters: WarehouseMasterStore, private val receipts: WarehouseReceiptService,
     private val plans: MaterialPlanningStore, private val reservations: WarehouseReservationStore,
     private val issues: WarehouseIssueStore, private val picking: WarehouseIssuePicking, private val operations: WarehouseOperationStore,
-    private val posting: WarehousePosting, private val validation: MaterialPlanValidation, private val stock: ReservationStockQueries) : InventoryIssueApi {
+    private val posting: WarehousePosting, private val validation: MaterialPlanValidation, private val stock: ReservationStockQueries,
+    private val reworks: MaterialReworkStore) : InventoryIssueApi {
     private val mapper = jacksonObjectMapper()
 
     override fun pick(context: MaterialPlanningContext, request: WarehousePickRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
         val current = current(context, true)
+        plans.current(context.workOrderId)?.plan?.let { reworks.assertLive(it.id) }
         if (request.lines.isEmpty() || request.lines.size > 100 || request.expectedRevision < 1 || request.demandRevision < 0 ||
             request.lines.distinctBy { it.reservationId }.size != request.lines.size || request.lines.distinctBy { it.stockIdentityId }.size != request.lines.size)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
@@ -75,6 +77,7 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
         val canonical = canonical(context, request)
         replay(context, action, metadata, canonical, current)?.let { return it }
         val snapshot = issues.snapshot(request.issueId)
+        if (dispatch) reworks.assertLive(snapshot.planId)
         if (snapshot.workOrderId != context.workOrderId) masterFailure(WarehouseErrorCode.NOT_FOUND)
         authorizeSubstitution(snapshot, current)
         authorize(snapshot.lines.map { it.dimension.locationId }, current)
@@ -156,6 +159,7 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
         if (prior.resourceId != context.workOrderId || prior.hash != canonical.hash) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
         if (prior.cutoverEpoch != context.cutover.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
         val snapshot = issues.snapshot(prior.receipt.documentId)
+        if (action == "DISPATCH" || action == "PICK") reworks.assertLive(snapshot.planId)
         authorizeSubstitution(snapshot, current)
         val destinations = if (action == "DISPATCH") issues.dispatchDestinations(snapshot.issueId).map { it.locationId } else emptyList()
         if (action == "DISPATCH" && destinations.isEmpty()) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
