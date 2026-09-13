@@ -26,6 +26,17 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M03: reservation task18
 
+Task18 rework reserves `V175_44__warehouse_material_rework.sql` and
+`V175_45__warehouse_rework_usage_binding.sql` before SQL creation. Rejected WO
+rework appends an additive submitted plan, immutable predecessor/inherited-line
+references and an exact evidence revision. Usage binds the current rework plan
+without changing the original source plan or consumption. V175.37-.43 stay frozen.
+
+`V175_46__warehouse_rework_fresh_custody.sql` is reserved before creation. The
+fresh-receipt delta gate distinguishes its initial receipt source from its own
+newly inserted usage line during deferred validation; existing residual-source
+semantics stay unchanged. Applied V175.44/.45 are not edited.
+
 Task18 reserves `V175_37__warehouse_material_lifecycle.sql` and
 `V175_38__warehouse_material_lifecycle_binding.sql` before SQL creation.
 Cancellation releases only unpicked reservations; physical residuals require
