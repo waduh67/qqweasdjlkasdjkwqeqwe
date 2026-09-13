@@ -1,40 +1,26 @@
 package com.duluin.ftth.workorder.application.service
 
-import com.duluin.ftth.common.domain.Page
-import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
-import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.AuthorityScope
-import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
-import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.workorder.WorkOrderAssigned
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
 import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
-import com.duluin.ftth.workorder.application.port.inbound.TechnicianWorkloadView
 import com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand
-import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssigneeView
-import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDashboardView
-import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
-import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEventView
-import com.duluin.ftth.workorder.application.port.inbound.WorkOrderFilter
-import com.duluin.ftth.workorder.application.port.inbound.WorkOrderQuery
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderView
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
-import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
 import com.duluin.ftth.workorder.domain.model.ProofArtifactCompatibility
 import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
-import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -52,14 +38,15 @@ class WorkOrderService(
     private val repository: WorkOrderRepository,
     private val iamApi: IamApi,
     private val customerApi: CustomerApi,
-    private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
     private val evidence: WorkOrderEvidenceRepository,
     private val signatures: WorkOrderSignatureRepository,
     private val cutovers: com.duluin.ftth.inventory.InventoryTenantCutoverApi,
     private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
     private val approvals: WorkOrderApprovalService,
-) : ManageWorkOrderUseCase, WorkOrderQuery {
+    private val materialLifecycle: com.duluin.ftth.workorder.WorkOrderMaterialLifecyclePort,
+    private val views: WorkOrderViewMapper,
+) : ManageWorkOrderUseCase {
 
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
@@ -114,6 +101,7 @@ class WorkOrderService(
         if (technicianIds.isEmpty()) throw ConflictException("Minimal satu teknisi harus ditugaskan")
         val workOrder = require(id, current)
         technicianIds.forEach { requireActiveTechnician(it) }
+        materialLifecycle.beforeChange(id, com.duluin.ftth.workorder.MaterialLifecycleChange.REASSIGN)
         workOrder.assign(technicianIds, Instant.now(), current.fence.identity.userId)
         val saved = repository.save(workOrder)
         publishAssigned(saved)
@@ -153,6 +141,7 @@ class WorkOrderService(
             throw ConflictException("Proof of Work sudah berubah; muat ulang bukti sebelum mengirim")
         }
         ProofArtifactCompatibility.requireMatching(packet.artifacts, authoritativeArtifacts)
+        materialLifecycle.beforeChange(id, com.duluin.ftth.workorder.MaterialLifecycleChange.RESUBMIT)
         workOrder.complete(resolutionNote, packet, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
@@ -161,6 +150,7 @@ class WorkOrderService(
     override fun cancel(id: UUID, reason: String?): WorkOrderView {
         val current = commandFence("workorder.order.close")
         val workOrder = require(id, current)
+        materialLifecycle.beforeChange(id, com.duluin.ftth.workorder.MaterialLifecycleChange.CANCEL)
         workOrder.cancel(reason, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
@@ -181,6 +171,7 @@ class WorkOrderService(
     override fun reject(id: UUID, reason: String): WorkOrderView {
         val current = commandFence("workorder.order.approve")
         val workOrder = require(id, current)
+        materialLifecycle.beforeChange(id, com.duluin.ftth.workorder.MaterialLifecycleChange.REWORK)
         workOrder.reject(reason, Instant.now(), current.fence.identity.userId)
         return repository.save(workOrder).toView()
     }
@@ -202,78 +193,6 @@ class WorkOrderService(
         val current = authority.lockCurrent()
         if (!current.platformAdmin && permissions.none { it in current.permissions }) throw AccessDeniedException("Current work order permission required")
         return current
-    }
-
-    override fun search(filter: WorkOrderFilter, page: PageRequest): Page<WorkOrderView> {
-        requireActiveActor()
-        val result = repository.search(
-            query = filter.query?.trim()?.takeIf { it.isNotEmpty() },
-            type = filter.type,
-            status = filter.status,
-            assignedTo = filter.assignedTo,
-            approvalStatus = filter.approvalStatus,
-            customerId = filter.customerId,
-            pageRequest = page,
-            areaIds = currentUser.current().areaScope(),
-        )
-        // Teknisi (roster) & penyetuju sama-sama pengguna iam → kumpulkan idnya lalu resolusi sekali-batch.
-        val userIds = HashSet<UUID>()
-        result.content.forEach { wo ->
-            userIds += wo.assignees
-            wo.approvedBy?.let { userIds += it }
-        }
-        val userNames = iamApi.usersByIds(userIds).associate { it.id to it.name }
-        val customers = customerApi.findCustomersByIds(result.content.mapNotNullTo(HashSet()) { it.customerId })
-            .associateBy { it.id }
-        return result.map { it.toView(customers[it.customerId], userNames, userNames[it.approvedBy]) }
-    }
-
-    override fun searchMine(status: WorkOrderStatus?, page: PageRequest): Page<WorkOrderView> {
-        val me = currentUser.current().userId
-        return search(
-            WorkOrderFilter(
-                query = null,
-                type = null,
-                status = status,
-                assignedTo = me,
-                approvalStatus = null,
-            ),
-            page,
-        )
-    }
-
-    override fun get(id: UUID): WorkOrderDetail {
-        val workOrder = require(id)
-        requireReadAccess(workOrder)
-        val timeline = repository.timelineOf(id).map { it.toView() }
-        return WorkOrderDetail(workOrder.toView(), timeline)
-    }
-
-    override fun dashboard(): WorkOrderDashboardView {
-        requireActiveActor()
-        val areaIds = currentUser.current().areaScope()
-        val byStatus = repository.countByStatus(areaIds)
-        val byType = repository.countByType(areaIds)
-        val openByTechnician = repository.countOpenByTechnician(areaIds)
-
-        // Nama teknisi diresolusi sekali-batch lewat iam (hindari N+1); WO tanpa
-        // teknisi masuk kunci null dan dihitung terpisah sebagai antrean dispatch.
-        val technicianNames = iamApi.usersByIds(openByTechnician.keys.filterNotNullTo(HashSet()))
-            .associate { it.id to it.name }
-        val workloads = openByTechnician
-            .filterKeys { it != null }
-            .map { (technicianId, count) -> TechnicianWorkloadView(technicianId!!, technicianNames[technicianId], count) }
-            .sortedByDescending { it.openCount }
-
-        return WorkOrderDashboardView(
-            total = byStatus.values.sum(),
-            open = WorkOrderStatus.entries.filter { it.open }.sumOf { byStatus[it] ?: 0L },
-            unassignedOpen = openByTechnician[null] ?: 0L,
-            pendingApproval = repository.countPendingApproval(areaIds),
-            byStatus = WorkOrderStatus.entries.associate { it.name to (byStatus[it] ?: 0L) },
-            byType = WorkOrderType.entries.associate { it.name to (byType[it] ?: 0L) },
-            workloads = workloads,
-        )
     }
 
     private fun require(id: UUID): WorkOrder =
@@ -321,28 +240,6 @@ class WorkOrderService(
         }
     }
 
-    private fun requireReadAccess(workOrder: WorkOrder) {
-        requireActiveActor()
-        requireReadArea(workOrder.areaId)
-        val actor = currentUser.current()
-        if (actor.hasPermission("workorder.order.view")) return
-        if (actor.hasPermission("workorder.order.field") && iamApi.findUser(actor.userId)?.technician == true && workOrder.isAssignedTo(actor.userId)) return
-        throw NotFoundException("Work order ${workOrder.id} tidak ditemukan")
-    }
-
-    private fun requireActiveActor() {
-        if (iamApi.findUser(currentUser.current().userId)?.active != true) {
-            throw AccessDeniedException("Akun tidak aktif")
-        }
-    }
-
-    private fun requireReadArea(areaId: UUID?) {
-        val scope = currentUser.current().areaScope()
-        if (scope != null && (areaId == null || areaId !in scope)) {
-            throw AccessDeniedException("Work order di luar area Anda")
-        }
-    }
-
     private fun publishAssigned(workOrder: WorkOrder) {
         events.publishEvent(
             WorkOrderAssigned(
@@ -357,48 +254,5 @@ class WorkOrderService(
         )
     }
 
-    /** View untuk satu WO: resolusi nama roster sekali-batch (murah untuk detail/aksi tunggal). */
-    private fun WorkOrder.toView(): WorkOrderView = toView(
-        customer = customerId?.let { customerApi.findCustomer(it) },
-        assigneeNames = iamApi.usersByIds(assignees).associate { it.id to it.name },
-        approverName = approvedBy?.let { iamApi.findUser(it)?.name },
-    )
-
-    private fun WorkOrder.toView(
-        customer: CustomerRef?,
-        assigneeNames: Map<UUID, String?>,
-        approverName: String?,
-    ) = WorkOrderView(
-        id = id,
-        code = code,
-        type = type.name,
-        status = status.name,
-        priority = priority.name,
-        title = title,
-        description = description,
-        customerId = customerId,
-        customerName = customer?.name,
-        subscriptionId = subscriptionId,
-        incidentId = incidentId,
-        areaId = areaId,
-        destinationLat = customer?.location?.latitude,
-        destinationLng = customer?.location?.longitude,
-        assignees = assignees.map { WorkOrderAssigneeView(it, assigneeNames[it]) },
-        scheduledAt = scheduledAt,
-        assignedAt = assignedAt,
-        startedAt = startedAt,
-        completedAt = completedAt,
-        resolutionNote = resolutionNote,
-        cancelReason = cancelReason,
-        rxBeforeDbm = rxBeforeDbm,
-        rxAfterDbm = rxAfterDbm,
-        approvalStatus = approvalStatus?.name,
-        approvedBy = approvedBy,
-        approvedByName = approverName,
-        approvedAt = approvedAt,
-        approvalNote = approvalNote,
-        createdAt = createdAt,
-    )
-
-    private fun WorkOrderEvent.toView() = WorkOrderEventView(type = type.name, message = message, at = at)
+    private fun WorkOrder.toView(): WorkOrderView = views.single(this)
 }

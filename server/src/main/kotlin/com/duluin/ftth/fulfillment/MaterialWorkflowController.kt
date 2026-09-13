@@ -37,11 +37,6 @@ class MaterialWorkflowController(private val workflow: MaterialWorkflowService) 
         response(workflow.issueTransition(id, MaterialWorkflowJson.decode(body, WarehouseIssueRequest::class.java), key, false))
     @GetMapping("/issues/{issueId}/slip")
     fun slip(@PathVariable id: UUID, @PathVariable issueId: UUID) = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(workflow.issueSlip(id, issueId))
-    @PostMapping("/correct-use", "/return", "/reallocate", "/settlement")
-    fun unavailable(@PathVariable id: UUID): Nothing {
-        workflow.summary(id)
-        throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Material transition not available in task13"))
-    }
     private fun response(receipt: WarehouseOperationReceipt) = ResponseEntity.status(receipt.originalStatus)
         .contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)
 }
