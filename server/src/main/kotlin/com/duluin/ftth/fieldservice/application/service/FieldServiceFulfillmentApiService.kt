@@ -16,6 +16,8 @@ class FieldServiceFulfillmentApiService(
     private val visits: VisitRepository,
     private val outcomes: CommandOutcomeStore,
     private val visitRepository: VisitRepository,
+    private val receipts: com.duluin.ftth.fieldservice.adapter.outbound.persistence.VisitFulfillmentReceiptStore,
+    private val operationScope: com.duluin.ftth.common.infrastructure.persistence.FulfillmentOperationScope,
 ) : FieldServiceApi {
     override fun visit(id: UUID) = visitRepository.findById(
         com.duluin.ftth.common.tenant.TenantContext.tenantId(),
@@ -29,6 +31,16 @@ class FieldServiceFulfillmentApiService(
             com.duluin.ftth.fieldservice.VisitRef(it.tenantId, it.id, it.orderId, it.workOrderId, it.technicianId, it.state, it.revision, null)
         }
 
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    override fun lockFulfillment(visitId: UUID, workOrderId: UUID): com.duluin.ftth.fieldservice.VisitRef {
+        val tenant = com.duluin.ftth.common.tenant.TenantContext.tenantId()
+        val visit = visitRepository.findById(tenant,visitId) ?: throw ConflictException("FULFILLMENT_VISIT_BINDING")
+        if (visit.workOrderId != workOrderId || visit.state != VisitState.CHECKED_OUT || !visit.assignmentActive)
+            throw ConflictException("FULFILLMENT_VISIT_BINDING")
+        return com.duluin.ftth.fieldservice.VisitRef(tenant,visit.id,visit.orderId,visit.workOrderId,visit.technicianId,visit.state,visit.revision,null)
+    }
+
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     override fun applyFulfillment(command: VisitFulfillmentCommand): VisitFulfillmentResult {
         require(command.namespace.isNotBlank() && command.operationKey.isNotBlank() && command.payloadHash.isNotBlank())
         val metadata = CommandMetadata(
@@ -44,13 +56,17 @@ class FieldServiceFulfillmentApiService(
             throw ConflictException("Operation key was used with a different payload")
         }
         if (prior != null) {
+            receipts.requireReplay(command)
             val replay = visits.findById(command.tenantId, command.visitId) ?: throw ConflictException("Visit is not available in this tenant")
             return VisitFulfillmentResult(command.tenantId, command.visitId, replay.state, replay.revision, true)
         }
         val visit = visits.findById(command.tenantId, command.visitId) ?: throw ConflictException("Visit is not available in this tenant")
+        command.reference?.let(operationScope::enter)
         visit.submit(metadata, command.receivedAt)
         visits.save(visit)
         outcomes.record(metadata, command.visitId, visit.state.name)
-        return VisitFulfillmentResult(command.tenantId, command.visitId, visit.state, visit.revision, false)
+        val result = VisitFulfillmentResult(command.tenantId, command.visitId, visit.state, visit.revision, false)
+        receipts.record(command,result)
+        return result
     }
 }
