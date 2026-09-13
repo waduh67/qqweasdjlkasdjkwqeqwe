@@ -22,6 +22,8 @@ class WorkOrderMaterialLifecycleITDelta : MaterialUsageFixture() {
             assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE status='ISSUED'")).isEqualTo("10000")
             assertThat(scalar("SELECT count(*) FROM inventory_usage_snapshot")).isEqualTo("2")
             assertThat(scalar("SELECT frozen_snapshot FROM inventory_usage_snapshot WHERE use_revision=1")).isEqualTo(original)
+            assertThat(mapper.readTree(scalar("SELECT canonical_payload FROM inventory_command_identity identity JOIN inventory_operation operation USING(tenant_id,id) WHERE operation.operation_key='use-delta'")))
+                .isEqualTo(mapper.readTree(body))
         }
     }
 }

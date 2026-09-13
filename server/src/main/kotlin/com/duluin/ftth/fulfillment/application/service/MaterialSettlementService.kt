@@ -25,6 +25,7 @@ class MaterialSettlementService(
     private val authority: CurrentAuthorityApi,
     private val approvals: FulfillmentApprovalStore,
     private val checkpoints: FulfillmentCheckpointRepository,
+    private val reworkContext: WorkOrderMaterialReworkApi,
 ) : WorkOrderMaterialLifecyclePort {
     override fun beforeChange(workOrderId: UUID, change: MaterialLifecycleChange) {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
@@ -67,6 +68,8 @@ class MaterialSettlementService(
         val (workOrder, context) = context(workOrderId)
         if (!workOrder.material.active || workOrder.material.cancelled || context.authority.identity.userId !in context.activeAssigneeIds)
             throw WarehouseContractException(WarehouseError(WarehouseErrorCode.FORBIDDEN, "Current active assigned technician required"))
+        if (request.reworkId != null && reworkContext.lock(workOrderId, context.authority).evidenceRevision != request.evidenceRevision)
+            throw WarehouseContractException(WarehouseError(WarehouseErrorCode.STALE_REVISION, "Evidence revision changed"))
         return inventory.correctUse(context, request, WarehouseMutationMetadata(key))
     }
 

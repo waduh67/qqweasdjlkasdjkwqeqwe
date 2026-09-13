@@ -35,7 +35,11 @@ data class MaterialResidualRequest(
 data class MaterialResidualAcknowledgement(val documentId: UUID, val expectedRevision: Long, val evidenceReference: String)
 data class MaterialUsageDeltaRequest(val expectedRevision: Long, val workOrderRevision: Long, val previousUsageId: UUID,
     val receiptId: UUID, val issueLineId: UUID, val stockIdentityId: UUID, val quantityBase: String,
-    val baseUnit: WarehouseBaseUnit, val evidenceReference: String, val reason: String)
+    val baseUnit: WarehouseBaseUnit, val evidenceReference: String, val reason: String,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val reworkId: UUID? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val evidenceRevision: String? = null)
 data class MaterialObligationLine(
     val issueLineId: UUID, val stockIdentityId: UUID, val baseUnit: WarehouseBaseUnit,
     val issuedBase: String, val usedBase: String, val returnedBase: String,

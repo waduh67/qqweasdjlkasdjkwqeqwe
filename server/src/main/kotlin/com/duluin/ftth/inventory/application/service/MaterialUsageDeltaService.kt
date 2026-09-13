@@ -17,7 +17,8 @@ import java.util.UUID
 class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, private val cutovers: InventoryTenantCutoverApi,
     private val usage: MaterialUsageStore, private val deltas: MaterialUsageDeltaStore, private val residuals: MaterialResidualStore,
     private val lifecycle: MaterialLifecycleStore, private val totals: MaterialPhysicalTotalsStore, private val operations: WarehouseOperationStore,
-    private val posting: WarehousePosting, private val scopes: InventoryWarehouseScopeApi, private val locations: WarehouseReceiptService) {
+    private val posting: WarehousePosting, private val scopes: InventoryWarehouseScopeApi, private val locations: WarehouseReceiptService,
+    private val plans: MaterialPlanningStore, private val reworks: MaterialReworkStore, private val receipts: MaterialReceiptStore) {
     private val mapper = jacksonObjectMapper()
 
     fun append(context: MaterialPlanningContext, input: MaterialUsageDeltaRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
@@ -31,6 +32,11 @@ class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, priv
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         lifecycle.lock(context.workOrderId)
         usage.lockSources(listOf(input.receiptId))
+        input.reworkId?.let { id ->
+            val rework = reworks.get(id) ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            if (rework.plan.workOrderId != context.workOrderId || input.evidenceRevision != rework.evidenceRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+            reworks.assertLive(id)
+        }
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
         val prior = operations.lockKey("warehouse.material.use", metadata.idempotencyKey)
         if (prior != null) {
@@ -46,9 +52,8 @@ class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, priv
         val previous = usage.get(input.previousUsageId)
         if (previous.workOrderId != context.workOrderId || previous.useRevision != input.expectedRevision || previous.materialMode != MaterialMode.MATERIAL_REQUIRED)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        val previousLine = previous.lines.singleOrNull { it.selection.receiptId == input.receiptId && it.selection.issueLineId == input.issueLineId }
-            ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        val position = residuals.source(context, ResidualStockSource(input.receiptId, input.issueLineId, input.previousUsageId, input.stockIdentityId, input.baseUnit))
+        val binding = source(context, input, previous)
+        val position = residuals.source(context, ResidualStockSource(input.receiptId, input.issueLineId, binding.sourceUsageId, input.stockIdentityId, input.baseUnit))
         locations.authorizeLocation(position.dimension.locationId, current, scopes.currentUnderFence(current.fence))
         val amount = input.quantityBase.toLong()
         if (amount > position.quantity) masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
@@ -60,17 +65,17 @@ class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, priv
         val remainder = if (remainderAmount == 0L) null else position.dimension.copy(stockIdentityId = if (split) UUID.randomUUID() else input.stockIdentityId)
         val id = UUID.randomUUID()
         val line = MaterialUsageLineSnapshot(UUID.randomUUID(), MaterialUsageSelection(input.receiptId, input.issueLineId, input.stockIdentityId, input.quantityBase, input.baseUnit),
-            previousLine.receiptRevision, previousLine.issueId, previousLine.planLineId, previousLine.requestedBase, position.quantity.toString(),
+            binding.receiptRevision, binding.issueId, binding.planLineId, binding.requestedBase, position.quantity.toString(),
             remainderAmount.toString(), position.dimension, position.revision, consumed, remainder, UUID.randomUUID())
         val time = lifecycle.now()
-        val snapshot = MaterialUsageSnapshot(id, context.workOrderId, context.workOrderRevision, previous.planId, previous.planRevision,
+        val snapshot = MaterialUsageSnapshot(id, context.workOrderId, context.workOrderRevision, binding.plan.id, binding.plan.planRevision,
             Math.addExact(previous.useRevision, 1), MaterialMode.MATERIAL_REQUIRED, current.fence.identity.userId, context.customerId,
             input.evidenceReference, input.reason, null, time, UUID.nameUUIDFromBytes("warehouse:$id".toByteArray(Charsets.UTF_8)), listOf(line))
         val body = mapper.writeValueAsString(snapshot)
         val operation = PostingOperation(id, "warehouse.material.use", metadata.idempotencyKey, snapshot.actorId, context.workOrderId,
             "workorder:${context.workOrderId}", canonical.hash, "REPORT_USE", 200, body, current.fence.epoch, time)
         usage.create(snapshot, context)
-        deltas.record(snapshot, input)
+        deltas.record(snapshot, input, binding.sourceUsageId)
         val unit = StockUnit.valueOf(input.baseUnit.name)
         val legs = buildList {
             add(PostingLeg(LegDirection.OUT, position.dimension, StockQuantity.of(if (split) position.quantity else amount, unit), line.id, InventoryStatus.ISSUED))
@@ -83,8 +88,30 @@ class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, priv
         posting.post(WarehousePost(id, 0, "POSTED", operation, MovementKind.CONSUME, input.reason, legs, splits = splits,
             facts = listOf(PostingMaterialFact(line.factId, consumed.stockIdentityId, context.customerId, context.workOrderId, "Measured material delta",
                 StockQuantity.of(amount, unit), snapshot.useRevision, true, false, usageId = id)),
-            usage = PostingUsage(id, context.workOrderId, context.workOrderRevision, previous.planId, snapshot.useRevision, body, previous.usageId)), cutover)
+            usage = PostingUsage(id, context.workOrderId, context.workOrderRevision, binding.plan.id, snapshot.useRevision, body, previous.usageId)), cutover)
         operations.storeIdentity(id, canonical.json, current.fence.identity.sessionId)
         return WarehouseOperationReceipt(id, id, 1, 200, body, time)
+    }
+
+    private data class SourceBinding(val plan: MaterialPlanSnapshot, val sourceUsageId: UUID?, val receiptRevision: Long,
+        val issueId: UUID, val planLineId: UUID, val requestedBase: String)
+
+    private fun source(context: MaterialPlanningContext, input: MaterialUsageDeltaRequest, previous: MaterialUsageSnapshot): SourceBinding {
+        val currentPlan = plans.current(context.workOrderId)?.plan ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val rework = reworks.get(currentPlan.id)
+        if (rework == null) {
+            if (input.reworkId != null || input.evidenceRevision != null) masterFailure(WarehouseErrorCode.STALE_REVISION)
+            val line = previous.lines.singleOrNull { it.selection.receiptId == input.receiptId && it.selection.issueLineId == input.issueLineId }
+                ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            return SourceBinding(plans.get(previous.planId).plan, previous.usageId, line.receiptRevision, line.issueId, line.planLineId, line.requestedBase)
+        }
+        if (input.reworkId != rework.reworkId || input.evidenceRevision != rework.evidenceRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        reworks.assertLive(rework.reworkId)
+        val receipt = receipts.get(input.receiptId)
+        if (receipt.issue.workOrderId != context.workOrderId || receipt.issue.customerId != context.customerId) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val issued = receipt.issue.lines.singleOrNull { it.id == input.issueLineId } ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val planLine = (currentPlan.lines + rework.inheritedLines).singleOrNull { it.id == issued.planLineId }
+            ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        return SourceBinding(currentPlan, deltas.latestSource(input.receiptId, input.issueLineId), receipt.revision, receipt.issueId, planLine.id, planLine.quantityBase)
     }
 }
