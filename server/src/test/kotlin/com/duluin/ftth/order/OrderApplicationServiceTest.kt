@@ -17,7 +17,8 @@ class OrderApplicationServiceTest {
     private val customer = UuidV7.generate()
     private val user = AuthenticatedUser(UuidV7.generate(), tenant, "operator@example.test", "Operator", false, setOf("order.order.create", "order.order.manage"), emptySet())
     private val current = object : CurrentUserProvider { override fun currentOrNull() = user }
-    private val service = OrderApplicationService(InMemoryOrderRepository(), current, InMemoryOrderCustomerProjection())
+    private val service = OrderApplicationService(InMemoryOrderRepository(), current, InMemoryOrderCustomerProjection(),
+        org.mockito.Mockito.mock(com.duluin.ftth.common.infrastructure.persistence.FulfillmentOperationScope::class.java))
 
     @Test
     fun `same operation replays one order and different payload conflicts`() {

@@ -14,6 +14,7 @@ interface OrderApi {
     fun applyFulfillment(command: OrderFulfillmentCommand): OrderFulfillmentResult
     fun applyFulfillment(command: OrderFulfillmentCommand, authority: com.duluin.ftth.common.security.AuthorityFence): OrderFulfillmentResult
     fun fulfillmentRevision(orderId: UUID): Long?
+    fun lockFulfillment(target: OrderFulfillmentTarget): OrderFulfillmentBinding
 }
 
 data class OrderFulfillmentCommand(
@@ -24,6 +25,8 @@ data class OrderFulfillmentCommand(
     val namespace: String,
     val operationKey: String,
     val payloadHash: String,
+    val expectedCustomerId: UUID? = null,
+    val reference: com.duluin.ftth.common.domain.FulfillmentEffectReference? = null,
 )
 
 data class OrderFulfillmentResult(

@@ -16,6 +16,7 @@ class OrderApplicationService(
     private val orders: OrderRepository,
     private val currentUser: CurrentUserProvider,
     private val projection: InMemoryOrderCustomerProjection,
+    private val operationScope: com.duluin.ftth.common.infrastructure.persistence.FulfillmentOperationScope,
 ) : OrderApi {
     private val eventLog = mutableListOf<OrderEvent>()
 
@@ -54,6 +55,15 @@ class OrderApplicationService(
     @Transactional(readOnly = true)
     override fun fulfillmentRevision(orderId: UUID): Long? = orders.findForFulfillment(orderId)?.revision
 
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    override fun lockFulfillment(target: OrderFulfillmentTarget): OrderFulfillmentBinding {
+        val order = orders.findForFulfillment(target.orderId) ?: throw ConflictException("FULFILLMENT_ORDER_BINDING")
+        if (order.tenantId != com.duluin.ftth.common.tenant.TenantContext.tenantId() || order.customerId != target.customerId ||
+            order.status != com.duluin.ftth.order.domain.model.OrderStatus.FULFILLING ||
+            target.expectedRevision?.let { it != order.revision } == true) throw ConflictException("FULFILLMENT_ORDER_BINDING")
+        return OrderFulfillmentBinding(order.tenantId, order.id, order.customerId, order.revision, order.status.name)
+    }
+
     override fun portalOrders(customerId: UUID): List<PortalOrderView> = projection.findByCustomer(customerId)
 
     override fun portalOrder(customerId: UUID, orderId: UUID): PortalOrderView? =
@@ -80,6 +90,8 @@ class OrderApplicationService(
         val view = replayOrConflict(command.tenantId, OperationCommand(command.namespace, command.operationKey, command.payloadHash)) {
             val order = orders.findForFulfillment(command.orderId) ?: throw NotFoundException("Order tidak ditemukan")
             if (order.tenantId != command.tenantId) throw NotFoundException("Order tidak ditemukan")
+            if (command.expectedCustomerId?.let { it != order.customerId } == true) throw ConflictException("FULFILLMENT_ORDER_BINDING")
+            command.reference?.let(operationScope::enter)
             order.transition(
                 OrderTransitionCommand(
                     orderId = command.orderId,
