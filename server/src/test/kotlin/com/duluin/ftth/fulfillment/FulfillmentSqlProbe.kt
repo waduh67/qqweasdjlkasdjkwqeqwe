@@ -9,13 +9,14 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal enum class FulfillmentSqlPhase { SNAPSHOT, COMPLETED_EFFECT, VISIT_RECEIPT }
+internal enum class FulfillmentSqlPhase { SNAPSHOT, COMPLETED_EFFECT, VISIT_RECEIPT, CHECKPOINT_LOCK }
 
 internal class FulfillmentSqlProbe(context: ConfigurableApplicationContext, phase: FulfillmentSqlPhase,
     action: () -> Unit) : AutoCloseable {
     private val type = when (phase) {
         FulfillmentSqlPhase.SNAPSHOT -> FulfillmentApprovalStore::class.java
         FulfillmentSqlPhase.COMPLETED_EFFECT -> FulfillmentCheckpointPersistenceAdapter::class.java
+        FulfillmentSqlPhase.CHECKPOINT_LOCK -> FulfillmentCheckpointPersistenceAdapter::class.java
         FulfillmentSqlPhase.VISIT_RECEIPT -> com.duluin.ftth.fieldservice.adapter.outbound.persistence.VisitFulfillmentReceiptStore::class.java
     }
     private val target = AopTestUtils.getUltimateTargetObject<Any>(context.getBean(type))
@@ -31,12 +32,13 @@ internal class FulfillmentSqlProbe(context: ConfigurableApplicationContext, phas
                 FulfillmentSqlPhase.SNAPSHOT -> sql.startsWith("INSERT INTO fulfillment_approval_snapshot")
                 FulfillmentSqlPhase.COMPLETED_EFFECT -> sql.startsWith("UPDATE fulfillment_effect_progress p SET status = 'COMPLETED'")
                 FulfillmentSqlPhase.VISIT_RECEIPT -> sql.startsWith("INSERT INTO fieldservice_fulfillment_receipt")
+                FulfillmentSqlPhase.CHECKPOINT_LOCK -> sql.startsWith("SELECT id FROM fulfillment_checkpoint")
             }
             if (method.name == "createNativeQuery" && matches) {
                 val query = Query::class.java.cast(result)
                 Proxy.newProxyInstance(Query::class.java.classLoader, arrayOf(Query::class.java)) { proxy, operation, values ->
                     val value = invoke(query, operation, values)
-                    if (operation.name == "executeUpdate" && fired.compareAndSet(false, true)) action()
+                    if ((operation.name == "executeUpdate" || (phase == FulfillmentSqlPhase.CHECKPOINT_LOCK && operation.name == "getResultList")) && fired.compareAndSet(false, true)) action()
                     if (value === query) proxy else value
                 }
             } else result
