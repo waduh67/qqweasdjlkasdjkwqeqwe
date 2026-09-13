@@ -73,6 +73,12 @@ current acknowledged custody. Ia menambah snapshot, posting dan fact baru;
 fact task16 dan receipt settlement task17 tidak ditulis ulang. Koreksi yang
 berarti pengembalian fisik harus memakai return, bukan negative usage.
 
+Checkpoint ini belum menuntaskan acceptance rework task18: penggantian material
+plan setelah issue/usage masih ditolak oleh `MaterialPlanningStore.assertReplaceable`,
+dan lifecycle belum menyimpan tautan eksplisit ke revision plan/evidence baru.
+Positive usage delta bukan pengganti kemampuan replanning tersebut. Checkbox
+task18 harus tetap terbuka sampai owner workflow dan pengujiannya ditambahkan.
+
 ## Integritas dan batas
 
 Tabel baru memakai FORCE RLS, FK tenant gabungan dan append-only guards. Snapshot
