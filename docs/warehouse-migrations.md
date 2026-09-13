@@ -18,11 +18,17 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 fulfillment settlement | V175.23, V175.24, V175.25, V175.26, V175.27, V175.28, V175.29 | 17 | Immutable approval applicability and usage snapshots; non-posting settlement receipts and internally scoped completion constraints; normalized SQL applicability array comparison; explicit BNG applicability, replay binding, terminal checkpoint seal, visit-link insertion fence and canonical deferred scope entry |
 | M03 fulfillment owner correction | V175.30, V175.31, V175.32, V175.33, V175.34 | 17 | Authoritative order/customer and visit bindings, owner-local subscription/BNG/visit receipts, captured owner transitions, complete effect and outbox lineage validation with internal tenant assertions; explicit read parameters and transaction-correlated BNG handoff fingerprints |
 | M03 BNG lineage seal | V175.35 | 17 | Immutable initial approval/transaction provenance, validated initial bound actions and complete OLD/NEW reference discovery for exact action-set validation |
+| M03 BNG exact-set correction | V175.36 | 17 | Exact sorted receipt/action identity equality, rejecting duplicate IDs that conceal omitted correlated actions |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M03: reservation task17
+
+T17-AV-3 reserves `V175_36__warehouse_bng_exact_action_set.sql` before SQL creation.
+A failing initial-receipt probe admitted duplicate action IDs while omitting a
+correlated action despite matching counts. Exact identity equality closes this
+gap without modifying the already applied V175.35 or rewriting stored history.
 
 T17-AV-3 reserves `V175_35__warehouse_bng_initial_lineage.sql` before SQL creation.
 Ordinary actions retain null provenance forever; fulfillment actions receive
