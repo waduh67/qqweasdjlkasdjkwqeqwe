@@ -19,9 +19,23 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 fulfillment owner correction | V175.30, V175.31, V175.32, V175.33, V175.34 | 17 | Authoritative order/customer and visit bindings, owner-local subscription/BNG/visit receipts, captured owner transitions, complete effect and outbox lineage validation with internal tenant assertions; explicit read parameters and transaction-correlated BNG handoff fingerprints |
 | M03 BNG lineage seal | V175.35 | 17 | Immutable initial approval/transaction provenance, validated initial bound actions and complete OLD/NEW reference discovery for exact action-set validation |
 | M03 BNG exact-set correction | V175.36 | 17 | Exact sorted receipt/action identity equality, rejecting duplicate IDs that conceal omitted correlated actions |
+| M03 material lifecycle | V175.37, V175.38, V175.39 | 18 | Immutable custody obligations, lifecycle revisions, specialized WO residual dispatch/acknowledgement and final-state conservation guards; table-specific deferred trigger routing |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
+
+## M03: reservation task18
+
+Task18 reserves `V175_37__warehouse_material_lifecycle.sql` and
+`V175_38__warehouse_material_lifecycle_binding.sql` before SQL creation.
+Cancellation releases only unpicked reservations; physical residuals require
+explicit dispatch and acknowledgement. Returned stock stays quarantined and
+nonavailable. These slots do not implement generic transfers or return inspection.
+V175.36 and all predecessors remain unchanged; V176 remains task19's slot.
+
+Task18 reserves `V175_39__warehouse_lifecycle_trigger_routing.sql` before creation.
+The return test exposed PostgreSQL record-field resolution in a shared deferred
+trigger. Route through JSON record fields without editing applied V175.37/.38.
 
 ## M03: reservation task17
 
