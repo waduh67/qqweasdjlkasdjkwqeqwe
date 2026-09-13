@@ -29,7 +29,8 @@ class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
                 JOIN inventory_document_line line ON line.tenant_id=leg.tenant_id AND line.id=leg.document_line_id
                 WHERE movement.tenant_id=? AND movement.state='APPLIED' AND leg.direction='IN'
                 AND NOT EXISTS (SELECT FROM inventory_operation operation WHERE operation.tenant_id=movement.tenant_id
-                    AND operation.id=movement.operation_id AND operation.namespace='warehouse.material.acknowledge')
+                    AND operation.id=movement.operation_id AND (operation.namespace='warehouse.material.acknowledge'
+                        OR operation.namespace LIKE 'warehouse.material.residual.%'))
                 AND (line.id=? OR line.source_line_id=?) AND NOT EXISTS (
                     SELECT FROM inventory_movement_leg debit WHERE debit.tenant_id=leg.tenant_id AND debit.movement_id=leg.movement_id
                     AND debit.document_line_id=leg.document_line_id AND debit.direction='OUT' AND debit.location_id=leg.location_id
@@ -47,6 +48,11 @@ class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
                 "RESERVE", "RELEASE", "TRANSFER_RECEIPT", "RECEIVE" -> Unit
                 else -> sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             } }
+            val acceptedReturns = requireNotNull(sql.value("""SELECT coalesce(sum(residual.quantity_base::numeric),0)
+                FROM inventory_material_residual residual JOIN inventory_material_residual_ack acknowledgement
+                ON acknowledgement.tenant_id=residual.tenant_id AND acknowledgement.residual_id=residual.id
+                WHERE residual.tenant_id=? AND residual.issue_line_id=? AND residual.purpose='RETURN'""", sql.tenant, issue)).toLong()
+            returned = Math.addExact(returned, acceptedReturns)
         }
         MaterialPhysicalTotals(issued, used, returned, transferred, disposed).also {
             if (it.accountable < 0) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
