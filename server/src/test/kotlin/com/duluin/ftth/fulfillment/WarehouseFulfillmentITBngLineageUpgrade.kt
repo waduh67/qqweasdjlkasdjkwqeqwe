@@ -14,6 +14,8 @@ import java.util.UUID
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseFulfillmentITBngLineageUpgrade : BngHandoffFixture() {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private lateinit var preLifecycleWriter: com.duluin.ftth.fulfillment.application.service.MaterialSettlementService
     companion object {
         private val database by lazy { WarehouseSchemaDatabase("175.34") }
         @JvmStatic @DynamicPropertySource fun properties(registry: DynamicPropertyRegistry) {
@@ -39,7 +41,7 @@ class WarehouseFulfillmentITBngLineageUpgrade : BngHandoffFixture() {
             Triple(case,extra,graph(case))
         }
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(2)
+        assertThat(database.migrate().migrationsExecuted).isEqualTo(9)
 
         cases.zip(scopes).forEach { (entry,scope) ->
             val (case,extra,before)=entry
