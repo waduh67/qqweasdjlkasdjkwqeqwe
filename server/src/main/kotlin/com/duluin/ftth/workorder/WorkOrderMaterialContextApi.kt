@@ -8,6 +8,7 @@ interface WorkOrderMaterialContextApi {
     fun read(workOrderId: UUID): WorkOrderMaterialContext
     fun lock(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
     fun lockForIssue(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
+    fun lockForCustody(workOrderId: UUID, authority: AuthorityFence): WorkOrderLifecycleContext
 }
 
 data class WorkOrderMaterialContext(
@@ -27,5 +28,7 @@ data class WorkOrderMaterialContext(
     val scheduledAt: Instant?,
     val scheduledEndAt: Instant?,
 )
+
+data class WorkOrderLifecycleContext(val material: WorkOrderMaterialContext, val technicalState: String, val qaState: String?)
 
 enum class WorkOrderMaterialAction { INSTALL, REPAIR, REPLACE, REMOVE, NETWORK, PREVENTIVE, RETURN_CUSTOMER_RMA }

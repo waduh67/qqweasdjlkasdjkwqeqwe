@@ -54,6 +54,25 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
     override fun lockForIssue(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext =
         locked(workOrderId, expectedRevision, authority, true)
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun lockForCustody(workOrderId: UUID, authority: AuthorityFence): WorkOrderLifecycleContext {
+        authority.assertHeld()
+        val current = this.authority.lockCurrent()
+        if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
+        if (!current.platformAdmin && current.permissions.none { it in setOf("workorder.order.view", "workorder.order.field", "workorder.order.close", "workorder.order.assign", "workorder.order.approve") })
+            fail(WarehouseErrorCode.FORBIDDEN)
+        val material = snapshot(workOrderId, current)
+        return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+            connection.prepareStatement("SELECT status,approval_status FROM work_order WHERE tenant_id=? AND id=?").use { query ->
+                query.setObject(1, TenantContext.tenantId()); query.setObject(2, workOrderId)
+                query.executeQuery().use { row ->
+                    check(row.next())
+                    WorkOrderLifecycleContext(material, row.getString("status"), row.getString("approval_status"))
+                }
+            }
+        }
+    }
+
     private fun locked(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence, issue: Boolean): WorkOrderMaterialContext {
         authority.assertHeld()
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK).assertHeld()
