@@ -20,6 +20,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 BNG lineage seal | V175.35 | 17 | Immutable initial approval/transaction provenance, validated initial bound actions and complete OLD/NEW reference discovery for exact action-set validation |
 | M03 BNG exact-set correction | V175.36 | 17 | Exact sorted receipt/action identity equality, rejecting duplicate IDs that conceal omitted correlated actions |
 | M03 material lifecycle | V175.37, V175.38, V175.39, V175.40, V175.41, V175.42, V175.43 | 18 | Immutable custody obligations, lifecycle revisions, specialized WO residual dispatch/acknowledgement and final-state conservation guards; table-specific deferred trigger routing; durable origin obligations, authorized two-party custody handover, positive measured usage deltas and quantitative snapshot truth |
+| M03 rework extension | V175.44, V175.45, V175.46, V175.47 | 18 | Additive post-use plan lineage and evidence snapshots, inherited line references, new-plan usage bindings, fresh receipt validation and direct-owner operation fences |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
@@ -36,6 +37,11 @@ without changing the original source plan or consumption. V175.37-.43 stay froze
 fresh-receipt delta gate distinguishes its initial receipt source from its own
 newly inserted usage line during deferred validation; existing residual-source
 semantics stay unchanged. Applied V175.44/.45 are not edited.
+
+`V175_47__warehouse_rework_operation_fence.sql` is reserved before creation.
+Direct reservation owner calls and physical operation inserts must honor current
+rework evidence, not only the fulfillment route. Release/unpick remain available
+for safe cleanup; stale positive allocation and use are rejected.
 
 Task18 reserves `V175_37__warehouse_material_lifecycle.sql` and
 `V175_38__warehouse_material_lifecycle_binding.sql` before SQL creation.
