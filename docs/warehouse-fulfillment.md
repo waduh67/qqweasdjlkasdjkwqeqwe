@@ -65,3 +65,31 @@ Migrasi V175.23-V175.29 mengikuti manifest forward-only; V175.22 dan predecessor
 tetap. Snapshot/receipt FORCE RLS, append-only, memakai FK tenant-composite dan
 validator deferred dengan pemeriksaan tenant internal. Endpoint settlement manual
 yang lama tetap fail-closed; verifikasi ini hanya berasal dari approval WO.
+
+## Binding pemilik dan bukti efek
+
+Koreksi V175.30-V175.34 menutup T17-AV-1/T17-AV-2. Order API mengunci dan
+memvalidasi tenant, customer, revisi serta state FULFILLING sebelum freeze.
+Validator database juga membaca `order_record`, bukan hanya membandingkan dua
+salinan JSON. WO customer A tidak dapat menyelesaikan order customer B.
+
+Visit harus merupakan record pemilik yang nyata untuk tenant/WO/teknisi tersebut,
+berstatus CHECKED_OUT pada revisi yang dibekukan. Completion memerlukan operasi
+visit, receipt pemilik dan transisi CHECKED_OUT ke SUBMITTED yang benar-benar
+terekam dalam transaksi pemilik. Progress COMPLETED saja bukan bukti.
+
+Subscription/customer dan BNG memiliki receipt immutable sendiri. Perubahan
+state order, subscription, akun BNG dan visit dicatat oleh trigger pemilik;
+INSERT langsung ke jurnal transisi ditolak. Referensi transaksi
+`app.fulfillment_approval_id` hanya korelasi, bukan pengganti otorisasi: authority
+fence dan binding pemilik tetap diperiksa oleh API serta database.
+
+Handoff BNG dikorelasikan dengan approval dan transaksi pembuatnya, termasuk
+DEPROVISION yang sengaja lepas dari FK akun dan SYNC_GROUP bersama. Fingerprint
+payload immutable membedakan perubahan status delivery yang sah dari penggantian
+target/perintah. Receipt serta seluruh efek lokal tetap rollback bersama.
+
+Snapshot APPLIED juga memerlukan outbox yang cocok dengan checkpoint, payload
+dan hash persetujuan. Read/replay memvalidasi bukti pemilik tersimpan; histori
+lama yang tidak konsisten ditolak untuk rekonsiliasi, tidak ditulis ulang atau
+direkonstruksi sebagai efek baru. Kabel/NONE tetap tidak mem-posting stok lagi.
