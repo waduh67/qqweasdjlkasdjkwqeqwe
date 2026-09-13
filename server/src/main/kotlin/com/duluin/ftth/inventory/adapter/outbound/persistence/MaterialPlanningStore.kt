@@ -20,6 +20,15 @@ class MaterialPlanningStore(private val jdbc: WarehouseCommandJdbc) {
             MaterialPlanHistory(mapper.readValue(snapshot, MaterialPlanSnapshot::class.java), it.getString("state"), it.optionalUuid("document_id"))
         }.singleOrNull()
     }
+    fun get(id: UUID): MaterialPlanHistory = jdbc.execute { sql ->
+        sql.value("SELECT warehouse_assert_material_submission(?,?)", sql.tenant, id)
+        sql.query("""SELECT snapshot.snapshot,plan.state,submission.document_id FROM inventory_material_plan plan
+            JOIN inventory_material_plan_snapshot snapshot ON snapshot.tenant_id=plan.tenant_id AND snapshot.id=plan.id
+            LEFT JOIN inventory_material_submission submission ON submission.tenant_id=plan.tenant_id AND submission.id=plan.id
+            WHERE plan.tenant_id=? AND plan.id=?""", sql.tenant, id) {
+            MaterialPlanHistory(mapper.readValue(it.getString("snapshot"), MaterialPlanSnapshot::class.java), it.getString("state"), it.optionalUuid("document_id"))
+        }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+    }
     fun history(workOrder: UUID, page: WarehousePageRequest): WarehousePage<MaterialPlanHistory> = jdbc.execute { sql ->
         val total = sql.value("SELECT count(*) FROM inventory_material_plan WHERE tenant_id=? AND work_order_id=?", sql.tenant, workOrder)!!.toLong()
         val rows = sql.query("""SELECT plan.id binding_plan_id,snapshot.snapshot,plan.state,submission.document_id FROM inventory_material_plan plan
