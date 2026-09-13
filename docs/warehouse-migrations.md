@@ -19,7 +19,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 fulfillment owner correction | V175.30, V175.31, V175.32, V175.33, V175.34 | 17 | Authoritative order/customer and visit bindings, owner-local subscription/BNG/visit receipts, captured owner transitions, complete effect and outbox lineage validation with internal tenant assertions; explicit read parameters and transaction-correlated BNG handoff fingerprints |
 | M03 BNG lineage seal | V175.35 | 17 | Immutable initial approval/transaction provenance, validated initial bound actions and complete OLD/NEW reference discovery for exact action-set validation |
 | M03 BNG exact-set correction | V175.36 | 17 | Exact sorted receipt/action identity equality, rejecting duplicate IDs that conceal omitted correlated actions |
-| M03 material lifecycle | V175.37, V175.38, V175.39 | 18 | Immutable custody obligations, lifecycle revisions, specialized WO residual dispatch/acknowledgement and final-state conservation guards; table-specific deferred trigger routing |
+| M03 material lifecycle | V175.37, V175.38, V175.39, V175.40, V175.41, V175.42, V175.43 | 18 | Immutable custody obligations, lifecycle revisions, specialized WO residual dispatch/acknowledgement and final-state conservation guards; table-specific deferred trigger routing; durable origin obligations, authorized two-party custody handover, positive measured usage deltas and quantitative snapshot truth |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
@@ -36,6 +36,22 @@ V175.36 and all predecessors remain unchanged; V176 remains task19's slot.
 Task18 reserves `V175_39__warehouse_lifecycle_trigger_routing.sql` before creation.
 The return test exposed PostgreSQL record-field resolution in a shared deferred
 trigger. Route through JSON record fields without editing applied V175.37/.38.
+
+Task18 reserves `V175_40__warehouse_residual_position_truth.sql` and
+`V175_41__warehouse_wo_handover_authority.sql` before creation. Origin obligations
+retain a durable due timestamp; final projections remain anchored to paired
+postings. Handover is WO-specific, dispatcher-authorized and receiver-acknowledged,
+not a generic warehouse transfer or return inspection implementation.
+
+Task18 reserves `V175_42__warehouse_positive_usage_deltas.sql` before creation.
+Positive measured deltas append a usage revision linked to its predecessor and
+current acknowledged custody. Prior consumed facts and settlement receipts are
+never rewritten; negative usage is not a return path.
+
+Task18 reserves `V175_43__warehouse_obligation_snapshot_truth.sql` before creation.
+App-role red evidence showed a self-consistent but false quantitative snapshot
+could append. Bind every line to current owner totals and seal closure at final
+transaction state without modifying previously applied migrations.
 
 ## M03: reservation task17
 
