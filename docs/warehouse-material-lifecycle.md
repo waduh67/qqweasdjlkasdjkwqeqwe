@@ -35,6 +35,8 @@ unit; `17500` MM berarti17.500m, bukan angka floating point.
 | POST `/handover` atau `/reallocate` | Sender menjalankan handover custody WO yang telah diotorisasi |
 | POST `/residuals/acknowledge` | Receiver mengakui dokumen residual secara independen |
 | POST `/correct-use` | Tambah measured-use delta positif dengan referensi usage sebelumnya |
+| GET `/rework-context` | Ambil revision WO/plan/usage/evidence yang harus cocok untuk rework |
+| POST `/rework` | Tambah plan delta dan bekukan referensi predecessor/evidence pada WO REJECTED |
 
 Return menyebut receipt, issue line, usage/remnant bila sudah digunakan, identitas
 stok dan lokasi quarantine. Dispatch memposting debit custody dan kredit transit
@@ -73,11 +75,11 @@ current acknowledged custody. Ia menambah snapshot, posting dan fact baru;
 fact task16 dan receipt settlement task17 tidak ditulis ulang. Koreksi yang
 berarti pengembalian fisik harus memakai return, bukan negative usage.
 
-Checkpoint ini belum menuntaskan acceptance rework task18: penggantian material
-plan setelah issue/usage masih ditolak oleh `MaterialPlanningStore.assertReplaceable`,
-dan lifecycle belum menyimpan tautan eksplisit ke revision plan/evidence baru.
-Positive usage delta bukan pengganti kemampuan replanning tersebut. Checkbox
-task18 harus tetap terbuka sampai owner workflow dan pengujiannya ditambahkan.
+Penggantian material plan biasa setelah issue/usage tetap ditolak oleh
+`MaterialPlanningStore.assertReplaceable`. Replanning memakai command `/rework`
+khusus, bukan pengecualian pada guard tersebut. Command ini menambah plan positif,
+menyimpan predecessor dan evidence revision immutable, serta mengikat pemakaian
+berikutnya ke revision baru. Rincian ada pada [rework material](warehouse-material-rework.md).
 
 ## Integritas dan batas
 
