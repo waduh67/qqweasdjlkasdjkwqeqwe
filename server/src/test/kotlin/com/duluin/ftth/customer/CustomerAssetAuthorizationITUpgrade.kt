@@ -44,14 +44,19 @@ class CustomerAssetAuthorizationITUpgrade {
                 app.createStatement().use { it.execute("SET app.tenant_id='$tenant'") }
                 scalar(app, "SELECT snapshot::text FROM inventory_deployment_authorization_history WHERE authorization_id='$permit'")
             }
-            assertThat(database.migrate().migrationsExecuted).isEqualTo(2)
+            assertThat(database.migrate().migrationsExecuted).isEqualTo(4)
             assertThat(database.migrate().migrationsExecuted).isZero()
             database.dataSource.connection.use { app ->
                 app.createStatement().use { it.execute("SET app.tenant_id='$tenant'") }
                 assertThat(scalar(app, "SELECT snapshot::text FROM inventory_deployment_authorization_history WHERE authorization_id='$permit'")).isEqualTo(before)
-                for (sql in listOf("SELECT warehouse_read_deployment_authorization('$tenant','$permit')",
-                    "UPDATE inventory_deployment_authorization SET consumed=true,consumed_at=now(),revision=1 WHERE id='$permit'")) {
-                    assertThat(assertThrows<SQLException> { app.createStatement().use { it.execute(sql) } }.sqlState).isEqualTo("23514")
+                for (zone in listOf("UTC", "America/New_York", "Asia/Kathmandu", "Australia/Lord_Howe")) {
+                    app.createStatement().use { it.execute("SET TIME ZONE '$zone'") }
+                    for (sql in listOf("SELECT warehouse_read_deployment_authorization('$tenant','$permit')",
+                        "UPDATE inventory_deployment_authorization SET consumed=true,consumed_at=now(),revision=1 WHERE id='$permit'")) {
+                        val failure = assertThrows<SQLException> { app.createStatement().use { it.execute(sql) } }
+                        assertThat(failure.sqlState).isEqualTo("23514")
+                        assertThat(failure.message).contains("authorization requires VERIFIED physical asset")
+                    }
                 }
                 assertThat(scalar(app, "SELECT consumed::text FROM inventory_deployment_authorization WHERE id='$permit'")).isEqualTo("false")
                 assertThat(scalar(app, "SELECT count(*) FROM inventory_deployment_authorization_history WHERE authorization_id='$permit'")).isEqualTo("1")
