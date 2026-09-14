@@ -11,11 +11,11 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
     protected data class ReceiptCase(val stock: Setup, val workOrder: String, val receiver: Pair<String, String>,
         val transit: String, val field: String, val input: MaterialReceiptRequest)
 
-    protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false): ReceiptCase {
+    protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false, installation: Boolean = false): ReceiptCase {
         val stock = setupReceipt()
         if (serial) {
             assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
-                """{"expectedRevision":0,"code":"ONU","name":"ONU","tracking":"SERIAL","baseUnit":"EA","inspectionRequired":false}""").status).isEqualTo(200)
+                """{"expectedRevision":0,"code":"ONU","name":"ONU","category":"ONU","tracking":"SERIAL","baseUnit":"EA","inspectionRequired":false}""").status).isEqualTo(200)
             val receipt = draft(stock, """{"skuId":"${stock.onu}","quantityBase":"2","serials":[{"serial":"RECEIVE-1"},{"serial":"RECEIVE-2"}]}""").path("id").asString()
             transition(stock, receipt, "receive", """{"expectedRevision":0}""")
             val received = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$receipt", stock.token).contentAsString)
@@ -32,8 +32,14 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
             transition(stock, receipt, "putaway", """{"expectedRevision":1,"destinationLocationId":"${stock.bin}","lines":[{"lineId":"${received.path("id").asString()}",
                 "stockIdentityId":"${received.path("pieces")[0].path("stockIdentityId").asString()}","quantityBase":"100","baseUnit":"EA"}]}""")
         } else receiveStock(stock, "1000000")
-        val receiver = technician(stock.token)
-        val workOrder = workOrder(stock.token)
+        val receiver = technician(stock.token, if (installation) setOf("customer.onu.assign") else emptySet())
+        val customer = if (installation) UUID.randomUUID().also { id ->
+            fixture(stock.token).transaction {
+                sql("INSERT INTO customer(id,tenant_id,code,name,address) VALUES ('$id','$tenant','$id','Installation','Test')")
+            }
+        }.toString() else null
+        val workOrder = workOrder(stock.token, if (installation) "PSB" else "PREVENTIVE", customer)
+        if (installation) create("locations", stock.token, """{"code":"CUSTOMER_INSTALLED","name":"Customer installed equipment","kind":"CUSTOMER_SITE"}""")
         assign(stock.token, workOrder, receiver.second)
         val planned = if (serial) line(stock.onu, "2", "EA") else if (fungible) line(stock.onu, "100", "EA") else line(stock.cable)
         putPlan(stock.token, workOrder, plan(stock.token, workOrder, "[$planned]"))

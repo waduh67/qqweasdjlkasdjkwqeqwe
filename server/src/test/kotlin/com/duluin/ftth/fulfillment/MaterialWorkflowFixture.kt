@@ -44,8 +44,8 @@ abstract class MaterialWorkflowFixture : WarehouseReceiptHttpFixture() {
         transition(setup, id, "putaway", """{"expectedRevision":1,"destinationLocationId":"${setup.bin}","lines":[{"lineId":"${line.path("id").asString()}",
             "stockIdentityId":"${line.path("pieces")[0].path("stockIdentityId").asString()}","baseUnit":"MM","quantityBase":"$amount"}]}""")
     }
-    protected fun technician(admin: String): Pair<String, String> {
-        val user = user(admin, setOf("workorder.order.field", "inventory.request.view", "inventory.request.manage", "inventory.sku.view"))
+    protected fun technician(admin: String, extraPermissions: Set<String> = emptySet()): Pair<String, String> {
+        val user = user(admin, setOf("workorder.order.field", "inventory.request.view", "inventory.request.manage", "inventory.sku.view") + extraPermissions)
         val roles = mapper.readTree(request("GET", "/api/roles", admin).contentAsString)
         val techRole = roles.single { it.path("name").asString() == "Teknisi" }.path("id").asString()
         val current = mapper.readTree(request("GET", "/api/me", user.first).contentAsString)
