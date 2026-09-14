@@ -29,6 +29,15 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M04: reservation task20
 
+T20-01/02 reserve `V175_64__warehouse_deployment_fact_cardinality.sql` and
+`V175_65__warehouse_deployment_document_lineage.sql` before creation.
+DEPLOY has zero customer-material-fact rows: its physical fact is the sealed
+assignment/customer-installation graph, not a task16 consumption fact. Every
+POSTED DEPLOYMENT document must have one exact authorization, execution, operation,
+result, posting and source-bound line. New mutation-side guards and validated
+reads reject admitted corrupt histories without rewriting them or blocking boot.
+V175.63 and all predecessors remain byte-identical.
+
 `V175_63__warehouse_deployment_posting_seal.sql` is reserved before creation.
 A failing app-role test appended an extra movement header to a completed
 deployment. Header/operation mutation sides must revalidate the sealed result;
