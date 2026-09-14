@@ -32,6 +32,7 @@ class WorkOrderMaterialLifecycleITReturns : MaterialLifecycleFixture() {
         assertThat(mapper.readTree(state.contentAsString).path("outstandingBase").asString()).isEqualTo("17500")
         assertThat(mapper.readTree(state.contentAsString).path("materialState").asString()).isEqualTo("SETTLING")
         assertThat(request("GET", "/api/work-orders/${case.usage.receipt.workOrder}/materials", case.usage.receipt.stock.token).status).isEqualTo(200)
+        assertThat(summary(case.usage.receipt.stock.token, case.usage.receipt.workOrder).path("settlementState").asString()).isEqualTo("OPEN")
     }
 
     @Test fun `partial return retains the sender remainder`() {

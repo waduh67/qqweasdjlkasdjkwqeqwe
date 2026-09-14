@@ -33,8 +33,14 @@ class MaterialWorkflowService(private val workOrders: WorkOrderMaterialContextAp
         val current = authority.lockCurrent()
         val workOrder = if (revision == null) workOrders.read(id) else if (issue) workOrders.lockForIssue(id, revision, current.fence)
             else workOrders.lock(id, revision, current.fence)
+        val qaState = when (workOrders.currentQaState(id, current.fence)) {
+            null, "PENDING" -> MaterialQaState.PENDING
+            "APPROVED" -> MaterialQaState.APPROVED
+            "REJECTED" -> MaterialQaState.REJECTED
+            else -> throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Unknown work order QA state"))
+        }
         return MaterialPlanningContext(id, workOrder.code, workOrder.workType, workOrder.action.name, workOrder.workOrderRevision,
             workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover,
-            workOrder.customerId?.let { customers.findCustomer(it)?.name })
+            workOrder.customerId?.let { customers.findCustomer(it)?.name }, qaState)
     }
 }

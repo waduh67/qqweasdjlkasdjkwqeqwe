@@ -54,7 +54,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
             MaterialRevisions(context.workOrderRevision, plan?.planRevision ?: 0, physical.useRevision(context.workOrderId), 0),
             demand?.let { MaterialDemandState.valueOf(it.state) } ?: if (history?.state == "SUBMITTED") MaterialDemandState.SUBMITTED else MaterialDemandState.DRAFT,
             if (context.customerId == null) MaterialInstallationState.NOT_APPLICABLE else MaterialInstallationState.NOT_INSTALLED,
-            MaterialQaState.PENDING, MaterialProvisioningState.NOT_APPLICABLE, MaterialSettlementState.OPEN, totals,
+            context.qaState, MaterialProvisioningState.NOT_APPLICABLE, MaterialSettlementState.OPEN, totals,
             plan, demand?.id, demand?.revision, templates.current(context.workType, context.action))
     }
 

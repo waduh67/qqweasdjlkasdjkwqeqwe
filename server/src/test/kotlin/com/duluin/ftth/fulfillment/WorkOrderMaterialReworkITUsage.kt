@@ -49,6 +49,13 @@ class WorkOrderMaterialReworkITUsage : MaterialReworkFixture() {
         val approved = request("POST", "/api/work-orders/${case.usage.receipt.workOrder}/approve", case.usage.receipt.stock.token, "{}")
 
         assertThat(approved.status).withFailMessage(approved.contentAsString).isEqualTo(200)
+        fixture(case.usage.receipt.stock.token).transaction {
+            assertThat(scalar("SELECT approval_status FROM work_order WHERE id='${case.usage.receipt.workOrder}'")).isEqualTo("APPROVED")
+        }
+        val settlement = request("GET", "/api/work-orders/${case.usage.receipt.workOrder}/materials/settlement", case.usage.receipt.stock.token)
+        assertThat(settlement.status).isEqualTo(200)
+        assertThat(mapper.readTree(settlement.contentAsString).path("qaState").asString()).isEqualTo("APPROVED")
+        assertThat(summary(case.usage.receipt.stock.token, case.usage.receipt.workOrder).path("qaState").asString()).isEqualTo("APPROVED")
         assertThat(physicalState(case.usage.receipt.stock.token)).isEqualTo(before)
         fixture(case.usage.receipt.stock.token).transaction {
             assertThat(scalar("SELECT sum(quantity_base) FROM inventory_customer_material_fact")).isEqualTo("95000")

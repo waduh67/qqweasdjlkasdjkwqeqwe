@@ -6,7 +6,8 @@ import java.util.UUID
 
 data class MaterialPlanningContext(val workOrderId: UUID, val code: String, val workType: String, val action: String,
     val workOrderRevision: Long, val customerId: UUID?, val areaId: UUID?, val activeAssigneeIds: Set<UUID>,
-    val authority: AuthorityFence, val cutover: TenantCutoverFence, val customerLabelSnapshot: String? = null)
+    val authority: AuthorityFence, val cutover: TenantCutoverFence, val customerLabelSnapshot: String? = null,
+    val qaState: MaterialQaState = MaterialQaState.PENDING)
 
 data class MaterialPlanningRequest(val expectedRevision: Long, val workOrderRevision: Long, val materialMode: MaterialMode,
     val reason: String? = null, val lines: List<MaterialPlanLine>? = null)
