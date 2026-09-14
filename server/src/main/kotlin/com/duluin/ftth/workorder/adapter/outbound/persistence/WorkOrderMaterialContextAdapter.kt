@@ -55,6 +55,21 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
         locked(workOrderId, expectedRevision, authority, true)
 
     @Transactional(propagation = Propagation.MANDATORY)
+    override fun currentQaState(workOrderId: UUID, authority: AuthorityFence): String? {
+        authority.assertHeld()
+        val current = this.authority.lockCurrent()
+        if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
+        val material = snapshot(workOrderId, current)
+        authorize(material, current, current.permissions.any { it in setOf("workorder.order.update", "workorder.order.assign") })
+        return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+            connection.prepareStatement("SELECT approval_status FROM work_order WHERE tenant_id=? AND id=?").use { query ->
+                query.setObject(1, TenantContext.tenantId()); query.setObject(2, workOrderId)
+                query.executeQuery().use { row -> check(row.next()); row.getString("approval_status") }
+            }
+        }
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     override fun lockForCustody(workOrderId: UUID, authority: AuthorityFence): WorkOrderLifecycleContext {
         authority.assertHeld()
         val current = this.authority.lockCurrent()

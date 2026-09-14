@@ -9,6 +9,7 @@ interface WorkOrderMaterialContextApi {
     fun lock(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
     fun lockForIssue(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
     fun lockForCustody(workOrderId: UUID, authority: AuthorityFence): WorkOrderLifecycleContext
+    fun currentQaState(workOrderId: UUID, authority: AuthorityFence): String?
 }
 
 data class WorkOrderMaterialContext(
