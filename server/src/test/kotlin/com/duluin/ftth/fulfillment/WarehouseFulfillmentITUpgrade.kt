@@ -20,7 +20,7 @@ class WarehouseFulfillmentITUpgrade {
 
             val result = database.migrate()
 
-            assertThat(result.migrationsExecuted).isEqualTo(when (starting) { "175.23" -> 40; "175.24" -> 39; else -> 0 })
+            assertThat(result.migrationsExecuted).isEqualTo(when (starting) { "175.23" -> 43; "175.24" -> 42; else -> 0 })
             assertThat(checksums()).containsAllEntriesOf(before)
             assertThat(database.migrate().migrationsExecuted).isZero()
             database.dataSource.connection.use { connection ->

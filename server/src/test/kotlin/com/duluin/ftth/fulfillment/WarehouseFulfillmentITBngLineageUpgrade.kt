@@ -41,7 +41,7 @@ class WarehouseFulfillmentITBngLineageUpgrade : BngHandoffFixture() {
             Triple(case,extra,graph(case))
         }
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(29)
+        assertThat(database.migrate().migrationsExecuted).isEqualTo(32)
 
         cases.zip(scopes).forEach { (entry,scope) ->
             val (case,extra,before)=entry
