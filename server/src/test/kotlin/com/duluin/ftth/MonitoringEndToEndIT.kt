@@ -100,7 +100,7 @@ class MonitoringEndToEndIT {
             ),
             "$.id",
         )
-        post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$suffix"}""")
+        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, "SN-$suffix")
         return "SN-$suffix"
     }
 
@@ -144,7 +144,7 @@ class MonitoringEndToEndIT {
                     "location":{"longitude":106.99,"latitude":-6.24}}""",
             ),
         )
-        val onuId = id(post("/api/customers/$customerId/onus", token, """{"serialNumber":"SN-$s"}"""))
+        val onuId = com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customerId, "SN-$s")
         post(
             "/api/customers/onus/$onuId/attach", token,
             """{"odpId":"$odp","portNumber":1,"installRxPowerDbm":-22.0}""", expected = 200,

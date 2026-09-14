@@ -101,7 +101,7 @@ class GisOltOnusIT {
                 """{"code":"$code","name":"$name","address":"Jl. Uji","location":{"longitude":106.996,"latitude":-6.246}}""",
             ),
         )
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
+        val onu = com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, serial)
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
         return customer
     }
