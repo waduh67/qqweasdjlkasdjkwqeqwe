@@ -25,6 +25,12 @@ A serial number is descriptive data, never installation authority.
 - The old inventory `installed-onu` write returns
   `409 USE_WORKORDER_ASSET_WORKFLOW`; it does not forward to fulfillment.
 
+All installation, authorized ONU-registration and fulfillment command bodies use
+the same strict decoder. Unknown/client-authority fields, duplicate keys, trailing
+JSON, null primitive revisions and numeric/string coercions are rejected with400
+before owner execution or replay lookup. This includes `tenantId`, `actorId`,
+`custodianId`, `sourceId`, `receiptId`, `movementId` and `approver`.
+
 ## Authority and transactions
 
 Both mint and consume reload current IAM authority. The actor must be an active
@@ -56,6 +62,26 @@ authority and WO checks. Changed actor, payload or consume key is rejected.
 Authorization revision zero is the immutable input revision; consumed revision
 one is not a second spend. Mint replay retains its original authorization reference.
 
+## Exact deployment graph
+
+A DEPLOY posting has **zero** `inventory_customer_material_fact` rows. Its physical
+installation fact is represented by its inventory assignment and customer receipt.
+Task16 CONSUME material facts retain their existing separate contract and seal.
+
+A DEPLOYMENT draft has revision0, at most one preparation line and no operation,
+posting or result. It has no installation authority. POSTED has revision1 and
+requires exactly one matching authorization/execution, operation, result, posting
+and line. The line belongs to that operation/document, starts at line/revision1/0,
+and binds the exact asset, SKU, 1EA, issue line and acknowledged technician custody.
+Fact, document, line, operation, posting and result mutation sides revalidate the
+final graph with their own tenant assertion, including selectively deferred checks.
+
+Forward migration does not rewrite previously admitted bad facts or orphan
+documents. Validated authorization reads and replay reject those completed graphs
+for reconciliation; unrelated valid installations continue working. An older
+unconsumed authorization does not invalidate another valid fresh authorization's
+completed document on the same issue line.
+
 ## Equipment and boundaries
 
 SKU categories `ONU` and `ONT` create ONU episodes. Other serialized equipment,
@@ -66,5 +92,5 @@ LOAN is the default. SALE records intent only. Legal title remains ISP and no
 handover, invoice, payment, swap, removal, return or telemetry-attribution workflow
 is enabled here. Task20 remains subject to independent verification.
 
-Forward migrations are V175.59 through V175.63. Task19 authorization row/history
+Forward migrations are V175.59 through V175.66. Task19 authorization row/history
 shapes and all previously applied migration bytes remain unchanged.
