@@ -70,6 +70,29 @@ sisa, transit, reservasi atau pending inspection mengembalikan
 mengubah status teknis atau QA. `OWNER_APPLIED` pada provisioning berarti efek
 pemilik fulfillment telah diterima, bukan bukti perangkat jaringan sudah selesai.
 
+### QA pada read model
+
+QA pada `GET /materials` berasal dari API owner workorder di bawah lock/fence
+yang sama, bukan dari status stok. Kontrak summary memiliki tiga nilai:
+
+| QA durable WO | `materials.qaState` | `settlement.qaState` |
+| --- | --- | --- |
+| null / belum ada keputusan | PENDING | null |
+| PENDING | PENDING | PENDING |
+| APPROVED | APPROVED | APPROVED |
+| REJECTED | REJECTED | REJECTED |
+
+Pembatalan tidak menciptakan keputusan QA: nilai yang disimpan owner tetap
+menentukan hasil mapping. Read ulang sesudah restart membaca keputusan sekarang.
+Status QA tidak ditambahkan ke frozen workorder snapshots, dan receipt command
+historis tetap mempertahankan bytes/status pada waktu command tersebut terjadi.
+
+`materials.settlementState=OPEN` adalah indikator konservatif kontrak summary
+lama, bukan verdict closure fisik. Untuk state material terkini gunakan field
+`materialState` dari `GET /materials/settlement`. Karena itu return pending inspection
+dapat tampil OPEN pada summary lama dan SETTLING pada detail. Perbedaan kontrak
+ini tidak dipakai untuk menyimpulkan QA atau melewati kewajiban closure.
+
 Delta pemakaian bersifat positif dan merujuk usage revision sebelumnya serta
 current acknowledged custody. Ia menambah snapshot, posting dan fact baru;
 fact task16 dan receipt settlement task17 tidak ditulis ulang. Koreksi yang
