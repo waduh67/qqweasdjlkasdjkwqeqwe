@@ -40,7 +40,7 @@ class WarehouseFulfillmentITOwnerUpgrade : WarehouseFulfillmentFixture() {
         val before = jobs.map { (token,_) -> integrityState(token) }
         assertThat(before).allMatch { it.startsWith("APPLIED|") }
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(18)
+        assertThat(database.migrate().migrationsExecuted).isEqualTo(34)
 
         jobs.forEachIndexed { index,(token,workOrder) ->
             val response = request("POST","/api/work-orders/$workOrder/approve",token,"{}")
