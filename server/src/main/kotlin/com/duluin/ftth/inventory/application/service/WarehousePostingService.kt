@@ -45,7 +45,10 @@ class WarehousePostingService(
             when (it.endpoint) {
                 PostingEndpoint.RECEIPT_SOURCE -> require(command.kind == MovementKind.RECEIVE && it.direction == LegDirection.OUT)
                 PostingEndpoint.CONSUMED -> require(command.kind == MovementKind.CONSUME && it.direction == LegDirection.IN && it.status == InventoryStatus.CONSUMED)
-                PostingEndpoint.PHYSICAL -> require(it.status != InventoryStatus.CONSUMED)
+                PostingEndpoint.CUSTOMER_INSTALLED -> require(command.kind == MovementKind.DEPLOY && it.direction == LegDirection.IN &&
+                    it.status == InventoryStatus.CUSTOMER_INSTALLED && it.dimension.custodianKind == OwnerKind.CUSTOMER &&
+                    it.quantity == StockQuantity.of(1, StockUnit.EA) && command.operation.namespace == "warehouse.deployment.consume")
+                PostingEndpoint.PHYSICAL -> require(it.status !in setOf(InventoryStatus.CONSUMED, InventoryStatus.CUSTOMER_INSTALLED))
             }
         }
         command.legs.groupBy { Triple(it.dimension.skuId,it.dimension.lotId,it.quantity.unit) }.values.forEach { legs ->
@@ -60,8 +63,8 @@ class WarehousePostingService(
             require(legs.filter { it.direction == LegDirection.IN }.fold(zero) { sum, leg -> sum + leg.quantity } ==
                 legs.filter { it.direction == LegDirection.OUT }.fold(zero) { sum, leg -> sum + leg.quantity }) { "Unrelated stock identities cannot offset each other" }
         }
-        if(command.kind == MovementKind.CONSUME) {
-            require(command.legs.any { it.endpoint == PostingEndpoint.CONSUMED })
+        if(command.kind in setOf(MovementKind.CONSUME, MovementKind.DEPLOY)) {
+            require(command.legs.any { it.endpoint in setOf(PostingEndpoint.CONSUMED, PostingEndpoint.CUSTOMER_INSTALLED) })
             require(command.legs.filter { it.direction==LegDirection.OUT }.all { it.status==InventoryStatus.ISSUED && it.dimension.custodianKind==OwnerKind.TECHNICIAN })
             require(command.legs.filter { it.endpoint==PostingEndpoint.CONSUMED }.all { leg -> command.facts.any { it.stockIdentityId==leg.dimension.stockIdentityId && it.installed } })
         }

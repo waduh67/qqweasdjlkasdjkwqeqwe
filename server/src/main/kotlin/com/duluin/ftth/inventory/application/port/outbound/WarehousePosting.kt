@@ -31,7 +31,7 @@ data class PostingDimension(
         .joinToString("|") { it?.toString().orEmpty() }
 }
 
-enum class PostingEndpoint { PHYSICAL, RECEIPT_SOURCE, CONSUMED }
+enum class PostingEndpoint { PHYSICAL, RECEIPT_SOURCE, CONSUMED, CUSTOMER_INSTALLED }
 
 data class PostingLeg(
     val direction: LegDirection,
