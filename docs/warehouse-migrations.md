@@ -22,10 +22,26 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 material lifecycle | V175.37, V175.38, V175.39, V175.40, V175.41, V175.42, V175.43 | 18 | Immutable custody obligations, lifecycle revisions, specialized WO residual dispatch/acknowledgement and final-state conservation guards; table-specific deferred trigger routing; durable origin obligations, authorized two-party custody handover, positive measured usage deltas and quantitative snapshot truth |
 | M03 rework extension | V175.44, V175.45, V175.46, V175.47 | 18 | Additive post-use plan lineage and evidence snapshots, inherited line references, new-plan usage bindings, fresh receipt validation and direct-owner operation fences |
 | M04 | V175.48, V175.49, V175.50, V175.51, V175.52, V175.53, V175.54 | 19 | Assignment/authorization/handover storage, legacy ONU episode expansion, immutable history and final-state identity/interval guards |
+| M04 authorization correction | V175.55, V175.56 | 19 T19-AV-01 | Shared verified authorization source/purpose validator and read gate; final-state authorization/history/source triggers and physical-asset locking |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M04: reservation task19
+
+T19-AV-01 reserves `V175_55__warehouse_deployment_authorization_truth.sql` and
+`V175_56__warehouse_deployment_authorization_triggers.sql` before SQL creation.
+Both verifier cases committed before correction: mismatched INSTALL physical
+identity and ordinary VERIFIED REMOVE over unresolved/conflicted legacy origin.
+V175.48-.54 and all predecessors remain immutable. The correction does not scan,
+rewrite or reject historical authorization rows at boot; owner reads/consumption
+validation must use the shared assertion. No task20 command is activated.
+
+INSTALL requires a matching acknowledged issue and no predecessor; REPLACE
+requires that issue plus another verified prior asset assignment for the same
+customer. REMOVE uses its same-asset prior assignment, not an arbitrary issue.
+RETURN_CUSTOMER_RMA requires a matching issue, customer-owned verified physical
+asset and same-customer/same-asset prior assignment. Repair-case authorization,
+live WO/IAM epoch checks and workflow consumption remain task20+ responsibilities.
 
 `V175_54__customer_asset_episode_canonical_truth.sql` is reserved before creation.
 A failing VERIFIED whitespace-serial probe demonstrated SQL CHECK's NULL truth
