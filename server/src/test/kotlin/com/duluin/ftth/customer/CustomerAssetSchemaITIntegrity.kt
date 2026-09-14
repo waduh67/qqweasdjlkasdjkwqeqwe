@@ -28,9 +28,9 @@ class CustomerAssetSchemaITIntegrity : CustomerAssetEpisodeFixture() {
     }
 
     @Test
-    fun `typed assignment owner persistence is available without installing deployment commands`() {
+    fun `typed assignment persistence and deployment owner are available`() {
         assertThat(context.containsBean("assetAssignmentPersistence")).isTrue()
-        assertThat(context.getBeansOfType(com.duluin.ftth.inventory.InventoryDeploymentApi::class.java)).isEmpty()
+        assertThat(context.getBeansOfType(com.duluin.ftth.inventory.InventoryDeploymentApi::class.java)).hasSize(1)
     }
 
     @Test
