@@ -27,6 +27,30 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## M04: reservation task20
+
+`V175_63__warehouse_deployment_posting_seal.sql` is reserved before creation.
+A failing app-role test appended an extra movement header to a completed
+deployment. Header/operation mutation sides must revalidate the sealed result;
+the same forward guard binds VERIFIED assignments and deployment-owned lines.
+
+`V175_62__warehouse_deployment_posting_kind.sql` is reserved before creation.
+The committed-transaction probe exposed the cable CONSUME guard requiring a cable
+usage snapshot. Serialized installation gets its own DEPLOY posting kind and its
+existing deployment result guard; cable consumption guards remain unchanged.
+
+`V175_61__warehouse_deployment_document_lifecycle.sql` is reserved before creation.
+The first real consume reached the existing document guard and rejected the new
+DEPLOYMENT DRAFT-to-POSTED transition. V175.59 and V175.60 have already applied
+in isolated QA and remain unchanged.
+
+Task20 reserves `V175_59__warehouse_deployment_execution.sql` and
+`V175_60__warehouse_deployment_final_state.sql` before SQL creation.
+Execution bindings and immutable outcomes extend task19 without changing its
+authorization row or snapshot shape. Deployment adds an explicit installed
+physical position and atomic owner-result validation. All V175.58 and earlier
+bytes are preserved; V176+ remains untouched.
+
 ## M04: reservation task19
 
 `V175_58__warehouse_authorization_timestamp_displacement.sql` is reserved before
