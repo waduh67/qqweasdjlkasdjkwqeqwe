@@ -21,9 +21,25 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 BNG exact-set correction | V175.36 | 17 | Exact sorted receipt/action identity equality, rejecting duplicate IDs that conceal omitted correlated actions |
 | M03 material lifecycle | V175.37, V175.38, V175.39, V175.40, V175.41, V175.42, V175.43 | 18 | Immutable custody obligations, lifecycle revisions, specialized WO residual dispatch/acknowledgement and final-state conservation guards; table-specific deferred trigger routing; durable origin obligations, authorized two-party custody handover, positive measured usage deltas and quantitative snapshot truth |
 | M03 rework extension | V175.44, V175.45, V175.46, V175.47 | 18 | Additive post-use plan lineage and evidence snapshots, inherited line references, new-plan usage bindings, fresh receipt validation and direct-owner operation fences |
-| M04 | V176 | 19 | Assignments, customer installation episodes |
+| M04 | V175.48, V175.49, V175.50, V175.51 | 19 | Assignment/authorization/handover storage, legacy ONU episode expansion, immutable history and final-state identity/interval guards |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
+
+## M04: reservation task19
+
+Task19 reserves `V175_48__customer_asset_episode_storage.sql`,
+`V175_49__customer_asset_episode_legacy.sql`,
+`V175_50__customer_asset_episode_history.sql`, and
+`V175_51__customer_asset_episode_binding.sql` before SQL creation.
+The explicit task19 execution contract places M04 below V176; these next-free
+forward slots supersede the original V176 placeholder. V175.47 and predecessors
+remain byte-identical. V176 and later are not used by task19.
+
+Existing ONU rows retain IDs, raw identity, customer and topology snapshots as
+LEGACY_UNRESOLVED. No physical asset, receipt or stock is inferred from an ONU.
+Verified deployment intervals use half-open boundaries and preserve closed
+episodes. Authorization mint/consume, title transitions, removal and monitoring
+attribution are later tasks, not operations enabled by this schema expansion.
 
 ## M03: reservation task18
 
