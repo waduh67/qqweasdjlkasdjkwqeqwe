@@ -186,6 +186,11 @@ class CustomerApiService(
      */
     @Transactional
     override fun provisionOnu(command: ProvisionOnuCommand): OnuRef {
+        command.deployment?.let { deployment ->
+            val view = manageOnu.register(command.customerId, RegisterOnuCommand("", null, deployment))
+            val customer = customerRepository.findById(command.customerId) ?: throw NotFoundException("Customer not found")
+            return OnuRef(view.id, view.serialNumber, view.customerId, customer.name, view.odpId, view.status.name)
+        }
         val customer = customerRepository.findById(command.customerId)
             ?: throw NotFoundException("Pelanggan ${command.customerId} tidak ditemukan")
         val serial = command.serialNumber.trim().uppercase()

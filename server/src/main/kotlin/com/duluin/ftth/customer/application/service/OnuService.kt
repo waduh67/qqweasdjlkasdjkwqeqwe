@@ -7,14 +7,12 @@ import com.duluin.ftth.customer.application.port.inbound.AttachOnuCommand
 import com.duluin.ftth.customer.application.port.inbound.ManageOnuUseCase
 import com.duluin.ftth.customer.application.port.inbound.OnuView
 import com.duluin.ftth.customer.application.port.inbound.RegisterOnuCommand
-import com.duluin.ftth.customer.OnuRegistered
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.Onu
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.network.NetworkApi
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -34,7 +32,7 @@ class OnuService(
     private val networkApi: NetworkApi,
     private val assembler: CustomerAssembler,
     private val auditor: AuditRecorder,
-    private val events: ApplicationEventPublisher,
+    private val assets: com.duluin.ftth.customer.CustomerAssetApi,
 ) : ManageOnuUseCase {
 
     @Transactional(readOnly = true)
@@ -44,27 +42,10 @@ class OnuService(
     }
 
     override fun register(customerId: UUID, command: RegisterOnuCommand): OnuView {
-        val customer = requireCustomer(customerId)
-        val serial = command.serialNumber.trim().uppercase()
-        if (onuRepository.existsBySerialNumber(serial)) {
-            throw ConflictException("ONU dengan serial '$serial' sudah terdaftar")
-        }
-        val onu = onuRepository.save(
-            Onu.create(
-                tenantId = customer.tenantId,
-                customerId = customerId,
-                serialNumber = command.serialNumber,
-                model = command.model,
-            ),
-        )
-        auditor.record(
-            "onu.registered", "Onu", onu.id, onu.tenantId,
-            mapOf("serialNumber" to onu.serialNumber, "customer" to customer.code),
-        )
-        // Beri tahu monitoring agar baris "Menunggu" berserial sama (bila didaftarkan lewat
-        // jalur ini, di luar kotak masuk) langsung dituntaskan — bukan menunggu poll berikutnya.
-        events.publishEvent(OnuRegistered(onu.tenantId, onu.id, customerId, onu.serialNumber))
-        return assembler.toOnuViews(listOf(onu)).single()
+        val deployment = command.deployment ?: throw ConflictException("USE_WORKORDER_ASSET_WORKFLOW")
+        val episode = assets.install(customerId, deployment.request, com.duluin.ftth.inventory.WarehouseMutationMetadata(deployment.operationKey))
+        val onuId = episode.onuId ?: throw ConflictException("EQUIPMENT_HAS_NO_ONU_TOPOLOGY")
+        return assembler.toOnuViews(listOf(requireOnu(onuId))).single()
     }
 
     override fun attach(id: UUID, command: AttachOnuCommand): OnuView {
