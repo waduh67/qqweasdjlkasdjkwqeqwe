@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(assignableTypes = [CustomerAssetController::class, CustomerController::class])
 class CustomerAssetErrors {
+    @ExceptionHandler(tools.jackson.core.JacksonException::class, jakarta.validation.ConstraintViolationException::class,
+        com.duluin.ftth.common.domain.error.ValidationException::class, org.springframework.http.converter.HttpMessageNotReadableException::class,
+        org.springframework.web.bind.MissingRequestValueException::class, org.springframework.web.method.annotation.MethodArgumentTypeMismatchException::class)
+    fun malformed(error: Exception) = ResponseEntity.status(400)
+        .body(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "MALFORMED_REQUEST"))
     @ExceptionHandler(WarehouseContractException::class)
     fun contract(error: WarehouseContractException) = ResponseEntity.status(error.error.code.httpStatus).body(error.error)
     @ExceptionHandler(DataIntegrityViolationException::class)
