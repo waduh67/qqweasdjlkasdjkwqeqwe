@@ -23,10 +23,21 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M03 rework extension | V175.44, V175.45, V175.46, V175.47 | 18 | Additive post-use plan lineage and evidence snapshots, inherited line references, new-plan usage bindings, fresh receipt validation and direct-owner operation fences |
 | M04 | V175.48, V175.49, V175.50, V175.51, V175.52, V175.53, V175.54 | 19 | Assignment/authorization/handover storage, legacy ONU episode expansion, immutable history and final-state identity/interval guards |
 | M04 authorization correction | V175.55, V175.56 | 19 T19-AV-01 | Shared verified authorization source/purpose validator and read gate; final-state authorization/history/source triggers and physical-asset locking |
+| M04 authorization timezone correction | V175.57 | 19 T19-AV-02 | Semantic timestamp comparison shared by authorization history insertion and final validation; original snapshot JSON preserved |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
 ## M04: reservation task19
+
+T19-AV-02 reserves `V175_57__warehouse_authorization_snapshot_instants.sql`
+before SQL creation. Authorization timestamps are `created_at` (required) and
+`consumed_at` (nullable); history `recorded_at` is native immutable audit metadata,
+not part of the authorization snapshot. There is no expiry column today.
+The comparator discovers native timestamptz columns from the authorization row
+type, checks exact JSON keys/non-timestamp values, and compares explicit-offset
+timestamp strings as null-safe instants. Future timestamptz fields are included,
+not silently ignored. Missing keys, malformed dates and true instant changes fail.
+No stored JSON or global/database timezone is changed; V175.55/.56 remain frozen.
 
 T19-AV-01 reserves `V175_55__warehouse_deployment_authorization_truth.sql` and
 `V175_56__warehouse_deployment_authorization_triggers.sql` before SQL creation.
