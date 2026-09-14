@@ -45,15 +45,7 @@ class InventoryApiService(
 
     @Transactional
     override fun linkInstalledOnu(assetId: UUID, onuId: UUID, operationKey: String): InventoryAssetRef {
-        require(operationKey.isNotBlank()) { "operation key is required" }
-        val tenantId = TenantContext.tenantId()
-        val existing = assets.findByOperation(tenantId, operationKey)
-        if (existing != null) return existing.toRef()
-        val asset = assets.findById(assetId) ?: error("serialized asset not found")
-        require(asset.tenantId == tenantId) { "asset belongs to another tenant" }
-        require(asset.installedOnuId == null || asset.installedOnuId == onuId) { "ONU already owns another asset" }
-        val saved = assets.save(asset.linkInstalledOnu(onuId))
-        return saved.toRef()
+        throw com.duluin.ftth.common.domain.error.ConflictException("USE_WORKORDER_ASSET_WORKFLOW")
     }
 
     @Transactional
