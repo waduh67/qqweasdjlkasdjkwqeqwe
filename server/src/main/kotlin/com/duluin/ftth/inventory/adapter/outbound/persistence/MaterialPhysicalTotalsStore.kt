@@ -11,7 +11,10 @@ data class MaterialPhysicalTotals(val issued: Long, val used: Long, val returned
 @Repository
 class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
     fun useRevision(workOrder: UUID): Long = jdbc.execute { sql ->
-        requireNotNull(sql.value("SELECT coalesce(max(use_revision),0) FROM inventory_usage_snapshot WHERE tenant_id=? AND work_order_id=?", sql.tenant, workOrder)).toLong()
+        requireNotNull(sql.value("""SELECT greatest(
+            (SELECT coalesce(max(use_revision),0) FROM inventory_usage_snapshot WHERE tenant_id=? AND work_order_id=?),
+            (SELECT coalesce(max(use_revision),0) FROM inventory_document WHERE tenant_id=? AND work_order_id=? AND kind='DEPLOYMENT' AND state='POSTED'))""",
+            sql.tenant, workOrder, sql.tenant, workOrder)).toLong()
     }
     fun forDemand(workOrder: UUID, demandLine: UUID): MaterialPhysicalTotals = jdbc.execute { sql ->
         val issues = sql.query("""SELECT issue.id FROM inventory_document_line issue JOIN inventory_document document
@@ -41,7 +44,7 @@ class MaterialPhysicalTotalsStore(private val jdbc: WarehouseCommandJdbc) {
             if (amounts.none { it.first in setOf("ISSUE", "ISSUE_EXCEPTION") }) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             amounts.forEach { (kind, amount) -> when (kind) {
                 "ISSUE", "ISSUE_EXCEPTION" -> issued = Math.addExact(issued, amount)
-                "CONSUME" -> used = Math.addExact(used, amount)
+                "CONSUME", "DEPLOY" -> used = Math.addExact(used, amount)
                 "RETURN" -> returned = Math.addExact(returned, amount)
                 "TRANSFER" -> transferred = Math.addExact(transferred, amount)
                 "LOSS", "SCRAP", "WRITE_OFF", "DISPOSAL" -> disposed = Math.addExact(disposed, amount)

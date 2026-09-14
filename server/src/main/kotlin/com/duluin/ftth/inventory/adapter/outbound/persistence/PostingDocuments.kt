@@ -143,7 +143,7 @@ internal class PostingDocuments(private val sql: PostingSql) {
         val kind = when(command.kind) {
             MovementKind.RESERVE -> WarehouseEventKind.RESERVED
             MovementKind.RELEASE -> WarehouseEventKind.RELEASED
-            MovementKind.CONSUME -> WarehouseEventKind.USE_POSTED
+            MovementKind.CONSUME, MovementKind.DEPLOY -> WarehouseEventKind.USE_POSTED
             MovementKind.RECEIVE -> WarehouseEventKind.RECEIVED
             MovementKind.RETURN -> WarehouseEventKind.RETURN_RECEIVED
             else -> if(command.splits.isNotEmpty()) WarehouseEventKind.SEGMENT_SPLIT else WarehouseEventKind.DISPATCHED

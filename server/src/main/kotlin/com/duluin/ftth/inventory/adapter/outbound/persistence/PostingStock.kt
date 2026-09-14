@@ -47,6 +47,7 @@ internal class PostingStock(private val sql: PostingSql) {
             val code=sql.value("SELECT code FROM inventory_location WHERE tenant_id=? AND id=? AND state='ACTIVE'",sql.tenant,leg.dimension.locationId)
                 ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
             if(leg.endpoint==PostingEndpoint.CONSUMED) require(code=="CONSUMED")
+            if(leg.endpoint==PostingEndpoint.CUSTOMER_INSTALLED) require(code=="CUSTOMER_INSTALLED")
             if(leg.endpoint==PostingEndpoint.PHYSICAL) require(code !in setOf("CONSUMED","RECEIPT_SOURCE"))
         }
     }
