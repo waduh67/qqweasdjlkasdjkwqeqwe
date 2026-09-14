@@ -117,7 +117,7 @@ class WarehouseSchemaITSelectiveTiming {
                         "warehouse_live_issue_binding_guard", "warehouse_issue_dispatch_binding_guard", "warehouse_material_receipt_guard",
                          "warehouse_material_usage_bound_guard", "warehouse_consumed_balance_guard", "warehouse_consumed_truth_guard", "warehouse_fulfillment_bound_guard", "warehouse_fulfillment_owner_guard",
                          "warehouse_material_lifecycle_final_guard", "warehouse_material_obligation_origin_guard", "warehouse_residual_position_final_guard", "warehouse_material_close_final_guard",
-                         "warehouse_material_rework_final_guard"))
+                          "warehouse_material_rework_final_guard", "warehouse_asset_episode_final_guard"))
             }
         } }
     }
