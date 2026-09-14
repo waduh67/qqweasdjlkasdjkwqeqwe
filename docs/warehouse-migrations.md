@@ -38,6 +38,13 @@ result, posting and source-bound line. New mutation-side guards and validated
 reads reject admitted corrupt histories without rewriting them or blocking boot.
 V175.63 and all predecessors remain byte-identical.
 
+`V175_66__warehouse_deployment_consumed_document_scope.sql` is reserved before
+creation. The preserved fresh-authorization control exposed that an unconsumed
+older authorization must not claim the fresh authorization's legitimate document
+as its own extra document. Completed deployment graphs retain the exact check;
+every orphan POSTED document independently remains forbidden. Applied V175.64/.65
+are unchanged.
+
 `V175_63__warehouse_deployment_posting_seal.sql` is reserved before creation.
 A failing app-role test appended an extra movement header to a completed
 deployment. Header/operation mutation sides must revalidate the sealed result;
