@@ -2,19 +2,13 @@ package com.duluin.ftth
 
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.contract.CollectorProtocol
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
-import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
-import com.duluin.ftth.monitoring.application.service.SilentCollectorEvaluator
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -30,134 +24,7 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class MonitoringEndToEndIT {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var onboarding: OnboardTenantUseCase
-
-    @Autowired
-    private lateinit var silentCollectorEvaluator: SilentCollectorEvaluator
-
-    @Autowired
-    private lateinit var collectorRepository: CollectorRepository
-
-    private val pass = "secret12345"
-
-    private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
-
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
-
-    private fun newTenantAdmin(prefix: String): String {
-        val slug = "$prefix${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        return login(slug, admin)
-    }
-
-    private fun post(url: String, token: String, body: String, expected: Int = 201): String =
-        mockMvc.perform(
-            post(url).header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON).content(body),
-        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
-            .andReturn().response.contentAsString
-
-    /** Mengirim ke gerbang collector memakai API key, bukan JWT pengguna. */
-    private fun postAsCollector(url: String, apiKey: String, body: String, expected: Int = 200): String =
-        mockMvc.perform(
-            post(url).header(CollectorProtocol.API_KEY_HEADER, apiKey)
-                .contentType(MediaType.APPLICATION_JSON).content(body),
-        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
-            .andReturn().response.contentAsString
-
-    /** Membuat collector dan mengembalikan API key mentahnya. */
-    private fun newCollector(token: String): String {
-        val json = post(
-            "/api/monitoring/collectors", token,
-            """{"name":"Collector ${uniq()}","pollIntervalSeconds":60}""",
-        )
-        return JsonPath.read(json, "$.apiKey")
-    }
-
-    private fun id(json: String): String = JsonPath.read(json, "$.id")
-
-    /** Mendaftarkan pelanggan + ONU, lalu mengembalikan serial ONU-nya. */
-    private fun registerOnu(token: String): String {
-        val suffix = uniq().uppercase()
-        val customer = JsonPath.read<String>(
-            post(
-                "/api/customers", token,
-                """{"code":"C-$suffix","name":"Pelanggan $suffix","address":"Jl. Uji",
-                    "location":{"longitude":106.99,"latitude":-6.24}}""",
-            ),
-            "$.id",
-        )
-        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, "SN-$suffix")
-        return "SN-$suffix"
-    }
-
-    /**
-     * Membangun rantai POP→OLT→PON→ODC→ODP, mendaftarkan pelanggan+ONU, lalu
-     * MEMASANG ONU-nya ke ODP. Metrik terbaru per pelanggan hanya muncul untuk ONU
-     * yang benar-benar terpasang (lihat `findPlacementOf`), jadi rantai penuh ini
-     * memang syarat, bukan kerumitan berlebih. Mengembalikan (customerId, serial).
-     */
-    private fun provisionAttachedOnu(token: String): Pair<String, String> {
-        val s = uniq().uppercase()
-        val site = id(
-            post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":-6.23}}"""),
-        )
-        val olt = id(
-            post(
-                "/api/olts", token,
-                """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE",
-                    "managementIp":"10.0.0.1","snmpCommunity":"rahasia"}""",
-            ),
-        )
-        val pon = id(post("/api/olts/$olt/pon-ports", token, """{"label":"1/1/1"}"""))
-        val odc = id(
-            post(
-                "/api/odcs", token,
-                """{"code":"ODC-$s","name":"ODC $s","location":{"longitude":106.99,"latitude":-6.24},
-                    "ponPortId":"$pon","splitterRatio":"1:8","capacity":64}""",
-            ),
-        )
-        val odp = id(
-            post(
-                "/api/odps", token,
-                """{"code":"ODP-$s","name":"ODP $s","location":{"longitude":106.995,"latitude":-6.245},
-                    "odcId":"$odc","splitterRatio":"1:8","capacity":8}""",
-            ),
-        )
-        val customerId = id(
-            post(
-                "/api/customers", token,
-                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji",
-                    "location":{"longitude":106.99,"latitude":-6.24}}""",
-            ),
-        )
-        val onuId = com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customerId, "SN-$s")
-        post(
-            "/api/customers/onus/$onuId/attach", token,
-            """{"odpId":"$odp","portNumber":1,"installRxPowerDbm":-22.0}""", expected = 200,
-        )
-        return customerId to "SN-$s"
-    }
-
-    private fun reading(serial: String, status: String, rxPower: Double?): String =
-        """
-        {"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status",
-         "rxPowerDbm":${rxPower ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,
-         "distanceMeters":null,"observedAt":"${Instant.now()}"}
-        """.trimIndent()
+class MonitoringEndToEndIT : MonitoringEndToEndFixture() {
 
     private fun readingWithCause(
         serial: String,
@@ -172,9 +39,6 @@ class MonitoringEndToEndIT {
          "observedAt":"${Instant.now()}","lastDownCause":"$cause",
          "lastOffAt":${lastOffAt?.let { "\"$it\"" } ?: "null"},"lastOnAt":${lastOnAt?.let { "\"$it\"" } ?: "null"}}
         """.trimIndent()
-
-    private fun batch(vararg readings: String, batchId: String = uniq()): String =
-        """{"batchId":"$batchId","collectedAt":"${Instant.now()}","readings":[${readings.joinToString(",")}]}"""
 
     @Test
     fun `gerbang collector menolak tanpa API key, dengan key salah, dan dengan JWT pengguna`() {
