@@ -11,6 +11,7 @@ import java.util.UUID
 
 interface CustomerAssetApi {
     fun install(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode
+    fun installDiscoveredAsset(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode
     fun replace(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode
     fun remove(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode
     fun history(customerId: UUID, page: WarehousePageRequest): WarehousePage<CustomerAssetEpisode>
@@ -22,6 +23,8 @@ data class InstallCustomerAssetRequest(
     val expectedRevision: Long,
     val topology: CustomerAssetTopology?,
 )
+
+data class AuthorizedOnuInstallation(val request: InstallCustomerAssetRequest, val operationKey: String)
 
 data class CustomerAssetTopology(val odpId: UUID, val portNumber: Int, val installRxPowerDbm: Double?)
 

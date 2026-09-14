@@ -5,7 +5,7 @@ import java.util.UUID
 
 interface InventoryDeploymentApi {
     fun authorize(workOrderId: UUID, request: DeploymentIntentRequest, metadata: WarehouseMutationMetadata): DeploymentAuthorizationRef
-    fun consume(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): AssetAssignmentRef
+    fun consume(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption
     fun acceptHandover(request: AcceptAssetHandoverRequest, metadata: WarehouseMutationMetadata): AssetAssignmentRef
     fun assignmentHistory(assetId: UUID, page: WarehousePageRequest): WarehousePage<AssetAssignmentRef>
 }
@@ -23,7 +23,10 @@ data class DeploymentIntentRequest(
     val repairCaseId: UUID? = null,
 )
 
-data class ConsumeDeploymentRequest(val authorizationId: UUID, val expectedRevision: Long)
+data class ConsumeDeploymentRequest(val authorizationId: UUID, val expectedRevision: Long,
+    val customerId: UUID, val installationPayload: String)
+data class DeploymentConsumption(val assignment: AssetAssignmentRef, val operationId: UUID,
+    val serialNumber: String, val model: String?, val createsOnu: Boolean)
 data class AcceptAssetHandoverRequest(val assignmentId: UUID, val expectedRevision: Long, val evidenceId: UUID)
 
 data class DeploymentAuthorizationRef(val authorizationId: UUID, val operationId: UUID, val revision: Long)

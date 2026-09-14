@@ -352,6 +352,7 @@ data class ProvisionOnuCommand(
     val portNumber: Int?,
     /** Redaman baseline saat instalasi untuk deteksi degradasi; boleh null. */
     val installRxPowerDbm: Double?,
+    val deployment: AuthorizedOnuInstallation? = null,
 )
 
 /** Pandangan ringkas sebuah ONU untuk konsumen lintas-module. */
