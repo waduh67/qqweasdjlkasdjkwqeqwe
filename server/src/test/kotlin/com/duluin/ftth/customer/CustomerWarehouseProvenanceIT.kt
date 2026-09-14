@@ -33,6 +33,7 @@ class CustomerWarehouseProvenanceIT : CustomerDeploymentIntegrityFixture() {
 
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(409)
         assertThat(response.contentAsString).contains("USE_WORKORDER_ASSET_WORKFLOW")
+        assertThat(mapper.readTree(response.contentAsString).path("code").asString()).isEqualTo("USE_WORKORDER_ASSET_WORKFLOW")
         fixture(stock.token).transaction {
             assertThat(scalar("SELECT count(*) FROM onu WHERE customer_id='$customer'")).isEqualTo("0")
             assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment WHERE customer_id='$customer'")).isEqualTo("0")

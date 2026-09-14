@@ -12,6 +12,9 @@ import com.duluin.ftth.customer.application.port.outbound.OnuRepository
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.Onu
 import com.duluin.ftth.customer.domain.model.OnuStatus
+import com.duluin.ftth.inventory.WarehouseContractException
+import com.duluin.ftth.inventory.WarehouseError
+import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.network.NetworkApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -42,7 +45,8 @@ class OnuService(
     }
 
     override fun register(customerId: UUID, command: RegisterOnuCommand): OnuView {
-        val deployment = command.deployment ?: throw ConflictException("USE_WORKORDER_ASSET_WORKFLOW")
+        val deployment = command.deployment ?: throw WarehouseContractException(
+            WarehouseError(WarehouseErrorCode.USE_WORKORDER_ASSET_WORKFLOW, "USE_WORKORDER_ASSET_WORKFLOW"))
         val episode = assets.install(customerId, deployment.request, com.duluin.ftth.inventory.WarehouseMutationMetadata(deployment.operationKey))
         val onuId = episode.onuId ?: throw ConflictException("EQUIPMENT_HAS_NO_ONU_TOPOLOGY")
         return assembler.toOnuViews(listOf(requireOnu(onuId))).single()
