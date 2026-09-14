@@ -184,3 +184,11 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Cancellation, reassignment, own-custody return, named handover and closure preserve exact physical facts; returned stock remains transit/quarantine and unavailable pending task26.
 - Rework plan2 adds only10000 demand with immutable plan/evidence lineage. New5000 plus inherited7500 usage yields95000 consumed/15000 accountable from110000 issued; ordinary used-plan replacement stays409.
 - DB, materials summary and settlement detail now agree on authoritative QA state across restart. Clean bootJar SHA256 is `1a157b7da1502d12fec521681bcc9d9035c7481c621ea2bc0a01b2ee20aa004f`.
+
+## 2026-09-14 - Task19 final verification
+
+- Independent verifier `ses_f6106f2ddffeO2YMQRB9OAUq0x` confirmed task19 at `b219e9e87cda6d5f85df3eac8f40c022a79b7c58` after authorization source-binding and timezone-semantic history corrections.
+- M04 preserves colliding/malformed legacy ONU rows without assets or stock. VERIFIED assignments enforce active uniqueness and half-open intervals; same physical asset can close episode A and open B without changing A history/telemetry.
+- VERIFIED authorization requires exact purpose/source/admission binding. Stored history JSON is preserved and timestamps compare by instant across UTC/New York/Kathmandu/Lord Howe.
+- Exact19 passed twice and 497 distinct tests passed independently; clean bootJar SHA256 `80d630be8f45d089dad8b18933b8a9165240050dd8c30153e06a2ea4c49b0546`.
+- Tasks 1-19 are checked; task20 is the next action. No task20 runtime behavior was added.

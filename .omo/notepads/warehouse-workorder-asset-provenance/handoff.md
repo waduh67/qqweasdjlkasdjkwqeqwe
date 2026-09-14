@@ -3,8 +3,8 @@
 ## Resume point
 
 - Plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
-- Tasks 1-18 independently confirmed and checked in the plan.
-- Next task: Task 19, customer installation episode schema M04. Task 19 remains unchecked.
+- Tasks 1-19 independently confirmed and checked in the plan.
+- Next task: Task 20, warehouse deployment authorization and customer install. Task 20 remains unchecked.
 - Task 18 product head: `58e509247bc46b9888d9dd731233aa16c8cb8d15`.
 - Task 18 migrations: `V175.37` through `V175.47`.
 - Task 18 executor: `ses_f666af9cbffe33V2yziazfFgi6`; verifier: `ses_f624a47dcffezn1hxq2R8wGyU5`.
@@ -22,6 +22,12 @@
 - No merge, rebase, amend, reset, force-push, or product/task13 edits during checkpoint sync.
 - Keep runtime, evidence, logs, archive, environment, Boulder, and secrets paths excluded.
 - Future commits use the effective global identity `fajarxfce <fajaralamsyah000@gmail.com>` without conflicting per-command overrides.
+
+## 2026-09-14 - Task19 confirmed checkpoint
+
+- Task19 is checked in the plan at product head `b219e9e87cda6d5f85df3eac8f40c022a79b7c58`.
+- Final verifier: `ses_f6106f2ddffeO2YMQRB9OAUq0x`, confirmed/high; migration range `V175.48` through `V175.58`; 497 distinct tests.
+- Task20 remains unchecked and is the next action. No task20 behavior was started.
 
 ## 2026-09-11 - Task15 confirmed checkpoint
 
