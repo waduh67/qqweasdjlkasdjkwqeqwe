@@ -3,11 +3,12 @@
 ## Resume point
 
 - Plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
-- Wave 3 Task 13 independently confirmed and checked; Tasks 1-13 are checked in the plan.
-- Next task: Task 14, continuing Wave 3. Task 14 remains unchecked.
-- Task 13 verifier: `ses_f726d8e9cffelvc6sK35yHPdt6`.
-- Task 13 implementation: `df33cce4209ce6bb1ecd87ff9b566cadaca6d2e3`.
-- Task 13 migrations: `V175.8` through `V175.10`.
+- Tasks 1-18 independently confirmed and checked in the plan.
+- Next task: Task 19, customer installation episode schema M04. Task 19 remains unchecked.
+- Task 18 product head: `58e509247bc46b9888d9dd731233aa16c8cb8d15`.
+- Task 18 migrations: `V175.37` through `V175.47`.
+- Task 18 executor: `ses_f666af9cbffe33V2yziazfFgi6`; verifier: `ses_f624a47dcffezn1hxq2R8wGyU5`.
+- Task 18 verdict: confirmed/high; final JAR SHA256 `1a157b7da1502d12fec521681bcc9d9035c7481c621ea2bc0a01b2ee20aa004f`.
 
 ## Recovery command
 

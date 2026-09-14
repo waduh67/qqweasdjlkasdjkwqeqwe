@@ -177,3 +177,10 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - V175.14 SHA256 remains `391da11be6b5704402b02d1d47d2f02ffe3027c2b07ea49251d797e318595e5c`; exact next action is task16 physical use, not started here.
 - Independent task17 executors `ses_f6b390e15ffe76otZa1Fy9PQL4` and `ses_f673bbd5affeO6yFqadwyUAaw7` completed after AV1 cross-customer order, AV2 fabricated visit, and AV3 BNG lineage corrections. Final verifier `ses_f66b5628effejTM6g1ZSQ2stcL` confirmed/high with 524 distinct tests at `3bfe12331428eb43740c8c0399b61a956c8820a7`.
 - V175.35 SHA256 is `5afa2f2f1c1cf2d7a43b8d378fc027a45f4f5166f0b853a2b93fba581731c08b`; V175.36 SHA256 is `e5bbbed8aca622d87ed7d9cf329e11e165c6b33b34e430ab399d0f01cee9c08d`. Task18 is the exact next action and remains unchecked; no task18 behavior started.
+
+## 2026-09-13 - Task18 final verification
+
+- Independent verifier `ses_f624a47dcffezn1hxq2R8wGyU5` confirmed task18 at `58e509247bc46b9888d9dd731233aa16c8cb8d15` after explicit post-use rework and QA-state mapping corrections.
+- Cancellation, reassignment, own-custody return, named handover and closure preserve exact physical facts; returned stock remains transit/quarantine and unavailable pending task26.
+- Rework plan2 adds only10000 demand with immutable plan/evidence lineage. New5000 plus inherited7500 usage yields95000 consumed/15000 accountable from110000 issued; ordinary used-plan replacement stays409.
+- DB, materials summary and settlement detail now agree on authoritative QA state across restart. Clean bootJar SHA256 is `1a157b7da1502d12fec521681bcc9d9035c7481c621ea2bc0a01b2ee20aa004f`.
