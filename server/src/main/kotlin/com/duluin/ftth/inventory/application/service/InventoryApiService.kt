@@ -6,6 +6,9 @@ import com.duluin.ftth.inventory.InventoryAssetRef
 import com.duluin.ftth.inventory.InventoryFulfillmentCommand
 import com.duluin.ftth.inventory.InventoryFulfillmentResult
 import com.duluin.ftth.inventory.InventoryFulfillmentAllocation
+import com.duluin.ftth.inventory.WarehouseContractException
+import com.duluin.ftth.inventory.WarehouseError
+import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLocationRepository
 import com.duluin.ftth.inventory.domain.model.InventoryStatus
@@ -45,7 +48,7 @@ class InventoryApiService(
 
     @Transactional
     override fun linkInstalledOnu(assetId: UUID, onuId: UUID, operationKey: String): InventoryAssetRef {
-        throw com.duluin.ftth.common.domain.error.ConflictException("USE_WORKORDER_ASSET_WORKFLOW")
+        throw WarehouseContractException(WarehouseError(WarehouseErrorCode.USE_WORKORDER_ASSET_WORKFLOW, "USE_WORKORDER_ASSET_WORKFLOW"))
     }
 
     @Transactional

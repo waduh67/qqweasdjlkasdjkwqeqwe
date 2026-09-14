@@ -8,6 +8,19 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 abstract class CustomerDeploymentIntegrityFixture : CustomerDeploymentRaceFixture() {
+    @Test
+    fun `old inventory write route returns the structured workflow conflict without writes`() {
+        val install = installation()
+        val asset = install.receipt.input.lines.single().stockIdentityId
+
+        val response = request("POST", "/api/inventory/serialized/$asset/installed-onu", install.receipt.stock.token,
+            """{"onuId":"${UUID.randomUUID()}","operationKey":"old-route"}""")
+
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(response.contentAsString).path("code").asString()).isEqualTo("USE_WORKORDER_ASSET_WORKFLOW")
+        assertUninstalled(install)
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["UNACKNOWLEDGED", "UNKNOWN_ASSET", "FOREIGN_WO", "QUARANTINE"])
     fun `mint rejects stock without matching serviceable acknowledged authority`(scenario: String) {
