@@ -15,7 +15,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import tools.jackson.core.JacksonException
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = [MaterialWorkflowController::class, MaterialReceiptController::class, MaterialUsageController::class, MaterialSettlementController::class, MaterialReworkController::class, CustomerAssetWorkflowController::class])
+@RestControllerAdvice(assignableTypes = [MaterialWorkflowController::class, MaterialReceiptController::class, MaterialUsageController::class, MaterialSettlementController::class, MaterialReworkController::class, CustomerAssetWorkflowController::class, AssetReplacementController::class])
 class MaterialWorkflowErrors {
     @ExceptionHandler(WarehouseContractException::class)
     fun contract(error: WarehouseContractException) = ResponseEntity.status(error.error.code.httpStatus).body(error.error)
@@ -26,5 +26,7 @@ class MaterialWorkflowErrors {
     fun forbidden(error: Exception) = response(WarehouseErrorCode.FORBIDDEN)
     @ExceptionHandler(AuthenticationException::class)
     fun anonymous(error: Exception) = response(WarehouseErrorCode.UNAUTHENTICATED)
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException::class)
+    fun conflict(error: Exception) = response(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     private fun response(code: WarehouseErrorCode) = ResponseEntity.status(code.httpStatus).body(WarehouseError(code, code.name))
 }
