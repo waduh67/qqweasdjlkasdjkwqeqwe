@@ -31,6 +31,11 @@ JSON, null primitive revisions and numeric/string coercions are rejected with400
 before owner execution or replay lookup. This includes `tenantId`, `actorId`,
 `custodianId`, `sourceId`, `receiptId`, `movementId` and `approver`.
 
+The decoder also rejects a top-level JSON `null` result before returning a typed
+command. Fresh and replay keys receive structured `400 MALFORMED_REQUEST` without
+owner execution or stored-response disclosure. Nullable fields inside a non-null
+command, such as `topology: null`, remain valid according to their DTO contracts.
+
 ## Authority and transactions
 
 Both mint and consume reload current IAM authority. The actor must be an active
