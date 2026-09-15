@@ -7,6 +7,55 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 abstract class CustomerAssetReplacementRaceCases : CustomerAssetReplacementCommandCases() {
+    @Test
+    fun `independent title approval racing swap cannot rewrite the recovered owner`() {
+        val case = replacementCase()
+        val receipt = case.replacement
+        val admin = receipt.stock.token
+        val checker = user(admin, setOf("inventory.approval.view", "inventory.approval.decide"))
+        val principal = mapper.readTree(request("GET", "/api/users/${checker.second}", admin).contentAsString)
+        assertThat(request("PUT", "/api/users/${checker.second}/access", admin, mapper.writeValueAsString(mapOf(
+            "roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(admin))))).status).isEqualTo(200)
+        val stock = fixture(admin)
+        val location = stock.transaction { scalar("SELECT location_id FROM inventory_serialized_asset WHERE id='${case.old.installation.receipt.input.lines.single().stockIdentityId}'") }
+        val handover = stock.transaction { scalar("SELECT id FROM inventory_asset_handover WHERE assignment_id='${case.old.installation.operation}'") }
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${checker.second}/$location", admin,
+            """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+        assertThat(request("PUT", "/api/v1/warehouse/settings/policy", admin,
+            """{"expectedRevision":0,"currency":"IDR","expiryHours":24,"warehouseIds":["$location"],"rules":[{"operation":"TITLE_REACQUISITION","tiers":[{"minimumMinor":"1","userIds":["${checker.second}"],"roleIds":[]}]}]}""").status).isEqualTo(200)
+        val correction = request("POST", "/api/v1/warehouse/asset-title-corrections", admin,
+            """{"assignmentId":"${case.old.installation.operation}","sourceHandoverId":"$handover","expectedAssignmentRevision":1,
+                "expectedTitleRevision":0,"targetOwner":"CUSTOMER","reason":"Independent correction","evidenceId":"${case.old.signature}"}""", "race-correction")
+        assertThat(correction.status).withFailMessage(correction.contentAsString).isEqualTo(201)
+        val document = mapper.readTree(correction.contentAsString).path("documentId").asString()
+        val approval = request("POST", "/api/v1/warehouse/approvals/request", admin,
+            """{"sourceDocumentId":"$document","sourceRevision":0}""", "race-approval")
+        assertThat(approval.status).withFailMessage(approval.contentAsString).isEqualTo(201)
+        val approvalId = mapper.readTree(approval.contentAsString).path("requestId").asString()
+        val authorized = authorizeReplacement(case)
+        assertThat(authorized.status).withFailMessage(authorized.contentAsString).isEqualTo(200)
+        val authorization = mapper.readTree(authorized.contentAsString).path("authorizationId").asString()
+
+        val outcomes = race({
+            request("POST", "/api/v1/warehouse/approvals/decide", checker.first,
+                """{"requestId":"$approvalId","expectedRevision":0,"decision":"APPROVE","reason":"Independent decision"}""", "race-title-decision").status
+        }, {
+            request("POST", "/api/customers/${case.old.installation.customer}/assets/replace", receipt.receiver.first,
+                """{"authorizationId":"$authorization","expectedRevision":0,"expectedAssignmentRevision":1,"expectedTitleRevision":0,
+                    "evidenceId":"${case.evidence}","topology":null}""", "title-race-swap").status
+        })
+
+        assertThat(outcomes[0]).isIn(200, 409)
+        assertThat(outcomes[1]).isIn(201, 409)
+        stock.transaction {
+            val removed = scalar("SELECT count(*) FROM inventory_asset_removal WHERE assignment_id='${case.old.installation.operation}'").toInt()
+            val corrected = scalar("SELECT count(*) FROM inventory_asset_title_transfer WHERE assignment_id='${case.old.installation.operation}'").toInt()
+            assertThat(removed + corrected).isEqualTo(1)
+            assertThat(scalar("SELECT status||'|'||legal_owner FROM inventory_serialized_asset WHERE id='${case.old.installation.receipt.input.lines.single().stockIdentityId}'"))
+                .isEqualTo(if (removed == 1) "QUARANTINE|ISP" else "CUSTOMER_INSTALLED|CUSTOMER")
+        }
+    }
+
     private fun race(first: () -> Int, second: () -> Int): List<Int> {
         val ready = CountDownLatch(2)
         val start = CountDownLatch(1)
