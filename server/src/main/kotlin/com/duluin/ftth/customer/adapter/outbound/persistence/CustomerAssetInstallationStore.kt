@@ -17,7 +17,12 @@ class CustomerAssetInstallationStore(private val entityManager: EntityManager) {
     fun find(operationId: UUID): CustomerAssetEpisode? = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
         connection.prepareStatement("SELECT response FROM customer_asset_installation WHERE tenant_id=? AND operation_id=?").use { query ->
             query.setObject(1, TenantContext.tenantId()); query.setObject(2, operationId)
-            query.executeQuery().use { row -> if (row.next()) mapper.readValue(row.getString(1), CustomerAssetEpisode::class.java) else null }
+            query.executeQuery().use { row ->
+                if (!row.next()) return@doReturningWork null
+                val episode = mapper.readValue(row.getString(1), CustomerAssetEpisode::class.java)
+                episode.onuId?.let(connection::validateOnuEpisode)
+                episode
+            }
         }
     }
     fun append(consumption: DeploymentConsumption, topology: CustomerAssetTopology?): CustomerAssetEpisode {
@@ -48,11 +53,20 @@ class CustomerAssetInstallationStore(private val entityManager: EntityManager) {
         return episode
     }
     fun history(customerId: UUID): List<CustomerAssetEpisode> = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
-        connection.prepareStatement("""SELECT coalesce(retirement.response,installation.response) FROM customer_asset_installation installation
+        connection.prepareStatement("""SELECT coalesce(retirement.response,installation.response),onu.episode_revision FROM customer_asset_installation installation
             LEFT JOIN customer_asset_retirement retirement ON retirement.tenant_id=installation.tenant_id AND retirement.episode_id=installation.id
+            LEFT JOIN onu ON onu.tenant_id=installation.tenant_id AND onu.id=installation.onu_id
             WHERE installation.tenant_id=? AND installation.customer_id=? ORDER BY installation.created_at,installation.id""").use { query ->
             query.setObject(1, TenantContext.tenantId()); query.setObject(2, customerId)
-            query.executeQuery().use { rows -> buildList { while (rows.next()) add(mapper.readValue(rows.getString(1), CustomerAssetEpisode::class.java)) } }
+            query.executeQuery().use { rows -> buildList {
+                while (rows.next()) {
+                    val episode = mapper.readValue(rows.getString(1), CustomerAssetEpisode::class.java)
+                    val revision = rows.getLong(2)
+                    val current = if (rows.wasNull()) episode else episode.copy(episodeRevision = revision)
+                    current.onuId?.let(connection::validateOnuEpisode)
+                    add(current)
+                }
+            } }
         }
     }
 }

@@ -11,27 +11,39 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.sql.Timestamp
 
 @Repository
-class CustomerAssetRetirementStore(private val entityManager: EntityManager, private val installations: CustomerAssetInstallationStore) {
+class CustomerAssetRetirementStore(private val entityManager: EntityManager) {
     private val mapper = jacksonObjectMapper()
     fun retire(result: AssetRemovalResult): CustomerAssetEpisode = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
         val tenant = TenantContext.tenantId()
         connection.prepareStatement("SELECT response FROM customer_asset_retirement WHERE tenant_id=? AND removal_id=?").use { query ->
             query.setObject(1, tenant); query.setObject(2, result.operationId)
             query.executeQuery().use { row ->
-                if (row.next()) return@doReturningWork mapper.readValue(row.getString(1), CustomerAssetEpisode::class.java)
+                if (row.next()) {
+                    val episode = mapper.readValue(row.getString(1), CustomerAssetEpisode::class.java)
+                    episode.onuId?.let(connection::validateOnuEpisode)
+                    return@doReturningWork episode
+                }
             }
         }
-        val original = installations.find(result.assignmentId) ?: throw ConflictException("ASSET_EPISODE_REQUIRED")
+        val original = connection.prepareStatement("SELECT response FROM customer_asset_installation WHERE tenant_id=? AND assignment_id=?").use { query ->
+            query.setObject(1, tenant); query.setObject(2, result.assignmentId)
+            query.executeQuery().use { row ->
+                if (!row.next()) throw ConflictException("ASSET_EPISODE_REQUIRED")
+                mapper.readValue(row.getString(1), CustomerAssetEpisode::class.java)
+            }
+        }
         if (original.customerId != result.customerId || original.assetId != result.assetId ||
             result.replacement?.let { it.createsOnu != (original.onuId != null) } == true) throw ConflictException("ASSET_EPISODE_MISMATCH")
-        val episode = original.copy(retiredAt = result.removedAt, episodeRevision = original.episodeRevision + 1,
-            legalOwner = result.legalOwner)
-        if (original.onuId != null) connection.prepareStatement("""UPDATE onu SET retired_at=?,episode_revision=episode_revision+1,
-            status='DISMANTLED',odp_id=NULL,odp_port_number=NULL WHERE tenant_id=? AND id=? AND assignment_id=? AND retired_at IS NULL""").use { query ->
+        val episode = if (original.onuId != null) connection.prepareStatement("""UPDATE onu SET retired_at=?,
+            status='DISMANTLED',odp_id=NULL,odp_port_number=NULL WHERE tenant_id=? AND id=? AND assignment_id=? AND retired_at IS NULL
+            RETURNING episode_revision,retired_at""").use { query ->
             query.setTimestamp(1, Timestamp.from(result.removedAt)); query.setObject(2, tenant)
             query.setObject(3, original.onuId); query.setObject(4, result.assignmentId)
-            if (query.executeUpdate() != 1) throw ConflictException("ASSET_EPISODE_ALREADY_RETIRED")
-        }
+            query.executeQuery().use { row ->
+                if (!row.next()) throw ConflictException("ASSET_EPISODE_ALREADY_RETIRED")
+                original.copy(retiredAt = row.getTimestamp("retired_at").toInstant(), episodeRevision = row.getLong("episode_revision"), legalOwner = result.legalOwner)
+            }
+        } else original.copy(retiredAt = result.removedAt, episodeRevision = 1, legalOwner = result.legalOwner)
         connection.prepareStatement("""INSERT INTO customer_asset_retirement(tenant_id,removal_id,episode_id,onu_id,response,retired_at)
             VALUES (?,?,?,?,?,?)""").use { query ->
             query.setObject(1, tenant); query.setObject(2, result.operationId); query.setObject(3, original.episodeId)
