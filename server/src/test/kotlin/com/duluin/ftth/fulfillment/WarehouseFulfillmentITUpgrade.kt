@@ -1,6 +1,7 @@
 package com.duluin.ftth.fulfillment
 
 import com.duluin.ftth.inventory.WarehouseSchemaDatabase
+import com.duluin.ftth.inventory.WarehouseMigrationInventory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -20,7 +21,7 @@ class WarehouseFulfillmentITUpgrade {
 
             val result = database.migrate()
 
-            assertThat(result.migrationsExecuted).isEqualTo(when (starting) { "175.23" -> 43; "175.24" -> 42; else -> 0 })
+            WarehouseMigrationInventory.assertUpgrade(starting, result)
             assertThat(checksums()).containsAllEntriesOf(before)
             assertThat(database.migrate().migrationsExecuted).isZero()
             database.dataSource.connection.use { connection ->
