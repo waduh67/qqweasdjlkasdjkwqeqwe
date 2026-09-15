@@ -43,7 +43,7 @@ abstract class CustomerAssetTitleGuardCases : CustomerAssetTitleCorrectionCases(
         assertThat(title(case.ownership)).isEqualTo("SALE|CUSTOMER|CUSTOMER|CUSTOMER_INSTALLED|1|1")
     }
 
-    private fun grantTitleApprover(case: CorrectionCase, userId: String) {
+    protected fun grantTitleApprover(case: CorrectionCase, userId: String) {
         val admin = case.ownership.installation.receipt.stock.token
         val adminRoles = mapper.readTree(request("GET", "/api/me", admin).contentAsString).path("roleIds").asSequence().map { it.asString() }.toList()
         val principal = mapper.readTree(request("GET", "/api/users/$userId", admin).contentAsString)

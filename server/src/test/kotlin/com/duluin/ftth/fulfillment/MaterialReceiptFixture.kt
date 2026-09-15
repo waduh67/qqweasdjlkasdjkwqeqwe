@@ -9,7 +9,10 @@ import java.util.UUID
 
 abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
     protected data class ReceiptCase(val stock: Setup, val workOrder: String, val receiver: Pair<String, String>,
-        val transit: String, val field: String, val input: MaterialReceiptRequest)
+        val transit: String, val field: String, val input: MaterialReceiptRequest, val customerActor: Pair<String, String>? = null)
+
+    protected data class CustomerIdentity(val id: UUID, val actor: Pair<String, String>?)
+    protected open fun installationCustomer(stock: Setup): CustomerIdentity = CustomerIdentity(UUID.randomUUID(), null)
 
     protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false, installation: Boolean = false, loanOnly: Boolean = false): ReceiptCase {
         val stock = setupReceipt()
@@ -34,11 +37,12 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
         } else receiveStock(stock, "1000000")
         val receiver = technician(stock.token, if (installation) setOf("customer.onu.assign") else emptySet())
         val customerArea = if (installation) area(stock.token) else null
-        val customer = if (installation) UUID.randomUUID().also { id ->
+        val customerIdentity = if (installation) installationCustomer(stock) else null
+        val customer = customerIdentity?.id?.also { id ->
             fixture(stock.token).transaction {
                 sql("INSERT INTO customer(id,tenant_id,code,name,address,area_id) VALUES ('$id','$tenant','$id','Installation','Test','$customerArea')")
             }
-        }.toString() else null
+        }?.toString()
         val workOrder = workOrder(stock.token, if (installation) "PSB" else "PREVENTIVE", customer)
         if (installation) create("locations", stock.token, """{"code":"CUSTOMER_INSTALLED","name":"Customer installed equipment","kind":"CUSTOMER_SITE"}""")
         assign(stock.token, workOrder, receiver.second)
@@ -62,7 +66,7 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
                 if (serial || fungible) WarehouseBaseUnit.EA else WarehouseBaseUnit.MM, if (serial) "1" else if (fungible) "60" else "60000",
                 missingBase = if (serial) "0" else if (fungible) "40" else "40000", reason = "Remaining delivery pending",
                 serial = if (serial) line.path("serial").asString() else null)))
-        return ReceiptCase(stock, workOrder, receiver, transit, field, input)
+        return ReceiptCase(stock, workOrder, receiver, transit, field, input, customerIdentity?.actor)
     }
 
     protected fun acknowledge(case: ReceiptCase, input: MaterialReceiptRequest = case.input, key: String = "acknowledgement") =
