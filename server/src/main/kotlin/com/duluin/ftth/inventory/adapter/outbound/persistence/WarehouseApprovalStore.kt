@@ -24,9 +24,11 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         val locations = sql.query("SELECT location_id,destination_location_id FROM inventory_document_line WHERE tenant_id=? AND document_id=? ORDER BY id FOR SHARE",
             sql.tenant, id) { listOfNotNull(it.optionalUuid("location_id"), it.optionalUuid("destination_location_id")) }.flatten().toSet()
-        val content = requireNotNull(sql.value("""SELECT jsonb_build_object('document',to_jsonb(document),'lines',
+        val content = requireNotNull(sql.value("""SELECT (jsonb_build_object('document',to_jsonb(document),'lines',
             (SELECT jsonb_agg(to_jsonb(line) ORDER BY line.id) FROM inventory_document_line line WHERE line.tenant_id=document.tenant_id AND line.document_id=document.id),
-            'intake',(SELECT to_jsonb(intake) FROM inventory_receipt_intake intake WHERE intake.tenant_id=document.tenant_id AND intake.id=document.id))::text
+            'intake',(SELECT to_jsonb(intake) FROM inventory_receipt_intake intake WHERE intake.tenant_id=document.tenant_id AND intake.id=document.id))
+            || CASE WHEN document.kind='TITLE_CORRECTION' THEN jsonb_build_object('title',
+                (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END)::text
             FROM inventory_document document WHERE document.tenant_id=? AND document.id=?""", sql.tenant, id))
         return@execute header.copy(content = WarehouseCanonicalPayload.parse(content).json, locations = locations)
     }
@@ -106,7 +108,7 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision, operation, body, event)
     }
     fun event(operation: UUID): UUID = jdbc.execute { sql ->
-        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind='RECEIVED'", sql.tenant, operation) { it.uuid("id") }.single()
+        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED')", sql.tenant, operation) { it.uuid("id") }.single()
     }
     fun candidates(): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_approval WHERE tenant_id=? AND evaluation_snapshot IS NOT NULL ORDER BY requested_at DESC,id", sql.tenant) { it.uuid("id") }
