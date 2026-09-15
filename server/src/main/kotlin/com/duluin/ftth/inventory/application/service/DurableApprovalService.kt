@@ -25,7 +25,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
     private val store: WarehouseApprovalStore, private val access: WarehousePolicyAccess,
     private val eligibility: WarehouseApprovalAuthority, private val masters: WarehouseMasterStore,
     private val inbox: WarehouseInboxApi, private val owners: List<WarehouseApprovalOwner>, private val probes: List<WarehouseApprovalProbe>,
-    transactionManager: PlatformTransactionManager) {
+    transactionManager: PlatformTransactionManager, private val sourceLocks: List<WarehouseApprovalSourceLock>) {
     private val mapper = jacksonObjectMapper()
     private val transaction = TransactionTemplate(transactionManager)
 
@@ -37,6 +37,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val current = authority.lockCurrent()
         access.permission(current, "inventory.approval.request")
         access.permission(current, "inventory.approval.view")
+        sourceLocks.forEach { it.lock(input.sourceDocumentId, current) }
         masters.lockTopology()
         val source = store.source(input.sourceDocumentId)
         source.locations.forEach { access.location(it, current) }
@@ -79,8 +80,9 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         access.permission(current, "inventory.approval.decide")
-        masters.lockTopology()
         val preview = store.get(input.requestId)
+        sourceLocks.forEach { it.lock(preview.snapshot.evaluation.sourceDocumentId, current) }
+        masters.lockTopology()
         eligibility.view(preview, current)
         val source = store.source(preview.snapshot.evaluation.sourceDocumentId)
         val record = store.get(input.requestId, true)
@@ -141,7 +143,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (input.decision == InventoryApprovalDecision.REJECT) store.reworkDisposition(record.snapshot.evaluation.sourceDocumentId, source.revision, true)
         if (final) {
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
-                record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash, "RECEIVE", 200, result, current.fence.epoch)
+                record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash,
+                if (source.kind == "TITLE_CORRECTION") "TITLE_REACQUISITION" else "RECEIVE", 200, result, current.fence.epoch)
             owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
@@ -161,8 +164,9 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         access.permission(current, "inventory.approval.request")
-        masters.lockTopology()
         val record = store.get(input.requestId)
+        sourceLocks.forEach { it.lock(record.snapshot.evaluation.sourceDocumentId, current) }
+        masters.lockTopology()
         eligibility.view(record, current)
         val source = store.source(record.snapshot.evaluation.sourceDocumentId)
         if (record.snapshot.requesterId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
@@ -182,6 +186,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         val record = store.get(id)
+        sourceLocks.forEach { it.lock(record.snapshot.evaluation.sourceDocumentId, current) }
         eligibility.view(record, current)
         store.source(record.snapshot.evaluation.sourceDocumentId)
         val locked = store.get(id, true)
