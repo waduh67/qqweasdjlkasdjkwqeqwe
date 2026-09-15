@@ -7,6 +7,7 @@ import java.util.UUID
 interface AssetHandoverWorkOrderPort {
     fun lock(binding: DeploymentBinding, authority: AuthorityFence): AssetHandoverWorkOrder
     fun signature(workOrderId: UUID, evidenceId: UUID): AssetHandoverSignature
+    fun lockTitle(workOrderId: UUID, authority: AuthorityFence): Long
 }
 
 interface AssetHandoverCustomerPort {

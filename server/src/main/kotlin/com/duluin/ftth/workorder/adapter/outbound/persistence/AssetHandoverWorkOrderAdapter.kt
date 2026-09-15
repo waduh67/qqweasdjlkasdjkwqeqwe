@@ -71,4 +71,21 @@ class AssetHandoverWorkOrderAdapter(private val authorities: CurrentAuthorityApi
     }
 
     private fun fail(code: WarehouseErrorCode): Nothing = throw WarehouseContractException(WarehouseError(code, code.name))
+
+    override fun lockTitle(workOrderId: UUID, authority: AuthorityFence): Long {
+        authority.assertHeld()
+        val current = authorities.lockCurrent()
+        if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
+        return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+            connection.prepareStatement("SELECT warehouse_revision,area_id FROM work_order WHERE tenant_id=? AND id=? FOR UPDATE").use { query ->
+                query.setObject(1, TenantContext.tenantId()); query.setObject(2, workOrderId)
+                query.executeQuery().use { row ->
+                    if (!row.next()) fail(WarehouseErrorCode.NOT_FOUND)
+                    val scope = current.areaScope
+                    if (scope is AuthorityScope.Restricted && row.getObject("area_id", UUID::class.java) !in scope.ids) fail(WarehouseErrorCode.NOT_FOUND)
+                    row.getLong("warehouse_revision")
+                }
+            }
+        }
+    }
 }
