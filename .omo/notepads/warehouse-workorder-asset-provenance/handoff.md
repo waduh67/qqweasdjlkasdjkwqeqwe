@@ -3,12 +3,12 @@
 ## Resume point
 
 - Plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
-- Tasks 1-19 independently confirmed and checked in the plan.
-- Next task: Task 20, warehouse deployment authorization and customer install. Task 20 remains unchecked.
-- Task 18 product head: `58e509247bc46b9888d9dd731233aa16c8cb8d15`.
-- Task 18 migrations: `V175.37` through `V175.47`.
-- Task 18 executor: `ses_f666af9cbffe33V2yziazfFgi6`; verifier: `ses_f624a47dcffezn1hxq2R8wGyU5`.
-- Task 18 verdict: confirmed/high; final JAR SHA256 `1a157b7da1502d12fec521681bcc9d9035c7481c621ea2bc0a01b2ee20aa004f`.
+- Tasks 1-20 independently confirmed and checked in the plan.
+- Next task: Task 21, loan/sale handover and title. Task 21 remains unchecked; do not start it in this checkpoint.
+- Task 20 product head: `6c3701e4a6b8e76f2753dc3c464f704a227b5553`.
+- Task 20 migrations: `V175.59` through `V175.66`.
+- Task 20 executor: `ses_f5fb981d9ffeaRTXaIe71novG2`; verifier: `ses_f5eb68d44ffeifB4XAh374xCWn`.
+- Task 20 verdict: confirmed/high; final JAR SHA256 `3be595c434a76fce4e1ccadc5efc2fa7da5a9b712aedc7c51eb7f3f5caa80bf9`.
 
 ## Recovery command
 
@@ -22,6 +22,12 @@
 - No merge, rebase, amend, reset, force-push, or product/task13 edits during checkpoint sync.
 - Keep runtime, evidence, logs, archive, environment, Boulder, and secrets paths excluded.
 - Future commits use the effective global identity `fajarxfce <fajaralamsyah000@gmail.com>` without conflicting per-command overrides.
+
+## 2026-09-14 - Task20 confirmed checkpoint
+
+- Task20 is checked in the plan at product head `6c3701e4a6b8e76f2753dc3c464f704a227b5553`.
+- Final verifier: `ses_f5eb68d44ffeifB4XAh374xCWn`, confirmed/high; migration range `V175.59` through `V175.66`; 249 distinct tests.
+- Executor: `ses_f5fb981d9ffeaRTXaIe71novG2`; task21 remains unchecked and is the next action.
 
 ## 2026-09-14 - Task19 confirmed checkpoint
 

@@ -1,17 +1,18 @@
-# Warehouse Workorder Asset Provenance Task 19 Checkpoint
+# Warehouse Workorder Asset Provenance Task 20 Checkpoint
 
 ## Resume
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Implementation SHA: `b219e9e87cda6d5f85df3eac8f40c022a79b7c58`
-- Tasks 1-19: checked; task 20: unchecked
+- Implementation SHA: `6c3701e4a6b8e76f2753dc3c464f704a227b5553`
+- Tasks 1-20: checked; task 21: unchecked
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: immediate push
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
-- Executor: `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`
-- Task 19 verifier: `ses_f6106f2ddffeO2YMQRB9OAUq0x` (confirmed/high)
-- Next action: task20 warehouse deployment authorization and customer install; do not start in this checkpoint.
+- Executor: `ses_f5fb981d9ffeaRTXaIe71novG2`
+- Task 20 verifier: `ses_f5eb68d44ffeifB4XAh374xCWn` (confirmed/high)
+- Migrations: `V175.59` through `V175.66`; 249 distinct tests.
+- Next action: task21 loan/sale handover and title; do not start in this checkpoint.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
