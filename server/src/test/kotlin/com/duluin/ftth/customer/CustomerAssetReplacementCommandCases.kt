@@ -7,8 +7,50 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.UUID
 
 abstract class CustomerAssetReplacementCommandCases : CustomerAssetReplacementIntegrityCases() {
+    @Test
+    fun `pending removal permit retires with physical recovery instead of blocking it`() {
+        val old = ownershipCase()
+        assertThat(accept(old).status).isEqualTo(200)
+        val receipt = old.installation.receipt
+        val order = workOrder(receipt.stock.token, "DISMANTLE", old.installation.customer.toString())
+        assign(receipt.stock.token, order, receipt.receiver.second)
+        val evidence = removalEvidence(receipt.receiver.first, order)
+        val permit = UUID.randomUUID()
+        fixture(receipt.stock.token).transaction {
+            sql("""INSERT INTO inventory_deployment_authorization(id,tenant_id,asset_id,work_order_id,customer_id,actor_id,purpose,ownership_mode,
+                operation_id,expected_asset_revision,expected_work_order_revision,expected_plan_revision,authority_epoch,cutover_epoch,
+                previous_assignment_id,expected_assignment_revision)
+                SELECT '$permit',tenant_id,asset_id,'$order',customer_id,'${receipt.receiver.second}','REMOVE',ownership_mode,
+                    '${UUID.randomUUID()}',0,0,0,0,0,id,revision FROM inventory_asset_assignment WHERE id='${old.installation.operation}'""")
+        }
+
+        val removed = request("POST", "/api/customers/${old.installation.customer}/assets/remove", receipt.receiver.first,
+            """{"assignmentId":"${old.installation.operation}","expectedRevision":1,"expectedTitleRevision":0,"workOrderId":"$order","evidenceId":"$evidence"}""", "pending-remove")
+
+        assertThat(removed.status).withFailMessage(removed.contentAsString).isEqualTo(200)
+        fixture(receipt.stock.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_deployment_retirement WHERE authorization_id='$permit'")).isEqualTo("1")
+        }
+    }
+
+    @Test
+    fun `recovered physical asset cannot mint a new installation authorization`() {
+        val swap = swappedCase()
+        val original = swap.case.old.installation.receipt
+        val revision = summary(original.stock.token, original.workOrder).path("revisions").path("workOrderRevision").asLong()
+        val before = physicalFingerprint(swap.case.old)
+
+        val denied = request("POST", "/api/work-orders/${original.workOrder}/assets/authorize", original.receiver.first,
+            """{"expectedRevision":$revision,"assetId":"${original.input.lines.single().stockIdentityId}",
+                "issueLineId":"${original.input.lines.single().issueLineId}","purpose":"INSTALL"}""", "recovered-install")
+
+        assertThat(denied.status).isEqualTo(409)
+        assertThat(physicalFingerprint(swap.case.old)).isEqualTo(before)
+    }
+
     @Test
     fun `removed recovery scope prevents private swap replay with the original JWT`() {
         val swap = swappedCase()
