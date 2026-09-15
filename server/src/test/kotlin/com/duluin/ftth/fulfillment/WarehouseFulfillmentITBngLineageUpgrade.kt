@@ -1,6 +1,7 @@
 package com.duluin.ftth.fulfillment
 
 import com.duluin.ftth.inventory.WarehouseSchemaDatabase
+import com.duluin.ftth.inventory.WarehouseMigrationInventory
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
@@ -41,7 +42,7 @@ class WarehouseFulfillmentITBngLineageUpgrade : BngHandoffFixture() {
             Triple(case,extra,graph(case))
         }
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(32)
+        WarehouseMigrationInventory.assertUpgrade("175.34", database.migrate())
 
         cases.zip(scopes).forEach { (entry,scope) ->
             val (case,extra,before)=entry

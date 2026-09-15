@@ -1,6 +1,7 @@
 package com.duluin.ftth.fulfillment
 
 import com.duluin.ftth.inventory.WarehouseSchemaDatabase
+import com.duluin.ftth.inventory.WarehouseMigrationInventory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
@@ -40,7 +41,7 @@ class WarehouseFulfillmentITOwnerUpgrade : WarehouseFulfillmentFixture() {
         val before = jobs.map { (token,_) -> integrityState(token) }
         assertThat(before).allMatch { it.startsWith("APPLIED|") }
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(37)
+        WarehouseMigrationInventory.assertUpgrade("175.29", database.migrate())
 
         jobs.forEachIndexed { index,(token,workOrder) ->
             val response = request("POST","/api/work-orders/$workOrder/approve",token,"{}")
