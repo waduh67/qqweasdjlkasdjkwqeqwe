@@ -73,6 +73,12 @@ Future topology changes and retirement advance the event sequence exactly once.
 V175.86 and every predecessor remain byte-identical; this is not task23 telemetry
 attribution or task26 inspection/reissue.
 
+`V175_89__customer_episode_topology_timestamp.sql` is reserved before creation.
+Packaged QA and a failing timezone regression exposed JSON timestamp text
+comparison in the new validator. Compare the installed timestamp as an instant
+while retaining exact topology keys and stored history bytes. Applied V175.87
+and V175.88 remain unchanged.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
