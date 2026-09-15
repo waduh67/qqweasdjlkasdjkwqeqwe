@@ -21,8 +21,9 @@ object StrictCommandJson {
             listOf(CoercionInputShape.Float, CoercionInputShape.String, CoercionInputShape.EmptyString, CoercionInputShape.Boolean).forEach { config.setCoercion(it, CoercionAction.Fail) }
         }.enable(EnumFeature.FAIL_ON_NUMBERS_FOR_ENUMS).build()
 
-    fun <T> decode(body: String, type: Class<T>): T {
+    fun <T : Any> decode(body: String, type: Class<T>): T {
         if (body.length > 131072) throw ValidationException("Request too large")
-        return mapper.readValue(body, type)
+        val command: T? = mapper.readValue(body, type)
+        return command ?: throw ValidationException("Command body must not be null")
     }
 }
