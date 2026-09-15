@@ -1,8 +1,7 @@
-# Customer asset acceptance (task21 work in progress)
+# Customer asset acceptance and approved title correction
 
-The acceptance path is implemented, but task21 is not complete. In particular,
-the independently approved post-handover title-correction command is not enabled.
-Do not interpret this document or the acceptance tests as completion of task21.
+Acceptance, approved correction and current ownership reporting are implemented.
+The task21 plan checkbox remains unchecked pending independent review.
 
 ## Acceptance command
 
@@ -42,14 +41,83 @@ current authority and source scope checks. A different payload or business key
 cannot accept the assignment a second time. Direct mode/title/history edits are
 not a correction path.
 
-## Remaining task21 work
+## Independently approved correction
 
-- Independently approved correction request, execution, immutable transfer record
-  and CUSTOMER-to-ISP posting without making the installed asset available.
-- Immutable receipt ownership-mode admission checks, beyond task20's current SKU
-  allowlist check, and complete acceptance snapshot/final-state reconciliation.
-- Current title read projections and service-cessation recovery reporting.
-- The complete requested race, cross-tenant, adversarial and bounded regression
-  matrix, including correction approval and removal-boundary contention.
+`POST /api/v1/warehouse/asset-title-corrections`, with `Idempotency-Key`, creates a
+new immutable correction request. It requires current approval request/view
+permission and warehouse/area access. Obtain the current revisions from the
+ownership endpoint; do not reuse the installation response as current title.
+
+```json
+{
+  "assignmentId": "existing-assignment-uuid",
+  "sourceHandoverId": "accepted-handover-uuid",
+  "expectedAssignmentRevision": 1,
+  "expectedTitleRevision": 1,
+  "targetOwner": "ISP",
+  "reason": "Documented reason for title correction",
+  "evidenceId": "committed-work-order-signature-revision-uuid"
+}
+```
+
+`targetOwner` is a requested transition, not authority over the current owner.
+The current asset/customer/WO, title, revisions and installed position are derived
+from verified owner state. A no-op transition or stale revision is rejected.
+The response supplies `documentId`; submit that ID with `sourceRevision: 0` to
+`POST /api/v1/warehouse/approvals/request`. Decisions use the existing
+`POST /api/v1/warehouse/approvals/decide` contract.
+
+The existing `TITLE_REACQUISITION` policy selects independent approvers. A
+TITLE_CORRECTION requires every configured tier without monetary threshold
+exemptions. Its neutral policy comparison value is not an asset valuation or
+commercial posting. Receipt and other document cost policies are unchanged.
+Requesters, customers, original custodians and their delegated approval authority
+cannot self-approve. Rejected, expired and stale requests have no title effect.
+
+Final approval atomically appends `inventory_asset_title_transfer`, its balanced
+1EA owner posting, approval effect/delivery receipts and a recovery-state
+transition. The assignment's current title/revision is a derived projection of
+that record. Existing handovers, assignment history and customer episodes are not
+rewritten. CUSTOMER-to-ISP correction remains CUSTOMER_INSTALLED and unavailable;
+it is not receipt, return, removal, inspection or recovery completion.
+
+Request and decision replay return their exact original durable outcomes only
+after current authority checks. Competing requests for the same source revision
+can produce at most one transfer; the other approval becomes stale.
+
+## Current ownership and cessation
+
+`GET /api/customers/{customerId}/assets/ownership` requires `customer.onu.view` and
+current customer/WO area scope. Its public DTO contains current `legalOwner`,
+`ownershipMode`, `assignmentRevision`, `titleRevision`, `handoverId`,
+`latestTransferId`, `serviceCeased`, `recoveryRequired`, `recoveryDue`, and
+`positionStatus`. It does not expose storage references or warehouse bins.
+
+LOAN acceptance retains the ISP recovery obligation. Customer service termination
+reports it due without moving the physical asset. A completed SALE has no reclaim
+obligation. An independently approved correction can require or release recovery
+through its immutable transition; neither action completes physical recovery.
+Customer termination uses the existing customer/subscription owner lifecycle.
+
+Historical installation and acceptance responses remain historical snapshots.
+Current views validate the latest transfer chain; restarting does not recompute
+title from a mutable ownership-mode dropdown.
+
+## Source seals and upgrades
+
+Both authorization/install and accepted handover enforce the immutable receipt
+SKU ownership-mode snapshot. Widening the live SKU allowlist does not authorize
+SALE for a loan-only receipt. Default intent remains LOAN.
+
+Acceptance captures immutable origin receipt/line/claim, issue/deployment,
+assignment, position and signature evidence. Final validators reconcile source
+revisions, exact posting/header/leg cardinality, approval effects, assignment
+history and recovery transitions. Tenant assertions execute inside each validator,
+including selective constraint timing. New tables use FORCE RLS and tenant FKs.
+
+Forward migrations V175.70 through V175.79 preserve V175.69 and all predecessor
+bytes. Older accepted handovers without the contemporaneous origin seal remain
+raw history, but validated title reads/corrections reject them for reconciliation;
+the migration does not invent acceptance proof or retroactively approve them.
 
 No task22 removal/swap, task23 attribution, RMA, UI or mobile flow is implemented.
