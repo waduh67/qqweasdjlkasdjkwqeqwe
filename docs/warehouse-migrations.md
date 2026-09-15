@@ -57,6 +57,13 @@ could prevent recovery at commit. Append an immutable removal-bound retirement
 of unused permits, preserving their original issuance and authorization history;
 retired permits cannot be consumed. Applied V175.84 remains unchanged.
 
+`V175_86__warehouse_removal_permit_history_binding.sql` is reserved before
+creation. A real pending task19 REMOVE permit reproduced a recovery failure:
+retirement capture selected it, but the insertion guard accepted REPLACE only.
+Retirement now covers every existing prior-assignment purpose without enabling
+any new REMOVE/RMA deployment path. Consumed history also selects recovery by
+the exact original assignment instead of asset ID alone. V175.85 is unchanged.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
