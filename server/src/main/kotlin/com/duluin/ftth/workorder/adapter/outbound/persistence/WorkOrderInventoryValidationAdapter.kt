@@ -28,16 +28,17 @@ class WorkOrderInventoryValidationAdapter(private val entityManager: EntityManag
         if (binding.cutoverEpoch != context.cutoverFence.snapshot.epoch) fail(WarehouseErrorCode.STALE_CUTOVER)
         if (!current.platformAdmin && !current.permissions.containsAll(setOf("workorder.order.field", "customer.onu.assign")))
             fail(WarehouseErrorCode.FORBIDDEN)
-        when (binding.purpose) {
-            DeploymentPurpose.INSTALL -> Unit
-            DeploymentPurpose.REPLACE, DeploymentPurpose.REMOVE, DeploymentPurpose.RETURN_CUSTOMER_RMA -> fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val workType = when (binding.purpose) {
+            DeploymentPurpose.INSTALL -> "PSB"
+            DeploymentPurpose.REPLACE -> "MIGRATION"
+            DeploymentPurpose.REMOVE, DeploymentPurpose.RETURN_CUSTOMER_RMA -> fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
         entityManager.unwrap(Session::class.java).doWork { connection ->
             connection.prepareStatement("SELECT customer_id,area_id,type,status,warehouse_revision FROM work_order WHERE tenant_id=? AND id=? FOR UPDATE").use { query ->
                 query.setObject(1, binding.tenantId); query.setObject(2, binding.workOrderId)
                 query.executeQuery().use { row ->
                     if (!row.next()) fail(WarehouseErrorCode.NOT_FOUND)
-                    if (row.getObject("customer_id", UUID::class.java) != binding.customerId || row.getString("type") != "PSB" ||
+                    if (row.getObject("customer_id", UUID::class.java) != binding.customerId || row.getString("type") != workType ||
                         row.getString("status") !in setOf("ASSIGNED", "IN_PROGRESS")) fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
                     if (row.getLong("warehouse_revision") != binding.revisions.workOrderRevision) fail(WarehouseErrorCode.STALE_REVISION)
                     val scope = current.areaScope
