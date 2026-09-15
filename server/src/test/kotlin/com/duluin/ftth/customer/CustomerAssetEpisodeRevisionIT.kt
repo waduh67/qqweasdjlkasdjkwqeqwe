@@ -9,6 +9,24 @@ import java.sql.SQLException
 
 class CustomerAssetEpisodeRevisionIT : CustomerAssetEpisodeRevisionCases() {
     @ParameterizedTest
+    @ValueSource(strings = ["UTC", "Asia/Kathmandu", "America/New_York"])
+    fun `equivalent topology timestamp validates and advances across session timezones`(zone: String) {
+        val old = ownershipCase()
+        val stock = fixture(old.installation.receipt.stock.token)
+
+        stock.transaction {
+            sql("SET LOCAL TIME ZONE '$zone'")
+            sql("SELECT warehouse_assert_onu_episode_revision('$tenant','${old.installation.operation}')")
+            sql("UPDATE onu SET installed_at=installed_at+interval '1 second' WHERE id='${old.installation.operation}'")
+        }
+
+        stock.transaction {
+            sql("SELECT warehouse_assert_onu_episode_revision('$tenant','${old.installation.operation}')")
+            assertThat(scalar("SELECT episode_revision FROM onu WHERE id='${old.installation.operation}'")).isEqualTo("1")
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["NORMAL", "RESTORED", "SELECTIVE"])
     fun `active episode increment without an event rejects at the application role boundary`(timing: String) {
         val old = ownershipCase()
