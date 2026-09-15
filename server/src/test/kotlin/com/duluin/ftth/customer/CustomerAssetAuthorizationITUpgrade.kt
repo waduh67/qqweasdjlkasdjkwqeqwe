@@ -44,7 +44,7 @@ class CustomerAssetAuthorizationITUpgrade {
                 app.createStatement().use { it.execute("SET app.tenant_id='$tenant'") }
                 scalar(app, "SELECT snapshot::text FROM inventory_deployment_authorization_history WHERE authorization_id='$permit'")
             }
-            assertThat(database.migrate().migrationsExecuted).isEqualTo(12)
+            assertThat(database.migrate().migrationsExecuted).isEqualTo(25)
             assertThat(database.migrate().migrationsExecuted).isZero()
             database.dataSource.connection.use { app ->
                 app.createStatement().use { it.execute("SET app.tenant_id='$tenant'") }

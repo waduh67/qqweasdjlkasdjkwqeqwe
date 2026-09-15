@@ -42,7 +42,7 @@ class CustomerDeploymentUpgradeIT : CustomerDeploymentGraphFixture() {
         val before = cases.map(::fingerprint)
         val validBody = consume(valid).contentAsString
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(3)
+        assertThat(database.migrate().migrationsExecuted).isEqualTo(16)
 
         cases.forEachIndexed { index, case ->
             assertThrows<Exception> { fixture(case.receipt.stock.token).transaction {
