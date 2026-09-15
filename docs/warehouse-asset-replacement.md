@@ -49,6 +49,29 @@ Detach ODP biasa tidak dianggap pelepasan fisik dan tidak memindahkan stok.
 Permit pengganti yang kalah terhadap removal disimpan sebagai authorization
 retirement immutable; permit tersebut tidak dapat dikonsumsi.
 
+## Revisi Episode
+
+`customer_onu_episode_event` mengikat revisi ke event immutable per tenant/ONU,
+assignment, aset, dan customer. Opening dimulai pada revisi0. Perubahan topologi
+yang menghasilkan `onu_topology_history` menaikkan revisi episode tepat sekali;
+retirement menaikkannya sekali lagi. Detach topologi yang merupakan bagian dari
+retirement tidak menghitung kenaikan episode kedua. UPDATE angka revisi tanpa
+event ditolak, termasuk skip, penurunan, atau event tambahan tanpa perubahan ONU.
+
+Response retirement memakai revisi dan waktu dari SQL `RETURNING`, bukan snapshot
+instalasi lama. Relokasi tetap mengembalikan `revision` topologi dan sekarang juga
+`episodeRevision`; keduanya berasal dari row hasil UPDATE. Field tambahan tidak
+disisipkan ke replay lama yang memang belum menyimpannya. Snapshot perintah lama
+tetap immutable; pembacaan riwayat terkini memakai revisi ONU yang tervalidasi.
+
+Migrasi tidak menulis ulang ONU, telemetry, atau riwayat topologi yang sudah ada.
+Data VERIFIED lama memperoleh baseline dengan semantik lama: opening0 atau
+retirement1. Riwayat topologi sebelum baseline tetap utuh; event berikutnya
+melanjutkan revisi episode dari baseline tersebut. Angka liar yang sudah telanjur
+tersimpan tidak dijadikan baseline sah: raw data tetap tersedia, tetapi validated
+read/replay ditolak untuk rekonsiliasi. Baris staged/legacy tetap terbaca.
+Ini bukan atribusi telemetry berbasis waktu task23.
+
 ## Provisioning Setelah Commit
 
 Outbox `fulfillment_asset_outbox` dan delivery terpisah dari transaksi fisik.
