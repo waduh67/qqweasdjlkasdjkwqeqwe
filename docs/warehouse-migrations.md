@@ -27,6 +27,19 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## M04: reservation task21
+
+Task21 reserves `V175_67__warehouse_asset_handover.sql` and
+`V175_68__warehouse_asset_title_binding.sql` before creation. These slots are for
+immutable customer acceptance, installed-title postings, recovery obligations,
+and the final-state title/assignment/receipt/evidence linkage. V175.66 and all
+predecessors remain unchanged. V176+ is not used.
+
+`V175_69__warehouse_asset_handover_document_kind.sql` is reserved before creation.
+The first owner invocation proved the inherited document kind/state CHECK still
+rejects ASSET_HANDOVER despite its lifecycle branch. Extend those CHECKs without
+changing applied V175.67/.68.
+
 ## M04: reservation task20
 
 T20-01/02 reserve `V175_64__warehouse_deployment_fact_cardinality.sql` and
