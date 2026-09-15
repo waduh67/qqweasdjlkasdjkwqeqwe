@@ -48,7 +48,9 @@ class CustomerAssetInstallationStore(private val entityManager: EntityManager) {
         return episode
     }
     fun history(customerId: UUID): List<CustomerAssetEpisode> = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
-        connection.prepareStatement("SELECT response FROM customer_asset_installation WHERE tenant_id=? AND customer_id=? ORDER BY created_at,id").use { query ->
+        connection.prepareStatement("""SELECT coalesce(retirement.response,installation.response) FROM customer_asset_installation installation
+            LEFT JOIN customer_asset_retirement retirement ON retirement.tenant_id=installation.tenant_id AND retirement.episode_id=installation.id
+            WHERE installation.tenant_id=? AND installation.customer_id=? ORDER BY installation.created_at,installation.id""").use { query ->
             query.setObject(1, TenantContext.tenantId()); query.setObject(2, customerId)
             query.executeQuery().use { rows -> buildList { while (rows.next()) add(mapper.readValue(rows.getString(1), CustomerAssetEpisode::class.java)) } }
         }
