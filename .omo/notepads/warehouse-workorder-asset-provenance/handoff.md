@@ -29,6 +29,15 @@
 - Final verifier: `ses_f5eb68d44ffeifB4XAh374xCWn`, confirmed/high; migration range `V175.59` through `V175.66`; 249 distinct tests.
 - Executor: `ses_f5fb981d9ffeaRTXaIe71novG2`; task21 remains unchecked and is the next action.
 
+## 2026-09-15 - Task21 confirmed checkpoint
+
+- Tasks 1-21 are checked in the tracked plan at product head
+  `729f245998117b646feb56577273f6a75da4a152`; task22 remains unchecked.
+- Task21 executor: `ses_f5d380e4fffeKBNKRFZ5C8Ubp1`; final verifier:
+  `ses_f5c054b5dffevN0uLx6c1tzeD3`, confirmed/high, 570 executions.
+- Migrations V175.67-.79 and task21 receipts remain immutable; next action is
+  task22 asset swap/removal/topology relocation. Do not start it in this checkpoint.
+
 ## 2026-09-14 - Task19 confirmed checkpoint
 
 - Task19 is checked in the plan at product head `b219e9e87cda6d5f85df3eac8f40c022a79b7c58`.

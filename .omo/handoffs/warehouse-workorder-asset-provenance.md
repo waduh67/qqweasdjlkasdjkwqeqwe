@@ -1,23 +1,23 @@
-# Warehouse Workorder Asset Provenance Task 20 Checkpoint
+# Warehouse Workorder Asset Provenance Task 21 Checkpoint
 
 ## Resume
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Implementation SHA: `6c3701e4a6b8e76f2753dc3c464f704a227b5553`
-- Tasks 1-20: checked; task 21: unchecked
+- Implementation SHA: `729f245998117b646feb56577273f6a75da4a152`
+- Tasks 1-21: checked; task 22: unchecked
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: immediate push
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
-- Executor: `ses_f5fb981d9ffeaRTXaIe71novG2`
-- Task 20 verifier: `ses_f5eb68d44ffeifB4XAh374xCWn` (confirmed/high)
-- Migrations: `V175.59` through `V175.66`; 249 distinct tests.
-- Next action: task21 loan/sale handover and title; do not start in this checkpoint.
+- Executor: `ses_f5d380e4fffeKBNKRFZ5C8Ubp1`
+- Task 21 verifier: `ses_f5c054b5dffevN0uLx6c1tzeD3` (confirmed/high)
+- Migrations: `V175.67` through `V175.79`; 570 executions.
+- Next action: task22 asset swap/removal/topology relocation; do not start in this checkpoint.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-19 are checked in the tracked plan and have trusted ledger receipts. Task 20 is still unchecked. This is the safe task19 checkpoint.
+Tasks 1-21 are checked in the tracked plan and have trusted ledger receipts. Task 22 is still unchecked. This is the safe task21 checkpoint.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
