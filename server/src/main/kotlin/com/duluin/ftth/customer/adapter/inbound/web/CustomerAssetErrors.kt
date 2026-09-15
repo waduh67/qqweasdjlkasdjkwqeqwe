@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = [CustomerAssetController::class, CustomerController::class])
+@RestControllerAdvice(assignableTypes = [CustomerAssetOwnershipController::class, CustomerAssetController::class, CustomerController::class])
 class CustomerAssetErrors {
     @ExceptionHandler(tools.jackson.core.JacksonException::class, jakarta.validation.ConstraintViolationException::class,
         com.duluin.ftth.common.domain.error.ValidationException::class, org.springframework.http.converter.HttpMessageNotReadableException::class,

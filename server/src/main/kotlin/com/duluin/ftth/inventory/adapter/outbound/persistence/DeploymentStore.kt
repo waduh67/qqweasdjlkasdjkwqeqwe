@@ -130,6 +130,12 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
     }
 
     fun assertOwnership(source: DeploymentSource, mode: AssetOwnershipMode) = jdbc.execute { sql ->
+        if (sql.value("""SELECT asset.id FROM inventory_serialized_asset asset JOIN inventory_document_line origin
+            ON origin.tenant_id=asset.tenant_id AND origin.id=asset.origin_document_line_id
+            JOIN inventory_receipt_intake intake ON intake.tenant_id=origin.tenant_id AND intake.id=origin.document_id
+            WHERE asset.tenant_id=? AND asset.id=? AND EXISTS(SELECT FROM jsonb_array_elements(intake.snapshot::jsonb->'lines') item
+                WHERE item#>>'{sku,id}'=asset.sku_id::text AND jsonb_exists(item#>'{sku,allowedOwnershipModes}',?))""",
+                sql.tenant, source.custody.stockIdentityId, mode.name) == null) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (sql.value("SELECT id FROM inventory_sku WHERE tenant_id=? AND id=? AND state='ACTIVE' AND ?=ANY(allowed_ownership_modes) FOR SHARE",
                 sql.tenant, source.custody.skuId, mode.name) == null) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }

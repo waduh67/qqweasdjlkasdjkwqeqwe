@@ -7,7 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
-class CustomerAssetOwnershipIT : CustomerAssetOwnershipIntegrityCases() {
+class CustomerAssetOwnershipIT : CustomerAssetTitleScopeCases() {
     @Test
     fun `public inventory owner accepts a signed loan without transferring title`() {
         val case = ownershipCase()
