@@ -39,6 +39,12 @@ replacement consumption and durable provisioning delivery. Recovery is never
 AVAILABLE and never transfers legal ownership. V175.79 and every predecessor
 remain byte-identical; task23 attribution and task26 inspection are excluded.
 
+`V175_83__warehouse_recovered_authorization_history.sql` is reserved before
+creation. The first recovery transaction proved the consumed authorization still
+checks the present asset condition as though it were an unconsumed issue. Validate
+the sealed recovery graph and its captured installed source for consumed history;
+unconsumed authorizations continue to require current serviceable custody.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
