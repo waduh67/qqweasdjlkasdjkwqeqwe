@@ -36,6 +36,7 @@ class OnuService(
     private val assembler: CustomerAssembler,
     private val auditor: AuditRecorder,
     private val assets: com.duluin.ftth.customer.CustomerAssetApi,
+    private val assetRetention: com.duluin.ftth.customer.adapter.outbound.persistence.CustomerAssetRetentionStore,
 ) : ManageOnuUseCase {
 
     @Transactional(readOnly = true)
@@ -103,6 +104,7 @@ class OnuService(
     }
 
     override fun delete(id: UUID) {
+        assetRetention.assertOnuRemovable(id)
         val onu = requireOnu(id)
         if (onu.attached) {
             throw ConflictException("ONU ${onu.serialNumber} masih terpasang di ODP, lepas dulu sebelum dihapus")

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
-class CustomerAssetReplacementIT : CustomerAssetReplacementCommandCases() {
+class CustomerAssetReplacementIT : CustomerAssetReplacementRaceCases() {
     @Test
     fun `acknowledged replacement swaps one active assignment and preserves the removed loan`() {
         val case = replacementCase()
