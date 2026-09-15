@@ -64,6 +64,15 @@ Retirement now covers every existing prior-assignment purpose without enabling
 any new REMOVE/RMA deployment path. Consumed history also selects recovery by
 the exact original assignment instead of asset ID alone. V175.85 is unchanged.
 
+TASK22-VERIFY-01 reserves `V175_87__customer_onu_episode_events.sql` and
+`V175_88__customer_onu_episode_revision_guards.sql` before creation. These add
+immutable, tenant-bound episode events and validated revision reads. Existing
+VERIFIED data receives a baseline under the pre-migration opening/retirement
+revision semantics; raw inconsistent revisions are not rewritten or adopted.
+Future topology changes and retirement advance the event sequence exactly once.
+V175.86 and every predecessor remain byte-identical; this is not task23 telemetry
+attribution or task26 inspection/reissue.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
