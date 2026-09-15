@@ -1,23 +1,23 @@
-# Warehouse Workorder Asset Provenance Task 21 Checkpoint
+# Warehouse Workorder Asset Provenance Task 22 Checkpoint
 
 ## Resume
 
 - Branch: `feat/warehouse-workorder`
 - Worktree: `worktrees/warehouse-workorder-asset-provenance`
-- Implementation SHA: `729f245998117b646feb56577273f6a75da4a152`
-- Tasks 1-21: checked; task 22: unchecked
+- Implementation SHA: `dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb`
+- Tasks 1-22: checked; task 23: unchecked
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: immediate push
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
-- Executor: `ses_f5d380e4fffeKBNKRFZ5C8Ubp1`
-- Task 21 verifier: `ses_f5c054b5dffevN0uLx6c1tzeD3` (confirmed/high)
-- Migrations: `V175.67` through `V175.79`; 570 executions.
-- Next action: task22 asset swap/removal/topology relocation; do not start in this checkpoint.
+- Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
+- Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
+- Migrations: `V175.80` through `V175.89`; final JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`.
+- Next action: task23 discovery/auto-provision/CPE integration; do not start in this checkpoint.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-21 are checked in the tracked plan and have trusted ledger receipts. Task 22 is still unchecked. This is the safe task21 checkpoint.
+Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Task 23 is still unchecked. This is the safe task22 checkpoint.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -35,7 +35,7 @@ Tasks 1-21 are checked in the tracked plan and have trusted ledger receipts. Tas
 
 ## Exact Next Action
 
-Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`. Resume verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` for its final verdict. Prior failures reject correctly, the first exact run was 35/35, and extra immutable snapshot/destination probes pass; this remains partial evidence only. Confirm then check task14, otherwise return findings to executor `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`.
+Resume with `/start-work warehouse-workorder-asset-provenance --make-pr` for task23 discovery/auto-provision/CPE integration. Task23 remains unchecked and must not start in this checkpoint.
 
 ## Continuation Policy
 

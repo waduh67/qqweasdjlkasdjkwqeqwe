@@ -38,6 +38,15 @@
 - Migrations V175.67-.79 and task21 receipts remain immutable; next action is
   task22 asset swap/removal/topology relocation. Do not start it in this checkpoint.
 
+## 2026-09-15 - Task22 confirmed checkpoint
+
+- Tasks 1-22 are checked in the tracked plan at product head
+  `dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb`; task23 remains unchecked.
+- Task22 executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`; final verifier:
+  `ses_f59e67eacffeVf28hlgEdebi2F`, confirmed/high.
+- Migrations V175.80-.89 and task22 receipts remain immutable; next action is
+  task23 discovery/auto-provision/CPE integration. Do not start it in this checkpoint.
+
 ## 2026-09-14 - Task19 confirmed checkpoint
 
 - Task19 is checked in the plan at product head `b219e9e87cda6d5f85df3eac8f40c022a79b7c58`.
