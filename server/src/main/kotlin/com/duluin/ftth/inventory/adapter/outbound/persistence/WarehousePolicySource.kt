@@ -8,7 +8,7 @@ import java.util.UUID
 data class PolicySourceLine(val locationId: UUID?, val custodianId: UUID?, val quantity: BigInteger,
     val numerator: BigInteger?, val denominator: BigInteger?, val currency: String?)
 data class PolicySource(val id: UUID, val revision: Long, val operation: PolicyOperation, val requesterId: UUID,
-    val counters: Set<UUID>, val lines: List<PolicySourceLine>)
+    val counters: Set<UUID>, val lines: List<PolicySourceLine>, val titleCorrection: Boolean)
 
 @Repository
 class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
@@ -25,6 +25,7 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             "LOSS" -> PolicyOperation.LOSS
             "SCRAP" -> PolicyOperation.SCRAP
             "COUNT" -> PolicyOperation.COUNT_VARIANCE
+            "TITLE_CORRECTION" -> PolicyOperation.TITLE_REACQUISITION
             "RETURN" -> if (action == PolicyOperation.TITLE_REACQUISITION) action else sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             else -> sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
@@ -43,7 +44,11 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
         }
         if (lines.isEmpty() || lines.any { it.locationId == null }) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val counters = sql.query("SELECT counter_id FROM inventory_cycle_count WHERE tenant_id=? AND document_id=? AND counter_id IS NOT NULL",
-            sql.tenant, input.sourceDocumentId) { it.uuid("counter_id") }.toSet()
-        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters, lines)
+            sql.tenant, input.sourceDocumentId) { it.uuid("counter_id") }.toSet() + if (header.first == "TITLE_CORRECTION") sql.query("""SELECT handover.actor_id,request.customer_id
+            FROM inventory_asset_title_request request JOIN inventory_asset_handover handover ON handover.tenant_id=request.tenant_id
+            AND handover.id=request.handover_id WHERE request.tenant_id=? AND request.id=?""", sql.tenant, input.sourceDocumentId) {
+            listOf(it.uuid("actor_id"), it.uuid("customer_id"))
+        }.flatten() else emptyList()
+        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters, lines, header.first == "TITLE_CORRECTION")
     }
 }

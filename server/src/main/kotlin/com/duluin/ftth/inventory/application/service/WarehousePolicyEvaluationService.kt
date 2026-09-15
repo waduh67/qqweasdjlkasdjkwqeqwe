@@ -42,12 +42,13 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
         if (rule == null && document.operation.exception) masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED, "Configure an approval policy for ${document.operation}")
         if (rule != null) {
             if (locations.any { !store.covered(it, policy.warehouseIds) }) masterFailure(WarehouseErrorCode.NOT_FOUND)
-            if (document.lines.any { it.numerator == null || it.denominator == null || it.currency == null })
+            val titleCorrection = document.titleCorrection
+            if (!titleCorrection && document.lines.any { it.numerator == null || it.denominator == null || it.currency == null })
                 masterFailure(WarehouseErrorCode.COST_BASIS_REQUIRED, "Record the source receipt cost numerator, base quantity denominator and currency")
-            if (document.lines.any { it.currency != policy.currency }) masterFailure(WarehouseErrorCode.CURRENCY_MISMATCH, "Policy currency ${policy.currency} must match each source cost; FX is not supported")
+            if (!titleCorrection && document.lines.any { it.currency != policy.currency }) masterFailure(WarehouseErrorCode.CURRENCY_MISMATCH, "Policy currency ${policy.currency} must match each source cost; FX is not supported")
             var total = BigInteger.ZERO
             var basis = BigInteger.ONE
-            document.lines.forEach { line ->
+            document.lines.filter { !titleCorrection }.forEach { line ->
                 val lineBasis = requireNotNull(line.denominator)
                 total = total * lineBasis + requireNotNull(line.numerator) * line.quantity * basis
                 basis *= lineBasis
@@ -62,7 +63,7 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
             val delegations = store.delegations().filter { it.revokedAt == null && it.validFrom <= now && it.validUntil > now && it.operation == document.operation }
             val excludedDelegates = delegations.filter { it.approverId in excluded }.map { it.delegateId }.toSet()
             rule.tiers.forEachIndexed { index, tier ->
-                if ((document.operation.exception && index == 0) || total >= tier.minimumMinor.toBigInteger() * basis) {
+                if (titleCorrection || (document.operation.exception && index == 0) || total >= tier.minimumMinor.toBigInteger() * basis) {
                     val decidingRoles = tier.roleIds.filter { "inventory.approval.decide" in directory.roles[it].orEmpty() }.toSet()
                     val direct = directory.users.filter { it.id in tier.userIds || it.roleIds.any(decidingRoles::contains) }
                     val candidates = direct.filter { it.id !in excluded && it.id !in excludedDelegates && access.eligible(it, locations) }
