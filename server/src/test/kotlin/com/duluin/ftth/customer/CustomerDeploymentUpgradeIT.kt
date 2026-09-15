@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer
 
 import com.duluin.ftth.inventory.WarehouseSchemaDatabase
+import com.duluin.ftth.inventory.WarehouseMigrationInventory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
@@ -42,7 +43,7 @@ class CustomerDeploymentUpgradeIT : CustomerDeploymentGraphFixture() {
         val before = cases.map(::fingerprint)
         val validBody = consume(valid).contentAsString
 
-        assertThat(database.migrate().migrationsExecuted).isEqualTo(16)
+        WarehouseMigrationInventory.assertUpgrade("175.63", database.migrate())
 
         cases.forEachIndexed { index, case ->
             assertThrows<Exception> { fixture(case.receipt.stock.token).transaction {

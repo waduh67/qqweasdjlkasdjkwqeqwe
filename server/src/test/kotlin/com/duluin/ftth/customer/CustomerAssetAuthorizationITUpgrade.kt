@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer
 
 import com.duluin.ftth.inventory.WarehouseSchemaDatabase
+import com.duluin.ftth.inventory.WarehouseMigrationInventory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -44,7 +45,7 @@ class CustomerAssetAuthorizationITUpgrade {
                 app.createStatement().use { it.execute("SET app.tenant_id='$tenant'") }
                 scalar(app, "SELECT snapshot::text FROM inventory_deployment_authorization_history WHERE authorization_id='$permit'")
             }
-            assertThat(database.migrate().migrationsExecuted).isEqualTo(25)
+            WarehouseMigrationInventory.assertUpgrade("175.54", database.migrate())
             assertThat(database.migrate().migrationsExecuted).isZero()
             database.dataSource.connection.use { app ->
                 app.createStatement().use { it.execute("SET app.tenant_id='$tenant'") }
