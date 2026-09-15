@@ -95,8 +95,9 @@ without fabricating an ONU or accepting ONU topology.
 
 LOAN is the default. SALE records intent only. Installation itself retains ISP
 title and creates no invoice, payment, swap, removal, return or telemetry-attribution
-workflow. The separate [task21 acceptance path](warehouse-asset-handover.md) can
-accept handover; that task remains in progress and is not a title-correction path.
+workflow. The separate [task21 ownership path](warehouse-asset-handover.md) handles
+acceptance, independently approved title correction and current ownership reads.
+Its plan checkbox remains pending independent review.
 
 Forward migrations are V175.59 through V175.66. Task19 authorization row/history
 shapes and all previously applied migration bytes remain unchanged.
