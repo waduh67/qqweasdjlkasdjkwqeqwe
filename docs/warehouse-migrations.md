@@ -51,6 +51,12 @@ customer-owned idempotent topology relocation receipts. The app-role regression
 first demonstrated that a PENDING delivery could be falsely marked SUCCEEDED;
 terminal delivery now requires its live claim. Applied V175.80-.83 are unchanged.
 
+`V175_85__warehouse_replacement_authorization_retirement.sql` is reserved before
+creation. The two-authorization regression proved an unused competing permit
+could prevent recovery at commit. Append an immutable removal-bound retirement
+of unused permits, preserving their original issuance and authorization history;
+retired permits cannot be consumed. Applied V175.84 remains unchanged.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
