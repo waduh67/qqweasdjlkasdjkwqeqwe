@@ -29,6 +29,44 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M04: reservation task21
 
+The continuation reserves V175.70 through V175.73 before creation:
+`V175_70__warehouse_title_correction_storage.sql`,
+`V175_71__warehouse_title_approval_execution.sql`,
+`V175_72__warehouse_acceptance_origin_seal.sql`, and
+`V175_73__warehouse_title_final_state.sql`. These add independently approved
+installed-title transfers, source seals and current-title/recovery validation.
+V175.69 and all predecessors remain byte-identical; no historical acceptance is
+silently reconstructed or approved by the migration.
+
+V175.74 (`V175_74__warehouse_title_origin_row_alias.sql`) is reserved before
+creation: executable acceptance found PostgreSQL resolving the `result` alias as
+the same-named text column inside to_jsonb. Use an unambiguous row alias while
+preserving the already applied V175.70-.73 files.
+
+V175.75 (`V175_75__warehouse_title_signature_expression.sql`) is reserved before
+creation to parenthesize JSON extraction before key subtraction in the acceptance
+signature comparison. The real acceptance transaction exposed PostgreSQL operator
+precedence; applied migration bytes remain unchanged.
+
+V175.76 (`V175_76__warehouse_title_approval_snapshot.sql`) is reserved before
+creation. Correction content belongs to the immutable title-request record and
+the approval source snapshot, not the existing bounded document reference field.
+The document keeps the request ID; approval includes the complete typed snapshot.
+
+V175.77 (`V175_77__warehouse_title_final_seals.sql`) is reserved before creation.
+Actual deployment executions also enforce frozen receipt intent at their shared
+SQL validator. Correction snapshots retain exact predecessor/recovery context,
+and completed correction documents require exactly one operation and transfer.
+
+V175.78 (`V175_78__warehouse_title_authorization_scope.sql`) is reserved before
+creation to qualify the execution authorization column against the shared
+validator's identically named parameter. V175.77 remains unchanged.
+
+V175.79 (`V175_79__warehouse_title_validator_entry_scope.sql`) is reserved before
+creation after the full schema catalog gate exposed non-entry tenant assertions
+in deployment and title mutation guards. Every guard asserts its captured tenant
+before dispatch; document/fact guards retain their OLD/NEW per-reference checks.
+
 Task21 reserves `V175_67__warehouse_asset_handover.sql` and
 `V175_68__warehouse_asset_title_binding.sql` before creation. These slots are for
 immutable customer acceptance, installed-title postings, recovery obligations,
