@@ -15,4 +15,10 @@ class CustomerAssetWorkflowService(private val inventory: InventoryDeploymentApi
         inventory.authorize(workOrderId, request, metadata)
     fun install(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode =
         customers.install(customerId, request, metadata)
+
+    fun acceptHandover(customerId: UUID, request: AcceptAssetHandoverRequest, metadata: WarehouseMutationMetadata): AssetAssignmentRef {
+        val result = inventory.acceptHandover(request, metadata)
+        if (result.customerId != customerId) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Customer assignment mismatch"))
+        return result
+    }
 }

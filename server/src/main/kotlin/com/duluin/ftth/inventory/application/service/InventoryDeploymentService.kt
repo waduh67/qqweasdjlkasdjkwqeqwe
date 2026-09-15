@@ -21,7 +21,7 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val locations: WarehouseReceiptService, private val assignments: AssetAssignmentStore,
     private val documents: DeploymentPostingStore, private val posting: WarehousePosting,
-    private val operations: WarehouseOperationStore) : InventoryDeploymentApi {
+    private val operations: WarehouseOperationStore, private val handovers: AssetHandoverService) : InventoryDeploymentApi {
     private val mapper = jacksonObjectMapper()
 
     override fun authorize(workOrderId: UUID, request: DeploymentIntentRequest, metadata: WarehouseMutationMetadata): DeploymentAuthorizationRef {
@@ -127,7 +127,7 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
         if (metadata.idempotencyKey.length > 200) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
     }
     override fun acceptHandover(request: AcceptAssetHandoverRequest, metadata: WarehouseMutationMetadata): AssetAssignmentRef =
-        masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Asset title handover is not enabled")
+        handovers.accept(request, metadata)
     @Transactional(timeout = 30)
     override fun assignmentHistory(assetId: UUID, page: WarehousePageRequest): WarehousePage<AssetAssignmentRef> {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
