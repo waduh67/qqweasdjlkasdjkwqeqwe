@@ -27,6 +27,18 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## M04: reservation task22
+
+Task22 reserves the next forward versions before SQL creation:
+`V175_80__warehouse_asset_removal_storage.sql`,
+`V175_81__warehouse_asset_recovery_history.sql`, and
+`V175_82__warehouse_asset_removal_integrity.sql`.
+These store immutable physical removal/replacement links and customer retirement,
+retain original deployment/title history, and validate exact recovery postings,
+replacement consumption and durable provisioning delivery. Recovery is never
+AVAILABLE and never transfers legal ownership. V175.79 and every predecessor
+remain byte-identical; task23 attribution and task26 inspection are excluded.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
