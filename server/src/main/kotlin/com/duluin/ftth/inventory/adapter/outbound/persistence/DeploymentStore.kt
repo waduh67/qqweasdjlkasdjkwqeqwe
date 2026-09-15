@@ -91,10 +91,11 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
         val source = mint.permit.source
         sql.update("""INSERT INTO inventory_deployment_authorization(id,tenant_id,asset_id,issue_line_id,work_order_id,customer_id,
             actor_id,purpose,ownership_mode,operation_id,expected_asset_revision,expected_work_order_revision,expected_plan_revision,
-            expected_issue_revision,authority_epoch,cutover_epoch) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            expected_issue_revision,authority_epoch,cutover_epoch,previous_assignment_id,expected_assignment_revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             binding.authorizationId, sql.tenant, binding.assetId, binding.issueLineId, binding.workOrderId, binding.customerId,
             binding.actorId, binding.purpose, binding.ownershipMode, binding.operationId, binding.assetRevision,
-            binding.revisions.workOrderRevision, binding.revisions.planRevision, binding.issueRevision, binding.authorityEpoch, binding.cutoverEpoch)
+            binding.revisions.workOrderRevision, binding.revisions.planRevision, binding.issueRevision, binding.authorityEpoch, binding.cutoverEpoch,
+            binding.previousAssignmentId, binding.previousAssignmentRevision)
         sql.update("""INSERT INTO inventory_deployment_execution(tenant_id,authorization_id,receipt_id,receipt_revision,use_revision,
             plan_id,mint_key,mint_hash,binding,source) VALUES (?,?,?,?,?,?,?,?,?,?)""", sql.tenant, binding.authorizationId,
             source.receiptId, source.receiptRevision, binding.revisions.useRevision, source.planId, mint.key, mint.hash,
@@ -141,6 +142,24 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
     }
 
     fun useRevision(workOrder: UUID): Long = totals.useRevision(workOrder)
+
+    fun previousRevision(assignment: UUID, customer: UUID): Long = jdbc.execute { sql ->
+        sql.value("SELECT revision FROM inventory_asset_assignment WHERE tenant_id=? AND id=? AND customer_id=? AND ended_at IS NULL AND warehouse_admission='VERIFIED'",
+            sql.tenant, assignment, customer)?.toLong() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+    }
+
+    fun lockPrevious(binding: DeploymentBinding) = jdbc.execute { sql ->
+        binding.previousAssignmentId?.let { assignment ->
+            val oldAsset = sql.value("""SELECT asset_id FROM inventory_asset_assignment WHERE tenant_id=? AND id=? AND customer_id=?
+                AND revision=? AND ended_at IS NULL AND warehouse_admission='VERIFIED' FOR UPDATE""",
+                sql.tenant, assignment, binding.customerId, binding.previousAssignmentRevision) ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            if (oldAsset == binding.assetId.toString()) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            sql.query("SELECT id FROM inventory_serialized_asset WHERE tenant_id=? AND id IN (?,?) ORDER BY id FOR UPDATE",
+                sql.tenant, UUID.fromString(oldAsset), binding.assetId) { it.uuid("id") }
+            sql.value("SELECT warehouse_assert_current_asset_title(?,?)", sql.tenant, assignment)
+        }
+        Unit
+    }
 
     fun history(assetId: UUID): List<DeploymentPermit> = jdbc.execute { sql ->
         sql.query("""SELECT permit.id FROM inventory_deployment_authorization permit JOIN inventory_deployment_result result
