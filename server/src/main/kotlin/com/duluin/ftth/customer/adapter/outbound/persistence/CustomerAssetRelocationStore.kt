@@ -22,26 +22,32 @@ class CustomerAssetRelocationStore(private val entityManager: EntityManager) {
         }
         connection.prepareStatement("SELECT response,actor_id,payload_hash FROM customer_asset_relocation WHERE tenant_id=? AND operation_key=?").use { query ->
             query.setObject(1, TenantContext.tenantId()); query.setString(2, key)
-            query.executeQuery().use { row -> if (row.next()) AssetRelocationReplay(mapper.readValue(row.getString(1), CustomerAssetRelocation::class.java),
-                row.getObject(2, UUID::class.java), row.getString(3)) else null }
+            query.executeQuery().use { row ->
+                if (!row.next()) return@doReturningWork null
+                val response = mapper.readValue(row.getString(1), CustomerAssetRelocation::class.java)
+                connection.validateOnuEpisode(response.onuId)
+                AssetRelocationReplay(response, row.getObject(2, UUID::class.java), row.getString(3))
+            }
         }
     }
     fun append(write: AssetRelocationWrite): CustomerAssetRelocation = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
         val request = write.request
         val topology = request.topology
-        val onuId = connection.prepareStatement("""UPDATE onu SET odp_id=?,odp_port_number=?,install_rx_power_dbm=?
+        val result = connection.prepareStatement("""UPDATE onu SET odp_id=?,odp_port_number=?,install_rx_power_dbm=?
             WHERE tenant_id=? AND customer_id=? AND assignment_id=? AND retired_at IS NULL AND topology_revision=?
-                AND (odp_id,odp_port_number) IS DISTINCT FROM (?,?) RETURNING id""").use { query ->
+                AND (odp_id,odp_port_number) IS DISTINCT FROM (?,?) RETURNING id,topology_revision,episode_revision""").use { query ->
             query.setObject(1, topology.odpId); query.setInt(2, topology.portNumber); query.setObject(3, topology.installRxPowerDbm)
             query.setObject(4, TenantContext.tenantId()); query.setObject(5, write.context.customerId); query.setObject(6, write.context.assignmentId)
             query.setLong(7, request.expectedRevision); query.setObject(8, topology.odpId); query.setInt(9, topology.portNumber)
-            query.executeQuery().use { row -> if (!row.next()) throw ConflictException("ASSET_TOPOLOGY_STALE"); row.getObject(1, UUID::class.java) }
+            query.executeQuery().use { row ->
+                if (!row.next()) throw ConflictException("ASSET_TOPOLOGY_STALE")
+                CustomerAssetRelocation(UUID.randomUUID(), row.getObject("id", UUID::class.java), row.getLong("topology_revision"), topology, row.getLong("episode_revision"))
+            }
         }
-        val result = CustomerAssetRelocation(UUID.randomUUID(), onuId, Math.addExact(request.expectedRevision, 1), topology)
         connection.prepareStatement("""INSERT INTO customer_asset_relocation(id,tenant_id,customer_id,assignment_id,onu_id,work_order_id,actor_id,
             operation_key,payload_hash,source_revision,target_revision,target_odp_id,target_port,response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""").use { query ->
             query.setObject(1, result.operationId); query.setObject(2, TenantContext.tenantId()); query.setObject(3, write.context.customerId)
-            query.setObject(4, write.context.assignmentId); query.setObject(5, onuId); query.setObject(6, request.workOrderId); query.setObject(7, write.actorId)
+            query.setObject(4, write.context.assignmentId); query.setObject(5, result.onuId); query.setObject(6, request.workOrderId); query.setObject(7, write.actorId)
             query.setString(8, write.key); query.setString(9, write.hash); query.setLong(10, request.expectedRevision); query.setLong(11, result.revision)
             query.setObject(12, topology.odpId); query.setInt(13, topology.portNumber); query.setString(14, mapper.writeValueAsString(result)); check(query.executeUpdate() == 1)
         }
