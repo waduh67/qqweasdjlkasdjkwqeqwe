@@ -45,6 +45,12 @@ checks the present asset condition as though it were an unconsumed issue. Valida
 the sealed recovery graph and its captured installed source for consumed history;
 unconsumed authorizations continue to require current serviceable custody.
 
+`V175_84__warehouse_asset_delivery_and_relocation.sql` is reserved before creation
+for delivery transition fencing, explicit physical recovery reporting, and
+customer-owned idempotent topology relocation receipts. The app-role regression
+first demonstrated that a PENDING delivery could be falsely marked SUCCEEDED;
+terminal delivery now requires its live claim. Applied V175.80-.83 are unchanged.
+
 ## M04: reservation task21
 
 The continuation reserves V175.70 through V175.73 before creation:
