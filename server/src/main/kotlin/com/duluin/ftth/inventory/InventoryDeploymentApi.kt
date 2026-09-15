@@ -27,7 +27,8 @@ data class ConsumeDeploymentRequest(val authorizationId: UUID, val expectedRevis
     val customerId: UUID, val installationPayload: String)
 data class DeploymentConsumption(val assignment: AssetAssignmentRef, val operationId: UUID,
     val serialNumber: String, val model: String?, val createsOnu: Boolean)
-data class AcceptAssetHandoverRequest(val assignmentId: UUID, val expectedRevision: Long, val evidenceId: UUID)
+data class AcceptAssetHandoverRequest(val assignmentId: UUID, val expectedRevision: Long, val evidenceId: UUID,
+    val expectedTitleRevision: Long = 0)
 
 data class DeploymentAuthorizationRef(val authorizationId: UUID, val operationId: UUID, val revision: Long)
 
@@ -78,6 +79,7 @@ data class AssetAssignmentRef(
     val endedAt: Instant?,
     val previousAssignmentId: UUID?,
     val recoveryObligation: Boolean,
+    val titleRevision: Long = 0,
 )
 
 data class AcceptedAssetHandover(

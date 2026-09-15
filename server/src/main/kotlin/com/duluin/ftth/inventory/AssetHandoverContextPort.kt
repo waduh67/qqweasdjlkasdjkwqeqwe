@@ -1,0 +1,19 @@
+package com.duluin.ftth.inventory
+
+import com.duluin.ftth.common.security.AuthorityFence
+import java.time.Instant
+import java.util.UUID
+
+interface AssetHandoverWorkOrderPort {
+    fun lock(binding: DeploymentBinding, authority: AuthorityFence): AssetHandoverWorkOrder
+    fun signature(workOrderId: UUID, evidenceId: UUID): AssetHandoverSignature
+}
+
+interface AssetHandoverCustomerPort {
+    fun lock(customerId: UUID, assignmentId: UUID): AssetHandoverCustomer
+}
+
+data class AssetHandoverWorkOrder(val code: String, val revision: Long, val senderLabel: String)
+data class AssetHandoverCustomer(val label: String, val status: String)
+data class AssetHandoverSignature(val id: UUID, val reference: String, val digest: String,
+    val receiverLabel: String, val receivedAt: Instant)
