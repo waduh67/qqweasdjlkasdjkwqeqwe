@@ -20,7 +20,11 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
         val stock = PostingStock(sql)
         stock.lock(command)
         command.approval?.let { approval ->
-            require(command.kind == com.duluin.ftth.inventory.domain.model.MovementKind.RECEIVE && command.splits.isEmpty() && command.reservations.isEmpty())
+            val expectedKind = when (approval.kind) {
+                ApprovalPostingKind.RECEIPT -> com.duluin.ftth.inventory.domain.model.MovementKind.RECEIVE
+                ApprovalPostingKind.TITLE_CORRECTION -> com.duluin.ftth.inventory.domain.model.MovementKind.TITLE_CORRECTION
+            }
+            require(command.kind == expectedKind && command.splits.isEmpty() && command.reservations.isEmpty())
             stock.lockBalances(command, command.operation.recordedAt)
             assertReceiptApproval(sql, approval, true)
         }
