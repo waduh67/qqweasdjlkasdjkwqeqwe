@@ -19,6 +19,7 @@ abstract class CustomerAssetReplacementScenarios : CustomerAssetReplacementFixtu
         val swap = swappedCase()
         val stock = fixture(swap.case.replacement.stock.token)
         val before = physicalFingerprint(swap.case.old)
+        val telemetry = telemetryFingerprint(swap.case.old)
         val status = AtomicInteger(503)
         val calls = AtomicInteger()
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -39,6 +40,7 @@ abstract class CustomerAssetReplacementScenarios : CustomerAssetReplacementFixtu
 
             assertThat(failedDelivery).isTrue()
             assertThat(physicalFingerprint(swap.case.old)).isEqualTo(before)
+            assertThat(telemetryFingerprint(swap.case.old)).isEqualTo(telemetry)
             stock.transaction {
                 assertThat(scalar("SELECT state||'|'||failure_code FROM fulfillment_asset_delivery WHERE operation_id='${swap.operation}'"))
                     .isEqualTo("RECONCILIATION_REQUIRED|ASSET_ADAPTER_HTTP_503")
@@ -48,6 +50,7 @@ abstract class CustomerAssetReplacementScenarios : CustomerAssetReplacementFixtu
             val restartedDelivery = AssetProvisioningDelivery(store, AssetProvisioningHttpAdapter("http://127.0.0.1:${server.address.port}/apply", ""))
             TenantContext.runAs(stock.tenant) { assertThat(restartedDelivery.deliver(swap.operation)).isTrue() }
             assertThat(physicalFingerprint(swap.case.old)).isEqualTo(before)
+            assertThat(telemetryFingerprint(swap.case.old)).isEqualTo(telemetry)
             stock.transaction { assertThat(scalar("SELECT state||'|'||attempts FROM fulfillment_asset_delivery WHERE operation_id='${swap.operation}'")).isEqualTo("SUCCEEDED|2") }
             TenantContext.runAs(stock.tenant) { assertThat(restartedDelivery.deliver(swap.operation)).isFalse() }
             assertThat(calls.get()).isEqualTo(2)

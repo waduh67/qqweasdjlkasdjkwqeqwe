@@ -16,6 +16,7 @@ abstract class CustomerAssetReplacementFixture : CustomerAssetOwnershipFixture()
 
     protected fun swappedCase(): CompletedSwap {
         val case = replacementCase()
+        val telemetry = populateTelemetry(case.old)
         val authorized = authorizeReplacement(case)
         assertThat(authorized.status).withFailMessage(authorized.contentAsString).isEqualTo(200)
         val authorization = mapper.readTree(authorized.contentAsString).path("authorizationId").asString()
@@ -23,7 +24,24 @@ abstract class CustomerAssetReplacementFixture : CustomerAssetOwnershipFixture()
             "expectedTitleRevision":0,"evidenceId":"${case.evidence}","topology":null}"""
         val swapped = request("POST", "/api/customers/${case.old.installation.customer}/assets/replace", case.replacement.receiver.first, body, "swap")
         assertThat(swapped.status).withFailMessage(swapped.contentAsString).isEqualTo(201)
+        assertThat(telemetryFingerprint(case.old)).isEqualTo(telemetry)
         return CompletedSwap(case, UUID.fromString(mapper.readTree(swapped.contentAsString).path("operationId").asString()), swapped.contentAsString, body)
+    }
+
+    protected fun populateTelemetry(case: OwnershipCase): String {
+        fixture(case.installation.receipt.stock.token).transaction {
+            sql("""INSERT INTO onu_metric(time,tenant_id,onu_id,status,rx_power_dbm,uptime_seconds)
+                SELECT now()-sample*interval '1 second','$tenant','${case.installation.operation}','ONLINE',-19.25-sample,240+sample
+                FROM generate_series(1,3) sample""")
+        }
+        return telemetryFingerprint(case)
+    }
+
+    protected fun telemetryFingerprint(case: OwnershipCase): String = fixture(case.installation.receipt.stock.token).transaction {
+        sql("SET LOCAL TIME ZONE 'UTC'")
+        scalar("""SELECT md5(jsonb_build_object('metrics',(SELECT jsonb_agg(to_jsonb(metric) ORDER BY time) FROM onu_metric metric WHERE onu_id='${case.installation.operation}'),
+            'opening',(SELECT snapshot FROM onu_topology_history WHERE onu_id='${case.installation.operation}' AND revision=0),
+            'installation',(SELECT response::jsonb FROM customer_asset_installation WHERE assignment_id='${case.installation.operation}'))::text)""")
     }
 
     protected fun replacementCase(acknowledged: Boolean = true, oldOwnership: String = "LOAN"): ReplacementCase {
