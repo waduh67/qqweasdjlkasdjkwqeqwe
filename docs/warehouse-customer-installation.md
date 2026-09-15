@@ -93,9 +93,10 @@ SKU categories `ONU` and `ONT` create ONU episodes. Other serialized equipment,
 including routers, receives the same physical assignment and customer receipt
 without fabricating an ONU or accepting ONU topology.
 
-LOAN is the default. SALE records intent only. Legal title remains ISP and no
-handover, invoice, payment, swap, removal, return or telemetry-attribution workflow
-is enabled here. Task20 remains subject to independent verification.
+LOAN is the default. SALE records intent only. Installation itself retains ISP
+title and creates no invoice, payment, swap, removal, return or telemetry-attribution
+workflow. The separate [task21 acceptance path](warehouse-asset-handover.md) can
+accept handover; that task remains in progress and is not a title-correction path.
 
 Forward migrations are V175.59 through V175.66. Task19 authorization row/history
 shapes and all previously applied migration bytes remain unchanged.
