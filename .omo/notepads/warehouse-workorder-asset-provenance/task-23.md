@@ -28,3 +28,9 @@
 - Current state: isolated infrastructure recovered by executor tests, independent verification pending. Exact next step after confirmation: up/check, actual legacy active telemetry/source-gate baseline, then genuine task23 failing-first behavior tests before implementation. Task23 remains unchecked and wholly unimplemented.
 - Additive evidence: .omo/evidence/warehouse-workorder-asset-provenance/task-23/infrastructure-repair/DoneClaim.md. XML archive SHA256s: run1=11a9ba1cc8f07cf8d931be3cbb4bef4aafb2c76fe5d2a493721e3b873c4e8ee5; run2=4d8353fe87650627d9f121685e4987cbf64accba96c75ce7e5e99a11691fb7b7. These archives remain local/untracked; this summary is portable.
 - Repair plus direct test committed as a61fdf5942063de1f994e1122744bfce6bcff9c7, immediately pushed normally and confirmed by live remote SHA. Author/committer use authorized commit-scoped identity; no Git config changes. Independent confirmation remains pending.
+
+## 2026-09-16 Infrastructure Independently Confirmed
+
+- Verifier ses_f56815f33ffe2OwxmAqXcjMN5o independently confirmed the prerequisite at checkpoint beb2e4381f48752086818f53446674251f8d3672. Fresh up/check and WarehouseEnvironmentIT executed7 tests,0 failures/errors/skips,7 testcase elements; actual MinIO digest/version/localhost and real S3/nonowner/RLS checks passed.
+- Verifier cleanup left zero owned resources/listeners/JVMs, retaining both task volumes. Its resource-registration.md was reread. safe_to_resume_task23=true supersedes the infrastructure pending/blocked entries above.
+- Exact next action: trace current owner APIs and establish actual legacy telemetry/current source-gate baseline, then genuine task23 behavioral red tests before implementation. Task23 remains unchecked and unimplemented at this confirmation checkpoint; no infrastructure test is counted as feature proof.
