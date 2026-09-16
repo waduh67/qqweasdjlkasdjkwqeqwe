@@ -15,4 +15,5 @@ interface CustomerObservationApi {
 data class ObservationPath(val oltId: UUID?, val oltCode: String, val ponPortLabel: String?, val ponPortId: UUID? = null)
 data class ObservationEpisode(val onu: OnuRef, val assignmentId: UUID?, val assignmentRevision: Long,
     val episodeRevision: Long, val startedAt: Instant, val endedAt: Instant?, val legacy: Boolean)
-data class ObservationAttribution(val episode: ObservationEpisode?, val reason: String?)
+data class ObservationAttribution(val episode: ObservationEpisode?, val reason: String?, val topologyRevision: Long? = null,
+    val networkEdgeIds: List<Long> = emptyList())

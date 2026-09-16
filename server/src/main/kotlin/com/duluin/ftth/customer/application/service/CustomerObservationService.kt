@@ -11,7 +11,8 @@ import java.util.Locale
 
 @Service
 @Transactional(readOnly = true)
-class CustomerObservationService(private val store: CustomerObservationStore) : CustomerObservationApi {
+class CustomerObservationService(private val store: CustomerObservationStore,
+    private val network: com.duluin.ftth.network.NetworkObservationApi) : CustomerObservationApi {
     @Transactional(propagation = Propagation.MANDATORY, readOnly = true)
     override fun lockOwnershipView() = store.lockOwnershipView()
 
@@ -30,18 +31,24 @@ class CustomerObservationService(private val store: CustomerObservationStore) : 
         }
         if (episodes.size != 1) return ObservationAttribution(null, if (episodes.isEmpty()) "NO_EPISODE_AT_TIME" else "AMBIGUOUS_EPISODE")
         val episode = episodes.single()
+        var topologyRevision: Long? = null
+        var networkEdgeIds = emptyList<Long>()
         if (context != null) {
             val path = store.historicalPath(episode, observedAt)
                 ?: return ObservationAttribution(null, "MISSING_PATH_HISTORY")
+            topologyRevision = path.revision
             if (path.hasOdp) {
                 if (path.unverified) return ObservationAttribution(null, "UNVERIFIED_PATH_HISTORY")
-                if (context.oltId == null || path.oltId != context.oltId ||
-                    (context.ponPortId != null && path.ponId != context.ponPortId) ||
-                    (context.ponPortLabel != null && path.label != context.ponPortLabel))
+                val upstream = path.odpId?.let { network.pathAt(it, observedAt) }
+                    ?: return ObservationAttribution(null, "UNVERIFIED_UPSTREAM_PATH")
+                networkEdgeIds = upstream.edgeIds
+                if (context.oltId == null || upstream.oltId != context.oltId ||
+                    (context.ponPortId != null && upstream.ponPortId != context.ponPortId) ||
+                    (context.ponPortLabel != null && upstream.label != context.ponPortLabel))
                     return ObservationAttribution(null, "PATH_MISMATCH")
             }
         }
-        return ObservationAttribution(episode, null)
+        return ObservationAttribution(episode, null, topologyRevision, networkEdgeIds)
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

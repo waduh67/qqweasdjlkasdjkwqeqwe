@@ -61,16 +61,19 @@ class CustomerObservationStore(private val entityManager: EntityManager,
         }
     }
 
-    data class PathSnapshot(val hasOdp: Boolean, val oltId: UUID?, val ponId: UUID?, val label: String?, val unverified: Boolean)
+    data class PathSnapshot(val hasOdp: Boolean, val oltId: UUID?, val ponId: UUID?, val label: String?, val unverified: Boolean,
+        val odpId: UUID?, val revision: Long)
 
     fun historicalPath(episode: ObservationEpisode, at: Instant): PathSnapshot? = jdbc { connection ->
-        connection.prepareStatement("""SELECT has_odp,olt_id,pon_port_id,pon_port_label,baseline AND captured_at>? AS unverified
-            FROM customer_onu_observation_path WHERE tenant_id=? AND onu_id=? AND (topology_revision=0 OR effective_at<=?)
-            ORDER BY topology_revision DESC LIMIT 1""").use { query ->
+        connection.prepareStatement("""SELECT p.has_odp,p.olt_id,p.pon_port_id,p.pon_port_label,p.baseline AND p.captured_at>? AS unverified,
+            (h.snapshot->>'odpId')::uuid,p.topology_revision
+            FROM customer_onu_observation_path p JOIN onu_topology_history h ON (h.tenant_id,h.onu_id,h.revision)=(p.tenant_id,p.onu_id,p.topology_revision)
+            WHERE p.tenant_id=? AND p.onu_id=? AND (p.topology_revision=0 OR p.effective_at<=?)
+            ORDER BY p.topology_revision DESC LIMIT 1""").use { query ->
             query.setTimestamp(1, Timestamp.from(at)); query.setObject(2, TenantContext.tenantId())
             query.setObject(3, episode.onu.id); query.setTimestamp(4, Timestamp.from(at))
             query.executeQuery().use { rows -> if (rows.next()) PathSnapshot(rows.getBoolean(1), rows.getObject(2, UUID::class.java),
-                rows.getObject(3, UUID::class.java), rows.getString(4), rows.getBoolean(5)) else null }
+                rows.getObject(3, UUID::class.java), rows.getString(4), rows.getBoolean(5), rows.getObject(6, UUID::class.java), rows.getLong(7)) else null }
         }
     }
 
