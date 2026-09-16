@@ -20,6 +20,9 @@ class WarehouseHttpErrors {
     @ExceptionHandler(WarehouseContractException::class)
     fun contract(error: WarehouseContractException) = ResponseEntity.status(error.error.code.httpStatus).body(error.error)
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException::class)
+    fun conflict(error: org.springframework.dao.DataIntegrityViolationException) = response(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+
     @ExceptionHandler(JacksonException::class, ValidationException::class, HttpMessageNotReadableException::class,
         MissingRequestValueException::class, MethodArgumentTypeMismatchException::class, org.springframework.web.multipart.MultipartException::class)
     fun malformed(error: Exception) = response(WarehouseErrorCode.MALFORMED_REQUEST)
