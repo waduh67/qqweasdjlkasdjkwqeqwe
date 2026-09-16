@@ -23,11 +23,11 @@ class WorkOrderInventoryValidationAdapter(private val entityManager: EntityManag
         val current = authority.lockActor(context.authorityFence.identity)
         if (binding.tenantId != TenantContext.tenantId() || binding.actorId != current.fence.identity.userId ||
             current.fence.identity != context.authorityFence.identity) fail(WarehouseErrorCode.FORBIDDEN)
+        if (!current.platformAdmin && !current.permissions.containsAll(setOf("workorder.order.field", "customer.onu.assign")))
+            fail(WarehouseErrorCode.FORBIDDEN)
         if (binding.authorityEpoch != current.fence.epoch || current.fence.epoch != context.authorityFence.epoch)
             fail(WarehouseErrorCode.STALE_AUTHORITY)
         if (binding.cutoverEpoch != context.cutoverFence.snapshot.epoch) fail(WarehouseErrorCode.STALE_CUTOVER)
-        if (!current.platformAdmin && !current.permissions.containsAll(setOf("workorder.order.field", "customer.onu.assign")))
-            fail(WarehouseErrorCode.FORBIDDEN)
         val workType = when (binding.purpose) {
             DeploymentPurpose.INSTALL -> "PSB"
             DeploymentPurpose.REPLACE -> "MIGRATION"

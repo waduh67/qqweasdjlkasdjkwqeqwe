@@ -107,4 +107,23 @@ class WarehouseDiscoveryITProvisioning : CustomerDeploymentFixture() {
             assertThat(scalar("SELECT count(*) FROM monitoring_discovery_receipt")).isEqualTo("1")
         }
     }
+
+    @Test
+    fun `revoked discovery replay denies the original response under current permissions`() {
+        val installation = installation(extraPermissions = setOf("monitoring.provisioning.manage"))
+        val discovered = discover(installation)
+        val body = """{"customerId":"${installation.customer}","authorizationId":"${installation.authorization}","expectedRevision":0,
+            "odpId":null,"portNumber":null,"installRxPowerDbm":null}"""
+        val path = "/api/monitoring/discovered-onus/$discovered/provision"
+        assertThat(request("POST", path, installation.receipt.receiver.first, body, "revoked-replay").status).isEqualTo(200)
+        assertThat(request("PUT", "/api/users/${installation.receipt.receiver.second}/access", installation.receipt.stock.token,
+            """{"roleIds":[],"areaIds":[]}""").status).isEqualTo(200)
+        val denied = request("POST", path, installation.receipt.receiver.first, body, "revoked-replay")
+        assertThat(denied.status).withFailMessage(denied.contentAsString).isEqualTo(403)
+        assertThat(denied.contentAsString).doesNotContain("firstSeenAt", "lastRxPowerDbm")
+        fixture(installation.receipt.stock.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM monitoring_discovery_receipt")).isEqualTo("1")
+        }
+    }
 }
