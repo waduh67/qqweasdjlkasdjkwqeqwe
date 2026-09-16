@@ -67,6 +67,12 @@ advance an active assignment revision, so observation bindings must read the
 actual inventory-owned revision rather than infer it from open/closed state.
 The failing handover/cache regression now drives this forward binding correction.
 
+V175_101__monitoring_batch_scope.sql is reserved before creation. Final live QA
+reproduced cross-tenant batch suppression from the historical global batch_id
+primary key. Preserve existing rows, scope identity to tenant/collector/batch,
+enforce tenant RLS and a composite collector FK, and retain replay markers for
+the full72h acceptance window plus5min skew. Retention remains tenant-scoped.
+
 Task23 reserves `V175_90__customer_observation_attribution.sql`,
 `V175_91__monitoring_observation_binding.sql`, and
 `V175_92__cpe_episode_snapshot_binding.sql` before SQL creation. These add

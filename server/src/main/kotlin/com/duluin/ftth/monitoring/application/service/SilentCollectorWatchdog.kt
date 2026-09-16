@@ -26,7 +26,7 @@ import java.util.UUID
 @Component
 class SilentCollectorWatchdog(
     private val collectorRepository: CollectorRepository,
-    private val batchRepository: IngestBatchRepository,
+    private val retention: IngestBatchRetention,
     private val evaluator: SilentCollectorEvaluator,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -50,17 +50,15 @@ class SilentCollectorWatchdog(
     }
 
     /**
-     * Jendela dedup hanya perlu menutupi percobaan ulang collector, yang berumur
-     * menit. Menyimpannya lebih lama hanya menumpuk baris tanpa guna.
-     *
-     * Dipanggil scheduler dari luar kelas, sehingga `@Transactional` di sini
-     * benar-benar melewati proxy — berbeda dengan [checkCollectors] yang harus
-     * mendelegasikan ke komponen terpisah.
+     * Retensi mencakup jendela penerimaan72jam dan toleransi clock5menit.
+     * Setiap tenant dibersihkan dalam transaksi dan konteks RLS sendiri.
      */
     @Scheduled(fixedDelayString = "\${ftth.monitoring.batch-cleanup-interval:PT1H}")
-    @Transactional
     fun purgeOldBatches() {
-        val removed = batchRepository.deleteOlderThan(Instant.now().minus(Duration.ofHours(6)))
+        val cutoff = IngestBatchRetention.cutoff(Instant.now())
+        val removed = retention.tenantIds().sumOf { tenant ->
+            TenantContext.runAs(tenant) { retention.purge(cutoff).toLong() }
+        }
         if (removed > 0) log.debug("{} catatan batch lama dibersihkan", removed)
     }
 }

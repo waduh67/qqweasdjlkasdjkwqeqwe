@@ -27,7 +27,7 @@ class IngestBatchPersistenceAdapter : IngestBatchRepository {
             """
             INSERT INTO ingest_batch (batch_id, collector_id, tenant_id, reading_count)
             VALUES (:batchId, CAST(:collectorId AS uuid), CAST(:tenantId AS uuid), :readingCount)
-            ON CONFLICT (batch_id) DO NOTHING
+            ON CONFLICT (tenant_id, collector_id, batch_id) DO NOTHING
             """.trimIndent(),
         )
             .setParameter("batchId", batchId)

@@ -49,6 +49,7 @@ class MetricIngestionService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun ingestRaw(collectorId: UUID, tenantId: UUID, batch: com.duluin.ftth.monitoring.application.port.inbound.CollectorObservationBatch): IngestResult {
+        validateBatchId(batch.batchId)
         if (batch.readings.size > MetricBatch.MAX_READINGS)
             throw com.duluin.ftth.common.domain.error.ValidationException("Batch exceeds maximum readings")
         if (!batchRepository.registerIfNew(batch.batchId, collectorId, tenantId, batch.readings.size))
@@ -70,6 +71,7 @@ class MetricIngestionService(
     }
 
     fun ingest(collectorId: UUID, tenantId: UUID, batch: MetricBatch): IngestResult {
+        validateBatchId(batch.batchId)
         if (batch.readings.size > MetricBatch.MAX_READINGS) {
             // Collector nakal atau salah versi; ditolak agar tidak membebani ingestion.
             throw com.duluin.ftth.common.domain.error.ValidationException(
@@ -148,6 +150,10 @@ class MetricIngestionService(
 
     private fun trustedTime(time: Instant, now: Instant): Boolean =
         com.duluin.ftth.customer.ObservationTimePolicy.rejection(time, now) == null
+
+    private fun validateBatchId(id: String) {
+        if (id.isBlank() || id.length > 64) throw com.duluin.ftth.common.domain.error.ValidationException("Batch id must contain 1-64 characters")
+    }
 
     /**
      * Menilai seluruh jenis alarm untuk satu ONU.
