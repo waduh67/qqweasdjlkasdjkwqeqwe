@@ -79,12 +79,16 @@ class CpeService(
         val before = acsGateway.findDevice(device.genieacsId)
         fun fresh(snapshot: com.duluin.ftth.cpe.application.port.outbound.AcsDevice?): Boolean =
             snapshot != null && snapshot.serialNumber.trim().uppercase(Locale.ROOT) == device.serialNumber.trim().uppercase(Locale.ROOT) &&
-                (episode.legacy || snapshot.lastInformAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true)
+                (episode.legacy || (snapshot.lastInformAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true &&
+                    snapshot.observedFieldsAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true))
         if (!fresh(before)) throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
-        val wifi = acsGateway.wifiNetworks(device.genieacsId)
-            .map { WifiView(it.ref, it.ssid, it.passphrase, it.band, it.enabled) }
-        val hosts = acsGateway.connectedHosts(device.genieacsId)
-            .map { HostView(it.hostName, it.ipAddress, it.macAddress, it.active) }
+        val wifiReadings = acsGateway.wifiNetworks(device.genieacsId)
+        val hostReadings = acsGateway.connectedHosts(device.genieacsId)
+        if (!episode.legacy && (wifiReadings.map { it.observedAt } + hostReadings.map { it.observedAt }).any {
+            it == null || it.isBefore(episode.startedAt) || it.isAfter(Instant.now().plusSeconds(300)) })
+            throw NotFoundException("CPE_PARAMETER_FRESHNESS_REQUIRED")
+        val wifi = wifiReadings.map { WifiView(it.ref, it.ssid, it.passphrase, it.band, it.enabled) }
+        val hosts = hostReadings.map { HostView(it.hostName, it.ipAddress, it.macAddress, it.active) }
         val after = acsGateway.findDevice(device.genieacsId)
         if (!fresh(after) || after?.lastInformAt != before?.lastInformAt ||
             observations.currentEpisode(device.serialNumber) != episode || deviceRepository.findById(deviceId) == null)

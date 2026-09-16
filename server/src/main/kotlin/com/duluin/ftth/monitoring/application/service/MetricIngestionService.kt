@@ -118,21 +118,22 @@ class MetricIngestionService(
         for (reading in readings.sortedBy { it.observedAt }) {
             val serial = reading.serialNumber.trim().uppercase(Locale.ROOT)
             val validTime = !untrustedBatch && trustedTime(reading.observedAt, now)
-            val attribution = if (validTime) observations.resolveObservation(serial, reading.observedAt,
+            val storedTime = reading.observedAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS)
+            val attribution = if (validTime) observations.resolveObservation(serial, storedTime,
                 ObservationPath(oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)], reading.oltCode, reading.ponPortLabel)) else null
             val episode = attribution?.episode
             if (episode == null) {
                 unassigned.append(reading, attribution?.reason ?: "UNTRUSTED_TIMESTAMP")
                 unknown += serial
-                if (validTime && attribution?.reason == "NO_EPISODE_AT_TIME")
+                if (validTime && attribution?.reason == "NO_EPISODE_AT_TIME" && observations.currentEpisode(serial) == null)
                     discoveredOnuRecorder.capture(tenantId, listOf(reading), oltIdsByCode)
                 continue
             }
             val onu = episode.onu
-            points += OnuMetricPoint(reading.observedAt, tenantId, onu.id, oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)],
+            points += OnuMetricPoint(storedTime, tenantId, onu.id, oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)],
                 reading.status.name, reading.rxPowerDbm, reading.txPowerDbm, reading.uptimeSeconds, reading.distanceMeters,
                 reading.lastDownCause?.name, reading.lastOffAt, reading.lastOnAt)
-            if (observations.advanceLiveObservation(episode, reading.observedAt)) {
+            if (observations.advanceLiveObservation(episode, storedTime)) {
                 customerApi.recordObservedOnuStatuses(mapOf(onu.id to reading.status.toOnuStatus()))
                 evaluateAlarms(tenantId, reading, onu)
                 changed = true

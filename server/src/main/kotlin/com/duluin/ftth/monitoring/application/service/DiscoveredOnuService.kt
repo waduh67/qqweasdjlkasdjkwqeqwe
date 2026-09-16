@@ -68,6 +68,7 @@ class DiscoveredOnuService(
     @Transactional
     override fun delete(id: UUID) {
         val discovered = require(id)
+        if (discovered.state == DiscoveredOnuState.PROVISIONED) throw ConflictException("PROVISIONED_OBSERVATION_RETAINED")
         repository.deleteById(discovered.id)
     }
 

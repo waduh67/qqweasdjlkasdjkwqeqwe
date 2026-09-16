@@ -33,6 +33,8 @@ class CpeSyncScheduler(
     private val acsGateway: AcsGateway,
     private val tenantApi: TenantApi,
     private val syncService: CpeSyncService,
+    private val ownerQuery: CpeObservationOwnerQuery,
+    private val unassigned: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeUnassignedObservationStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -78,15 +80,37 @@ class CpeSyncScheduler(
             return
         }
 
+        val serials = snapshots.mapTo(sortedSetOf()) { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
+        val owners = mutableMapOf<String, MutableList<UUID>>()
+        try {
+            ownerQuery.tenantIds().forEach { tenant ->
+                TenantContext.runAs(tenant) { ownerQuery.serials(serials) }.forEach { serial ->
+                    owners.getOrPut(serial) { mutableListOf() }.add(tenant)
+                }
+            }
+        } catch (failure: Exception) {
+            log.warn("ACS ownership resolution failed: {}", failure.javaClass.simpleName)
+            lastRunAtValue = Instant.now()
+            lastRunOkValue = false
+            return
+        }
+        var successful = true
         tenantApi.findActiveTenantIds().forEach { tenantId ->
+            snapshots.filter { snapshot -> owners[snapshot.serialNumber.trim().uppercase(java.util.Locale.ROOT)]
+                ?.let { tenantId in it && it.size > 1 } == true }.forEach { snapshot ->
+                TenantContext.runAs(tenantId) { unassigned.record(snapshot, "AMBIGUOUS_SERIAL") }
+            }
+            val eligible = snapshots.filter { owners[it.serialNumber.trim().uppercase(java.util.Locale.ROOT)]?.singleOrNull() == tenantId }
+            if (eligible.isEmpty()) return@forEach
             runCatching {
-                TenantContext.runAs(tenantId) { syncService.sync(snapshots) }
+                TenantContext.runAs(tenantId) { syncService.sync(eligible) }
             }.onFailure {
+                successful = false
                 log.warn("Sinkronisasi CPE tenant {} gagal: {}", tenantId, it.message)
             }
         }
         lastRunAtValue = Instant.now()
-        lastRunOkValue = true
+        lastRunOkValue = successful
     }
 }
 
@@ -107,6 +131,7 @@ class CpeSyncService(
     private val deviceRepository: CpeDeviceRepository,
     private val observations: CustomerObservationApi,
     private val bindings: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeObservationBindingStore,
+    private val unassigned: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeUnassignedObservationStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -116,8 +141,15 @@ class CpeSyncService(
             .filterValues { it.size == 1 }.mapValues { it.value.single() }
         observations.lockEpisodes(bySerial.keys)
         val matchedOnus = bySerial.keys.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
-            val inform = bySerial[episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT)]?.lastInformAt
-            episode.legacy || (inform != null && !inform.isBefore(episode.startedAt) && !inform.isAfter(Instant.now().plusSeconds(300)))
+            val snapshot = bySerial.getValue(episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT))
+            val inform = snapshot.lastInformAt
+            val fresh = if (inform == null) episode.legacy else
+                !inform.isAfter(Instant.now().plusSeconds(300)) && (episode.legacy || !inform.isBefore(episode.startedAt))
+            if (!fresh) unassigned.record(snapshot, "STALE_INFORM")
+            val fieldsFresh = episode.legacy || snapshot.observedFieldsAt?.let {
+                !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true
+            if (fresh && !fieldsFresh) unassigned.record(snapshot, "STALE_FIELDS")
+            fresh && fieldsFresh
         }.map { it.onu }
 
         matchedOnus.forEach { onu ->
@@ -137,7 +169,7 @@ class CpeSyncService(
                     temperatureC = snapshot.temperatureC,
                 )
                 row.linkTo(onu.customerId, onu.id)
-                deviceRepository.save(row)
+                deviceRepository.save(row.withObservedFieldsAt(snapshot.observedFieldsAt))
             } else {
                 deviceRepository.save(
                     CpeDevice.link(
@@ -154,7 +186,7 @@ class CpeSyncService(
                         temperatureC = snapshot.temperatureC,
                         customerId = onu.customerId,
                         onuId = onu.id,
-                    ),
+                    ).withObservedFieldsAt(snapshot.observedFieldsAt),
                 )
             }
         }

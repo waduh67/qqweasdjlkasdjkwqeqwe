@@ -25,6 +25,7 @@ data class WifiNetwork(
     /** Pita frekuensi bila terbaca (mis. "2.4GHz"/"5GHz"); null bila perangkat diam. */
     val band: String?,
     val enabled: Boolean,
+    val observedAt: java.time.Instant? = null,
 )
 
 /** Satu perangkat yang sedang tersambung ke LAN CPE — dari tabel `Hosts` TR-069. */
@@ -33,4 +34,5 @@ data class ConnectedHost(
     val ipAddress: String?,
     val macAddress: String?,
     val active: Boolean,
+    val observedAt: java.time.Instant? = null,
 )

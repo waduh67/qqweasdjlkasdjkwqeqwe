@@ -22,7 +22,7 @@ class WarehouseDiscoveryITIntegrity : CustomerAssetEpisodeFixture() {
         fixture.stock.transaction { sql(fixture.assignment(assignment, start = start)); sql(fixture.episode(assignment, start = start)) }
         TenantContext.runAs(fixture.stock.tenant) {
             context.getBean(CpeSyncService::class.java).sync(listOf(AcsDevice("guard-${fixture.asset}", fixture.serial,
-                null, null, "Vendor", "Model", null, "192.0.2.1", Instant.now(), "private")))
+                null, null, "Vendor", "Model", null, "192.0.2.1", Instant.now(), "private", observedFieldsAt = Instant.now())))
         }
         val query = when (scenario) {
             "REPARENT" -> "UPDATE cpe_device SET customer_id='${fixture.customerB}'"

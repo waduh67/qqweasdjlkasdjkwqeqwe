@@ -11,6 +11,13 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
     private val totals: MaterialPhysicalTotalsStore) {
     private val mapper = jacksonObjectMapper()
 
+    fun assignmentRevisions(ids: Set<UUID>): Map<UUID, Long> = jdbc.execute { sql ->
+        ids.chunked(1000).flatMap { chunk ->
+            sql.query("SELECT id,revision FROM inventory_asset_assignment WHERE tenant_id=? AND id IN (${chunk.joinToString(",") { "?" }})",
+                sql.tenant, *chunk.toTypedArray()) { it.uuid("id") to it.getLong("revision") }
+        }.toMap()
+    }
+
     fun pendingDiscovery(serial: String, customerId: UUID): UUID? = jdbc.execute { sql ->
         sql.query("""SELECT permit.id FROM inventory_deployment_authorization permit
             JOIN inventory_deployment_execution execution ON execution.tenant_id=permit.tenant_id AND execution.authorization_id=permit.id

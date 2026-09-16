@@ -12,7 +12,10 @@ import java.time.Instant
 import java.util.UUID
 
 @Repository
-class CustomerObservationStore(private val entityManager: EntityManager) {
+class CustomerObservationStore(private val entityManager: EntityManager,
+    private val inventory: com.duluin.ftth.inventory.InventoryDeploymentApi) {
+    private data class EpisodeRow(val onu: OnuRef, val assignmentId: UUID?, val revision: Long,
+        val start: Instant, val end: Instant?, val legacy: Boolean)
     private fun <T> jdbc(block: (Connection) -> T): T = entityManager.unwrap(Session::class.java).doReturningWork(block)
 
     fun lock(serials: Set<String>) = jdbc { connection ->
@@ -24,21 +27,29 @@ class CustomerObservationStore(private val entityManager: EntityManager) {
         }
     }
 
-    fun episodes(serial: String): List<ObservationEpisode> = jdbc { connection ->
+    fun episodes(serial: String): List<ObservationEpisode> = episodes(setOf(serial))
+
+    fun episodes(serials: Set<String>): List<ObservationEpisode> = jdbc { connection ->
         connection.prepareStatement("""SELECT o.id,o.serial_number,o.customer_id,c.name,o.odp_id,o.status,o.assignment_id,
-            o.episode_revision,coalesce(o.started_at,o.created_at),o.retired_at,o.warehouse_admission,
-            CASE WHEN o.retired_at IS NULL THEN 0 ELSE 1 END
+            o.episode_revision,coalesce(o.started_at,o.created_at),o.retired_at,o.warehouse_admission
             FROM onu o JOIN customer c ON c.tenant_id=o.tenant_id AND c.id=o.customer_id
-            WHERE o.tenant_id=? AND warehouse_canonical_serial(o.serial_number)=? ORDER BY o.id""").use { query ->
-            query.setObject(1, TenantContext.tenantId()); query.setString(2, serial)
+            WHERE o.tenant_id=? AND warehouse_canonical_serial(o.serial_number)=ANY(?) ORDER BY o.id""").use { query ->
+            query.setObject(1, TenantContext.tenantId()); query.setArray(2, connection.createArrayOf("text", serials.toTypedArray()))
             query.executeQuery().use { rows -> buildList {
-                while (rows.next()) add(ObservationEpisode(
+                while (rows.next()) add(EpisodeRow(
                     OnuRef(rows.getObject(1, UUID::class.java), rows.getString(2), rows.getObject(3, UUID::class.java),
                         rows.getString(4), rows.getObject(5, UUID::class.java), rows.getString(6)),
-                    rows.getObject(7, UUID::class.java), rows.getLong(12), rows.getLong(8), rows.getTimestamp(9).toInstant(),
+                    rows.getObject(7, UUID::class.java), rows.getLong(8), rows.getTimestamp(9).toInstant(),
                     rows.getTimestamp(10)?.toInstant(), rows.getString(11) == "LEGACY_UNRESOLVED"))
             } }
-        }.also { episodes -> episodes.filterNot { it.legacy }.forEach { connection.validateOnuEpisode(it.onu.id) } }
+        }.also { episodes -> episodes.filterNot { it.legacy }.forEach { connection.validateOnuEpisode(it.onu.id) } }.let { episodes ->
+            val revisions = inventory.assignmentRevisions(episodes.mapNotNullTo(HashSet()) { it.assignmentId })
+            episodes.map { episode ->
+                val revision = if (episode.assignmentId == null) 0L else revisions[episode.assignmentId]
+                    ?: throw com.duluin.ftth.common.domain.error.ConflictException("ASSIGNMENT_REVISION_REQUIRED")
+                ObservationEpisode(episode.onu, episode.assignmentId, revision, episode.revision, episode.start, episode.end, episode.legacy)
+            }
+        }
     }
 
     data class PathSnapshot(val hasOdp: Boolean, val oltId: UUID?, val ponId: UUID?, val label: String?, val unverified: Boolean)

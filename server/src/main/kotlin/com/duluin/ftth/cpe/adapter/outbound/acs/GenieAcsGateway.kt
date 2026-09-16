@@ -112,6 +112,7 @@ class GenieAcsGateway(
                 passphrase = cfg.param("KeyPassphrase") ?: cfg.param("PreSharedKey.1.KeyPassphrase"),
                 band = cfg.param("Standard"),
                 enabled = cfg.paramBool("Enable") ?: true,
+                observedAt = observedParameterTime(cfg),
             )
         }
     }
@@ -128,6 +129,7 @@ class GenieAcsGateway(
                 ipAddress = host.param("IPAddress"),
                 macAddress = host.param("MACAddress"),
                 active = host.paramBool("Active") ?: false,
+                observedAt = observedParameterTime(host),
             )
         }
     }
@@ -287,6 +289,7 @@ class GenieAcsGateway(
         val genieacsId = plain("_id") ?: return null
         val serial = plain("_deviceId._SerialNumber") ?: return null
         val root = detectRoot()
+        val informedAt = plain("_lastInform")?.let { runCatching { Instant.parse(it) }.getOrNull() }
         return AcsDevice(
             genieacsId = genieacsId,
             serialNumber = serial,
@@ -296,9 +299,10 @@ class GenieAcsGateway(
             model = root?.let { param("$it.DeviceInfo.ModelName") } ?: plain("_deviceId._ProductClass"),
             softwareVersion = root?.let { param("$it.DeviceInfo.SoftwareVersion") },
             ipAddress = root?.let { externalIp(it) },
-            lastInformAt = plain("_lastInform")?.let { runCatching { Instant.parse(it) }.getOrNull() },
+            lastInformAt = informedAt,
             ssid = firstSsid(),
             temperatureC = firstTemperature(),
+            observedFieldsAt = observedParameterTime(this, informedAt),
         )
     }
 

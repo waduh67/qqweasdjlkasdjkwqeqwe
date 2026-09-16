@@ -18,6 +18,9 @@ class CustomerObservationService(private val store: CustomerObservationStore) : 
     override fun currentEpisode(serial: String): ObservationEpisode? =
         store.episodes(normalize(serial)).filter { it.endedAt == null }.singleOrNull()
 
+    override fun activeObservationSerials(serials: Set<String>): List<String> =
+        store.episodes(serials.mapTo(sortedSetOf()) { normalize(it) }).filter { it.endedAt == null }.map { normalize(it.onu.serialNumber) }
+
     override fun resolveObservation(serial: String, observedAt: Instant, context: ObservationPath?): ObservationAttribution {
         val episodes = store.episodes(normalize(serial)).filter {
             !observedAt.isBefore(it.startedAt) && (it.endedAt == null || observedAt.isBefore(it.endedAt))

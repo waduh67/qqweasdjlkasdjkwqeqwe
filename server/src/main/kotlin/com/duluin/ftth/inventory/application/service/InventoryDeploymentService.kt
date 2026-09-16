@@ -75,6 +75,8 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     override fun pendingDiscoveryAuthorization(serial: String, customerId: UUID): UUID? =
         store.pendingDiscovery(serial.trim().uppercase(java.util.Locale.ROOT), customerId)
 
+    override fun assignmentRevisions(assignmentIds: Set<UUID>): Map<UUID, Long> = store.assignmentRevisions(assignmentIds)
+
     fun consumeReplacement(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
         consumePurpose(request, metadata, DeploymentPurpose.REPLACE)
 

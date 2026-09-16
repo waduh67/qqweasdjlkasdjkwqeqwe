@@ -41,6 +41,32 @@ customer topology observation roots; V175.94 stores original discovery outcomes,
 and V175.95 seals CPE snapshots to their current episode and persisted fields.
 Applied V175.90-.92 remain unchanged.
 
+Task23 reserves V175_96__cpe_observation_conflicts.sql before creation. A real
+cross-tenant ACS ambiguity test reproduced the same global device being exposed
+to two tenants. Preserve those rows and append tenant-scoped immutable conflict
+records; the scheduler resolves unique owners across all tenants (including
+suspended tenants) through the existing public TenantAuthorityDirectory.
+
+V175_97__cpe_unassigned_observations.sql is reserved before creation for durable,
+tenant-scoped ambiguity/stale-Inform reasons. Only canonical serial and hashed
+ACS identity are retained there, never another customer's SSID/host/IP payload.
+
+V175_98__cpe_parameter_freshness.sql is reserved before creation. A fresh Inform
+with cached WiFi lacking post-assignment parameter timestamps reproduced an A-to-B
+field leak. Store immutable parameter-refresh evidence and require it for verified
+episode exposure. Old snapshots remain unchanged; legacy reads remain compatible.
+GenieACS parameter refresh semantics: https://github.com/genieacs/genieacs/blob/master/docs/provisions.md
+
+V175_99__monitoring_discovery_cycles.sql is reserved before creation. Actual task22
+removal followed by observation reproduced a permanently resolved inbox row.
+Preserve resolved history and permit one unresolved cycle per tenant/serial;
+recovery remains quarantined, never available stock or a new physical identity.
+
+V175_100__cpe_assignment_revision.sql is reserved before creation. Handover can
+advance an active assignment revision, so observation bindings must read the
+actual inventory-owned revision rather than infer it from open/closed state.
+The failing handover/cache regression now drives this forward binding correction.
+
 Task23 reserves `V175_90__customer_observation_attribution.sql`,
 `V175_91__monitoring_observation_binding.sql`, and
 `V175_92__cpe_episode_snapshot_binding.sql` before SQL creation. These add

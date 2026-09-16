@@ -50,7 +50,7 @@ class CpeDevicePersistenceAdapter(
             onuId = device.onuId,
         )
         val saved = jpa.saveAndFlush(entity).toDomain()
-        bindings.record(saved, episode)
+        bindings.record(saved, episode, device.observedFieldsAt)
         return saved
     }
 

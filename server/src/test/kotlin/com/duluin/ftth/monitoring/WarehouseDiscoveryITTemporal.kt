@@ -36,13 +36,14 @@ class WarehouseDiscoveryITTemporal : CustomerAssetEpisodeFixture() {
             """{"name":"Temporal","pollIntervalSeconds":60}""")
         assertThat(response.status).isEqualTo(201)
         val collector = UUID.fromString(mapper.readTree(response.contentAsString).path("collector").path("id").asString())
-        val sample = OnuReading(fixture.serial, "OLT-X", "1/1/1", OnuOperationalStatus.LOS, -30.0, null, null, null, boundary.minusMillis(1))
+        val sample = OnuReading(fixture.serial, "OLT-X", "1/1/1", OnuOperationalStatus.LOS, -30.0, null, null, null, boundary.minusNanos(1))
         val result = fixture.stock.transaction {
             context.getBean(MetricIngestionService::class.java).ingest(collector, tenant, MetricBatch(UUID.randomUUID().toString(), Instant.now(), listOf(sample)))
         }
         assertThat(result.accepted).isEqualTo(1)
         fixture.stock.transaction {
             assertThat(scalar("SELECT count(*) FROM onu_metric m JOIN onu o ON o.id=m.onu_id WHERE o.assignment_id='$first'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM onu_metric m JOIN onu o ON o.id=m.onu_id WHERE o.assignment_id='$first' AND m.time<'$boundary'")).isEqualTo("1")
             assertThat(scalar("SELECT count(*) FROM onu_metric m JOIN onu o ON o.id=m.onu_id WHERE o.assignment_id='$second'")).isEqualTo("0")
             assertThat(scalar("SELECT status FROM onu WHERE assignment_id='$second'")).isEqualTo("PENDING")
             assertThat(scalar("SELECT count(*) FROM alarm")).isEqualTo("0")
@@ -62,7 +63,8 @@ class WarehouseDiscoveryITTemporal : CustomerAssetEpisodeFixture() {
         val first = UUID.randomUUID()
         val second = UUID.randomUUID()
         fixture.stock.transaction { sql(fixture.assignment(first, start = start.toString())); sql(fixture.episode(first, start = start.toString())) }
-        val snapshot = AcsDevice("ACS-${fixture.asset}", fixture.serial, null, null, "Vendor", "A-model", null, "192.0.2.10", boundary.minusSeconds(10), "A-private")
+        val snapshot = AcsDevice("ACS-${fixture.asset}", fixture.serial, null, null, "Vendor", "A-model", null, "192.0.2.10",
+            boundary.minusSeconds(10), "A-private", observedFieldsAt = boundary.minusSeconds(10))
         val sync = context.getBean(CpeSyncService::class.java)
         TenantContext.runAs(fixture.stock.tenant) { sync.sync(listOf(snapshot)) }
         val oldId = fixture.stock.transaction { scalar("SELECT id FROM cpe_device WHERE customer_id='${fixture.customerA}'") }
@@ -77,9 +79,29 @@ class WarehouseDiscoveryITTemporal : CustomerAssetEpisodeFixture() {
             assertThat(scalar("SELECT customer_id FROM cpe_device WHERE id='$oldId'")).isEqualTo(fixture.customerA.toString())
             assertThat(scalar("SELECT ssid FROM cpe_device WHERE id='$oldId'")).isEqualTo("A-private")
         }
-        val fresh = snapshot.copy(lastInformAt = boundary.plusSeconds(1), model = "B-model", ssid = "B-private", ipAddress = "192.0.2.20")
+        TenantContext.runAs(fixture.stock.tenant) { sync.sync(listOf(snapshot.copy(lastInformAt = boundary.plusSeconds(1)))) }
+        fixture.stock.transaction {
+            assertThat(context.getBean(CpeApi::class.java).findDevicesForCustomer(fixture.customerB)).isEmpty()
+            assertThat(scalar("SELECT count(*) FROM cpe_unassigned_observation WHERE reason='STALE_FIELDS'")).isEqualTo("1")
+        }
+        val fresh = snapshot.copy(lastInformAt = boundary.plusSeconds(1), observedFieldsAt = boundary.plusSeconds(1),
+            model = "B-model", ssid = "B-private", ipAddress = "192.0.2.20")
         TenantContext.runAs(fixture.stock.tenant) { sync.sync(listOf(fresh)) }
         TenantContext.runAs(fixture.stock.tenant) { sync.sync(listOf(snapshot)) }
+        val ready = java.util.concurrent.CountDownLatch(2)
+        val startRace = java.util.concurrent.CountDownLatch(1)
+        java.util.concurrent.Executors.newFixedThreadPool(2).use { executor ->
+            val results = listOf(snapshot, fresh.copy(lastInformAt = boundary.plusSeconds(2))).map { sample ->
+                executor.submit {
+                    ready.countDown()
+                    check(startRace.await(20, java.util.concurrent.TimeUnit.SECONDS))
+                    TenantContext.runAs(fixture.stock.tenant) { sync.sync(listOf(sample)) }
+                }
+            }
+            check(ready.await(20, java.util.concurrent.TimeUnit.SECONDS))
+            startRace.countDown()
+            results.forEach { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }
+        }
         fixture.stock.transaction {
             val devices = context.getBean(CpeApi::class.java).findDevicesForCustomer(fixture.customerB)
             assertThat(devices).hasSize(1)
@@ -89,6 +111,23 @@ class WarehouseDiscoveryITTemporal : CustomerAssetEpisodeFixture() {
             assertThat(scalar("SELECT count(*) FROM cpe_device")).isEqualTo("2")
             assertThat(scalar("SELECT ssid FROM cpe_device WHERE id='$oldId'")).isEqualTo("A-private")
             assertThat(context.getBean(com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository::class.java).findById(UUID.fromString(oldId))).isNull()
+        }
+        val acs = context.getBean(com.duluin.ftth.InMemoryAcsGateway::class.java)
+        acs.reset()
+        try {
+            acs.seedDevice(fresh.copy(lastInformAt = boundary.plusSeconds(2), observedFieldsAt = boundary.plusSeconds(2)))
+            acs.seedWifi(snapshot.genieacsId, listOf(com.duluin.ftth.cpe.domain.model.WifiNetwork("WLAN.1", "A-private", null, null, true)))
+            val currentId = fixture.stock.transaction { scalar("SELECT id FROM cpe_device WHERE customer_id='${fixture.customerB}'") }
+            val response = request("GET", "/api/cpe/devices/$currentId/live", fixture.token)
+            assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(404)
+            assertThat(response.contentAsString).doesNotContain("A-private")
+            acs.seedWifi(snapshot.genieacsId, listOf(com.duluin.ftth.cpe.domain.model.WifiNetwork("WLAN.1", "B-private", null, null, true,
+                observedAt = boundary.plusSeconds(2))))
+            val freshResponse = request("GET", "/api/cpe/devices/$currentId/live", fixture.token)
+            assertThat(freshResponse.status).withFailMessage(freshResponse.contentAsString).isEqualTo(200)
+            assertThat(freshResponse.contentAsString).contains("B-private").doesNotContain("A-private")
+        } finally {
+            acs.reset()
         }
     }
 }

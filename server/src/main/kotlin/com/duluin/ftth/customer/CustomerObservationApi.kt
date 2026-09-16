@@ -6,6 +6,7 @@ import java.util.UUID
 interface CustomerObservationApi {
     fun lockEpisodes(serials: Set<String>)
     fun currentEpisode(serial: String): ObservationEpisode?
+    fun activeObservationSerials(serials: Set<String>): List<String>
     fun resolveObservation(serial: String, observedAt: Instant, context: ObservationPath? = null): ObservationAttribution
     fun advanceLiveObservation(episode: ObservationEpisode, observedAt: Instant): Boolean
 }

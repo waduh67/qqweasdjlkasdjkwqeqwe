@@ -133,6 +133,7 @@ data class AcsDevice(
     val ssid: String? = null,
     /** Suhu (°C) dari parameter vendor yang dikonfigurasi; null bila tak ada/tak dikonfigurasi. */
     val temperatureC: Double? = null,
+    val observedFieldsAt: Instant? = null,
 )
 
 /** Perubahan satu jaringan WiFi. Field null berarti "biarkan apa adanya". */

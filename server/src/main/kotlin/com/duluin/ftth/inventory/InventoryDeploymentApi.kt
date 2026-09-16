@@ -8,6 +8,7 @@ interface InventoryDeploymentApi {
     fun consume(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption
     fun consumeDiscovered(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption
     fun pendingDiscoveryAuthorization(serial: String, customerId: UUID): UUID?
+    fun assignmentRevisions(assignmentIds: Set<UUID>): Map<UUID, Long>
     fun acceptHandover(request: AcceptAssetHandoverRequest, metadata: WarehouseMutationMetadata): AssetAssignmentRef
     fun assignmentHistory(assetId: UUID, page: WarehousePageRequest): WarehousePage<AssetAssignmentRef>
 }

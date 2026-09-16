@@ -15,6 +15,9 @@ import java.time.Instant
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class WarehouseDiscoveryIT : WarehouseDiscoveryFixture() {
+    @org.springframework.beans.factory.annotation.Autowired
+    private lateinit var ingestion: com.duluin.ftth.monitoring.application.service.MetricIngestionService
+
     @Test
     fun `unissued discovered provision is a stable conflict and leaves observation actionable`() {
         val token = newTenantAdmin("discred")
@@ -78,5 +81,31 @@ class WarehouseDiscoveryIT : WarehouseDiscoveryFixture() {
         assertThat(scalar(token, "SELECT status FROM onu WHERE serial_number='$serial'")).isEqualTo("ONLINE")
         assertThat(scalar(token, "SELECT count(*) FROM alarm")).isEqualTo("0")
         assertThat(scalar(token, "SELECT count(*) FROM monitoring_unassigned_observation WHERE reason='PATH_MISMATCH'")).isEqualTo("1")
+    }
+
+    @Test
+    fun `server polls use server time rather than a supplied device timestamp`() {
+        val token = newTenantAdmin("discserverclock")
+        val device = legacy(token)
+        val before = Instant.now().minusSeconds(1)
+        val tenant = tenantId(token)
+        val result = com.duluin.ftth.common.tenant.TenantContext.runAs(tenant) {
+            ingestion.ingestReadings(tenant, listOf(com.duluin.ftth.contract.OnuReading(device.serial, "OLT-X", null,
+                com.duluin.ftth.contract.OnuOperationalStatus.ONLINE, -20.0, null, null, null, Instant.EPOCH)))
+        }
+        assertThat(result.accepted).isEqualTo(1)
+        assertThat(scalar(token, "SELECT count(*) FROM onu_metric WHERE onu_id='${device.onu}' AND time>='$before'")).isEqualTo("1")
+    }
+
+    @Test
+    fun `out of database range timestamp is retained without attempting a timestamp insert`() {
+        val token = newTenantAdmin("discextremetime")
+        val device = legacy(token)
+        val sample = """{"serialNumber":"${device.serial}","oltCode":"OLT-X","ponPortLabel":null,"status":"LOS",
+            "rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.MAX}"}"""
+        val result = postAsCollector("/api/collector/metrics", newCollector(token), batch(sample))
+        assertThat(JsonPath.read<Int>(result, "$.accepted")).isZero()
+        assertThat(scalar(token, "SELECT count(*) FROM monitoring_unassigned_observation WHERE observed_at IS NULL")).isEqualTo("1")
+        assertThat(scalar(token, "SELECT count(*) FROM onu_metric")).isEqualTo("0")
     }
 }

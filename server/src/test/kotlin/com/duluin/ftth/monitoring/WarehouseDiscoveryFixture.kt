@@ -13,6 +13,7 @@ abstract class WarehouseDiscoveryFixture : MonitoringEndToEndFixture() {
     @Autowired private lateinit var jwtDecoder: JwtDecoder
 
     protected data class Legacy(val customer: String, val onu: String, val serial: String)
+    protected fun tenantId(token: String): java.util.UUID = java.util.UUID.fromString(jwtDecoder.decode(token).getClaimAsString(JwtClaims.TENANT_ID))
 
     protected fun customer(token: String): String = JsonPath.read(post("/api/customers", token,
         """{"code":"C-${uniq()}","name":"Discovery fixture","address":"Test","location":{"longitude":106.99,"latitude":-6.24}}"""), "$.id")
