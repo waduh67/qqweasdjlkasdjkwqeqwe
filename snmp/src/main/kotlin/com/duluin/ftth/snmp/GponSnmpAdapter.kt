@@ -148,6 +148,7 @@ class GponSnmpAdapter(
             lastDownCause = lastDownCause(row),
             lastOffAt = timestampAt(profile.lastOffAtOid, row),
             lastOnAt = timestampAt(profile.lastOnAtOid, row),
+            pathProvenance = com.duluin.ftth.contract.OnuPathProvenance.UNVERIFIED_INDEX,
         )
     }
 

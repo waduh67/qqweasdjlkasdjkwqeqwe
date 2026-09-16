@@ -12,13 +12,14 @@ data class CollectorObservationReading(
     val serialNumber: String, val oltCode: String, val ponPortLabel: String?, val status: OnuOperationalStatus,
     val rxPowerDbm: Double?, val txPowerDbm: Double?, val uptimeSeconds: Long?, val distanceMeters: Int?,
     val observedAt: String, val lastDownCause: OnuDownCause? = null, val lastOffAt: String? = null, val lastOnAt: String? = null,
+    val pathProvenance: com.duluin.ftth.contract.OnuPathProvenance = com.duluin.ftth.contract.OnuPathProvenance.CONFIGURED_LABEL,
 ) {
     fun parsed(): OnuReading? {
         val observed = observationInstant(observedAt) ?: return null
         val off = lastOffAt?.let { observationInstant(it) ?: return null }
         val on = lastOnAt?.let { observationInstant(it) ?: return null }
         return OnuReading(serialNumber, oltCode, ponPortLabel, status, rxPowerDbm, txPowerDbm, uptimeSeconds, distanceMeters,
-            observed, lastDownCause, off, on)
+            observed, lastDownCause, off, on, pathProvenance)
     }
 }
 

@@ -130,7 +130,10 @@ data class OnuReading(
      * [lastOffAt] terisi), ONU masih putus sejak saat itu.
      */
     val lastOnAt: Instant? = null,
+    val pathProvenance: OnuPathProvenance = OnuPathProvenance.CONFIGURED_LABEL,
 )
+
+enum class OnuPathProvenance { CONFIGURED_LABEL, UNVERIFIED_INDEX }
 
 /** Status ONU sebagaimana dilaporkan OLT. */
 enum class OnuOperationalStatus {
