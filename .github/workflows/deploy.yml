@@ -8,6 +8,10 @@ on:
         branches: [main]
     workflow_dispatch:
 
+concurrency:
+    group: deploy-production
+    cancel-in-progress: false
+
 env:
     IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
@@ -164,7 +168,7 @@ jobs:
                   host: ${{ secrets.VPS_HOST }}
                   username: ${{ secrets.VPS_USER }}
                   key: ${{ secrets.VPS_SSH_KEY }}
-                  source: deploy/docker-compose.prod.yml
+                  source: deploy/docker-compose.prod.yml,deploy/Caddyfile,deploy/postgres-init,deploy/radius,deploy/backup,deploy/monitoring
                   target: /opt/ftth
                   strip_components: 1
 
@@ -175,9 +179,22 @@ jobs:
                   username: ${{ secrets.VPS_USER }}
                   key: ${{ secrets.VPS_SSH_KEY }}
                   script: |
-                      set -e
+                      set -eu
                       cd /opt/ftth
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+                      if grep -q '^IMAGE_TAG=' .env; then
+                          sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/' .env
+                      else
+                          echo 'IMAGE_TAG=${{ github.sha }}' >> .env
+                      fi
+                      docker compose -f docker-compose.prod.yml config --quiet
                       docker compose -f docker-compose.prod.yml pull
-                      docker compose -f docker-compose.prod.yml up -d
+                      docker compose -f docker-compose.prod.yml up -d --remove-orphans
+                      docker compose -f docker-compose.prod.yml ps
                       docker image prune -f
+
+            - name: Verifikasi situs produksi
+              run: |
+                  curl --fail --silent --show-error \
+                    --retry 24 --retry-delay 5 --retry-all-errors \
+                    https://ftth.karuhundeveloper.com/ > /dev/null
