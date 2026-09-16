@@ -59,3 +59,7 @@ observation behavior, not release approval.
 - ACS202 is queued, not diagnostic completion. Completion requires post-request
   parameter timestamps and matching request inputs; stale or missing evidence is
   incomplete. Every timestamp must satisfy the bounds, not only the oldest one.
+- Legacy compatibility permits missing timestamp evidence, never explicitly
+  malformed or out-of-bounds parameter times. Missing siblings cannot conceal a
+  known-invalid timestamp; the gateway carries that distinction through reads and
+  cache admission.
