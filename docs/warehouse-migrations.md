@@ -27,6 +27,16 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## M04: reservation task23
+
+Task23 reserves `V175_90__customer_observation_attribution.sql`,
+`V175_91__monitoring_observation_binding.sql`, and
+`V175_92__cpe_episode_snapshot_binding.sql` before SQL creation. These add
+customer-owned immutable temporal attribution, monitoring metric/live-state
+binding, and immutable ACS snapshot bindings with current-episode visibility.
+V175.89 and predecessors remain unchanged. Physical inspection/reissue remains
+task26; temporal reuse tests use scoped schema fixtures, not production bypasses.
+
 ## M04: reservation task22
 
 Task22 reserves the next forward versions before SQL creation:
