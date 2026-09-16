@@ -26,12 +26,18 @@ import java.util.UUID
 class AcsBulkRefreshRunner(
     private val acsGateway: AcsGateway,
     private val actionLogRepository: CpeActionLogRepository,
+    private val devices: com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository,
+    private val operations: CpeOperationGuard,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun refreshOne(deviceId: UUID, genieacsId: String, actorId: UUID, actorEmail: String?): RefreshOutcome {
+        val device = devices.findById(deviceId) ?: return RefreshOutcome.FAILED
+        if (device.genieacsId != genieacsId) return RefreshOutcome.FAILED
+        operations.lock(genieacsId)
         val outcome = runCatching { acsGateway.requestConnection(genieacsId) }
+        if (devices.findById(deviceId)?.onuId != device.onuId) return RefreshOutcome.FAILED
         val connected = outcome.getOrNull() == true
         val message = when {
             outcome.isFailure -> "gagal menghubungi ACS: ${outcome.exceptionOrNull()?.message?.take(200)}"
