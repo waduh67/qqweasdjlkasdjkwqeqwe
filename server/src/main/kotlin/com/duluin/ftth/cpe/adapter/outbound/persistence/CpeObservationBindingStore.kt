@@ -11,11 +11,16 @@ import java.time.Instant
 
 @Repository
 class CpeObservationBindingStore(private val entityManager: EntityManager, private val episodes: CustomerObservationApi,
-    private val devices: CpeDeviceJpaRepository) {
+    private val devices: CpeDeviceJpaRepository, private val eligibility: com.duluin.ftth.cpe.application.service.CpeOwnershipEligibility) {
+    fun visible(devices: List<CpeDevice>): List<CpeDevice> {
+        eligibility.prepare(devices.mapTo(HashSet()) { it.serialNumber })
+        return devices.filter(::visible)
+    }
+
     fun existing(genieacsId: String, onuId: java.util.UUID): CpeDevice? =
         devices.findByGenieacsIdAndOnuId(genieacsId, onuId)?.toDomain()
 
-    fun current(device: CpeDevice): ObservationEpisode? = episodes.currentEpisode(device.serialNumber)?.takeIf {
+    fun current(device: CpeDevice): ObservationEpisode? = if (!eligibility.current(device.serialNumber)) null else episodes.currentEpisode(device.serialNumber)?.takeIf {
         it.onu.id == device.onuId && it.onu.customerId == device.customerId &&
             (if (device.lastInformAt == null) it.legacy else device.lastInformAt?.let { time ->
                 (it.legacy || !time.isBefore(it.startedAt)) && !time.isAfter(Instant.now().plusSeconds(300)) } == true)
@@ -26,7 +31,7 @@ class CpeObservationBindingStore(private val entityManager: EntityManager, priva
         return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
             connection.prepareStatement("""SELECT EXISTS(SELECT FROM cpe_episode_snapshot s JOIN cpe_device d ON d.tenant_id=s.tenant_id AND d.id=s.device_id
                 WHERE s.tenant_id=? AND s.device_id=? AND s.episode_revision=? AND s.assignment_id IS NOT DISTINCT FROM ?
-                AND s.assignment_revision=? AND s.snapshot=to_jsonb(d) AND (? OR s.observed_fields_at>=?)
+                AND s.assignment_revision=? AND s.snapshot=to_jsonb(d) AND (? OR (s.observed_fields_at>=? AND s.revision_evidence='CURRENT_VERIFIED'))
                 AND NOT EXISTS(SELECT FROM cpe_observation_conflict conflict WHERE conflict.tenant_id=d.tenant_id AND conflict.device_id=d.id))""").use { query ->
                 query.setObject(1, TenantContext.tenantId()); query.setObject(2, device.id); query.setLong(3, episode.episodeRevision)
                 query.setObject(4, episode.assignmentId); query.setLong(5, episode.assignmentRevision)
