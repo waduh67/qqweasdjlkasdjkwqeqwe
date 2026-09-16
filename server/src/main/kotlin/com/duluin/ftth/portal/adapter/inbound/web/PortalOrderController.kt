@@ -1,4 +1,4 @@
-package com.duluin.ftth.order.adapter.inbound.web
+package com.duluin.ftth.portal.adapter.inbound.web
 
 import com.duluin.ftth.order.OrderApi
 import com.duluin.ftth.order.PortalOrderView
