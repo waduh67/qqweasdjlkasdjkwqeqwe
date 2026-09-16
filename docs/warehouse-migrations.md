@@ -29,6 +29,18 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M04: reservation task23
 
+Temporal review reserves V175_106__ordered_topology_transition_time.sql and
+V175_107__monitoring_receipt_retention_anchor.sql before creation, following
+genuine T1/T7 failures. Applied versions through175.105 remain unchanged.
+
+V175_108__network_observation_edge_history.sql is reserved before creation for
+T2's reproduced ODC/ODP uplink changes. Network owns immutable edge history;
+customer combines it with retained ONU topology through a public network API.
+
+V175_109__monitoring_attribution_decision_evidence.sql is reserved before creation
+after the T8 missing-evidence red. Old/direct rows without producer evidence stay
+explicitly unverified; no historical origin or path is backfilled by guesswork.
+
 Verify-01 reserves V175_102__monitoring_metric_attribution.sql,
 V175_103__customer_observation_commit_fence.sql,
 V175_104__monitoring_receipt_outcome_binding.sql, and
