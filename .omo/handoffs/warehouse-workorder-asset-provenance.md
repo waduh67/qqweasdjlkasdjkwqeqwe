@@ -124,3 +124,4 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - T1-T8, malformed-time behavior, global-fence lock order/selective GUC, exact repeats, regressions, fresh JAR and live/restart proof remain mandatory. No approval from old runtime scenarios.
 - Owned stack/compiler daemons retained only during active use. No active test/API/simulator at inspection. Cleanup and normal push/live-SHA proof required before return; preserve volumes/data/images.
 - Resume newest remote feat/warehouse-workorder checkpoint, then run WarehouseDiscoveryITReviewTopology. Task23 unchecked; no task24.
+- Code/test checkpoint5ca646532be26a0a9dda47e10eaf07d8ab88043a is pushed/live-SHA verified with clean worktree;19 focused commits after2453c5db. Exact40-path inventory is appended in task-23.md. Still WIP, not corrected DoneClaim.
