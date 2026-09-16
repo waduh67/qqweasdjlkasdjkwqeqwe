@@ -101,3 +101,25 @@ class WarehouseDiscoveryManualEpisodesIT : CustomerAssetEpisodeFixture() {
         }
     }
 }
+
+class WarehouseDiscoveryManualConflictIT : CustomerDeploymentFixture() {
+    @Test
+    fun `prepare an issued competing tenant owner without consuming it before live QA`() {
+        val runtime = Path.of(System.getProperty("user.dir")).parent.resolve(".omo/runtime")
+        val source = runtime.resolve("task23-manual-episodes.json")
+        check(Files.isRegularFile(source) && !Files.isSymbolicLink(source))
+        val serial = mapper.readTree(Files.readString(source)).path("serial").asString()
+        check(serial.startsWith("MANUAL-"))
+        val installation = installation(serials = listOf(serial, "$serial-OTHER"))
+        val stock = fixture(installation.receipt.stock.token)
+        val admin = mapper.readTree(request("GET", "/api/me", installation.receipt.stock.token).contentAsString)
+        val actor = mapper.readTree(request("GET", "/api/me", installation.receipt.receiver.first).contentAsString)
+        manualManifest("task23-manual-conflict.json", mapOf(
+            "tenant" to stock.tenant.toString(), "customer" to installation.customer.toString(), "serial" to serial,
+            "authorization" to installation.authorization.toString(), "operation" to installation.operation.toString(),
+            "adminEmail" to admin.path("email").asString(), "actorEmail" to actor.path("email").asString(),
+            "slug" to admin.path("email").asString().substringAfter('@').substringBefore(".test"),
+        ))
+        assertUninstalled(installation)
+    }
+}
