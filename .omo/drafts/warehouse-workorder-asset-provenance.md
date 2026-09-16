@@ -34,6 +34,13 @@ approach: one durable warehouse authority integrated with existing WO and custom
 
 # Draft: warehouse-workorder-asset-provenance
 
+## 2026-09-16 — Execution checkpoint pointer
+
+- User explicitly requested immediate commit/push plus durable progress notes for replacement-agent recovery after VPS loss.
+- Current implementation position is recorded separately from this historical planning draft: tasks 1–22 checked and task 23 next, per `.omo/start-work/ledger.jsonl` and the active plan.
+- Read `.omo/handoffs/warehouse-workorder-asset-provenance.md` for the verified worktree/branch topology, incomplete-work recording requirements, known regression, and replacement-VPS recovery instructions. Earlier statements below about implementation not starting apply to the original planning session only.
+- Recovery setup uses local continuation branch `work/warehouse-resume-20260916` in a separate task-owned worktree and targets remote `feat/warehouse-workorder`; no product implementation or new task verification occurred. Approved plan scope and historical review receipts are unchanged.
+
 ## Current handoff / compaction checkpoint
 
 - Authoritative resume artifact: THIS draft; final plan content is `.omo/plans/warehouse-workorder-asset-provenance.md` (48 implementation tasks, 8 waves, 4 final gates).
