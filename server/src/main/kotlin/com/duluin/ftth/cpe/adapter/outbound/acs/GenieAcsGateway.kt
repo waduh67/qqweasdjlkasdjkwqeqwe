@@ -106,13 +106,15 @@ class GenieAcsGateway(
         if (wlan.isMissingNode) return emptyList()
         return wlan.instanceKeys().map { i ->
             val cfg = wlan.path(i)
+            val time = parameterTimeEvidence(cfg)
             WifiNetwork(
                 ref = "$root.LANDevice.1.WLANConfiguration.$i",
                 ssid = cfg.param("SSID") ?: "",
                 passphrase = cfg.param("KeyPassphrase") ?: cfg.param("PreSharedKey.1.KeyPassphrase"),
                 band = cfg.param("Standard"),
                 enabled = cfg.paramBool("Enable") ?: true,
-                observedAt = observedParameterTime(cfg),
+                observedAt = time.earliest,
+                hasInvalidParameterTime = time.invalid,
             )
         }
     }
@@ -130,6 +132,7 @@ class GenieAcsGateway(
                 macAddress = host.param("MACAddress"),
                 active = host.paramBool("Active") ?: false,
                 observedAt = observedParameterTime(host),
+                hasInvalidParameterTime = parameterTimeEvidence(host).invalid,
             )
         }
     }
@@ -299,6 +302,7 @@ class GenieAcsGateway(
         val serial = plain("_deviceId._SerialNumber") ?: return null
         val root = detectRoot()
         val informedAt = plain("_lastInform")?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        val time = parameterTimeEvidence(this, informedAt)
         return AcsDevice(
             genieacsId = genieacsId,
             serialNumber = serial,
@@ -311,7 +315,9 @@ class GenieAcsGateway(
             lastInformAt = informedAt,
             ssid = firstSsid(),
             temperatureC = firstTemperature(),
-            observedFieldsAt = observedParameterTime(this, informedAt),
+            observedFieldsAt = time.earliest,
+            hasInvalidParameterTime = time.invalid || (plain("_lastInform") != null &&
+                (informedAt == null || informedAt.isAfter(Instant.now().plusSeconds(300)))),
         )
     }
 
