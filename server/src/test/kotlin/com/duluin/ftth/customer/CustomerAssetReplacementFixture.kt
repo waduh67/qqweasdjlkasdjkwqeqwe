@@ -31,8 +31,8 @@ abstract class CustomerAssetReplacementFixture : CustomerAssetOwnershipFixture()
     protected fun populateTelemetry(case: OwnershipCase): String {
         fixture(case.installation.receipt.stock.token).transaction {
             sql("""INSERT INTO onu_metric(time,tenant_id,onu_id,status,rx_power_dbm,uptime_seconds)
-                SELECT now()-sample*interval '1 second','$tenant','${case.installation.operation}','ONLINE',-19.25-sample,240+sample
-                FROM generate_series(1,3) sample""")
+                SELECT coalesce(episode.started_at,episode.created_at)+sample*interval '1 microsecond','$tenant','${case.installation.operation}','ONLINE',-19.25-sample,240+sample
+                FROM onu episode CROSS JOIN generate_series(1,3) sample WHERE episode.id='${case.installation.operation}'""")
         }
         return telemetryFingerprint(case)
     }
