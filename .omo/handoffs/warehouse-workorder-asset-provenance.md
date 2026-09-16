@@ -93,3 +93,10 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - Cleanup stop/down exit0, zero containers/owned JVMs/task PID records/task-port listeners; task volumes/images retained. LSP rejected external-worktree paths, compiler/tests used instead. No task23 baseline/feature-red, bootJar or full-suite claim; known NetworkEndToEndIT10 caveat retained.
 - Exact current substep: infrastructure-only DoneClaim awaiting independent verification. Next after confirmation: run up/check, establish observable legacy active telemetry/source-gate baseline, then genuine task23 red tests and implementation. Do not start task24 or mark task23 complete. See tracked task-23.md and the latest ledger entry for portable evidence.
 - Infrastructure repair implementation SHA: a61fdf5942063de1f994e1122744bfce6bcff9c7, immediately pushed and matched by live remote. Subsequent commits are safe notes only; task23 product implementation remains absent.
+
+## 2026-09-16 Task23 Feature WIP
+
+- Infrastructure was independently confirmed by ses_f56815f33ffe2OwxmAqXcjMN5o (fresh7/0/0/0); feature work resumed. Current implementation76abef67f9dac1837be63096838c4fb444334f78 is a pushed WIP, not a completion or approval.
+- Baseline3 passed before production edits; genuine behavioral red4 failed before changes. Latest focused58 passed: direct task23 cases18, baseline3, modularity3, CPE regressions34. Broad final regressions, clean bootJar and built live HTTP/ACS/restart proof remain outstanding. Original failures/archives retained; NetworkEndToEndIT10 caveat unchanged.
+- Forward SQL V175.90-.95 adds temporal live-state/path evidence, durable unassigned observations, episode-bound CPE snapshots and original discovery receipts. No applied predecessors changed and no task24/26/UI/mobile implementation.
+- Exact current substep: complete task23 adversarial and live surface verification after this checkpoint. Isolated stack stopped, owned compiler daemons terminated, both volumes retained. Read task-23.md for scope/proof details; never mark task23 checked before independent feature verification.
