@@ -29,6 +29,18 @@ class WarehouseEnvironmentIT {
     private val root = Path.of(System.getProperty("user.dir")).parent
 
     @Test
+    fun `warehouse images retain Timescale and pin official same-release MinIO manifest`() {
+        val images = Files.readAllLines(root.resolve("deploy/docker-compose.warehouse-test.yml"))
+            .map(String::trim)
+            .filter { it.startsWith("image:") }
+        assertThat(images).containsExactly(
+            "image: timescale/timescaledb-ha:pg17",
+            "image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:" +
+                "14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+        )
+    }
+
+    @Test
     fun `runner refuses forbidden datasource before any database access`() {
         val process = ProcessBuilder("bash", root.resolve("scripts/warehouse/qa.sh").toString(), "server")
             .directory(root.toFile())
