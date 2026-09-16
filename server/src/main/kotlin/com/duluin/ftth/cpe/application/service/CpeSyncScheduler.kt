@@ -33,7 +33,7 @@ class CpeSyncScheduler(
     private val acsGateway: AcsGateway,
     private val tenantApi: TenantApi,
     private val syncService: CpeSyncService,
-    private val ownerQuery: CpeObservationOwnerQuery,
+    private val ownership: CpeOwnershipEligibility,
     private val unassigned: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeUnassignedObservationStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -81,13 +81,8 @@ class CpeSyncScheduler(
         }
 
         val serials = snapshots.mapTo(sortedSetOf()) { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
-        val owners = mutableMapOf<String, MutableList<UUID>>()
-        try {
-            ownerQuery.tenantIds().forEach { tenant ->
-                TenantContext.runAs(tenant) { ownerQuery.serials(serials) }.forEach { serial ->
-                    owners.getOrPut(serial) { mutableListOf() }.add(tenant)
-                }
-            }
+        val owners = try {
+            ownership.census(serials)
         } catch (failure: Exception) {
             log.warn("ACS ownership resolution failed: {}", failure.javaClass.simpleName)
             lastRunAtValue = Instant.now()
@@ -132,6 +127,7 @@ class CpeSyncService(
     private val observations: CustomerObservationApi,
     private val bindings: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeObservationBindingStore,
     private val unassigned: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeUnassignedObservationStore,
+    private val eligibility: CpeOwnershipEligibility,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -140,7 +136,8 @@ class CpeSyncService(
         val bySerial = snapshots.groupBy { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
             .filterValues { it.size == 1 }.mapValues { it.value.single() }
         observations.lockEpisodes(bySerial.keys)
-        val matchedOnus = bySerial.keys.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
+        eligibility.prepare(bySerial.keys)
+        val matchedOnus = bySerial.keys.filter { eligibility.current(it) }.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
             val snapshot = bySerial.getValue(episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT))
             val inform = snapshot.lastInformAt
             val fresh = if (inform == null) episode.legacy else
