@@ -28,6 +28,7 @@ class AcsBulkRefreshRunner(
     private val actionLogRepository: CpeActionLogRepository,
     private val devices: com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository,
     private val operations: CpeOperationGuard,
+    private val eligibility: CpeOwnershipEligibility,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -36,7 +37,10 @@ class AcsBulkRefreshRunner(
         val device = devices.findById(deviceId) ?: return RefreshOutcome.FAILED
         if (device.genieacsId != genieacsId) return RefreshOutcome.FAILED
         operations.lock(genieacsId)
+        eligibility.refresh()
+        if (devices.findById(deviceId)?.onuId != device.onuId) return RefreshOutcome.FAILED
         val outcome = runCatching { acsGateway.requestConnection(genieacsId) }
+        eligibility.refresh()
         if (devices.findById(deviceId)?.onuId != device.onuId) return RefreshOutcome.FAILED
         val connected = outcome.getOrNull() == true
         val message = when {

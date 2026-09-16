@@ -72,7 +72,7 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
     }
 
     @Test
-    fun `CPE-1 ownership commit waits for in-flight diagnostic lease then later access is denied`() {
+    fun `CPE-1 ownership commit is not held across ACS IO and stale final result is denied`() {
         val device = admitted()
         val other = tenant()
         val customer = request("POST", "/api/customers", other,
@@ -91,16 +91,9 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
                 check(entered.await(10, TimeUnit.SECONDS))
                 val newOwner = pool.submit<String> { LegacyOnuTestFixture.stage(customerId, device.serial) }
                 try {
-                    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
-                    var waiting = false
-                    while (!waiting && System.nanoTime() < deadline) {
-                        waiting = fixture(other).transaction { scalar("SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted").toInt() > 0 }
-                        if (!waiting) Thread.sleep(10)
-                    }
-                    assertThat(waiting).isTrue()
-                    assertThat(newOwner.isDone).isFalse()
+                    newOwner.get(5, TimeUnit.SECONDS)
                 } finally { release.countDown() }
-                assertThat(diagnostic.get(30, TimeUnit.SECONDS)).isEqualTo(200)
+                assertThat(diagnostic.get(30, TimeUnit.SECONDS)).isEqualTo(404)
                 newOwner.get(30, TimeUnit.SECONDS)
             }
             val denied = request("POST", "/api/cpe/devices/${device.deviceId}/refresh", device.installation.receipt.stock.token)

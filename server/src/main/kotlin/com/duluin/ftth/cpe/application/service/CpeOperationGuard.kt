@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component
 class CpeOperationGuard(private val entityManager: EntityManager) {
     fun lock(genieacsId: String) = entityManager.unwrap(Session::class.java).doWork { connection ->
         check(!connection.autoCommit)
-        connection.prepareStatement("SELECT pg_advisory_xact_lock(hashtextextended(current_schema()||':cpe-operation:'||?||':'||?,0))").use { query ->
-            query.setString(1, TenantContext.tenantId().toString()); query.setString(2, genieacsId); query.execute()
+        connection.prepareStatement("SELECT pg_advisory_xact_lock(hashtextextended(current_schema()||':cpe-operation:'||?,0))").use { query ->
+            query.setString(1, genieacsId); query.execute()
         }
     }
 }

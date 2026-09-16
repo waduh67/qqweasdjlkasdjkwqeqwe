@@ -57,6 +57,7 @@ class CpeService(
     @Value("\${ftth.cpe.diagnostics.ping-count:4}") private val pingCount: Int,
     private val observations: com.duluin.ftth.customer.CustomerObservationApi,
     private val operations: CpeOperationGuard,
+    private val eligibility: CpeOwnershipEligibility,
 ) : CpeQuery, ManageCpeUseCase {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -94,6 +95,7 @@ class CpeService(
         if (!fresh(after) || after?.lastInformAt != before?.lastInformAt ||
             observations.currentEpisode(device.serialNumber) != episode || deviceRepository.findById(deviceId) == null)
             throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
+        confirm(device)
         return CpeLiveView(wifi, hosts)
     }
 
@@ -285,11 +287,13 @@ class CpeService(
     private fun requireDevice(id: UUID): CpeDevice {
         val device = deviceRepository.findById(id) ?: throw NotFoundException("Perangkat CPE $id tidak ditemukan")
         operations.lock(device.genieacsId)
-        return device
+        eligibility.refresh()
+        return deviceRepository.findById(id) ?: throw NotFoundException("CPE_OWNERSHIP_CHANGED")
     }
 
     private fun confirm(device: CpeDevice) {
-        val current = requireDevice(device.id)
+        eligibility.refresh()
+        val current = deviceRepository.findById(device.id) ?: throw NotFoundException("CPE_OWNERSHIP_CHANGED")
         if (current.onuId != device.onuId || current.customerId != device.customerId || current.genieacsId != device.genieacsId)
             throw NotFoundException("CPE_OWNERSHIP_CHANGED")
     }
