@@ -125,3 +125,4 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - Owned stack/compiler daemons retained only during active use. No active test/API/simulator at inspection. Cleanup and normal push/live-SHA proof required before return; preserve volumes/data/images.
 - Resume newest remote feat/warehouse-workorder checkpoint, then run WarehouseDiscoveryITReviewTopology. Task23 unchecked; no task24.
 - Code/test checkpoint5ca646532be26a0a9dda47e10eaf07d8ab88043a is pushed/live-SHA verified with clean worktree;19 focused commits after2453c5db. Exact40-path inventory is appended in task-23.md. Still WIP, not corrected DoneClaim.
+- Temporal WIP now has84 combined passing cases after genuine T1/T2/T3/T5/T7 and corrected T4/T8/fence reproductions; see newest task23 note for caveats and immutable106-109 hashes. T6, expanded DB/timing/retention qualification and final artifact QA remain open. This update does not mark task23 complete.
