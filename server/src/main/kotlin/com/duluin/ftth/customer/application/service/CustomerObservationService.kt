@@ -12,6 +12,9 @@ import java.util.Locale
 @Service
 @Transactional(readOnly = true)
 class CustomerObservationService(private val store: CustomerObservationStore) : CustomerObservationApi {
+    @Transactional(propagation = Propagation.MANDATORY, readOnly = true)
+    override fun lockOwnershipView() = store.lockOwnershipView()
+
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockEpisodes(serials: Set<String>) = store.lock(serials.mapTo(sortedSetOf()) { normalize(it) })
 

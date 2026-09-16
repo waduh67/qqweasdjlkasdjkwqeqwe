@@ -18,6 +18,15 @@ class CustomerObservationStore(private val entityManager: EntityManager,
         val start: Instant, val end: Instant?, val legacy: Boolean)
     private fun <T> jdbc(block: (Connection) -> T): T = entityManager.unwrap(Session::class.java).doReturningWork(block)
 
+    fun lockOwnershipView() = jdbc { connection ->
+        connection.createStatement().use { query ->
+            query.execute("""SELECT pg_advisory_xact_lock_shared(hashtextextended(namespace.nspname||':cpe-ownership-commit',0))
+                FROM pg_class relation JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+                WHERE relation.oid='onu'::regclass""")
+            Unit
+        }
+    }
+
     fun lock(serials: Set<String>) = jdbc { connection ->
         connection.prepareStatement("""SELECT id FROM onu WHERE tenant_id=? AND warehouse_canonical_serial(serial_number)=ANY(?)
             ORDER BY id FOR UPDATE""").use { query ->
