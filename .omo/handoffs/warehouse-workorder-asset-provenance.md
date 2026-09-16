@@ -1,13 +1,41 @@
 # Warehouse Workorder Asset Provenance Task 22 Checkpoint
 
+## 2026-09-16 — User-requested remote recovery checkpoint
+
+- User instruction: commit and push immediately, and keep the work position documented so another agent can resume if this VPS is lost. This supplements the existing immediate-push/no-merge policy; it does not authorize force-push, main deployment, or skipping verification.
+- Latest recorded completion: tasks 1–22 of 48; wave 4 of 8. Tasks 23–48 and final gates F1–F4 remain unchecked. Source: the active plan and the 2026-09-15 task22 completion/checkpoint entries in `.omo/start-work/ledger.jsonl`.
+- Exact next task: 23, discovery/auto-provision/CPE integration. Enforce the same warehouse-origin authorization for non-UI callers; observation must not create stock. Follow the full task23 references, acceptance criteria and QA in the plan.
+- Historical evidence is not a fresh full-suite pass. This setup verified Git topology, note structure and the live remote only; it did not rerun product tests, complete a final gate, or start task23.
+- Verified setup base: live remote `feat/warehouse-workorder` and both local branches started at `2105273f1de7783fdc2454de6bc9e4a3a86be38a`. The task-owned worktree is `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume` on local-only continuation branch `work/warehouse-resume-20260916`; pushes target `HEAD:refs/heads/feat/warehouse-workorder` explicitly.
+- The protected initial checkout remains `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe` on local `feat/warehouse-workorder`, with its two pre-existing dirty note copies preserved and no branch displacement, stash, reset, rebase, or file edit by the checkpoint worker.
+- The prior ledger path `/home/fajar/ftth/worktrees/warehouse-workorder-asset-provenance` does not exist on this host and is historical only.
+
+### Checkpoint procedure
+
+1. Use the separate local continuation branch for checkpoint and later task work; never force checkout the feature branch out of the protected initial checkout.
+2. Push each checkpoint commit normally with explicit refspec `HEAD:refs/heads/feat/warehouse-workorder`; stop on divergence and verify the live remote SHA rather than relying on tracking refs.
+3. The repository had no effective configured Git identity during setup. Plan line 486 authorizes `fajarxfce <fajaralamsyah000@gmail.com>` through commit-scoped author/committer environment variables only; do not modify Git config or carry those variables into other commands.
+4. At every later completed task or interruption boundary, update this handoff and append a sanitized ledger receipt in the same checkpoint. Record completed tasks, current substep, implementation commit, migration versions, tests actually run, verifier status, failures and exact next action. Leave incomplete or unverified tasks unchecked.
+5. Preserve concise, sanitized verification summaries in tracked notes. Raw evidence, local session IDs and absolute evidence paths are not portable proof; rerun unavailable checks after recovery before claiming new verification.
+
+### Recovery on a replacement VPS
+
+1. Obtain this repository from its configured remote and check out remote branch `feat/warehouse-workorder`; the local continuation branch and current absolute worktree path are host-local setup details, not required branch names on a replacement host.
+2. Reconcile the newest remote checkpoint with plan checkboxes and ledger receipts. Historical append-only notes can say "unchecked" after later confirmation; use the latest matching receipt. The planning draft describes earlier plan approval, not current implementation progress.
+3. Recreate the isolated QA environment using the task1 scripts/runbook. Treat local databases, retained volumes, binary evidence and agent sessions as unavailable unless separately restored; this Git checkpoint is not a database/object-store backup.
+4. Known unresolved regression from task22: `NetworkEndToEndIT` had 10 legacy-fixture failures expecting serial-only ONU creation (201), while the task20 provenance guard returns `409 USE_WORKORDER_ASSET_WORKFLOW`. Do not report the full suite green.
+5. Resume `/start-work warehouse-workorder-asset-provenance --make-pr` at task23 only after confirming no newer remote WIP/checkpoint. PR delivery waits for all plan work and review; merging remains forbidden.
+
 ## Resume
 
-- Branch: `feat/warehouse-workorder`
-- Worktree: `worktrees/warehouse-workorder-asset-provenance`
+- Remote target branch: `feat/warehouse-workorder`
+- Local continuation branch: `work/warehouse-resume-20260916`
+- Task-owned worktree on this host: `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume`
+- Verified checkpoint base: `2105273f1de7783fdc2454de6bc9e4a3a86be38a`
 - Implementation SHA: `dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb`
 - Tasks 1-22: checked; task 23: unchecked
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
-- Delivery mode: immediate push
+- Delivery mode: `--make-pr` after plan completion; immediate checkpoint pushes; no merge
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
 - Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
 - Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
