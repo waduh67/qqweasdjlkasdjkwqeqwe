@@ -37,6 +37,13 @@ binding, and immutable ACS snapshot bindings with current-episode visibility.
 V175.89 and predecessors remain unchanged. Physical inspection/reissue remains
 task26; temporal reuse tests use scoped schema fixtures, not production bypasses.
 
+`V175_93__customer_observation_episode_roots.sql` is reserved before creation.
+The scoped task19 sequential-episode fixture reproduced a lookup failure because
+an ONU episode need not have a later task20 command receipt. Attribution binds
+the retained ONU root and its real event baseline, never invents a deployment
+receipt, and keeps ACS freshness independent of SNMP's last sample timestamp.
+Applied V175.90-.92 remain unchanged.
+
 ## M04: reservation task22
 
 Task22 reserves the next forward versions before SQL creation:
