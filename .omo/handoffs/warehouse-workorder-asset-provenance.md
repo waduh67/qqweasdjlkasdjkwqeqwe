@@ -100,3 +100,10 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - Baseline3 passed before production edits; genuine behavioral red4 failed before changes. Latest focused58 passed: direct task23 cases18, baseline3, modularity3, CPE regressions34. Broad final regressions, clean bootJar and built live HTTP/ACS/restart proof remain outstanding. Original failures/archives retained; NetworkEndToEndIT10 caveat unchanged.
 - Forward SQL V175.90-.95 adds temporal live-state/path evidence, durable unassigned observations, episode-bound CPE snapshots and original discovery receipts. No applied predecessors changed and no task24/26/UI/mobile implementation.
 - Exact current substep: complete task23 adversarial and live surface verification after this checkpoint. Isolated stack stopped, owned compiler daemons terminated, both volumes retained. Read task-23.md for scope/proof details; never mark task23 checked before independent feature verification.
+
+## 2026-09-16 Final Artifact Verification Next
+
+- Product head d67215edbc966216cd8622bead980d35cd601df6 is pushed. Current exact feature31, monitoring/CPE/provenance148, and customer/task22 batch235 pass with zero failures/errors/skips. SQL V175.90-.100 is forward-only; original source/hash histories remain intact.
+- Final corrections cover parameter-level ACS freshness, actual assignment revisions, global ACS owner ambiguity (including suspended tenants), precise episode boundaries, recovered-device rediscovery, current-authority replay and deferred conflict mapping.
+- The first built HTTP/DB/ACS and crash/restart proof passed; repeat it on the final clean JAR with timestamped ACS simulator fields before DoneClaim. Current substep is final artifact QA/cleanup, not another implementation task. Task23 remains unchecked and independent feature verification pending.
+- Wider schema129 had one unchanged task22 catalog-string mismatch, characterized against175.89; do not claim it or the full server suite green. See task-23.md for retained failure evidence and precise next commands.
