@@ -95,5 +95,5 @@ class ServerRejectedException(val statusCode: Int, val body: String) :
     RuntimeException("Server menolak permintaan (HTTP $statusCode): ${body.take(300)}") {
 
     /** Kesalahan konfigurasi/otorisasi — mengulang tidak akan mengubah hasilnya. */
-    val permanent: Boolean get() = statusCode in 400..499 && statusCode != 429
+    val permanent: Boolean get() = statusCode in 400..499 && statusCode !in setOf(409, 429)
 }
