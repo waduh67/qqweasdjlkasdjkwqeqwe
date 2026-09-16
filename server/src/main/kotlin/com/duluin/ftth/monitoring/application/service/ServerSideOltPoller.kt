@@ -98,13 +98,16 @@ class ServerSideOltPoller(
                 log.debug("OLT {} vendor {} belum didukung, dilewati", target.code, target.vendor)
                 continue
             }
+            val startedAt = java.time.Instant.now()
             val outcome = poll(adapter, target.toWire())
+            val acquisition = ServerPollWindow(startedAt, java.time.Instant.now())
             persister.persist(
                 tenantId = tenantId,
                 target = target,
                 reachable = outcome.reachable,
                 readings = outcome.readings,
                 failureReason = outcome.failureReason,
+                acquisition = acquisition,
             )
         }
     }
@@ -164,6 +167,7 @@ class OltReadingPersister(
         reachable: Boolean,
         readings: List<OnuReading>,
         failureReason: String?,
+        acquisition: ServerPollWindow,
     ) {
         // Dinilai tiap siklus: OLT yang kini terjangkau menutup alarmnya sendiri.
         alarmEngine.evaluate(
@@ -177,7 +181,7 @@ class OltReadingPersister(
             },
         )
         if (reachable && readings.isNotEmpty()) {
-            ingestion.ingestReadings(tenantId, readings)
+            ingestion.ingestServerReadings(tenantId, readings, acquisition)
         }
         // Reachability OLT / alarm ONU mungkin berubah → picu korelasi ulang insiden.
         events.publishEvent(AlarmsChangedEvent(tenantId))
