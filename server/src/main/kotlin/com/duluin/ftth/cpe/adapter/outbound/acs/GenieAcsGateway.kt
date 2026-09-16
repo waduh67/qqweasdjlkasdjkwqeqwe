@@ -152,7 +152,8 @@ class GenieAcsGateway(
         val base = pingBase(root)
         // Setel input + picu (DiagnosticsState=Requested) dalam satu setParameterValues:
         // perangkat menjalankan ping lalu melaporkan hasil pada inform "diagnostics complete".
-        postTask(
+        val requestedAt = Instant.now()
+        val immediate = postTask(
             genieacsId,
             mapOf(
                 "name" to "setParameterValues",
@@ -163,7 +164,9 @@ class GenieAcsGateway(
                 ),
             ),
         )
-        val device = pollDiagnostic(genieacsId, "$base.DiagnosticsState", pingProjection(base))
+        if (!immediate) return PingDiagnostic.incomplete(host, "Queued")
+        val device = pollDiagnostic(genieacsId, base, pingProjection(base), requestedAt,
+            mapOf("$base.Host" to host, "$base.NumberOfRepetitions" to count.toString()))
             ?: return PingDiagnostic.incomplete(host, "Error_Timeout")
         val state = device.param("$base.DiagnosticsState") ?: "Error"
         if (state != PingDiagnostic.COMPLETE) return PingDiagnostic.incomplete(host, state)
@@ -190,8 +193,12 @@ class GenieAcsGateway(
                 add(listOf("$base.TestFileLength", uploadBytes.toString(), XSD_UNSIGNED_INT))
             }
         }
-        postTask(genieacsId, mapOf("name" to "setParameterValues", "parameterValues" to inputs))
-        val device = pollDiagnostic(genieacsId, "$base.DiagnosticsState", speedProjection(base, direction))
+        val requestedAt = Instant.now()
+        if (!postTask(genieacsId, mapOf("name" to "setParameterValues", "parameterValues" to inputs)))
+            return SpeedTestDiagnostic.incomplete(direction, "Queued")
+        val expected = if (direction == SpeedDirection.DOWNLOAD) mapOf("$base.DownloadURL" to downloadUrl)
+            else mapOf("$base.UploadURL" to uploadUrl, "$base.TestFileLength" to uploadBytes.toString())
+        val device = pollDiagnostic(genieacsId, base, speedProjection(base, direction), requestedAt, expected)
             ?: return SpeedTestDiagnostic.incomplete(direction, "Error_Timeout")
         val state = device.param("$base.DiagnosticsState") ?: "Error"
         if (state != PingDiagnostic.COMPLETE) return SpeedTestDiagnostic.incomplete(direction, state)
@@ -202,7 +209,8 @@ class GenieAcsGateway(
             SpeedDirection.UPLOAD ->
                 device.paramLong("$base.TotalBytesSent") ?: device.paramLong("$base.TestBytesSent")
         }
-        val durationMs = diagnosticDurationMs(device, base)
+        val durationMs = diagnosticDurationMs(device, base, requestedAt)
+            ?: return SpeedTestDiagnostic.incomplete(direction, "Error_StaleResult")
         val throughput = if (bytes != null && durationMs != null && durationMs > 0) {
             bytes * 8.0 / 1_000_000.0 / (durationMs / 1000.0)
         } else {
@@ -276,13 +284,14 @@ class GenieAcsGateway(
      * memicu koneksi ke perangkat (bukan menunggu inform berikutnya). Status non-2xx
      * dilempar oleh handler default RestClient.
      */
-    private fun postTask(genieacsId: String, task: Map<String, Any>) {
-        restClient.post()
+    private fun postTask(genieacsId: String, task: Map<String, Any>): Boolean {
+        val response = restClient.post()
             .uri { it.pathSegment("devices", genieacsId, "tasks").queryParam("connection_request").build() }
             .contentType(MediaType.APPLICATION_JSON)
             .body(task)
             .retrieve()
             .toBodilessEntity()
+        return response.statusCode.value() == 200
     }
 
     private fun JsonNode.toAcsDevice(): AcsDevice? {
@@ -369,14 +378,16 @@ class GenieAcsGateway(
      * bertahap sampai [diagnosticsTimeout] dapat diterima; bila mentok, kembalikan
      * snapshot terakhir (state-nya jadi penanda "belum tuntas").
      */
-    private fun pollDiagnostic(genieacsId: String, statePath: String, projection: String): JsonNode? {
+    private fun pollDiagnostic(genieacsId: String, base: String, projection: String, requestedAt: Instant,
+        expected: Map<String, String>): JsonNode? {
         val deadline = Instant.now().plus(diagnosticsTimeout)
-        var last: JsonNode? = null
         while (true) {
-            last = fetchDevice(genieacsId, projection) ?: last
-            val state = last?.param(statePath)
-            if (state != null && state != "Requested" && state != "None") return last
-            if (Instant.now().isAfter(deadline)) return last
+            val current = fetchDevice(genieacsId, projection)
+            val state = current?.param("$base.DiagnosticsState")
+            val observedAt = current?.let { observedParameterTime(it.descend(base)) }
+            if (state != null && state != "Requested" && state != "None" && observedAt?.isAfter(requestedAt) == true &&
+                expected.all { (path, value) -> current.param(path) == value }) return current
+            if (Instant.now().isAfter(deadline)) return null
             Thread.sleep(pollInterval.toMillis())
         }
     }
@@ -384,6 +395,7 @@ class GenieAcsGateway(
     private fun pingProjection(base: String): String = listOf(
         "$base.DiagnosticsState", "$base.SuccessCount", "$base.FailureCount",
         "$base.AverageResponseTime", "$base.MinimumResponseTime", "$base.MaximumResponseTime",
+        "$base.Host", "$base.NumberOfRepetitions",
     ).joinToString(",")
 
     private fun speedProjection(base: String, direction: SpeedDirection): String {
@@ -392,13 +404,14 @@ class GenieAcsGateway(
         } else {
             listOf("$base.TotalBytesSent", "$base.TestBytesSent")
         }
-        return (listOf("$base.DiagnosticsState", "$base.BOMTime", "$base.EOMTime") + bytes).joinToString(",")
+        return (listOf("$base.DiagnosticsState", "$base.BOMTime", "$base.EOMTime", "$base.DownloadURL", "$base.UploadURL", "$base.TestFileLength") + bytes).joinToString(",")
     }
 
     /** Durasi transfer TR-143 dari `BOMTime`→`EOMTime` (ISO dateTime), dalam milidetik. */
-    private fun diagnosticDurationMs(device: JsonNode, base: String): Long? {
+    private fun diagnosticDurationMs(device: JsonNode, base: String, requestedAt: Instant): Long? {
         val bom = device.param("$base.BOMTime")?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return null
         val eom = device.param("$base.EOMTime")?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return null
+        if (bom.isBefore(requestedAt) || eom.isAfter(Instant.now().plusSeconds(300))) return null
         return Duration.between(bom, eom).toMillis().takeIf { it > 0 }
     }
 

@@ -231,7 +231,7 @@ class GenieAcsGatewayTest {
         // 3) Poll: perangkat sudah menuntaskan.
         server.expect(requestTo(containsString("/devices/")))
             .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("[$TR098_PING_DONE]", MediaType.APPLICATION_JSON))
+            .andRespond { request -> withSuccess(freshDiagnostic(TR098_PING_DONE, "IPPingDiagnostics"), MediaType.APPLICATION_JSON).createResponse(request) }
 
         val ping = gateway.runPing("ACS-001", host = "1.1.1.1", count = 4)
 
@@ -258,7 +258,7 @@ class GenieAcsGatewayTest {
             .andRespond(withSuccess())
         server.expect(requestTo(containsString("/devices/")))
             .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("[$TR098_DOWNLOAD_DONE]", MediaType.APPLICATION_JSON))
+            .andRespond { request -> withSuccess(freshDiagnostic(TR098_DOWNLOAD_DONE, "DownloadDiagnostics"), MediaType.APPLICATION_JSON).createResponse(request) }
 
         val speed = gateway.runSpeedTest("ACS-001", SpeedDirection.DOWNLOAD)
 
@@ -343,6 +343,23 @@ class GenieAcsGatewayTest {
 
         assertThat(gateway.requestConnection("ACS-001")).isFalse()
         server.verify()
+    }
+
+    private fun freshDiagnostic(document: String, name: String): String {
+        val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
+        val root = mapper.readTree("[$document]")
+        val diagnostic = root[0].path("InternetGatewayDevice").path(name) as tools.jackson.databind.node.ObjectNode
+        val now = Instant.now()
+        if (name == "IPPingDiagnostics") {
+            diagnostic.putObject("Host").put("_value", "1.1.1.1")
+            diagnostic.putObject("NumberOfRepetitions").put("_value", 4)
+        } else {
+            diagnostic.putObject("DownloadURL").put("_value", "http://speed.test/10MB.zip")
+            diagnostic.putObject("BOMTime").put("_value", now.toString())
+            diagnostic.putObject("EOMTime").put("_value", now.plusMillis(900).toString())
+        }
+        diagnostic.forEach { (it as tools.jackson.databind.node.ObjectNode).put("_timestamp", now.toString()) }
+        return mapper.writeValueAsString(root)
     }
 
     companion object {
