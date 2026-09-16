@@ -13,8 +13,9 @@ import java.time.Instant
 
 class WarehouseDiscoveryITAuto : CustomerDeploymentFixture() {
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun `actual automatic sweep requires a minted issued authorization despite HIGH policy`(authorized: Boolean) {
+    @ValueSource(strings = ["NO_AUTH", "SINGLE", "EQUIVALENT", "STALE_CURRENT", "AMBIGUOUS_MODE"])
+    fun `actual automatic sweep requires a usable unambiguous authorization despite HIGH policy`(scenario: String) {
+        val authorized = scenario != "NO_AUTH"
         val installation = if (authorized) installation() else null
         val receipt = installation?.receipt ?: receiptCase(serial = true, installation = true).also { received(it) }
         val stock = fixture(receipt.stock.token)
@@ -41,11 +42,21 @@ class WarehouseDiscoveryITAuto : CustomerDeploymentFixture() {
         }
         val waiting = mapper.readTree(request("GET", "/api/monitoring/discovered-onus", receipt.stock.token).contentAsString)
         assertThat(waiting[0].path("suggestion").path("confidence").asString()).isEqualTo("HIGH")
+        if (scenario in setOf("EQUIVALENT", "STALE_CURRENT", "AMBIGUOUS_MODE")) {
+            if (scenario == "STALE_CURRENT") user(receipt.stock.token, setOf("monitoring.provisioning.view"))
+            val selected = receipt.input.lines.single()
+            val revision = summary(receipt.stock.token, receipt.workOrder).path("revisions").path("workOrderRevision").asLong()
+            val mode = if (scenario == "AMBIGUOUS_MODE") "SALE" else "LOAN"
+            val response = request("POST", "/api/work-orders/${receipt.workOrder}/assets/authorize", receipt.receiver.first,
+                """{"expectedRevision":$revision,"assetId":"${selected.stockIdentityId}","issueLineId":"${selected.issueLineId}","purpose":"INSTALL","ownershipMode":"$mode"}""", "second-permit")
+            assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
+        }
         repeat(2) { TenantContext.runAs(stock.tenant) { context.getBean(AutoProvisionSweeper::class.java).sweep(stock.tenant) } }
+        val installed = authorized && scenario != "AMBIGUOUS_MODE"
         stock.transaction {
             assertThat(scalar("SELECT count(*) FROM inventory_serialized_asset")).isEqualTo("2")
-            assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment")).isEqualTo(if (authorized) "1" else "0")
-            assertThat(scalar("SELECT state FROM discovered_onu WHERE serial_number='$serial'")).isEqualTo(if (authorized) "PROVISIONED" else "DISCOVERED")
+            assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment")).isEqualTo(if (installed) "1" else "0")
+            assertThat(scalar("SELECT state FROM discovered_onu WHERE serial_number='$serial'")).isEqualTo(if (installed) "PROVISIONED" else "DISCOVERED")
         }
     }
 }

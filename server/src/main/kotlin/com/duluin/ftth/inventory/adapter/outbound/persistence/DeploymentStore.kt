@@ -18,11 +18,14 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
         }.toMap()
     }
 
-    fun pendingDiscovery(serial: String, customerId: UUID): UUID? = jdbc.execute { sql ->
-        sql.query("""SELECT permit.id FROM inventory_deployment_authorization permit
+    fun pendingDiscovery(serial: String, customerId: UUID): List<DeploymentPermit> = jdbc.execute { sql ->
+        sql.query("""SELECT execution.binding,execution.source FROM inventory_deployment_authorization permit
             JOIN inventory_deployment_execution execution ON execution.tenant_id=permit.tenant_id AND execution.authorization_id=permit.id
             WHERE permit.tenant_id=? AND permit.customer_id=? AND permit.purpose='INSTALL' AND NOT permit.consumed
-                AND execution.source::jsonb->>'serial'=? ORDER BY permit.id""", sql.tenant, customerId, serial) { it.uuid("id") }.singleOrNull()
+                AND execution.source::jsonb->>'serial'=? ORDER BY permit.id""", sql.tenant, customerId, serial) {
+            DeploymentPermit(mapper.readValue(it.getString("binding"), DeploymentBinding::class.java),
+                mapper.readValue(it.getString("source"), DeploymentSource::class.java), false)
+        }
     }
 
     fun source(issueLine: UUID): DeploymentSource = jdbc.execute { sql ->

@@ -23,7 +23,8 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     private val documents: DeploymentPostingStore, private val posting: WarehousePosting,
     private val operations: WarehouseOperationStore, private val handovers: AssetHandoverService,
     private val deliveryAuthority: com.duluin.ftth.iam.DeliveryAuthorityApi,
-    private val currentUser: com.duluin.ftth.common.security.CurrentUserProvider) : InventoryDeploymentApi {
+    private val currentUser: com.duluin.ftth.common.security.CurrentUserProvider,
+    private val transactionManager: org.springframework.transaction.PlatformTransactionManager) : InventoryDeploymentApi {
     private val mapper = jacksonObjectMapper()
 
     override fun authorize(workOrderId: UUID, request: DeploymentIntentRequest, metadata: WarehouseMutationMetadata): DeploymentAuthorizationRef {
@@ -72,8 +73,47 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     override fun consumeDiscovered(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
         consumePurpose(request, metadata, DeploymentPurpose.INSTALL, true)
 
-    override fun pendingDiscoveryAuthorization(serial: String, customerId: UUID): UUID? =
-        store.pendingDiscovery(serial.trim().uppercase(java.util.Locale.ROOT), customerId)
+    override fun pendingDiscoveryAuthorization(serial: String, customerId: UUID): UUID? {
+        val candidates = store.pendingDiscovery(serial.trim().uppercase(java.util.Locale.ROOT), customerId)
+        val groups = candidates.groupBy { permit ->
+            permit.binding.copy(authorizationId = UUID(0, 0), operationId = UUID(0, 0)) to permit.source
+        }
+        val eligible = mutableListOf<UUID>()
+        for (group in groups.values) {
+            val selected = group.sortedBy { it.binding.authorizationId }.firstOrNull { usableDiscovery(it.binding.authorizationId) }
+            if (selected != null) eligible += selected.binding.authorizationId
+            if (eligible.size > 1) return null
+        }
+        return eligible.singleOrNull()
+    }
+
+    private fun usableDiscovery(id: UUID): Boolean {
+        val transaction = org.springframework.transaction.support.TransactionTemplate(transactionManager).apply {
+            propagationBehavior = org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+            timeout = 30
+        }
+        return try {
+            transaction.execute {
+                val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+                val preview = store.preview(id)
+                val current = if (currentUser.currentOrNull() == null)
+                    deliveryAuthority.lockActor(com.duluin.ftth.common.security.SessionIdentity(preview.binding.tenantId, preview.binding.actorId, null))
+                else authority.lockCurrent()
+                workOrders.lockAndValidate(DeploymentValidationContext(preview.binding, current.fence, cutover))
+                val locked = store.lock(id)
+                if (locked.consumed || locked.binding != preview.binding) return@execute false
+                validateSource(locked, current)
+                store.read(id)
+                true
+            } == true
+        } catch (_: WarehouseContractException) {
+            false
+        } catch (_: com.duluin.ftth.common.domain.error.AccessDeniedException) {
+            false
+        } catch (_: com.duluin.ftth.common.domain.error.AuthenticationException) {
+            false
+        }
+    }
 
     override fun assignmentRevisions(assignmentIds: Set<UUID>): Map<UUID, Long> = store.assignmentRevisions(assignmentIds)
 
