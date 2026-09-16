@@ -52,7 +52,8 @@ class DiscoveredOnuService(
         val topology = command.odpId?.let { com.duluin.ftth.customer.CustomerAssetTopology(it, requireNotNull(command.portNumber), command.installRxPowerDbm) }
         workflow.installObserved(discovered.serialNumber, command.customerId,
             com.duluin.ftth.customer.InstallCustomerAssetRequest(authorization, command.expectedRevision, topology),
-            com.duluin.ftth.inventory.WarehouseMutationMetadata(command.operationKey))
+            com.duluin.ftth.inventory.WarehouseMutationMetadata(command.operationKey,
+                if (receipts.legacy(id)) null else com.duluin.ftth.inventory.WarehouseObservationContext(id, receipts.payload(command))))
         receipts.find(id, command)?.let { return it }
         discovered.markProvisioned()
         return repository.save(discovered).toView().also { receipts.append(it, command) }

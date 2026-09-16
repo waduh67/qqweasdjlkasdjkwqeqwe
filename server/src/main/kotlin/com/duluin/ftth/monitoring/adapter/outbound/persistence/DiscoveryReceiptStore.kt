@@ -16,11 +16,19 @@ import java.util.UUID
 @Repository
 class DiscoveryReceiptStore(private val entityManager: EntityManager) {
     private val mapper = jacksonObjectMapper()
+    fun payload(command: ProvisionDiscoveredOnuCommand): String = mapper.writeValueAsString(command)
+
+    fun legacy(id: UUID): Boolean = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+        connection.prepareStatement("SELECT request_payload IS NULL FROM monitoring_discovery_receipt WHERE tenant_id=? AND discovery_id=?").use { query ->
+            query.setObject(1, TenantContext.tenantId()); query.setObject(2, id)
+            query.executeQuery().use { rows -> rows.next() && rows.getBoolean(1) }
+        }
+    }
     private fun hash(command: ProvisionDiscoveredOnuCommand) = MessageDigest.getInstance("SHA-256")
         .digest(mapper.writeValueAsBytes(command)).joinToString("") { "%02x".format(it) }
 
     fun find(id: UUID, command: ProvisionDiscoveredOnuCommand): DiscoveredOnuView? = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
-        connection.prepareStatement("SELECT request_hash,response FROM monitoring_discovery_receipt WHERE tenant_id=? AND discovery_id=?").use { query ->
+        connection.prepareStatement("SELECT request_hash,response,monitoring_assert_discovery_receipt(tenant_id,discovery_id,false) FROM monitoring_discovery_receipt WHERE tenant_id=? AND discovery_id=?").use { query ->
             query.setObject(1, TenantContext.tenantId()); query.setObject(2, id)
             query.executeQuery().use { rows ->
                 if (!rows.next()) return@doReturningWork null
@@ -31,10 +39,11 @@ class DiscoveryReceiptStore(private val entityManager: EntityManager) {
     }
 
     fun append(view: DiscoveredOnuView, command: ProvisionDiscoveredOnuCommand) = entityManager.unwrap(Session::class.java).doWork { connection ->
-        connection.prepareStatement("""INSERT INTO monitoring_discovery_receipt(tenant_id,discovery_id,authorization_id,operation_key,request_hash,response)
-            VALUES (?,?,?,?,?,?::jsonb)""").use { query ->
+        connection.prepareStatement("""INSERT INTO monitoring_discovery_receipt(tenant_id,discovery_id,authorization_id,operation_key,request_hash,response,request_payload)
+            VALUES (?,?,?,?,?,?::jsonb,?)""").use { query ->
             query.setObject(1, TenantContext.tenantId()); query.setObject(2, view.id); query.setObject(3, command.authorizationId)
-            query.setString(4, command.operationKey); query.setString(5, hash(command)); query.setString(6, mapper.writeValueAsString(view)); query.executeUpdate()
+            query.setString(4, command.operationKey); query.setString(5, hash(command)); query.setString(6, mapper.writeValueAsString(view))
+            query.setString(7, payload(command)); query.executeUpdate()
         }
     }
 }
