@@ -10,8 +10,8 @@ import java.util.UUID
 abstract class CustomerAssetOwnershipFixture : CustomerDeploymentFixture() {
     protected data class OwnershipCase(val installation: Installation, val signature: UUID)
 
-    protected fun ownershipCase(mode: String? = null): OwnershipCase {
-        val receipt = receiptCase(serial = true, installation = true)
+    protected fun ownershipCase(mode: String? = null, serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): OwnershipCase {
+        val receipt = receiptCase(serial = true, installation = true, serials = serials)
         received(receipt)
         val start = request("POST", "/api/work-orders/${receipt.workOrder}/start", receipt.receiver.first)
         assertThat(start.status).withFailMessage(start.contentAsString).isEqualTo(200)

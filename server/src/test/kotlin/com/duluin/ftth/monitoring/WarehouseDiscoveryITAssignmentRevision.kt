@@ -12,7 +12,7 @@ import java.time.Instant
 class WarehouseDiscoveryITAssignmentRevision : CustomerAssetOwnershipFixture() {
     @Test
     fun `actual assignment revision invalidates exposure until a newly bound ACS readback`() {
-        val case = ownershipCase("LOAN")
+        val case = ownershipCase("LOAN", listOf("REVISION-${java.util.UUID.randomUUID()}".uppercase(), "SPARE-${java.util.UUID.randomUUID()}".uppercase()))
         val stock = fixture(case.installation.receipt.stock.token)
         val serial = requireNotNull(case.installation.receipt.input.lines.single().serial)
         val time = Instant.now()
