@@ -11,16 +11,17 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
     protected data class ReceiptCase(val stock: Setup, val workOrder: String, val receiver: Pair<String, String>,
         val transit: String, val field: String, val input: MaterialReceiptRequest, val customerActor: Pair<String, String>? = null)
 
-    protected data class CustomerIdentity(val id: UUID, val actor: Pair<String, String>?)
+    protected data class CustomerIdentity(val id: UUID, val actor: Pair<String, String>?, val existing: Boolean = false)
     protected open fun installationCustomer(stock: Setup): CustomerIdentity = CustomerIdentity(UUID.randomUUID(), null)
 
     protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false, installation: Boolean = false, loanOnly: Boolean = false,
-        extraPermissions: Set<String> = emptySet()): ReceiptCase {
+        extraPermissions: Set<String> = emptySet(), serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): ReceiptCase {
         val stock = setupReceipt()
         if (serial) {
             assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
                 """{"expectedRevision":0,"code":"ONU","name":"ONU","category":"ONU","tracking":"SERIAL","baseUnit":"EA","inspectionRequired":false,"allowedOwnershipModes":${if (loanOnly) "[\"LOAN\"]" else "[\"LOAN\",\"SALE\"]"}}""").status).isEqualTo(200)
-            val receipt = draft(stock, """{"skuId":"${stock.onu}","quantityBase":"2","serials":[{"serial":"RECEIVE-1"},{"serial":"RECEIVE-2"}]}""").path("id").asString()
+            val receipt = draft(stock, mapper.writeValueAsString(mapOf("skuId" to stock.onu, "quantityBase" to "2",
+                "serials" to serials.map { mapOf("serial" to it) }))).path("id").asString()
             transition(stock, receipt, "receive", """{"expectedRevision":0}""")
             val received = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$receipt", stock.token).contentAsString)
             val pieces = received.path("lines").asSequence().flatMap { line -> line.path("pieces").asSequence().map { piece ->
@@ -40,7 +41,7 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
         val customerArea = if (installation) area(stock.token) else null
         val customerIdentity = if (installation) installationCustomer(stock) else null
         val customer = customerIdentity?.id?.also { id ->
-            fixture(stock.token).transaction {
+            if (customerIdentity.existing.not()) fixture(stock.token).transaction {
                 sql("INSERT INTO customer(id,tenant_id,code,name,address,area_id) VALUES ('$id','$tenant','$id','Installation','Test','$customerArea')")
             }
         }?.toString()
@@ -60,7 +61,7 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
         val setup = IssueSetup(stock, workOrder, receiver.second)
         val picked = action(stock.token, workOrder, "pick", pickBody(setup))
         val issue = action(stock.token, workOrder, "dispatch", transitionBody(setup, picked))
-        val line = issue.path("lines")[0]
+        val line = if (serial) issue.path("lines").first { it.path("serial").asString() == serials.first().uppercase() } else issue.path("lines")[0]
         val input = MaterialReceiptRequest(UUID.fromString(issue.path("issueId").asString()), issue.path("revision").asLong(),
             issue.path("workOrderRevision").asLong(), "signed-paper-handover", listOf(MaterialReceiptSelection(
                 UUID.fromString(line.path("id").asString()), UUID.fromString(line.path("dimension").path("stockIdentityId").asString()),

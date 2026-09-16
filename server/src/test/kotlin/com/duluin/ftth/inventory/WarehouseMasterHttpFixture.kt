@@ -23,7 +23,7 @@ abstract class WarehouseMasterHttpFixture {
     protected val mapper = jacksonObjectMapper()
     private val tenantAreas = mutableMapOf<String, String>()
 
-    protected fun tenant(slug: String = "master${UUID.randomUUID().toString().take(8)}"): String {
+    protected open fun tenant(slug: String = "master${UUID.randomUUID().toString().take(8)}"): String {
         onboarding.onboard(OnboardTenantCommand(slug, "Master test", "admin@$slug.test", "Admin", "secret12345"))
         val token = login(slug, "admin@$slug.test")
         val area = request("POST", "/api/areas", token, """{"code":"MAIN","name":"Main area"}""")

@@ -21,7 +21,8 @@ class CustomerAssetService(private val deployment: InventoryDeploymentApi, priva
     private val locks: CustomerFulfillmentLockApi, private val store: CustomerAssetInstallationStore,
     private val network: NetworkApi, private val onus: OnuRepository,
     private val authority: CurrentAuthorityApi, private val cutovers: InventoryTenantCutoverApi,
-    private val observations: CustomerObservationApi) : CustomerAssetApi {
+    private val observations: CustomerObservationApi,
+    private val events: org.springframework.context.ApplicationEventPublisher) : CustomerAssetApi {
     private val mapper = jacksonObjectMapper()
     override fun install(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode =
         installEpisode(customerId, request, metadata, false)
@@ -41,7 +42,10 @@ class CustomerAssetService(private val deployment: InventoryDeploymentApi, priva
             network.assertOdpPortAssignable(topology.odpId, topology.portNumber,
                 onus.findByOdpId(topology.odpId).mapNotNullTo(HashSet()) { it.odpPortNumber })
         }
-        return store.append(consumption, request.topology)
+        return store.append(consumption, request.topology).also { episode ->
+            episode.onuId?.let { onuId -> events.publishEvent(OnuRegistered(
+                com.duluin.ftth.common.tenant.TenantContext.tenantId(), onuId, customerId, consumption.serialNumber)) }
+        }
     }
     override fun history(customerId: UUID, page: WarehousePageRequest): WarehousePage<CustomerAssetEpisode> {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()

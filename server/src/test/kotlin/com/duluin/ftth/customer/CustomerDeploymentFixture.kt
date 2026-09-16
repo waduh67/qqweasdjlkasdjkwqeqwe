@@ -10,8 +10,9 @@ import java.util.UUID
 abstract class CustomerDeploymentFixture : MaterialReceiptFixture() {
     protected data class Installation(val receipt: ReceiptCase, val customer: UUID, val authorization: UUID, val operation: UUID)
 
-    protected fun installation(generic: Boolean = false, extraPermissions: Set<String> = emptySet()): Installation {
-        val case = receiptCase(serial = true, installation = true, extraPermissions = extraPermissions)
+    protected fun installation(generic: Boolean = false, extraPermissions: Set<String> = emptySet(),
+        serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): Installation {
+        val case = receiptCase(serial = true, installation = true, extraPermissions = extraPermissions, serials = serials)
         received(case)
         if (generic) {
             val response = request("PUT", "/api/v1/warehouse/skus/${case.stock.onu}", case.stock.token,
@@ -28,7 +29,7 @@ abstract class CustomerDeploymentFixture : MaterialReceiptFixture() {
         return Installation(case, customer, UUID.fromString(body.path("authorizationId").asString()), UUID.fromString(body.path("operationId").asString()))
     }
 
-    protected fun consume(installation: Installation, key: String = "consume") = request("POST",
+    protected open fun consume(installation: Installation, key: String = "consume") = request("POST",
         "/api/customers/${installation.customer}/assets/install", installation.receipt.receiver.first,
         mapper.writeValueAsString(InstallCustomerAssetRequest(installation.authorization, 0, null)), key)
 
