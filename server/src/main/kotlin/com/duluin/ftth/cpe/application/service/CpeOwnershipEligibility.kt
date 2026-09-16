@@ -9,28 +9,26 @@ import java.util.Locale
 import java.util.UUID
 
 @Service
-class CpeOwnershipEligibility(private val observations: CustomerObservationApi, private val owners: CpeObservationOwnerQuery) {
+class CpeOwnershipEligibility(private val census: CpeOwnershipCensus) {
     private class View : TransactionSynchronization {
         val resolved = mutableMapOf<String, List<UUID>>()
     }
 
-    fun prepare(serials: Set<String>) {
+    fun prepare(serials: Set<String>) = prepare(serials, false)
+    fun prepareLocked(serials: Set<String>) = prepare(serials, true)
+
+    private fun prepare(serials: Set<String>, locked: Boolean) {
         if (serials.isEmpty()) return
         check(TransactionSynchronizationManager.isActualTransactionActive())
         val view = TransactionSynchronizationManager.getSynchronizations().filterIsInstance<View>().singleOrNull() ?: View().also {
-            observations.lockOwnershipView()
             TransactionSynchronizationManager.registerSynchronization(it)
         }
         val missing = serials.mapTo(sortedSetOf()) { normalize(it) }.filterNotTo(sortedSetOf()) { view.resolved.containsKey(it) }
         if (missing.isEmpty()) return
-        val matches = mutableMapOf<String, MutableList<UUID>>()
-        owners.tenantIds().forEach { tenant ->
-            TenantContext.runAs(tenant) { owners.serials(missing) }.forEach { serial ->
-                matches.getOrPut(serial) { mutableListOf() }.add(tenant)
-            }
-        }
-        missing.forEach { view.resolved[it] = matches[it]?.toList().orEmpty() }
+        view.resolved.putAll(if (locked) census.readLocked(missing) else census.read(missing))
     }
+
+    fun refresh() = TransactionSynchronizationManager.getSynchronizations().filterIsInstance<View>().forEach { it.resolved.clear() }
 
     fun current(serial: String): Boolean {
         prepare(setOf(serial))
