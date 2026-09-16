@@ -192,3 +192,9 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - VERIFIED authorization requires exact purpose/source/admission binding. Stored history JSON is preserved and timestamps compare by instant across UTC/New York/Kathmandu/Lord Howe.
 - Exact19 passed twice and 497 distinct tests passed independently; clean bootJar SHA256 `80d630be8f45d089dad8b18933b8a9165240050dd8c30153e06a2ea4c49b0546`.
 - Tasks 1-19 are checked; task20 is the next action. No task20 runtime behavior was added.
+
+## 2026-09-16 - Recovery worktree setup
+
+- The protected initial checkout already held `feat/warehouse-workorder`, so the safe non-displacing pattern is a new local continuation branch from the verified live remote tip in a separate worktree, followed by ordinary explicit-refspec pushes back to the existing remote feature branch.
+- Current host setup uses `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume` on local `work/warehouse-resume-20260916`; the remote delivery target remains `feat/warehouse-workorder`.
+- No effective Git identity was configured. Plan line 486 explicitly permits `fajarxfce <fajaralamsyah000@gmail.com>` through commit-scoped author/committer environment variables, avoiding any Git configuration change.
