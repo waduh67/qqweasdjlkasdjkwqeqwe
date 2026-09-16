@@ -33,6 +33,29 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
     }
 
     @Test
+    fun `captured bulk candidate loses eligibility before dispatch and produces no ACS action`() {
+        val device = admitted()
+        val stock = fixture(device.installation.receipt.stock.token)
+        val candidates = TenantContext.runAs(stock.tenant) {
+            context.getBean(com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository::class.java).findAllForCurrentTenant()
+        }
+        assertThat(candidates).hasSize(1)
+        val other = tenant()
+        val customer = request("POST", "/api/customers", other,
+            """{"code":"OTHER","name":"Other","address":"Test","location":{"longitude":106.99,"latitude":-6.24}}""")
+        assertThat(customer.status).isEqualTo(201)
+        LegacyOnuTestFixture.stage(mapper.readTree(customer.contentAsString).path("id").asString(), device.serial)
+        val principal = mapper.readTree(request("GET", "/api/me", device.installation.receipt.stock.token).contentAsString)
+        val result = TenantContext.runAs(stock.tenant) {
+            context.getBean(com.duluin.ftth.cpe.application.service.AcsBulkRefreshRunner::class.java).refreshOne(
+                candidates.single().id, candidates.single().genieacsId, UUID.fromString(principal.path("id").asString()), principal.path("email").asString())
+        }
+        assertThat(result).isEqualTo(com.duluin.ftth.cpe.application.service.RefreshOutcome.FAILED)
+        Mockito.verify(acs, Mockito.never()).requestConnection(device.genie)
+        stock.transaction { assertThat(scalar("SELECT count(*) FROM cpe_action_log")).isEqualTo("0") }
+    }
+
+    @Test
     fun `CPE-3 real gateway mixed future fields are refused by the live HTTP service`() {
         val device = admitted()
         WarehouseReviewAcsServer().use { server ->

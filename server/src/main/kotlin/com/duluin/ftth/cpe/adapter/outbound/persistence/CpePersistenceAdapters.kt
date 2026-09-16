@@ -53,17 +53,22 @@ class CpeDevicePersistenceAdapter(
         return saved
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     override fun findById(id: UUID): CpeDevice? = jpa.findById(id).orElse(null)?.toDomain()?.takeIf(bindings::visible)
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     override fun findByGenieacsId(genieacsId: String): CpeDevice? =
         bindings.visible(jpa.findAll().filter { it.genieacsId == genieacsId }.map { it.toDomain() }).singleOrNull()
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     override fun findByCustomerId(customerId: UUID): List<CpeDevice> =
         bindings.visible(jpa.findByCustomerId(customerId).map { it.toDomain() })
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     override fun findAllForCurrentTenant(): List<CpeDevice> =
         bindings.visible(jpa.findAll().map { it.toDomain() })
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     override fun findByIds(ids: Collection<UUID>): List<CpeDevice> =
         if (ids.isEmpty()) emptyList() else bindings.visible(jpa.findAllById(ids).map { it.toDomain() })
 
