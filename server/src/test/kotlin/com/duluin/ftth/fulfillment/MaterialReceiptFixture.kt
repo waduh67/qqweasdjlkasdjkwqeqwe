@@ -14,7 +14,8 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
     protected data class CustomerIdentity(val id: UUID, val actor: Pair<String, String>?)
     protected open fun installationCustomer(stock: Setup): CustomerIdentity = CustomerIdentity(UUID.randomUUID(), null)
 
-    protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false, installation: Boolean = false, loanOnly: Boolean = false): ReceiptCase {
+    protected fun receiptCase(serial: Boolean = false, fungible: Boolean = false, installation: Boolean = false, loanOnly: Boolean = false,
+        extraPermissions: Set<String> = emptySet()): ReceiptCase {
         val stock = setupReceipt()
         if (serial) {
             assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
@@ -35,7 +36,7 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
             transition(stock, receipt, "putaway", """{"expectedRevision":1,"destinationLocationId":"${stock.bin}","lines":[{"lineId":"${received.path("id").asString()}",
                 "stockIdentityId":"${received.path("pieces")[0].path("stockIdentityId").asString()}","quantityBase":"100","baseUnit":"EA"}]}""")
         } else receiveStock(stock, "1000000")
-        val receiver = technician(stock.token, if (installation) setOf("customer.onu.assign") else emptySet())
+        val receiver = technician(stock.token, extraPermissions + if (installation) setOf("customer.onu.assign") else emptySet())
         val customerArea = if (installation) area(stock.token) else null
         val customerIdentity = if (installation) installationCustomer(stock) else null
         val customer = customerIdentity?.id?.also { id ->

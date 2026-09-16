@@ -11,6 +11,13 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
     private val totals: MaterialPhysicalTotalsStore) {
     private val mapper = jacksonObjectMapper()
 
+    fun pendingDiscovery(serial: String, customerId: UUID): UUID? = jdbc.execute { sql ->
+        sql.query("""SELECT permit.id FROM inventory_deployment_authorization permit
+            JOIN inventory_deployment_execution execution ON execution.tenant_id=permit.tenant_id AND execution.authorization_id=permit.id
+            WHERE permit.tenant_id=? AND permit.customer_id=? AND permit.purpose='INSTALL' AND NOT permit.consumed
+                AND execution.source::jsonb->>'serial'=? ORDER BY permit.id""", sql.tenant, customerId, serial) { it.uuid("id") }.singleOrNull()
+    }
+
     fun source(issueLine: UUID): DeploymentSource = jdbc.execute { sql ->
         val receiptId = sql.query("""SELECT receipt_id FROM inventory_material_receipt_line
             WHERE tenant_id=? AND issue_line_id=? AND accepted_base=1 AND base_unit='EA'""", sql.tenant, issueLine) { it.uuid("receipt_id") }

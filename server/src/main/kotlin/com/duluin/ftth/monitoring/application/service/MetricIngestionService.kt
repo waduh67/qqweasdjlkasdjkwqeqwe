@@ -6,6 +6,9 @@ import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.OnuRef
+import com.duluin.ftth.customer.CustomerObservationApi
+import com.duluin.ftth.customer.ObservationPath
+import com.duluin.ftth.monitoring.adapter.outbound.persistence.UnassignedObservationStore
 import com.duluin.ftth.monitoring.application.port.outbound.IngestBatchRepository
 import com.duluin.ftth.monitoring.application.port.outbound.OnuMetricRepository
 import com.duluin.ftth.monitoring.AlarmsChangedEvent
@@ -17,6 +20,8 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import java.time.Instant
+import java.util.Locale
 
 /**
  * Menerima batch metrik dari collector: memetakannya ke ONU terdaftar, menyimpan
@@ -38,8 +43,31 @@ class MetricIngestionService(
     private val alarmEngine: AlarmEngine,
     private val discoveredOnuRecorder: DiscoveredOnuRecorder,
     private val events: ApplicationEventPublisher,
+    private val observations: CustomerObservationApi,
+    private val unassigned: UnassignedObservationStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    fun ingestRaw(collectorId: UUID, tenantId: UUID, batch: com.duluin.ftth.monitoring.application.port.inbound.CollectorObservationBatch): IngestResult {
+        if (batch.readings.size > MetricBatch.MAX_READINGS)
+            throw com.duluin.ftth.common.domain.error.ValidationException("Batch exceeds maximum readings")
+        if (!batchRepository.registerIfNew(batch.batchId, collectorId, tenantId, batch.readings.size))
+            return IngestResult(0, emptyList(), true)
+        val now = Instant.now()
+        val collected = com.duluin.ftth.monitoring.application.port.inbound.observationInstant(batch.collectedAt)
+        val readings = mutableListOf<OnuReading>()
+        val invalid = linkedSetOf<String>()
+        val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
+        for (reading in batch.readings) {
+            val parsed = reading.parsed()
+            if (parsed != null) readings += parsed else {
+                unassigned.appendRaw(reading.serialNumber, null, "MALFORMED_TIMESTAMP", mapper.writeValueAsString(reading))
+                invalid += reading.serialNumber.trim().uppercase(Locale.ROOT)
+            }
+        }
+        val result = process(tenantId, readings, now, collected == null || !trustedTime(collected, now))
+        return result.copy(unknownSerialNumbers = (result.unknownSerialNumbers + invalid).distinct().take(MAX_REPORTED_UNKNOWN))
+    }
 
     fun ingest(collectorId: UUID, tenantId: UUID, batch: MetricBatch): IngestResult {
         if (batch.readings.size > MetricBatch.MAX_READINGS) {
@@ -55,7 +83,8 @@ class MetricIngestionService(
             return IngestResult(accepted = 0, unknownSerialNumbers = emptyList(), duplicate = true)
         }
 
-        return ingestReadings(tenantId, batch.readings)
+        val now = Instant.now()
+        return process(tenantId, batch.readings, now, !trustedTime(batch.collectedAt, now))
     }
 
     /**
@@ -74,64 +103,50 @@ class MetricIngestionService(
      * jatuh atau berhasil bersama-sama.
      */
     fun ingestReadings(tenantId: UUID, readings: List<OnuReading>): IngestResult {
-        val serials = readings.mapTo(HashSet()) { it.serialNumber.trim().uppercase() }
-        val knownOnus = customerApi.findOnusBySerialNumbers(serials).associateBy { it.serialNumber }
-        val oltIdsByCode = resolveOltIds(readings)
-
-        val unknown = serials.filterNot { it in knownOnus }
-        val matched = readings.mapNotNull { reading ->
-            knownOnus[reading.serialNumber.trim().uppercase()]?.let { onu -> reading to onu }
-        }
-
-        if (matched.isNotEmpty()) {
-            metricRepository.saveAll(
-                matched.map { (reading, onu) ->
-                    OnuMetricPoint(
-                        time = reading.observedAt,
-                        tenantId = tenantId,
-                        onuId = onu.id,
-                        oltId = oltIdsByCode[reading.oltCode.uppercase()],
-                        status = reading.status.name,
-                        rxPowerDbm = reading.rxPowerDbm,
-                        txPowerDbm = reading.txPowerDbm,
-                        uptimeSeconds = reading.uptimeSeconds,
-                        distanceMeters = reading.distanceMeters,
-                        downCause = reading.lastDownCause?.name,
-                        lastOffAt = reading.lastOffAt,
-                        lastOnAt = reading.lastOnAt,
-                    )
-                },
-            )
-
-            customerApi.recordObservedOnuStatuses(
-                matched.associate { (reading, onu) -> onu.id to reading.status.toOnuStatus() },
-            )
-
-            matched.forEach { (reading, onu) -> evaluateAlarms(tenantId, reading, onu) }
-            // Alarm mungkin berubah → picu korelasi ulang insiden untuk tenant ini,
-            // sekali setelah seluruh batch dinilai (bukan per ONU).
-            events.publishEvent(AlarmsChangedEvent(tenantId))
-
-            // Serial yang kini dikenal tapi masih menggantung di kotak masuk
-            // (didaftarkan lewat jalur lain) dituntaskan sendiri.
-            discoveredOnuRecorder.resolveKnown(knownOnus.keys)
-        }
-
-        if (unknown.isNotEmpty()) {
-            // ONU liar ditangkap ke kotak masuk provisioning, bukan sekadar dicatat log:
-            // operator bisa menuntaskannya jadi pelanggan tanpa mengetik ulang serial.
-            val unknownReadings = readings.filterNot { it.serialNumber.trim().uppercase() in knownOnus }
-            discoveredOnuRecorder.capture(tenantId, unknownReadings, oltIdsByCode)
-            log.info("{} serial ONU tidak dikenal ditangkap ke kotak masuk", unknown.size)
-        }
-        return IngestResult(
-            accepted = matched.size,
-            // Dibatasi agar respons tidak membengkak saat OLT baru dipasang dan
-            // seluruh ONU-nya belum didaftarkan.
-            unknownSerialNumbers = unknown.take(MAX_REPORTED_UNKNOWN),
-            duplicate = false,
-        )
+        val now = Instant.now()
+        return process(tenantId, readings.map { it.copy(observedAt = now) }, now, false)
     }
+
+    private fun process(tenantId: UUID, readings: List<OnuReading>, now: Instant, untrustedBatch: Boolean): IngestResult {
+        val serials = readings.mapTo(sortedSetOf()) { it.serialNumber.trim().uppercase(Locale.ROOT) }
+        observations.lockEpisodes(serials)
+        val oltIdsByCode = resolveOltIds(readings)
+        val unknown = linkedSetOf<String>()
+        val points = mutableListOf<OnuMetricPoint>()
+        val current = linkedSetOf<String>()
+        var changed = false
+        for (reading in readings.sortedBy { it.observedAt }) {
+            val serial = reading.serialNumber.trim().uppercase(Locale.ROOT)
+            val validTime = !untrustedBatch && trustedTime(reading.observedAt, now)
+            val attribution = if (validTime) observations.resolveObservation(serial, reading.observedAt,
+                ObservationPath(oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)], reading.oltCode, reading.ponPortLabel)) else null
+            val episode = attribution?.episode
+            if (episode == null) {
+                unassigned.append(reading, attribution?.reason ?: "UNTRUSTED_TIMESTAMP")
+                unknown += serial
+                if (validTime && attribution?.reason == "NO_EPISODE_AT_TIME")
+                    discoveredOnuRecorder.capture(tenantId, listOf(reading), oltIdsByCode)
+                continue
+            }
+            val onu = episode.onu
+            points += OnuMetricPoint(reading.observedAt, tenantId, onu.id, oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)],
+                reading.status.name, reading.rxPowerDbm, reading.txPowerDbm, reading.uptimeSeconds, reading.distanceMeters,
+                reading.lastDownCause?.name, reading.lastOffAt, reading.lastOnAt)
+            if (observations.advanceLiveObservation(episode, reading.observedAt)) {
+                customerApi.recordObservedOnuStatuses(mapOf(onu.id to reading.status.toOnuStatus()))
+                evaluateAlarms(tenantId, reading, onu)
+                changed = true
+                current += serial
+            }
+        }
+        if (points.isNotEmpty()) metricRepository.saveAll(points)
+        if (changed) events.publishEvent(AlarmsChangedEvent(tenantId))
+        if (current.isNotEmpty()) discoveredOnuRecorder.resolveKnown(current)
+        return IngestResult(points.size, unknown.take(MAX_REPORTED_UNKNOWN), false)
+    }
+
+    private fun trustedTime(time: Instant, now: Instant): Boolean =
+        com.duluin.ftth.customer.ObservationTimePolicy.rejection(time, now) == null
 
     /**
      * Menilai seluruh jenis alarm untuk satu ONU.

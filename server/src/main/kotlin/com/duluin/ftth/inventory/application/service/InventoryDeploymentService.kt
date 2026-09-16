@@ -21,7 +21,9 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val locations: WarehouseReceiptService, private val assignments: AssetAssignmentStore,
     private val documents: DeploymentPostingStore, private val posting: WarehousePosting,
-    private val operations: WarehouseOperationStore, private val handovers: AssetHandoverService) : InventoryDeploymentApi {
+    private val operations: WarehouseOperationStore, private val handovers: AssetHandoverService,
+    private val deliveryAuthority: com.duluin.ftth.iam.DeliveryAuthorityApi,
+    private val currentUser: com.duluin.ftth.common.security.CurrentUserProvider) : InventoryDeploymentApi {
     private val mapper = jacksonObjectMapper()
 
     override fun authorize(workOrderId: UUID, request: DeploymentIntentRequest, metadata: WarehouseMutationMetadata): DeploymentAuthorizationRef {
@@ -67,14 +69,24 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     override fun consume(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
         consumePurpose(request, metadata, DeploymentPurpose.INSTALL)
 
+    override fun consumeDiscovered(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
+        consumePurpose(request, metadata, DeploymentPurpose.INSTALL, true)
+
+    override fun pendingDiscoveryAuthorization(serial: String, customerId: UUID): UUID? =
+        store.pendingDiscovery(serial.trim().uppercase(java.util.Locale.ROOT), customerId)
+
     fun consumeReplacement(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
         consumePurpose(request, metadata, DeploymentPurpose.REPLACE)
 
-    private fun consumePurpose(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata, purpose: DeploymentPurpose): DeploymentConsumption {
+    private fun consumePurpose(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata, purpose: DeploymentPurpose,
+        observedDelivery: Boolean = false): DeploymentConsumption {
         key(metadata)
         if (request.expectedRevision != 0L || request.installationPayload.length > 8192) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
-        val current = authority.lockCurrent()
+        val current = if (observedDelivery && currentUser.currentOrNull() == null) {
+            val binding = store.preview(request.authorizationId).binding
+            deliveryAuthority.lockActor(com.duluin.ftth.common.security.SessionIdentity(binding.tenantId, binding.actorId, null))
+        } else authority.lockCurrent()
         val preview = store.preview(request.authorizationId)
         if (preview.binding.purpose != purpose) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (preview.binding.customerId != request.customerId) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)

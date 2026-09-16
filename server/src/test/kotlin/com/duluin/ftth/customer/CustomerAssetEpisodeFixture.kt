@@ -14,6 +14,7 @@ abstract class CustomerAssetEpisodeFixture : MaterialReceiptFixture() {
         val customerA: UUID,
         val customerB: UUID,
         val serial: String,
+        val token: String,
     )
 
     internal fun episodeCase(): EpisodeCase {
@@ -29,7 +30,7 @@ abstract class CustomerAssetEpisodeFixture : MaterialReceiptFixture() {
         }
         val selected = received.input.lines.single()
         return EpisodeCase(stock, selected.stockIdentityId, selected.issueLineId, UUID.fromString(received.workOrder),
-            UUID.fromString(received.receiver.second), first, second, requireNotNull(selected.serial))
+            UUID.fromString(received.receiver.second), first, second, requireNotNull(selected.serial), received.stock.token)
     }
 
     internal fun EpisodeCase.assignment(id: UUID, customer: UUID = customerA, start: String = "2026-01-01T00:00:00Z"): String = """

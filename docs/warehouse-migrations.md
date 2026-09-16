@@ -29,6 +29,18 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M04: reservation task23
 
+2026-09-16 execution inventory: packaged source and live isolated Flyway both
+end at V175.89 (275 validated migrations). V175.90-.93 below are reservations,
+not applied files on this recovered host. Task23 now uses the existing reserved
+V175.90-.92 slots for observation state, durable unassigned observations and
+episode-bound CPE snapshots. V175.93 remains reserved; no predecessor changes.
+
+Task23 additionally reserves V175_94__monitoring_discovery_receipts.sql and
+V175_95__cpe_snapshot_integrity.sql before creation. V175.93 captures immutable
+customer topology observation roots; V175.94 stores original discovery outcomes,
+and V175.95 seals CPE snapshots to their current episode and persisted fields.
+Applied V175.90-.92 remain unchanged.
+
 Task23 reserves `V175_90__customer_observation_attribution.sql`,
 `V175_91__monitoring_observation_binding.sql`, and
 `V175_92__cpe_episode_snapshot_binding.sql` before SQL creation. These add

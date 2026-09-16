@@ -67,7 +67,7 @@ enum class ObservationUnassignedReason { UNMATCHED, AMBIGUOUS, UNTRUSTED_TIME, T
 sealed interface CustomerAssetObservationAttribution {
     data class Attributed(
         val episodeId: UUID,
-        val assignmentId: UUID,
+        val assignmentId: UUID?,
         val episodeRevision: Long,
         val mayUpdateLiveState: Boolean,
     ) : CustomerAssetObservationAttribution

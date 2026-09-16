@@ -26,9 +26,10 @@ import java.util.UUID
 @Transactional(readOnly = true)
 class DiscoveredOnuService(
     private val repository: DiscoveredOnuRepository,
-    private val customerApi: CustomerApi,
+    private val workflow: com.duluin.ftth.fulfillment.CustomerAssetWorkflowService,
     private val resolver: OnuProvisioningResolver,
     private val recorder: DiscoveredOnuRecorder,
+    private val receipts: com.duluin.ftth.monitoring.adapter.outbound.persistence.DiscoveryReceiptStore,
 ) : ManageDiscoveredOnuUseCase {
 
     override fun list(state: DiscoveredOnuState?, oltId: UUID?): List<DiscoveredOnuView> {
@@ -42,26 +43,19 @@ class DiscoveredOnuService(
     @Transactional
     override fun provision(id: UUID, command: ProvisionDiscoveredOnuCommand): DiscoveredOnuView {
         val discovered = require(id)
-        if (discovered.state == DiscoveredOnuState.PROVISIONED) {
-            throw ConflictException("ONU ${discovered.serialNumber} sudah diprovisikan")
-        }
         // ODP opsional, tapi harus utuh: ODP tanpa port (atau sebaliknya) ambigu.
         if ((command.odpId == null) != (command.portNumber == null)) {
             throw ValidationException("ODP dan nomor port harus diisi bersamaan, atau keduanya dikosongkan")
         }
-        customerApi.provisionOnu(
-            ProvisionOnuCommand(
-                serialNumber = discovered.serialNumber,
-                model = null,
-                customerId = command.customerId,
-                odpId = command.odpId,
-                portNumber = command.portNumber,
-                // Bila operator tak mengisi baseline, pakai redaman terakhir yang teramati.
-                installRxPowerDbm = command.installRxPowerDbm ?: discovered.lastRxPowerDbm,
-            ),
-        )
+        val authorization = command.authorizationId ?: throw com.duluin.ftth.inventory.WarehouseContractException(
+            com.duluin.ftth.inventory.WarehouseError(com.duluin.ftth.inventory.WarehouseErrorCode.SOURCE_NOT_VERIFIED, "USE_WORKORDER_ASSET_WORKFLOW"))
+        val topology = command.odpId?.let { com.duluin.ftth.customer.CustomerAssetTopology(it, requireNotNull(command.portNumber), command.installRxPowerDbm) }
+        workflow.installObserved(discovered.serialNumber, command.customerId,
+            com.duluin.ftth.customer.InstallCustomerAssetRequest(authorization, command.expectedRevision, topology),
+            com.duluin.ftth.inventory.WarehouseMutationMetadata(command.operationKey))
+        receipts.find(id, command)?.let { return it }
         discovered.markProvisioned()
-        return repository.save(discovered).toView()
+        return repository.save(discovered).toView().also { receipts.append(it, command) }
     }
 
     @Transactional

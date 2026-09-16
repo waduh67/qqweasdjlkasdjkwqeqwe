@@ -4,6 +4,8 @@ import com.duluin.ftth.cpe.application.port.outbound.CpeActionLogRepository
 import com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository
 import com.duluin.ftth.cpe.domain.model.CpeActionLog
 import com.duluin.ftth.cpe.domain.model.CpeDevice
+import com.duluin.ftth.customer.CustomerObservationApi
+import com.duluin.ftth.common.domain.error.ConflictException
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -11,9 +13,13 @@ import java.util.UUID
 @Component
 class CpeDevicePersistenceAdapter(
     private val jpa: CpeDeviceJpaRepository,
+    private val bindings: CpeObservationBindingStore,
+    private val episodes: CustomerObservationApi,
 ) : CpeDeviceRepository {
 
     override fun save(device: CpeDevice): CpeDevice {
+        episodes.lockEpisodes(setOf(device.serialNumber))
+        val episode = bindings.current(device) ?: throw ConflictException("CPE_EPISODE_FRESHNESS_REQUIRED")
         val entity = jpa.findById(device.id).orElse(null)?.apply {
             // Identitas (genieacsId, serialNumber) tak disentuh — hanya keadaan & tautan.
             oui = device.oui
@@ -43,22 +49,24 @@ class CpeDevicePersistenceAdapter(
             customerId = device.customerId,
             onuId = device.onuId,
         )
-        return jpa.save(entity).toDomain()
+        val saved = jpa.saveAndFlush(entity).toDomain()
+        bindings.record(saved, episode)
+        return saved
     }
 
-    override fun findById(id: UUID): CpeDevice? = jpa.findById(id).orElse(null)?.toDomain()
+    override fun findById(id: UUID): CpeDevice? = jpa.findById(id).orElse(null)?.toDomain()?.takeIf(bindings::visible)
 
     override fun findByGenieacsId(genieacsId: String): CpeDevice? =
-        jpa.findByGenieacsId(genieacsId)?.toDomain()
+        jpa.findAll().filter { it.genieacsId == genieacsId }.map { it.toDomain() }.singleOrNull(bindings::visible)
 
     override fun findByCustomerId(customerId: UUID): List<CpeDevice> =
-        jpa.findByCustomerId(customerId).map { it.toDomain() }
+        jpa.findByCustomerId(customerId).map { it.toDomain() }.filter(bindings::visible)
 
     override fun findAllForCurrentTenant(): List<CpeDevice> =
-        jpa.findAll().map { it.toDomain() }
+        jpa.findAll().map { it.toDomain() }.filter(bindings::visible)
 
     override fun findByIds(ids: Collection<UUID>): List<CpeDevice> =
-        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }.filter(bindings::visible)
 
     override fun deleteByIds(ids: Collection<UUID>) {
         jpa.deleteAllById(ids)
@@ -91,7 +99,7 @@ class CpeActionLogPersistenceAdapter(
         jpa.findAllByOrderByRequestedAtDesc(PageRequest.of(0, limit)).map { it.toDomain() }
 }
 
-private fun CpeDeviceJpaEntity.toDomain(): CpeDevice = CpeDevice.rehydrate(
+internal fun CpeDeviceJpaEntity.toDomain(): CpeDevice = CpeDevice.rehydrate(
     id = id,
     genieacsId = genieacsId,
     serialNumber = serialNumber,

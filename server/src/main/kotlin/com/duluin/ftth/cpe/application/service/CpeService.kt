@@ -55,6 +55,7 @@ class CpeService(
     @Value("\${ftth.cpe.online-stale-after:PT15M}") private val onlineStaleAfter: Duration,
     @Value("\${ftth.cpe.diagnostics.ping-host:8.8.8.8}") private val defaultPingHost: String,
     @Value("\${ftth.cpe.diagnostics.ping-count:4}") private val pingCount: Int,
+    private val observations: com.duluin.ftth.customer.CustomerObservationApi,
 ) : CpeQuery, ManageCpeUseCase {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -73,10 +74,21 @@ class CpeService(
     @Transactional(readOnly = true)
     override fun liveState(deviceId: UUID): CpeLiveView {
         val device = requireDevice(deviceId)
+        val episode = observations.currentEpisode(device.serialNumber)
+            ?: throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
+        val before = acsGateway.findDevice(device.genieacsId)
+        fun fresh(snapshot: com.duluin.ftth.cpe.application.port.outbound.AcsDevice?): Boolean =
+            snapshot != null && snapshot.serialNumber.trim().uppercase(Locale.ROOT) == device.serialNumber.trim().uppercase(Locale.ROOT) &&
+                (episode.legacy || snapshot.lastInformAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true)
+        if (!fresh(before)) throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
         val wifi = acsGateway.wifiNetworks(device.genieacsId)
             .map { WifiView(it.ref, it.ssid, it.passphrase, it.band, it.enabled) }
         val hosts = acsGateway.connectedHosts(device.genieacsId)
             .map { HostView(it.hostName, it.ipAddress, it.macAddress, it.active) }
+        val after = acsGateway.findDevice(device.genieacsId)
+        if (!fresh(after) || after?.lastInformAt != before?.lastInformAt ||
+            observations.currentEpisode(device.serialNumber) != episode || deviceRepository.findById(deviceId) == null)
+            throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
         return CpeLiveView(wifi, hosts)
     }
 

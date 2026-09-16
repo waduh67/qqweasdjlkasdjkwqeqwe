@@ -14,13 +14,13 @@ import java.util.UUID
 
 @Component
 class WorkOrderInventoryValidationAdapter(private val entityManager: EntityManager,
-    private val authority: CurrentAuthorityApi, private val users: IamApi) : InventoryWorkOrderValidationPort {
+    private val authority: com.duluin.ftth.iam.DeliveryAuthorityApi, private val users: IamApi) : InventoryWorkOrderValidationPort {
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockAndValidate(context: DeploymentValidationContext): ValidatedWorkOrderContext {
         context.cutoverFence.assertHeld()
         context.authorityFence.assertHeld()
         val binding = context.binding
-        val current = authority.lockCurrent()
+        val current = authority.lockActor(context.authorityFence.identity)
         if (binding.tenantId != TenantContext.tenantId() || binding.actorId != current.fence.identity.userId ||
             current.fence.identity != context.authorityFence.identity) fail(WarehouseErrorCode.FORBIDDEN)
         if (binding.authorityEpoch != current.fence.epoch || current.fence.epoch != context.authorityFence.epoch)

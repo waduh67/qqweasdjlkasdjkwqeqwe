@@ -2,6 +2,7 @@ package com.duluin.ftth.cpe.application.service
 
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.CustomerObservationApi
 import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository
@@ -104,23 +105,26 @@ class CpeSyncScheduler(
 @Component
 class CpeSyncService(
     private val deviceRepository: CpeDeviceRepository,
-    private val customerApi: CustomerApi,
+    private val observations: CustomerObservationApi,
+    private val bindings: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeObservationBindingStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun sync(snapshots: List<AcsDevice>) {
-        val bySerial = snapshots.associateBy { it.serialNumber }
-        val matchedOnus = customerApi.findOnusBySerialNumbers(bySerial.keys)
-
-        val existing = deviceRepository.findAllForCurrentTenant().associateByTo(HashMap()) { it.genieacsId }
-        val keptGenieacsIds = HashSet<String>()
+        val bySerial = snapshots.groupBy { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
+            .filterValues { it.size == 1 }.mapValues { it.value.single() }
+        observations.lockEpisodes(bySerial.keys)
+        val matchedOnus = bySerial.keys.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
+            val inform = bySerial[episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT)]?.lastInformAt
+            episode.legacy || (inform != null && !inform.isBefore(episode.startedAt) && !inform.isAfter(Instant.now().plusSeconds(300)))
+        }.map { it.onu }
 
         matchedOnus.forEach { onu ->
-            val snapshot = bySerial[onu.serialNumber] ?: return@forEach
-            keptGenieacsIds += snapshot.genieacsId
-            val row = existing[snapshot.genieacsId]
+            val snapshot = bySerial[onu.serialNumber.trim().uppercase(java.util.Locale.ROOT)] ?: return@forEach
+            val row = bindings.existing(snapshot.genieacsId, onu.id)
             if (row != null) {
+                if (row.lastInformAt != null && (snapshot.lastInformAt == null || snapshot.lastInformAt.isBefore(row.lastInformAt))) return@forEach
                 row.applySnapshot(
                     oui = snapshot.oui,
                     productClass = snapshot.productClass,
@@ -155,12 +159,5 @@ class CpeSyncService(
             }
         }
 
-        // Proyeksi yang serialnya tak lagi cocok ONU tenant ini (ONU dilepas/dipindah,
-        // atau device lenyap dari ACS) dipangkas — proyeksi tak boleh menyimpan hantu.
-        val stale: List<UUID> = existing.values.filterNot { it.genieacsId in keptGenieacsIds }.map { it.id }
-        if (stale.isNotEmpty()) {
-            deviceRepository.deleteByIds(stale)
-            log.debug("{} proyeksi CPE basi dipangkas", stale.size)
-        }
     }
 }

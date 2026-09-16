@@ -6,6 +6,8 @@ import java.util.UUID
 interface InventoryDeploymentApi {
     fun authorize(workOrderId: UUID, request: DeploymentIntentRequest, metadata: WarehouseMutationMetadata): DeploymentAuthorizationRef
     fun consume(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption
+    fun consumeDiscovered(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption
+    fun pendingDiscoveryAuthorization(serial: String, customerId: UUID): UUID?
     fun acceptHandover(request: AcceptAssetHandoverRequest, metadata: WarehouseMutationMetadata): AssetAssignmentRef
     fun assignmentHistory(assetId: UUID, page: WarehousePageRequest): WarehousePage<AssetAssignmentRef>
 }

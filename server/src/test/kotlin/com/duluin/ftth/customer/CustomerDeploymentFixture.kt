@@ -10,8 +10,8 @@ import java.util.UUID
 abstract class CustomerDeploymentFixture : MaterialReceiptFixture() {
     protected data class Installation(val receipt: ReceiptCase, val customer: UUID, val authorization: UUID, val operation: UUID)
 
-    protected fun installation(generic: Boolean = false): Installation {
-        val case = receiptCase(serial = true, installation = true)
+    protected fun installation(generic: Boolean = false, extraPermissions: Set<String> = emptySet()): Installation {
+        val case = receiptCase(serial = true, installation = true, extraPermissions = extraPermissions)
         received(case)
         if (generic) {
             val response = request("PUT", "/api/v1/warehouse/skus/${case.stock.onu}", case.stock.token,

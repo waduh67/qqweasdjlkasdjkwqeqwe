@@ -20,15 +20,20 @@ import java.util.UUID
 class CustomerAssetService(private val deployment: InventoryDeploymentApi, private val customers: CustomerRepository,
     private val locks: CustomerFulfillmentLockApi, private val store: CustomerAssetInstallationStore,
     private val network: NetworkApi, private val onus: OnuRepository,
-    private val authority: CurrentAuthorityApi, private val cutovers: InventoryTenantCutoverApi) : CustomerAssetApi {
+    private val authority: CurrentAuthorityApi, private val cutovers: InventoryTenantCutoverApi,
+    private val observations: CustomerObservationApi) : CustomerAssetApi {
     private val mapper = jacksonObjectMapper()
-    override fun install(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode {
+    override fun install(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode =
+        installEpisode(customerId, request, metadata, false)
+
+    private fun installEpisode(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata,
+        observedDelivery: Boolean): CustomerAssetEpisode {
         request.topology?.let { topology ->
             if (topology.portNumber < 1 || topology.installRxPowerDbm?.let { !it.isFinite() || it !in -40.0..0.0 } == true)
                 throw ConflictException("INVALID_INSTALLATION_TOPOLOGY")
         }
-        val consumption = deployment.consume(ConsumeDeploymentRequest(request.authorizationId, request.expectedRevision,
-            customerId, mapper.writeValueAsString(request)), metadata)
+        val command = ConsumeDeploymentRequest(request.authorizationId, request.expectedRevision, customerId, mapper.writeValueAsString(request))
+        val consumption = if (observedDelivery) deployment.consumeDiscovered(command, metadata) else deployment.consume(command, metadata)
         locks.lock(customerId, null)
         store.find(consumption.operationId)?.let { return it }
         if (!consumption.createsOnu && request.topology != null) throw ConflictException("EQUIPMENT_HAS_NO_ONU_TOPOLOGY")
@@ -49,9 +54,19 @@ class CustomerAssetService(private val deployment: InventoryDeploymentApi, priva
         val offset = page.page.toLong() * page.size
         return WarehousePage(if (offset >= rows.size) emptyList() else rows.drop(offset.toInt()).take(page.size), page.page, page.size, rows.size.toLong())
     }
-    override fun installDiscoveredAsset(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata) = install(customerId, request, metadata)
+    override fun installDiscoveredAsset(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata) =
+        installEpisode(customerId, request, metadata, true)
     override fun replace(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode = closed()
     override fun remove(customerId: UUID, request: InstallCustomerAssetRequest, metadata: WarehouseMutationMetadata): CustomerAssetEpisode = closed()
-    override fun attributeObservation(query: CustomerAssetObservationQuery): CustomerAssetObservationAttribution = closed()
+    override fun attributeObservation(query: CustomerAssetObservationQuery): CustomerAssetObservationAttribution {
+        val now = java.time.Instant.now()
+        val time = if (query.clock == ObservationClock.SERVER) now else query.observedAt
+        ObservationTimePolicy.rejection(time, now)?.let { return CustomerAssetObservationAttribution.Unassigned(it) }
+        val result = observations.resolveObservation(query.canonicalSerial, time,
+            if (query.deviceId == null && query.pathId == null) null else ObservationPath(query.deviceId, "", null, query.pathId))
+        val episode = result.episode ?: return CustomerAssetObservationAttribution.Unassigned(
+            if (result.reason == "AMBIGUOUS_EPISODE") ObservationUnassignedReason.AMBIGUOUS else ObservationUnassignedReason.UNMATCHED)
+        return CustomerAssetObservationAttribution.Attributed(episode.onu.id, episode.assignmentId, episode.episodeRevision, episode.endedAt == null)
+    }
     private fun closed(): Nothing = throw ConflictException("ASSET_LIFECYCLE_OPERATION_NOT_ENABLED")
 }
