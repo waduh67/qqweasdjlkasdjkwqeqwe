@@ -116,3 +116,11 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - Forward migrations V175.90-.101, all predecessors unchanged. V175.101 fixes authenticated tenant/collector batch scope and retention, exposed by final live QA. No source/custody/WO/RLS validator bypass; no task24/26/UI/mobile work.
 - Cleanup verified zero owned containers/JVMs/schemas/PID records/task listeners; two task volumes and images retained. Only runtime env/lock retained privately. Sanitized raw evidence is ignored; portable details are in task-23.md and ledger.
 - Known caveats: unchanged schema catalog assertion in WarehouseSchemaIT129/1, plus historical NetworkEndToEndIT10 fixture failures. Exact next action is independent task23 AdversarialVerify using feature/DoneClaim.md, changed-files.txt, source-hashes.txt and archived XML. Do not self-approve or advance task23 until that verifier confirms.
+
+## 2026-09-17 Rejected Task23 Recovery WIP
+
+- Supersedes earlier DoneClaim: source review lanes NEEDS_FIX. Forty correction paths after2453c5db are being secured in focused commits before further edits. Focused38/0/0 passed; topology regression UNRUN.
+- Applied ceiling175.105 confirmed live; immutable hashes/checksums and detailed remaining work are in newest task-23.md. Reserve new forward versions, never rewrite applied SQL.
+- T1-T8, malformed-time behavior, global-fence lock order/selective GUC, exact repeats, regressions, fresh JAR and live/restart proof remain mandatory. No approval from old runtime scenarios.
+- Owned stack/compiler daemons retained only during active use. No active test/API/simulator at inspection. Cleanup and normal push/live-SHA proof required before return; preserve volumes/data/images.
+- Resume newest remote feat/warehouse-workorder checkpoint, then run WarehouseDiscoveryITReviewTopology. Task23 unchecked; no task24.
