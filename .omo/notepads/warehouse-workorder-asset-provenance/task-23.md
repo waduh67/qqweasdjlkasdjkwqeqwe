@@ -65,3 +65,13 @@
 - Caveats retained: WarehouseSchemaIT129 has one unchanged task22 catalog-string assertion failure, not PASS; NetworkEndToEndIT10 historical fixture failures not rerun or solved. Manual global health is DOWN for intentionally unconfigured SMTP; application readiness JSON200/UP and real DB/MinIO checks passed, with no health validator disabled.
 - Current complete report is .omo/evidence/warehouse-workorder-asset-provenance/task-23/feature/DoneClaim.md with exact changed paths, source/migration hashes, per-command counts, red/green/manual/adversarial and cleanup receipts. Raw evidence stays local/ignored; this summary is portable.
 - Exact next action: independent AdversarialVerify for task23 at the final product/checkpoint SHA. Task23 remains unchecked; do not start task24, merge, or claim independent confirmation from the executor's DoneClaim.
+
+## Task23 Review Rejected: Verify-01 Needs Fix
+
+- Aggregate review REJECTED checkpoint16a6f3e16588e7536d6c01364881d1287cfab2e0 (producta3e9be5331bd02b8e2e8459f8686790fe127a281). Earlier executor/runtime passes are not aggregate approval. Task23 remains unchecked; no task24 work.
+- DISCOVERY-1/2, reviewer ses_f54d52757ffeoWPEsl2LCm08XQ: equivalent/stale pending permits block automatic selection; stale ignore versus provision lacks stable HTTP409 conflict mapping.
+- CPE-1/2/3, reviewer ses_f54d52690ffefwS6LHWH9xpiJt: admitted CPE exposure survives new global ownership conflicts; queued diagnostics can reuse stale completion without request/owner binding; minimum timestamp hides future siblings.
+- DB-1/2/3, reviewer ses_f54d5267bffeH6M87YAIQbBrrv: mutable/misbound metric attribution; unbound discovery receipt insertion; historical snapshot revision guessed during upgrade.
+- Runtime lane ses_f54d52609ffe9BiEMrmv2lwpMu passed existing33 and old live scenarios only. Temporal oracle ses_f54d527eaffeQMhYzFuG21jaGJ is reviewing immutable16a6f3e; further findings may follow. Existing schema catalog omission remains independently confirmed preexisting, not a task23 SQL regression.
+- Current substep: baseline reproduction for each finding under task23/verify-01, before corrective product edits. All SQL through175.101 is immutable; new versions require manifest-first reservation. Also verify selective GUC timing, populated batch upgrade/retention and topology lock/commit timing.
+- Exact next action: execute genuine failing-first cases, minimally correct each finding with owner APIs/current fences, then rerun feature/regressions/clean JAR/live ACS202 and ownership-conflict/restart proof. Final state remains NEEDS_FIX until repeat independent verification; do not infer approval from any single lane.
