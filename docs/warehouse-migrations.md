@@ -29,6 +29,14 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M04: reservation task23
 
+Verify-01 reserves V175_102__monitoring_metric_attribution.sql,
+V175_103__customer_observation_commit_fence.sql,
+V175_104__monitoring_receipt_outcome_binding.sql, and
+V175_105__cpe_historical_binding_evidence.sql before creation. These address
+DB-1, current global CPE ownership coordination, DB-2 and DB-3 respectively.
+All versions through175.101 remain immutable. Legacy metric/snapshot bytes are
+preserved; unverified history is not silently promoted, and chunk retention remains supported.
+
 2026-09-16 execution inventory: packaged source and live isolated Flyway both
 end at V175.89 (275 validated migrations). V175.90-.93 below are reservations,
 not applied files on this recovered host. Task23 now uses the existing reserved
