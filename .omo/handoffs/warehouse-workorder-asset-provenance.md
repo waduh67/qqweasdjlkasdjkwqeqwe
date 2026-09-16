@@ -74,3 +74,13 @@ The active plan, draft, notepads, ledger, and this handoff are the portable stat
 ## Excluded Data
 
 No runtime env files, credentials, API keys, private keys, JWTs, connection strings, generated logs, screenshots, archives, binary evidence, database data, object-store content, build output, session caches, `.omo/runtime/**`, `.omo/evidence/**`, `.omo/run-continuation/**`, or `.omo/boulder.json` is tracked.
+
+## 2026-09-16 Task23 Blocked Before Product Edits
+
+- This entry supersedes the earlier next-action wording. Task23 preflight started from clean local/live remote0735b81c3fbc8ae8dd2c4b4f826b480d596db6a5, but stopped before baseline/red proof as required by the infrastructure gate. Tasks1-22 remain checked; task23 and all later tasks remain unchecked.
+- Docker29.8.0/JDK21.0.12.1 are available. Isolated up failed pulling pinned minio/minio:RELEASE.2025-09-07T16-13-09Z with pull access denied; timescale/timescaledb-ha:pg17 pull was interrupted. Neither required image is cached. No registry credential or replacement image was guessed.
+- Isolated check and exact WarehouseDiscoveryIT QA runner refused64 before Gradle because owned PostgreSQL is absent. Zero product tests, no real baseline/feature-red, no bootJar or manual HTTP/DB/privacy proof. Existing NetworkEndToEndIT10 caveat is unchanged and not rerun.
+- No product/test/migration/harness/checkbox changes. Packaged SQL ends at V175.89; manifest reservations V175.90-.93 exist without SQL. Historical manifest applied-version text must not be treated as current DB proof.
+- Stop/down exit0; no containers/volumes, task PID records or task-port listeners remain. Only default Docker networks exist. Private generated env/lock retained locally, ignored; no preexisting data removed. See tracked task-23.md for probe details.
+- Needed external action: provide approved registry access or trusted restoration for the pinned images; if unavailable, approve and verify a compatible isolated-harness replacement separately. Do not weaken QA isolation or fall back to production.
+- Exact current substep: infrastructure capability BLOCKED. Next: verify newest remote checkpoint, rerun up/check, then establish real legacy telemetry/source-gate baseline and genuine task23 red tests before implementation. Independent verifier remains pending; this is an incomplete notes-only checkpoint, not a DoneClaim.
