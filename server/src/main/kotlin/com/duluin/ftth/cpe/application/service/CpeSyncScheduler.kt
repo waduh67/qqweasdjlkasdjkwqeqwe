@@ -136,7 +136,7 @@ class CpeSyncService(
         val bySerial = snapshots.groupBy { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
             .filterValues { it.size == 1 }.mapValues { it.value.single() }
         observations.lockEpisodes(bySerial.keys)
-        eligibility.prepare(bySerial.keys)
+        eligibility.prepareLocked(bySerial.keys)
         val matchedOnus = bySerial.keys.filter { eligibility.current(it) }.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
             val snapshot = bySerial.getValue(episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT))
             val inform = snapshot.lastInformAt
