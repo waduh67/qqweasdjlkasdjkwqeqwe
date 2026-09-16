@@ -17,7 +17,7 @@ abstract class CustomerAssetEpisodeFixture : MaterialReceiptFixture() {
         val token: String,
     )
 
-    internal fun episodeCase(serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): EpisodeCase {
+    internal fun episodeCase(serials: List<String> = listOf("EPISODE-${UUID.randomUUID()}".uppercase(), "SPARE-${UUID.randomUUID()}".uppercase())): EpisodeCase {
         val received = receiptCase(serial = true, serials = serials)
         received(received)
         val stock = fixture(received.stock.token)
