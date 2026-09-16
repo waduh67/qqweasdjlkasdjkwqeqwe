@@ -27,7 +27,9 @@ data class DeploymentIntentRequest(
 )
 
 data class ConsumeDeploymentRequest(val authorizationId: UUID, val expectedRevision: Long,
-    val customerId: UUID, val installationPayload: String)
+    val customerId: UUID, val installationPayload: String,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val observation: WarehouseObservationContext? = null)
 data class DeploymentConsumption(val assignment: AssetAssignmentRef, val operationId: UUID,
     val serialNumber: String, val model: String?, val createsOnu: Boolean)
 data class AcceptAssetHandoverRequest(val assignmentId: UUID, val expectedRevision: Long, val evidenceId: UUID,

@@ -33,7 +33,7 @@ class CustomerAssetService(private val deployment: InventoryDeploymentApi, priva
             if (topology.portNumber < 1 || topology.installRxPowerDbm?.let { !it.isFinite() || it !in -40.0..0.0 } == true)
                 throw ConflictException("INVALID_INSTALLATION_TOPOLOGY")
         }
-        val command = ConsumeDeploymentRequest(request.authorizationId, request.expectedRevision, customerId, mapper.writeValueAsString(request))
+        val command = ConsumeDeploymentRequest(request.authorizationId, request.expectedRevision, customerId, mapper.writeValueAsString(request), metadata.observation)
         val consumption = if (observedDelivery) deployment.consumeDiscovered(command, metadata) else deployment.consume(command, metadata)
         locks.lock(customerId, null)
         store.find(consumption.operationId)?.let { return it }
