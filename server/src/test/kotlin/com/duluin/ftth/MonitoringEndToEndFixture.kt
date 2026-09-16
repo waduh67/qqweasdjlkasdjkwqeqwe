@@ -20,6 +20,8 @@ abstract class MonitoringEndToEndFixture {
     @Autowired protected lateinit var silentCollectorEvaluator: SilentCollectorEvaluator
     @Autowired protected lateinit var collectorRepository: CollectorRepository
     private val pass = "secret12345"
+    private val observedOltCodes = mutableMapOf<String, String>()
+    protected fun oltCodeFor(serial: String): String = observedOltCodes[serial] ?: "OLT-X"
 
     protected fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
@@ -87,11 +89,12 @@ abstract class MonitoringEndToEndFixture {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""{"odpId":"$odp","portNumber":1,"installRxPowerDbm":-22.0}"""))
             .andExpect(status().isOk)
+        observedOltCodes["SN-$suffix"] = "OLT-$suffix"
         return customerId to "SN-$suffix"
     }
 
     protected fun reading(serial: String, status: String, rxPower: Double?): String = """
-        {"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status",
+        {"serialNumber":"$serial","oltCode":"${oltCodeFor(serial)}","ponPortLabel":"1/1/1","status":"$status",
          "rxPowerDbm":${rxPower ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,
          "distanceMeters":null,"observedAt":"${Instant.now()}"}
     """.trimIndent()

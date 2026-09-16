@@ -34,7 +34,7 @@ class MonitoringEndToEndIT : MonitoringEndToEndFixture() {
         lastOnAt: String? = null,
     ): String =
         """
-        {"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status",
+        {"serialNumber":"$serial","oltCode":"${oltCodeFor(serial)}","ponPortLabel":"1/1/1","status":"$status",
          "rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,
          "observedAt":"${Instant.now()}","lastDownCause":"$cause",
          "lastOffAt":${lastOffAt?.let { "\"$it\"" } ?: "null"},"lastOnAt":${lastOnAt?.let { "\"$it\"" } ?: "null"}}
