@@ -8,12 +8,14 @@ internal fun observedParameterTime(root: JsonNode, emptyFallback: Instant? = nul
     val pending = ArrayDeque<JsonNode>()
     pending.add(root)
     var oldest: Instant? = null
+    val latestAllowed = Instant.now().plusSeconds(300)
     while (pending.isNotEmpty()) {
         val node = pending.removeLast()
         if (node.has("_value")) {
             val raw = node.path("_timestamp")
             if (!raw.isTextual) return null
             val time = try { Instant.parse(raw.asString()) } catch (_: DateTimeParseException) { return null }
+            if (time.isAfter(latestAllowed)) return null
             if (oldest == null || time.isBefore(oldest)) oldest = time
         } else {
             node.forEach { pending.add(it) }
