@@ -37,7 +37,13 @@ data class OnuMetricPoint(
      */
     val lastOffAt: Instant?,
     val lastOnAt: Instant?,
+    val attribution: MetricAttribution? = null,
 )
+
+enum class MetricSource { COLLECTOR, SERVER_POLL, SERVER_INSTANT }
+data class MetricAttribution(val source: MetricSource, val receivedAt: Instant, val episodeRevisionAtDecision: Long,
+    val assignmentId: UUID?, val assignmentRevisionAtDecision: Long, val topologyRevision: Long,
+    val networkEdgeIds: List<Long>, val decision: String = "BOUND")
 
 /** Ringkasan riwayat redaman satu ONU pada rentang waktu tertentu. */
 data class OpticalTrend(
