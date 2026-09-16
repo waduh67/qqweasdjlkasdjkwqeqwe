@@ -40,7 +40,7 @@ class IngestBatchPersistenceAdapter : IngestBatchRepository {
     }
 
     override fun deleteOlderThan(cutoff: Instant): Int =
-        entityManager.createNativeQuery("DELETE FROM ingest_batch WHERE received_at < :cutoff")
+        entityManager.createNativeQuery("DELETE FROM ingest_batch WHERE greatest(received_at,retention_anchor) < :cutoff")
             .setParameter("cutoff", Timestamp.from(cutoff))
             .executeUpdate()
 }
