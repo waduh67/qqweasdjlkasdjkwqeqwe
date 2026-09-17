@@ -4,7 +4,7 @@ import tools.jackson.databind.JsonNode
 import java.time.Instant
 import java.time.format.DateTimeParseException
 
-internal data class AcsParameterTime(val earliest: Instant?, val invalid: Boolean)
+internal data class AcsParameterTime(val earliest: Instant?, val invalid: Boolean, val knownEarliest: Instant?, val missing: Boolean)
 
 internal fun observedParameterTime(root: JsonNode, emptyFallback: Instant? = null): Instant? =
     parameterTimeEvidence(root, emptyFallback).earliest
@@ -29,5 +29,5 @@ internal fun parameterTimeEvidence(root: JsonNode, emptyFallback: Instant? = nul
             node.forEach { pending.add(it) }
         }
     }
-    return AcsParameterTime(if (missing || invalid) null else oldest ?: emptyFallback, invalid)
+    return AcsParameterTime(if (missing || invalid) null else oldest ?: emptyFallback, invalid, oldest, missing)
 }

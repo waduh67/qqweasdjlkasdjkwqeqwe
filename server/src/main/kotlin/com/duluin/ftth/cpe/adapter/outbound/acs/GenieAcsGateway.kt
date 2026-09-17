@@ -115,6 +115,7 @@ class GenieAcsGateway(
                 enabled = cfg.paramBool("Enable") ?: true,
                 observedAt = time.earliest,
                 hasInvalidParameterTime = time.invalid,
+                knownParameterTime = time.knownEarliest,
             )
         }
     }
@@ -133,6 +134,7 @@ class GenieAcsGateway(
                 active = host.paramBool("Active") ?: false,
                 observedAt = observedParameterTime(host),
                 hasInvalidParameterTime = parameterTimeEvidence(host).invalid,
+                knownParameterTime = parameterTimeEvidence(host).knownEarliest,
             )
         }
     }
@@ -150,14 +152,15 @@ class GenieAcsGateway(
         postTask(genieacsId, mapOf("name" to "setParameterValues", "parameterValues" to values))
     }
 
-    override fun runPing(genieacsId: String, host: String, count: Int): PingDiagnostic {
-        val root = currentRoot(genieacsId) ?: return PingDiagnostic.incomplete(host, "Error_NoRoot")
+    override fun runPing(genieacsId: String, host: String, count: Int, beforePost: () -> Unit): PingDiagnostic {
+        val baseline = fetchDevice(genieacsId, "_id,_deviceId,_lastInform,InternetGatewayDevice,Device")
+            ?: return PingDiagnostic.incomplete(host, "Error_NoRoot")
+        val root = baseline.detectRoot() ?: return PingDiagnostic.incomplete(host, "Error_NoRoot")
         val base = pingBase(root)
         // Setel input + picu (DiagnosticsState=Requested) dalam satu setParameterValues:
         // perangkat menjalankan ping lalu melaporkan hasil pada inform "diagnostics complete".
-        val requestedAt = Instant.now()
-        val immediate = postTask(
-            genieacsId,
+        val correlation = AcsDiagnosticCorrelation(restClient, diagnosticsTimeout, pollInterval)
+        val preparation = correlation.begin(genieacsId, baseline, base, "$base.Host", host,
             mapOf(
                 "name" to "setParameterValues",
                 "parameterValues" to listOf(
@@ -165,11 +168,12 @@ class GenieAcsGateway(
                     listOf("$base.Host", host, XSD_STRING),
                     listOf("$base.NumberOfRepetitions", count.toString(), XSD_UNSIGNED_INT),
                 ),
-            ),
+            ), beforePost,
         )
-        if (!immediate) return PingDiagnostic.incomplete(host, "Queued")
-        val device = pollDiagnostic(genieacsId, base, pingProjection(base), requestedAt,
-            mapOf("$base.Host" to host, "$base.NumberOfRepetitions" to count.toString()))
+        if (preparation is AcsDiagnosticCorrelation.Start.Incomplete) return PingDiagnostic.incomplete(host, preparation.state)
+        val ticket = (preparation as AcsDiagnosticCorrelation.Start.Ready).ticket
+        val device = pollDiagnostic(genieacsId, base, pingProjection(base), ticket.requestedAt,
+            mapOf("$base.Host" to host, "$base.NumberOfRepetitions" to count.toString()), correlation, ticket)
             ?: return PingDiagnostic.incomplete(host, "Error_Timeout")
         val state = device.param("$base.DiagnosticsState") ?: "Error"
         if (state != PingDiagnostic.COMPLETE) return PingDiagnostic.incomplete(host, state)
@@ -184,8 +188,10 @@ class GenieAcsGateway(
         )
     }
 
-    override fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic {
-        val root = currentRoot(genieacsId) ?: return SpeedTestDiagnostic.incomplete(direction, "Error_NoRoot")
+    override fun runSpeedTest(genieacsId: String, direction: SpeedDirection, beforePost: () -> Unit): SpeedTestDiagnostic {
+        val baseline = fetchDevice(genieacsId, "_id,_deviceId,_lastInform,InternetGatewayDevice,Device")
+            ?: return SpeedTestDiagnostic.incomplete(direction, "Error_NoRoot")
+        val root = baseline.detectRoot() ?: return SpeedTestDiagnostic.incomplete(direction, "Error_NoRoot")
         val base = speedBase(root, direction)
         val inputs = buildList {
             add(listOf("$base.DiagnosticsState", "Requested", XSD_STRING))
@@ -196,12 +202,17 @@ class GenieAcsGateway(
                 add(listOf("$base.TestFileLength", uploadBytes.toString(), XSD_UNSIGNED_INT))
             }
         }
-        val requestedAt = Instant.now()
-        if (!postTask(genieacsId, mapOf("name" to "setParameterValues", "parameterValues" to inputs)))
-            return SpeedTestDiagnostic.incomplete(direction, "Queued")
+        val correlation = AcsDiagnosticCorrelation(restClient, diagnosticsTimeout, pollInterval)
+        val resetField = if (direction == SpeedDirection.DOWNLOAD) "$base.DownloadURL" else "$base.UploadURL"
+        val preparation = correlation.begin(genieacsId, baseline, base, resetField,
+            if (direction == SpeedDirection.DOWNLOAD) downloadUrl else uploadUrl,
+            mapOf("name" to "setParameterValues", "parameterValues" to inputs), beforePost)
+        if (preparation is AcsDiagnosticCorrelation.Start.Incomplete) return SpeedTestDiagnostic.incomplete(direction, preparation.state)
+        val ticket = (preparation as AcsDiagnosticCorrelation.Start.Ready).ticket
+        val requestedAt = ticket.requestedAt
         val expected = if (direction == SpeedDirection.DOWNLOAD) mapOf("$base.DownloadURL" to downloadUrl)
             else mapOf("$base.UploadURL" to uploadUrl, "$base.TestFileLength" to uploadBytes.toString())
-        val device = pollDiagnostic(genieacsId, base, speedProjection(base, direction), requestedAt, expected)
+        val device = pollDiagnostic(genieacsId, base, speedProjection(base, direction), requestedAt, expected, correlation, ticket)
             ?: return SpeedTestDiagnostic.incomplete(direction, "Error_Timeout")
         val state = device.param("$base.DiagnosticsState") ?: "Error"
         if (state != PingDiagnostic.COMPLETE) return SpeedTestDiagnostic.incomplete(direction, state)
@@ -316,8 +327,9 @@ class GenieAcsGateway(
             ssid = firstSsid(),
             temperatureC = firstTemperature(),
             observedFieldsAt = time.earliest,
-            hasInvalidParameterTime = time.invalid || (plain("_lastInform") != null &&
+            hasInvalidParameterTime = time.invalid || (has("_lastInform") && !path("_lastInform").isNull &&
                 (informedAt == null || informedAt.isAfter(Instant.now().plusSeconds(300)))),
+            knownParameterTime = time.knownEarliest,
         )
     }
 
@@ -385,14 +397,14 @@ class GenieAcsGateway(
      * snapshot terakhir (state-nya jadi penanda "belum tuntas").
      */
     private fun pollDiagnostic(genieacsId: String, base: String, projection: String, requestedAt: Instant,
-        expected: Map<String, String>): JsonNode? {
+        expected: Map<String, String>, correlation: AcsDiagnosticCorrelation, ticket: AcsDiagnosticCorrelation.Ticket): JsonNode? {
         val deadline = Instant.now().plus(diagnosticsTimeout)
         while (true) {
-            val current = fetchDevice(genieacsId, projection)
+            val current = fetchDevice(genieacsId, "$projection,_id,_deviceId,_lastInform")
             val state = current?.param("$base.DiagnosticsState")
             val observedAt = current?.let { observedParameterTime(it.descend(base)) }
             if (state != null && state != "Requested" && state != "None" && observedAt?.isAfter(requestedAt) == true &&
-                expected.all { (path, value) -> current.param(path) == value }) return current
+                expected.all { (path, value) -> current.param(path) == value } && correlation.matches(ticket, current, base)) return current
             if (Instant.now().isAfter(deadline)) return null
             Thread.sleep(pollInterval.toMillis())
         }
