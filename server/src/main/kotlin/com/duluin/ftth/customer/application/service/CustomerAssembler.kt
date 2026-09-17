@@ -6,6 +6,8 @@ import com.duluin.ftth.customer.application.port.inbound.SubscriptionView
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.Onu
 import com.duluin.ftth.customer.domain.model.Subscription
+import com.duluin.ftth.customer.adapter.outbound.persistence.CustomerOnuProvenanceStore
+import com.duluin.ftth.customer.adapter.outbound.persistence.OnuProvenanceProjection
 import com.duluin.ftth.network.NetworkApi
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -21,27 +23,28 @@ import java.util.UUID
 @Component
 class CustomerAssembler(
     private val networkApi: NetworkApi,
+    private val provenance: CustomerOnuProvenanceStore,
 ) {
     fun toViews(
         customers: List<Customer>,
         subscriptions: List<Subscription>,
         onus: List<Onu>,
     ): List<CustomerView> {
-        val odpCodes = odpCodesOf(onus)
+        val onuViews = toOnuViews(onus).groupBy { it.customerId }
         // Satu langganan per pelanggan (V107) — associateBy, bukan groupBy.
         val subByCustomer = subscriptions.associateBy { it.customerId }
-        val onusByCustomer = onus.groupBy { it.customerId }
         return customers.map { customer ->
             customer.toView(
                 subscription = subByCustomer[customer.id]?.toView(),
-                onus = onusByCustomer[customer.id].orEmpty().map { it.toView(odpCodes[it.odpId]) },
+                onus = onuViews[customer.id].orEmpty(),
             )
         }
     }
 
     fun toOnuViews(onus: List<Onu>): List<OnuView> {
         val odpCodes = odpCodesOf(onus)
-        return onus.map { it.toView(odpCodes[it.odpId]) }
+        val origins = provenance.forOnus(onus.mapTo(HashSet()) { it.id })
+        return onus.map { it.toView(odpCodes[it.odpId], checkNotNull(origins[it.id])) }
     }
 
     private fun odpCodesOf(onus: List<Onu>): Map<UUID, String> =
@@ -76,7 +79,7 @@ internal fun Subscription.toView() = SubscriptionView(
     terminatedAt = terminatedAt,
 )
 
-internal fun Onu.toView(odpCode: String?) = OnuView(
+internal fun Onu.toView(odpCode: String?, origin: OnuProvenanceProjection) = OnuView(
     id = id,
     customerId = customerId,
     serialNumber = serialNumber,
@@ -88,4 +91,8 @@ internal fun Onu.toView(odpCode: String?) = OnuView(
     opticalHealth = opticalHealth(),
     status = status,
     installedAt = installedAt,
+    assetId = origin.assetId,
+    assignmentId = origin.assignmentId,
+    provenance = origin.provenance,
+    retiredAt = origin.retiredAt,
 )

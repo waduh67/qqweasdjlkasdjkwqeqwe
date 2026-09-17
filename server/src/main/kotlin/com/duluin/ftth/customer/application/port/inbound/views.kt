@@ -73,4 +73,8 @@ data class OnuView(
     val opticalHealth: OpticalHealth,
     val status: OnuStatus,
     val installedAt: Instant?,
+    val assetId: UUID? = null,
+    val assignmentId: UUID? = null,
+    val provenance: com.duluin.ftth.inventory.AssetProvenance = com.duluin.ftth.inventory.AssetProvenance.UNKNOWN,
+    val retiredAt: Instant? = null,
 )
