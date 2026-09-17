@@ -40,3 +40,11 @@
 - Cleanup confirmed zero owned containers/network/JVMs/API/task listeners/PID files. Five owned compiler/Gradle daemons stopped; live manifests/private requests and dirty sentinel removed. Original environment/lock and both volumes/images/data retained. No temporary schemas were created.
 - Full local evidence:task-24/DoneClaim.md, changed-files.txt, source-hashes.txt, counts.json, complete XML archives and redacted reproducible curl/status/body/DB receipts. LSP external-worktree paths unavailable; real compilation/tests used. No evidence/runtime/build/Boulder staged.
 - Exact next action: independent task24 source/runtime verification at final checkpoint, including server-tenant background import behavior and V2 deployment-versus-legacy semantics. Do not check task24 from executor claim. Historical WarehouseSchema catalog/NetworkEndToEnd fixture caveats remain task46; no full-suite/release/UI/mobile or renewed GPON claim.
+
+## Source Review Rejected: Subscriber360 Area Scope
+
+- Entry clean local/live remotea709b65ac7df13bae6e8ed3edfd019061c8efcb4. Source reviewer ses_f4fee4e43ffefMaI3Uq4c5eotK reports one concrete NEEDS_FIX: Subscriber360 uses unscoped CustomerApi.findCustomer before exposing tenant/permission-gated legacy and V2 materials, so an areaA user can retrieve areaB customer data.
+- Runtime reviewer ses_f4fee4d34ffemYo7phG6cKJ5lR passed prior14/78 cases but did not cover this area boundary. Those receipts are not aggregate approval or proof of this correction.
+- Current step: publish rejection checkpoint, then real IAM/HTTP failing-first allowed/different/restricted-empty/foreign tests over actual material fixtures. Add a small customer-owned scoped public lookup using established server area semantics; preserve unscoped portal/background API and all other reviewed task24 behavior.
+- No migration expected; applied175.112 immutable. No task23/GPON/task25/PR/merge work. Task24 stays unchecked and rejected until targeted independent re-review.
+- Register before use: task-owned isolated containers/network and spawned test/Gradle/Kotlin/API processes will be cleaned; volumes/images/data preserved. Any live fixture manifests stay private under runtime and are removed before return. Evidence is local task-24/area-review, never staged.
