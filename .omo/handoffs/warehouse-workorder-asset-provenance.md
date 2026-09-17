@@ -2,6 +2,8 @@
 
 ## Current Status: Task24 NEEDS_FIX, One Subscriber360 Area Finding
 
+- Executor correction now has genuine red5/4, green targeted14/exact20/regression95, all green runs0 failures/errors/skips. Current step is checkpoint then clean build, real area HTTP/DB proof and cleanup; independent re-review remains pending. New customer-owner check uses existing CurrentAuthority scope semantics before facets; unscoped API/DTOs/inventory queries unchanged. See newest task-24.md.
+
 - Source reviewer ses_f4fee4e43ffefMaI3Uq4c5eotK rejected checkpointa709b65a: Subscriber360's unscoped customer lookup permits cross-area legacy/V2 material exposure. Current step is failing-first IAM/HTTP reproduction and a customer-owned scoped lookup before any facets. Preserve the unscoped API for portal/background use.
 - Runtime reviewer ses_f4fee4d34ffemYo7phG6cKJ5lR passed old14/78 cases without this area case; no aggregate approval. The historical executor claim below is superseded for this finding. Task24 unchecked; task23 and other reviewed behavior unchanged. No migration expected,175.112 immutable. Read newest task-24.md/EOF ledger.
 
