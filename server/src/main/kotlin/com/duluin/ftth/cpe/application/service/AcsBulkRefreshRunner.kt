@@ -34,11 +34,9 @@ class AcsBulkRefreshRunner(
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun refreshOne(deviceId: UUID, genieacsId: String, actorId: UUID, actorEmail: String?): RefreshOutcome {
-        val device = devices.findById(deviceId) ?: return RefreshOutcome.FAILED
-        if (device.genieacsId != genieacsId) return RefreshOutcome.FAILED
-        operations.lock(genieacsId)
+        if (operations.lockDevice(deviceId) != genieacsId) return RefreshOutcome.FAILED
         eligibility.refresh()
-        if (devices.findById(deviceId)?.onuId != device.onuId) return RefreshOutcome.FAILED
+        val device = devices.findById(deviceId) ?: return RefreshOutcome.FAILED
         val outcome = runCatching { acsGateway.requestConnection(genieacsId) }
         eligibility.refresh()
         if (devices.findById(deviceId)?.onuId != device.onuId) return RefreshOutcome.FAILED

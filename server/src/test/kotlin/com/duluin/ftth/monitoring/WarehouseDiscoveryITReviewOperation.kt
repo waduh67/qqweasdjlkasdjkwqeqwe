@@ -113,13 +113,12 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
             Executors.newFixedThreadPool(2).use { pool ->
                 val diagnostic = pool.submit<Int> { request("POST", "/api/cpe/devices/${device.deviceId}/diagnostics/ping",
                     device.installation.receipt.stock.token, """{"host":"owned.test"}""").status }
-                check(entered.await(10, TimeUnit.SECONDS))
-                val newOwner = pool.submit<String> { LegacyOnuTestFixture.stage(customerId, device.serial) }
                 try {
+                    check(entered.await(10, TimeUnit.SECONDS))
+                    val newOwner = pool.submit<String> { LegacyOnuTestFixture.stage(customerId, device.serial) }
                     newOwner.get(5, TimeUnit.SECONDS)
                 } finally { release.countDown() }
                 assertThat(diagnostic.get(30, TimeUnit.SECONDS)).isEqualTo(404)
-                newOwner.get(30, TimeUnit.SECONDS)
             }
             val denied = request("POST", "/api/cpe/devices/${device.deviceId}/refresh", device.installation.receipt.stock.token)
             assertThat(denied.status).isEqualTo(404)
