@@ -54,6 +54,13 @@ class WarehouseCompatibilityITAreaScope : WarehouseCompatibilityMaterialFixture(
         assertThat(otherArea.status).isEqualTo(201)
         val areaId = mapper.readTree(otherArea.contentAsString).path("id").asString()
         if (scenario != "EMPTY_AREAS") grantAreas(admin, reader, listOf(areaId))
+        if (scenario == "DIFFERENT_AREA") {
+            val ownCustomer = request("POST", "/api/customers", admin,
+                """{"name":"Reader own area","address":"Test","areaId":"$areaId","location":{"longitude":106.8,"latitude":-6.2}}""")
+            assertThat(ownCustomer.status).isEqualTo(201)
+            val ownId = mapper.readTree(ownCustomer.contentAsString).path("id").asString()
+            assertThat(request("GET", "/api/subscriber-360/$ownId", reader.first).status).isEqualTo(200)
+        }
         val target = if (scenario == "NULL_CUSTOMER_AREA") {
             val created = request("POST", "/api/customers", admin,
                 """{"name":"Unassigned area","address":"Test","location":{"longitude":106.8,"latitude":-6.2}}""")
