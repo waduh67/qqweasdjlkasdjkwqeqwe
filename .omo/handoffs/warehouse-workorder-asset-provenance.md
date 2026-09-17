@@ -1,6 +1,9 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task24 NEEDS_FIX, One Subscriber360 Area Finding
+## Current Status: Task24 Area Correction Verified, Targeted Re-Review Pending
+
+- Latest correction sourced5344163 is pushed; exact20 twice, regression95 and targeted14 pass with0 failures/errors/skips after real red5/4. Clean19-task JAR SHA256ccf100eb75a7838aaa026dba5dde74ade765d7be8fe757877e32233d9e219c35 passed two real area HTTP/DB runs, including original-token revocation, unrestricted access, legacy/V2 preservation and portal safety. Cleanup complete; only original env/lock and two retained volumes remain.
+- Current step: targeted independent task24 source/runtime re-review. safe_to_request_recheck=true; task24 remains unchecked and not independently approved. See newest task-24.md/true EOF ledger and local area-review/DoneClaim.md. The earlier rejected and WIP paragraphs below are historical; no task23/GPON/task25 or SQL changes.
 
 - Executor correction now has genuine red5/4, green targeted14/exact20/regression95, all green runs0 failures/errors/skips. Current step is checkpoint then clean build, real area HTTP/DB proof and cleanup; independent re-review remains pending. New customer-owner check uses existing CurrentAuthority scope semantics before facets; unscoped API/DTOs/inventory queries unchanged. See newest task-24.md.
 
