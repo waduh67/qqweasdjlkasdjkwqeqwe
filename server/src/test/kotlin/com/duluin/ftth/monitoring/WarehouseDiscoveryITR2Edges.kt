@@ -39,7 +39,7 @@ class WarehouseDiscoveryITR2Edges : WarehouseDiscoveryFixture() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["EMPTY", "UNRELATED", "DUPLICATE", "REORDERED", "SUPERSEDED", "DELETED", "OLT", "VALID"])
+    @ValueSource(strings = ["EMPTY", "UNRELATED", "DUPLICATE", "REORDERED", "SUPERSEDED", "DELETED", "OLT", "DOWNGRADE", "VALID"])
     fun `DB-R2-2 BOUND evidence must contain exactly the selected nondeleted historical chain`(mode: String) {
         val token = newTenantAdmin("r2edges")
         val device = legacy(token)
@@ -58,7 +58,7 @@ class WarehouseDiscoveryITR2Edges : WarehouseDiscoveryFixture() {
         val attribution = mapper.readTree(scalar(token, "SELECT attribution::text FROM onu_metric WHERE onu_id='${device.onu}'")) as tools.jackson.databind.node.ObjectNode
         val ids = attribution.path("networkEdgeIds").asSequence().map { it.asLong() }.toList()
         val replacement: List<Long> = when (mode) {
-            "EMPTY" -> emptyList()
+            "EMPTY", "DOWNGRADE" -> emptyList()
             "UNRELATED" -> listOf(scalar(token, "SELECT min(id) FROM network_observation_edge WHERE node_id='${second.odp}'").toLong())
             "DUPLICATE" -> ids + ids.first()
             "REORDERED" -> ids.reversed()
@@ -67,6 +67,7 @@ class WarehouseDiscoveryITR2Edges : WarehouseDiscoveryFixture() {
             else -> ids
         }
         attribution.putArray("networkEdgeIds").also { array -> replacement.forEach { array.add(it) } }
+        if (mode == "DOWNGRADE") attribution.put("decision", "EPISODE_ONLY")
         val insert = {
             dataSource.connection.use { connection ->
                 connection.autoCommit = false
