@@ -11,6 +11,30 @@ import tools.jackson.databind.JsonNode
 
 class WarehouseCompatibilityITCsv : WarehouseMasterHttpFixture() {
     @Test
+    fun `connection loss before import commit rolls back customer subscription and fulfillment`() {
+        val token = tenant()
+        assertThat(request("POST", "/api/catalog/plans", token,
+            """{"name":"Interrupted CSV","price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""").status).isEqualTo(201)
+        val csv = "name,address,package_name,mikrotik_username\nInterrupted,Test,Interrupted CSV,interrupted-user\n".toByteArray()
+        val row = com.duluin.ftth.onboarding.application.service.CustomerCsvParser.parse(csv.inputStream(), csv.size.toLong()).rows.single()
+        val command = com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersCommand(listOf(row))
+        val stock = fixture(token)
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            stock.transaction {
+                context.getBean(com.duluin.ftth.onboarding.application.service.CustomerRowImporter::class.java)
+                    .importRow(command, "interrupted-user", "PPPOE", row)
+                assertThat(scalar("SELECT count(*) FROM customer")).isEqualTo("1")
+                sql("SELECT pg_terminate_backend(pg_backend_pid())")
+            }
+        }.isInstanceOf(Exception::class.java)
+        stock.transaction {
+            for (table in listOf("customer", "subscription", "migration_fulfillment_inbox", "onu", "inventory_asset_assignment")) {
+                assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("0")
+            }
+        }
+    }
+
+    @Test
     fun `tenant scoped promotion creates a customer without an interactive principal`() {
         val token = tenant()
         assertThat(request("POST", "/api/catalog/plans", token,
