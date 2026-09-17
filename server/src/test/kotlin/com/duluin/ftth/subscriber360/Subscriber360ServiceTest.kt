@@ -105,7 +105,18 @@ class Subscriber360ServiceTest {
 
     // --- Perkakas uji ---
 
-    private fun service(permissions: Set<String>, customer: CustomerApi) = Subscriber360Service(
+    @Test
+    fun `material query failure propagates while forbidden facet never queries inventory`() {
+        val failure = IllegalStateException("material query unavailable")
+        assertThatThrownBy { service(ALL_FACET_PERMISSIONS, FakeCustomerApi(true), failure).assemble(customerId) }
+            .isSameAs(failure)
+        val denied = service(setOf("customer.customer.view"), FakeCustomerApi(true), failure).assemble(customerId)
+        assertThat(denied.materialHistory).isNull()
+        assertThat(denied.materialHistoryV2).isNull()
+        assertThat(denied.access.materialHistoryV2).isFalse()
+    }
+
+    private fun service(permissions: Set<String>, customer: CustomerApi, materialFailure: RuntimeException? = null) = Subscriber360Service(
         customerApi = customer,
         bngApi = FakeBngApi(),
         billingApi = FakeBillingApi(),
@@ -119,8 +130,10 @@ class Subscriber360ServiceTest {
             else throw UnsupportedOperationException(invocation.method.name)
         },
         materialApiV2 = object : com.duluin.ftth.inventory.MaterialConsumptionApiV2 {
-            override fun forCustomer(customerId: UUID, page: com.duluin.ftth.inventory.WarehousePageRequest) =
-                com.duluin.ftth.inventory.WarehousePage(emptyList<com.duluin.ftth.inventory.CustomerMaterialFactV2>(), page.page, page.size, 0)
+            override fun forCustomer(customerId: UUID, page: com.duluin.ftth.inventory.WarehousePageRequest): com.duluin.ftth.inventory.WarehousePage<com.duluin.ftth.inventory.CustomerMaterialFactV2> {
+                materialFailure?.let { throw it }
+                return com.duluin.ftth.inventory.WarehousePage(emptyList(), page.page, page.size, 0)
+            }
         },
     )
 
