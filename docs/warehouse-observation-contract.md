@@ -9,6 +9,9 @@ observation behavior, not release approval.
   Missing/null required fields are malformed HTTP shapes:400, no dedup marker or
   fabricated observation timestamp. A present but unparsable timestamp is retained
   as unassigned evidence, rather than converted to the ingestion clock.
+- Clock admission precedes every provenance quarantine. Out-of-window/extreme
+  instants retain their raw payload timestamp with a null typed timestamp; they
+  cannot overflow persistence and roll back otherwise valid siblings.
 - The72-hour age and5-minute future tolerance are admission windows, not proof
   that future ownership is known. Tolerated future samples become immutable
   `FUTURE_OBSERVATION` evidence; they do not update metrics, live status or alarms.
@@ -32,11 +35,18 @@ observation behavior, not release approval.
   ONU attachment rows. Customer attribution reads it through a public network API.
   Unknown pre-expansion upstream history is unassigned, not reconstructed from
   today's mutable topology.
-- Current GPON profiles explicitly mark raw ONU table indexes
-  `UNVERIFIED_INDEX`. They are retained as `UNVERIFIED_PON_IDENTITY`, not treated as
-  configured labels such as `1/1/1`. Firmware-specific verified index mapping is
-  still required before these hints can support attribution. No decoder is guessed
-  from an example integer, and missing port proof never disables path checks.
+- Current GPON profiles retain raw ONU table indexes as `UNVERIFIED_INDEX`, never
+  configured labels such as `1/1/1`. A unique active legacy ONU with no ODP/path
+  can accept valid-time telemetry from an OLT belonging to its tenant as
+  `EPISODE_ONLY`; this does not assert a verified PON path or create stock.
+  Unknown/ambiguous episodes, foreign/unresolved OLTs and connected unresolved
+  paths remain unassigned. Connected path mismatch checks are unchanged.
+- Connected GPON mapping remains blocked pending authoritative evidence. Existing
+  owner data maps `(OLT, configured label)` to a PON, not raw ONU indexes. Required
+  evidence is a vendor/model/firmware-specific SNMP index+serial capture paired
+  with authoritative CLI/API frame/slot/PON identity across multiple ports/ONU
+  positions, plus the matching MIB/index semantics. No bit-shift decoder or raw
+  index relabelling is inferred from one example integer.
 
 ## Concurrency And Replay
 
