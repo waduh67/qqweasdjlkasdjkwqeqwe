@@ -20,10 +20,17 @@ class CpeObservationBindingStore(private val entityManager: EntityManager, priva
     fun existing(genieacsId: String, onuId: java.util.UUID): CpeDevice? =
         devices.findByGenieacsIdAndOnuId(genieacsId, onuId)?.toDomain()
 
-    fun current(device: CpeDevice): ObservationEpisode? = if (!eligibility.current(device.serialNumber)) null else episodes.currentEpisode(device.serialNumber)?.takeIf {
-        it.onu.id == device.onuId && it.onu.customerId == device.customerId &&
-            (if (device.lastInformAt == null) it.legacy else device.lastInformAt?.let { time ->
-                (it.legacy || !time.isBefore(it.startedAt)) && !time.isAfter(Instant.now().plusSeconds(300)) } == true)
+    fun current(device: CpeDevice): ObservationEpisode? {
+        entityManager.unwrap(Session::class.java).doWork { connection ->
+            if (connection.transactionIsolation != java.sql.Connection.TRANSACTION_READ_COMMITTED)
+                throw com.duluin.ftth.common.domain.error.ConflictException("CPE_READ_COMMITTED_REQUIRED")
+        }
+        if (!eligibility.current(device.serialNumber)) return null
+        return episodes.currentEpisode(device.serialNumber)?.takeIf {
+            it.onu.id == device.onuId && it.onu.customerId == device.customerId &&
+                (if (device.lastInformAt == null) it.legacy else device.lastInformAt?.let { time ->
+                    (it.legacy || !time.isBefore(it.startedAt)) && !time.isAfter(Instant.now().plusSeconds(300)) } == true)
+        }
     }
 
     fun visible(device: CpeDevice): Boolean {
