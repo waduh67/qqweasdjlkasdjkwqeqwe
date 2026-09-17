@@ -29,6 +29,12 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## M04: reservation task23
 
+Verify-02 reserves V175_110__discovery_canonical_hash_binding.sql,
+V175_111__metric_exact_historical_chain.sql and
+V175_112__metric_interval_mutation_guard.sql before creation. These close the
+joint receipt hash, false BOUND chain and post-insert interval findings. All
+applied predecessors through175.109 remain immutable; legacy bytes are retained.
+
 Temporal review reserves V175_106__ordered_topology_transition_time.sql and
 V175_107__monitoring_receipt_retention_anchor.sql before creation, following
 genuine T1/T7 failures. Applied versions through175.105 remain unchanged.
