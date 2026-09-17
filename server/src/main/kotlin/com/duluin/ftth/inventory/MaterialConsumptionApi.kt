@@ -12,6 +12,7 @@ interface MaterialConsumptionApi {
     fun forCustomer(tenantId: UUID, customerId: UUID): List<CustomerMaterialFactRef>
 }
 
+@org.springframework.stereotype.Component
 class MaterialConsumptionApiAdapter(
     private val service: MaterialConsumptionService,
 ) : MaterialConsumptionApi {
