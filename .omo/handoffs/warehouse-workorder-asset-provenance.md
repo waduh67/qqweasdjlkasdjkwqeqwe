@@ -1,12 +1,13 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task24 First Green WIP, Final QA Pending
+## Current Status: Task24 Executor Verified, Independent Verification Pending
 
-- Latest task24: exact13 and selected91 pass with0 failures/errors/skips. Current step is correction checkpoint followed by clean artifact, real isolated HTTP/DB and owned-resource cleanup. CSV entity mappings and server-tenant background promotion are corrected with failing-first proof; no migration. See newest task-24.md for classified failures. Task24 remains unchecked and independent verification pending.
+- Task24 sourcec7e3647acb984cd48666ac49ff3a27e71b73691c is pushed. Exact13 twice, final14 including connection-loss rollback, and selected91 pass with0 failures/errors/skips. Clean19-task JAR SHA2568fc6327a7a37a3c834d685fb6bd7a3e65873fdf8e91edee3de9fbeabd1790f11 passed two actual isolated HTTP/DB journeys. No migration; live175.112 unchanged. Read newest task-24.md and local task-24/DoneClaim.md for complete scope, classified failures and source/artifact binding.
 
-- Task24 started from verified clean local/live remote49e47396993c46b03ff48d6a8258af17db9068d6 on2026-09-17. Current step is contract tracing and baseline characterization before production edits. Read newest task-24.md and the true EOF ledger receipt for subsequent checkpoints.
-- Current task24 substep supersedes the startup line: selected26/0/0/0 green after genuine red6/4 and classified baseline39/3. Checkpoint implementation/tests, then expand adversarial/CSV cases, regressions, clean bootJar, real HTTP/DB and cleanup. No task24 live proof or DoneClaim yet; live schema175.112 unchanged. See append-only task-24.md for legacy fact semantics and inbox mapping correction.
-- Task23 remains independently confirmed complete; task24 remains unchecked, and no task25/later work or GPON re-review is authorized. No task24 tests, build or live HTTP proof yet. No migrations added; prior ceiling175.112 awaits live verification.
+- Current step: independent task24 source/runtime verification, not more implementation. Task24 remains unchecked. Verify server-tenant background import behavior, explicit V2 deployment/legacy count distinction, additive owner provenance and portal privacy. Live multipart promotion was intentionally disabled; actual full promotion is DB-integration proof, not a claim from PROCESSING.
+- Cleanup is complete: zero owned containers/JVMs/API/task listeners/PID files; local live manifests and dirty sentinel removed. Original environment/lock and two volumes/images/data retained. No temporary schemas created. Protected checkout, task23 status and GPON scope unchanged; no task25/later/PR/merge.
+
+## Confirmed Task23 Snapshot (Unchanged)
 
 - Authoritative top-level state is 23 completed, 0 blocked and 29 pending: tasks 1-23 are `[x]`; tasks24-48 and F1-F4 remain `[ ]`. Task24 is next. This is task23 completion only, not full-plan, task46, release or final-wave approval.
 - Owner decision dated 2026-09-17: "yaudh skip aja dulu yg GPON ZTE/Huawei/FiberHome mah, buat sesuai yg ada di dokumentasi mereka aja". Physical ZTE/Huawei/FiberHome GPON capture, model/firmware certification and hardware validation are deferred and no longer block this plan.
