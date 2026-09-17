@@ -81,7 +81,7 @@ class CpeService(
         val before = acsGateway.findDevice(device.genieacsId)
         fun fresh(snapshot: com.duluin.ftth.cpe.application.port.outbound.AcsDevice?): Boolean =
             snapshot != null && !snapshot.hasInvalidParameterTime && snapshot.serialNumber.trim().uppercase(Locale.ROOT) == device.serialNumber.trim().uppercase(Locale.ROOT) &&
-                snapshot.knownParameterTime?.isBefore(episode.startedAt) != true &&
+                (snapshot.knownParameterTime ?: snapshot.observedFieldsAt)?.isBefore(episode.startedAt) != true &&
                 (episode.legacy || (snapshot.lastInformAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true &&
                     snapshot.observedFieldsAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true))
         if (!fresh(before)) throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
@@ -89,7 +89,7 @@ class CpeService(
         val hostReadings = acsGateway.connectedHosts(device.genieacsId)
         if (wifiReadings.any { it.hasInvalidParameterTime } || hostReadings.any { it.hasInvalidParameterTime })
             throw NotFoundException("CPE_PARAMETER_FRESHNESS_REQUIRED")
-        if ((wifiReadings.mapNotNull { it.knownParameterTime } + hostReadings.mapNotNull { it.knownParameterTime }).any { it.isBefore(episode.startedAt) })
+        if ((wifiReadings.mapNotNull { it.knownParameterTime ?: it.observedAt } + hostReadings.mapNotNull { it.knownParameterTime ?: it.observedAt }).any { it.isBefore(episode.startedAt) })
             throw NotFoundException("CPE_PARAMETER_FRESHNESS_REQUIRED")
         if (!episode.legacy && (wifiReadings.map { it.observedAt } + hostReadings.map { it.observedAt }).any {
             it == null || it.isBefore(episode.startedAt) || it.isAfter(Instant.now().plusSeconds(300)) })

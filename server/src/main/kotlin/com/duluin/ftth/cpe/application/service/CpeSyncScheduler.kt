@@ -140,11 +140,12 @@ class CpeSyncService(
         val matchedOnus = bySerial.keys.filter { eligibility.current(it) }.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
             val snapshot = bySerial.getValue(episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT))
             val inform = snapshot.lastInformAt
-            val fresh = if (snapshot.hasInvalidParameterTime || snapshot.knownParameterTime?.isBefore(episode.startedAt) == true) false else if (inform == null) episode.legacy else
+            val fresh = if (snapshot.hasInvalidParameterTime) false else if (inform == null) episode.legacy else
                 !inform.isAfter(Instant.now().plusSeconds(300)) && (episode.legacy || !inform.isBefore(episode.startedAt))
             if (!fresh) unassigned.record(snapshot, "STALE_INFORM")
-            val fieldsFresh = episode.legacy || snapshot.observedFieldsAt?.let {
-                !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true
+            val fieldsFresh = (snapshot.knownParameterTime ?: snapshot.observedFieldsAt)?.isBefore(episode.startedAt) != true &&
+                (episode.legacy || snapshot.observedFieldsAt?.let {
+                    !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true)
             if (fresh && !fieldsFresh) unassigned.record(snapshot, "STALE_FIELDS")
             fresh && fieldsFresh
         }.map { it.onu }

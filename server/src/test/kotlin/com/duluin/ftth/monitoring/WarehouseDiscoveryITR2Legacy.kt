@@ -24,7 +24,7 @@ class WarehouseDiscoveryITR2Legacy : WarehouseDiscoveryFixture() {
     @MockitoSpyBean private lateinit var acs: AcsGateway
 
     @ParameterizedTest
-    @ValueSource(strings = ["KNOWN_OLD", "MISSING_OLD", "MISSING_ONLY", "BAD_INFORM", "BLANK_INFORM"])
+    @ValueSource(strings = ["KNOWN_OLD", "MISSING_OLD", "MISSING_ONLY", "WIFI_ONLY_OLD", "HOST_ONLY_OLD", "BAD_INFORM", "BLANK_INFORM"])
     fun `CPE-R2-3 legacy distinguishes absent evidence from explicit pre-episode data`(mode: String) {
         val token = newTenantAdmin("r2legacy")
         val device = legacy(token)
@@ -36,11 +36,20 @@ class WarehouseDiscoveryITR2Legacy : WarehouseDiscoveryFixture() {
         val old = if (mode in setOf("KNOWN_OLD", "MISSING_OLD")) ",\"_timestamp\":\"1970-01-01T00:00:00Z\"" else ""
         val sibling = if (mode == "KNOWN_OLD") ",\"_timestamp\":\"$now\"" else ""
         val inform = when (mode) { "BAD_INFORM" -> "bad"; "BLANK_INFORM" -> " "; else -> now.toString() }
-        WarehouseReviewAcsServer().use { server ->
+        R2AcsServer().use { server ->
             server.document.set("""[{"_id":"$genie","_deviceId":{"_SerialNumber":"${device.serial}"},"_lastInform":"$inform",
                 "InternetGatewayDevice":{"DeviceInfo":{"ModelName":{"_value":"old-private"$old}},
                 "LANDevice":{"1":{"WLANConfiguration":{"1":{"SSID":{"_value":"legacy"$sibling},
                     "KeyPassphrase":{"_value":"old-secret"$old}}}}}}}]""")
+            if (mode == "WIFI_ONLY_OLD" || mode == "HOST_ONLY_OLD") server.deviceResponse.set { uri ->
+                val requested = java.net.URLDecoder.decode(uri, Charsets.UTF_8)
+                val values = if (mode == "HOST_ONLY_OLD" && requested.contains(".Hosts.Host"))
+                    """"LANDevice":{"1":{"Hosts":{"Host":{"1":{"HostName":{"_value":"old-host","_timestamp":"1970-01-01T00:00:00Z"},"Active":{"_value":true}}}}}}"""
+                else if (mode == "WIFI_ONLY_OLD" && requested.contains("projection=InternetGatewayDevice.LANDevice.1.WLANConfiguration,"))
+                    """"LANDevice":{"1":{"WLANConfiguration":{"1":{"SSID":{"_value":"missing"},"KeyPassphrase":{"_value":"old-secret","_timestamp":"1970-01-01T00:00:00Z"}}}}}"""
+                else """"DeviceInfo":{"ModelName":{"_value":"current","_timestamp":"$now"}}"""
+                """[{"_id":"$genie","_deviceId":{"_SerialNumber":"${device.serial}"},"_lastInform":"$now","InternetGatewayDevice":{$values}}]"""
+            }
             Mockito.doAnswer { server.gateway.findDevice(genie) }.`when`(acs).findDevice(genie)
             Mockito.doAnswer { server.gateway.wifiNetworks(genie) }.`when`(acs).wifiNetworks(genie)
             Mockito.doAnswer { server.gateway.connectedHosts(genie) }.`when`(acs).connectedHosts(genie)

@@ -27,7 +27,7 @@ data class WifiNetwork(
     val enabled: Boolean,
     val observedAt: java.time.Instant? = null,
     val hasInvalidParameterTime: Boolean = false,
-    val knownParameterTime: java.time.Instant? = observedAt,
+    val knownParameterTime: java.time.Instant? = null,
 )
 
 /** Satu perangkat yang sedang tersambung ke LAN CPE — dari tabel `Hosts` TR-069. */
@@ -38,5 +38,5 @@ data class ConnectedHost(
     val active: Boolean,
     val observedAt: java.time.Instant? = null,
     val hasInvalidParameterTime: Boolean = false,
-    val knownParameterTime: java.time.Instant? = observedAt,
+    val knownParameterTime: java.time.Instant? = null,
 )

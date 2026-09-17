@@ -135,7 +135,7 @@ data class AcsDevice(
     val temperatureC: Double? = null,
     val observedFieldsAt: Instant? = null,
     val hasInvalidParameterTime: Boolean = false,
-    val knownParameterTime: Instant? = observedFieldsAt,
+    val knownParameterTime: Instant? = null,
 )
 
 /** Perubahan satu jaringan WiFi. Field null berarti "biarkan apa adanya". */
