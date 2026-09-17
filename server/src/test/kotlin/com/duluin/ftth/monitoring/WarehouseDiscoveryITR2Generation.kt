@@ -51,7 +51,7 @@ class WarehouseDiscoveryITR2Generation {
             server.document.set(device(before, before.toString()))
             server.onPost.set { body ->
                 val task = jacksonObjectMapper().readTree(body)
-                if (task.path("name").asString() == "getParameterValues") return@set
+                if (task.path("name").asString() != "setParameterValues") return@set
                 val params = task.path("parameterValues")
                 val host = params.firstOrNull { it[0].asString().endsWith(".Host") }?.get(1)?.asString() ?: "target.invalid"
                 val requested = params.any { it[0].asString().endsWith(".DiagnosticsState") && it[1].asString() == "Requested" }
@@ -74,7 +74,7 @@ class WarehouseDiscoveryITR2Generation {
             var lateCompletion = ""
             server.onPost.set { body ->
                 val task = jacksonObjectMapper().readTree(body)
-                if (task.path("name").asString() == "getParameterValues") return@set
+                if (task.path("name").asString() != "setParameterValues") return@set
                 val params = task.path("parameterValues")
                 val host = params.firstOrNull { it[0].asString().endsWith(".Host") }?.get(1)?.asString() ?: "target.invalid"
                 val requested = params.any { it[0].asString().endsWith(".DiagnosticsState") }
