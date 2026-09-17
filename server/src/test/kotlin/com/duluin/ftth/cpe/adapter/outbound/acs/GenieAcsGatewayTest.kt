@@ -213,62 +213,30 @@ class GenieAcsGatewayTest {
 
     @Test
     fun `runPing menyetel input lalu memetakan hasil IPPingDiagnostics`() {
-        val (gateway, server) = fixture()
-        // 1) Deteksi akar model data (currentRoot).
-        server.expect(requestTo(containsString("/devices/")))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("[$TR098_ROOT]", MediaType.APPLICATION_JSON))
-        // 2) Task setParameterValues memicu diagnostik.
-        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
-            .andExpect(method(HttpMethod.POST))
-            .andExpect(jsonPath("$.name").value("setParameterValues"))
-            .andExpect(jsonPath("$.parameterValues[0][0]").value("InternetGatewayDevice.IPPingDiagnostics.DiagnosticsState"))
-            .andExpect(jsonPath("$.parameterValues[0][1]").value("Requested"))
-            .andExpect(jsonPath("$.parameterValues[1][0]").value("InternetGatewayDevice.IPPingDiagnostics.Host"))
-            .andExpect(jsonPath("$.parameterValues[1][1]").value("1.1.1.1"))
-            .andExpect(jsonPath("$.parameterValues[2][1]").value("4"))
-            .andRespond(withSuccess())
-        // 3) Poll: perangkat sudah menuntaskan.
-        server.expect(requestTo(containsString("/devices/")))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond { request -> withSuccess(freshDiagnostic(TR098_PING_DONE, "IPPingDiagnostics"), MediaType.APPLICATION_JSON).createResponse(request) }
-
-        val ping = gateway.runPing("ACS-001", host = "1.1.1.1", count = 4)
-
-        assertThat(ping.complete).isTrue()
-        assertThat(ping.host).isEqualTo("1.1.1.1")
-        assertThat(ping.successCount).isEqualTo(4)
-        assertThat(ping.failureCount).isEqualTo(0)
-        assertThat(ping.averageResponseMs).isEqualTo(12)
-        server.verify()
+        com.duluin.ftth.monitoring.R2AcsServer().use { server ->
+            diagnosticServer(server, "IPPingDiagnostics", TR098_PING_DONE)
+            val ping = server.gateway.runPing("ACS-001", host = "1.1.1.1", count = 4)
+            assertThat(ping.complete).isTrue()
+            assertThat(ping.host).isEqualTo("1.1.1.1")
+            assertThat(ping.successCount).isEqualTo(4)
+            assertThat(ping.failureCount).isEqualTo(0)
+            assertThat(ping.averageResponseMs).isEqualTo(12)
+            assertThat(server.posts.get()).isEqualTo(4)
+        }
     }
 
     @Test
     fun `runSpeedTest unduh menghitung throughput dari byte dan durasi`() {
-        val (gateway, server) = fixture()
-        server.expect(requestTo(containsString("/devices/")))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("[$TR098_ROOT]", MediaType.APPLICATION_JSON))
-        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
-            .andExpect(method(HttpMethod.POST))
-            .andExpect(jsonPath("$.name").value("setParameterValues"))
-            .andExpect(jsonPath("$.parameterValues[0][0]").value("InternetGatewayDevice.DownloadDiagnostics.DiagnosticsState"))
-            .andExpect(jsonPath("$.parameterValues[1][0]").value("InternetGatewayDevice.DownloadDiagnostics.DownloadURL"))
-            .andExpect(jsonPath("$.parameterValues[1][1]").value("http://speed.test/10MB.zip"))
-            .andRespond(withSuccess())
-        server.expect(requestTo(containsString("/devices/")))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond { request -> withSuccess(freshDiagnostic(TR098_DOWNLOAD_DONE, "DownloadDiagnostics"), MediaType.APPLICATION_JSON).createResponse(request) }
-
-        val speed = gateway.runSpeedTest("ACS-001", SpeedDirection.DOWNLOAD)
-
-        assertThat(speed.complete).isTrue()
-        assertThat(speed.direction).isEqualTo(SpeedDirection.DOWNLOAD)
-        assertThat(speed.testBytes).isEqualTo(10_485_760)
-        assertThat(speed.durationMs).isEqualTo(900)
-        // 10.485.760 byte × 8 / 1e6 / 0,9 s ≈ 93,2 Mbps.
-        assertThat(speed.throughputMbps).isCloseTo(93.2, within(0.5))
-        server.verify()
+        com.duluin.ftth.monitoring.R2AcsServer("http://speed.test/10MB.zip").use { server ->
+            diagnosticServer(server, "DownloadDiagnostics", TR098_DOWNLOAD_DONE)
+            val speed = server.gateway.runSpeedTest("ACS-001", SpeedDirection.DOWNLOAD)
+            assertThat(speed.complete).isTrue()
+            assertThat(speed.direction).isEqualTo(SpeedDirection.DOWNLOAD)
+            assertThat(speed.testBytes).isEqualTo(10_485_760)
+            assertThat(speed.durationMs).isEqualTo(900)
+            assertThat(speed.throughputMbps).isCloseTo(93.2, within(0.5))
+            assertThat(server.posts.get()).isEqualTo(4)
+        }
     }
 
     @Test
@@ -345,11 +313,37 @@ class GenieAcsGatewayTest {
         server.verify()
     }
 
+    private fun diagnosticServer(server: com.duluin.ftth.monitoring.R2AcsServer, name: String, document: String) {
+        val before = Instant.now().minusSeconds(2)
+        server.document.set("""[{"_id":"ACS-001","_deviceId":{"_SerialNumber":"SERIAL"},"_lastInform":"$before","InternetGatewayDevice":{}}]""")
+        server.onPost.set { body ->
+            val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
+            val task = mapper.readTree(body)
+            if (task.path("name").asString() == "getParameterValues") return@set
+            assertThat(task.path("name").asString()).isEqualTo("setParameterValues")
+            val parameters = task.path("parameterValues")
+            val requested = parameters[0][0].asString().endsWith(".DiagnosticsState")
+            if (requested) {
+                assertThat(parameters[0][1].asString()).isEqualTo("Requested")
+                assertThat(parameters[1][1].asString()).isEqualTo(if (name == "IPPingDiagnostics") "1.1.1.1" else "http://speed.test/10MB.zip")
+                if (name == "IPPingDiagnostics") assertThat(parameters[2][1].asString()).isEqualTo("4")
+                server.document.set(freshDiagnostic(document, name))
+            } else {
+                val now = Instant.now()
+                val field = parameters[0][0].asString().substringAfterLast('.')
+                val marker = parameters[0][1].asString()
+                server.document.set("""[{"_id":"ACS-001","_deviceId":{"_SerialNumber":"SERIAL"},"_lastInform":"$now","InternetGatewayDevice":{"$name":{
+                    "DiagnosticsState":{"_value":"None","_timestamp":"$now"},"$field":{"_value":"$marker","_timestamp":"$now"}}}}]""")
+            }
+        }
+    }
+
     private fun freshDiagnostic(document: String, name: String): String {
         val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
         val root = mapper.readTree("[$document]")
         val diagnostic = root[0].path("InternetGatewayDevice").path(name) as tools.jackson.databind.node.ObjectNode
         val now = Instant.now()
+        (root[0] as tools.jackson.databind.node.ObjectNode).put("_lastInform", now.toString()).putObject("_deviceId").put("_SerialNumber", "SERIAL")
         if (name == "IPPingDiagnostics") {
             diagnostic.putObject("Host").put("_value", "1.1.1.1")
             diagnostic.putObject("NumberOfRepetitions").put("_value", 4)

@@ -28,6 +28,7 @@ internal class AcsDiagnosticCorrelation(private val client: RestClient, private 
         beforePost()
         val resetTask = post(deviceId, mapOf("name" to "setParameterValues", "parameterValues" to listOf(listOf(resetField, marker, "xsd:string"))))
             ?: return Start.Incomplete("Queued")
+        if (!refresh(deviceId, "$base.DiagnosticsState,$resetField", beforePost)) return Start.Incomplete("Queued")
         val deadline = Instant.now().plus(timeout)
         var reset: JsonNode? = null
         while (Instant.now().isBefore(deadline)) {
@@ -69,12 +70,17 @@ internal class AcsDiagnosticCorrelation(private val client: RestClient, private 
         return emptyQueue(ticket.deviceId) && query("faults", mapOf("_id" to "${ticket.deviceId}:task_${ticket.taskId}"))?.let { it.isArray && it.isEmpty } == true
     }
 
+    fun refresh(deviceId: String, projection: String, beforePost: () -> Unit): Boolean {
+        beforePost()
+        return post(deviceId, mapOf("name" to "getParameterValues", "parameterNames" to projection.split(',').filterNot { it.startsWith('_') })) != null
+    }
+
     private fun post(device: String, body: Map<String, Any>): String? {
         val response = client.post().uri { it.pathSegment("devices", device, "tasks").queryParam("connection_request").build() }
             .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().toEntity(JsonNode::class.java)
         if (response.statusCode.value() != 200) return null
         val task = response.body ?: return null
-        return task.path("_id").asString().takeIf { it.matches(Regex("[0-9a-f]{24}")) && task.path("device").asString() == device }
+        return task.path("_id").asString().takeIf { it.matches(Regex("[0-9a-f]{24}")) && task.path("device").asString() == device && task.path("name").asString() == body["name"] }
     }
     private fun emptyQueue(device: String): Boolean = query("tasks", mapOf("device" to device))?.let { it.isArray && it.isEmpty } == true
     private fun query(collection: String, filter: Map<String, String>): JsonNode? = client.get().uri {

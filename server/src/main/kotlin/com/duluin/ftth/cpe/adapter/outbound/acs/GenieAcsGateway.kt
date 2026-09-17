@@ -173,7 +173,7 @@ class GenieAcsGateway(
         if (preparation is AcsDiagnosticCorrelation.Start.Incomplete) return PingDiagnostic.incomplete(host, preparation.state)
         val ticket = (preparation as AcsDiagnosticCorrelation.Start.Ready).ticket
         val device = pollDiagnostic(genieacsId, base, pingProjection(base), ticket.requestedAt,
-            mapOf("$base.Host" to host, "$base.NumberOfRepetitions" to count.toString()), correlation, ticket)
+            mapOf("$base.Host" to host, "$base.NumberOfRepetitions" to count.toString()), correlation, ticket, beforePost)
             ?: return PingDiagnostic.incomplete(host, "Error_Timeout")
         val state = device.param("$base.DiagnosticsState") ?: "Error"
         if (state != PingDiagnostic.COMPLETE) return PingDiagnostic.incomplete(host, state)
@@ -212,7 +212,7 @@ class GenieAcsGateway(
         val requestedAt = ticket.requestedAt
         val expected = if (direction == SpeedDirection.DOWNLOAD) mapOf("$base.DownloadURL" to downloadUrl)
             else mapOf("$base.UploadURL" to uploadUrl, "$base.TestFileLength" to uploadBytes.toString())
-        val device = pollDiagnostic(genieacsId, base, speedProjection(base, direction), requestedAt, expected, correlation, ticket)
+        val device = pollDiagnostic(genieacsId, base, speedProjection(base, direction), requestedAt, expected, correlation, ticket, beforePost)
             ?: return SpeedTestDiagnostic.incomplete(direction, "Error_Timeout")
         val state = device.param("$base.DiagnosticsState") ?: "Error"
         if (state != PingDiagnostic.COMPLETE) return SpeedTestDiagnostic.incomplete(direction, state)
@@ -397,9 +397,10 @@ class GenieAcsGateway(
      * snapshot terakhir (state-nya jadi penanda "belum tuntas").
      */
     private fun pollDiagnostic(genieacsId: String, base: String, projection: String, requestedAt: Instant,
-        expected: Map<String, String>, correlation: AcsDiagnosticCorrelation, ticket: AcsDiagnosticCorrelation.Ticket): JsonNode? {
+        expected: Map<String, String>, correlation: AcsDiagnosticCorrelation, ticket: AcsDiagnosticCorrelation.Ticket, beforePost: () -> Unit): JsonNode? {
         val deadline = Instant.now().plus(diagnosticsTimeout)
         while (true) {
+            if (!correlation.refresh(genieacsId, projection, beforePost)) return null
             val current = fetchDevice(genieacsId, "$projection,_id,_deviceId,_lastInform")
             val state = current?.param("$base.DiagnosticsState")
             val observedAt = current?.let { observedParameterTime(it.descend(base)) }
