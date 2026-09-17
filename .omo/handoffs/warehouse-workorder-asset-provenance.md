@@ -6,9 +6,11 @@
 - Current source checkpoint `864199313485a88521ae5b767b0f45ccf9ee62c3` contains the executor fixes for extreme timestamp safety and unique active legacy/no-ODP producer compatibility. Connected GPON mapping remains incomplete.
 - Required external evidence is vendor, model, firmware and MIB revision plus paired raw SNMP index/serial captures and authoritative CLI/API frame/slot/PON identity across multiple ports and ONU positions. The alternative is an owner-authorized mapping policy; no such policy has been approved.
 - Do not guess a decoder or relabel raw indexes. Connected unresolved samples remain unassigned until authoritative mapping evidence or an approved policy exists.
-- CPE-R2 reviewer `ses_f54d52690ffefwS6LHWH9xpiJt` and DB-R2 reviewer `ses_f54d5267bffeH6M87YAIQbBrrv` confirmed their `39295078930507d75b58213420c4bb63025d011d` scope. Their corresponding implementation and SQL blobs are unchanged by verify-03. Targeted temporal/discovery and runtime review of the local fixes is running; no verdict is recorded prematurely.
+- CPE-R2 reviewer `ses_f54d52690ffefwS6LHWH9xpiJt` and DB-R2 reviewer `ses_f54d5267bffeH6M87YAIQbBrrv` confirmed their `39295078930507d75b58213420c4bb63025d011d` scope. Their corresponding implementation and SQL blobs are unchanged by verify-03.
+- Temporal/source reviewer `ses_f54d527eaffeQMhYzFuG21jaGJ` confirmed DISCOVERY-3 timestamp safety and T3 unique active legacy/no-ODP handling at assigned checkpoint `5e49bc4e4377d484629df18dd1692643c461ac04`. The review specifically accepted the named `appendUntrustedTime` helper, explicit typed/raw timestamp boundary, existing shared time policy and narrow legacy eligibility checks as clean, cohesive code.
+- Fresh runtime reviewer `ses_f54d52609ffe9BiEMrmv2lwpMu` independently confirmed the targeted local fixes: V3 class 18, targeted regression 47, SNMP 17 and collector serialization 6, all with zero failures, errors or skips. The 47 count includes the standalone fixture seed absent from the executor's earlier 46. This is targeted confirmation only, not aggregate task23 approval.
 - Task24 depends on task23 in the existing dependency matrix. No task24 or other downstream implementation has started or may be claimed independently while this blocker remains.
-- Next steps: obtain the required device evidence or explicit owner policy; retain conservative unassigned handling while implementing only an authoritative mapping; finish targeted temporal/discovery and runtime verification; then rerun the required task23 gates before any completion decision or task24 start.
+- Next step: obtain the required device evidence or explicit owner policy decision. Retain conservative unassigned handling and implement only an authoritative mapping; afterward complete the remaining task23 acceptance gates before any completion decision or task24 start. Do not repeat already confirmed local-fix verification merely to resolve the external dependency.
 - Strict clean-code requirement remains binding: cohesive small code, explicit types and errors, public ownership boundaries, no duplicate policy or silent success, and only narrow purposeful abstractions with focused tests.
 
 ## 2026-09-16 — User-requested remote recovery checkpoint
@@ -44,13 +46,15 @@
 - Task-owned worktree on this host: `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume`
 - Verified checkpoint base: `2105273f1de7783fdc2454de6bc9e4a3a86be38a`
 - Current source SHA: `864199313485a88521ae5b767b0f45ccf9ee62c3`
+- Current migrations: through `V175.112`; verify-03 added no migration and all SQL is unchanged from the confirmed `39295078` scope.
+- Current verify-03 JAR SHA256: `f6628c0e52caf316244c6faead08899666cb36a94df8b1268841d9140c024e42`.
 - Tasks 1-22: checked; task 23: blocked; tasks 24-48 and F1-F4: pending
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr` after plan completion; immediate checkpoint pushes; no merge
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
 - Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
 - Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
-- Migrations: `V175.80` through `V175.89`; final JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`.
+- Historical task22 identity: migrations `V175.80` through `V175.89`; JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`. This is retained history, not the current task23 artifact identity.
 - Next action: resolve the connected-GPON mapping dependency and finish targeted task23 verification; do not start task24.
 - Immediate normal fast-forward push is required; no merge.
 
