@@ -65,15 +65,18 @@ class WarehouseDiscoveryITReviewTopology : WarehouseDiscoveryFixture() {
     @Test
     fun `T3 real GPON raw ONU index is retained as unverified provenance not a configured PON label`() {
         val token = newTenantAdmin("snmpindex")
-        val device = legacy(token)
+        val customer = customer(token)
+        val serial = "ZTEG" + UUID.randomUUID().toString().replace("-", "").take(8).uppercase()
+        val device = Legacy(customer, com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, serial), serial)
         val path = path(token, "INDEX")
         val attached = mockMvc.perform(post("/api/customers/onus/${device.onu}/attach").header("Authorization", "Bearer $token")
             .contentType(MediaType.APPLICATION_JSON).content("""{"odpId":"${path.odp}","portNumber":1}""")).andReturn().response
         assertThat(attached.status).isEqualTo(200)
-        val profile = com.duluin.ftth.snmp.MibProfiles.ZTE.copy(serialIsHex = false)
+        val profile = com.duluin.ftth.snmp.MibProfiles.ZTE
         val reader = com.duluin.ftth.snmp.SnmpReaderFactory { _, _, _ -> object : com.duluin.ftth.snmp.SnmpReader {
             override fun get(oid: String) = "owned"
-            override fun walkTable(columnOids: List<String>) = mapOf("268501249.1" to mapOf(profile.serialNumberOid to device.serial, profile.statusOid to "3"))
+            override fun walkTable(columnOids: List<String>) = mapOf("268501249.1" to mapOf(
+                requireNotNull(profile.serialNumberOid) to "5A544547${serial.removePrefix("ZTEG")}", requireNotNull(profile.statusOid) to "3"))
             override fun close() {}
         } }
         val samples = com.duluin.ftth.snmp.GponSnmpAdapter(profile, reader).pollOnus(

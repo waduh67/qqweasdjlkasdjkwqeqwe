@@ -12,8 +12,8 @@ import kotlin.test.assertTrue
 /**
  * Menguji penafsiran data SNMP tanpa perangkat: skala redaman per vendor, format
  * serial GPON, sentinel "tidak terbaca", pembuangan nilai mustahil, dan pemetaan
- * status. Inilah bagian yang paling rawan salah saat OLT sungguhan akhirnya
- * disambungkan (Phase 2b) — verifikasi berikutnya tinggal memastikan OID-nya benar.
+ * status. Asumsi kompatibilitas ZTE bukan bukti unit/enum vendor; batas dokumentasi
+ * ada di docs/gpon-profile-evidence.md. Fixture tidak mensertifikasi hardware.
  */
 class GponSnmpAdapterTest {
 
@@ -26,12 +26,12 @@ class GponSnmpAdapterTest {
     )
 
     /** Pembaca SNMP tiruan: satu baris tabel, dikunci OID → nilai mentah. */
-    private fun readerOf(vararg rows: Map<String, String>): SnmpReaderFactory =
+    private fun readerOf(vararg rows: Map<String?, String>): SnmpReaderFactory =
         SnmpReaderFactory { _, _, _ ->
             object : SnmpReader {
                 override fun get(oid: String) = "tiruan sysDescr"
                 override fun walkTable(columnOids: List<String>): Map<String, Map<String, String>> =
-                    rows.mapIndexed { index, row -> "$index" to row }.toMap()
+                    rows.mapIndexed { index, row -> "$index" to row.mapKeys { (oid, _) -> requireNotNull(oid) } }.toMap()
                 override fun close() {}
             }
         }
@@ -118,9 +118,7 @@ class GponSnmpAdapterTest {
     }
 
     @Test
-    fun `Huawei - redaman dibagi 100 dan status dipetakan berbeda dari ZTE`() {
-        // Huawei memakai satuan 0,01 dBm: -2415 -> -24,15 dBm. Status 3 = LOS
-        // (di ZTE status 3 justru ONLINE) — pemetaan per-vendor harus dihormati.
+    fun `Huawei - redaman dibagi 100 dan status 3 tidak didokumentasikan`() {
         val row = mapOf(
             MibProfiles.HUAWEI.serialNumberOid to "48575443ABCDEF12",
             MibProfiles.HUAWEI.statusOid to "3",
@@ -129,7 +127,7 @@ class GponSnmpAdapterTest {
         val onu = adapter(MibProfiles.HUAWEI, readerOf(row)).pollOnus(target).single()
 
         assertEquals("HWTCABCDEF12", onu.serialNumber)
-        assertEquals(OnuOperationalStatus.LOS, onu.status)
+        assertEquals(OnuOperationalStatus.UNKNOWN, onu.status)
         assertEquals(-24.15, onu.rxPowerDbm)
     }
 

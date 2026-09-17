@@ -6,54 +6,13 @@ import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
 import org.slf4j.LoggerFactory
 import java.time.Instant
-
-/**
- * Peta MIB satu vendor: OID mana yang dibaca dan bagaimana nilainya ditafsirkan.
- *
- * Perbedaan antar vendor GPON hampir seluruhnya bersifat data, bukan alur —
- * langkahnya sama (walk tabel ONU, ubah satuan, petakan status), yang berbeda
- * hanya angka OID dan skalanya. Karena itu vendor didefinisikan sebagai profil
- * data, bukan sebagai kelas baru: menambah vendor cukup menambah satu [MibProfile].
- */
-data class MibProfile(
-    val vendor: String,
-    val serialNumberOid: String,
-    val statusOid: String,
-    val rxPowerOid: String,
-    val txPowerOid: String?,
-    val distanceOid: String?,
-    val uptimeOid: String?,
-    /** Pembagi untuk mengubah nilai mentah menjadi dBm. */
-    val opticalPowerDivisor: Double,
-    /** Nilai mentah yang berarti "tidak ada pembacaan", mis. -32768 atau 2147483647. */
-    val opticalPowerSentinels: Set<Long>,
-    val statusMapping: Map<String, OnuOperationalStatus>,
-    /**
-     * OID register "last down cause" ONU. `null` bila belum diketahui untuk vendor
-     * ini — plumbing-nya sudah lengkap, tinggal isi OID + [downCauseMapping] setelah
-     * di-`snmpwalk` di perangkat sungguhan (Phase 2b).
-     */
-    val downCauseOid: String? = null,
-    /** Pemetaan nilai mentah register di atas ke [OnuDownCause]. */
-    val downCauseMapping: Map<String, OnuDownCause> = emptyMap(),
-    /**
-     * OID register "last down/last up time" ONU. `null` bila belum diketahui untuk
-     * vendor ini — seperti [downCauseOid], plumbing-nya sudah lengkap dan tinggal
-     * diisi OID-nya setelah di-`snmpwalk` di perangkat sungguhan (Phase 2b).
-     */
-    val lastOffAtOid: String? = null,
-    val lastOnAtOid: String? = null,
-    /** Serial GPON umumnya 4 huruf vendor + 8 digit heksa. */
-    val serialIsHex: Boolean = true,
-)
+import java.util.Locale
 
 /**
  * Adapter GPON berbasis SNMP yang perilakunya ditentukan [MibProfile].
  *
- * PERINGATAN: OID di [MibProfiles] disusun dari dokumentasi MIB publik dan
- * BELUM diverifikasi terhadap perangkat sungguhan. Firmware berbeda kerap
- * menggeser sub-tree. Sebelum dipakai produksi, jalankan `snmpwalk` pada OLT
- * sungguhan dan sesuaikan — itu pekerjaan Phase 2b.
+ * Batas bukti per profil ada di docs/gpon-profile-evidence.md. Validasi hardware
+ * ditunda; konstanta yang belum terdokumentasi bukan dukungan vendor terverifikasi.
  */
 class GponSnmpAdapter(
     private val profile: MibProfile,
@@ -87,14 +46,14 @@ class GponSnmpAdapter(
     /**
      * Peran tiap OID profil, memakai penafsir adapter ini sendiri — sehingga alat validasi
      * lapangan menampilkan persis nilai yang akan dipakai polling, bukan tafsiran kedua.
-     * Serial + status wajib: tanpa keduanya sebuah baris tak bisa jadi [OnuReading].
+     * OID serial/status harus tersedia; nilai status yang hilang tetap UNKNOWN.
      */
     override val oidPlan: List<OidRole> get() = listOf(
         OidRole("SERIAL", "Serial number ONU", profile.serialNumberOid, essential = true, interpret = ::normalizeSerial),
         OidRole("STATUS", "Status ONU", profile.statusOid, essential = true) { profile.statusMapping[it]?.name },
-        OidRole("RX_POWER", "Redaman terima (RX)", profile.rxPowerOid, essential = true, interpret = ::dbmOrNull),
+        OidRole("RX_POWER", "Redaman terima (RX)", profile.rxPowerOid, interpret = ::dbmOrNull),
         OidRole("TX_POWER", "Daya kirim (TX)", profile.txPowerOid, interpret = ::dbmOrNull),
-        OidRole("DISTANCE", "Jarak ranging", profile.distanceOid) { it.toIntOrNull()?.let { m -> "$m m" } },
+        OidRole("DISTANCE", "Jarak ranging", profile.distanceOid) { distanceMeters(it)?.let { meters -> "$meters m" } },
         OidRole("UPTIME", "Lama menyala", profile.uptimeOid) { it.toLongOrNull()?.let { s -> "$s dtk" } },
         OidRole("DOWN_CAUSE", "Sebab putus terakhir", profile.downCauseOid) { profile.downCauseMapping[it]?.name },
         OidRole("LAST_OFF", "Waktu putus terakhir", profile.lastOffAtOid) { timestampOf(it)?.toString() },
@@ -102,6 +61,9 @@ class GponSnmpAdapter(
     )
 
     override fun pollOnus(target: OltTarget): List<OnuReading> {
+        if (profile.serialNumberOid == null || profile.statusOid == null) {
+            throw OltProtocolException("GPON ${profile.vendor}: documented serial/status OIDs unavailable; see docs/gpon-profile-evidence.md")
+        }
         val community = target.snmpCommunity
             ?: throw OltProtocolException("Community string SNMP belum diisi untuk ${target.oltCode}")
 
@@ -143,7 +105,7 @@ class GponSnmpAdapter(
             rxPowerDbm = opticalPower(row[profile.rxPowerOid]),
             txPowerDbm = profile.txPowerOid?.let { opticalPower(row[it]) },
             uptimeSeconds = profile.uptimeOid?.let { row[it]?.toLongOrNull() },
-            distanceMeters = profile.distanceOid?.let { row[it]?.toIntOrNull() },
+            distanceMeters = profile.distanceOid?.let { distanceMeters(row[it]) },
             observedAt = observedAt,
             lastDownCause = lastDownCause(row),
             lastOffAt = timestampAt(profile.lastOffAtOid, row),
@@ -156,8 +118,7 @@ class GponSnmpAdapter(
      * Menafsirkan register waktu OLT (last off / last on). Formatnya bergantung
      * firmware — sebagian melaporkan epoch detik, sebagian string ISO-8601 — jadi
      * keduanya dicoba dan nilai yang tak terbaca diabaikan daripada salah tafsir.
-     * Selama OID vendor belum diisi, hasilnya `null`; format sebenarnya diverifikasi
-     * saat `snmpwalk` di perangkat sungguhan (Phase 2b).
+     * Selama OID/format vendor belum didokumentasikan, profil baku tidak mengisinya.
      */
     private fun timestampAt(oid: String?, row: Map<String, String>): Instant? =
         oid?.let { row[it] }?.let(::timestampOf)
@@ -189,18 +150,20 @@ class GponSnmpAdapter(
      * diinput teknisi.
      */
     private fun normalizeSerial(raw: String): String? {
+        if (!profile.serialIsHex) return raw.trim().uppercase(Locale.ROOT).takeIf(PRINTED_SERIAL::matches)
         val cleaned = raw.trim().replace(":", "").replace(" ", "")
-        if (cleaned.isEmpty()) return null
-        if (!profile.serialIsHex) return cleaned.uppercase()
-
-        return runCatching {
-            val bytes = cleaned.chunked(2).map { it.toInt(16).toByte() }
-            if (bytes.size < 8) return@runCatching cleaned.uppercase()
-            val vendorCode = String(bytes.take(4).toByteArray(), Charsets.US_ASCII)
-            val suffix = bytes.drop(4).joinToString("") { "%02X".format(it) }
-            "$vendorCode$suffix"
-        }.getOrElse { cleaned.uppercase() }
+        val bytes = when {
+            raw.length == 8 && raw.all { it.code in 32..126 } -> raw.toByteArray(Charsets.US_ASCII)
+            HEX_SERIAL.matches(cleaned) -> cleaned.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+            else -> return null
+        }
+        val vendorCode = String(bytes.take(4).toByteArray(), Charsets.US_ASCII)
+        if (!VENDOR_CODE.matches(vendorCode)) return null
+        val suffix = bytes.drop(4).joinToString("") { "%02X".format(it) }
+        return "$vendorCode$suffix"
     }
+
+    private fun distanceMeters(raw: String?): Int? = raw?.toIntOrNull()?.takeIf { it >= 0 }
 
     /**
      * Mengubah nilai optik mentah menjadi dBm, memperhitungkan sentinel
@@ -208,9 +171,10 @@ class GponSnmpAdapter(
      * dan langsung memicu alarm palsu — karena itu dibuang menjadi `null`.
      */
     private fun opticalPower(raw: String?): Double? {
+        val divisor = profile.opticalPowerDivisor ?: return null
         val value = raw?.trim()?.toLongOrNull() ?: return null
         if (value in profile.opticalPowerSentinels) return null
-        val dbm = value / profile.opticalPowerDivisor
+        val dbm = value / divisor
         if (dbm !in PLAUSIBLE_DBM_RANGE) {
             log.debug("Nilai redaman {} dBm di luar rentang masuk akal, diabaikan", dbm)
             return null
@@ -226,72 +190,10 @@ class GponSnmpAdapter(
     private fun ponPortLabelFrom(index: String): String? = index.takeIf { it.isNotBlank() }
 
     private companion object {
+        val HEX_SERIAL = Regex("[0-9A-Fa-f]{16}")
+        val VENDOR_CODE = Regex("[A-Z]{4}")
+        val PRINTED_SERIAL = Regex("[A-Z]{4}[0-9A-F]{8}")
         /** Di luar rentang ini pasti salah baca, bukan ONU yang bermasalah. */
         val PLAUSIBLE_DBM_RANGE = -50.0..10.0
     }
-}
-
-/**
- * Profil MIB per vendor.
- *
- * Nilai-nilai ini BELUM diuji terhadap perangkat sungguhan — lihat peringatan
- * di [GponSnmpAdapter].
- */
-object MibProfiles {
-
-    /** ZTE C300/C320 — redaman dilaporkan dalam satuan 0,001 dBm. */
-    val ZTE = MibProfile(
-        vendor = "ZTE",
-        serialNumberOid = "1.3.6.1.4.1.3902.1012.3.28.1.1.5",
-        statusOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.4",
-        rxPowerOid = "1.3.6.1.4.1.3902.1012.3.50.12.1.1.10",
-        txPowerOid = "1.3.6.1.4.1.3902.1012.3.50.12.1.1.14",
-        distanceOid = "1.3.6.1.4.1.3902.1012.3.11.3.1.6",
-        uptimeOid = null,
-        opticalPowerDivisor = 1_000.0,
-        opticalPowerSentinels = setOf(2_147_483_647L, -2_147_483_648L),
-        statusMapping = mapOf(
-            "1" to OnuOperationalStatus.OFFLINE,
-            "2" to OnuOperationalStatus.LOS,
-            "3" to OnuOperationalStatus.ONLINE,
-        ),
-    )
-
-    /** Huawei MA5600/MA5800 — redaman dalam satuan 0,01 dBm. */
-    val HUAWEI = MibProfile(
-        vendor = "HUAWEI",
-        serialNumberOid = "1.3.6.1.4.1.2011.6.128.1.1.2.43.1.3",
-        statusOid = "1.3.6.1.4.1.2011.6.128.1.1.2.46.1.15",
-        rxPowerOid = "1.3.6.1.4.1.2011.6.128.1.1.2.51.1.4",
-        txPowerOid = "1.3.6.1.4.1.2011.6.128.1.1.2.51.1.6",
-        distanceOid = "1.3.6.1.4.1.2011.6.128.1.1.2.46.1.20",
-        uptimeOid = null,
-        opticalPowerDivisor = 100.0,
-        opticalPowerSentinels = setOf(2_147_483_647L, 65_535L),
-        statusMapping = mapOf(
-            "1" to OnuOperationalStatus.ONLINE,
-            "2" to OnuOperationalStatus.OFFLINE,
-            "3" to OnuOperationalStatus.LOS,
-        ),
-    )
-
-    /** Fiberhome AN5516 — redaman dalam satuan 0,01 dBm dengan offset. */
-    val FIBERHOME = MibProfile(
-        vendor = "FIBERHOME",
-        serialNumberOid = "1.3.6.1.4.1.5875.800.3.9.3.3.1.3",
-        statusOid = "1.3.6.1.4.1.5875.800.3.9.3.3.1.5",
-        rxPowerOid = "1.3.6.1.4.1.5875.800.3.9.4.1.1.4",
-        txPowerOid = "1.3.6.1.4.1.5875.800.3.9.4.1.1.3",
-        distanceOid = null,
-        uptimeOid = null,
-        opticalPowerDivisor = 100.0,
-        opticalPowerSentinels = setOf(2_147_483_647L, -1L),
-        statusMapping = mapOf(
-            "1" to OnuOperationalStatus.ONLINE,
-            "2" to OnuOperationalStatus.OFFLINE,
-            "3" to OnuOperationalStatus.LOS,
-        ),
-    )
-
-    fun all(): List<MibProfile> = listOf(ZTE, HUAWEI, FIBERHOME)
 }

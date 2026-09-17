@@ -85,8 +85,8 @@ class WarehouseDiscoveryITV3Ingestion : WarehouseDiscoveryFixture() {
         val factory = SnmpReaderFactory { _, _, _ -> object : SnmpReader {
             override fun get(oid: String): String = "owned ZTE fixture"
             override fun walkTable(columnOids: List<String>): Map<String, Map<String, String>> = mapOf("268501249.1" to mapOf(
-                profile.serialNumberOid to "5A544547${serial.removePrefix("ZTEG")}", profile.statusOid to online,
-                profile.rxPowerOid to (-22.5 * profile.opticalPowerDivisor).toLong().toString()))
+                requireNotNull(profile.serialNumberOid) to "5A544547${serial.removePrefix("ZTEG")}", requireNotNull(profile.statusOid) to online,
+                requireNotNull(profile.rxPowerOid) to (-22.5 * requireNotNull(profile.opticalPowerDivisor)).toLong().toString()))
             override fun close() {}
         } }
         return GponSnmpAdapter(profile, factory) { at }
@@ -130,7 +130,7 @@ class WarehouseDiscoveryITV3Ingestion : WarehouseDiscoveryFixture() {
     }
 
     @ParameterizedTest
-    @CsvSource("COLLECTOR,ZTE", "SERVER,ZTE", "COLLECTOR,HUAWEI", "SERVER,HUAWEI", "COLLECTOR,FIBERHOME", "SERVER,FIBERHOME")
+    @CsvSource("COLLECTOR,ZTE", "SERVER,ZTE", "COLLECTOR,HUAWEI", "SERVER,HUAWEI")
     fun `T3 real GPON producer accepts unique active legacy unattached episode only`(route: String, vendor: String) {
         val token = newTenantAdmin("v3producer")
         val profile = MibProfiles.all().single { it.vendor == vendor }
