@@ -41,12 +41,12 @@ observation behavior, not release approval.
   `EPISODE_ONLY`; this does not assert a verified PON path or create stock.
   Unknown/ambiguous episodes, foreign/unresolved OLTs and connected unresolved
   paths remain unassigned. Connected path mismatch checks are unchanged.
-- Connected GPON mapping remains blocked pending authoritative evidence. Existing
-  owner data maps `(OLT, configured label)` to a PON, not raw ONU indexes. Required
-  evidence is a vendor/model/firmware-specific SNMP index+serial capture paired
-  with authoritative CLI/API frame/slot/PON identity across multiple ports/ONU
-  positions, plus the matching MIB/index semantics. No bit-shift decoder or raw
-  index relabelling is inferred from one example integer.
+- Owner decision2026-09-17 defers physical GPON validation; it is not a task23 gate.
+  [The GPON evidence matrix](gpon-profile-evidence.md) distinguishes exact mirrored
+  Huawei definitions, unverified ZTE compatibility assumptions and unavailable
+  FiberHome fields. No GPON profile is hardware-validated. Existing owner data maps
+  `(OLT, configured label)` to a PON, not raw ONU indexes. Undocumented connected
+  mappings stay unassigned; no bit-shift decoder or raw-index relabelling is guessed.
 
 ## Concurrency And Replay
 
