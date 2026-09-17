@@ -151,3 +151,9 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - Clean executable JAR SHA256cd0d1aeb566e185088086b74ad8637c362afc64f6c5268430e5acac1d78c1a68,19 executed tasks. Real HTTP/DB/NBI valid diagnostic success, static/late stale withholding, pre-POST owner loss, hash/chain/interval denial and SIGKILL/restart passed on the same artifact.
 - Applied SQL through175.112 immutable; no predecessor rewrites. Cleanup verified no owned containers/JVMs/temp schemas/PID records/task listeners; seven generated manifests removed, original env/lock and two volumes/images/data retained.
 - Read task23/verify-02/DoneClaim.md and latest task-23.md for exact findings, protocol assumptions, counts, hashes and preserved caveats. All affected source/runtime reviewers must repeat on the final artifact. Task23 remains unchecked/unapproved and task24 must not start.
+
+## Verify-03 Narrow Ingestion Correction
+
+- CPE-R2 and DB-R2 reviews at39295078 are CONFIRMED by ses_f54d52690ffefwS6LHWH9xpiJt and ses_f54d5267bffeH6M87YAIQbBrrv; preserve that scope. Temporal/discovery still require DISCOVERY-3 safe extreme timestamp quarantine and T3 known-unattached GPON telemetry compatibility. No aggregate task approval.
+- User explicitly requires strict clean code: small cohesive functions/classes, explicit types/errors, public boundaries, no duplicated policy/silent success, only purposeful abstraction and focused tests. No unrelated refactors or CPE redesign.
+- Entry39295078930507d75b58213420c4bb63025d011d is clean; prior verify-03 attempt was only rate-limited. Use verify-03 evidence, targeted tests and real HTTP proof; defer full suites. Connected mapping must remain blocked if authoritative vendor/firmware evidence is unavailable. Task23 stays unchecked; task24 must not start.
