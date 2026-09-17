@@ -1,5 +1,16 @@
 # Warehouse Workorder Asset Provenance Task 22 Checkpoint
 
+## Current Status — Task23 Externally Blocked
+
+- Authoritative top-level state is 22 completed, 1 blocked and 29 pending: tasks 1–22 are `[x]`, task23 is `[~]`, and tasks24–48 plus F1–F4 remain `[ ]`. Task23 is blocked, not delivered complete.
+- Current source checkpoint `864199313485a88521ae5b767b0f45ccf9ee62c3` contains the executor fixes for extreme timestamp safety and unique active legacy/no-ODP producer compatibility. Connected GPON mapping remains incomplete.
+- Required external evidence is vendor, model, firmware and MIB revision plus paired raw SNMP index/serial captures and authoritative CLI/API frame/slot/PON identity across multiple ports and ONU positions. The alternative is an owner-authorized mapping policy; no such policy has been approved.
+- Do not guess a decoder or relabel raw indexes. Connected unresolved samples remain unassigned until authoritative mapping evidence or an approved policy exists.
+- CPE-R2 reviewer `ses_f54d52690ffefwS6LHWH9xpiJt` and DB-R2 reviewer `ses_f54d5267bffeH6M87YAIQbBrrv` confirmed their `39295078930507d75b58213420c4bb63025d011d` scope. Their corresponding implementation and SQL blobs are unchanged by verify-03. Targeted temporal/discovery and runtime review of the local fixes is running; no verdict is recorded prematurely.
+- Task24 depends on task23 in the existing dependency matrix. No task24 or other downstream implementation has started or may be claimed independently while this blocker remains.
+- Next steps: obtain the required device evidence or explicit owner policy; retain conservative unassigned handling while implementing only an authoritative mapping; finish targeted temporal/discovery and runtime verification; then rerun the required task23 gates before any completion decision or task24 start.
+- Strict clean-code requirement remains binding: cohesive small code, explicit types and errors, public ownership boundaries, no duplicate policy or silent success, and only narrow purposeful abstractions with focused tests.
+
 ## 2026-09-16 — User-requested remote recovery checkpoint
 
 - User instruction: commit and push immediately, and keep the work position documented so another agent can resume if this VPS is lost. This supplements the existing immediate-push/no-merge policy; it does not authorize force-push, main deployment, or skipping verification.
@@ -32,20 +43,20 @@
 - Local continuation branch: `work/warehouse-resume-20260916`
 - Task-owned worktree on this host: `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume`
 - Verified checkpoint base: `2105273f1de7783fdc2454de6bc9e4a3a86be38a`
-- Implementation SHA: `dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb`
-- Tasks 1-22: checked; task 23: unchecked
+- Current source SHA: `864199313485a88521ae5b767b0f45ccf9ee62c3`
+- Tasks 1-22: checked; task 23: blocked; tasks 24-48 and F1-F4: pending
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr` after plan completion; immediate checkpoint pushes; no merge
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
 - Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
 - Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
 - Migrations: `V175.80` through `V175.89`; final JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`.
-- Next action: task23 discovery/auto-provision/CPE integration; do not start in this checkpoint.
+- Next action: resolve the connected-GPON mapping dependency and finish targeted task23 verification; do not start task24.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Task 23 is still unchecked. This is the safe task22 checkpoint.
+Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Task23 is explicitly blocked and incomplete; tasks24–48 and F1–F4 remain pending.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -63,7 +74,7 @@ Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Tas
 
 ## Exact Next Action
 
-Resume with `/start-work warehouse-workorder-asset-provenance --make-pr` for task23 discovery/auto-provision/CPE integration. Task23 remains unchecked and must not start in this checkpoint.
+Resume task23 only to resolve the documented connected-GPON external dependency and complete targeted verification. Preserve unresolved connected samples as unassigned; do not start task24 or mark task23 complete.
 
 ## Continuation Policy
 
