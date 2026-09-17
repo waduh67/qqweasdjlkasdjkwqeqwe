@@ -123,3 +123,40 @@ class WarehouseDiscoveryManualConflictIT : CustomerDeploymentFixture() {
         assertUninstalled(installation)
     }
 }
+
+class WarehouseDiscoveryManualStableIT : CustomerDeploymentFixture() {
+    @Test
+    fun `prepare connected warehouse owner for live diagnostic generations and exact path proof`() {
+        val serial = "R2-STABLE-${UUID.randomUUID()}".uppercase()
+        val installation = installation(serials = listOf(serial, "$serial-X"))
+        val token = installation.receipt.stock.token
+        fun created(path: String, body: String): String {
+            val response = request("POST", path, token, body)
+            assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(201)
+            return mapper.readTree(response.contentAsString).path("id").asString()
+        }
+        val site = created("/api/sites", """{"code":"R2SITE","name":"Site","location":{"longitude":106.99,"latitude":-6.24}}""")
+        val olt = created("/api/olts", """{"siteId":"$site","code":"R2OLT","name":"OLT","vendor":"ZTE","managementIp":"127.0.0.1","snmpCommunity":"owned"}""")
+        val pon = created("/api/olts/$olt/pon-ports", """{"label":"1/1/1"}""")
+        val odc = created("/api/odcs", """{"code":"R2ODC","name":"ODC","ponPortId":"$pon","capacity":8,"splitterRatio":"1:8","location":{"longitude":106.99,"latitude":-6.24}}""")
+        val odp = created("/api/odps", """{"code":"R2ODP","name":"ODP","odcId":"$odc","capacity":8,"splitterRatio":"1:8","location":{"longitude":106.99,"latitude":-6.24}}""")
+        val installed = request("POST", "/api/customers/${installation.customer}/assets/install", installation.receipt.receiver.first,
+            """{"authorizationId":"${installation.authorization}","expectedRevision":0,"topology":{"odpId":"$odp","portNumber":1,"installRxPowerDbm":null}}""", "stable-install")
+        assertThat(installed.status).withFailMessage(installed.contentAsString).isEqualTo(201)
+        val stock = fixture(token)
+        val time = Instant.now()
+        val genie = "R2-STABLE-${installation.operation}"
+        TenantContext.runAs(stock.tenant) { context.getBean(CpeSyncService::class.java).sync(listOf(
+            AcsDevice(genie, serial, null, null, "Vendor", "Model", null, null, time, "stable", observedFieldsAt = time))) }
+        val collector = request("POST", "/api/monitoring/collectors", token, """{"name":"Stable","pollIntervalSeconds":60}""")
+        assertThat(collector.status).isEqualTo(201)
+        val admin = mapper.readTree(request("GET", "/api/me", token).contentAsString)
+        manualManifest("task23-manual-stable.json", mapOf(
+            "tenant" to stock.tenant.toString(), "serial" to serial, "customer" to installation.customer.toString(),
+            "onu" to installation.operation.toString(), "cpe" to stock.transaction { scalar("SELECT id FROM cpe_device") },
+            "genieacsId" to genie, "oltId" to olt, "oltCode" to "R2OLT", "ponPortLabel" to "1/1/1",
+            "adminEmail" to admin.path("email").asString(), "slug" to admin.path("email").asString().substringAfter('@').substringBefore(".test"),
+            "collectorKey" to mapper.readTree(collector.contentAsString).path("apiKey").asString(),
+        ))
+    }
+}
