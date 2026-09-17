@@ -59,7 +59,7 @@ export function LoginPage() {
           <span className="logo" aria-hidden style={{ width: 34, height: 34 }}>
             {otpRequired ? <IconShield size={20} /> : <BrandMark size={26} />}
           </span>
-          <div>
+          <div className="stack" style={{ gap: '0.25rem' }}>
             <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>NetOps Console</Text>
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               {otpRequired ? 'Verifikasi dua langkah' : 'Masuk ke konsol operasi jaringan'}
