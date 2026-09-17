@@ -125,6 +125,7 @@ class Subscriber360ServiceTest {
         // Tanpa penjaga kunci baca-saja: kelas ini menguji izin, bukan status langganan.
         authz = AccessChecker(FakeCurrentUser(permissions), FixedObjectProvider(null)),
         currentUser = FakeCurrentUser(permissions),
+        customerReadAccess = org.mockito.Mockito.mock(com.duluin.ftth.customer.CustomerReadAccessApi::class.java),
         materialApi = org.mockito.Mockito.mock(com.duluin.ftth.inventory.MaterialConsumptionApi::class.java) { invocation ->
             if (invocation.method.name == "forCustomer") emptyList<com.duluin.ftth.inventory.CustomerMaterialFactRef>()
             else throw UnsupportedOperationException(invocation.method.name)

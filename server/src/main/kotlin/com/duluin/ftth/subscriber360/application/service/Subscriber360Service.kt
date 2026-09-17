@@ -6,6 +6,7 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.security.AccessChecker
 import com.duluin.ftth.cpe.CpeApi
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.CustomerReadAccessApi
 import com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360Access
 import com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360Query
 import com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360View
@@ -26,7 +27,7 @@ import java.util.UUID
  * terkunci (lewat [Subscriber360Access]).
  */
 @Service
-@Transactional(readOnly = true)
+@Transactional(timeout = 20)
 class Subscriber360Service(
     private val customerApi: CustomerApi,
     private val bngApi: BngApi,
@@ -37,10 +38,12 @@ class Subscriber360Service(
     private val materialApi: MaterialConsumptionApi,
     private val currentUser: CurrentUserProvider,
     private val materialApiV2: MaterialConsumptionApiV2,
+    private val customerReadAccess: CustomerReadAccessApi,
 ) : Subscriber360Query {
 
     @Suppress("DEPRECATION")
     override fun assemble(customerId: UUID, materialPage: WarehousePageRequest): Subscriber360View {
+        customerReadAccess.requireVisibleCustomer(customerId)
         val customer = customerApi.findCustomer(customerId)
             ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
 
