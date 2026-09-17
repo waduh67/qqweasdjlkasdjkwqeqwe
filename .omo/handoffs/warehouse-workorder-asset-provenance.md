@@ -1,6 +1,9 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task23 Confirmed Complete
+## Current Status: Task24 In Progress, Baseline Pending
+
+- Task24 started from verified clean local/live remote49e47396993c46b03ff48d6a8258af17db9068d6 on2026-09-17. Current step is contract tracing and baseline characterization before production edits. Read newest task-24.md and the true EOF ledger receipt for subsequent checkpoints.
+- Task23 remains independently confirmed complete; task24 remains unchecked, and no task25/later work or GPON re-review is authorized. No task24 tests, build or live HTTP proof yet. No migrations added; prior ceiling175.112 awaits live verification.
 
 - Authoritative top-level state is 23 completed, 0 blocked and 29 pending: tasks 1-23 are `[x]`; tasks24-48 and F1-F4 remain `[ ]`. Task24 is next. This is task23 completion only, not full-plan, task46, release or final-wave approval.
 - Owner decision dated 2026-09-17: "yaudh skip aja dulu yg GPON ZTE/Huawei/FiberHome mah, buat sesuai yg ada di dokumentasi mereka aja". Physical ZTE/Huawei/FiberHome GPON capture, model/firmware certification and hardware validation are deferred and no longer block this plan.
