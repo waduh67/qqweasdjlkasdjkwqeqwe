@@ -137,3 +137,9 @@ No runtime env files, credentials, API keys, private keys, JWTs, connection stri
 - Cleanup verified no owned containers/JVMs/temp schemas/PID records/task listeners. Original two volumes/images/data and private env/lock preserved; owned manifests removed.28 complete sanitized XML archives plus source inventory/hashes and corrected DoneClaim stay ignored under task23/verify-01.
 - Applied SQL through175.109 immutable. All per-finding evidence, conservative GPON limitation, stable retry behavior and old catalog/NetworkEndToEnd caveats are in newest task-23.md and DoneClaim. All four source lanes and runtime must rerun independently on this artifact; prior runtime pass is not aggregate approval.
 - Resume only independent task23 verification from newest remote feat/warehouse-workorder. Never treat this executor DoneClaim as permission to check task23 or start task24.
+
+## Verify-02: Source Review Still NEEDS_FIX
+
+- Second CPE/DB source review rejects67dc9513185ca907e0704125781fbf89d636ab76 despite scoped runtime success. Latest task23 note lists six CPE-R2/DB-R2 findings and additional timing/isolation qualification. Reviewers: ses_f54d52690ffefwS6LHWH9xpiJt and ses_f54d5267bffeH6M87YAIQbBrrv.
+- Resume correction in the task-owned worktree only. First publish this notes-only checkpoint, then genuine failing-first proofs. Applied migrations through175.109 stay immutable; reserve new versions before creation. Temporal/discovery reviewers read immutable67dc9513 concurrently and do not own mutable QA state.
+- Task23 remains unchecked/NEEDS_FIX. No task24/PR/merge. Previous DoneClaim and83-case runtime pass are historical scope evidence, not aggregate approval. New evidence and corrected claim belong under task23/verify-02, with normal checkpoint pushes and full owned-resource cleanup.
