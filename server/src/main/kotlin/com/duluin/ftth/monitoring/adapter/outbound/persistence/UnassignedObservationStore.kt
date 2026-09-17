@@ -13,7 +13,10 @@ import java.util.UUID
 class UnassignedObservationStore(private val entityManager: EntityManager) {
     private val mapper = jacksonObjectMapper()
     fun append(reading: OnuReading, reason: String) = appendRaw(reading.serialNumber,
-        reading.observedAt.takeUnless { reason == "UNTRUSTED_TIMESTAMP" }, reason, mapper.writeValueAsString(reading))
+        reading.observedAt, reason, mapper.writeValueAsString(reading))
+
+    fun appendUntrustedTime(reading: OnuReading) = appendRaw(reading.serialNumber,
+        null, "UNTRUSTED_TIMESTAMP", mapper.writeValueAsString(reading))
 
     fun appendRaw(serial: String, observedAt: java.time.Instant?, reason: String, payload: String) = entityManager.unwrap(Session::class.java).doWork { connection ->
         connection.prepareStatement("""INSERT INTO monitoring_unassigned_observation(id,tenant_id,serial_number,observed_at,reason,payload)

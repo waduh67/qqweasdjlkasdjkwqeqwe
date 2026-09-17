@@ -4,10 +4,12 @@ import com.duluin.ftth.contract.IngestResult
 import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
+import com.duluin.ftth.contract.OnuPathProvenance
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.CustomerObservationApi
 import com.duluin.ftth.customer.ObservationPath
+import com.duluin.ftth.customer.ObservationAttribution
 import com.duluin.ftth.monitoring.adapter.outbound.persistence.UnassignedObservationStore
 import com.duluin.ftth.monitoring.application.port.outbound.IngestBatchRepository
 import com.duluin.ftth.monitoring.application.port.outbound.OnuMetricRepository
@@ -128,24 +130,29 @@ class MetricIngestionService(
         var changed = false
         for (reading in readings.sortedBy { it.observedAt }) {
             val serial = reading.serialNumber.trim().uppercase(Locale.ROOT)
-            if (reading.pathProvenance == com.duluin.ftth.contract.OnuPathProvenance.UNVERIFIED_INDEX) {
-                unassigned.append(reading, "UNVERIFIED_PON_IDENTITY")
+            if (untrustedBatch || !trustedTime(reading.observedAt, now)) {
+                unassigned.appendUntrustedTime(reading)
                 unknown += serial
                 continue
             }
-            val validTime = !untrustedBatch && trustedTime(reading.observedAt, now)
-            if (validTime && reading.observedAt.isAfter(now)) {
+            if (reading.observedAt.isAfter(now)) {
                 unassigned.append(reading, "FUTURE_OBSERVATION")
                 unknown += serial
                 continue
             }
             val storedTime = reading.observedAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS)
-            val attribution = if (validTime) observations.resolveObservation(serial, storedTime,
-                ObservationPath(oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)], reading.oltCode, reading.ponPortLabel)) else null
-            val episode = attribution?.episode
+            val oltId = oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)]
+            val path = ObservationPath(oltId, reading.oltCode, reading.ponPortLabel)
+            val attribution = observations.resolveObservation(serial, storedTime, path)
+            val pathRejection = unverifiedPonRejection(reading.pathProvenance, oltId, attribution)
+            if (pathRejection != null) {
+                unassigned.append(reading, pathRejection)
+                unknown += serial
+                continue
+            }
+            val episode = attribution.episode
             if (episode != null && completedAt != null) {
-                val completed = observations.resolveObservation(serial, completedAt,
-                    ObservationPath(oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)], reading.oltCode, reading.ponPortLabel))
+                val completed = observations.resolveObservation(serial, completedAt, path)
                 if (completed.episode?.onu?.id != episode.onu.id || completed.topologyRevision != attribution.topologyRevision ||
                     completed.networkEdgeIds != attribution.networkEdgeIds) {
                     unassigned.append(reading, "POLL_SPANS_TRANSITION")
@@ -154,14 +161,14 @@ class MetricIngestionService(
                 }
             }
             if (episode == null) {
-                unassigned.append(reading, attribution?.reason ?: "UNTRUSTED_TIMESTAMP")
+                unassigned.append(reading, requireNotNull(attribution.reason))
                 unknown += serial
-                if (validTime && attribution?.reason == "NO_EPISODE_AT_TIME" && observations.currentEpisode(serial) == null)
+                if (attribution.reason == "NO_EPISODE_AT_TIME" && observations.currentEpisode(serial) == null)
                     discoveredOnuRecorder.capture(tenantId, listOf(reading), oltIdsByCode)
                 continue
             }
             val onu = episode.onu
-            points += OnuMetricPoint(storedTime, tenantId, onu.id, oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)],
+            points += OnuMetricPoint(storedTime, tenantId, onu.id, oltId,
                 reading.status.name, reading.rxPowerDbm, reading.txPowerDbm, reading.uptimeSeconds, reading.distanceMeters,
                 reading.lastDownCause?.name, reading.lastOffAt, reading.lastOnAt,
                 com.duluin.ftth.monitoring.domain.model.MetricAttribution(source, now, episode.episodeRevision, episode.assignmentId,
@@ -178,6 +185,17 @@ class MetricIngestionService(
         if (changed) events.publishEvent(AlarmsChangedEvent(tenantId))
         if (current.isNotEmpty()) discoveredOnuRecorder.resolveKnown(current)
         return IngestResult(points.size, unknown.take(MAX_REPORTED_UNKNOWN), false)
+    }
+
+    private fun unverifiedPonRejection(provenance: OnuPathProvenance, oltId: UUID?, attribution: ObservationAttribution): String? {
+        if (provenance != OnuPathProvenance.UNVERIFIED_INDEX) return null
+        val episode = attribution.episode
+        return when {
+            oltId == null -> "UNVERIFIED_OLT"
+            episode == null -> if (attribution.reason == "PATH_MISMATCH") "UNVERIFIED_PON_IDENTITY" else requireNotNull(attribution.reason)
+            !episode.legacy || episode.endedAt != null || episode.onu.odpId != null || attribution.networkEdgeIds.isNotEmpty() -> "UNVERIFIED_PON_IDENTITY"
+            else -> null
+        }
     }
 
     private fun trustedTime(time: Instant, now: Instant): Boolean =
