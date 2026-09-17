@@ -38,6 +38,14 @@ class CustomerObservationStore(private val entityManager: EntityManager,
 
     fun episodes(serial: String): List<ObservationEpisode> = episodes(setOf(serial))
 
+    fun activeSerials(serials: Set<String>): List<String> = jdbc { connection ->
+        connection.prepareStatement("""SELECT warehouse_canonical_serial(serial_number) FROM onu
+            WHERE tenant_id=? AND retired_at IS NULL AND warehouse_canonical_serial(serial_number)=ANY(?) ORDER BY id""").use { query ->
+            query.setObject(1, TenantContext.tenantId()); query.setArray(2, connection.createArrayOf("text", serials.toTypedArray()))
+            query.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getString(1)) } }
+        }
+    }
+
     fun episodes(serials: Set<String>): List<ObservationEpisode> = jdbc { connection ->
         connection.prepareStatement("""SELECT o.id,o.serial_number,o.customer_id,c.name,o.odp_id,o.status,o.assignment_id,
             o.episode_revision,coalesce(o.started_at,o.created_at),o.retired_at,o.warehouse_admission
