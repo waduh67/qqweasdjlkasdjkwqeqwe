@@ -319,7 +319,7 @@ class GenieAcsGatewayTest {
         server.onPost.set { body ->
             val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
             val task = mapper.readTree(body)
-            if (task.path("name").asString() == "getParameterValues") return@set
+            if (task.path("name").asString() != "setParameterValues") return@set
             assertThat(task.path("name").asString()).isEqualTo("setParameterValues")
             val parameters = task.path("parameterValues")
             val requested = parameters[0][0].asString().endsWith(".DiagnosticsState")

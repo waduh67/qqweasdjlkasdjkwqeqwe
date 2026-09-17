@@ -70,9 +70,11 @@ internal class AcsDiagnosticCorrelation(private val client: RestClient, private 
         return emptyQueue(ticket.deviceId) && query("faults", mapOf("_id" to "${ticket.deviceId}:task_${ticket.taskId}"))?.let { it.isArray && it.isEmpty } == true
     }
 
-    fun refresh(deviceId: String, projection: String, beforePost: () -> Unit): Boolean {
+    fun refresh(deviceId: String, projection: String, beforePost: () -> Unit, objectName: String? = null): Boolean {
         beforePost()
-        return post(deviceId, mapOf("name" to "getParameterValues", "parameterNames" to projection.split(',').filterNot { it.startsWith('_') })) != null
+        val task = if (objectName == null) mapOf("name" to "getParameterValues", "parameterNames" to projection.split(',').filterNot { it.startsWith('_') })
+            else mapOf("name" to "refreshObject", "objectName" to objectName)
+        return post(deviceId, task) != null
     }
 
     private fun post(device: String, body: Map<String, Any>): String? {

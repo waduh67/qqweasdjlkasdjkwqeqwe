@@ -400,7 +400,7 @@ class GenieAcsGateway(
         expected: Map<String, String>, correlation: AcsDiagnosticCorrelation, ticket: AcsDiagnosticCorrelation.Ticket, beforePost: () -> Unit): JsonNode? {
         val deadline = Instant.now().plus(diagnosticsTimeout)
         while (true) {
-            if (!correlation.refresh(genieacsId, projection, beforePost)) return null
+            if (!correlation.refresh(genieacsId, projection, beforePost, base)) return null
             val current = fetchDevice(genieacsId, "$projection,_id,_deviceId,_lastInform")
             val state = current?.param("$base.DiagnosticsState")
             val observedAt = current?.let { observedParameterTime(it.descend(base)) }
