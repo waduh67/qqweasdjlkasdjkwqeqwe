@@ -2,6 +2,8 @@
 
 ## Current Status: Task24 First Green WIP, Final QA Pending
 
+- Latest task24: exact13 and selected91 pass with0 failures/errors/skips. Current step is correction checkpoint followed by clean artifact, real isolated HTTP/DB and owned-resource cleanup. CSV entity mappings and server-tenant background promotion are corrected with failing-first proof; no migration. See newest task-24.md for classified failures. Task24 remains unchecked and independent verification pending.
+
 - Task24 started from verified clean local/live remote49e47396993c46b03ff48d6a8258af17db9068d6 on2026-09-17. Current step is contract tracing and baseline characterization before production edits. Read newest task-24.md and the true EOF ledger receipt for subsequent checkpoints.
 - Current task24 substep supersedes the startup line: selected26/0/0/0 green after genuine red6/4 and classified baseline39/3. Checkpoint implementation/tests, then expand adversarial/CSV cases, regressions, clean bootJar, real HTTP/DB and cleanup. No task24 live proof or DoneClaim yet; live schema175.112 unchanged. See append-only task-24.md for legacy fact semantics and inbox mapping correction.
 - Task23 remains independently confirmed complete; task24 remains unchecked, and no task25/later work or GPON re-review is authorized. No task24 tests, build or live HTTP proof yet. No migrations added; prior ceiling175.112 awaits live verification.
