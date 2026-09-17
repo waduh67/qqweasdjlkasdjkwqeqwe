@@ -75,7 +75,7 @@ class CustomerService(
         val code = manualCode ?: generateNextCode()
         val customer = customerRepository.save(
             Customer.create(
-                tenantId = currentUser.current().tenantId,
+                tenantId = com.duluin.ftth.common.tenant.TenantContext.tenantId(),
                 code = code,
                 name = command.name,
                 phone = command.phone,
