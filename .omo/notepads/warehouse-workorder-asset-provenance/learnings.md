@@ -198,3 +198,8 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - The protected initial checkout already held `feat/warehouse-workorder`, so the safe non-displacing pattern is a new local continuation branch from the verified live remote tip in a separate worktree, followed by ordinary explicit-refspec pushes back to the existing remote feature branch.
 - Current host setup uses `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume` on local `work/warehouse-resume-20260916`; the remote delivery target remains `feat/warehouse-workorder`.
 - No effective Git identity was configured. Plan line 486 explicitly permits `fajarxfce <fajaralamsyah000@gmail.com>` through commit-scoped author/committer environment variables, avoiding any Git configuration change.
+
+## Verify-03 User Requirement: Strict Clean Code
+
+- Current and future edits must use small cohesive functions/classes, explicit types and failure outcomes, public module boundaries, one source of policy, no silent-success fallback, minimal purposeful abstraction and focused regression tests.
+- Apply this locally to the assigned behavior; it is not permission for broad unrelated refactoring. Preserve confirmed CPE/database blobs and applied migrations unless a direct dependency is unavoidable and explicitly reported.
