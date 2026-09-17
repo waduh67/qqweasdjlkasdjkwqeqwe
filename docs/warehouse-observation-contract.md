@@ -70,8 +70,9 @@ observation behavior, not release approval.
   starting a test. They explicitly refresh and observe the nonce plus `None` in a
   newer Inform before restoring requested inputs and starting the new generation.
   Broadband Forum diagnostics require writable-input changes to terminate/reset
-  an in-progress test. NBI GET alone is only a cache read, so reset and result
-  reads use `getParameterValues` tasks. Pending tasks, faults, ambiguous reset,
+  an in-progress test. NBI GET alone is only a cache read: reset uses
+  `getParameterValues`, and results refresh the diagnostic object rather than
+  requesting unsupported vendor/direction-specific leaves. Pending tasks, faults, ambiguous reset,
   stale/future results or missing identity/Inform yield incomplete, not success.
 - Successful results require distinct acknowledged task identities, newer
   trustworthy Inform and parameter evidence and matching requested inputs. A
