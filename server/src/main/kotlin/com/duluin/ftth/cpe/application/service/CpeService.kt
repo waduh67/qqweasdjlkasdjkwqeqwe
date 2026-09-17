@@ -291,7 +291,9 @@ class CpeService(
     }
 
     private fun requireDevice(id: UUID): CpeDevice {
-        operations.lockDevice(id) ?: throw NotFoundException("Perangkat CPE $id tidak ditemukan")
+        eligibility.refresh()
+        val device = deviceRepository.findById(id) ?: throw NotFoundException("Perangkat CPE $id tidak ditemukan")
+        if (operations.lock(device.genieacsId)) return device
         eligibility.refresh()
         return deviceRepository.findById(id) ?: throw NotFoundException("CPE_OWNERSHIP_CHANGED")
     }

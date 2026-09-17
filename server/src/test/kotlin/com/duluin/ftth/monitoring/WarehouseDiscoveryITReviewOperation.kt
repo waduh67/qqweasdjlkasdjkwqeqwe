@@ -56,6 +56,39 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
     }
 
     @Test
+    fun `ownership is revalidated after waiting for the device operation lock`() {
+        val device = admitted()
+        val stock = fixture(device.installation.receipt.stock.token)
+        val other = tenant()
+        val customer = request("POST", "/api/customers", other,
+            """{"code":"WAIT","name":"Waiting owner","address":"Test","location":{"longitude":106.99,"latitude":-6.24}}""")
+        assertThat(customer.status).isEqualTo(201)
+        val held = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        Executors.newFixedThreadPool(2).use { pool ->
+            val holder = pool.submit { stock.transaction {
+                context.getBean(com.duluin.ftth.cpe.application.service.CpeOperationGuard::class.java).lock(device.genie)
+                held.countDown(); check(release.await(30, TimeUnit.SECONDS))
+            } }
+            check(held.await(10, TimeUnit.SECONDS))
+            val caller = pool.submit<Int> { request("POST", "/api/cpe/devices/${device.deviceId}/refresh", device.installation.receipt.stock.token).status }
+            try {
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20)
+                var waiting = false
+                while (!waiting && System.nanoTime() < deadline) {
+                    waiting = stock.transaction { scalar("SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted").toInt() > 0 }
+                    if (!waiting) Thread.sleep(10)
+                }
+                assertThat(waiting).isTrue()
+                LegacyOnuTestFixture.stage(mapper.readTree(customer.contentAsString).path("id").asString(), device.serial)
+            } finally { release.countDown() }
+            holder.get(30, TimeUnit.SECONDS)
+            assertThat(caller.get(30, TimeUnit.SECONDS)).isEqualTo(404)
+        }
+        Mockito.verify(acs, Mockito.never()).requestConnection(device.genie)
+    }
+
+    @Test
     fun `CPE-3 real gateway mixed future fields are refused by the live HTTP service`() {
         val device = admitted()
         WarehouseReviewAcsServer().use { server ->
