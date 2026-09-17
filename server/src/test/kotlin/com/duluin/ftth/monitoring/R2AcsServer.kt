@@ -8,13 +8,14 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-internal class R2AcsServer : AutoCloseable {
+internal class R2AcsServer(downloadUrl: String = "http://owned.test/download") : AutoCloseable {
     val document = AtomicReference("[]")
     val files = AtomicReference("[]")
     val pending = AtomicReference("[]")
     val status = AtomicInteger(200)
     val posts = AtomicInteger()
     val onGet = AtomicReference<(String) -> Unit>({})
+    val deviceResponse = AtomicReference<(String) -> String?>({ null })
     val onPost = AtomicReference<(String) -> Unit>({})
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
         createContext("/") { exchange ->
@@ -22,11 +23,13 @@ internal class R2AcsServer : AutoCloseable {
             val task = exchange.requestMethod == "POST"
             val body = if (task) {
                 val count = posts.incrementAndGet()
-                onPost.get().invoke(exchange.requestBody.readAllBytes().toString(Charsets.UTF_8))
-                "{\"_id\":\"${count.toString(16).padStart(24, '0')}\",\"device\":\"${path.split('/')[2]}\",\"name\":\"setParameterValues\"}"
+                val request = exchange.requestBody.readAllBytes().toString(Charsets.UTF_8)
+                onPost.get().invoke(request)
+                val name = tools.jackson.module.kotlin.jacksonObjectMapper().readTree(request).path("name").asString()
+                "{\"_id\":\"${count.toString(16).padStart(24, '0')}\",\"device\":\"${path.split('/')[2]}\",\"name\":\"$name\"}"
             } else {
                 onGet.get().invoke(path)
-                when { path.startsWith("/files") -> files.get(); path.startsWith("/tasks") -> pending.get(); path.startsWith("/faults") -> "[]"; else -> document.get() }
+                when { path.startsWith("/files") -> files.get(); path.startsWith("/tasks") -> pending.get(); path.startsWith("/faults") -> "[]"; else -> deviceResponse.get().invoke(exchange.requestURI.toString()) ?: document.get() }
             }
             val bytes = body.toByteArray()
             exchange.responseHeaders.set("Content-Type", "application/json")
@@ -37,7 +40,7 @@ internal class R2AcsServer : AutoCloseable {
         start()
     }
     private val client = RestClient.builder().baseUrl("http://127.0.0.1:${server.address.port}").build()
-    val gateway = GenieAcsGateway(client, client, "", "http://owned.test/download", "http://owned.test/upload", 1024,
+    val gateway = GenieAcsGateway(client, client, "", downloadUrl, "http://owned.test/upload", 1024,
         Duration.ofMillis(150), Duration.ofMillis(5))
     override fun close() = server.stop(0)
 }
