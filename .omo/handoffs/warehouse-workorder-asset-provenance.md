@@ -1,17 +1,26 @@
-# Warehouse Workorder Asset Provenance Task 22 Checkpoint
+# Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status — Task23 Externally Blocked
+## Current Status: Task23 Scope Approved, Verification Pending
 
-- Authoritative top-level state is 22 completed, 1 blocked and 29 pending: tasks 1–22 are `[x]`, task23 is `[~]`, and tasks24–48 plus F1–F4 remain `[ ]`. Task23 is blocked, not delivered complete.
-- Current source checkpoint `864199313485a88521ae5b767b0f45ccf9ee62c3` contains the executor fixes for extreme timestamp safety and unique active legacy/no-ODP producer compatibility. Connected GPON mapping remains incomplete.
-- Required external evidence is vendor, model, firmware and MIB revision plus paired raw SNMP index/serial captures and authoritative CLI/API frame/slot/PON identity across multiple ports and ONU positions. The alternative is an owner-authorized mapping policy; no such policy has been approved.
-- Do not guess a decoder or relabel raw indexes. Connected unresolved samples remain unassigned until authoritative mapping evidence or an approved policy exists.
+- Authoritative top-level state is 22 completed, 0 blocked and 30 pending: tasks 1-22 are `[x]`, task23 is `[ ]`, and tasks24-48 plus F1-F4 remain `[ ]`. Task23 is ready for revised-scope closure verification, not delivered complete.
+- Owner decision dated 2026-09-17: "yaudh skip aja dulu yg GPON ZTE/Huawei/FiberHome mah, buat sesuai yg ada di dokumentasi mereka aja". Physical ZTE/Huawei/FiberHome GPON capture, model/firmware certification and hardware validation are deferred and no longer block this plan.
+- Existing GPON support must follow traceable vendor documentation or MIBs with offline fixture coverage and be labelled documentation-backed/not hardware-validated. A separate librarian is still checking those references, so this checkpoint neither verifies them nor supplies or invents a mapping formula.
+- Undocumented or unknown raw-index formats remain `UNVERIFIED` and quarantined. No decoder guess or raw-index relabelling is allowed.
+- This decision does not remove existing GPON code or waive warehouse provenance, CPE ownership/freshness, temporal attribution, database/RLS, privacy, source-gate or strict clean-code requirements. All unrelated real DB/browser/stock gates remain intact.
+- The HSGQ-E04I read-only field evidence is EPON-only. It is not ZTE/Huawei/FiberHome GPON firmware, mapping or certification evidence.
+- Current product source checkpoint `864199313485a88521ae5b767b0f45ccf9ee62c3` contains the executor fixes for extreme timestamp safety and unique active legacy/no-ODP producer compatibility. No product code changes are part of this scope checkpoint.
 - CPE-R2 reviewer `ses_f54d52690ffefwS6LHWH9xpiJt` and DB-R2 reviewer `ses_f54d5267bffeH6M87YAIQbBrrv` confirmed their `39295078930507d75b58213420c4bb63025d011d` scope. Their corresponding implementation and SQL blobs are unchanged by verify-03.
 - Temporal/source reviewer `ses_f54d527eaffeQMhYzFuG21jaGJ` confirmed DISCOVERY-3 timestamp safety and T3 unique active legacy/no-ODP handling at assigned checkpoint `5e49bc4e4377d484629df18dd1692643c461ac04`. The review specifically accepted the named `appendUntrustedTime` helper, explicit typed/raw timestamp boundary, existing shared time policy and narrow legacy eligibility checks as clean, cohesive code.
 - Fresh runtime reviewer `ses_f54d52609ffe9BiEMrmv2lwpMu` independently confirmed the targeted local fixes: V3 class 18, targeted regression 47, SNMP 17 and collector serialization 6, all with zero failures, errors or skips. The 47 count includes the standalone fixture seed absent from the executor's earlier 46. This is targeted confirmation only, not aggregate task23 approval.
-- Task24 depends on task23 in the existing dependency matrix. No task24 or other downstream implementation has started or may be claimed independently while this blocker remains.
-- Next step: obtain the required device evidence or explicit owner policy decision. Retain conservative unassigned handling and implement only an authoritative mapping; afterward complete the remaining task23 acceptance gates before any completion decision or task24 start. Do not repeat already confirmed local-fix verification merely to resolve the external dependency.
+- Task24 depends on task23 in the existing dependency matrix. No task24 or other downstream implementation has started or may be claimed before revised-scope task23 closure.
+- Next step: complete the documentation traceability check, make only bounded necessary implementation/test changes if that review finds a gap, then perform final task23 verification under the revised scope before task24. Do not repeat already confirmed local-fix verification solely to seek physical GPON evidence.
 - Strict clean-code requirement remains binding: cohesive small code, explicit types and errors, public ownership boundaries, no duplicate policy or silent success, and only narrow purposeful abstractions with focused tests.
+
+## 2026-09-17 Owner Decision Superseding The Physical GPON Blocker
+
+- This dated owner decision supersedes the current status of the historical blocked records below without deleting or rewriting them. Those records remain evidence of what was previously required and attempted.
+- Physical ZTE/Huawei/FiberHome validation is deferred. Documentation/MIB traceability and offline fixtures now define the GPON evidence boundary, with explicit documentation-backed/not-hardware-validated labelling and fail-closed `UNVERIFIED` quarantine for unknown formats.
+- Task23 returns from `[~]` to `[ ]` for revised-scope closure verification. It is not `[x]`, and task24 has not started.
 
 ## 2026-09-16 — User-requested remote recovery checkpoint
 
@@ -45,22 +54,22 @@
 - Local continuation branch: `work/warehouse-resume-20260916`
 - Task-owned worktree on this host: `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume`
 - Verified checkpoint base: `2105273f1de7783fdc2454de6bc9e4a3a86be38a`
-- Current source SHA: `864199313485a88521ae5b767b0f45ccf9ee62c3`
+- Current product source SHA: `864199313485a88521ae5b767b0f45ccf9ee62c3`
 - Current migrations: through `V175.112`; verify-03 added no migration and all SQL is unchanged from the confirmed `39295078` scope.
 - Current verify-03 JAR SHA256: `f6628c0e52caf316244c6faead08899666cb36a94df8b1268841d9140c024e42`.
-- Tasks 1-22: checked; task 23: blocked; tasks 24-48 and F1-F4: pending
+- Tasks 1-22: checked; task 23: pending revised-scope verification; tasks 24-48 and F1-F4: pending
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr` after plan completion; immediate checkpoint pushes; no merge
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
 - Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
 - Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
 - Historical task22 identity: migrations `V175.80` through `V175.89`; JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`. This is retained history, not the current task23 artifact identity.
-- Next action: resolve the connected-GPON mapping dependency and finish targeted task23 verification; do not start task24.
+- Next action: finish documentation traceability, bounded necessary implementation/tests, and final task23 verification under the revised scope; then task24.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Task23 is explicitly blocked and incomplete; tasks24–48 and F1–F4 remain pending.
+Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Task23 is pending revised-scope verification and remains incomplete; tasks24-48 and F1-F4 remain pending.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -78,7 +87,7 @@ Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Tas
 
 ## Exact Next Action
 
-Resume task23 only to resolve the documented connected-GPON external dependency and complete targeted verification. Preserve unresolved connected samples as unassigned; do not start task24 or mark task23 complete.
+Resume task23 for documentation traceability, any bounded necessary implementation/tests, and final verification under the revised scope. Preserve undocumented or unknown raw-index samples as `UNVERIFIED` and quarantined. Do not start task24 or mark task23 complete before that verification.
 
 ## Continuation Policy
 
