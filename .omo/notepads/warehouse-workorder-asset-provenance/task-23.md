@@ -223,3 +223,13 @@
 - The bounded `ifDescr` walk observed PON ifIndexes 1-4 as `PON01`-`PON04`. Sanitized ONU examples prove interface/PON position relationships across two ports: ifIndex13=`ONU01/01`, ifIndex20=`ONU02/01`, and ifIndex24=`ONU02/05`. No MAC/customer identifier is recorded here.
 - The standard `ifName` walk and the first narrow HSGQ ONU-name table walk each returned `Timeout: No Response`; probing stopped after those consecutive bounded failures. No MAC/status/optical table or broader enterprise walk followed.
 - Returned model/object identity matches the repository's HSGQ `.50224.3` EPON adapter, whose ONU identity is MAC-based rather than GPON serial-based. This is useful HSGQ EPON index evidence, but it does not certify or resolve ZTE/Huawei/FiberHome connected GPON mapping. Task23 therefore remains `[~]`; no task24 or checkbox change.
+
+## 2026-09-17 Owner Decision: Physical GPON Validation Deferred
+
+- Exact user decision: "yaudh skip aja dulu yg GPON ZTE/Huawei/FiberHome mah, buat sesuai yg ada di dokumentasi mereka aja".
+- This decision supersedes the active external-blocker status above without deleting its historical evidence. Physical ZTE/Huawei/FiberHome capture, model/firmware certification and hardware validation are deferred and no longer block task23 or this plan.
+- Existing GPON behavior must be traceable to vendor documentation or MIBs, covered by offline fixtures, and labelled documentation-backed/not hardware-validated. A separate librarian is checking references; this checkpoint does not claim they are verified and does not invent a raw-index formula.
+- Undocumented or unknown raw-index formats stay `UNVERIFIED` and quarantined. The decision does not remove existing GPON code or waive warehouse provenance, CPE ownership/freshness, temporal attribution, database/RLS, privacy, source-gate or strict clean-code requirements.
+- HSGQ-E04I evidence remains EPON-only and makes no GPON firmware, mapping or certification claim.
+- Task23 changes from `[~]` to `[ ]`, ready for revised-scope closure verification but not complete. Authoritative counts are 22 complete, 0 blocked and 30 pending. Task24 remains pending.
+- Next action: finish documentation traceability, make only bounded necessary implementation/test changes if gaps are found, complete final task23 verification under this revised scope, then proceed to task24.

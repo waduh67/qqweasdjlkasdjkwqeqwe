@@ -98,3 +98,10 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 - Record the user-requested compaction pause without changing task14 or starting task15. The next verifier action is final verdict only.
 - Use implementation SHA `3a4f2f1ffbb0343066b503a305ef540800e508b0`; executor `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`; verifier `ses_f6fd0321cffeCyHsPe5gpV05FO` remains partial until final verdict.
 - Effective global identity is `fajarxfce <fajaralamsyah000@gmail.com>` with no environment override. Resume with `/start-work warehouse-workorder-asset-provenance --make-pr`.
+
+## 2026-09-17 - GPON evidence scope decision
+
+- User decision: "yaudh skip aja dulu yg GPON ZTE/Huawei/FiberHome mah, buat sesuai yg ada di dokumentasi mereka aja". Physical ZTE/Huawei/FiberHome capture, model/firmware certification and hardware validation are deferred and are not plan blockers.
+- GPON behavior remains documentation/MIB-backed with offline fixtures and explicit documentation-backed/not-hardware-validated labelling. Documentation references are still under separate review; no mapping formula is accepted without traceability.
+- Unknown or undocumented raw indexes remain `UNVERIFIED` and quarantined. All warehouse provenance, CPE, database/RLS, temporal, privacy, source-gate and strict clean-code requirements remain binding. HSGQ-E04I is EPON evidence only.
+- Task23 is pending revised-scope verification, not complete. Continue with documentation traceability, bounded necessary implementation/tests, final task23 verification, then task24.
