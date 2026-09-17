@@ -101,7 +101,7 @@ class WarehouseDiscoveryITReviewRetention : WarehouseDiscoveryFixture() {
             database.migrate()
             database.dataSource.connection.use { connection ->
                 execute(connection, "SET app.tenant_id='$tenant'")
-                assertThat(value(connection, "SELECT (to_jsonb(metric)-ARRAY['attribution_verified','attribution','attribution_topology_revision'])::text FROM onu_metric metric")).isEqualTo(original)
+                assertThat(value(connection, "SELECT (to_jsonb(metric)-ARRAY['attribution_verified','attribution','attribution_topology_revision','interval_protected'])::text FROM onu_metric metric")).isEqualTo(original)
                 assertThat(value(connection, "SELECT attribution_verified FROM onu_metric")).isIn("f", "false")
                 assertThat(assertThrows<SQLException> { execute(connection, "UPDATE onu_metric SET status='LOS'") }.sqlState).isEqualTo("23514")
                 execute(connection, "INSERT INTO onu_metric(time,tenant_id,onu_id,status) VALUES (clock_timestamp(),'$tenant','$onu','ONLINE')")

@@ -54,7 +54,7 @@ class CustomerAssetEpisodeRevisionUpgradeIT : CustomerAssetReplacementFixture() 
             scalar("""SELECT md5((SELECT to_jsonb(onu)::text FROM onu WHERE id='${installation.operation}')||
                 (SELECT jsonb_agg(snapshot ORDER BY revision)::text FROM onu_topology_history WHERE onu_id='${installation.operation}')||
                 (SELECT response FROM customer_asset_installation WHERE id='${installation.operation}')||
-                (SELECT jsonb_agg(to_jsonb(metric)-ARRAY['attribution_verified','attribution','attribution_topology_revision'] ORDER BY time)::text FROM onu_metric metric WHERE onu_id='${installation.operation}'))""")
+                (SELECT jsonb_agg(to_jsonb(metric)-ARRAY['attribution_verified','attribution','attribution_topology_revision','interval_protected'] ORDER BY time)::text FROM onu_metric metric WHERE onu_id='${installation.operation}'))""")
         }
 
         WarehouseMigrationInventory.assertUpgrade("175.86", database.migrate())
@@ -63,7 +63,7 @@ class CustomerAssetEpisodeRevisionUpgradeIT : CustomerAssetReplacementFixture() 
             assertThat(scalar("""SELECT md5((SELECT to_jsonb(onu)::text FROM onu WHERE id='${installation.operation}')||
                 (SELECT jsonb_agg(snapshot ORDER BY revision)::text FROM onu_topology_history WHERE onu_id='${installation.operation}')||
                 (SELECT response FROM customer_asset_installation WHERE id='${installation.operation}')||
-                (SELECT jsonb_agg(to_jsonb(metric)-ARRAY['attribution_verified','attribution','attribution_topology_revision'] ORDER BY time)::text FROM onu_metric metric WHERE onu_id='${installation.operation}'))""")).isEqualTo(before)
+                (SELECT jsonb_agg(to_jsonb(metric)-ARRAY['attribution_verified','attribution','attribution_topology_revision','interval_protected'] ORDER BY time)::text FROM onu_metric metric WHERE onu_id='${installation.operation}'))""")).isEqualTo(before)
             assertThat(scalar("SELECT count(*) FROM onu_metric WHERE onu_id='${installation.operation}' AND (attribution_verified OR attribution IS NOT NULL)")).isEqualTo("0")
             assertThat(scalar("SELECT episode_revision FROM onu WHERE id='$legacy'")).isEqualTo("7")
             assertThat(scalar("SELECT count(*) FROM customer_onu_episode_event WHERE onu_id='$legacy'")).isEqualTo("0")
