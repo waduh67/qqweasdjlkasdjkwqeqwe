@@ -1,8 +1,9 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task24 In Progress, Baseline Pending
+## Current Status: Task24 First Green WIP, Final QA Pending
 
 - Task24 started from verified clean local/live remote49e47396993c46b03ff48d6a8258af17db9068d6 on2026-09-17. Current step is contract tracing and baseline characterization before production edits. Read newest task-24.md and the true EOF ledger receipt for subsequent checkpoints.
+- Current task24 substep supersedes the startup line: selected26/0/0/0 green after genuine red6/4 and classified baseline39/3. Checkpoint implementation/tests, then expand adversarial/CSV cases, regressions, clean bootJar, real HTTP/DB and cleanup. No task24 live proof or DoneClaim yet; live schema175.112 unchanged. See append-only task-24.md for legacy fact semantics and inbox mapping correction.
 - Task23 remains independently confirmed complete; task24 remains unchecked, and no task25/later work or GPON re-review is authorized. No task24 tests, build or live HTTP proof yet. No migrations added; prior ceiling175.112 awaits live verification.
 
 - Authoritative top-level state is 23 completed, 0 blocked and 29 pending: tasks 1-23 are `[x]`; tasks24-48 and F1-F4 remain `[ ]`. Task24 is next. This is task23 completion only, not full-plan, task46, release or final-wave approval.
