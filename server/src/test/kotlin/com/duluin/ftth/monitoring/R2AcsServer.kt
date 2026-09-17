@@ -23,7 +23,7 @@ internal class R2AcsServer : AutoCloseable {
             val body = if (task) {
                 val count = posts.incrementAndGet()
                 onPost.get().invoke(exchange.requestBody.readAllBytes().toString(Charsets.UTF_8))
-                "{\"_id\":\"${count.toString(16).padStart(24, '0')}\",\"name\":\"setParameterValues\"}"
+                "{\"_id\":\"${count.toString(16).padStart(24, '0')}\",\"device\":\"${path.split('/')[2]}\",\"name\":\"setParameterValues\"}"
             } else {
                 onGet.get().invoke(path)
                 when { path.startsWith("/files") -> files.get(); path.startsWith("/tasks") -> pending.get(); path.startsWith("/faults") -> "[]"; else -> document.get() }

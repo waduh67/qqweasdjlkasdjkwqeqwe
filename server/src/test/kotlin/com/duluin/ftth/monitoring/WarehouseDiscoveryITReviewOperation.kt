@@ -78,9 +78,10 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
     fun `CPE-2 queued real gateway diagnostic produces neither successful response nor history`() {
         val device = admitted()
         WarehouseReviewAcsServer().use { server ->
-            server.document.set("""[{"_id":"${device.genie}","_deviceId":{"_SerialNumber":"${device.serial}"},
+            server.document.set("""[{"_id":"${device.genie}","_lastInform":"${Instant.now()}","_deviceId":{"_SerialNumber":"${device.serial}"},
                 "InternetGatewayDevice":{"IPPingDiagnostics":{"DiagnosticsState":{"_value":"Complete"},"SuccessCount":{"_value":99}}}}]""")
-            Mockito.doAnswer { server.gateway.runPing(device.genie, "owned.test", 4) }.`when`(acs).runPing(device.genie, "owned.test", 4)
+            Mockito.doAnswer { invocation -> server.gateway.runPing(device.genie, "owned.test", 4, invocation.getArgument(3)) }.`when`(acs)
+                .runPing(Mockito.eq(device.genie) ?: device.genie, Mockito.eq("owned.test") ?: "owned.test", Mockito.eq(4), Mockito.any<() -> Unit>() ?: {})
             val response = request("POST", "/api/cpe/devices/${device.deviceId}/diagnostics/ping", device.installation.receipt.stock.token,
                 """{"host":"owned.test"}""")
             assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
@@ -105,9 +106,10 @@ class WarehouseDiscoveryITReviewOperation : CustomerDeploymentFixture() {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         WarehouseReviewAcsServer().use { server ->
-            server.document.set("""[{"_id":"${device.genie}","_deviceId":{"_SerialNumber":"${device.serial}"},"InternetGatewayDevice":{}}]""")
+            server.document.set("""[{"_id":"${device.genie}","_lastInform":"${Instant.now()}","_deviceId":{"_SerialNumber":"${device.serial}"},"InternetGatewayDevice":{}}]""")
             server.onTask.set { entered.countDown(); check(release.await(20, TimeUnit.SECONDS)) }
-            Mockito.doAnswer { server.gateway.runPing(device.genie, "owned.test", 4) }.`when`(acs).runPing(device.genie, "owned.test", 4)
+            Mockito.doAnswer { invocation -> server.gateway.runPing(device.genie, "owned.test", 4, invocation.getArgument(3)) }.`when`(acs)
+                .runPing(Mockito.eq(device.genie) ?: device.genie, Mockito.eq("owned.test") ?: "owned.test", Mockito.eq(4), Mockito.any<() -> Unit>() ?: {})
             Executors.newFixedThreadPool(2).use { pool ->
                 val diagnostic = pool.submit<Int> { request("POST", "/api/cpe/devices/${device.deviceId}/diagnostics/ping",
                     device.installation.receipt.stock.token, """{"host":"owned.test"}""").status }

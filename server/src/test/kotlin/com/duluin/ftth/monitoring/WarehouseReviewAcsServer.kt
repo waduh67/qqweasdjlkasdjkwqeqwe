@@ -14,6 +14,12 @@ internal class WarehouseReviewAcsServer : AutoCloseable {
     val tasks = AtomicInteger()
     val onTask = AtomicReference<(String) -> Unit>({})
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+        for (path in listOf("/tasks", "/faults")) createContext(path) { exchange ->
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, 2)
+            exchange.responseBody.use { it.write("[]".toByteArray()) }
+            exchange.close()
+        }
         createContext("/devices") { exchange ->
             val body = if (exchange.requestMethod == "POST") {
                 tasks.incrementAndGet()

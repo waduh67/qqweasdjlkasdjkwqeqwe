@@ -50,7 +50,8 @@ class WarehouseDiscoveryITR2Preparation : WarehouseDiscoveryFixture() {
                 }
             }
             Mockito.doAnswer { server.gateway.availableFirmware(null, null) }.`when`(acs).availableFirmware(null, null)
-            Mockito.doAnswer { server.gateway.runPing(genie, "target.invalid", 4) }.`when`(acs).runPing(genie, "target.invalid", 4)
+            Mockito.doAnswer { invocation -> server.gateway.runPing(genie, "target.invalid", 4, invocation.getArgument(3)) }.`when`(acs)
+                .runPing(Mockito.eq(genie) ?: genie, Mockito.eq("target.invalid") ?: "target.invalid", Mockito.eq(4), Mockito.any<() -> Unit>() ?: {})
             Mockito.doAnswer { invocation -> server.gateway.pushFirmware(genie, invocation.getArgument(1)); Unit }.`when`(acs)
                 .pushFirmware(Mockito.eq(genie) ?: genie, Mockito.any(com.duluin.ftth.cpe.domain.model.FirmwareFile::class.java)
                     ?: com.duluin.ftth.cpe.domain.model.FirmwareFile("owned.bin", null, null, null, "1 Firmware Upgrade Image", 100))
