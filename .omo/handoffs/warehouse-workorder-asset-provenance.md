@@ -1,6 +1,9 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task24 Executor Verified, Independent Verification Pending
+## Current Status: Task24 NEEDS_FIX, One Subscriber360 Area Finding
+
+- Source reviewer ses_f4fee4e43ffefMaI3Uq4c5eotK rejected checkpointa709b65a: Subscriber360's unscoped customer lookup permits cross-area legacy/V2 material exposure. Current step is failing-first IAM/HTTP reproduction and a customer-owned scoped lookup before any facets. Preserve the unscoped API for portal/background use.
+- Runtime reviewer ses_f4fee4d34ffemYo7phG6cKJ5lR passed old14/78 cases without this area case; no aggregate approval. The historical executor claim below is superseded for this finding. Task24 unchecked; task23 and other reviewed behavior unchanged. No migration expected,175.112 immutable. Read newest task-24.md/EOF ledger.
 
 - Task24 sourcec7e3647acb984cd48666ac49ff3a27e71b73691c is pushed. Exact13 twice, final14 including connection-loss rollback, and selected91 pass with0 failures/errors/skips. Clean19-task JAR SHA2568fc6327a7a37a3c834d685fb6bd7a3e65873fdf8e91edee3de9fbeabd1790f11 passed two actual isolated HTTP/DB journeys. No migration; live175.112 unchanged. Read newest task-24.md and local task-24/DoneClaim.md for complete scope, classified failures and source/artifact binding.
 
