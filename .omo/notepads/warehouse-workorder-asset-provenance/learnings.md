@@ -203,3 +203,13 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 - Current and future edits must use small cohesive functions/classes, explicit types and failure outcomes, public module boundaries, one source of policy, no silent-success fallback, minimal purposeful abstraction and focused regression tests.
 - Apply this locally to the assigned behavior; it is not permission for broad unrelated refactoring. Preserve confirmed CPE/database blobs and applied migrations unless a direct dependency is unavoidable and explicitly reported.
+
+## 2026-09-17 - Authorized SNMP probe environment blocker
+
+- A user-authorized, bounded read-only probe of the single supplied endpoint could not begin because this host has `timeout` but neither `snmpwalk` nor `snmpget`; the redacted system-subtree command failed locally before network I/O.
+- Do not infer reachability, vendor, model, firmware or EPON/GPON family from an unexecuted probe, and do not choose a vendor subtree before identity evidence. Connected GPON mapping remains blocked pending bounded identity plus paired interface/PON/ONU observations from an approved Net-SNMP-capable environment.
+
+## 2026-09-17 - Disposable SNMP probe result
+
+- A non-privileged, no-mount disposable Ubuntu container safely supplied Net-SNMP without host installation. The bounded system response identifies HSGQ-E04I at enterprise object `.1.3.6.1.4.1.50224.3.1.1`; standard `ifDescr` pairs PON ifIndexes1-4 with ONU labels under PON1/PON2.
+- Repository profile evidence classifies this family as HSGQ EPON with MAC identity, not GPON serial identity. Firmware remained unobserved, and consecutive bounded `ifName`/HSGQ table timeouts ended the probe. This endpoint cannot resolve the outstanding connected GPON mapping requirement.

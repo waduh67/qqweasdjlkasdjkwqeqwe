@@ -209,3 +209,17 @@
 - Independent cleanup found zero owned containers, JVMs, PID records, listeners and temporary schemas; two existing volumes/data were retained. Full details remain in `independent-qa-v3/report.md`.
 - CPE-R2/DB-R2 confirmations at `39295078930507d75b58213420c4bb63025d011d` remain scoped and unchanged; verify-03 modified neither their implementation nor SQL. These targeted confirmations do not approve aggregate task23 or connected GPON mapping.
 - Exact next action is authoritative connected mapping input: vendor/model/firmware/MIB revision and paired SNMP index+serial with CLI/API frame/slot/PON evidence across multiple ports/positions, or an explicitly approved owner mapping policy. Until then, do not guess or relabel indexes; keep connected unresolved samples unassigned and do not start task24.
+
+## 2026-09-17 User-Authorized Read-Only Device Probe Blocked Locally
+
+- The user authorized one bounded SNMPv2c read-only probe of the supplied endpoint. The required system-subtree command was executed with host/community redacted here, but `timeout` exited immediately because `snmpwalk` is not installed; `snmpget` is also absent. No SNMP packet was sent and no retry, installation, privilege change, alternate endpoint, login, write, or broad walk was attempted.
+- Reachability, `sysDescr`, `sysObjectID`, `sysName`, uptime, vendor, model, firmware, MIB revision, EPON/GPON family and interface/ONU indexes are therefore unobserved. No repository vendor subtree was selected because device identity was not established, and no raw device evidence file was warranted.
+- The connected GPON mapping blocker is unresolved. This endpoint cannot be accepted or rejected as mapping evidence until an approved environment with Net-SNMP tools returns identity first and then bounded paired interface/PON/ONU evidence. Task23 remains `[~]`; no task24 work or checkbox change occurred.
+
+## 2026-09-17 Disposable-Container SNMP Probe Supersedes Local CLI Blocker
+
+- The same user-authorized endpoint was queried read-only from a disposable, non-privileged Ubuntu container using Net-SNMP 5.9.1 installed from signed repositories inside its writable layer. The command used the supplied host/community but they remain redacted here. No mounts, published ports, host networking, host packages, login protocols, device writes or other endpoints were used.
+- The bounded system walk succeeded: `.1.3.6.1.2.1.1.1.0 = "HSGQ-E04I"`, `.1.3.6.1.2.1.1.2.0 = .1.3.6.1.4.1.50224.3.1.1`, generic `sysName = "OLT"`, and observed uptime `1:48:14.00`. No firmware version or MIB revision was exposed by these returned system values.
+- The bounded `ifDescr` walk observed PON ifIndexes 1-4 as `PON01`-`PON04`. Sanitized ONU examples prove interface/PON position relationships across two ports: ifIndex13=`ONU01/01`, ifIndex20=`ONU02/01`, and ifIndex24=`ONU02/05`. No MAC/customer identifier is recorded here.
+- The standard `ifName` walk and the first narrow HSGQ ONU-name table walk each returned `Timeout: No Response`; probing stopped after those consecutive bounded failures. No MAC/status/optical table or broader enterprise walk followed.
+- Returned model/object identity matches the repository's HSGQ `.50224.3` EPON adapter, whose ONU identity is MAC-based rather than GPON serial-based. This is useful HSGQ EPON index evidence, but it does not certify or resolve ZTE/Huawei/FiberHome connected GPON mapping. Task23 therefore remains `[~]`; no task24 or checkbox change.
