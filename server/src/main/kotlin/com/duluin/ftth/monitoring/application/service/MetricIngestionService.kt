@@ -165,7 +165,8 @@ class MetricIngestionService(
                 reading.status.name, reading.rxPowerDbm, reading.txPowerDbm, reading.uptimeSeconds, reading.distanceMeters,
                 reading.lastDownCause?.name, reading.lastOffAt, reading.lastOnAt,
                 com.duluin.ftth.monitoring.domain.model.MetricAttribution(source, now, episode.episodeRevision, episode.assignmentId,
-                    episode.assignmentRevision, requireNotNull(attribution.topologyRevision), attribution.networkEdgeIds))
+                    episode.assignmentRevision, requireNotNull(attribution.topologyRevision), attribution.networkEdgeIds,
+                    if (attribution.networkEdgeIds.isEmpty()) "EPISODE_ONLY" else "BOUND"))
             if (observations.advanceLiveObservation(episode, storedTime)) {
                 customerApi.recordObservedOnuStatuses(mapOf(onu.id to reading.status.toOnuStatus()))
                 evaluateAlarms(tenantId, reading, onu)
