@@ -142,6 +142,13 @@ class PortalSelfServiceTest {
         assertThat(view.session!!.username).isEqualTo("budi")
         assertThat(view.devices).singleElement()
         assertThat(view.devices.first().serialNumber).isEqualTo("SN-CPE")
+        val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
+        val json = mapper.valueToTree<tools.jackson.databind.JsonNode>(view)
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder("session", "devices")
+        assertThat(json.path("devices").single().propertyNames()).containsExactlyInAnyOrder(
+            "deviceId", "serialNumber", "manufacturer", "model", "softwareVersion", "ipAddress", "online", "lastInformAt")
+        assertThat(json.path("session").propertyNames()).containsExactlyInAnyOrder(
+            "username", "accessStatus", "planName", "online", "framedIp", "nasName", "uptimeSeconds", "startedAt", "lastSeenAt")
     }
 
     @Test
