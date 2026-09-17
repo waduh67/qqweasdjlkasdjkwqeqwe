@@ -52,6 +52,14 @@ the V2 page; they never truncate or reinterpret the legacy list. A denied facet
 is null, an authorized empty V2 result is an empty page, and a backend failure
 fails the request. Existing client fields and meanings are unchanged.
 
+Before resolving any facet, Subscriber360 calls the customer-owned
+`CustomerReadAccessApi`. It applies the current IAM authority scope under its
+transaction fence: unrestricted platform access remains available, while a
+restricted empty scope, another area, a null customer area or a foreign/missing
+customer returns indistinguishable404. Neither material API is called on denial.
+The unscoped `CustomerApi.findCustomer` remains unchanged for portal and trusted
+background callers; inventory does not acquire customer-area ownership.
+
 ## Portal Boundary
 
 Portal account, connection, device and session DTOs remain separate allowlisted
