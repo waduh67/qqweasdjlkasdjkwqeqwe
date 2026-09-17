@@ -64,6 +64,7 @@ class Subscriber360ServiceTest {
             com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360Access(
                 subscription = true, placement = true, session = true,
                 billing = true, cpe = true, workOrder = true,
+                materialHistory = true, materialHistoryV2 = true,
             ),
         )
     }
@@ -112,6 +113,15 @@ class Subscriber360ServiceTest {
         workorderApi = FakeWorkorderApi(customerId),
         // Tanpa penjaga kunci baca-saja: kelas ini menguji izin, bukan status langganan.
         authz = AccessChecker(FakeCurrentUser(permissions), FixedObjectProvider(null)),
+        currentUser = FakeCurrentUser(permissions),
+        materialApi = org.mockito.Mockito.mock(com.duluin.ftth.inventory.MaterialConsumptionApi::class.java) { invocation ->
+            if (invocation.method.name == "forCustomer") emptyList<com.duluin.ftth.inventory.CustomerMaterialFactRef>()
+            else throw UnsupportedOperationException(invocation.method.name)
+        },
+        materialApiV2 = object : com.duluin.ftth.inventory.MaterialConsumptionApiV2 {
+            override fun forCustomer(customerId: UUID, page: com.duluin.ftth.inventory.WarehousePageRequest) =
+                com.duluin.ftth.inventory.WarehousePage(emptyList<com.duluin.ftth.inventory.CustomerMaterialFactV2>(), page.page, page.size, 0)
+        },
     )
 
     private inner class FakeCurrentUser(private val permissions: Set<String>) : CurrentUserProvider {

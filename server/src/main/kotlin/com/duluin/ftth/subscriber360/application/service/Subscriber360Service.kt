@@ -11,6 +11,8 @@ import com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360Query
 import com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360View
 import com.duluin.ftth.workorder.WorkorderApi
 import com.duluin.ftth.inventory.MaterialConsumptionApi
+import com.duluin.ftth.inventory.MaterialConsumptionApiV2
+import com.duluin.ftth.inventory.WarehousePageRequest
 import com.duluin.ftth.common.security.CurrentUserProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -32,11 +34,13 @@ class Subscriber360Service(
     private val cpeApi: CpeApi,
     private val workorderApi: WorkorderApi,
     private val authz: AccessChecker,
-    private val materialApi: MaterialConsumptionApi? = null,
-    private val currentUser: CurrentUserProvider? = null,
+    private val materialApi: MaterialConsumptionApi,
+    private val currentUser: CurrentUserProvider,
+    private val materialApiV2: MaterialConsumptionApiV2,
 ) : Subscriber360Query {
 
-    override fun assemble(customerId: UUID): Subscriber360View {
+    @Suppress("DEPRECATION")
+    override fun assemble(customerId: UUID, materialPage: WarehousePageRequest): Subscriber360View {
         val customer = customerApi.findCustomer(customerId)
             ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
 
@@ -57,7 +61,8 @@ class Subscriber360Service(
             // Peta open-PSB dihitung untuk seluruh tenant lalu diambil satu pelanggan —
             // set WO pasang terbuka biasanya kecil, jadi masih murah untuk pandangan satu ini.
             openWorkOrder = if (canWorkOrder) workorderApi.openPsbByCustomer()[customerId] else null,
-            materialHistory = if (canWorkOrder) currentUser?.currentOrNull()?.let { user -> materialApi?.forCustomer(user.tenantId, customerId) } else null,
+            materialHistory = if (canWorkOrder) materialApi.forCustomer(currentUser.current().tenantId, customerId) else null,
+            materialHistoryV2 = if (canWorkOrder) materialApiV2.forCustomer(customerId, materialPage) else null,
             access = Subscriber360Access(
                 subscription = canSubscription,
                 placement = canPlacement,
@@ -65,7 +70,8 @@ class Subscriber360Service(
                 billing = canBilling,
                 cpe = canCpe,
                 workOrder = canWorkOrder,
-                materialHistory = canWorkOrder && materialApi != null,
+                materialHistory = canWorkOrder,
+                materialHistoryV2 = canWorkOrder,
             ),
         )
     }
