@@ -1,8 +1,8 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task23 Ready For Aggregate Confirmation
+## Current Status: Task23 Confirmed Complete
 
-- Authoritative top-level state is 22 completed, 0 blocked and 30 pending: tasks 1-22 are `[x]`, task23 is `[ ]`, and tasks24-48 plus F1-F4 remain `[ ]`. Revised-scope executor verification is complete; aggregate confirmation is next. No executor checkbox change or task24 work.
+- Authoritative top-level state is 23 completed, 0 blocked and 29 pending: tasks 1-23 are `[x]`; tasks24-48 and F1-F4 remain `[ ]`. Task24 is next. This is task23 completion only, not full-plan, task46, release or final-wave approval.
 - Owner decision dated 2026-09-17: "yaudh skip aja dulu yg GPON ZTE/Huawei/FiberHome mah, buat sesuai yg ada di dokumentasi mereka aja". Physical ZTE/Huawei/FiberHome GPON capture, model/firmware certification and hardware validation are deferred and no longer block this plan.
 - Traceability is now recorded in docs/gpon-profile-evidence.md: exact Huawei XPON mirror objects support bounded corrections; ZTE constants remain documentation-unverified compatibility assumptions; FiberHome's contradicted description/speed OIDs are explicitly unavailable. None is hardware-validated. No index formula or MAC-to-GPON identity was invented.
 - Undocumented or unknown raw-index formats remain `UNVERIFIED` and quarantined. No decoder guess or raw-index relabelling is allowed.
@@ -11,10 +11,12 @@
 - Current tested/built source is `a028c6a934b191e2fabdc596000f4b40d8fd33eb`. Bounded GPON profile/parser corrections and direct fixtures are pushed. V3 ingestion/source/time logic and confirmed CPE/DB production blobs remain byte-identical; all SQL through175.112 is untouched.
 - CPE-R2 reviewer `ses_f54d52690ffefwS6LHWH9xpiJt` and DB-R2 reviewer `ses_f54d5267bffeH6M87YAIQbBrrv` confirmed their `39295078930507d75b58213420c4bb63025d011d` scope. Their corresponding implementation and SQL blobs are unchanged by verify-03.
 - Temporal/source reviewer `ses_f54d527eaffeQMhYzFuG21jaGJ` confirmed DISCOVERY-3 timestamp safety and T3 unique active legacy/no-ODP handling at assigned checkpoint `5e49bc4e4377d484629df18dd1692643c461ac04`. The review specifically accepted the named `appendUntrustedTime` helper, explicit typed/raw timestamp boundary, existing shared time policy and narrow legacy eligibility checks as clean, cohesive code.
-- Prior V3 runtime reviewer `ses_f54d52609ffe9BiEMrmv2lwpMu` confirmed its recorded scope; source identity binding is in documented-gpon/receipt-binding.md. Current executor runs pass: exact WarehouseDiscoveryIT142, selected monitoring/CPE/Modularity49 plus2 seeds, SNMP25 and collector22, all zero failures/errors/skips. New profile behavior is not represented as covered by old receipts.
-- Task24 depends on task23 in the existing dependency matrix. No task24 or other downstream implementation has started or may be claimed before revised-scope task23 closure.
-- Clean JAR SHA256 `cc17447cd9ad0a5e383cef9734fcd7a185ee82b649163defef2e98f5bdb052cd` passed one actual built HTTP/DB source-gate, delayed-A, privacy and replay journey plus current mixed-clock/legacy-GPON proof. Owned API/ACS/compilers/containers/listeners and generated manifests are cleaned; original env/lock, volumes/images/data remain.
-- Next step: aggregate task23 confirmation using documented-gpon/DoneClaim.md and current portable task23 record. Do not restart physical-GPON evidence requests or repeat unrelated multi-hour reviews. Task24 waits for that confirmation.
+- Source reviewer `ses_f54d527eaffeQMhYzFuG21jaGJ` returned `CONFIRMED` with `safe_to_mark_task23_source=true` at `d5e9a4fb09ebde79289d08a98e0596e28af94303`. Runtime reviewer `ses_f54d52609ffe9BiEMrmv2lwpMu` independently returned `CONFIRMED` with `safe_to_mark_task23_runtime=true` on the same artifact.
+- Fresh current runs: exact WarehouseDiscoveryIT 142, SNMP 25 and collector 22, all zero failures/errors/skips. The default 30-minute exact attempt timed out before XML finalization and is not counted; the same validated environment, lock, filter and flags completed under a 45-minute bound with 142/0/0/0. No tracked harness timeout was changed.
+- Clean JAR SHA256 `cc17447cd9ad0a5e383cef9734fcd7a185ee82b649163defef2e98f5bdb052cd` passed the real source-gate, delayed-A, privacy, mixed-clock and replay journeys. Cleanup independently verified zero owned containers, JVMs, listeners and temporary files/schemas; two volumes/data were retained.
+- Prior CPE-R2/DB-R2 confirmations at `39295078` and V3 confirmation at `86419931` remain identity-bound receipts for unchanged blobs, not fresh 545/95 reruns. Historical catalog and `NetworkEndToEndIT` caveats remain for task46.
+- Physical GPON validation is deferred by explicit owner decision. Huawei behavior is documentation-backed/not hardware-validated; ZTE remains documentation-unverified compatibility; FiberHome is unsupported where the prior profile contradicted available evidence; unknown connected raw indexes remain quarantined. No hardware or vendor-wide certification is claimed.
+- Task24 is the exact next action. It depends on task23; tasks25/27/29 depend on task24 and no downstream task has independently started or become ready through this checkpoint.
 - Strict clean-code requirement remains binding: cohesive small code, explicit types and errors, public ownership boundaries, no duplicate policy or silent success, and only narrow purposeful abstractions with focused tests.
 
 ## 2026-09-17 Owner Decision Superseding The Physical GPON Blocker
@@ -55,22 +57,22 @@
 - Local continuation branch: `work/warehouse-resume-20260916`
 - Task-owned worktree on this host: `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume`
 - Verified checkpoint base: `2105273f1de7783fdc2454de6bc9e4a3a86be38a`
-- Current product source SHA: `864199313485a88521ae5b767b0f45ccf9ee62c3`
+- Current product source SHA: `a028c6a934b191e2fabdc596000f4b40d8fd33eb`
 - Current migrations: through `V175.112`; verify-03 added no migration and all SQL is unchanged from the confirmed `39295078` scope.
-- Current verify-03 JAR SHA256: `f6628c0e52caf316244c6faead08899666cb36a94df8b1268841d9140c024e42`.
-- Tasks 1-22: checked; task 23: pending revised-scope verification; tasks 24-48 and F1-F4: pending
+- Current task23 JAR SHA256: `cc17447cd9ad0a5e383cef9734fcd7a185ee82b649163defef2e98f5bdb052cd`.
+- Tasks 1-23: checked; tasks 24-48 and F1-F4: pending
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr` after plan completion; immediate checkpoint pushes; no merge
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
 - Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
 - Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
 - Historical task22 identity: migrations `V175.80` through `V175.89`; JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`. This is retained history, not the current task23 artifact identity.
-- Next action: finish documentation traceability, bounded necessary implementation/tests, and final task23 verification under the revised scope; then task24.
+- Next action: task24 onboarding/import/read compatibility. Do not claim task25 or later started through this checkpoint.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Task23 is pending revised-scope verification and remains incomplete; tasks24-48 and F1-F4 remain pending.
+Tasks 1-23 are checked in the tracked plan with independent task23 source/runtime confirmation. Tasks24-48 and F1-F4 remain pending.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -88,7 +90,7 @@ Tasks 1-22 are checked in the tracked plan and have trusted ledger receipts. Tas
 
 ## Exact Next Action
 
-Resume task23 for documentation traceability, any bounded necessary implementation/tests, and final verification under the revised scope. Preserve undocumented or unknown raw-index samples as `UNVERIFIED` and quarantined. Do not start task24 or mark task23 complete before that verification.
+Resume at task24 onboarding/import/read compatibility. Preserve task23's documentation-backed/not-hardware-validated GPON boundary and `UNVERIFIED` quarantine; do not infer task25 or later completion.
 
 ## Continuation Policy
 
