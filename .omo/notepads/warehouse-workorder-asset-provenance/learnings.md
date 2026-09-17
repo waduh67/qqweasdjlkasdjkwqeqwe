@@ -213,3 +213,9 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 - A non-privileged, no-mount disposable Ubuntu container safely supplied Net-SNMP without host installation. The bounded system response identifies HSGQ-E04I at enterprise object `.1.3.6.1.4.1.50224.3.1.1`; standard `ifDescr` pairs PON ifIndexes1-4 with ONU labels under PON1/PON2.
 - Repository profile evidence classifies this family as HSGQ EPON with MAC identity, not GPON serial identity. Firmware remained unobserved, and consecutive bounded `ifName`/HSGQ table timeouts ended the probe. This endpoint cannot resolve the outstanding connected GPON mapping requirement.
+
+## 2026-09-17 - Documentation-Scope GPON Completion
+
+- Owner decision defers physical GPON validation; it is no longer a plan blocker. Exact-object public MIB mirrors may establish bounded behavior, but mirror hosting, third-party hints and undocumented assumptions must remain distinct.
+- Huawei XPON3 is not LOS, .51.1.6 is OLT receive power rather than ONT TX, and ranging-1 is unavailable. FiberHome's old identity/status OIDs describe a port and its speed, so no GPON serial/units can be inferred from those values or a MAC alias. ZTE's exact .1012 vendor semantics remain unverified compatibility assumptions.
+- Keep profile data separate from parsing, represent unavailable fields explicitly, and reject malformed serials without string fallbacks. Never promote raw indexes. Current task23 evidence/clean artifact/manual proof is in documented-gpon/DoneClaim.md; next is aggregate confirmation, not hardware requests or a new broad implementation loop.
