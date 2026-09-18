@@ -40,6 +40,12 @@ membuat atau menerapkan SQL:
 | 27 | `V175.114` | `V175_114__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_114_N__*.sql` | blind count/recount; pemilik utama dispatch approval Wave 5 |
 | 29 | `V175.115` | `V175_115__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_115_N__*.sql` | replenishment suggestion/request |
 
+Task29 declares and implements `V175_115__warehouse_replenishment.sql` and
+`V175_115_1__warehouse_replenishment_snapshot_binding.sql` in its isolated child.
+These extend the existing rule/request tables, immutable command receipts,
+bounded scheduler cursor and receiving snapshot/destination binding. Predecessor
+SQL is unchanged; the integrator reconciles this namespace in Wave5 order.
+
 Hanya worker pemilik namespace yang boleh menambah file di namespace tersebut,
 dan nama/file yang hendak dibuat wajib dideklarasikan lebih dahulu di catatan
 tugasnya. Worker tidak mengubah reservasi worker lain. Integrator tunggal
