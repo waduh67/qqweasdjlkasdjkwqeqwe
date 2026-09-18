@@ -4,7 +4,8 @@
 
 - Setup-only checkpoint after task24: 24 tasks complete, 0 blocked, 28 pending.
 - Ready lanes are task25, task27 and task29. No child task is complete and no child checkbox may be changed.
-- `setup_content_base` is finalized in the follow-up mapping commit before child worktrees are created. Every child is created from that published commit, not from an unpublished index.
+- Published setup-content base: `1f0564110a6a8a1d5361c8ab58c13dc7d71d08d8`. All three child worktrees and remote child branches were created from this exact commit, which contains the reservations, QA rules and ownership boundaries below.
+- This mapping-finalization update is integration-only. Child branches remain intentionally at the setup-content base and already contain every operational instruction; do not reset or rebase them to absorb later note-only receipts.
 
 ## Child ownership map
 
@@ -13,6 +14,10 @@
 | 25 | `/home/fajar/ftth/warehouse-wave5-task25` | `work/warehouse-task25` | `refs/heads/work/warehouse-task25` | `V175.113` and pre-higher-apply children `V175_113_N` |
 | 27 | `/home/fajar/ftth/warehouse-wave5-task27` | `work/warehouse-task27` | `refs/heads/work/warehouse-task27` | `V175.114` and pre-higher-apply children `V175_114_N` |
 | 29 | `/home/fajar/ftth/warehouse-wave5-task29` | `work/warehouse-task29` | `refs/heads/work/warehouse-task29` | `V175.115` and pre-higher-apply children `V175_115_N` |
+
+Creation verification: each local HEAD and each queried live remote child ref equals
+`1f0564110a6a8a1d5361c8ab58c13dc7d71d08d8`, and every child worktree was clean
+before implementation dispatch.
 
 Workers push WIP only to their named remote child branch with an explicit
 `HEAD:refs/heads/work/warehouse-taskNN` refspec. They never push to
