@@ -162,6 +162,8 @@ services:
   server:
     image: ${IMAGE_PREFIX}/ftth-server:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -332,30 +334,32 @@ services:
   web:
     image: ${IMAGE_PREFIX}/ftth-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
-
-  # --- Reverse proxy + TLS otomatis (satu-satunya yang terekspos ke internet) ---
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    depends_on:
-      - server
-      - web
-    environment:
-      FTTH_SITE_ADDRESS: ${FTTH_SITE_ADDRESS}
-      # Sasaran lemparan penjaga walled-garden. Bawaannya menebak dari domain di atas — benar
-      # untuk deployment berdomain. Mode tanpa domain (FTTH_SITE_ADDRESS=:80) HARUS mengisinya
-      # sendiri, mis. http://203.0.113.10/portal: ":80" bukan alamat yang bisa dibuka browser.
-      FTTH_ISOLIR_PORTAL_URL: ${FTTH_ISOLIR_PORTAL_URL:-https://${FTTH_SITE_ADDRESS}/portal}
     ports:
-      - "${FTTH_HTTP_PORT:-80}:80"
-      - "${FTTH_HTTPS_PORT:-443}:443"
-      # Penjaga walled-garden (lihat Caddyfile). Cuma melempar ke halaman tagihan — tak ada
-      # data di baliknya — tapi wajib terjangkau pelanggan terisolir, jadi ikut terbuka.
-      - "${FTTH_ISOLIR_PORT:-8880}:8880"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - "127.0.0.1:3080:80"
+
+  # --- Reverse proxy + TLS otomatis (dinonaktifkan sementara, diganti Nginx native di host) ---
+  # caddy:
+  #   image: caddy:2
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - server
+  #     - web
+  #   environment:
+  #     FTTH_SITE_ADDRESS: ${FTTH_SITE_ADDRESS}
+  #     # Sasaran lemparan penjaga walled-garden. Bawaannya menebak dari domain di atas — benar
+  #     # untuk deployment berdomain. Mode tanpa domain (FTTH_SITE_ADDRESS=:80) HARUS mengisinya
+  #     # sendiri, mis. http://203.0.113.10/portal: ":80" bukan alamat yang bisa dibuka browser.
+  #     FTTH_ISOLIR_PORTAL_URL: ${FTTH_ISOLIR_PORTAL_URL:-https://${FTTH_SITE_ADDRESS}/portal}
+  #   ports:
+  #     - "${FTTH_HTTP_PORT:-80}:80"
+  #     - "${FTTH_HTTPS_PORT:-443}:443"
+  #     # Penjaga walled-garden (lihat Caddyfile). Cuma melempar ke halaman tagihan — tak ada
+  #     # data di baliknya — tapi wajib terjangkau pelanggan terisolir, jadi ikut terbuka.
+  #     - "${FTTH_ISOLIR_PORT:-8880}:8880"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
 
   # --- Pemantauan (Prometheus + Grafana) — OPSIONAL, profile "monitoring" ---
   # Tak ikut naik pada `docker compose up` biasa. Nyalakan dengan:
@@ -433,7 +437,7 @@ volumes:
   radiusdata:
   miniodata:
   genieacs_mongo:
-  caddy_data:
-  caddy_config:
+  # caddy_data:
+  # caddy_config:
   promdata:
   grafanadata:

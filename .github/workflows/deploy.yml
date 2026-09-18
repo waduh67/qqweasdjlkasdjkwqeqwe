@@ -162,36 +162,59 @@ jobs:
             - name: Ambil konfigurasi deploy
               uses: actions/checkout@v4
 
+            - name: Install cloudflared
+              run: |
+                  curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+                  sudo dpkg -i cloudflared.deb
+                  rm -f cloudflared.deb
+
+            - name: Konfigurasi SSH & Cloudflare Access
+              env:
+                  VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+                  VPS_HOST: ${{ secrets.VPS_HOST }}
+                  VPS_USER: ${{ secrets.VPS_USER }}
+              run: |
+                  mkdir -p ~/.ssh
+                  chmod 700 ~/.ssh
+                  printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_rsa
+                  chmod 600 ~/.ssh/id_rsa
+                  cat << 'EOF' > ~/.ssh/config
+                  Host ${{ secrets.VPS_HOST }}
+                      ProxyCommand cloudflared access ssh --hostname %h
+                      User ${{ secrets.VPS_USER }}
+                      IdentityFile ~/.ssh/id_rsa
+                      StrictHostKeyChecking no
+                      UserKnownHostsFile /dev/null
+                  EOF
+                  chmod 600 ~/.ssh/config
+
             - name: Sinkronkan Docker Compose ke VPS
-              uses: appleboy/scp-action@v1
-              with:
-                  host: ${{ secrets.VPS_HOST }}
-                  username: ${{ secrets.VPS_USER }}
-                  key: ${{ secrets.VPS_SSH_KEY }}
-                  source: deploy/docker-compose.prod.yml,deploy/Caddyfile,deploy/postgres-init,deploy/radius,deploy/backup,deploy/monitoring
-                  target: /opt/ftth
-                  strip_components: 1
+              run: |
+                  ssh ${{ secrets.VPS_HOST }} "mkdir -p /opt/ftth"
+                  scp deploy/docker-compose.prod.yml deploy/Caddyfile ${{ secrets.VPS_HOST }}:/opt/ftth/
+                  scp -r deploy/postgres-init deploy/radius deploy/backup deploy/monitoring ${{ secrets.VPS_HOST }}:/opt/ftth/
 
             - name: Deploy lewat SSH
-              uses: appleboy/ssh-action@v1
-              with:
-                  host: ${{ secrets.VPS_HOST }}
-                  username: ${{ secrets.VPS_USER }}
-                  key: ${{ secrets.VPS_SSH_KEY }}
-                  script: |
-                      set -eu
-                      cd /opt/ftth
-                      echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
-                      if grep -q '^IMAGE_TAG=' .env; then
-                          sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/' .env
-                      else
-                          echo 'IMAGE_TAG=${{ github.sha }}' >> .env
-                      fi
-                      docker compose -f docker-compose.prod.yml config --quiet
-                      docker compose -f docker-compose.prod.yml pull
-                      docker compose -f docker-compose.prod.yml up -d --remove-orphans
-                      docker compose -f docker-compose.prod.yml ps
-                      docker image prune -f
+              env:
+                  GHCR_PAT: ${{ secrets.GHCR_PAT }}
+                  GHCR_USER: ${{ secrets.GHCR_USER }}
+                  COMMIT_SHA: ${{ github.sha }}
+              run: |
+                  ssh ${{ secrets.VPS_HOST }} "GHCR_PAT='$GHCR_PAT' GHCR_USER='$GHCR_USER' COMMIT_SHA='$COMMIT_SHA' bash -s" << 'EOF'
+                  set -eu
+                  cd /opt/ftth
+                  echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+                  if grep -q '^IMAGE_TAG=' .env; then
+                      sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$COMMIT_SHA/" .env
+                  else
+                      echo "IMAGE_TAG=$COMMIT_SHA" >> .env
+                  fi
+                  docker compose -f docker-compose.prod.yml config --quiet
+                  docker compose -f docker-compose.prod.yml pull
+                  docker compose -f docker-compose.prod.yml up -d --remove-orphans
+                  docker compose -f docker-compose.prod.yml ps
+                  docker image prune -f
+                  EOF
 
             - name: Verifikasi situs produksi
               run: |
