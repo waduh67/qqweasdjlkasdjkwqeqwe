@@ -56,6 +56,22 @@ class WarehouseTransferStore(private val jdbc: WarehouseCommandJdbc, private val
         operations.storeIdentity(operation.id, mapper.writeValueAsString(record), session)
     }
 
+    fun advanceWithoutPosting(record: TransferRecord, operation: PostingOperation, epoch: Long, session: String?) {
+        jdbc.execute { sql ->
+            sql.update("""INSERT INTO inventory_operation(id,tenant_id,namespace,operation_key,actor_id,resource_id,resource_scope,
+                payload_hash,document_id,document_revision,business_action,original_status,original_body,cutover_epoch,authority_epoch,created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", operation.id, sql.tenant, operation.namespace, operation.key,
+                operation.actorId, record.id, operation.resourceScope, operation.payloadHash, record.id, record.revision,
+                operation.businessAction, operation.originalStatus, operation.originalBody, epoch, operation.authorityEpoch, operation.recordedAt)
+            if (sql.update("UPDATE inventory_document SET state=?,revision=revision+1,updated_at=? WHERE tenant_id=? AND id=? AND revision=?",
+                record.state, operation.recordedAt, sql.tenant, record.id, record.revision - 1) != 1) sql.fail(WarehouseErrorCode.STALE_REVISION)
+            sql.update("""INSERT INTO inventory_outbox(id,tenant_id,operation_id,document_id,document_revision,event_kind,payload,recorded_at)
+                VALUES (?,?,?,?,?,'ACKNOWLEDGED',?,?)""", UUID.randomUUID(), sql.tenant, operation.id, record.id,
+                record.revision, operation.originalBody, operation.recordedAt)
+        }
+        seal(record, operation, session)
+    }
+
     fun history(id: UUID): List<WarehouseTransferView> = jdbc.execute { sql ->
         sql.query("""SELECT original_body FROM inventory_operation WHERE tenant_id=? AND document_id=?
             AND namespace LIKE 'warehouse.transfer.%' ORDER BY document_revision""", sql.tenant, id) {
