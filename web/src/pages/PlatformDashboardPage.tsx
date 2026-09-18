@@ -14,6 +14,7 @@ import {
   IconBuilding,
   IconGauge,
   IconRoute,
+  IconServer,
   IconShield,
   IconUsers,
   type IconProps,
@@ -103,6 +104,7 @@ export function PlatformDashboardPage() {
             <QuickLink to="/platform/tenants" icon={IconBuilding} label="Kelola tenant" hint="Onboarding & status tenant" show={can('platform.tenant.view')} />
             <QuickLink to="/platform/billing" icon={IconGauge} label="Billing langganan" hint="Gateway & harga default" show={can('platform.billing.view')} />
             <QuickLink to="/platform/vpn-servers" icon={IconRoute} label="Server VPN" hint="Endpoint & kapasitas VPN" show={can('vpn.server.view')} />
+            <QuickLink to="/platform/radius-servers" icon={IconServer} label="Server RADIUS" hint="Cluster & kapasitas RADIUS" show={can('radius.server.view')} />
             <QuickLink to="/platform/users" icon={IconUsers} label="Pengguna" hint="Akun platform admin" show={can('iam.user.view')} />
             <QuickLink to="/platform/roles" icon={IconShield} label="Role & izin" hint="RBAC platform" show={can('iam.role.view')} />
           </div>

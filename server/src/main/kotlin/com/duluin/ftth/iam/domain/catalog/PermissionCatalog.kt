@@ -240,6 +240,10 @@ object PermissionCatalog {
         perm("vpn.peer.manage", "Generate & kelola akun VPN")
         perm("vpn.config.view", "Unduh config VPN (.ovpn & RouterOS) berisi kredensial")
 
+        // RADIUS — server/node cluster adalah infrastruktur PLATFORM (dikelola admin platform)
+        platform("radius.server.view", "Lihat server RADIUS platform")
+        platform("radius.server.manage", "Kelola server RADIUS platform")
+
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")
         perm("notification.template.manage", "Kelola template notifikasi")

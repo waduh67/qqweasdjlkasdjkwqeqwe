@@ -97,7 +97,7 @@ export function BngPage() {
  */
 function mikrotikScript(endpoint: RadiusEndpointView, secret: string, radiusHost: string | null): string {
   const host = radiusHost ?? '<IP-RADIUS>'
-  const sec = secret || '<SECRET-BRAS>'
+  const sec = secret || endpoint.sharedSecret || '<SECRET-BRAS>'
   return [
     `/ip pool add name=pool-pppoe ranges=10.20.0.2-10.20.255.254`,
     `/ppp profile set [find name=default] local-address=10.20.0.1 remote-address=pool-pppoe`,
@@ -587,7 +587,12 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                   <div className="stack">
                     {endpoint && radiusTarget?.host && (
                       <>
-                        <Text as="span" size={300} className="muted">Konfigurasi RouterOS</Text>
+                        <div className="spread" style={{ alignItems: 'center' }}>
+                          <Text as="span" size={300} className="muted">Konfigurasi RouterOS</Text>
+                          {endpoint.serverName && (
+                            <Badge tone="good">Cluster: {endpoint.serverName}</Badge>
+                          )}
+                        </div>
                         <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret, radiusTarget.host)} />
                         <Text as="span" size={300} className="muted">
                           Sesuaikan pool dan profil PPPoE; RADIUS tidak menetapkan IP pelanggan.

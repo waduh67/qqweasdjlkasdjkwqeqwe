@@ -123,6 +123,8 @@ export interface RadiusEndpointView {
    * tapi tak ada aturan yang membacanya — pelanggan "terisolir" yang internetnya lancar.
    */
   isolirAddressList: string
+  serverName?: string | null
+  sharedSecret?: string | null
 }
 
 /**

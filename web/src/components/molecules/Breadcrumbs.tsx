@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   acs: 'ACS / TR-069',
   vpn: 'Akun VPN',
   'vpn-servers': 'Server VPN',
+  'radius-servers': 'Server RADIUS',
   monitoring: 'Monitoring',
   provisioning: 'Provisioning',
   'express-psb': 'PSB Ekspres',

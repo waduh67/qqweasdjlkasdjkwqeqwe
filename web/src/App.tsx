@@ -36,6 +36,7 @@ import { AcsPage } from './pages/AcsPage'
 import { BngPage } from './pages/BngPage'
 import { VpnPage } from './pages/VpnPage'
 import { VpnServersPage } from './pages/VpnServersPage'
+import { RadiusServersPage } from './pages/RadiusServersPage'
 
 /**
  * Halaman peta dimuat terpisah: MapLibre menyumbang sebagian besar ukuran
@@ -298,6 +299,7 @@ function OperatorApp() {
             />
             {/* Pindah ke area platform; jaga bookmark lama. */}
             <Route path="vpn-servers" element={<Navigate to="/platform/vpn-servers" replace />} />
+            <Route path="radius-servers" element={<Navigate to="/platform/radius-servers" replace />} />
             <Route
               path="monitoring"
               element={
@@ -493,6 +495,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="vpn.server.view">
                   <VpnServersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="radius-servers"
+              element={
+                <RequirePermission permission="radius.server.view">
+                  <RadiusServersPage />
                 </RequirePermission>
               }
             />

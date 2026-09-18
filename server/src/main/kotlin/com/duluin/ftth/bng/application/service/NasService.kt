@@ -37,6 +37,7 @@ class NasService(
     private val coverageRepository: NasAreaCoverageRepository,
     private val routerOs: RouterOsPort,
     private val vpnApi: VpnApi,
+    private val allocationService: RadiusServerAllocationService? = null,
 ) : ManageNasUseCase {
 
     @Transactional(readOnly = true)
@@ -48,17 +49,24 @@ class NasService(
 
     @Transactional(readOnly = true)
     override fun radiusEndpoint(): RadiusEndpointView {
-        val host = radiusProperties.publicHost.trim().ifBlank { null }
+        val tenantId = currentUser.current().tenantId
+        val server = allocationService?.getOrAllocateServerForTenant(tenantId)
+        val host = server?.host ?: radiusProperties.publicHost.trim().ifBlank { null }
+        val authPort = server?.authPort ?: radiusProperties.authPort
+        val acctPort = server?.acctPort ?: radiusProperties.acctPort
+        val coaPort = server?.coaPort ?: radiusProperties.coaPort
         return RadiusEndpointView(
             host = host,
-            authPort = radiusProperties.authPort,
-            acctPort = radiusProperties.acctPort,
-            coaPort = radiusProperties.coaPort,
+            authPort = authPort,
+            acctPort = acctPort,
+            coaPort = coaPort,
             configured = host != null,
             // Alamat overlay ikut disebut supaya BRAS yang masuk lewat VPN diarahkan ke
             // alamat hub, bukan ke IP publik — lihat [RadiusVpnHostView].
             vpnHosts = vpnApi.overlayTunnels().map { RadiusVpnHostView(it.tunnelCidr, it.serverAddress) },
             isolirAddressList = radiusProperties.isolirAddressList,
+            serverName = server?.name,
+            sharedSecret = server?.sharedSecret,
         )
     }
 

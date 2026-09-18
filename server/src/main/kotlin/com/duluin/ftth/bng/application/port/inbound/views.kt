@@ -75,6 +75,8 @@ data class RadiusEndpointView(
      * di mana pun.
      */
     val isolirAddressList: String = "isolir",
+    val serverName: String? = null,
+    val sharedSecret: String? = null,
 )
 
 /**
