@@ -41,6 +41,9 @@ class ReceiptApprovalPostingGuard(private val jdbc: WarehouseCommandJdbc, privat
 internal fun assertReceiptApproval(sql: PostingSql, guard: ReceiptPostingApproval, decided: Boolean) {
     check(sql.value("SELECT pg_current_xact_id()::text") == guard.transactionId)
     val attempt = guard.attempt
+    val count = guard.kind == ApprovalPostingKind.COUNT
+    val documentRevision = attempt.sourceRevision + if (count && decided) 1 else 0
+    val documentState = if (count) { if (decided) "APPROVED" else "SUBMITTED" } else "DRAFT"
     val states = sql.query("""SELECT approval.status,approval.revision,approval.expires_at,approval.policy_snapshot_hash,
         approval.policy_version_id,approval.source_snapshot_hash,approval.source_document_id,approval.source_document_revision,
         policy.snapshot_hash,document.kind,document.state document_state,document.revision document_revision,
@@ -56,7 +59,7 @@ internal fun assertReceiptApproval(sql: PostingSql, guard: ReceiptPostingApprova
             row.uuid("policy_version_id") != attempt.policyVersionId || row.getString("snapshot_hash") != guard.policyHash ||
                 row.getString("policy_snapshot_hash") != guard.policyHash || row.getString("source_snapshot_hash") != guard.sourceHash -> WarehouseApprovalStatus.STALE
             row.uuid("source_document_id") != attempt.sourceDocumentId || row.getLong("source_document_revision") != attempt.sourceRevision ||
-                row.getLong("document_revision") != attempt.sourceRevision || row.getString("kind") != guard.kind.name || row.getString("document_state") != "DRAFT" -> WarehouseApprovalStatus.STALE
+                row.getLong("document_revision") != documentRevision || row.getString("kind") != guard.kind.name || row.getString("document_state") != documentState -> WarehouseApprovalStatus.STALE
             row.getLong("epoch") != guard.cutoverEpoch || row.getString("cutover_state") != "ENFORCED" -> WarehouseApprovalStatus.STALE
             else -> null
         }
