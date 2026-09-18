@@ -9,7 +9,8 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/warehouse/transfers")
-class WarehouseTransferController(private val transfers: WarehouseTransferService) {
+class WarehouseTransferController(private val transfers: WarehouseTransferService,
+    private val discrepancies: com.duluin.ftth.inventory.application.service.WarehouseTransferDiscrepancyService) {
     @PostMapping
     fun create(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(transfers.create(WarehouseReceiptJson.decode(body, WarehouseTransferDraft::class.java), WarehouseMutationMetadata(key)))
@@ -27,6 +28,9 @@ class WarehouseTransferController(private val transfers: WarehouseTransferServic
         transfers.cancel(id, WarehouseReceiptJson.decode(body, WarehouseTransferRevision::class.java))
 
     @GetMapping("/{id}") fun get(@PathVariable id: UUID): WarehouseTransferView = transfers.get(id)
+    @PostMapping("/{id}/discrepancy")
+    fun discrepancy(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
+        response(discrepancies.report(id, WarehouseReceiptJson.decode(body, WarehouseTransferDiscrepancy::class.java), key))
     @GetMapping("/{id}/history") fun history(@PathVariable id: UUID): List<WarehouseTransferView> = transfers.history(id)
 
     private fun response(receipt: WarehouseOperationReceipt): ResponseEntity<String> = ResponseEntity.status(receipt.originalStatus)
