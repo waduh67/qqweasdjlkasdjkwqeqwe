@@ -17,6 +17,8 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             Triple(it.getString("kind"), it.uuid("actor_id"), it.getLong("revision"))
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         if (header.third != input.sourceRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
+        if (header.first == "COUNT" && sql.value("SELECT state FROM inventory_document WHERE tenant_id=? AND id=?", sql.tenant, input.sourceDocumentId)
+            !in setOf("SUBMITTED", "APPROVED", "POSTED")) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val derived = when (header.first) {
             "RECEIPT" -> PolicyOperation.RECEIPT
             "ISSUE" -> PolicyOperation.ISSUE
@@ -32,12 +34,18 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
         if (action != null && action != derived && !(derived == PolicyOperation.ISSUE && action == PolicyOperation.ISSUE_EXCEPTION))
             sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val operation = action ?: derived
-        val lines = sql.query("""SELECT line.location_id,line.custodian_id,line.custodian_kind,line.quantity_base,
+        val lines = sql.query("""SELECT line.location_id,line.custodian_id,line.custodian_kind,
+            CASE WHEN ? THEN (SELECT abs(observation.observed_quantity_base-observation.prior_quantity_base)
+                FROM inventory_cycle_count observation JOIN inventory_count_entry entry ON entry.tenant_id=observation.tenant_id
+                    AND entry.document_id=observation.document_id AND entry.balance_id=observation.balance_id
+                WHERE observation.tenant_id=line.tenant_id AND entry.id=line.id AND observation.document_revision=
+                    (SELECT max(document_revision) FROM inventory_count_round WHERE tenant_id=line.tenant_id AND document_id=line.document_id))
+                ELSE line.quantity_base END quantity_base,
             coalesce(line.cost_total_minor,lot.cost_total_minor) numerator,
             coalesce(line.cost_basis_quantity_base,lot.cost_basis_quantity_base) denominator,
             coalesce(line.currency,lot.currency) currency FROM inventory_document_line line
             LEFT JOIN inventory_lot lot ON lot.tenant_id=line.tenant_id AND lot.id=line.lot_id
-            WHERE line.tenant_id=? AND line.document_id=? ORDER BY line.line_number""", sql.tenant, input.sourceDocumentId) {
+            WHERE line.tenant_id=? AND line.document_id=? ORDER BY line.line_number""", header.first == "COUNT", sql.tenant, input.sourceDocumentId) {
             PolicySourceLine(it.optionalUuid("location_id"), if (it.getString("custodian_kind") == "TECHNICIAN") it.optionalUuid("custodian_id") else null,
                 it.getString("quantity_base").toBigInteger(), it.getString("numerator")?.toBigInteger(),
                 it.getString("denominator")?.toBigInteger(), it.getString("currency"))

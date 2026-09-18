@@ -144,8 +144,10 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         val result = store.get(id).view
         val body = if (error == null) mapper.writeValueAsString(result)
             else mapper.writeValueAsString(WarehouseError(error, "Stock changed after observation; perform a recount"))
-        return receipts.record(id, result.revision, action, key, canonical.hash, canonical.json, current, cutover.snapshot.epoch,
+        val receipt = receipts.record(id, result.revision, action, key, canonical.hash, canonical.json, current, cutover.snapshot.epoch,
             if (error == null) 200 else error.httpStatus, body)
+        if (result.state == WarehouseCountState.POSTED) store.complete(session, revision, receipt.operationId, null)
+        return receipt
     }
 
     private fun replay(action: String, key: String, hash: String, current: CurrentAuthority, epoch: Long): WarehouseOperationReceipt? {

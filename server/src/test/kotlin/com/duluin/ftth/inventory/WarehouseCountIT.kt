@@ -3,6 +3,10 @@ package com.duluin.ftth.inventory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.JsonNode
+import java.util.UUID
+import com.duluin.ftth.inventory.application.port.outbound.*
+import com.duluin.ftth.inventory.domain.model.*
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseCountStore
 
 class WarehouseCountIT : WarehousePolicyHttpFixture() {
     private data class CountFixture(val setup: Setup, val balance: String, val counter: Pair<String, String>)
@@ -77,6 +81,96 @@ class WarehouseCountIT : WarehousePolicyHttpFixture() {
         fixture(token).transaction {
             assertThat(scalar("""SELECT count(*) FROM pg_trigger WHERE tgrelid='inventory_cycle_count'::regclass
                 AND tgname='warehouse_count_evidence_immutable' AND NOT tgisinternal""")).isEqualTo("1")
+        }
+    }
+
+    private fun measured(fixture: CountFixture, quantity: String): String {
+        val id = draftCount(fixture).path("id").asString()
+        action(id, fixture.setup.token, "start", """{"expectedRevision":0}""")
+        action(id, fixture.counter.first, "observe", """{"expectedRevision":1,"balanceId":"${fixture.balance}",
+            "quantityBase":"$quantity","reason":"Measured discrepancy","documentReference":"SHEET-2"}""")
+        return id
+    }
+
+    private fun approval(fixture: CountFixture, id: String): Pair<String, String> {
+        val reviewer = approver(fixture.setup.token, listOf(fixture.setup.bin))
+        configure(fixture.setup.token, policyBody(listOf(fixture.setup.bin), listOf(reviewer.second), "COUNT_VARIANCE", "1"))
+        val result = request("POST", "/api/v1/warehouse/approvals/request", fixture.setup.token,
+            """{"sourceDocumentId":"$id","sourceRevision":3}""")
+        assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(201)
+        return reviewer.first to mapper.readTree(result.contentAsString).path("requestId").asString()
+    }
+
+    @Test fun `independent approval posts one linked negative count adjustment and replays unchanged`() {
+        val fixture = stock()
+        val id = measured(fixture, "80")
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, approval) = approval(fixture, id)
+        val body = """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}"""
+        val response = request("POST", "/api/v1/warehouse/approvals/decide", reviewer, body, "approve-count")
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
+        assertThat(request("POST", "/api/v1/warehouse/approvals/decide", reviewer, body, "approve-count").contentAsString)
+            .isEqualTo(response.contentAsString)
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT quantity_base FROM inventory_balance_projection WHERE id='${fixture.balance}'")).isEqualTo("80")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE document_id='$id' AND kind='COUNT_VARIANCE'")).isEqualTo("1")
+            assertThat(scalar("SELECT state FROM inventory_document WHERE id='$id'")).isEqualTo("POSTED")
+            assertThat(scalar("SELECT count(*) FROM inventory_cycle_count WHERE document_id='$id'")).isEqualTo("1")
+        }
+    }
+
+    private fun moveTen(fixture: CountFixture) {
+        val destination = UUID.fromString(create("locations", fixture.setup.token,
+            """{"code":"OTHER","name":"Other warehouse","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString())
+        val database = fixture(fixture.setup.token)
+        database.transaction {
+            val position = context.getBean(WarehouseCountStore::class.java).position(UUID.fromString(fixture.balance))
+            val document = UUID.randomUUID()
+            val line = UUID.randomUUID()
+            sql("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,cutover_epoch,authority_epoch)
+                VALUES ('$document','$tenant','$document','TRANSFER','$actor',0,0)""")
+            sql("""INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,stock_identity_id,lot_id,
+                base_unit,tracking,quantity_base,location_id,custodian_id,custodian_kind,condition,legal_owner)
+                SELECT '$line',tenant_id,'$document',1,0,sku_id,stock_identity_id,lot_id,base_unit,'BULK',10,location_id,
+                    custody_owner_id,custody_owner_kind,condition,legal_owner FROM inventory_balance_projection WHERE id='${fixture.balance}'""")
+            post(WarehousePost(document, 0, "DISPATCHED", operation("TRANSFER"), MovementKind.TRANSFER, "Concurrent stock movement",
+                listOf(PostingLeg(LegDirection.OUT, position.dimension, StockQuantity.each("10"), line, InventoryStatus.AVAILABLE),
+                    PostingLeg(LegDirection.IN, position.dimension.copy(locationId = destination, custodianId = destination),
+                        StockQuantity.each("10"), line, InventoryStatus.AVAILABLE))))
+        }
+    }
+
+    @Test fun `movement before final approval returns COUNT_STALE without changing stock or count evidence`() {
+        val fixture = stock()
+        val id = measured(fixture, "80")
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, approval) = approval(fixture, id)
+        moveTen(fixture)
+        val response = request("POST", "/api/v1/warehouse/approvals/decide", reviewer,
+            """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""")
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(response.contentAsString).path("code").asString()).isEqualTo("COUNT_STALE")
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT quantity_base FROM inventory_balance_projection WHERE id='${fixture.balance}'")).isEqualTo("90")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE document_id='$id'")).isEqualTo("0")
+            assertThat(scalar("SELECT state FROM inventory_document WHERE id='$id'")).isEqualTo("RECOUNT_REQUIRED")
+        }
+    }
+
+    @Test fun `movement before submission requires an append-only recount`() {
+        val fixture = stock()
+        val id = measured(fixture, "100")
+        moveTen(fixture)
+        val response = request("POST", "/api/v1/warehouse/counts/$id/submit", fixture.setup.token, """{"expectedRevision":2}""")
+        assertThat(response.status).isEqualTo(409)
+        assertThat(mapper.readTree(response.contentAsString).path("code").asString()).isEqualTo("COUNT_STALE")
+        action(id, fixture.setup.token, "recount", """{"expectedRevision":3}""")
+        action(id, fixture.counter.first, "observe", """{"expectedRevision":4,"balanceId":"${fixture.balance}",
+            "quantityBase":"90","reason":"Recounted after movement","documentReference":"SHEET-3"}""")
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":5}""")
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_cycle_count WHERE document_id='$id'")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE document_id='$id'")).isEqualTo("0")
         }
     }
 }

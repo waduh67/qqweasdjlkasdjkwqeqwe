@@ -10,7 +10,7 @@ internal object ApprovalOutcomeCodec {
         mapper.readValue(it, WarehouseApprovalView::class.java)
     } ?: WarehouseApprovalView(record.id, record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision,
         record.status, record.revision, record.expiresAt, when (record.status) {
-            WarehouseApprovalStatus.STALE -> "STALE_REVISION"
+            WarehouseApprovalStatus.STALE -> if (record.snapshot.evaluation.operation == PolicyOperation.COUNT_VARIANCE) "COUNT_STALE" else "STALE_REVISION"
             WarehouseApprovalStatus.EXPIRED -> "APPROVAL_EXPIRED"
             else -> record.status.name
         })

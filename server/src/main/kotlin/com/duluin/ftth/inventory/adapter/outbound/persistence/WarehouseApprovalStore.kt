@@ -28,7 +28,11 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             (SELECT jsonb_agg(to_jsonb(line) ORDER BY line.id) FROM inventory_document_line line WHERE line.tenant_id=document.tenant_id AND line.document_id=document.id),
             'intake',(SELECT to_jsonb(intake) FROM inventory_receipt_intake intake WHERE intake.tenant_id=document.tenant_id AND intake.id=document.id))
             || CASE WHEN document.kind='TITLE_CORRECTION' THEN jsonb_build_object('title',
-                (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END)::text
+                (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
+             || CASE WHEN document.kind='COUNT' THEN jsonb_build_object('count',
+                 (SELECT jsonb_agg(to_jsonb(observation) ORDER BY observation.id) FROM inventory_cycle_count observation
+                  WHERE observation.tenant_id=document.tenant_id AND observation.document_id=document.id
+                    AND observation.document_revision=(SELECT max(document_revision) FROM inventory_count_round WHERE tenant_id=document.tenant_id AND document_id=document.id))) ELSE '{}'::jsonb END)::text
             FROM inventory_document document WHERE document.tenant_id=? AND document.id=?""", sql.tenant, id))
         return@execute header.copy(content = WarehouseCanonicalPayload.parse(content).json, locations = locations)
     }
@@ -108,7 +112,7 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision, operation, body, event)
     }
     fun event(operation: UUID): UUID = jdbc.execute { sql ->
-        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED')", sql.tenant, operation) { it.uuid("id") }.single()
+        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','COUNT_POSTED')", sql.tenant, operation) { it.uuid("id") }.single()
     }
     fun candidates(): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_approval WHERE tenant_id=? AND evaluation_snapshot IS NOT NULL ORDER BY requested_at DESC,id", sql.tenant) { it.uuid("id") }
@@ -124,6 +128,11 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             sql.tenant, id) { it.uuid("id") }
     }
     fun reworkDisposition(id: UUID, revision: Long, required: Boolean) = jdbc.execute { sql ->
+        if (required && sql.value("SELECT kind FROM inventory_document WHERE tenant_id=? AND id=?", sql.tenant, id) == "COUNT") {
+            if (sql.update("UPDATE inventory_document SET state='RECOUNT_REQUIRED',revision=revision+1,updated_at=clock_timestamp() WHERE tenant_id=? AND id=? AND revision=? AND state='SUBMITTED'",
+                    sql.tenant, id, revision) != 1) sql.fail(WarehouseErrorCode.STALE_REVISION)
+            return@execute
+        }
         if (sql.update("UPDATE inventory_document SET approval_disposition=?,revision=revision+1,updated_at=clock_timestamp() WHERE tenant_id=? AND id=? AND revision=? AND state='DRAFT'",
             if (required) "REWORK_REQUIRED" else null, sql.tenant, id, revision) != 1) sql.fail(WarehouseErrorCode.STALE_REVISION)
     }
