@@ -12,6 +12,10 @@ data class ReplenishmentReplay(val actorId: UUID, val ruleId: UUID, val hash: St
 class ReplenishmentStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
 
+    fun deadline() = jdbc.execute { sql ->
+        sql.query("SELECT set_config('lock_timeout','2s',true),set_config('statement_timeout','20s',true)") { Unit }.single()
+    }
+
     fun rule(id: UUID): ReplenishmentRule = jdbc.execute { sql ->
         sql.query("SELECT * FROM inventory_replenishment_rule WHERE tenant_id=? AND id=? FOR UPDATE", sql.tenant, id, map = ::ruleRow)
             .singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
