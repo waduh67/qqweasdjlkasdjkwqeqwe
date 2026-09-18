@@ -27,6 +27,31 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## Wave 5: reservasi paralel task25, task27, task29
+
+Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada
+adalah `V175_112` dan tidak ada file atau reservasi untuk `V175_113`,
+`V175_114`, atau `V175_115`. Wave 5 mencadangkan namespace berikut tanpa
+membuat atau menerapkan SQL:
+
+| Tugas | Namespace pemilik | Pola file yang diizinkan | Cakupan |
+| --- | --- | --- | --- |
+| 25 | `V175.113` | `V175_113__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_113_N__*.sql` | transfer/discrepancy |
+| 27 | `V175.114` | `V175_114__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_114_N__*.sql` | blind count/recount; pemilik utama dispatch approval Wave 5 |
+| 29 | `V175.115` | `V175_115__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_115_N__*.sql` | replenishment suggestion/request |
+
+Hanya worker pemilik namespace yang boleh menambah file di namespace tersebut,
+dan nama/file yang hendak dibuat wajib dideklarasikan lebih dahulu di catatan
+tugasnya. Worker tidak mengubah reservasi worker lain. Integrator tunggal
+merekonsiliasi perubahan manifest dan shared files saat cherry-pick.
+
+Child version seperti `V175_113_1` hanya boleh dibuat sebelum migrasi bernomor
+lebih tinggi digabung atau diterapkan. Setelah `V175.114` atau versi lebih tinggi
+diterapkan, koreksi task25 harus mengambil versi baru di atas maksimum global;
+aturan yang sama berlaku untuk setiap namespace. Tidak boleh menyisipkan child
+bernomor lebih rendah di belakang migrasi yang sudah diterapkan. Reservasi ini
+bukan klaim bahwa file SQL ada atau bahwa migrasi telah diterapkan.
+
 ## M04: reservation task23
 
 Verify-02 reserves V175_110__discovery_canonical_hash_binding.sql,
