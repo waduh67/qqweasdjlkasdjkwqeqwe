@@ -49,6 +49,11 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             AND handover.id=request.handover_id WHERE request.tenant_id=? AND request.id=?""", sql.tenant, input.sourceDocumentId) {
             listOf(it.uuid("actor_id"), it.uuid("customer_id"))
         }.flatten() else emptyList()
-        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters, lines, header.first == "TITLE_CORRECTION")
+        val transferParties = sql.query("""SELECT source.actor_id,source.transfer_receiver_id FROM inventory_document document
+            JOIN inventory_document source ON source.tenant_id=document.tenant_id AND source.id=document.source_document_id
+            WHERE document.tenant_id=? AND document.id=? AND document.transfer_remainder_action IS NOT NULL""", sql.tenant, input.sourceDocumentId) {
+            listOf(it.uuid("actor_id"), it.uuid("transfer_receiver_id"))
+        }.flatten()
+        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters + transferParties, lines, header.first == "TITLE_CORRECTION")
     }
 }
