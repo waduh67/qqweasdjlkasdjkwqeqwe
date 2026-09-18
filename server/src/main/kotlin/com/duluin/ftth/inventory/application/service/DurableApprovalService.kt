@@ -144,7 +144,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (final) {
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
                 record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash,
-                if (source.kind == "TITLE_CORRECTION") "TITLE_REACQUISITION" else "RECEIVE", 200, result, current.fence.epoch)
+                when (source.kind) { "TITLE_CORRECTION" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
             owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
