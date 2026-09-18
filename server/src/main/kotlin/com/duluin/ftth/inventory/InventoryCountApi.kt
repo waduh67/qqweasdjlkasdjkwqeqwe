@@ -10,6 +10,7 @@ interface InventoryCountApi {
     fun recount(id: UUID, input: WarehouseCountRevision, key: String): WarehouseOperationReceipt
     fun get(id: UUID): WarehouseCountView
     fun history(id: UUID): List<WarehouseCountFact>
+    fun review(id: UUID): WarehouseCountReview
     fun list(page: Int, size: Int): WarehousePage<WarehouseCountView>
 }
 
@@ -25,3 +26,6 @@ data class WarehouseCountView(val id: UUID, val revision: Long, val state: Wareh
     val partialLocation: Boolean, val roundRevision: Long?, val entries: List<WarehouseCountEntry>)
 data class WarehouseCountFact(val id: UUID, val balanceId: UUID, val counterId: UUID, val roundRevision: Long,
     val quantityBase: String, val baseUnit: WarehouseBaseUnit, val reason: String, val documentReference: String)
+data class WarehouseCountComparison(val balanceId: UUID, val counterId: UUID, val bookQuantityBase: String,
+    val quantityBase: String, val baseUnit: WarehouseBaseUnit, val observedDimensionRevision: Long)
+data class WarehouseCountReview(val count: WarehouseCountView, val observations: List<WarehouseCountComparison>)

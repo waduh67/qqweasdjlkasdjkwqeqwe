@@ -26,6 +26,7 @@ class WarehouseCountController(private val counts: InventoryCountApi) {
         response(counts.recount(id, WarehouseReceiptJson.decode(body, WarehouseCountRevision::class.java), key))
     @GetMapping("/{id}") fun get(@PathVariable id: UUID) = counts.get(id)
     @GetMapping("/{id}/history") fun history(@PathVariable id: UUID) = counts.history(id)
+    @GetMapping("/{id}/review") fun review(@PathVariable id: UUID) = ResponseEntity.ok().header("Cache-Control", "no-store").body(counts.review(id))
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) = counts.list(page, size)
     private fun response(receipt: WarehouseOperationReceipt) = ResponseEntity.status(receipt.originalStatus)
         .contentType(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").body(receipt.originalBody)

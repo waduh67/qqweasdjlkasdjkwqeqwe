@@ -110,4 +110,12 @@ class WarehouseCountStore(private val jdbc: WarehouseCommandJdbc) {
         sql.update("INSERT INTO inventory_count_result(id,tenant_id,round_revision,source_revision,operation_id,approval_id) VALUES (?,?,?,?,?,?)",
             session.view.id, sql.tenant, session.view.roundRevision, sourceRevision, operation, approval)
     }
+
+    fun review(session: CountSession): WarehouseCountReview = jdbc.execute { sql ->
+        WarehouseCountReview(session.view, sql.query("""SELECT * FROM inventory_cycle_count
+            WHERE tenant_id=? AND document_id=? AND document_revision=? ORDER BY balance_id""", sql.tenant, session.view.id, session.view.roundRevision) {
+            WarehouseCountComparison(it.uuid("balance_id"), it.uuid("counter_id"), it.getString("prior_quantity_base"),
+                it.getString("observed_quantity_base"), WarehouseBaseUnit.valueOf(it.getString("base_unit")), it.getLong("observed_dimension_revision"))
+        })
+    }
 }

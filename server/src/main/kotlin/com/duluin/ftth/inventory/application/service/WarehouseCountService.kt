@@ -112,6 +112,18 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         return store.facts(id).filter { session.requester == current.fence.identity.userId || it.counterId == current.fence.identity.userId }
     }
 
+    override fun review(id: UUID): WarehouseCountReview {
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val current = authority.lockCurrent()
+        access.permission(current, "inventory.approval.view")
+        masters.lockTopology()
+        val session = store.get(id)
+        access.location(session.view.locationId, current)
+        if (session.view.state !in setOf(WarehouseCountState.SUBMITTED, WarehouseCountState.APPROVED, WarehouseCountState.POSTED))
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Submit the blind count before reviewing book quantities")
+        return store.review(session)
+    }
+
     override fun list(page: Int, size: Int): WarehousePage<WarehouseCountView> {
         if (page < 0 || size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
