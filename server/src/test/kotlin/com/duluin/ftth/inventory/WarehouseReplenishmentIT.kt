@@ -2,10 +2,9 @@ package com.duluin.ftth.inventory
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import tools.jackson.databind.JsonNode
 import java.util.UUID
 
-class WarehouseReplenishmentIT : WarehouseReservationFixture() {
+class WarehouseReplenishmentIT : WarehouseReplenishmentFixture() {
     @Test fun `threshold rounds exact deficit and acceptance never posts stock`() {
         val (token, fixture) = prepare()
         receive(fixture, "60")
@@ -53,22 +52,4 @@ class WarehouseReplenishmentIT : WarehouseReservationFixture() {
         assertThat(denied.status).isEqualTo(404)
     }
 
-    private fun createRule(token: String, fixture: WarehousePostingFixture): JsonNode {
-        val response = request("POST", "$root/rules", token, ruleBody(fixture), UUID.randomUUID().toString())
-        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
-        return mapper.readTree(response.contentAsString)
-    }
-
-    private fun ruleBody(fixture: WarehousePostingFixture) = """{"skuId":"${fixture.sku}","locationId":"${fixture.warehouse}",
-        "baseUnit":"MM","minimumBase":"50000","maximumBase":"100000","targetBase":"100000",
-        "packageMultipleBase":"25000","leadTimeDays":7}"""
-
-    private fun recompute(token: String, rule: JsonNode): JsonNode {
-        val response = request("POST", "$root/rules/${rule.path("id").asString()}/recompute", token,
-            """{"expectedRevision":0}""", UUID.randomUUID().toString())
-        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
-        return mapper.readTree(response.contentAsString)
-    }
-
-    private val root = "/api/v1/warehouse/replenishments"
 }
