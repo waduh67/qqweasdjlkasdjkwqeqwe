@@ -38,3 +38,40 @@
   cwd; actual Gradle Kotlin compilation succeeded.
 - Risks/next action: re-run corrected HTTP fixture for genuine feature-red,
   then implement transfer persistence and owner services. No DoneClaim yet.
+
+## Checkpoint 3: genuine feature red and migration declaration
+
+- Branch/head: `work/warehouse-task25` at `815a1bf5b93240a79db84c6e861042af2022d594`,
+  confirmed on the explicit live child remote.
+- Substep/tests: corrected fixture completed real receipt and putaway. Exact
+  WarehouseTransferIT ran 3 tests, all failing at POST /transfers (404 instead
+  of 201), not compilation or fixture errors. Production remains unchanged.
+- Migration declaration BEFORE creation:
+  `server/src/main/resources/db/migration/V175_113__warehouse_transfer_bindings.sql`
+  (Flyway `175.113`) for generic document transfer bindings and final-state guards.
+  No SQL exists yet and prior migrations remain byte-identical.
+- Cleanup: isolated stop/down succeeded before host lock release; retained
+  private child volumes. Feature-red XML will be archived before the next run.
+- Next action: own public contract, typed store/planner/service/controller;
+  existing posting is the only physical authority. Generic transfer must reject
+  encumbered and WO-issued stock in favor of the existing linked WO handover.
+
+## Checkpoint 4: initial transfer path green (WIP, not DoneClaim)
+
+- Branch/head before commit: `work/warehouse-task25`, `815a1bf5b93240a79db84c6e861042af2022d594`.
+- Substep/tests: exact WarehouseTransferIT now passes 3/3, zero skipped. The
+  actual HTTP-adapter/PostgreSQL journey proves draft no effect, dispatch100000,
+  receive60000 leaving40000, final receipt, original partial replay after final,
+  overreceipt rejection and post-dispatch cancellation rejection.
+- Migration applied: `175.113`, file declared above; SHA256
+  `9fc5a1a45f55fbd314e450c189c80a11ecd03de54ab83bda851354b4fad631bf`.
+  Preserve it unchanged from here; corrections require a declared child version.
+- Changed files: InventoryTransferApi; WarehouseTransferModels, Access, Planning,
+  Service; WarehouseTransferStore, Stock; WarehouseTransferController;
+  WarehouseTransferFixture, WarehouseTransferIT; V175_113 migration; this note.
+- Shared delta: WarehouseHttpErrors adds only WarehouseTransferController to its
+  advice registration. Posting, generic documents and approvals are unchanged.
+- Cleanup: owned stop/down completed, child volumes retained, host lock released.
+- Risks/next action: complete discrepancy approval integration, expanded hostile
+  and concurrency tests, serialized identities, manual socket HTTP/SQL and
+  clean artifact/regression proof. This initial green is not task completion.
