@@ -1,5 +1,16 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Wave 5 Parallel Setup Pending Publication
+
+- Task24 remains the latest completed task: 24 complete, 0 blocked, 28 pending. Ready lanes are task25, task27 and task29; no downstream implementation or checkbox change has started.
+- Integration worktree remains `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume` on `work/warehouse-resume-20260916`, delivering checkpoints to `feat/warehouse-workorder`.
+- Planned child recovery branches are `work/warehouse-task25`, `work/warehouse-task27`, and `work/warehouse-task29`, each with an isolated worktree under `/home/fajar/ftth/warehouse-wave5-taskNN` and its same-named remote child branch. Workers push only to those child refs, never the integration branch.
+- Migration namespaces are reserved, not created/applied: task25=`V175.113`, task27=`V175.114`, task29=`V175.115`, with children allowed only before a higher migration is applied. Exact rules are in `docs/warehouse-migrations.md`.
+- All host QA uses one bounded outer lock at `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume/.omo/runtime/wave5-host-qa.lock` across the entire up/check/Gradle/HTTP/stop/down lifecycle. Ports25432/29000/17880/14188 never overlap. Each child generates its own private env, marker and volumes.
+- Shared warehouse contracts/errors/posting/documents/approval dispatch and the migration manifest have one integration owner. Task27 primarily owns approval dispatch; task29 must use existing generic documents/projections and not depend on a new task25 API.
+- Reviewed child commits are cherry-picked by the integration owner in migration order, shared files reconciled once, then combined QA runs under the host lock. No main merge, rebase, force push or PR is authorized here.
+- Portable execution map: `.omo/notepads/warehouse-workorder-asset-provenance/wave5-execution.md`. The exact child base SHA is finalized there before worktree creation.
+
 ## Current Status: Task24 Confirmed Complete
 
 - Authoritative state is 24 completed, 0 blocked and 28 pending. Tasks25, 27 and 29 are now dependency-ready; none has started through this checkpoint. Task26 depends on25, task28 depends on26/27, and task30 depends on26.
