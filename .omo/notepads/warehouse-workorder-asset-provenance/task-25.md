@@ -107,3 +107,27 @@
 - Cleanup completed before releasing host lock; all volumes retained.
 - Next: rerun exact transfer plus posting/reservation/approval/modularity, then
   packaged manual HTTP and app-role SQL. No completion claim yet.
+
+## Checkpoint 7: resume after OpenCode interruption
+
+- Recovery branch/head: `work/warehouse-task25`, local/live
+  `07661056f0d069bbe0c46f759931e8a2298fd565`; clean, no unpushed commits.
+- Re-read C1-C11/task25, child execution rules, latest logs and archived XML.
+  The completed regression already passed190 tests with zero failures/errors/
+  skips, including15 direct transfer tests, serial identity, rollback phases,
+  revocation, concurrent receipt, and LOST/REJECTED quarantine continuity.
+- Clean no-cache bootJar passed19 tasks, SHA256
+  `d23f0d8b17bbe82ee243f054f596a985112110c7e754df4c1ad1c9ba01d3e698`.
+- Interrupted command: manual-qa.sh started its timestamped log at034011Z but
+  emitted no lifecycle output; no new server log or manual-result exists. It
+  stopped while waiting for the host lock, before the corrected manual launch.
+  Earlier manual attempts exposed test-profile storage exclusion, then SMTP
+  health503. The retained runner now uses real S3 and disables only unrelated
+  SMTP health probing; no application code was changed for those runner issues.
+- Migration175.113/.113.1/.113.2 are committed and frozen. No new SQL declared.
+- Read-only recovery inventory: no running Docker containers. Ambiguous shared
+  Gradle PID1445108 is preexisting, not task25-owned; do not kill it or claim
+  all host JVMs were cleaned. Task25 uses its own Gradle home.
+- Next: resume packaged socket HTTP/app-role SQL/restart proof under the outer
+  host lock, then complete remaining scope/obligation acceptance coverage and
+  publish an evidence-backed claim for independent review, not a checked task.
