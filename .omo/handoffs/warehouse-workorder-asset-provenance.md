@@ -1,9 +1,15 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
-## Current Status: Task24 Area Correction Verified, Targeted Re-Review Pending
+## Current Status: Task24 Confirmed Complete
 
-- Latest correction sourced5344163 is pushed; exact20 twice, regression95 and targeted14 pass with0 failures/errors/skips after real red5/4. Clean19-task JAR SHA256ccf100eb75a7838aaa026dba5dde74ade765d7be8fe757877e32233d9e219c35 passed two real area HTTP/DB runs, including original-token revocation, unrestricted access, legacy/V2 preservation and portal safety. Cleanup complete; only original env/lock and two retained volumes remain.
-- Current step: targeted independent task24 source/runtime re-review. safe_to_request_recheck=true; task24 remains unchecked and not independently approved. See newest task-24.md/true EOF ledger and local area-review/DoneClaim.md. The earlier rejected and WIP paragraphs below are historical; no task23/GPON/task25 or SQL changes.
+- Authoritative state is 24 completed, 0 blocked and 28 pending. Tasks25, 27 and 29 are now dependency-ready; none has started through this checkpoint. Task26 depends on25, task28 depends on26/27, and task30 depends on26.
+- Corrected source is `d5344163b5bef69b2c483ced1bc41c90c1653183`. Source reviewer `ses_f4fee4e43ffefMaI3Uq4c5eotK` returned `CONFIRMED` with `safe_to_mark_task24_source=true`. Runtime reviewer `ses_f4fee4d34ffemYo7phG6cKJ5lR` returned final `CONFIRMED` with `safe_to_mark_task24_runtime=true` at `f3e73959fc43766ef38996b52eccb30687307a31`.
+- Fresh non-overlapping evidence is exact compatibility 20 and focused 40, both with zero failures/errors/skips. Actual IAM/HTTP proves own-area 200; different-area, restricted-empty, null-area, foreign and missing 404; original JWT after revocation 404 and after restoration 200; legacy 37 plus V2 `82500 MM`/`82.500 M`, paging and portal privacy remain intact.
+- Clean 19-task JAR SHA256 is `ccf100eb75a7838aaa026dba5dde74ade765d7be8fe757877e32233d9e219c35`. No SQL/migration changed and live ceiling remains `V175.112`. Cleanup left zero owned containers, JVMs, listeners, PID/private directories or temporary schemas; two volumes/images/data remain.
+- Earlier task24 14+78 compatibility/import/source-gate evidence is carried only by unchanged identity; it is not represented as fresh or full-suite evidence. Historical catalog and NetworkEndToEnd caveats remain task46 work.
+- Strict clean-code and task23's owner-approved documentation-only GPON boundary remain binding; no hardware certification is claimed.
+
+## Historical Task24 Correction And Review Timeline
 
 - Executor correction now has genuine red5/4, green targeted14/exact20/regression95, all green runs0 failures/errors/skips. Current step is checkpoint then clean build, real area HTTP/DB proof and cleanup; independent re-review remains pending. New customer-owner check uses existing CurrentAuthority scope semantics before facets; unscoped API/DTOs/inventory queries unchanged. See newest task-24.md.
 
@@ -72,22 +78,22 @@
 - Local continuation branch: `work/warehouse-resume-20260916`
 - Task-owned worktree on this host: `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume`
 - Verified checkpoint base: `2105273f1de7783fdc2454de6bc9e4a3a86be38a`
-- Current product source SHA: `a028c6a934b191e2fabdc596000f4b40d8fd33eb`
+- Current product source SHA: `d5344163b5bef69b2c483ced1bc41c90c1653183`
 - Current migrations: through `V175.112`; verify-03 added no migration and all SQL is unchanged from the confirmed `39295078` scope.
-- Current task23 JAR SHA256: `cc17447cd9ad0a5e383cef9734fcd7a185ee82b649163defef2e98f5bdb052cd`.
-- Tasks 1-23: checked; tasks 24-48 and F1-F4: pending
+- Current task24 JAR SHA256: `ccf100eb75a7838aaa026dba5dde74ade765d7be8fe757877e32233d9e219c35`.
+- Tasks 1-24: checked; tasks 25-48 and F1-F4: pending
 - Active plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
 - Delivery mode: `--make-pr` after plan completion; immediate checkpoint pushes; no merge
 - Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`
 - Executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`
 - Task 22 verifier: `ses_f59e67eacffeVf28hlgEdebi2F` (confirmed/high)
 - Historical task22 identity: migrations `V175.80` through `V175.89`; JAR SHA256 `b062548e6601935f073e7b12d468cb100497ff7ef1d88def78af99f37c84ac1c`. This is retained history, not the current task23 artifact identity.
-- Next action: task24 onboarding/import/read compatibility. Do not claim task25 or later started through this checkpoint.
+- Next dependency-ready tasks: 25 transfer/discrepancy, 27 blind counts and 29 replenishment. No implementation has started through this checkpoint.
 - Immediate normal fast-forward push is required; no merge.
 
 ## Verified State
 
-Tasks 1-23 are checked in the tracked plan with independent task23 source/runtime confirmation. Tasks24-48 and F1-F4 remain pending.
+Tasks 1-24 are checked with independent task24 source/runtime confirmation. Tasks25-48 and F1-F4 remain pending.
 
 - Task 1: PASS after correction; isolated environment and fail-closed runner verified by `ses_f86494639ffe1UztWotWQf1lcy`.
 - Task 2: PASS contract-only; strict public contracts, modularity, and packaged build verified by `ses_f86079a15ffeG2Er4fVXbaZqiC`.
@@ -105,7 +111,7 @@ Tasks 1-23 are checked in the tracked plan with independent task23 source/runtim
 
 ## Exact Next Action
 
-Resume at task24 onboarding/import/read compatibility. Preserve task23's documentation-backed/not-hardware-validated GPON boundary and `UNVERIFIED` quarantine; do not infer task25 or later completion.
+Resume one dependency-ready Wave5 lane: task25, task27 or task29. Coordinate shared environment and file ownership; task26 waits for25, task28 waits for26/27, and task30 waits for26. No later completion is implied.
 
 ## Continuation Policy
 
