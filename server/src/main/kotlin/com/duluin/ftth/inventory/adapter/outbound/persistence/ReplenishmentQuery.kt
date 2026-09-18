@@ -45,8 +45,7 @@ class ReplenishmentQuery(private val jdbc: WarehouseCommandJdbc) {
                     WHERE leg.tenant_id=document.tenant_id AND leg.document_line_id=replenishment.receiving_line_id
                     AND leg.direction='IN' AND leg.status='AVAILABLE' AND operation.namespace='warehouse.receipt.putaway') putaway ON true,request
                 WHERE replenishment.tenant_id=request.tenant AND rule.sku_id=request.sku AND rule.location_id=request.location
-                    AND document.kind='RECEIPT' AND document.state IN ('RECEIVED_IN_INSPECTION','PUTAWAY')
-                    AND replenishment.state<>'CANCELLED')
+                    AND document.kind='RECEIPT' AND document.state IN ('RECEIVED_IN_INSPECTION','PUTAWAY'))
             SELECT jsonb_build_object('availableBase',coalesce(sum(available),0)::text,
                 'reservedBase',coalesce(sum(unpicked+picked),0)::text,
                 'confirmedInboundBase',((SELECT quantity FROM inbound)+(SELECT quantity FROM bound_receipts))::text)::text
