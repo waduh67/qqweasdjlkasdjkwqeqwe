@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.JsonNode
 import java.util.UUID
@@ -171,6 +172,129 @@ class WarehouseCountIT : WarehousePolicyHttpFixture() {
         fixture(fixture.setup.token).transaction {
             assertThat(scalar("SELECT count(*) FROM inventory_cycle_count WHERE document_id='$id'")).isEqualTo("2")
             assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE document_id='$id'")).isEqualTo("0")
+        }
+    }
+
+    @Test fun `approver review exposes frozen book and measured quantities only after submission`() {
+        val fixture = stock()
+        val id = measured(fixture, "80")
+        assertThat(request("GET", "/api/v1/warehouse/counts/$id/review", fixture.setup.token).status).isEqualTo(409)
+        assertThat(request("GET", "/api/v1/warehouse/counts/$id/review", fixture.counter.first).status).isEqualTo(403)
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, _) = approval(fixture, id)
+        val reviewed = request("GET", "/api/v1/warehouse/counts/$id/review", reviewer)
+        assertThat(reviewed.status).withFailMessage(reviewed.contentAsString).isEqualTo(200)
+        val comparison = mapper.readTree(reviewed.contentAsString).path("observations")[0]
+        assertThat(comparison.path("bookQuantityBase").asString()).isEqualTo("100")
+        assertThat(comparison.path("quantityBase").asString()).isEqualTo("80")
+    }
+
+    @Test fun `positive count recovers only previously recorded missing units without minting identity`() {
+        val fixture = stock()
+        val first = measured(fixture, "80")
+        action(first, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, approval) = approval(fixture, first)
+        assertThat(request("POST", "/api/v1/warehouse/approvals/decide", reviewer,
+            """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""").status).isEqualTo(200)
+        val second = measured(fixture, "100")
+        action(second, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val pending = request("POST", "/api/v1/warehouse/approvals/request", fixture.setup.token,
+            """{"sourceDocumentId":"$second","sourceRevision":3}""")
+        assertThat(pending.status).withFailMessage(pending.contentAsString).isEqualTo(201)
+        val requestId = mapper.readTree(pending.contentAsString).path("requestId").asString()
+        val result = request("POST", "/api/v1/warehouse/approvals/decide", reviewer,
+            """{"requestId":"$requestId","expectedRevision":0,"decision":"APPROVE"}""")
+        assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(200)
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT quantity_base FROM inventory_balance_projection WHERE id='${fixture.balance}'")).isEqualTo("100")
+            assertThat(scalar("SELECT count(*) FROM inventory_segment")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='COUNT_VARIANCE'")).isEqualTo("2")
+        }
+    }
+
+    @Test fun `unknown positive variance is actionable and cannot invent stock`() {
+        val fixture = stock()
+        val id = measured(fixture, "120")
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, approval) = approval(fixture, id)
+        val result = request("POST", "/api/v1/warehouse/approvals/decide", reviewer,
+            """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""")
+        assertThat(result.status).isEqualTo(409)
+        assertThat(result.contentAsString).contains("previously recorded")
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT quantity_base FROM inventory_balance_projection WHERE id='${fixture.balance}'")).isEqualTo("100")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE document_id='$id'")).isEqualTo("0")
+        }
+    }
+
+    @Test fun `requester cannot approve own count even with administrative permissions`() {
+        val fixture = stock()
+        val id = measured(fixture, "80")
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (_, approval) = approval(fixture, id)
+        val result = request("POST", "/api/v1/warehouse/approvals/decide", fixture.setup.token,
+            """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""")
+        assertThat(result.status).isEqualTo(403)
+        fixture(fixture.setup.token).transaction { assertThat(scalar("SELECT count(*) FROM inventory_approval_decision")).isEqualTo("0") }
+    }
+
+    @Test fun `revoked warehouse scope blocks original observation replay and history`() {
+        val fixture = stock()
+        val id = draftCount(fixture).path("id").asString()
+        action(id, fixture.setup.token, "start", """{"expectedRevision":0}""")
+        val body = """{"expectedRevision":1,"balanceId":"${fixture.balance}","quantityBase":"100","reason":"Measured","documentReference":"SHEET"}"""
+        assertThat(request("POST", "/api/v1/warehouse/counts/$id/observe", fixture.counter.first, body, "own-observation").status).isEqualTo(200)
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${fixture.counter.second}/${fixture.setup.bin}", fixture.setup.token,
+            """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+        assertThat(request("POST", "/api/v1/warehouse/counts/$id/observe", fixture.counter.first, body, "own-observation").status).isIn(403, 404)
+        assertThat(request("GET", "/api/v1/warehouse/counts/$id/history", fixture.counter.first).status).isIn(403, 404)
+    }
+
+    @Test fun `app role cannot append a count fact without its bound observation command`() {
+        val fixture = stock()
+        val id = draftCount(fixture).path("id").asString()
+        action(id, fixture.setup.token, "start", """{"expectedRevision":0}""")
+        assertThatThrownBy {
+            fixture(fixture.setup.token).transaction {
+                val store = context.getBean(WarehouseCountStore::class.java)
+                val input = WarehouseCountObservation(1, UUID.fromString(fixture.balance), "100", "Forged command", "NO-COMMAND")
+                store.observe(store.get(UUID.fromString(id)), input, store.position(input.balanceId), UUID.fromString(fixture.counter.second), "forged", "a".repeat(64))
+            }
+        }.hasStackTraceContaining("count observation command")
+    }
+
+    @Test fun `app role cannot change or delete immutable measured facts`() {
+        val fixture = stock()
+        val id = measured(fixture, "100")
+        for (statement in listOf("UPDATE inventory_cycle_count SET observed_quantity_base=99,revision=revision+1 WHERE document_id='$id'",
+            "DELETE FROM inventory_cycle_count WHERE document_id='$id'")) {
+            assertThatThrownBy { fixture(fixture.setup.token).transaction { sql(statement) } }.hasStackTraceContaining("count observations are immutable")
+        }
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT observed_quantity_base FROM inventory_cycle_count WHERE document_id='$id'")).isEqualTo("100")
+        }
+    }
+
+    @Test fun `barrier concurrent final decisions produce one adjustment and one original replay`() {
+        val fixture = stock()
+        val id = measured(fixture, "80")
+        action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, approval) = approval(fixture, id)
+        val gate = java.util.concurrent.CountDownLatch(1)
+        java.util.concurrent.Executors.newFixedThreadPool(2).use { pool ->
+            val calls = (1..2).map { pool.submit<String> {
+                check(gate.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                val response = request("POST", "/api/v1/warehouse/approvals/decide", reviewer,
+                    """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""", "concurrent-approval")
+                assertThat(response.status).isEqualTo(200)
+                response.contentAsString
+            } }
+            gate.countDown()
+            assertThat(calls[0].get(30, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(calls[1].get(30, java.util.concurrent.TimeUnit.SECONDS))
+        }
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE document_id='$id'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_approval_decision WHERE approval_id='$approval'")).isEqualTo("1")
         }
     }
 }
