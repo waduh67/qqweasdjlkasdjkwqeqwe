@@ -25,7 +25,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
     private val store: WarehouseApprovalStore, private val access: WarehousePolicyAccess,
     private val eligibility: WarehouseApprovalAuthority, private val masters: WarehouseMasterStore,
     private val inbox: WarehouseInboxApi, private val owners: List<WarehouseApprovalOwner>, private val probes: List<WarehouseApprovalProbe>,
-    transactionManager: PlatformTransactionManager, private val sourceLocks: List<WarehouseApprovalSourceLock>) {
+    transactionManager: PlatformTransactionManager, private val sourceLocks: List<WarehouseApprovalSourceLock>, private val counts: WarehouseCountStore) {
     private val mapper = jacksonObjectMapper()
     private val transaction = TransactionTemplate(transactionManager)
 
@@ -144,7 +144,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (final) {
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
                 record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash,
-                when (source.kind) { "TITLE_CORRECTION" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
+                when (source.kind) { "TITLE_CORRECTION" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; "COUNT" -> "COUNT_VARIANCE"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
             owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
@@ -231,6 +231,10 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         probe(WarehouseApprovalStage.RESPONSE, id)
     }
     internal fun terminate(record: WarehouseApprovalRecord, status: WarehouseApprovalStatus): WarehouseApprovalResponse {
+        if (record.snapshot.evaluation.operation == PolicyOperation.COUNT_VARIANCE) {
+            val session = counts.get(record.snapshot.evaluation.sourceDocumentId)
+            if (session.view.state == WarehouseCountState.SUBMITTED) counts.advance(session.view.id, session.view.revision, WarehouseCountState.RECOUNT_REQUIRED)
+        }
         val result = body(record.copy(status = status, revision = record.revision + 1))
         store.advance(record, status, result)
         return WarehouseApprovalResponse(409, result)

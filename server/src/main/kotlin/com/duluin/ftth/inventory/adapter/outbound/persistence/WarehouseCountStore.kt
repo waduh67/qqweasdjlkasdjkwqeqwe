@@ -105,4 +105,9 @@ class WarehouseCountStore(private val jdbc: WarehouseCommandJdbc) {
     fun candidates(): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_count_scope WHERE tenant_id=? ORDER BY created_at DESC,id", sql.tenant) { it.uuid("id") }
     }
+
+    fun complete(session: CountSession, sourceRevision: Long, operation: UUID, approval: UUID?) = jdbc.execute { sql ->
+        sql.update("INSERT INTO inventory_count_result(id,tenant_id,round_revision,source_revision,operation_id,approval_id) VALUES (?,?,?,?,?,?)",
+            session.view.id, sql.tenant, session.view.roundRevision, sourceRevision, operation, approval)
+    }
 }
