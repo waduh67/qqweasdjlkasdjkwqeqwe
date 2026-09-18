@@ -66,3 +66,13 @@
 - App-role physical before/after snapshots identical:ONU1/assets2/assignments1/movements18/usedMM82500. Source/runtime evidence and full XML count/timestamp archives are under task-24/area-review/DoneClaim.md, counts.json, source-hashes.txt and redacted live receipts. Prior reviewer14/78 is not counted as new closure proof.
 - Cleanup complete: owned API/containers/network/JVMs/PID/task listeners absent, three compiler/Gradle daemons stopped, area live manifest/private requests removed. Only original runtime env/lock remain; both volumes/images/data retained. No temporary schemas, reset or production/device calls.
 - safe_to_request_recheck=true; safe_to_mark_task24=false. Exact next step is targeted independent source/runtime re-review by the task24 reviewers. Task24 unchecked; task23/GPON/task25 and historical task46 caveats unchanged. LSP external-path limitation remains, actual compilation/tests supplied proof.
+
+## Independent Confirmation And Completion
+
+- Source reviewer `ses_f4fee4e43ffefMaI3Uq4c5eotK` returned `CONFIRMED` with `safe_to_mark_task24_source=true`. Runtime reviewer `ses_f4fee4d34ffemYo7phG6cKJ5lR` returned final `CONFIRMED` with `safe_to_mark_task24_runtime=true` at `f3e73959fc43766ef38996b52eccb30687307a31`.
+- Authoritative corrected source is `d5344163b5bef69b2c483ced1bc41c90c1653183`. Fresh non-overlapping runs are exact WarehouseCompatibilityIT 20 and focused area/import/portal/modularity 40, all zero failures/errors/skips. Earlier 14+78 receipts remain identity-bound compatibility/import/source-gate evidence, not fresh reruns or a full-suite claim.
+- Actual area IAM/HTTP proves own-area 200; different-area, restricted-empty, null-area, foreign and missing customers return indistinguishable 404; original JWT after area revocation returns 404 and after restoration returns 200. Legacy 37, V2 `82500 MM`/`82.500 M`, paging and portal privacy remain intact.
+- Clean build executed 19 tasks. JAR SHA256 is `ccf100eb75a7838aaa026dba5dde74ade765d7be8fe757877e32233d9e219c35`. No SQL/migration changed; live ceiling remains `V175.112`.
+- Independent cleanup found zero owned containers, JVMs, listeners, PID/private directories, manifests and temporary schemas; two volumes/images/data were retained. Historical catalog and NetworkEndToEnd failures remain task46 caveats.
+- Task24 is complete and marked `[x]`. Tasks25, 27 and 29 are dependency-ready, but none has started. Task26 depends on25, task28 on26/27, and task30 on26. No task25/later, PR, merge, full-plan or F1-F4 completion is claimed.
+- Strict clean-code and task23's documentation-backed/not-hardware-validated GPON scope remain unchanged; no hardware certification claim is introduced.
