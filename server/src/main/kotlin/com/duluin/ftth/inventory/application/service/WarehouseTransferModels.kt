@@ -10,15 +10,16 @@ import java.util.UUID
 data class TransferStock(val dimension: PostingDimension, val quantity: Long, val unit: WarehouseBaseUnit,
     val tracking: WarehouseTracking, val status: InventoryStatus, val revision: Long, val cost: ReceiptCostSnapshot?)
 data class TransferLine(val id: UUID, val source: TransferStock, val quantity: Long,
-    val received: Long = 0, val remainingIdentity: UUID? = source.dimension.stockIdentityId)
+    val received: Long = 0, val remainingIdentity: UUID? = source.dimension.stockIdentityId, val resolved: Long = 0)
 data class TransferRecord(val id: UUID, val code: String, val revision: Long, val state: WarehouseTransferState,
-    val binding: WarehouseTransferDraft, val sender: UUID, val recordedAt: Instant, val lines: List<TransferLine>) {
+    val binding: WarehouseTransferDraft, val sender: UUID, val recordedAt: Instant, val lines: List<TransferLine>,
+    val resolutionDocumentId: UUID? = null) {
     fun view(): WarehouseTransferView = WarehouseTransferView(id, code, revision, state, binding.sourceLocationId,
         binding.destinationLocationId, binding.transitLocationId, sender, binding.receiverId, binding.reason, recordedAt,
         lines.map { line -> WarehouseTransferLineView(line.id, line.source.dimension.skuId,
             line.source.dimension.stockIdentityId, line.source.unit, line.quantity.toString(), line.received.toString(),
-            (if (state == WarehouseTransferState.DRAFT) 0 else line.quantity - line.received).toString(),
-            line.remainingIdentity, line.source.dimension.condition, line.source.dimension.legalOwner) })
+            (if (state == WarehouseTransferState.DRAFT) 0 else line.quantity - line.received - line.resolved).toString(),
+            line.remainingIdentity, line.source.dimension.condition, line.source.dimension.legalOwner, line.resolved.toString()) }, resolutionDocumentId)
 }
 
 internal fun transferQuantity(value: String): Long {
