@@ -3,7 +3,7 @@ package com.duluin.ftth.inventory
 import org.assertj.core.api.Assertions.assertThat
 import tools.jackson.databind.JsonNode
 
-abstract class WarehouseTransferFixture : WarehouseReceiptHttpFixture() {
+abstract class WarehouseTransferFixture : WarehousePolicyHttpFixture() {
     protected data class TransferStock(val setup: Setup, val identity: String, val destination: String,
         val transit: String, val receiver: String)
 

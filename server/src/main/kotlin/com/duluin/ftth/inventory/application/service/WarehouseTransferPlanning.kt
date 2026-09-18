@@ -61,7 +61,8 @@ class WarehouseTransferPlanning(private val stock: WarehouseTransferStock) {
             }
             val target = current.dimension.copy(locationId = destination.id, custodianKind = custody,
                 custodianId = if (custody == OwnerKind.WAREHOUSE) destination.id else record.binding.receiverId)
-            val available = destination.issueEligible && target.condition == WarehouseCondition.SERVICEABLE && target.legalOwner == AssetLegalOwner.ISP
+            val available = line.source.status == InventoryStatus.AVAILABLE && destination.issueEligible &&
+                target.condition == WarehouseCondition.SERVICEABLE && target.legalOwner == AssetLegalOwner.ISP
             val status = if (available) InventoryStatus.AVAILABLE else InventoryStatus.QUARANTINE
             selection.lineId to move(line, current, target, status, quantity, false)
         }
