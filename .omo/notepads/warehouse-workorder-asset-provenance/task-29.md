@@ -28,3 +28,18 @@
 - Risks/remaining work: expanded rule/replay/scheduler/inbound/SQL adversarial tests, receipt-reference destination sealing, upgrade/regression, clean bootJar, actual live HTTP/restart proof and final cleanup. Existing LSP refuses external worktree paths; real compiler/test evidence is used instead.
 - All completed QA lifecycles held the host lock including owned startup/check/stop/down/private Gradle shutdown. Containers and network removed, both child volumes retained. Host lock released before coding.
 - Next action: run expanded failing-first supply and app-role snapshot probes; fix only reproduced task29 defects with forward migrations if needed.
+
+## 2026-09-18 - Expanded red and forward declaration
+
+- Expanded exact filter executed12 tests,4 failures,0 skips. Two product failures: cancelled request excluded confirmed remaining receipt supply (expected40000, actual0); pending snapshot forgery committed instead of raising. Two fixture failures: BIN creation without parent and Hibernate-wrapped SQL rejection asserted as a direct SQLException. Scheduler/repeated scan/concurrent acceptance and current-scope replay denial passed.
+- Debug hypotheses distinguished with archived XML: query state filtering erased real supply; snapshot presence guard did not validate source truth; fixture errors occurred before product behavior or despite correct SQL rejection. No debugging process/instrumentation was left running.
+- Declare before creation `V175_115_1__warehouse_replenishment_snapshot_binding.sql` (175.115.1) to bind request snapshots to actual rule/quantity and validated receiving line/destination. Only175.115 has applied in this child; no higher source version exists here. Applied175.115 remains unchanged.
+- Next action: retain the two feature failures, correct fixture setup/assertion, preserve cancelled confirmed supply, and apply the declared forward-only binding guard through isolated QA.
+
+## 2026-09-18 - Expanded verification and contract caveat
+
+- Published checkpoint `7fb8e8a6d5ea7577b2efc06d540fe32cc53ae86b`; expanded exact suite17/0 failures/0 skips. Actual generic transit fixture proves physical60000/reserved20000/available40000/inbound40000 -> request75000. A stale draft-line revision fixture error was fixed without product changes.
+- Applied175.115.1 SHA256 `223d0fb34d4b5eb693308da07f8505f6c33570e24e285a3f0dd69cfcd9e28e4f`;175.115 hash remains unchanged. Forward upgrade preserves old rule/request values without invented acceptance.
+- Explicit lock-contention test first failed with TimeoutException after8seconds. The task29 entry paths now set transaction-local lock_timeout2s and statement_timeout20s; the same test returns409. The timeout-red is retained as failure, never PASS.
+- Full selected regression executed180/2 failures/0 skips. All18 task29 tests, query15, reservation26, receipt93, authority3, material contracts7, Modularity3 and schema upgrade3 passed. Two unchanged WarehouseContractTest expectations failed: missing customerId in its ConsumeDeploymentRequest fixture and missing observation in its WarehouseMutationMetadata expected fields. Those test/contracts have zero diff from base1f056411; they were not edited or weakened. Combined run remains FAILED, not an aggregate PASS.
+- Remaining live work: exact18 rerun, clean bootJar and two real JVM HTTP sessions, physical equality for planning operations, separate real receipt/putaway stale-acceptance proof, final owned cleanup. Private task29-live.json is generated only by the legitimate integration fixture and removed after manual use.
