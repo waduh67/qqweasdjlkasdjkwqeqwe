@@ -18,11 +18,15 @@ data class WarehouseTransferRevision(val expectedRevision: Long)
 data class WarehouseTransferReceipt(val expectedRevision: Long, val evidenceReference: String,
     val lines: List<WarehouseTransferAcceptance>)
 data class WarehouseTransferAcceptance(val lineId: UUID, val quantityBase: String, val baseUnit: WarehouseBaseUnit)
+enum class TransferRemainderAction { LOST, REJECTED }
+data class WarehouseTransferDiscrepancy(val expectedRevision: Long, val action: TransferRemainderAction,
+    val destinationLocationId: UUID, val reason: String, val evidenceReference: String)
 
 data class WarehouseTransferView(val id: UUID, val code: String, val revision: Long, val state: WarehouseTransferState,
     val sourceLocationId: UUID, val destinationLocationId: UUID, val transitLocationId: UUID,
     val senderId: UUID, val receiverId: UUID, val reason: String, val recordedAt: Instant,
-    val lines: List<WarehouseTransferLineView>)
+    val lines: List<WarehouseTransferLineView>, val resolutionDocumentId: UUID? = null)
 data class WarehouseTransferLineView(val id: UUID, val skuId: UUID, val stockIdentityId: UUID,
     val baseUnit: WarehouseBaseUnit, val quantityBase: String, val receivedBase: String, val inTransitBase: String,
-    val remainingIdentityId: UUID?, val condition: WarehouseCondition, val legalOwner: AssetLegalOwner)
+    val remainingIdentityId: UUID?, val condition: WarehouseCondition, val legalOwner: AssetLegalOwner,
+    val resolvedBase: String = "0")
