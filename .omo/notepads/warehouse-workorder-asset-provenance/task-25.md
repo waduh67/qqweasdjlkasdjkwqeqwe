@@ -75,3 +75,35 @@
 - Risks/next action: complete discrepancy approval integration, expanded hostile
   and concurrency tests, serialized identities, manual socket HTTP/SQL and
   clean artifact/regression proof. This initial green is not task completion.
+
+## Checkpoint 5: discrepancy red and second migration declaration
+
+- Branch/head: `work/warehouse-task25`, live `fbf18100f68f4e8646f6b6e4ca02adf21324e846`.
+- Tests: expanded run passed 9 ordinary/adversarial/concurrent receipt cases;
+  two discrepancy fixtures initially failed at malformed location JSON caused by
+  trailing whitespace in the fixture helper. Corrected fixture now reaches
+  /discrepancy and both LOST/REJECTED cases fail 404 instead of 200.
+- Declare BEFORE creation: `V175_113_1__warehouse_transfer_discrepancy.sql`,
+  version `175.113.1`, for linked independently approved remainder documents.
+  Existing175.113 remains immutable; no higher version exists on this child.
+- Substep/next: bind an ADJUSTMENT owner narrowly to transfer remainders; normal
+  task28 disposition remains unsupported. Preserve sender/receiver independence,
+  original receipt, exact residual and approval effect/outbox/inbox linkage.
+- Cleanup: isolated stop/down succeeded before host-lock release, volumes kept.
+- Risks: shared approval event/action dispatch additions must be reconciled with
+  task27 by the integrator; no shared file edit from another child is copied.
+
+## Checkpoint 6: quarantine continuity correction
+
+- Branch/head: `work/warehouse-task25` at `fbf18100f68f4e8646f6b6e4ca02adf21324e846` plus discrepancy WIP.
+- Tests: 11 passed including LOST/REJECTED approved remainder. Added five-phase
+  rollback, partial-dispatch and revoked-token probes pass. A new rejected-stock
+  follow-on transfer reproduced AVAILABLE100000 instead of60000: original status
+  QUARANTINE was not included in destination eligibility. Correct eligibility
+  requires original AVAILABLE as well as serviceable ISP title and eligible bin.
+- Declare BEFORE creation: `V175_113_2__warehouse_transfer_quarantine_continuity.sql`
+  (`175.113.2`) to enforce that same status invariant in the retained posting graph.
+- Applied175.113 and175.113.1 remain unchanged. No higher source migrations on child.
+- Cleanup completed before releasing host lock; all volumes retained.
+- Next: rerun exact transfer plus posting/reservation/approval/modularity, then
+  packaged manual HTTP and app-role SQL. No completion claim yet.
