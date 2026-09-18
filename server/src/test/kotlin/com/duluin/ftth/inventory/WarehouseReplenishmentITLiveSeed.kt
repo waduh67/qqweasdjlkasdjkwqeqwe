@@ -15,10 +15,13 @@ class WarehouseReplenishmentITLiveSeed : WarehouseReplenishmentInboundFixture() 
         val viewer = user(scenario.token, setOf("inventory.request.view"))
         val viewerIdentity = mapper.readTree(request("GET", "/api/me", viewer.first).contentAsString)
         val foreign = prepare()
+        val foreignIdentity = mapper.readTree(request("GET", "/api/me", foreign.first).contentAsString)
         val values = mapOf("tenant" to scenario.fixture.tenant.toString(), "adminEmail" to identity.path("email").asString(),
             "viewerEmail" to viewerIdentity.path("email").asString(), "skuId" to scenario.fixture.sku.toString(),
             "locationId" to scenario.target.toString(), "foreignLocationId" to foreign.second.warehouse.toString(),
-            "ruleBody" to inboundRule(scenario), "physicalCounts" to scenario.fixture.transaction { counts() })
+            "ruleBody" to inboundRule(scenario), "physicalCounts" to scenario.fixture.transaction { counts() },
+            "staleEmail" to foreignIdentity.path("email").asString(), "staleArea" to area(foreign.first),
+            "staleSource" to foreign.second.source.toString(), "staleLocation" to foreign.second.warehouse.toString())
         assertThat(scenario.fixture.transaction { total(scenario.target) }).isEqualTo(60000)
         val runtime = Path.of(System.getProperty("user.dir")).parent.resolve(".omo/runtime")
         val file = runtime.resolve("task29-live.json")
