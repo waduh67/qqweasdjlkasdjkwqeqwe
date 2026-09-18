@@ -25,6 +25,7 @@ class WarehouseReplenishmentScan(private val cutovers: InventoryTenantCutoverApi
     private val sites: SiteReferenceApi, private val evaluation: ReplenishmentEvaluator) {
     @Transactional(timeout = 30, rollbackFor = [Exception::class])
     fun batch(): Int {
+        store.deadline()
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK).assertHeld()
         authority.lockForChange().assertHeld()
         masters.lockTopology()
