@@ -23,6 +23,7 @@ class ReplenishmentAccess(private val cutovers: InventoryTenantCutoverApi, priva
 
     fun begin(action: String, key: String, payload: String, controlPlane: Boolean = false): ReplenishmentCommand {
         receiptKey(key)
+        store.deadline()
         val fence = cutovers.lockForCommand(cutovers.read().epoch,
             if (controlPlane) WarehouseOperationClass.CONTROL_PLANE else WarehouseOperationClass.ORDINARY_STOCK)
         authority.lockForChange().assertHeld()
@@ -40,8 +41,11 @@ class ReplenishmentAccess(private val cutovers: InventoryTenantCutoverApi, priva
         return ReplenishmentCommand(action, key, hash, fence.snapshot.epoch, current, replay)
     }
 
-    fun reader(mutate: Boolean = false): CurrentAuthority = authority.lockCurrent().also {
-        policy.permission(it, if (mutate) "inventory.request.manage" else "inventory.request.view")
+    fun reader(mutate: Boolean = false): CurrentAuthority {
+        store.deadline()
+        return authority.lockCurrent().also {
+            policy.permission(it, if (mutate) "inventory.request.manage" else "inventory.request.view")
+        }
     }
 
     fun location(id: UUID, current: CurrentAuthority) = policy.location(id, current)
