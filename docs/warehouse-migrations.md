@@ -1,5 +1,15 @@
 # Migrasi dan lingkungan QA warehouse
 
+## Reservasi V175.147: payload event kehilangan pinjaman
+
+146 applied22:46:28.708 JKT, immutable: `d7126fe6d9ab06ef9415d3ebbebf86de03193a142359d7db31c0bd6c8968f837`.
+Draft, replay, listing, approval request dan self-denial sudah terlewati. Commit
+efek ditolak karena144 membandingkan payload outbox dengan response approval,
+sedangkan posting owner menyimpan snapshot posting/legs. Slot147 dicadangkan
+sebelum pembuatan untuk membandingkan payload dengan exact snapshot ledger itu.
+Tidak mengubah kardinalitas, approval, histori atau validasi dimensi stok.
+
+
 ## Reservasi V175.146: perbandingan JSON bukti kehilangan
 
 145 telah diterapkan; jalur draft sekarang mencapai pembandingan bukti pada fungsi143.

@@ -1,5 +1,28 @@
 # Task28 — independent loss, scrap and compensation (in progress)
 
+## Task28 lost-loan outbox binding fix — 15-case validation running
+
+20bb5ce9 is published. asset-loss-evidence-fixed executed5 tests/1 failure,
+0 errors/skips,1m56s.146 applied22:46:28.708 JKT, immutable: d7126fe6d9ab06ef9415d3ebbebf86de03193a142359d7db31c0bd6c8968f837.
+LOAN draft/replay/get/list, policy-derived approval request and requester403 passed.
+The checker effect reached COMMIT but rolled back because144 compared the outbox
+payload with the approval response. PostingDocuments correctly emits the physical
+posting/legs snapshot instead. SALE rejection and3 modularity tests passed.
+
+147 was reserved before creation and changes that comparison to the exact expected
+posting JSON derived from the two actual ledger legs, including identity, custody,
+condition, title, quantity, unit, document line and endpoint; no approval/stock/episode
+guard was removed. Actual source validation and all existing ledger rows remain.
+
+Current .omo/runtime/asset-loss-guards.sh / .log selects WarehouseAssetLoss*IT
+(2 primary journeys +10 guards) and ModularityTests3, expected15. Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/asset-loss-guards/xml;
+private DB log asset-loss-guards-database.log. Do NOT claim147 applied or tests green
+until execution confirms.148 next unused after147 applies. All143–146 immutable.
+When these pass, run the relevant removal/return/compensation regressions, persist
+sanitized verification and assess task28 acceptance before marking complete.
+Whole-plan goal remains active;30–48/F1–F4 pending. No main merge/deploy/reset.
+
 ## Task28 active-loan loss query fixes — five-case verification running
 
 0200fecf is published. Its asset-loss-effect run executed5 tests/2 failures,2m1s.
