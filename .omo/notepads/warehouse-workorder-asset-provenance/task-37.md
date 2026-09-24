@@ -1,3 +1,14 @@
+## Transfer recovery UI verified; backend run in progress
+
+Frontend permits report replacement only after server recovery state matches the exact
+transfer id/revision/resolution document. Old reports remain linked in history.
+14 tests in transfer UI/API suites passed (6.22s), TypeScript and targeted oxlint passed.
+Initial two new UI tests used a nonexistent fixture id; corrected to existing allocation
+UUID before the green rerun. Backend run is pinned to 28b9b415, 9 tests selected;
+wrapper .omo/runtime/transfer-recovery-server.sh; log transfer-recovery-server.log.
+Approval evidence additions currently in the worktree are not part of that run.
+Whole task37 remains open pending evidence and real browser discrepancy acceptance.
+
 ## Transfer discrepancy recovery checkpoint — verification pending
 
 2026-09-25: receiver may create a new revision-bound discrepancy source when the old

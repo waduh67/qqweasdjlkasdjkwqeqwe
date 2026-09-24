@@ -18,6 +18,7 @@ function partial(): WarehouseTransfer { const prior = shipped(); return { ...pri
 function read(path: string, transfer = transferFixture()) {
   if (path.endsWith('/details')) return response(transferDetailsFixture(transfer))
   if (path.includes('/history/page?')) return response(page([transfer]))
+  if (path.endsWith('/discrepancy/recovery')) return response({ transferId: transfer.id, revision: transfer.revision, resolutionDocumentId: transfer.resolutionDocumentId, canReport: false, block: 'PRIOR_APPROVAL_ACTIVE' })
   throw new Error(`Unexpected read ${path}`)
 }
 beforeEach(() => {
@@ -206,4 +207,51 @@ it('reads another server history page without treating current labels as new sto
   fireEvent.click(within(history).getByRole('button', { name: 'Berikutnya' }))
   await within(history).findByRole('heading', { name: 'Revisi 0 · Draf' })
   expect(fetch.mock.calls.some(([path]) => path.endsWith('/history/page?page=1&size=25'))).toBe(true)
+})
+
+it('replaces a rejected discrepancy from the actual transfer revision and keeps the old history link', async () => {
+  mocks.user.id = id.receiver
+  const original = { ...partial(), state: 'DISCREPANCY' as const, revision: 3, resolutionDocumentId: id.evidence }
+  let current = original
+  const lost = { ...transferLocations[0], id: id.evidence, code: 'LOST', name: 'Barang hilang', kind: 'LOST', issueEligible: false }
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'POST') { current = { ...original, revision: 4, resolutionDocumentId: id.allocation }; return response(current) }
+    if (path.includes('/locations?')) return response(page([lost]))
+    if (path.includes('/history/page?')) return response(page([current, ...(current.revision === 4 ? [original] : [])]))
+    if (path.endsWith('/discrepancy/recovery')) return response({ transferId: current.id, revision: current.revision, resolutionDocumentId: current.resolutionDocumentId, canReport: true, block: null })
+    return read(path, current)
+  }); vi.stubGlobal('fetch', fetch); show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Perbaiki laporan selisih' }))
+  expect(screen.getByRole('textbox', { name: 'Alasan selisih' })).toHaveProperty('value', '')
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Tujuan penanganan selisih' })).not.toHaveProperty('disabled', true))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Tujuan penanganan selisih' }), { target: { value: id.evidence } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Alasan selisih' }), { target: { value: 'Hasil penelusuran diperbarui' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Referensi bukti transfer' }), { target: { value: 'BA-REVISI' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau selisih' }))
+  expect((await screen.findByRole('dialog', { name: 'Konfirmasi selisih transfer' })).textContent).toContain('Revisi 3')
+  fireEvent.click(screen.getByRole('button', { name: 'Catat selisih' }))
+  await waitFor(() => expect(screen.getByRole('link', { name: 'Buka persetujuan gudang' })).toHaveProperty('href', expect.stringContaining(id.allocation)))
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
+  expect(writes).toHaveLength(1)
+  expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ expectedRevision: 3, action: 'LOST', destinationLocationId: id.evidence, reason: 'Hasil penelusuran diperbarui', evidenceReference: 'BA-REVISI' })
+  fireEvent.click(screen.getByText('Riwayat transfer'))
+  expect(await screen.findByRole('link', { name: 'Laporan selisih pada revisi 3' })).toHaveProperty('href', expect.stringContaining(id.evidence))
+  const row = screen.getAllByRole('row').find(row => row.textContent?.includes('Identitas asal:'))!
+  expect(within(row).getByText('60,000 m')).toBeTruthy(); expect(within(row).getByText('40,000 m')).toBeTruthy()
+})
+
+it('does not offer replacement while approval is active or recovery refers to another revision', async () => {
+  mocks.user.id = id.receiver
+  const current = { ...partial(), state: 'DISCREPANCY' as const, revision: 3, resolutionDocumentId: id.evidence }
+  let stale = false
+  const fetch = vi.fn(async (path: string) => {
+    if (path.endsWith('/discrepancy/recovery') && stale) return response({ transferId: current.id, revision: 4, resolutionDocumentId: id.allocation, canReport: true, block: null })
+    return read(path, current)
+  }); vi.stubGlobal('fetch', fetch)
+  const first = show()
+  await screen.findByText('Laporan masih memiliki persetujuan aktif. Buka persetujuannya untuk memeriksa keputusan atau masa berlakunya.')
+  expect(screen.queryByRole('button', { name: 'Perbaiki laporan selisih' })).toBeNull()
+  first.unmount(); stale = true; show()
+  await screen.findByText('Transfer berubah. Muat ulang sebelum memperbaiki laporan.')
+  expect(screen.queryByRole('button', { name: 'Perbaiki laporan selisih' })).toBeNull()
 })

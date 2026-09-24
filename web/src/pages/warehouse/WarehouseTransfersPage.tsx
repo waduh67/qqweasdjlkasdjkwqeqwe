@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
-import { dispatchTransfer, getTransfer, listTransfers, transferHistory, type TransferDetails, type TransferFilter, type WarehouseTransfer } from '@/api/warehouse/transfers'
+import { dispatchTransfer, getTransfer, getTransferRecovery, listTransfers, transferHistory, type TransferDetails, type TransferFilter, type WarehouseTransfer } from '@/api/warehouse/transfers'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
@@ -75,6 +75,8 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
     {transfer.lines.some(line => line.legalOwner === 'CUSTOMER') && <p role="status">Barang milik pelanggan tetap milik pelanggan; penerimaan tidak menjadikannya stok tersedia.</p>}
     {transfer.resolutionDocumentId && <div className="stack"><p style={{ overflowWrap: 'anywhere' }}>Dokumen penanganan selisih: {transfer.resolutionDocumentId}</p><p>Pengirim dan penerima tidak dapat menyetujui selisihnya sendiri. Jumlah selesai di tabel hanya bertambah setelah keputusan dibukukan.</p>
       {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(transfer.resolutionDocumentId)}`}>Buka persetujuan gudang</Link>}</div>}
+    {transfer.state === 'DISCREPANCY' && transfer.lines.some(line => BigInt(line.inTransitBase) > 0n) && manage && receiver && can('inventory.approval.request') && can('inventory.location.view') &&
+      <DiscrepancyRecovery transfer={transfer} reload={reload} onReport={() => setAction('discrepancy')} />}
   </section>
     <DataTable presentation="warehouse" rows={transfer.lines} rowKey={line => line.id} columns={[
       { key: 'item', header: 'Barang', cell: line => <span>{transferLineLabel(details, line.id)}<p className="muted" style={{ overflowWrap: 'anywhere' }}>Identitas asal: {line.stockIdentityId}</p></span> },
@@ -92,9 +94,28 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
   </>
 }
 function TransferHistory({ details }: { details: TransferDetails }) {
+  const { can } = useCan()
   const id = details.transfer.id
   const [page, setPage] = useState(0), loader = useCallback(() => transferHistory(id, page), [id, page]), result = useWarehouseQuery(loader)
   return <details className="card"><summary>Riwayat transfer</summary><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section key={row.revision}>
     <h3>Revisi {row.revision} · <WarehouseStatus status={row.state} /></h3><p><WarehouseTime value={row.recordedAt} /></p><ul>{row.lines.map(line => <li key={line.id}>{transferLineLabel(details, line.id)}: diterima <WarehouseQuantity value={line.receivedBase} unit={line.baseUnit} />, dalam perjalanan <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /></li>)}</ul>
+    {row.resolutionDocumentId && can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(row.resolutionDocumentId)}`}>Laporan selisih pada revisi {row.revision}</Link>}
   </section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></details>
+}
+
+function DiscrepancyRecovery({ transfer, reload, onReport }: { transfer: WarehouseTransfer; reload: () => void; onReport: () => void }) {
+  const loader = useCallback(() => getTransferRecovery(transfer.id), [transfer.id]), result = useWarehouseQuery(loader)
+  const blocks: Record<string, string> = {
+    PRIOR_APPROVAL_ACTIVE: 'Laporan masih memiliki persetujuan aktif. Buka persetujuannya untuk memeriksa keputusan atau masa berlakunya.',
+    DISCREPANCY_ALREADY_POSTED: 'Laporan sudah dibukukan. Muat ulang transfer untuk melihat jumlah yang diselesaikan.',
+    NO_UNRESOLVED_REMAINDER: 'Tidak ada sisa perjalanan untuk dilaporkan ulang.',
+    CUTOVER_REQUIRED: 'Transaksi gudang belum diaktifkan.',
+    RECIPIENT_REQUIRED: 'Hanya penerima tercatat yang dapat memperbaiki laporan.',
+    MANAGE_PERMISSION_REQUIRED: 'Perbaikan laporan memerlukan izin kelola transfer dan ajukan persetujuan.',
+  }
+  return <WarehouseState {...result}>{data => data.transferId !== transfer.id || data.revision !== transfer.revision || data.resolutionDocumentId !== transfer.resolutionDocumentId
+    ? <div role="alert"><p>Transfer berubah. Muat ulang sebelum memperbaiki laporan.</p><Button onClick={reload}>Muat ulang laporan selisih</Button></div>
+    : data.canReport ? <div className="stack"><p>Laporan yang belum diajukan, ditolak, atau kedaluwarsa dapat diganti dengan alasan dan bukti baru. Riwayat lama tetap tersimpan; stok tetap di transit sampai laporan baru disetujui.</p>
+      <Button onClick={onReport}>Perbaiki laporan selisih</Button></div>
+      : <p role="status">{blocks[data.block ?? ''] ?? 'Perbaikan laporan belum tersedia. Muat ulang dan periksa persetujuannya.'}</p>}</WarehouseState>
 }

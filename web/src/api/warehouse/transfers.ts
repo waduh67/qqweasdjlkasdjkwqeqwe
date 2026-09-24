@@ -1,5 +1,5 @@
 import { timestamp } from './approvals'
-import { array, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
+import { array, boolean, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { baseUnit } from './materialModels'
 import { CONDITIONS, LEGAL_OWNERS } from './models'
 import type { BaseUnit } from './quantity'
@@ -59,9 +59,17 @@ export function transferDetails(value: unknown, path = 'details') {
 }
 export type TransferDetails = ReturnType<typeof transferDetails>
 
+export function transferRecovery(value: unknown, path = 'recovery') {
+  const row = record(value, path), canReport = boolean(row.canReport, path)
+  const block = nullable(row.block, text, path), resolutionDocumentId = nullable(row.resolutionDocumentId, uuid, path)
+  if (canReport !== (block === null) || (canReport && resolutionDocumentId === null)) throw new WarehouseDataError(path)
+  return { transferId: uuid(row.transferId, path), revision: integer(row.revision, path), resolutionDocumentId, canReport, block }
+}
+
 const root = '/api/v1/warehouse/transfers'
 export const listTransfers = (filter: TransferFilter = {}) => query(`${root}${parameters({ ...filter })}`, pageOf(transferDetails))
 export const getTransfer = (id: string) => query(`${root}/${uuid(id)}/details`, transferDetails)
+export const getTransferRecovery = (id: string) => query(`${root}/${uuid(id)}/discrepancy/recovery`, transferRecovery)
 export const transferHistory = (id: string, page = 0) => query(`${root}/${uuid(id)}/history/page${parameters({ page, size: 25 })}`, pageOf(transferView))
 export const createTransfer = (input: TransferDraft) => command(root, 'POST', input, transferView)
 export const dispatchTransfer = (id: string, expectedRevision: number) => command(`${root}/${uuid(id)}/dispatch`, 'POST', { expectedRevision }, transferView)
