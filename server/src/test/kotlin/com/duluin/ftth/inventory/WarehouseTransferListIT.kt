@@ -52,7 +52,7 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
             val scope = "/api/v1/warehouse/settings/scopes/${viewer.second}/$location"
             assertThat(request("PUT", scope, admin, """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
             assertThat(list(viewer.first, "page=0&size=1").path("totalElements").asLong()).isZero()
-            assertThat(request("GET", "/api/v1/warehouse/transfers/$firstId/details", viewer.first).status).isEqualTo(403)
+            assertThat(request("GET", "/api/v1/warehouse/transfers/$firstId/details", viewer.first).status).isEqualTo(404)
             assertThat(request("PUT", scope, admin, """{"expectedRevision":2,"active":true}""").status).isEqualTo(200)
         }
         assertThat(list(tenant()).path("totalElements").asLong()).isZero()
@@ -114,7 +114,7 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
         assertThat(list(admin, "locationId=$target&state=DISCREPANCY").path("totalElements").asLong()).isEqualTo(1)
         assertThat(list(viewer.first).path("totalElements").asLong()).isZero()
         for (suffix in listOf("", "/details", "/history"))
-            assertThat(request("GET", "/api/v1/warehouse/transfers/$id$suffix", viewer.first).status).isEqualTo(403)
+            assertThat(request("GET", "/api/v1/warehouse/transfers/$id$suffix", viewer.first).status).isEqualTo(404)
         val scope = "/api/v1/warehouse/settings/scopes/${viewer.second}/$target"
         assertThat(request("PUT", scope, admin, """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
         assertThat(list(viewer.first).path("totalElements").asLong()).isEqualTo(1)

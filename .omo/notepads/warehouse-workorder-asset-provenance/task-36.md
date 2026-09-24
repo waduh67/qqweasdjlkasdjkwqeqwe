@@ -1,5 +1,23 @@
 # Task36 — transfer / return / repair UI investigation
 
+## Task36 typed transfer commands green; scope assertion correction
+
+Server @496d1d85 compiled and ran21tests:19passed,2failed only because new scope
+assertions expected403 while existing WarehouseMasterService intentionallyreturns
+404 NOT_FOUND for hidden locations/areas. Confirmed source lines133/154, corrected
+those assertions only (missing permission still403). All18existingtransfer cases
+passed, plusnewinactive-receiver/current-name/immutable-response case. Cleanupdone.
+Rerun3newdiscoverycases to reach remaining scope-restoration checks; production
+backend unchanged from496d1d85. No stale XML used as proof.
+
+Web typed transfers/read wrapper/captured commands and exact draft/partialreceipt
+builders added.6meaningful cases+TypeScript+focusedoxlint passed. CoversDRAFTzero,
+60/40 transit vsresolved conservation, referencebinding, response-loss samebytes/key,
+sourceBalanceId, allocated/wrongcustodian/overreceipt, distinctlocationsandreceiver.
+No Transfer page yet. NEXT backend3case outcome; build actual Transfer page/editor,
+then return-source discovery/inspection/repair and desktop/mobile100/60/40 journey.
+Task35complete;36–48/F1–F4 active;no migrations.
+
 ## Task36 transfer discovery compilation correction
 
 Initial server run @7fa9af4c failed production compile: validatePage was private
