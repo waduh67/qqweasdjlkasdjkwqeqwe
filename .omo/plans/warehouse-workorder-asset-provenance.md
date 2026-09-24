@@ -389,7 +389,7 @@ All tasks inherit C1–C11, the dependency matrix, tenant/auth/idempotency rules
   Do/accept: C8/C9 route groups and permission-aware navigation, typed runtime DTO parsing matching server contracts, reusable quantity/serial/line table/status/history/dialog controls, original idempotency key retained across retry. Configure real API proxy+readiness assertions, desktop/mobile projects, no warehouse route mocks. Update web/DESIGN.md primitive/state specs before screens, no new visual language.
   QA: `W(src/api/warehouse)` malformed DTO/decimal/retry tests; `B(setup.spec.ts)` signup/readiness and approver-only navigation; unsupported route fails explicitly instead of rendering empty success. Save E(31). Commit: `feat(web): pisahkan navigasi gudang dan fondasi transaksi`.
 
-- [ ] 32. Warehouse setup/master screens: make an empty tenant usable to bootstrap real operations — expect visible create/edit/archive paths.
+- [x] 32. Warehouse setup/master screens: make an empty tenant usable to bootstrap real operations — expect visible create/edit/archive paths.
   References: R12,R13,task07; NEW `web/src/pages/warehouse/WarehouseCatalogPage.tsx` and colocated tests.
   Do/accept: SKU/UoM/model/tracking, warehouse/bin hierarchy, supplier, user-warehouse scope, setup checklist and contextual create actions. Scope and missing-role explanation visible; referenced/stocked master archive blocked. Barcode/manual lookup duplicate errors actionable. Display names not UUIDs.
   QA: `W(WarehouseCatalogPage)` happy setup and readonly/archive/conflict states; `B(setup.spec.ts)` creates all prerequisites without SQL inventory seed. Save E(32). Commit: `feat(web): lengkapi pengaturan barang dan lokasi gudang`.

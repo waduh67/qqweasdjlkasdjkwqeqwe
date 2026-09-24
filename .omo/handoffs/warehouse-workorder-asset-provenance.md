@@ -1,5 +1,17 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task32 COMPLETE —76 unit tests and4 real browser cases green
+
+catalog-layout-fixed against99868d60:4passed,0failed/skipped/flaky. Real desktop and
+375px touch journeys cover full empty-tenant setup, master edits/archive/duplicate,
+user area/scope grants and restricted read-only access. Both screenshots reviewed:
+mobile labels match values, action buttons reachable, correct warehouse breadcrumbs,
+no horizontal document overflow. Portable task32/verification.json and reviewed
+synthetic screenshots committed.76unit (61warehouse+15DataTable), TS/lint/bootJar/web
+build passed. Owned processes/containers/network stopped; volumes retained.
+Task32 checkbox complete. Continue33–48/F1–F4; task33 receipt contracts in task-33.md.
+Goal ACTIVE. No migrations changed;148 unused and177/178 reservedtask43.
+
 ## Task32 functional setup green; mobile table and breadcrumb refinement
 
 catalog-area-fixed against beecbc60:4 passed,0 failed/skipped/flaky,59.084s.

@@ -1,0 +1,69 @@
+{
+  "task": 32,
+  "status": "complete",
+  "verifiedAt": "2026-09-24T17:25:52.461316+00:00",
+  "sourceCommit": "99868d602c6543c1510de0a26fb1fbdc15168d38",
+  "browserCommand": "scripts/warehouse/qa.sh browser setup.spec.ts",
+  "browserStats": {
+    "startTime": "2026-09-24T17:24:02.031Z",
+    "duration": 61037.851,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "browserCases": [
+    {
+      "project": "warehouse-desktop",
+      "name": "real signup, independent approver navigation and explicit unavailable route",
+      "status": "passed",
+      "durationMs": 6616
+    },
+    {
+      "project": "warehouse-desktop",
+      "name": "empty tenant creates, edits and archives warehouse masters and grants scoped read-only access through UI",
+      "status": "passed",
+      "durationMs": 23282
+    },
+    {
+      "project": "warehouse-mobile",
+      "name": "real signup, independent approver navigation and explicit unavailable route",
+      "status": "passed",
+      "durationMs": 5289
+    },
+    {
+      "project": "warehouse-mobile",
+      "name": "empty tenant creates, edits and archives warehouse masters and grants scoped read-only access through UI",
+      "status": "passed",
+      "durationMs": 22483
+    }
+  ],
+  "browserRawSha256": "4fa2242a4d780f0d585ca941444d2c57cb09444de04d671065fdfe405c7a0fa5",
+  "unit": {
+    "passed": 76,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "61 warehouse tests and15 DataTable regression tests"
+  },
+  "build": "server bootJar, web TypeScript/Vite and lint PASS",
+  "assertions": [
+    "Real UI signup, explicit area/self access, warehouse/bin/quarantine, cable and serialized SKU, supplier",
+    "Edit master revisions; referenced root archive409; unused SKU archived",
+    "Duplicate code retains editable draft",
+    "Named user scope grant; scoped reader sees parent and child only, no mutations",
+    "Warehouse breadcrumbs, mobile labelled rows and action target >=24px",
+    "No document horizontal overflow; reviewed synthetic screenshots"
+  ],
+  "screenshots": {
+    ".omo/evidence/warehouse-workorder-asset-provenance/task32/warehouse-desktop-catalog.png": "df14061c584da9c1272d5b5629465a04f6c412e1c6823fedb9305e62950e8cba",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task32/warehouse-mobile-catalog.png": "4b4b8a8b719e9b82ea9891016fc11d15fd5abf664507257357547e8001503cb1"
+  },
+  "environment": {
+    "database": "warehouse_e2e",
+    "role": "warehouse_app NOSUPERUSER NOBYPASSRLS",
+    "warehouseMocks": false,
+    "sqlInventorySeeds": false
+  },
+  "cleanup": "Owned processes/containers/network stopped; volumes retained",
+  "remainingScope": "33\u201348/F1\u2013F4"
+}
