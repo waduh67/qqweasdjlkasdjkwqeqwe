@@ -1,5 +1,42 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Supplier repair implementation checkpoint — not yet verified
+
+Source3bde6567 passed the complete return suite:10 tests/5 suites/zero failures,
+errors or skips in2m37s. Archive task26/position-correction-second/xml. This
+includes unposted rewrite rejection23514, atomic delete/rebuild with no movement,
+17.5m residual, revoked replay, LOAN/SALE inspection and actual new-customer reuse.
+The supplier repair baseline then failed2/2 at missing repair-dispatch route404,
+after legitimate LOAN/SALE recovery; archive task26/repair-red/xml.
+
+Current implementation adds repair-dispatch/repair-receive on the linked RETURN,
+plus a sealed repair case, vendor custody, same-serial receipt back to quarantine,
+immutable original title and separate post-repair inspection. The nullable repair
+view field is omitted when absent so earlier persisted JSON stays byte-compatible.
+V175.121 was declared before creation; pending first application. No earlier SQL
+bytes changed. Read actual runner output before treating121 as unapplied/editable.
+
+Current command `.omo/runtime/return-repair-green.sh` runs supplier repair plus
+all10 return tests; matching log; archive task26/repair-green/xml. Compilation
+and tests are pending. If a migration has applied, any correction must use a
+new declared version. No repair success/whole-task26 closure is claimed here.
+Still required: repair access/SQL attacks, supplier physical replacement,
+original-customer RMA, independently approved reacquisition, bounded lists,
+material obligation closure, full regressions and packaged HTTP.
+
+
+## Supplier repair declaration and failing-first scenario
+
+Reserve V175_121__warehouse_supplier_repair.sql BEFORE SQL creation.
+WarehouseSupplierRepairIT exercises legitimate LOAN/SALE removal and inspection,
+vendor outbound custody, exact replay, wrong-device denial, physical receipt
+back into quarantine and a separate reset/inspection. Title and old assignment
+must survive. `.omo/runtime/return-repair-red.sh` is queued behind the current
+return regression; archive task26/repair-red/xml. Read its actual result before
+claiming a missing-feature failure. This does not yet test original-customer RMA
+delivery or supplier replacement. The draft implementation must not contaminate
+the baseline test resources before its compile/runtime snapshot is taken.
+
 ## Position correction checkpoint — validation in progress
 
 V175.120 applied, SHA256 `c76419bc97d7fecd225f6f5e9e393f8b71ab92ffa308e3b7488426e736bed9d0`. Never edit its bytes.

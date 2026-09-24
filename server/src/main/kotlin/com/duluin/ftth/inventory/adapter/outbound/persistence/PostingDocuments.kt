@@ -146,6 +146,7 @@ internal class PostingDocuments(private val sql: PostingSql) {
             MovementKind.CONSUME, MovementKind.DEPLOY -> WarehouseEventKind.USE_POSTED
             MovementKind.RECEIVE -> WarehouseEventKind.RECEIVED
             MovementKind.RETURN -> WarehouseEventKind.RETURN_RECEIVED
+            MovementKind.REPAIR -> if (command.nextState == "REPAIR") WarehouseEventKind.DISPATCHED else WarehouseEventKind.RETURN_RECEIVED
             MovementKind.TITLE_TRANSFER -> WarehouseEventKind.HANDOVER_ACCEPTED
             MovementKind.TITLE_CORRECTION -> WarehouseEventKind.TITLE_REACQUIRED
             MovementKind.COUNT_VARIANCE -> WarehouseEventKind.COUNT_POSTED

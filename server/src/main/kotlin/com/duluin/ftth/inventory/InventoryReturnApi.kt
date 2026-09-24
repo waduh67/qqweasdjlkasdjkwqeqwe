@@ -1,5 +1,6 @@
 package com.duluin.ftth.inventory
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import java.time.Instant
 import java.util.UUID
 
@@ -21,4 +22,5 @@ data class WarehouseReturnView(val id: UUID, val revision: Long, val state: Ware
     val origin: WarehouseReturnOrigin, val sourceDocumentId: UUID, val stockIdentityId: UUID,
     val skuId: UUID, val lotId: UUID?, val baseUnit: WarehouseBaseUnit, val quantityBase: String,
     val locationId: UUID, val condition: WarehouseCondition, val legalOwner: AssetLegalOwner,
-    val receivedBy: UUID, val recordedAt: Instant, val inspection: WarehouseReturnInspection? = null)
+    val receivedBy: UUID, val recordedAt: Instant, val inspection: WarehouseReturnInspection? = null,
+    @get:JsonInclude(JsonInclude.Include.NON_NULL) val repair: WarehouseRepairProgress? = null)

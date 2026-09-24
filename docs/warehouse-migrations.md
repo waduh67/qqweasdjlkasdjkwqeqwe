@@ -47,6 +47,11 @@ setelah tes app-role membuktikan perubahan kondisi aset+saldo tanpa posting bisa
 lolos sesudah retur sah. Kelanjutan recovery wajib cocok dengan saldo ledger
 APPLIED per dimensi dan posisi aset tunggal; rebuild proyeksi tetap diperbolehkan.
 Seluruh byte175.119 dan sebelumnya tetap immutable.
+`V175_121__warehouse_supplier_repair.sql` dicadangkan sebelum pembuatan untuk
+case servis vendor yang terikat retur, custody outbound/inbound aset yang sama,
+request dan riwayat immutable, serta inspeksi ulang setelah barang kembali.
+Title pelanggan tetap CUSTOMER. Penggantian perangkat dan izin RMA kembali ke
+pelanggan asal akan ditambahkan tersendiri;175.120 tetap immutable.
 
 ## Wave 5: reservasi paralel task25, task27, task29
 

@@ -18,7 +18,7 @@ import java.util.UUID
 class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val locations: WarehouseReceiptService,
     private val masters: WarehouseMasterStore, private val origins: WarehouseReturnOrigins,
-    private val store: WarehouseReturnStore, private val operations: WarehouseOperationStore,
+    private val store: WarehouseReturnStore, private val repairs: WarehouseRepairStore, private val operations: WarehouseOperationStore,
     private val posting: WarehousePosting) : InventoryReturnApi {
     private val mapper = jacksonObjectMapper()
 
@@ -86,7 +86,7 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
             replay(prior, current, cutover, canonical, id)
             return prior.receipt
         }
-        if (record.view.revision != request.expectedRevision || record.view.state == WarehouseReturnState.ACCEPTED)
+        if (record.view.revision != request.expectedRevision || record.view.state != WarehouseReturnState.RECEIVED_IN_INSPECTION)
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         val expected = record.source.dimension.copy(locationId = record.view.locationId, custodianId = record.view.locationId,
             custodianKind = OwnerKind.WAREHOUSE, condition = record.view.condition)
@@ -118,6 +118,7 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
                 PostingLeg(LegDirection.IN, target, quantity, id, if (released) InventoryStatus.AVAILABLE else InventoryStatus.QUARANTINE)),
             events = listOf(PostingEvent(UUID.randomUUID(), WarehouseEventKind.RETURN_RECEIVED, operation.originalBody))), cutover)
         operations.storeIdentity(operation.id, canonical.json, current.fence.identity.sessionId)
+        repairs.inspected(view)
         return receipt(view, operation)
     }
 

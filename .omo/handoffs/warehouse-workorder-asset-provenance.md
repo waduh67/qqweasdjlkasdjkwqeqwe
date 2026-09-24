@@ -2,23 +2,23 @@
 
 ## Active task:26 —2026-09-24
 
-- Actual loan reuse to a new customer passed1; revoked access/replay passed1.
-  A separate app-role probe proved unposted asset+balance rewrites were accepted.
-- This checkpoint adds declared/applied V175.120, requiring the recovered asset
-  and positive balance to match APPLIED ledger quantities/status. It preserves
-  projection rebuild (new test passed); prior migrations remain immutable.
-- First corrected integrity run rejected SQL23514 but the test's JDBC exception
-  handling caused outer UnexpectedRollbackException. The test now catches and
-  rolls back inside doReturningWork; no production weakening. Complete rerun
-  `.omo/runtime/return-position-correction-second.sh` queued/running under lock.
-  Check matching log and `task26/position-correction-second/xml` for actual counts.
-- Last broad regression:179 tests/7 suites/0 failures/errors/skips at6868f1a8.
-  This guard still needs complete regression evidence. Read latest task-26.md.
-- Next: supplier repair/vendor replacement, original-customer sold RMA, approved
-  reacquisition, scoped list, material closure and packaged proof, then28/30–48
-  and final gates.26 is OPEN;25/27/29 closed atff530d47.
-- Work on work/warehouse-completion, push ordinary recovery checkpoints to
-  feat/warehouse-workorder. No main deployment, database reset or agent delegation.
+- Source3bde6567 passed10 return tests in5 suites, zero failures/errors/skips.
+  Covers source/title/reset,17.5m remnant, revoked replay, real second installation,
+  unposted physical rewrite rejection23514 and atomic ledger projection rebuild.
+- Supplier repair baseline failed2/2 at absent dispatch route404 after legitimate
+  recovery. Current checkpoint implements vendor outbound/inbound on the original
+  return, sealed repair case and separate reset/inspection. Not yet verified.
+- Declared V175.121 is in the current normal compile/test run; inspect actual
+  output before deciding whether it is applied.175.120 and earlier are immutable.
+- Host command `.omo/runtime/return-repair-green.sh`, matching log, archive
+  `task26/repair-green/xml`: supplier repair and all return suites. Capture final
+  counts and correct actual failures with forward SQL once applied.
+- Next: repair scoped replay/adversarial guards, physical vendor replacement,
+  original-customer sold RMA, approved reacquisition, bounded lists, material
+  closure, regression and packaged proof.26 stays OPEN;25/27/29 closed atff530d47.
+- Continue work/warehouse-completion and ordinary push to feat/warehouse-workorder.
+  Whole plan still includes28/30–48/F1–F4. No main deployment/reset/delegation.
+  Read latest task-26.md entry; historical status labels below do not override it.
 
 ## Current integration checkpoint: 2026-09-24
 

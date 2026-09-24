@@ -8,7 +8,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/warehouse/returns")
-class WarehouseReturnController(private val returns: InventoryReturnApi) {
+class WarehouseReturnController(private val returns: InventoryReturnApi, private val repairs: InventoryReturnRepairApi) {
     @PostMapping
     fun receive(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(returns.receive(WarehouseReceiptJson.decode(body, WarehouseReturnIntake::class.java), WarehouseMutationMetadata(key)))
@@ -16,6 +16,14 @@ class WarehouseReturnController(private val returns: InventoryReturnApi) {
     @PostMapping("/{id}/inspect")
     fun inspect(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(returns.inspect(id, WarehouseReceiptJson.decode(body, WarehouseReturnInspection::class.java), WarehouseMutationMetadata(key)))
+
+    @PostMapping("/{id}/repair-dispatch")
+    fun repairDispatch(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
+        response(repairs.dispatch(id, WarehouseReceiptJson.decode(body, WarehouseRepairDispatch::class.java), WarehouseMutationMetadata(key)))
+
+    @PostMapping("/{id}/repair-receive")
+    fun repairReceive(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
+        response(repairs.receive(id, WarehouseReceiptJson.decode(body, WarehouseRepairReceipt::class.java), WarehouseMutationMetadata(key)))
 
     @GetMapping("/{id}") fun get(@PathVariable id: UUID): WarehouseReturnView = returns.get(id)
     @GetMapping("/{id}/history") fun history(@PathVariable id: UUID): List<WarehouseReturnView> = returns.history(id)
