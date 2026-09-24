@@ -59,6 +59,13 @@ retur terikat yang telah diterima/diinspeksi, tanpa menghapus returned_base atau
 mem-posting stok lagi. Snapshot dan guard penutupan tetap memeriksa sumbernya.
 Seluruh versi sampai175.121 sudah diterapkan dan tetap immutable.
 
+`V175_123__warehouse_deployed_material_settlement.sql` dicadangkan sebelum
+pembuatan setelah tiga tes membuktikan used perangkat terpasang masih0 dan
+penutupan dapat menghilangkan semua baris sejarah. Penggunaan serial dihitung
+sekali dari hasil deployment APPLIED yang terikat issue; handover title tidak
+menambah penggunaan. Snapshot lifecycle baru wajib memuat tepat seluruh kunci
+sumber material saat transaksi ditutup.175.122 sudah diterapkan dan immutable.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada

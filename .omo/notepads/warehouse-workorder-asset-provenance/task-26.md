@@ -1,5 +1,33 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##123 first bootstrap rollback — corrected before first apply
+
+The first green attempt failed before scenarios: PostgreSQL42601 rejected the
+reserved alias authorization in123. Flyway explicitly logged19:25:56.313JKT:
+"Changes successfully rolled back." Raw XML task26/material-obligation-green/xml.
+123 was never applied; alias corrected to permit. No applied SQL edited.
+Second run material-obligation-green-second.sh/log (same archive stem), includes
+all79 serial/integrity/lifecycle/rework/closure cases. Results pending.
+
+
+## Serial settlement and complete history —123 declared before creation
+
+V175.122 passed the full material lifecycle/rework/return closure regression:
+76 tests in14 suites, zero failures/errors/skips,4m51s. Archive
+`task26/return-settlement-green/xml`; owned lifecycle exited0, volumes retained.
+
+The next real baseline ran3 tests in2 suites and failed all3 (zero errors/skips,
+1m17s): LOAN/SALE actual installed issue unit reports used0 instead of1, and a
+new app-role CLOSE with an empty snapshot set is accepted after valid inspection.
+Archive `task26/material-obligation-red/xml`; omission was savepoint-rolled-back.
+
+Reserve `V175_123__warehouse_deployed_material_settlement.sql` BEFORE creation.
+Count actual bound APPLIED deployment once against its original issue line;
+title handover must not count another use. Seal the complete source-key set for
+new lifecycle snapshots at transaction end; preserve historical snapshots and
+all existing closure fences. All migrations through175.122 remain immutable.
+
+
 ## Applied122 — core closure passed, shared regression still running
 
 V175.122 applied successfully and is immutable, SHA256 `97b18a1b9ffbd7eac315da93788df8d572575b001373b31700277557b0edd0c4`.

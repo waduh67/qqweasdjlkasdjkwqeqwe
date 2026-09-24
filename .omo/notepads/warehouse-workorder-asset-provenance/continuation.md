@@ -1,5 +1,18 @@
 # Whole-plan continuation
 
+## Material obligation correction — verification pending
+
+V175.122 passed76 tests in14 suites (zero failures/errors/skips). New serial and
+omitted-history probes then failed3/3 on real valid fixtures. Declared V175.123
+counts bound APPLIED serial deployment once and seals complete lifecycle source
+keys. Its first bootstrap failed42601 reserved alias and explicitly rolled back;
+only never-applied123 was corrected. Second run is
+`.omo/runtime/material-obligation-green-second.sh`, matching log and
+`task26/material-obligation-green-second/xml`;79 selected tests, outcomes pending.
+Check actual applied status before any SQL edit. Ceiling122 is immutable.
+Continue task26 original-customer sold RMA, vendor replacement, independent
+reacquisition, then remaining plan. No whole-task closure yet.
+
 ## Active task —26 returns/inspection/repair
 
 - Latest:175.122 applied and is IMMUTABLE. Core17.5m accepted inspection/close
