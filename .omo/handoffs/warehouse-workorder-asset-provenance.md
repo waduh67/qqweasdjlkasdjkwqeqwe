@@ -1,3 +1,18 @@
+## Task38 COMPLETE — task39 in progress
+
+Source1119e257: settings backend9tests/4suites PASS, targeted web15/4 PASS,
+full warehouse web249/44 PASS58.63s, TypeScript/build/warehouse oxlint PASS.
+Proof task38/settings-workbench-verification.json. Initial delegate-count test corrected
+for the real eligible admin, rerun full9 green. Owned cleanup completed, volumes kept.
+Together with policy, reports, replenishment and overview proofs,38 is COMPLETE.
+
+Task39 now in progress: WO Material section will use named current own custody,
+immutable measured-use history, actual source/revision selections and independent
+material settlement. New read-only MaterialWorkbench owner API/controller compiles;
+real5test integration gate in .omo/runtime/material-workbench-server.sh/log pending.
+No39 completion claim. Then40–48/F1–F4 remain open; long-run goal ACTIVE.
+No migration;148 next free,177/178 reserved43. All checkpoints pushed regularly.
+
 ## Task38 settings UI checkpoint — targeted web verified, integration rerun pending
 
 Added on-demand named policy history and scoped paged delegation workbench, direct-user

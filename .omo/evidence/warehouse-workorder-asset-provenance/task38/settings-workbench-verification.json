@@ -1,0 +1,54 @@
+{
+  "sourceCommit": "1119e257",
+  "backend": {
+    "tests": 9,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITDelegation",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "c5851310adf270b1270d87e08373a74cb52f6f304e151afb292a8c1411d8dc79"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "cb9adb85585bfef75bbcf9ecdd1111e6b96927193abc28c9b77e758ff1efc20e"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehousePolicyWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "7e18ad295178c682d9537f8f3f5d419d6c154642f1c7291b70500bfe8c5f605a"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSettingsWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "f20ac45fe7978a361e8c2c305c8e353eade41a80ab5bde3d1e97314feba764a8"
+      }
+    ],
+    "result": "BUILD SUCCESSFUL in 5m 5s"
+  },
+  "web": {
+    "targetedTests": 15,
+    "targetedFiles": 4,
+    "fullTests": 249,
+    "fullFiles": 44,
+    "fullDurationSeconds": 58.63,
+    "typeScript": "PASS",
+    "productionBuild": "PASS",
+    "warehouseOxlint": "PASS"
+  },
+  "coverage": "Named history and scoped delegations, role sources and independent candidates, revoked scope, expiry/revocation filters before pages, immutable retry, actual revision conflicts, read-only permissions. Initial expectation corrected to include legitimately eligible tenant admin; no permission weakened.",
+  "cleanup": "Owned services stopped; volumes retained",
+  "task38": "COMPLETE; full acceptance browsers remain task45"
+}
