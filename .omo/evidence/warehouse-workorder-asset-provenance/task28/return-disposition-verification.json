@@ -1,0 +1,86 @@
+{
+  "recordedAt": "2026-09-24T15:05:53.863348+00:00",
+  "task": 28,
+  "scope": "Initial inspected-return LOSS/SCRAP; compensation and broader loss workflow not complete",
+  "verifiedProductCommit": "18447663",
+  "verifiedMainTree": "c156883b9fdb20a84b7a54b77f6565f797344de8",
+  "result": "PASS",
+  "run": "disposition-verified",
+  "duration": "2m42s",
+  "counts": {
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 4
+  },
+  "command": "scripts/warehouse/qa.sh server --tests '*WarehouseDisposition*IT' --tests '*ModularityTests' --no-parallel",
+  "environment": "Owned isolated PostgreSQL app role NOSUPERUSER NOBYPASSRLS; private MinIO; JDK21; serialized QA lock; no volume reset",
+  "redaction": "Only test names/counts and source/result digests; no HTTP bodies, headers, tokens or raw logs",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "cetak peta module()",
+        "hotspot accesses only public BNG and catalog APIs()",
+        "struktur module valid()"
+      ],
+      "xmlSha256": "7376a8b9d9a7cdc981250b986a03f5b73c021d8482a174d51f97f28fc95d2f68"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseDispositionAssetIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\", action = \"SCRAP\"",
+        "[2] mode = \"LOAN\", action = \"LOSS\"",
+        "[3] mode = \"SALE\", action = \"SCRAP\"",
+        "[4] mode = \"SALE\", action = \"LOSS\""
+      ],
+      "xmlSha256": "63aaec2e081e6739e9d94503cf84ec9db3ff7b64f842c84667aa44b48d2d3a10"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseDispositionGuardsIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "pending approval cannot admit a physical disposition effect through direct SQL()",
+        "rejected disposition preserves source and requires a fresh request with its own approval()",
+        "disposition list removes hidden destinations before pagination()",
+        "competing independently approved drafts can dispose the same remnant only once()",
+        "unknown receipt cost stays unknown and blocks threshold approval without inventing zero()",
+        "changed inspection makes pending approval durably stale without a physical effect()",
+        "receipt currency cannot be converted implicitly to the disposition policy currency()",
+        "disposed measured segment cannot be rewritten and rebuild preserves the exact applied ledger()",
+        "requester delegation cannot turn a configured checker into an independent approver()",
+        "current destination scope is required to replay an approved decision()",
+        "writeoff cannot overdraw or silently resize the measured returned segment()"
+      ],
+      "xmlSha256": "e2febd76326ce284f5c60e6e597bac7da9eaef01d78aa43598f211364ea7fe01"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] action = \"SCRAP\"",
+        "[2] action = \"LOSS\""
+      ],
+      "xmlSha256": "bc208cfbad555956b92525242667f7d3e737497910c1e9fb5e3c6e9b6328f0cd"
+    }
+  ],
+  "migrations": {
+    "V175_138__warehouse_disposition_request.sql": "34a2b183f2a4f1395981b5efdf5e14d3033ca9f7121b767c9d3f2ab52c74ea3b",
+    "V175_139__warehouse_return_disposition_effect.sql": "a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489"
+  }
+}

@@ -1,5 +1,33 @@
 # Whole-plan continuation
 
+## Task28 initial return LOSS/SCRAP VERIFIED — compensation remains open
+
+The disposition-verified run against18447663 product source completed20 tests/4
+suites,0 failures/errors/skips,2m42s. All2 residual LOSS/SCRAP settlement journeys,
+11 source/permission/concurrency/replay/integrity guards,4 serialized LOAN/SALE
+cases, and3 modularity checks passed. Owned QA cleanup completed with volumes
+retained. Portable sanitized evidence is committed at
+.omo/evidence/warehouse-workorder-asset-provenance/task28/return-disposition-verification.json.
+It contains every test name/count, XML digest, product main-tree identity and
+138/139 checksums; raw private XML/logs remain excluded from commits.
+
+Verified behavior: independent posting moves the exact quantity once, preserves
+original returned quantity and old customer assignment history, and closes the
+returned residual obligation without new physical postings on WO settlement.
+Customer title, bad quantities, unknown cost, currency mismatch, direct SQL fake
+effects, requester delegation, revoked scope and stale sources reject correctly.
+Competing approvals produce one effect; both MM and serialized projections rebuild.
+All10 old return/approval regressions also passed in preceding28-case mixed run.
+
+Task28 is still OPEN. WarehouseCompensationIT has2 authored but unexecuted cases;
+its proposed endpoint is not implemented. Next: a new DISPOSITION_REVERSAL source
+kind with ADJUSTMENT policy, actual original movement linkage, independent approval,
+current disposed position and closed-material lifecycle checks, and one paired
+REVERSAL restoring QUARANTINE plus a nonphysical return-history step. Preserve
+original posting; reject duplicate/reused/installed/consumed rollback. Broader
+vendor/outstanding loss paths still need assessment.140 is available but NOT yet
+reserved/created.138 and139 remain immutable. Overall goal continues beyond28.
+
 ## Task28 exact outbox/error contract checkpoint — 20-case rerun pending
 
 The disposition-guards combined run against dac2434b completed28 tests/8 suites,
