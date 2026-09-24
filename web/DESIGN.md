@@ -109,3 +109,10 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   quantities and destinations. Accepted stock remains quarantined until placement.
   Private evidence has named type/date labels, pagination, download and a visible
   stale-intake state. Success reloads the durable document and revision.
+- Stock exploration separates SKU totals, physical positions, serialized devices,
+  and lot/reel lineage. Reservation and custody views filter durable data before
+  pagination. Label totals that include consumed material; show available separately.
+  Low-stock markers compare current scoped availability with the actual SKU minimum.
+  Unknown provenance/unit/cost and restricted cost remain distinct states. Tree rows
+  keep parent links, exact quantities and split/active labels without summing parents
+  again. A failed conservation check is visible and never repaired by reading.

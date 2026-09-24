@@ -3770,6 +3770,7 @@ td.dg-actions {
   }
   .warehouse-data-table-card .warehouse-mobile-label {
     display: block;
+    text-align: left;
     color: var(--muted);
     font-size: var(--fontSizeBase200);
   }

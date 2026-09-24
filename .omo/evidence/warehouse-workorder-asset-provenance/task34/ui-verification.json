@@ -1,0 +1,20 @@
+{
+  "task": 34,
+  "phase": "stock explorer UI checkpoint",
+  "tests": 100,
+  "testFiles": 12,
+  "durationSeconds": 9.53,
+  "checks": [
+    "TypeScript passed",
+    "lint passed; existing unrelated warnings",
+    "11 bucket backend cases passed at3046bb05"
+  ],
+  "sourceFiles": {
+    "web/src/pages/warehouse/WarehouseStockDetail.tsx": "f4a8adf2220ec95a8a299b59227a91589b35eda9f832f0acdb21d03531539a51",
+    "web/src/pages/warehouse/WarehouseStockFilters.tsx": "c72346176dd5e7a690a5c672294d57f14141b0f693742d1ee01aa960263ae9e6",
+    "web/src/pages/warehouse/WarehouseStockPage.tsx": "df922777509be33854e50b44ef00590c66ed0150cacbb3398422a24617495941",
+    "web/src/pages/warehouse/WarehouseStockPage.test.tsx": "a6fbbbc2350e33f99b1e78bebed837a2107e78451756da59ecdbbae94f7305ad",
+    "web/e2e/warehouse/receiving.spec.ts": "03152b6fbe10c2d903413336055318d3be8d062be1fc001d3d34ffa3b3f0de91"
+  },
+  "browser": "pending real desktop/mobile run; task not complete"
+}

@@ -1,5 +1,31 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task34 explorer UI implemented — 100 web tests green; browser pending
+
+Backend operational buckets against 3046bb05: 11 tests / 7 suites passed in 2m54s,
+including exact reserved/picked quantities, quarantine/transit and scope/privacy;
+owned cleanup passed, volumes retained. Portable bucket-verification.json saved.
+Stock page now has summary/positions/assets/lots/unknown, server filters/paging,
+named historical master selectors including archived rows, scanner GET lookup,
+asset/position details, origin receipt links, exact costs and permission redaction,
+lot conservation and paginated parent/child segment navigation, immutable history.
+Drilldown retains location/condition/bucket; invalid/blank/duplicate URL rejected;
+unknown legacy units remain unknown and inconsistent conservation remains an alert.
+100 tests / 12 files passed (full warehouse + DataTable), TypeScript and lint green.
+Eight new stock page tests cover quantities/pages, server buckets, archived named
+filters, provenance denial, unknown units, hidden/exact costs, scope failure and
+inconsistent/truncated lineage. No warnings in changed warehouse files.
+
+NEXT run `.omo/runtime/warehouse-stock-browser.sh stock-explorer-initial` (new
+wrapper archives task34, owned lock/cleanup retained). Extended receiving.spec.ts
+uses only actual UI/API: receipt 1000m/10ONU, rejected 100m/2ONU, staged putaway,
+serial lookup and 5-event trace, reel 5 segments / 3 active / 2 split, cost/origin,
+quarantine filter and location-preserving position drilldown. No mocked browser
+writes/responses. Screenshot top scroll corrected and mobile labels left-aligned.
+Do not mark task34 complete until both projects pass and screenshots are reviewed.
+Continue 35–48/F1–F4; goal ACTIVE. No migrations changed;148 next unused,177/178
+reserved for43. This is a recoverable implementation checkpoint, not completion.
+
 ## Task34 typed explorer API and bucket filters checkpoint
 
 Metadataquery e1634743:11tests/7suites green2m46s,portable display-metadata-verification.
