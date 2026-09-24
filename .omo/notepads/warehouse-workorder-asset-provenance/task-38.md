@@ -1,3 +1,23 @@
+## Task38 replenishment verified; overview next
+
+Replenishment backend d874d2d0:12tests/4suites PASS2m13s, including new2 workbench
+and old3 basic/4 commands/3 inbound.16web/3files PASS4.60s, TypeScript and oxlint PASS.
+Initial new UI tests corrected jsdom dialog polyfill/role options/required-label matcher.
+Proof task38/replenishment-workbench-verification.json. Owned cleanup done; volumes retained.
+
+New Pengisian Stok route provides named rule/request lists, state/active server filters,
+read-only current versus captured quantities, create/edit exact-unit rules, bounded
+history, recompute, accept/cancel/archive with captured revisions/replay, and binding
+an actual receipt line/current revision. Cost/stock/ordinary master read permissions
+are not prerequisites for reading or editing an existing rule. Creating a rule uses
+named SKU/location pickers. Accepted requests block archive until cancellation.
+Receipt binding follows existing backend singular-line exact-quantity contract; it
+requires one matching received line (serial multi-line batch binding is not added).
+
+Task38 overview shortages/transit/pending drilldowns and remaining settings history/
+delegation next. Reports and policy settings already verified. Then39–48/F1–F4.
+Formal long-run goal ACTIVE. No migrations;148 next free. Branch checkpoints pushed.
+
 ## Replenishment compile correction; fresh verification next
 
 9dd7fe96 initial backend build failed in13s: missing imports for inbound MasterKind,

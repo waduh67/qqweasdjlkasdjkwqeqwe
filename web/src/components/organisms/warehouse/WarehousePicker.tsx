@@ -5,9 +5,9 @@ import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { warehouseError } from '@/api/warehouse/errors'
 
 /** Bounded directory selection. Searching a new page never drops the selected reference. */
-export function WarehousePicker<T extends { id: string }>({ label, load, value, onChange, name, optional = false, disabled = false, eligible = () => true }: {
+export function WarehousePicker<T extends { id: string }>({ label, load, value, onChange, name, optional = false, disabled = false, searchable = true, eligible = () => true }: {
   label: string; load: (search: string, page: number) => Promise<WarehousePage<T>>; value: T | null; onChange: (value: T | null) => void;
-  name: (value: T) => string; optional?: boolean; disabled?: boolean; eligible?: (value: T) => boolean
+  name: (value: T) => string; optional?: boolean; disabled?: boolean; searchable?: boolean; eligible?: (value: T) => boolean
 }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
@@ -16,7 +16,7 @@ export function WarehousePicker<T extends { id: string }>({ label, load, value, 
   const rows = state.status === 'ready' ? state.data.items : []
   const choices = value && !rows.some(row => row.id === value.id) ? [value, ...rows] : rows
   return <div className="stack" style={{ gap: '0.35rem' }}>
-    <TextField label={`Cari ${label.toLowerCase()}`} value={search} maxLength={200} disabled={disabled} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
+    {searchable && <TextField label={`Cari ${label.toLowerCase()}`} value={search} maxLength={200} disabled={disabled} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />}
     <SelectField label={label} value={value?.id ?? ''} disabled={disabled || state.status !== 'ready'} required={!optional}
       onChange={(_, data) => onChange(choices.find(row => row.id === data.value) ?? null)}>
       <option value="">{optional ? 'Tidak dipilih' : 'Pilih…'}</option>

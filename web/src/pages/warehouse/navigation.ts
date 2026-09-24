@@ -3,6 +3,7 @@ export const WAREHOUSE_PAGES = [
   { path: 'stock', label: 'Stok & Perangkat', permissions: ['inventory.item.view'] },
   { path: 'receipts', label: 'Penerimaan', permissions: ['inventory.receipt.view'] },
   { path: 'requests', label: 'Permintaan & Pengeluaran', permissions: ['inventory.request.view', 'inventory.issue.view'] },
+  { path: 'replenishment', label: 'Pengisian Stok', permissions: ['inventory.request.view'] },
   { path: 'transfers', label: 'Transfer', permissions: ['inventory.transfer.view'] },
   { path: 'returns', label: 'Retur & Servis', permissions: ['inventory.return.view'] },
   { path: 'counts', label: 'Stock Opname', permissions: ['inventory.count.view'] },
