@@ -9,7 +9,8 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/warehouse/returns")
 class WarehouseReturnController(private val returns: InventoryReturnApi, private val repairs: InventoryReturnRepairApi,
-    private val rma: InventoryCustomerRmaApi, private val titles: InventoryReturnReacquisitionApi) {
+    private val rma: InventoryCustomerRmaApi, private val titles: InventoryReturnReacquisitionApi,
+    private val replacements: InventorySupplierReplacementApi) {
     @PostMapping
     fun receive(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(returns.receive(WarehouseReceiptJson.decode(body, WarehouseReturnIntake::class.java), WarehouseMutationMetadata(key)))
@@ -33,6 +34,14 @@ class WarehouseReturnController(private val returns: InventoryReturnApi, private
     @PostMapping("/{id}/reacquisition")
     fun reacquisition(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<ReturnReacquisitionRef> =
         ResponseEntity.status(201).body(titles.request(id, WarehouseReceiptJson.decode(body, ReturnReacquisitionInput::class.java), WarehouseMutationMetadata(key)))
+
+    @PostMapping("/{id}/replacement-receipts")
+    fun replacement(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<SupplierReplacementView> =
+        ResponseEntity.status(201).body(replacements.request(id, WarehouseReceiptJson.decode(body, SupplierReplacementInput::class.java), WarehouseMutationMetadata(key)))
+
+    @GetMapping("/{id}/replacement-receipts")
+    fun replacements(@PathVariable id: UUID, @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int): List<SupplierReplacementView> = replacements.list(id, WarehousePageRequest(page, size))
 
     @GetMapping("/{id}") fun get(@PathVariable id: UUID): WarehouseReturnView = returns.get(id)
     @GetMapping("/{id}/history") fun history(@PathVariable id: UUID,

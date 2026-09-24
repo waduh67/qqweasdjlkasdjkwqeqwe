@@ -1,5 +1,71 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##134 supplier replacement request/source draft — first validation running
+
+The supplier baseline compiled and ran2 tests/1 suite,2 failures/0 errors/skips,
+1m33s. Both LOAN and SALE reached missing POST replacement-receipts404 after real
+receipt/install/handover/removal/intake/inspection/vendor dispatch. Archive
+`task26/return-replacement-red/xml`; no fake physical seed or invented provenance.
+
+Source now implements InventorySupplierReplacementApi POST/GET
+returns/{id}/replacement-receipts, strict request, original WO/return/asset locks,
+current locations, tenant/actor/hash replay, a real nested RECEIPT draft with an
+internal key based on new request UUID, and original customer/WO/owner binding.
+New134 was reserved BEFORE creation and captures/seals actual vendor custody,
+closed original assignment, repair case, prior return and normal receipt intake.
+134 deliberately allows only DRAFT0 with no physical receipt effect; admission,
+one-replacement consumption, subsequent inspection and handover remain pending.
+CUSTOMER draft line retains CUSTOMER; no change to old asset or old assignment.
+
+Current `.omo/runtime/return-replacement-request-green.sh`, matching log and
+`task26/return-replacement-request-green/xml` (session25146), compiles/runs both
+supplier cases plus3 modularity cases. Read log for compile/apply status. After
+any successful134 apply its bytes are immutable. No135 declared or created.
+Expected next missing behavior is physical receipt admission; first fix request
+capture/binding if exposed. Last published e5d2cef1 is the fully verified direct
+quarantine implementation:13/3/0/0/0,3m41s (6 title,6 approval,1 full history/reset/
+replay/rebuild);133 and all earlier migrations immutable.
+
+Next implementation must lock replacement source before topology/receipt locks
+for BOTH normal receive and approval receive, validate current source before
+approval final decision, choose admission owner only from captured replacement
+binding, and seal one receipt/new identity per repair with an immutable effect.
+Include replacement binding in approval source snapshot. Normal receipt payloads
+and historical snapshot shapes remain unchanged. CUSTOMER inspection/return-to-
+original-customer and old vendor custody disposition must remain explicit.
+Then finish task26 packaged proof and remaining plan; task26 is still OPEN.
+
+##134 reserved — supplier replacement draft/source binding
+
+Direct quarantine final run is13/3/0/0/0,3m41s; e5d2cef1 published/verified.
+Supplier baseline ran both genuine LOAN/SALE repair setups and reached the absent
+replacement-receipts route; XML/log in return-replacement-red (inspect exact
+failures). New InventorySupplierReplacementApi and SupplierReplacementModels
+are being authored. Reserve134 BEFORE SQL creation; no134 SQL exists yet.
+
+Implementation direction: create a normal RECEIPT draft via the existing receipt
+service, with immutable source binding to original return/repair/assignment and
+captured owner. Separate request idempotency namespace/key from nested receipt
+creation (derive internal key from request identity). Validate current original
+WO/return/asset and source/destination scope before replay. Keep old asset and its
+vendor custody/history intact. For CUSTOMER source, physical admission must use
+CUSTOMER from verified binding; ordinary receipt inputs must never choose title.
+No physical receipt is enabled until exact graph/owner/one-replacement consumption
+proof is available. Use forward migration for post-draft lifecycle as necessary.
+
+Next integration points: WarehouseReceiptOrigins.admit currently hardcodes ISP
+for asset/legs; WarehouseReceiptPersistence.saveDraft sets line owner ISP.
+ReceiptTransitionService and ReceiptApprovalOwner both call origins.admit, then
+post. ReceiptTransitionService needs source locking before topology/receipt locks
+for linked replacement receipts; use same source-lock owner pattern as approval.
+WarehouseApprovalStore.source must capture replacement binding when present.
+Generic receipt inspection/putaway requires ISP, so CUSTOMER remains safely
+quarantined until replacement-specific inspection/original-customer handover is
+implemented. Preserve normal receipt payload/snapshot shape and historic SQL.
+Multiple draft attempts may exist but only one physical replacement may be
+consumed per repair; do not strand a rejected immutable request behind a draft
+unique constraint. A separate immutable consumption/effect row is appropriate.
+
 ## Direct quarantine reacquisition verified —13 tests green
 
 return-title-final-green passed13 tests/3 suites/0 failures/errors/skips,3m41s:

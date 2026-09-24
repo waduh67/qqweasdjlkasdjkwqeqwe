@@ -29,6 +29,11 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## Task26: retur dan inspeksi
 
+`V175_134__warehouse_supplier_replacement_request.sql` dicadangkan sebelum pembuatan
+untuk mengikat draft RECEIPT vendor ke kasus servis dan hak milik asal.133 tetap
+immutable. Penerimaan fisik wajib dibuktikan terpisah; draft pengganti tidak
+mengubah aset lama atau memberi stok ISP dari aset pelanggan.
+
 `V175_133__warehouse_return_title_leg_revisions.sql` dicadangkan sebelum pembuatan.
 132 sudah diterapkan; tes approval menemukan perbandingan revision kedua leg
 yang keliru. Revision balance CUSTOMER dan ISP berjalan terpisah, sehingga133

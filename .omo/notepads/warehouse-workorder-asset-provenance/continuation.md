@@ -1,5 +1,40 @@
 # Whole-plan continuation
 
+##134 supplier replacement request/source draft — first validation running
+
+The supplier baseline compiled and ran2 tests/1 suite,2 failures/0 errors/skips,
+1m33s. Both LOAN and SALE reached missing POST replacement-receipts404 after real
+receipt/install/handover/removal/intake/inspection/vendor dispatch. Archive
+`task26/return-replacement-red/xml`; no fake physical seed or invented provenance.
+
+Source now implements InventorySupplierReplacementApi POST/GET
+returns/{id}/replacement-receipts, strict request, original WO/return/asset locks,
+current locations, tenant/actor/hash replay, a real nested RECEIPT draft with an
+internal key based on new request UUID, and original customer/WO/owner binding.
+New134 was reserved BEFORE creation and captures/seals actual vendor custody,
+closed original assignment, repair case, prior return and normal receipt intake.
+134 deliberately allows only DRAFT0 with no physical receipt effect; admission,
+one-replacement consumption, subsequent inspection and handover remain pending.
+CUSTOMER draft line retains CUSTOMER; no change to old asset or old assignment.
+
+Current `.omo/runtime/return-replacement-request-green.sh`, matching log and
+`task26/return-replacement-request-green/xml` (session25146), compiles/runs both
+supplier cases plus3 modularity cases. Read log for compile/apply status. After
+any successful134 apply its bytes are immutable. No135 declared or created.
+Expected next missing behavior is physical receipt admission; first fix request
+capture/binding if exposed. Last published e5d2cef1 is the fully verified direct
+quarantine implementation:13/3/0/0/0,3m41s (6 title,6 approval,1 full history/reset/
+replay/rebuild);133 and all earlier migrations immutable.
+
+Next implementation must lock replacement source before topology/receipt locks
+for BOTH normal receive and approval receive, validate current source before
+approval final decision, choose admission owner only from captured replacement
+binding, and seal one receipt/new identity per repair with an immutable effect.
+Include replacement binding in approval source snapshot. Normal receipt payloads
+and historical snapshot shapes remain unchanged. CUSTOMER inspection/return-to-
+original-customer and old vendor custody disposition must remain explicit.
+Then finish task26 packaged proof and remaining plan; task26 is still OPEN.
+
 ## Direct quarantine reacquisition verified —13 tests green
 
 return-title-final-green passed13 tests/3 suites/0 failures/errors/skips,3m41s:
