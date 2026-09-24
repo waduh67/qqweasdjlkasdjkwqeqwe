@@ -34,6 +34,7 @@ import {
   IconWorkOrder,
 } from '@/components/atoms/icons'
 import { HOTSPOT_VIEW_PERMISSIONS } from '@/api/hotspot'
+import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from '@/pages/warehouse/navigation'
 /**
  * Navigasi dikelompokkan menurut alur kerja (operasi jaringan vs administrasi),
  * bukan sekadar daftar datar — pada belasan menu, pengelompokan membuat operator
@@ -54,13 +55,19 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
       { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
-      { to: '/warehouse', label: 'Operasi Gudang', permission: 'inventory.item.view', icon: IconInventory },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
       { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
       { to: '/network-provisioning', label: 'Provisioning Jaringan', permission: 'provisioning.segment.view', icon: IconRoute },
       { to: '/provisioning', label: 'Provisioning', permission: 'monitoring.provisioning.view', icon: IconInbox },
+    ],
+  },
+  {
+    label: 'Gudang & Logistik',
+    items: [
+      { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: IconInventory, end: true },
+      ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: IconPackage })),
     ],
   },
   {

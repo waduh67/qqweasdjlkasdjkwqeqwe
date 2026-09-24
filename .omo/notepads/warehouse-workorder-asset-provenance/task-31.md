@@ -1,5 +1,35 @@
 # Task31 — shared warehouse web foundation (IN PROGRESS)
 
+## Task31 navigation and transaction controls — browser harness pending
+
+Warehouse routes now use independent permissions and a separate Gudang & Logistik
+sidebar group. /warehouse and /warehouse/approvals use the current paginated API;
+approvers do not need inventory.item.view. /warehouse/stock reads typed quantities.
+Old WarehouseOperationsPage is a compatibility export; client-generated approval
+hashes are removed from the active/legacy web entry. Other planned routes and
+unknown paths explicitly report unavailable until their tasks are implemented.
+
+Shared controls under components/organisms/warehouse: exact quantity field/readout,
+manual/keyboard serial lookup (lookup only), named lines, status, timestamp/history,
+and captured-command dialog. Network/invalid-success ambiguity locks dismissal and
+retries the original command; definite 400/402/403/404/409/422 rejections allow return
+or explicit document reload. Query state discards obsolete filter results.
+49 unit tests passed (44 API +5 controls); TypeScript passed. Lint passed with
+existing repository warnings. Isolated jsdom dialog shim is only in unit tests.
+No real browser success claimed yet.
+
+New real browser harness: playwright.warehouse.config.ts, e2e/warehouse/helpers.ts
+and setup.spec.ts; actual UI signup, role/user create, login independent approver,
+API readiness database/user/marker assertion, denied stock API and route, explicit
+unknown route, 375px touch/mobile and desktop. No API response mocks or SQL seeds.
+application-warehouse-e2e.yml disables scheduling/demo/radius/SMTP fallback/throttle
+and automatic provisioning; existing qa.sh owns backend/database/object store.
+
+NEXT: run .omo/runtime/warehouse-setup-browser.sh setup-initial (private log),
+resolve actual failures and capture sanitized portable browser evidence before
+checking task31 complete. Wrapper owns outer flock fd8; qa uses fd9; cleanup retains
+volumes. Then finish32–48/F1–F4. Goal ACTIVE. No migrations changed;148unused.
+
 ## Task31 API foundation —44 tests and TypeScript green
 
 Quantity, runtime codecs, master/stock/lookup DTOs and immutable command transport

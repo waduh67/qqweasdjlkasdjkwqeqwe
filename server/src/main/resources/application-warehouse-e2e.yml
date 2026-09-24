@@ -1,0 +1,25 @@
+# Used only by scripts/warehouse/qa.sh with its owned database, object store and loopback ports.
+# Keep the real HTTP/auth/domain/persistence stack; background delivery and demo data stay off.
+spring:
+  mail:
+    host: ""
+    username: ""
+    password: ""
+ftth:
+  scheduling:
+    enabled: false
+  monitoring:
+    server-poll-enabled: false
+  radius:
+    enabled: false
+  bootstrap:
+    seed-demo-tenant: false
+  mail:
+    from: ""
+  throttle:
+    enabled: false
+  provisioning:
+    rollout:
+      auto-apply-enabled: false
+  cpe:
+    health-probe-ttl: PT0S

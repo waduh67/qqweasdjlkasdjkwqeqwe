@@ -15,7 +15,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { PlatformJobsPage } from './pages/PlatformJobsPage'
 import { InventoryPage } from './pages/InventoryPage'
-import { WarehouseOperationsPage } from './pages/WarehouseOperationsPage'
+import { WarehouseRoutes } from './pages/warehouse/WarehouseRoutes'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { InvoicesPage } from './pages/InvoicesPage'
@@ -197,11 +197,9 @@ function OperatorApp() {
               }
             />
             <Route
-              path="warehouse"
+              path="warehouse/*"
               element={
-                <RequirePermission permission="inventory.item.view">
-                  <WarehouseOperationsPage />
-                </RequirePermission>
+                <WarehouseRoutes />
               }
             />
             <Route
