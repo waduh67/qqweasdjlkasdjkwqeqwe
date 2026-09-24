@@ -19,6 +19,12 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import com.duluin.ftth.mobile.data.MaterialHttpPort
+import com.duluin.ftth.mobile.data.MaterialHttpResponse
+import com.duluin.ftth.mobile.domain.MaterialSession
+import com.duluin.ftth.mobile.domain.MaterialSessionPort
+import com.duluin.ftth.mobile.materials.MaterialViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class DiTest {
     @Test
@@ -37,6 +43,8 @@ class DiTest {
             assertNotNull(koin.koin.get<PayrollViewModel>())
             assertNotNull(koin.koin.get<com.duluin.ftth.mobile.attendance.AttendanceViewModel>())
             assertNotNull(koin.koin.get<TechnicianEffectPort>())
+            assertNotNull(koin.koin.get<com.duluin.ftth.mobile.domain.MaterialPort>())
+            assertNotNull(koin.koin.get<MaterialViewModel>())
         } finally {
             stopKoin()
         }
@@ -62,6 +70,14 @@ private fun fakePorts() = TechnicianPlatformPorts(
     effects = object : TechnicianEffectPort {
         override fun requestLocationPermission() = Unit
         override fun announceWorkOrderCompleted() = Unit
+    },
+    materialHttp = object : MaterialHttpPort {
+        override suspend fun get(path: String, session: MaterialSession) = MaterialHttpResponse(503, "{}")
+        override suspend fun post(path: String, body: String, idempotencyKey: String, session: MaterialSession) = MaterialHttpResponse(503, "{}")
+    },
+    materialSession = object : MaterialSessionPort {
+        override val state = MutableStateFlow<MaterialSession?>(null)
+        override val connectivity = MutableStateFlow(false)
     },
 )
 

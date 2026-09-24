@@ -2,6 +2,9 @@ package com.duluin.ftth.mobile.app
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +23,8 @@ import com.duluin.ftth.mobile.workorders.WorkOrderEffect
 import com.duluin.ftth.mobile.workorders.WorkOrderIntent
 import com.duluin.ftth.mobile.workorders.WorkOrderScreen
 import com.duluin.ftth.mobile.workorders.WorkOrderViewModel
+import com.duluin.ftth.mobile.materials.MaterialScreen
+import com.duluin.ftth.mobile.materials.MaterialViewModel
 import org.koin.core.module.Module
 
 interface TechnicianEffectPort {
@@ -39,11 +44,13 @@ private fun TechnicianAppContent(
     workOrders: WorkOrderViewModel = koinViewModel(),
     attendance: AttendanceViewModel = koinViewModel(),
     payroll: PayrollViewModel = koinViewModel(),
+    materials: MaterialViewModel = koinViewModel(),
     effects: TechnicianEffectPort = koinInject(),
 ) {
     val workOrderState by workOrders.state.collectAsStateWithLifecycle()
     val attendanceState by attendance.state.collectAsStateWithLifecycle()
     val payrollState by payroll.state.collectAsStateWithLifecycle()
+    val materialState by materials.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(workOrders) {
         workOrders.effects.collect { effect ->
@@ -60,8 +67,9 @@ private fun TechnicianAppContent(
     }
 
     FieldOperationsTheme {
-        Column(verticalArrangement = Arrangement.spacedBy(com.duluin.ftth.mobile.ui.FluentTokens.sectionGap)) {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(com.duluin.ftth.mobile.ui.FluentTokens.sectionGap)) {
             WorkOrderScreen(workOrderState, workOrders::accept)
+            MaterialScreen(materialState, materials::accept)
             AttendanceScreen(attendanceState, attendance::accept)
             PayrollScreen(payrollState, payroll::accept)
         }

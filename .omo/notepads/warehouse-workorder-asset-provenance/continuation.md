@@ -1,3 +1,52 @@
+## Task42 shared Material Saya verified; iOS CI proof pending, task43 NEXT
+
+KMP gate41 tests PASS / BUILD SUCCESSFUL21s; module graph PASS. Suites: domain5,
+data8,mvi6,storage7,workorders7,materials7(5common+2actualComposeUI),appDI1.
+Proof task42/material-feature-verification.json. Shared UI/ViewModel/core implementation
+is complete;42 remains OPEN for configured iOS compilation proof. Native runtime/release
+is not in scope. Tasks43-48/F1-F4 remain; goal ACTIVE, continue independently while CI runs.
+
+New feature/materials has actual own WO/issue/custody selection, measured partial receipt
+with serial matching, multi-source initial use, single-source correction and no-material
+form; offline is encrypted QUEUED, response loss ATTEMPTED retry samekey, server success
+reloads counts. MaterialSessionPort now exposes session/connectivity StateFlows. VM
+immediately clears/purges changed accounts, ignores old asynchronous results and restores
+pending records even offline. Koin creates MaterialRepository from host MaterialHttpPort,
+MaterialSessionPort and existing native SecureOutboxPort. Host transport must bind captured
+session credentials and Idempotency-Key; shared foundation does not claim native launcher.
+App embeds MaterialScreen in scrollable existing field app. FluentTextInput adds editable
+48dp field; tests exercise actual input and uncertain retry UI. qa.sh kmp now includes
+new domain/repository tests. docs/mobile.md describes actual boundaries and workflow.
+
+.github/workflows/mobile-materials.yml: push on feat/warehouse-workorder mobile paths,
+reusable workflow_call for later48. Read-only permissions, macos-latest, Java21, two
+app iOS compile tasks plus graph; rejects SKIPPED/NO-SOURCE and uploads log/commit-bound
+native JSON. gh is authenticated and Actions enabled. After pushing this checkpoint,
+find newest workflow run with gh run list --workflow mobile-materials.yml --branch
+feat/warehouse-workorder; inspect result/log and fix real native compiler issues if any.
+Download safe native JSON evidence after success. Then42 can be checked complete.
+No deploy job is triggered by this feature branch; existing deploy onlymain.
+
+Local .omo/runtime/material-kmp-gate.sh runs owned test env + qa.sh kmp, then Linux
+compileKotlinIosArm64/SimulatorArm64 + common metadata attempt. Latest output:
+.omo/runtime/material-kmp-gate-verified.log, exec session47180; may still be running.
+Check completion/owned cleanup. Earlier UI label duplicate and nullable-when compile
+failures are fixed; no failed test assertion removed. Initials .omo/runtime/material-
+kmp-gate.log and -final.log retained locally. Earlier foundation ate09ab382 remote pushed.
+
+NEXT43: M05/M06 reserved177/178,149 next free incremental patch. Read C10/task43 carefully.
+InventoryTenantPolicyService already supports exclusive LEGACY->VALIDATING fence/watermark
+but finalization throws INDEPENDENT_APPROVAL_NOT_INSTALLED; WarehouseOpeningBalanceService
+has no real migration baseline yet. Existing claims/candidates/legacy admission staged
+by173/174/176. Need provenance cases +migration batch, dryrun real quantities/units/
+collisions/effects, independent approval, atomic original-ID admission/opening/claims and
+per-tenant ENFORCED finalization without boot requiring every tenant clean. Full packaged
+migration upgrade fixture colliding legacy identities must boot. UI /warehouse/provenance
+already linked from customer asset legacy badge but not implemented yet. No43 edits yet.
+
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder; original branch
+preserved. Commit/push coherent changes. No deployment/main merge, no resets/volume deletion.
+
 ## Task42 encrypted material contracts/repository checkpoint; feature UI NEXT
 
 Foundation20 JVM tests PASS (domain5,data8,storage7). Evidence:

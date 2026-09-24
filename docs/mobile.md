@@ -9,7 +9,8 @@ Compose Fluent UI entry point and the iOS `ComposeUIViewController` bridge.
 ## Module Graph
 
 ```text
-:mobile:app -> :mobile:feature:workorders, :mobile:feature:attendance, :mobile:feature:payroll, :mobile:core:ui
+:mobile:app -> :mobile:feature:workorders, :mobile:feature:materials, :mobile:feature:attendance, :mobile:feature:payroll, :mobile:data, :mobile:core:ui
+:mobile:feature:materials -> :mobile:domain, :mobile:core:mvi, :mobile:core:ui
 :mobile:feature:workorders -> :mobile:domain, :mobile:core:mvi, :mobile:core:ui
 :mobile:feature:attendance -> :mobile:domain, :mobile:core:mvi, :mobile:core:ui
 :mobile:feature:payroll -> :mobile:domain, :mobile:core:mvi, :mobile:core:ui
@@ -97,3 +98,43 @@ Keychain, and Application Support. The outbox binds user/device/session/operatio
 encrypts bytes at rest, rejects foreign-user retry/enqueue/purge, and purges the signed-out
 user. Native device execution, Keychain fault injection, and Android permission prompts
 remain platform-runtime acceptance checks, not evidence supplied by JVM/common tests.
+
+## Material Saya
+
+The shared `feature:materials` uses the same MVI engine, lifecycle ViewModel and Fluent
+primitives. Koin builds `MaterialRepository` from the host's authenticated
+`MaterialHttpPort`, observable `MaterialSessionPort`, operation-key generator and the
+existing native secure outbox. The host must bind each HTTP request to the captured
+tenant/user/device/session and send the supplied key as `Idempotency-Key`; it must not
+switch credentials underneath an in-flight request. Update session and connectivity
+StateFlows on login, logout, permission changes and connection changes. Recreate the
+platform bundle and its user-scoped outbox for a different logged-in user.
+
+Material Saya reads bounded own WO, issue and custody pages. Receipt forms retain
+actual issue/WO revisions, measured accepted/missing/rejected quantities and serial
+matching. Usage selects acknowledged non-serialized sources and supports initial use,
+additional use with the current history reference, and explicit no-material declarations.
+Device installation remains the customer-asset workflow; the shared material module
+exposes no offline reservation, assignment or serialized-consumption command.
+
+Quantities use checked integer strings: millimetres for cable and whole EA units.
+Forms accept at most three decimal places for metres and never use floating point.
+Submitting while offline persists an encrypted pending intent; it does not claim server
+stock or a successful receipt. The encrypted envelope freezes canonical request bytes,
+key, source/document revisions and tenant/user/device/session. Reconnect checks current
+access, assignment and source before the first send. An ATTEMPTED state is persisted
+before HTTP, so restart or a lost response retries the same bytes/key even when the
+original command already consumed the source. The server reauthorizes canonical replay.
+Only a parsed server success removes that one queue entry and reloads displayed stock.
+Conflicts/rejections remain visible; uncertain commands cannot be discarded or edited.
+Account changes clear the ViewModel and purge the prior user's queue. Late results from
+an old scope cannot repopulate the screen. Offline startup restores the current session's
+pending commands without fetching or inventing stock.
+
+`scripts/warehouse/qa.sh kmp` includes domain, repository, secure storage, MVI,
+workorders, material screen and app DI tests plus the module graph. Tests include exact
+quantity boundaries, partial receipt, source revocation, restart/response-loss replay,
+session changes and actual Compose text input. The reusable `mobile-materials` workflow
+compiles both configured iOS application targets on macOS and rejects skipped/no-source
+compilation. Linux common/JVM checks do not establish iOS compilation. Neither check
+claims native device execution, a signed app binary or an app-store release.

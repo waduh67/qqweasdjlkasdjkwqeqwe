@@ -1,0 +1,60 @@
+name: mobile-materials
+
+on:
+  push:
+    branches: [feat/warehouse-workorder]
+    paths:
+      - 'mobile/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - 'settings.gradle.kts'
+      - '.github/workflows/mobile-materials.yml'
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-compile:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compile the configured iOS application targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :mobile:app:compileKotlinIosArm64 :mobile:app:compileKotlinIosSimulatorArm64 verifyMobileModuleGraph \
+            --no-daemon --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process --console=plain \
+            2>&1 | tee mobile-materials-native.log
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          log = Path('mobile-materials-native.log').read_text()
+          tasks = ['compileKotlinIosArm64', 'compileKotlinIosSimulatorArm64']
+          results = {}
+          for task in tasks:
+              matches = re.findall(r'^> Task :mobile:app:' + task + r'(.*)$', log, re.M)
+              if len(matches) != 1 or any(word in matches[0] for word in ['SKIPPED', 'NO-SOURCE', 'FAILED']):
+                  raise SystemExit('Required iOS compilation did not execute: ' + task)
+              results[task] = matches[0].strip() or 'COMPILED'
+          if 'BUILD SUCCESSFUL' not in log:
+              raise SystemExit('Native compile did not complete successfully')
+          Path('mobile-materials-native.json').write_text(json.dumps({
+              'commit': os.environ['GITHUB_SHA'], 'runner': 'macos-latest',
+              'tasks': results, 'nativeRuntimeOrRelease': False
+          }, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-materials-native-${{ github.sha }}
+          path: |
+            mobile-materials-native.log
+            mobile-materials-native.json
+          if-no-files-found: error

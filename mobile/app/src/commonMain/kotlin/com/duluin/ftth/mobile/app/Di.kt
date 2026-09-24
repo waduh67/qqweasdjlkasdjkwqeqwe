@@ -16,6 +16,12 @@ import com.duluin.ftth.mobile.workorders.WorkOrderFeature
 import com.duluin.ftth.mobile.workorders.WorkOrderStateSaver
 import com.duluin.ftth.mobile.workorders.WorkOrderUiState
 import com.duluin.ftth.mobile.workorders.WorkOrderViewModel
+import com.duluin.ftth.mobile.domain.MaterialPort
+import com.duluin.ftth.mobile.domain.MaterialSessionPort
+import com.duluin.ftth.mobile.data.MaterialHttpPort
+import com.duluin.ftth.mobile.data.MaterialRepository
+import com.duluin.ftth.mobile.materials.MaterialFeature
+import com.duluin.ftth.mobile.materials.MaterialViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModel
@@ -31,6 +37,8 @@ data class TechnicianPlatformPorts(
     val payslips: SecurePayslipPort,
     val permissions: Set<Permission>,
     val effects: TechnicianEffectPort,
+    val materialHttp: MaterialHttpPort,
+    val materialSession: MaterialSessionPort,
 )
 
 val commonAppModule: Module = module {
@@ -43,6 +51,9 @@ val commonAppModule: Module = module {
     single { get<TechnicianPlatformPorts>().operationKey }
     single { get<TechnicianPlatformPorts>().identity }
     single { ObserveWorkOrders(get()) }
+    single<MaterialSessionPort> { get<TechnicianPlatformPorts>().materialSession }
+    single<MaterialPort> { MaterialRepository(get<TechnicianPlatformPorts>().materialHttp, get(), get(), get()) }
+    factoryOf(::MaterialFeature)
     factoryOf(::WorkOrderFeature)
     factoryOf(::AttendanceFeature)
     factoryOf(::PayrollFeature)
@@ -50,4 +61,5 @@ val commonAppModule: Module = module {
     viewModel { WorkOrderViewModel(get(), get(), Dispatchers.Default) }
     viewModel { AttendanceViewModel(get(), get(), Dispatchers.Default) }
     viewModel { PayrollViewModel(get(), get(), Dispatchers.Default) }
+    viewModel { MaterialViewModel(get(), Dispatchers.Default) }
 }

@@ -1,6 +1,7 @@
 package com.duluin.ftth.mobile.domain
 
 import kotlin.jvm.JvmInline
+import kotlinx.coroutines.flow.StateFlow
 
 enum class MaterialUnit { EA, MM }
 enum class MaterialTracking { SERIAL, LOT, BULK }
@@ -31,8 +32,10 @@ value class MaterialQuantity private constructor(val base: String) {
 
 data class MaterialSession(val tenantId: String, val identity: OutboxIdentity, val fieldAllowed: Boolean, val readOnly: Boolean)
 interface MaterialSessionPort {
-    fun current(): MaterialSession?
-    fun online(): Boolean
+    val state: StateFlow<MaterialSession?>
+    val connectivity: StateFlow<Boolean>
+    fun current(): MaterialSession? = state.value
+    fun online(): Boolean = connectivity.value
 }
 data class MaterialPage<T>(val items: List<T>, val page: Int, val size: Int, val totalElements: Long)
 data class MaterialJob(val id: String, val code: String, val updatedAt: String)

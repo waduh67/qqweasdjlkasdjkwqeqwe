@@ -132,7 +132,7 @@ case "$MODE" in
     kmp)
         [[ $# == 0 ]] || refuse 'kmp takes no arguments'
         [[ -f "$ROOT/mobile/feature/materials/build.gradle.kts" ]] || refuse 'materials KMP module missing; implement plan task42 before running kmp'
-        gradle :mobile:core:mvi:jvmTest :mobile:core:storage:jvmTest :mobile:feature:workorders:jvmTest :mobile:feature:materials:jvmTest :mobile:app:jvmTest verifyMobileModuleGraph --no-parallel
+        gradle :mobile:domain:jvmTest :mobile:data:jvmTest :mobile:core:mvi:jvmTest :mobile:core:storage:jvmTest :mobile:feature:workorders:jvmTest :mobile:feature:materials:jvmTest :mobile:app:jvmTest verifyMobileModuleGraph --no-parallel
         ;;
     browser)
         [[ $# == 1 && "$1" =~ ^[a-zA-Z0-9_-]+\.spec\.ts$ ]] || refuse 'browser requires one warehouse spec filename'

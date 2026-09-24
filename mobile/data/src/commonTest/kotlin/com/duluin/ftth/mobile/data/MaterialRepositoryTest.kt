@@ -3,6 +3,7 @@ package com.duluin.ftth.mobile.data
 import com.duluin.ftth.mobile.domain.*
 import com.duluin.ftth.mobile.storage.*
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.*
 
 internal const val WORK = "11111111-1111-4111-8111-111111111111"
@@ -19,10 +20,14 @@ internal fun issueJson() = """{"id":"$ISSUE","code":"ISS-01","workOrderId":"$WOR
     "lines":[{"id":"$ISSUE","stockIdentityId":"$SOURCE","sku":{"id":"$SOURCE","code":"DROP","name":"Kabel drop","tracking":"LOT","baseUnit":"MM"},"baseUnit":"MM","dispatchedBase":"100000","acceptedBase":"0","remainingBase":"100000","serial":null,"lotCode":"REEL-1"}]}"""
 internal fun reportDraft() = MaterialDraft.ReportUse(MaterialJson.context(contextJson(), WORK), listOf(MaterialMeasuredUse(MaterialJson.custody(MaterialJson.parse(sourceJson())), MaterialQuantity.base("82500"))), "Ukuran lapangan", null)
 internal class MaterialTestSession : MaterialSessionPort {
-    var value: MaterialSession? = MaterialSession(TENANT, OutboxIdentity(USER, "device", "session"), fieldAllowed = true, readOnly = false)
-    var connected = true
-    override fun current() = value
-    override fun online() = connected
+    override val state = MutableStateFlow<MaterialSession?>(MaterialSession(TENANT, OutboxIdentity(USER, "device", "session"), fieldAllowed = true, readOnly = false))
+    override val connectivity = MutableStateFlow(true)
+    var value: MaterialSession?
+        get() = state.value
+        set(value) { state.value = value }
+    var connected: Boolean
+        get() = connectivity.value
+        set(value) { connectivity.value = value }
 }
 private class MaterialRecords : SecureOutboxRecords {
     val rows = linkedMapOf<String, SecureOutboxRecord>()

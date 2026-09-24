@@ -34,7 +34,7 @@ class MaterialRepository(
     override fun sessionChanged() {
         val current = sessions.current()
         val prior = bound
-        if (prior != null && (prior.tenantId != current?.tenantId || prior.identity != current?.identity)) outbox.purge(prior.identity.userId)
+        if (prior != null && (prior.tenantId != current?.tenantId || prior.identity != current.identity)) outbox.purge(prior.identity.userId)
         bound = current
     }
     private fun session(write: Boolean = false): MaterialSession {

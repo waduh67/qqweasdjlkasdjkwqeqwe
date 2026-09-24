@@ -1,0 +1,127 @@
+{
+  "sourceCommit": "accompanying shared material feature checkpoint",
+  "kmp": {
+    "tests": 41,
+    "failures": 0,
+    "result": "scripts/warehouse/qa.sh kmp: BUILD SUCCESSFUL in21s, Gradle executes changed suites and verifies unchanged suites up-to-date",
+    "suites": [
+      {
+        "module": "domain",
+        "suite": "MaterialQuantityTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "4a37a0e39dada07478746dabebf11e6c835695bd0d1308a9df7b191dea28ae25"
+      },
+      {
+        "module": "domain",
+        "suite": "NavigationTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "89a376df01072f3f8fa89bdf80acd4cccc002a5c95215302453ef6a7883fb209"
+      },
+      {
+        "module": "domain",
+        "suite": "OutboxTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "2fb1a3daeb2333d10ae7e66362e10467af878f021a073bf46c66dd3f37df91a7"
+      },
+      {
+        "module": "domain",
+        "suite": "WorkOrderReducerTest[jvm]",
+        "tests": 2,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "929732805979e3553e4968bdcdf82330507d17f1b1ae56e0e5deaa89ecb88d21"
+      },
+      {
+        "module": "data",
+        "suite": "MaterialRepositoryTest[jvm]",
+        "tests": 7,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "c35b072ef0b684e16b6d3602646c51d4f43fdee73d6fb8dec21037ed1f2f16be"
+      },
+      {
+        "module": "data",
+        "suite": "WorkOrderRepositoryTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "d46863ac7e5ebe1b5b6b2b4a8c97c2f581a41a8ed911e71a359fe6ee4472ae36"
+      },
+      {
+        "module": "core/mvi",
+        "suite": "MviStoreTest[jvm]",
+        "tests": 5,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "8d54a6f535c86617210857e0a6ea358be40020fffcbd7467c1f37c02a46fd391"
+      },
+      {
+        "module": "core/mvi",
+        "suite": "MviViewModelTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "917860dd7e44f3fa9302b23dcce710c509a5f6daaf1d6532a6747a0bc1dd42ae"
+      },
+      {
+        "module": "core/storage",
+        "suite": "EncryptedOutboxTest[jvm]",
+        "tests": 7,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "89384c23735e9e417b4cd0f4961f5f64ca69d038791b579b26ba2cc54838612c"
+      },
+      {
+        "module": "feature/workorders",
+        "suite": "WorkOrderReducerTest[jvm]",
+        "tests": 4,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "cc5720eaef2a863b6db354bd30d518571aec7000a516f5b8b14c7404594a10de"
+      },
+      {
+        "module": "feature/workorders",
+        "suite": "WorkOrderScreenUiTest[jvm]",
+        "tests": 3,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "30d8f3649f72357c63ad6d3dcf23a16780722207ac55d3288d654c26b8a16afd"
+      },
+      {
+        "module": "feature/materials",
+        "suite": "MaterialFeatureTest[jvm]",
+        "tests": 5,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "eb86dad17af6cc8bd69aef7efc58cd036a550e259c3cfc22f23771e77b72b713"
+      },
+      {
+        "module": "feature/materials",
+        "suite": "MaterialScreenUiTest[jvm]",
+        "tests": 2,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "1c02d594adcca09148a0c8d173661670c5a0d04a3161a660334bb425768725e4"
+      },
+      {
+        "module": "app",
+        "suite": "DiTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "7f250cec41de3bb2058967814a6217b5294eeab2470f5b6dd7fd3d4e3e086393"
+      }
+    ],
+    "graph": "PASS"
+  },
+  "coverage": "Shared MaterialViewModel/Fluent screen and typed own WO/issue/custody pages. Measured initial/corrected use, partial serialized/lot receipt, no-material declaration. Session/connectivity observation clears old scope, rejects late old responses and restores pending queue offline without fetching stock. Form/uncertain/pending/accepted/conflict/rejected separated; double submit blocked; successful response reloads actual quantities. Koin constructs MaterialRepository with platform-authenticated transport and existing encrypted user outbox. Source pagination retains multiple measured lines.",
+  "initialFailures": "UI test initially found duplicate input content descriptions; primitive label fixed. Nullable when cleanup initially failed exhaustive compile; explicit nonnull local fixed. Final7 material tests and all41 required tests pass.",
+  "native": "macOS native compilation pending: new mobile-materials workflow compiles both configured iOS app targets and rejects SKIPPED/NO-SOURCE. Linux compile/metadata attempt still running when checkpoint prepared; no native compile or runtime claim.",
+  "remaining": "42 remains OPEN solely until native compile proof completes; continue43 independently.43-48/F1-F4 remain. No main merge/deploy."
+}
