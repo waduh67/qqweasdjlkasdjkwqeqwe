@@ -38,7 +38,8 @@ class WarehouseContractTest {
         "inventory.SettlementCheckRequest" to """{"expectedRevision":2,"planRevision":3,"useRevision":4}""",
         "inventory.DeploymentIntentRequest" to
             """{"expectedRevision":2,"assetId":"$id","issueLineId":"$id","purpose":"INSTALL"}""",
-        "inventory.ConsumeDeploymentRequest" to """{"authorizationId":"$id","expectedRevision":2}""",
+        "inventory.ConsumeDeploymentRequest" to
+            """{"authorizationId":"$id","expectedRevision":2,"customerId":"$id","installationPayload":"{}"}""",
         "inventory.AcceptAssetHandoverRequest" to
             """{"assignmentId":"$id","expectedRevision":2,"evidenceId":"$id"}""",
         "inventory.ApprovalSourceRequest" to """{"documentId":"$id","expectedRevision":2}""",
@@ -187,7 +188,7 @@ class WarehouseContractTest {
         assertFields("inventory.MaterialRevisions", setOf("workOrderRevision", "planRevision", "useRevision", "settlementRevision"))
         assertFields("inventory.WarehouseQuantity", setOf("quantityBase", "baseUnit", "displayQuantity", "displayUnit"))
         assertFields("inventory.ReceiptCostSnapshot", setOf("totalMinor", "currency", "costBasisQuantityBase"))
-        assertFields("inventory.WarehouseMutationMetadata", setOf("idempotencyKey"))
+        assertFields("inventory.WarehouseMutationMetadata", setOf("idempotencyKey", "observation"))
         assertFields("inventory.WarehouseOperationReceipt", setOf("operationId", "documentId", "documentRevision", "originalStatus", "originalBody", "recordedAt"))
         assertThat(type("inventory.WarehouseQuantity").getDeclaredField("quantityBase").type).isEqualTo(String::class.java)
         assertThat(type("inventory.ReceiptCostSnapshot").getDeclaredField("totalMinor").type).isEqualTo(String::class.java)

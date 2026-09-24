@@ -110,3 +110,31 @@ inbound, receipt binding, stale acceptance, role/scope revocation, concurrent
 acceptance, actual connection termination, lock contention and forward upgrade.
 The live seed class prepares a private local fixture manifest for packaged HTTP
 verification; it is not a production endpoint or stock-seeding mechanism.
+
+### Packaged HTTP and restart verification
+
+With JDK 21, Docker Compose, Python 3, `jq`, and the owned environment available,
+run `scripts/warehouse/qa.sh replenishment` inside the same Wave5 host lock and
+`up`/`stop`/`down` lifecycle. This command performs a clean server build, runs the
+legitimate live fixture, and starts the resulting JAR twice on `127.0.0.1:17880`.
+It uses `warehouse_test` with the non-owner app role and disables scheduling.
+Its dedicated `/actuator/health/warehouse` readiness group requires the database,
+disk and ping checks to be UP; SMTP is not a dependency of this isolated workflow.
+
+The first JVM uses a minimum of 100,000 MM, a target of 150,000 MM and packages
+of 25,000 MM. Physical stock of 60,000 MM, reservations of 20,000 MM and inbound
+supply of 40,000 MM produce a 75,000 MM request. It checks duplicate recompute,
+acceptance replay, changed input, restricted users and foreign locations.
+A separate tenant receives and puts away 100,000 MM through real HTTP APIs, then
+rejects its outdated suggestion with 409 `STALE_REVISION`. That test SKU permits putaway
+without separate inspection. The second JVM verifies the original responses,
+one request, resolved shortage, and physical stock survive restart.
+
+The runner compares eleven tenant-scoped physical posting counts before and
+after planning/replay, in addition to exact stock API snapshots. Logs, assertion
+results, counts, and the JAR SHA256 are written under
+`.omo/runtime/replenishment-http/`; archive them with the task evidence before
+another run. Fixture and replay manifests are private and removed on exit.
+Owned JVMs are stopped even on failure, and environment shutdown retains volumes.
+The port probe tolerates TCP `TIME_WAIT` from a prior run while still rejecting
+an active listener.

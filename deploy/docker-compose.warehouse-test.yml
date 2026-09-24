@@ -13,7 +13,8 @@ services:
     volumes:
       - postgres:/home/postgres/pgdata/data
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U warehouse_admin -d postgres"]
+      # The initialization server accepts Unix sockets before its final restart.
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U warehouse_admin -d postgres"]
       interval: 2s
       timeout: 3s
       retries: 60
