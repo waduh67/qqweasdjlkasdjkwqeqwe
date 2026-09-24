@@ -34,7 +34,8 @@ class WarehouseSettingsWorkbenchIT : WarehousePolicyHttpFixture() {
         val locations = listOf(setup.source, setup.inspection)
         val source = approver(setup.token, locations)
         val delegate = approver(setup.token, locations)
-        approver(setup.token, locations)
+        val other = approver(setup.token, locations)
+        val adminId = mapper.readTree(request("GET", "/api/me", setup.token).contentAsString).path("id").asString()
         val sourceRole = mapper.readTree(request("GET", "/api/users/${source.second}", setup.token).contentAsString).path("roleIds").single().asString()
         configure(setup.token, mapper.writeValueAsString(mapOf("expectedRevision" to 0, "currency" to "IDR", "expiryHours" to 24,
             "warehouseIds" to locations, "rules" to listOf(mapOf("operation" to "RECEIPT", "tiers" to listOf(mapOf(
@@ -45,7 +46,11 @@ class WarehouseSettingsWorkbenchIT : WarehousePolicyHttpFixture() {
         assertThat(mapper.readTree(sources.contentAsString).path("items").single().path("id").asString()).isEqualTo(source.second)
         val targets = request("GET", "$path&kind=DELEGATE&approverId=${source.second}&sourceRoleId=$sourceRole&size=1", setup.token)
         assertThat(targets.status).withFailMessage(targets.contentAsString).isEqualTo(200)
-        assertThat(mapper.readTree(targets.contentAsString).path("totalElements").asLong()).isEqualTo(2)
+        assertThat(mapper.readTree(targets.contentAsString).path("totalElements").asLong()).isEqualTo(3)
+        assertThat(mapper.readTree(targets.contentAsString).path("items").size()).isEqualTo(1)
+        val allTargets = request("GET", "$path&kind=DELEGATE&approverId=${source.second}&sourceRoleId=$sourceRole", setup.token)
+        assertThat(mapper.readTree(allTargets.contentAsString).path("items").asSequence().map { it.path("id").asString() }.toList())
+            .containsExactlyInAnyOrder(delegate.second, other.second, adminId).doesNotContain(source.second)
         fun create(location: String): String {
             val result = request("POST", "/api/v1/warehouse/settings/delegations", setup.token, mapper.writeValueAsString(mapOf(
                 "expectedRevision" to 0, "approverId" to source.second, "delegateId" to delegate.second, "sourceRoleId" to sourceRole,

@@ -1,3 +1,22 @@
+## Task38 settings UI checkpoint — targeted web verified, integration rerun pending
+
+Added on-demand named policy history and scoped paged delegation workbench, direct-user
+or configured-role source picker, independent delegate picker, expiry validation and
+captured create/revoke review. Canonical create expectedRevision=0; revoke uses actual
+row revision. Same body/key survives ambiguous retries; stale409 reloads current state.
+Read-only approval.view can reach settings without location.view; unauthorized actions
+and broad IAM reads remain absent. Saved policy preview reused in history.
+
+15 web tests/4 files PASS3.94s, TypeScript and targeted oxlint PASS. New8 tests cover
+history paging/names, role binding, independent target, replay and actual revision.
+Initial backend9 run had1 test expectation failure: eligible tenant admin makes3 delegate
+candidates, not2. Corrected assertion checks all3 actual IDs and excludes source; no
+product authorization was weakened. Fresh9 run: settings-workbench-corrected-server.log,
+archive task38/settings-workbench-corrected/xml. Full web/build/lint in progress:
+task38-full-web.log, task38-web-build.log, task38-web-lint.log. Whole38 remains OPEN until
+those checks pass. Next39: integrate WO material planning, field use and settlement.
+Goal ACTIVE; then40–48/F1–F4. No migration. Remote checkpoints requested by user.
+
 ## Task38 settings read backend checkpoint — verification pending
 
 Implemented new /settings/workbench policy-history, delegations and delegation-candidates.

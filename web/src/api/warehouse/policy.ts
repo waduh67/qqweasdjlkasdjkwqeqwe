@@ -32,7 +32,7 @@ export function policyChoice(value: unknown, path = 'choice') {
 export type PolicyChoice = ReturnType<typeof policyChoice>
 export function policyDetails(value: unknown, path = 'settings') {
   const row = record(value, path), refs = record(row.references, path), current = nullable(row.current, policyVersion, path), configured = boolean(row.configured, path)
-  const references = { users: array(refs.users, policyChoice, path, 9000), roles: array(refs.roles, policyChoice, path, 9000), locations: array(refs.locations, (value, path = 'location') => {
+  const references = { users: array(refs.users, policyChoice, path, 9001), roles: array(refs.roles, policyChoice, path, 9000), locations: array(refs.locations, (value, path = 'location') => {
     const row = record(value, path)
     return { id: uuid(row.id, path), code: text(row.code, path), name: nullable(row.name, text, path) }
   }, path, 100) }
