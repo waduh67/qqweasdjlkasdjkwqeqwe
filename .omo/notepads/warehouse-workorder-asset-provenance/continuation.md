@@ -1,5 +1,25 @@
 # Whole-plan continuation
 
+## Task31 COMPLETE —49 unit tests and both real browser projects green
+
+setup-mobile-fixed against55b19223: desktop1280x900 and touch/mobile375x812 both
+PASSED (2tests,12.35s,zero failures/skips/flaky). Real UI signup, role/user creation,
+independent approver login, overview+queue, stock API403 and route denial, unknown
+route unavailable, no horizontal document overflow. All warehouse requests were
+real, no mocked responses or SQL inventory seed. API+Vite proxy readiness proved
+warehouse_e2e/warehouse_app/owned marker; role NOSUPERUSER NOBYPASSRLS. All339
+migrations through147 booted. Server bootJar and web TypeScript/Vite passed.
+49 API/control unit tests and14 prior API/session/nav regression tests are separately
+recorded. Portable verification.json +reviewed synthetic-account desktop/mobile
+screenshots committed under task31. Raw result JSON/auth-bearing traces stay private.
+
+All owned QA processes/containers/network stopped cleanly; volumes retained.
+Task31 checkbox now checked; whole goal stays ACTIVE. Next task32 setup/catalog
+CRUD and user warehouse scope UI; read task-32.md preparation and actual contracts.
+Current other warehouse routes explicitly unavailable pending32–41; do not claim
+full operational UI complete. Continue32–48/F1–F4 with commits/remote checkpoints.
+No migration changes;148 nextunused,177/178 reservedtask43. No subagents or deployment.
+
 ## Task31 desktop passes; mobile drawer selector fixed
 
 setup-label-fixed against9b794f79: real desktop journey PASSED, including signup,
