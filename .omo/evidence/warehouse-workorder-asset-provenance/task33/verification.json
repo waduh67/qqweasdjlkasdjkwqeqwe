@@ -1,0 +1,59 @@
+{
+  "task": 33,
+  "status": "complete",
+  "verifiedAt": "2026-09-24T17:49:21.552721+00:00",
+  "sourceCommit": "a39aaea8e42b220d758049ba4da7b38a771a5377",
+  "browserCommand": "scripts/warehouse/qa.sh browser receiving.spec.ts",
+  "browserStats": {
+    "startTime": "2026-09-24T17:47:08.196Z",
+    "duration": 40918.329000000005,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "browserCases": [
+    {
+      "project": "warehouse-desktop",
+      "name": "real receipt receives 1000 metres and10 ONUs, rejects a subset and puts away accepted goods in stages",
+      "status": "passed",
+      "durationMs": 21059
+    },
+    {
+      "project": "warehouse-mobile",
+      "name": "real receipt receives 1000 metres and10 ONUs, rejects a subset and puts away accepted goods in stages",
+      "status": "passed",
+      "durationMs": 17061
+    }
+  ],
+  "browserRawSha256": "4892900731619a55b3c396912a2b5f7fb3c670ec3fd7113c01812cf5dc88cd0c",
+  "unit": "85 baseline passed;57 API/receipt tests passed after transition fix including1 new regression,86 distinct covered tests",
+  "server": "11 tests/5 suites passed at f16352e6; metadata-final-verification.json",
+  "build": "server bootJar, web TypeScript/Vite and lint PASS",
+  "assertions": [
+    "Real UI signup, area/self access and master prerequisites including receipt-source preset",
+    "Draft1000000MM and10 unique serials, duplicate serial correction, scanner Enter only appends",
+    "Edit expanded serial group into2 original lines; preserve cable cost1000006IDR",
+    "Private evidence upload, list after reload, download",
+    "Receive acknowledgement decoded then current GET; every piece quarantined",
+    "Inspect900000MM+8EA accepted,100000MM+2EA rejected",
+    "Putaway800000MM+8EA then100000MM; statePUTAWAY revision6",
+    "Stock UI available900000MM+8EA;physical1000000MM+10EA",
+    "Seven actual history operations; reference file download",
+    "Both screenshots reviewed; no horizontal document overflow"
+  ],
+  "screenshots": {
+    ".omo/evidence/warehouse-workorder-asset-provenance/task33/warehouse-desktop-receipt-complete.png": "b2d948378d5b1fa75ae30892fea8cb13e6b545a372cc4e155543e74780a84a55",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task33/warehouse-desktop-received-stock.png": "df51ae6d1656fb14d00dbccd794d4e5bebe3d8533621482b6135516bdcfa800b",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task33/warehouse-mobile-receipt-complete.png": "6ec4cad57bc669423a778a40cf9514249bbbecdbd993bf64613fb81c12ef6621",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task33/warehouse-mobile-received-stock.png": "6ce066f9b9d4f702a721f1f3faa4bd2db234fa6886fa69a38793e09b5e0631cd"
+  },
+  "environment": {
+    "database": "warehouse_e2e",
+    "role": "warehouse_app NOSUPERUSER NOBYPASSRLS",
+    "warehouseMocks": false,
+    "sqlInventorySeeds": false
+  },
+  "cleanup": "Owned processes containers network stopped;volumes retained",
+  "remainingScope": "34\u201348/F1\u2013F4"
+}

@@ -1,5 +1,22 @@
 # Task33 preparation — not yet implemented
 
+## Task33 COMPLETE — real receiving desktop/mobile green
+
+receiving-transition-fixed againsta39aaea8:2passed,0failed/skipped/flaky,40.9s.
+ActualUI emptytenant setup andsourcepreset; draft1000m+10ONU,duplicate correction,
+scanner,editpreservinggroupcost,privateevidenceupload/reload/download,receive,inspect
+reject100m+2ONU,putaway800m+8ONU then100m. FinalPUTAWAYrevision6/history7;
+stockUI900m+8ONUavailable,1000m+10physical withrejected100m+2inquarantine.
+CurrentGET followsactualtransitionack,notfabricatedfullresponse. Both desktop/mobile
+receipt/stock screenshots reviewed andportabletask33/verification.json committed.
+85baselineunit +57focused afterfix incl1new=86distinct;TS/lint/bootJar/webbuildpassed.
+Backendmetadata/costVisible11tests/5suites passedf16352e6;portablefinalproof saved.
+
+AllownedQAprocesses/containers/networkstopped;volumesretained. Task33checkbox complete.
+Nexttask34 stock/device/lotexplorer:read task-34.md preparation,actualquerycontracts;
+extendsame receiving.spec.ts forserialtimeline/reelconservation. Continue34–48/F1–F4.
+GoalACTIVE. No migrationschanged;148nextunused;177/178reservedtask43.
+
 ## Task33 receive acknowledgement corrected; browser rerun pending
 
 receiving-initial againstf16352e6:both desktop/mobile reached real draftcreate/edit,

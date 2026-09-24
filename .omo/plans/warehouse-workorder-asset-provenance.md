@@ -394,7 +394,7 @@ All tasks inherit C1–C11, the dependency matrix, tenant/auth/idempotency rules
   Do/accept: SKU/UoM/model/tracking, warehouse/bin hierarchy, supplier, user-warehouse scope, setup checklist and contextual create actions. Scope and missing-role explanation visible; referenced/stocked master archive blocked. Barcode/manual lookup duplicate errors actionable. Display names not UUIDs.
   QA: `W(WarehouseCatalogPage)` happy setup and readonly/archive/conflict states; `B(setup.spec.ts)` creates all prerequisites without SQL inventory seed. Save E(32). Commit: `feat(web): lengkapi pengaturan barang dan lokasi gudang`.
 
-- [ ] 33. Receipt/putaway screens: receive and inspect real material via UI to establish warehouse source — expect documents post once and populate stock.
+- [x] 33. Receipt/putaway screens: receive and inspect real material via UI to establish warehouse source — expect documents post once and populate stock.
   References: R13,task08; NEW `web/src/pages/warehouse/WarehouseReceiptsPage.tsx` and tests, `web/e2e/warehouse/receiving.spec.ts`.
   Do/accept: source details, bulk serial entry/scanner, cable measured reel length and line quantities, attachments, inspection discrepancy and putaway location. Draft vs posted labels, confirm exact stock delta, print/save reference, retry retains business operation. Failure recovers editable draft and reloads stale version, not duplicate receipt.
   QA: `W(WarehouseReceiptsPage)` submit/retry/duplicate serial/scope states; `B(receiving.spec.ts)` actual receive1000m/10ONUs and inspect reject subset. Save E(33). Commit: `feat(web): operasikan penerimaan dan pemeriksaan barang`.
