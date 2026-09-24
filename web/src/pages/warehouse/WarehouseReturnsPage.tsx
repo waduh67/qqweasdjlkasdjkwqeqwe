@@ -12,6 +12,7 @@ import { WarehouseQuantity } from '@/components/organisms/warehouse/WarehouseQua
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
 import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatus'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
+import { WarehousePendingMaterialReturns } from './WarehousePendingMaterialReturns'
 import { WarehouseReturnActions, type ReturnAction } from './WarehouseReturnActions'
 import { WarehouseReturnEditor } from './WarehouseReturnEditor'
 import { WarehouseReturnFilters } from './WarehouseReturnFilters'
@@ -34,7 +35,7 @@ export function WarehouseReturnsPage() {
   return <div className="stack warehouse-returns"><PageHeader title="Retur & Servis" subtitle="Terima sumber yang sah, periksa kondisi fisik, dan ikuti perangkat selama servis." />
     {creating ? <WarehouseReturnEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />
       : id ? <><Link to="/warehouse/returns">Kembali ke daftar retur</Link><ReturnDetail key={id} id={id} /></>
-        : <>{can('inventory.return.manage') && <Button variant="primary" disabled={!can('inventory.location.view')} onClick={() => setCreating(true)}>Terima retur baru</Button>}
+        : <>{can('inventory.return.manage') && <WarehousePendingMaterialReturns />}{can('inventory.return.manage') && <Button variant="primary" disabled={!can('inventory.location.view')} onClick={() => setCreating(true)}>Terima retur baru</Button>}
           {can('inventory.return.manage') && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih karantina penerimaan.</p>}<ReturnList /></>}
   </div>
 }

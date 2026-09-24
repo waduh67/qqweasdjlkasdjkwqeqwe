@@ -6,9 +6,9 @@ import { Modal } from '@/components/molecules/Modal'
 import { warehouseError } from '@/api/warehouse/errors'
 
 /** Mount with a captured command; keep this same instance through every ambiguous retry. */
-export function WarehouseCommandDialog<T>({ title, summary, command, confirmLabel = 'Simpan', onDone, onClose, onReload }: {
+export function WarehouseCommandDialog<T>({ title, summary, command, confirmLabel = 'Simpan', onDone, onClose, onReload, disabled = false }: {
   title: string; summary: ReactNode; command: WarehouseCommand<T>; confirmLabel?: string;
-  onDone: (result: T) => void; onClose: () => void; onReload?: () => void
+  onDone: (result: T) => void; onClose: () => void; onReload?: () => void; disabled?: boolean
 }) {
   const captured = useRef(command)
   const active = useRef(false)
@@ -18,7 +18,7 @@ export function WarehouseCommandDialog<T>({ title, summary, command, confirmLabe
   const uncertain = error !== null && !rejected
   const close = () => { if (!active.current && !uncertain) onClose() }
   async function submit() {
-    if (active.current || rejected) return
+    if (active.current || rejected || disabled) return
     active.current = true; setBusy(true); setError(null)
     try { const result = await captured.current.execute(); onDone(result) }
     catch (caught) { setError(caught) }
@@ -26,7 +26,7 @@ export function WarehouseCommandDialog<T>({ title, summary, command, confirmLabe
   }
   return <Modal title={title} onClose={close} footer={<>
     <Button variant="subtle" disabled={busy || uncertain} onClick={close}>{rejected ? 'Kembali' : 'Batal'}</Button>
-    {rejected && onReload ? <Button variant="primary" onClick={onReload}>Muat ulang dokumen</Button> : <Button variant="primary" disabled={busy || rejected} onClick={() => void submit()}>{busy ? 'Memproses…' : uncertain ? 'Coba transaksi yang sama' : confirmLabel}</Button>}
+    {rejected && onReload ? <Button variant="primary" onClick={onReload}>Muat ulang dokumen</Button> : <Button variant="primary" disabled={busy || rejected || disabled} onClick={() => void submit()}>{busy ? 'Memproses…' : uncertain ? 'Coba transaksi yang sama' : confirmLabel}</Button>}
   </>}>
     <div className="stack">{summary}
       {error !== null && <div role="alert"><p className="error">{warehouseError(error)}</p>{uncertain && <p>Hasil transaksi belum terkonfirmasi. Coba lagi dengan transaksi yang sama sebelum mengubah isinya.</p>}</div>}

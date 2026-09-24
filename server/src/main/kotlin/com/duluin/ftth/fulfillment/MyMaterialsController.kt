@@ -22,6 +22,9 @@ class MyMaterialsController(private val service: MyMaterialsService) {
     @GetMapping("/{id}/issues") fun issues(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(service.issues(id, page(parameters)))
     @GetMapping("/{id}/residuals") fun residuals(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(service.residuals(id, page(parameters)))
     @GetMapping("/{id}/return-locations") fun locations(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(service.locations(id, page(parameters)))
+    @GetMapping("/{id}/custody/{source}") fun source(@PathVariable id: UUID, @PathVariable source: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(service.source(id, source).also { if (parameters.isNotEmpty()) invalid() })
+    @GetMapping("/{id}/issues/{issue}") fun issue(@PathVariable id: UUID, @PathVariable issue: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(service.issue(id, issue).also { if (parameters.isNotEmpty()) invalid() })
+    @GetMapping("/{id}/return-locations/{location}") fun location(@PathVariable id: UUID, @PathVariable location: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(service.location(id, location).also { if (parameters.isNotEmpty()) invalid() })
     private fun page(parameters: MultiValueMap<String, String>): WarehousePageRequest {
         if (parameters.any { (key, values) -> key !in setOf("page", "size") || values.size != 1 || !values.single().matches(Regex("[0-9]+")) }) invalid()
         fun number(key: String, default: Int) = parameters[key]?.single()?.let { it.toIntOrNull() ?: invalid() } ?: default
@@ -58,6 +61,11 @@ class MyMaterialsService(private val authority: CurrentAuthorityApi, private val
     fun issues(id: UUID, page: WarehousePageRequest) = inventory.issues(locked(id), page)
     fun residuals(id: UUID, page: WarehousePageRequest) = inventory.residuals(locked(id), page)
     fun locations(id: UUID, page: WarehousePageRequest) = inventory.returnLocations(locked(id), page)
+    fun source(id: UUID, source: UUID) = single(inventory.custody(locked(id), WarehousePageRequest(0, 1), source))
+    fun issue(id: UUID, issue: UUID) = single(inventory.issues(locked(id), WarehousePageRequest(0, 1), issue))
+    fun location(id: UUID, location: UUID) = single(inventory.returnLocations(locked(id), WarehousePageRequest(0, 1), location))
+    private fun <T : Any> single(page: WarehousePage<T>) = page.items.singleOrNull()
+        ?: throw WarehouseContractException(WarehouseError(WarehouseErrorCode.NOT_FOUND, "Material reference is no longer visible"))
     private fun locked(id: UUID): MaterialPlanningContext {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()

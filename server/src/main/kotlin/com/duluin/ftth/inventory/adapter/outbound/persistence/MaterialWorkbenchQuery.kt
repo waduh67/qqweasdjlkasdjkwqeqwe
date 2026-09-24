@@ -16,7 +16,7 @@ class MaterialWorkbenchQuery(private val jdbc: WarehouseCommandJdbc) {
     }
 
     /** Enumerate actual receipt descendants and intersect with current own physical custody before counting. */
-    fun custody(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<MaterialCustodyChoice> = jdbc.execute { sql ->
+    fun custody(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, identity: UUID? = null): WarehousePage<MaterialCustodyChoice> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page = page.page, size = page.size), access)
         decode(query.result(""", context AS (SELECT ?::uuid work_order,?::uuid actor),
             receipts AS MATERIALIZED (SELECT receipt.*,line.issue_line_id,line.accepted_identity_id,
@@ -55,11 +55,11 @@ class MaterialWorkbenchQuery(private val jdbc: WarehouseCommandJdbc) {
                     AND position.status='ISSUED' AND position.condition='SERVICEABLE' AND position.legal_owner='ISP'
                     AND position.warehouse_admission='VERIFIED' AND segment.warehouse_admission='VERIFIED' AND segment.state='ACTIVE'
                     AND position.quantity_base>0
-                ORDER BY position.stock_identity_id,receipt.recorded_at DESC,receipt.id)""" + query.page("SELECT * FROM live_sources",
+                ORDER BY position.stock_identity_id,receipt.recorded_at DESC,receipt.id)""" + query.page("SELECT * FROM live_sources WHERE (?::uuid IS NULL OR id=?::uuid)",
             """jsonb_build_object('id',id,'receiptId',receipt_id,'issueId',issue_id,'issueCode',issue_code,'issueLineId',issue_line_id,
                 'planId',plan_id,'planLineId',plan_line,'sku',sku,'sourceUsageId',usage_id,'quantityBase',quantity_base::text,
                 'baseUnit',base_unit,'stockRevision',revision,'location',jsonb_build_object('id',location_id,'code',location_code,'name',location_name),
-                'serial',serial_number,'lotCode',lot_code,'initialUseSource',initial_use_source)""", "issue_code"), workOrder, actor), MaterialCustodyChoice::class.java)
+                'serial',serial_number,'lotCode',lot_code,'initialUseSource',initial_use_source)""", "issue_code"), workOrder, actor, identity, identity), MaterialCustodyChoice::class.java)
     }
 
     fun usage(workOrder: UUID, actor: UUID?, page: WarehousePageRequest, access: WarehouseQueryAccess, usageId: UUID? = null): WarehousePage<MaterialUsageView> = jdbc.execute { sql ->

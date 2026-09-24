@@ -116,3 +116,11 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   Unknown provenance/unit/cost and restricted cost remain distinct states. Tree rows
   keep parent links, exact quantities and split/active labels without summing parents
   again. A failed conservation check is visible and never repaired by reading.
+- Field material forms use the same controls and exact units at mobile widths. A
+  scanner selects a serial from the authorized document or current own custody;
+  Enter never acknowledges it. Camera scanning starts on an explicit user action,
+  releases its stream on close, and leaves manual entry available on every error.
+- Offline field edits are labelled drafts in the current tab. Previously loaded
+  quantities are labelled as the last server snapshot, and mutations stay disabled.
+  Reconnection requires fresh source, assignment and revision checks before review.
+  Switching accounts or leaving the page clears these unsent local drafts.

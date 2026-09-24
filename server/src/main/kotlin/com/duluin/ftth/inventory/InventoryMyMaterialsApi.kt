@@ -4,12 +4,13 @@ import java.time.Instant
 import java.util.UUID
 
 interface InventoryMyMaterialsApi {
+    fun pendingReturns(page: WarehousePageRequest): WarehousePage<MyMaterialResidual>
     fun jobs(page: WarehousePageRequest): WarehousePage<MyMaterialJob>
     fun authorize(context: MaterialPlanningContext)
-    fun custody(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialCustodyChoice>
-    fun issues(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MyMaterialIssue>
+    fun custody(context: MaterialPlanningContext, page: WarehousePageRequest, identity: UUID? = null): WarehousePage<MaterialCustodyChoice>
+    fun issues(context: MaterialPlanningContext, page: WarehousePageRequest, issue: UUID? = null): WarehousePage<MyMaterialIssue>
     fun residuals(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MyMaterialResidual>
-    fun returnLocations(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<WarehouseApprovalLocation>
+    fun returnLocations(context: MaterialPlanningContext, page: WarehousePageRequest, location: UUID? = null): WarehousePage<WarehouseApprovalLocation>
 }
 data class MyMaterialJob(val id: UUID, val code: String, val updatedAt: Instant)
 data class MyMaterialIssue(val id: UUID, val code: String, val workOrderId: UUID, val workOrderRevision: Long,

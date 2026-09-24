@@ -34,6 +34,7 @@ const LABELS: Record<string, string> = {
   catalog: 'Paket Internet',
   incidents: 'Insiden',
   'work-orders': 'Work Order',
+  'my-materials': 'Material Saya',
   'my-work-orders': 'Tugas Saya',
   users: 'Pengguna',
   roles: 'Role & Izin',

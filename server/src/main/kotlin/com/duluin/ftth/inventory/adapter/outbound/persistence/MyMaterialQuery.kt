@@ -9,14 +9,10 @@ import java.util.UUID
 @Repository
 class MyMaterialQuery(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
-    fun belongs(workOrder: UUID, actor: UUID): Boolean = jdbc.execute { sql ->
-        sql.value("""SELECT id FROM inventory_issue_snapshot issue WHERE tenant_id=? AND receiver_id=? AND EXISTS (
-            SELECT FROM inventory_document document WHERE document.tenant_id=issue.tenant_id AND document.id=issue.id AND document.work_order_id=?)
-            UNION ALL SELECT id FROM inventory_material_residual WHERE tenant_id=? AND work_order_id=? AND (sender_id=? OR receiver_id=?) LIMIT 1""",
-            sql.tenant, actor, workOrder, sql.tenant, workOrder, actor, actor) != null
-    }
+    fun belongs(workOrder: UUID, actor: UUID, access: WarehouseQueryAccess): Boolean =
+        jobs(actor, WarehousePageRequest(0, 1), access, workOrder).totalElements > 0
 
-    fun jobs(actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<MyMaterialJob> = jdbc.execute { sql ->
+    fun jobs(actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, workOrder: UUID? = null): WarehousePage<MyMaterialJob> = jdbc.execute { sql ->
         val query = query(sql, page, access)
         decode(query.result(""", actor AS (SELECT ?::uuid id), owned AS (
             SELECT document.work_order_id,document.work_order_code_snapshot code,document.created_at
@@ -28,15 +24,15 @@ class MyMaterialQuery(private val jdbc: WarehouseCommandJdbc) {
             FROM inventory_material_residual residual JOIN inventory_document document ON document.tenant_id=residual.tenant_id AND document.id=residual.id,request,actor
             WHERE residual.tenant_id=request.tenant AND ((residual.sender_id=actor.id AND (residual.source_dimension::jsonb->>'locationId')::uuid IN (SELECT id FROM visible_locations))
                 OR (residual.receiver_id=actor.id AND residual.target_location_id IN (SELECT id FROM visible_locations))))""" + query.page(
-            "SELECT work_order_id id,max(code) code,max(created_at) updated_at FROM owned GROUP BY work_order_id",
-            """jsonb_build_object('id',id,'code',code,'updatedAt',${queryTime("updated_at")})""", "updated_at"), actor), MyMaterialJob::class.java)
+            "SELECT work_order_id id,max(code) code,max(created_at) updated_at FROM owned WHERE (?::uuid IS NULL OR work_order_id=?::uuid) GROUP BY work_order_id",
+            """jsonb_build_object('id',id,'code',code,'updatedAt',${queryTime("updated_at")})""", "updated_at"), actor, workOrder, workOrder), MyMaterialJob::class.java)
     }
 
-    fun issues(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<MyMaterialIssue> = jdbc.execute { sql ->
+    fun issues(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, issue: UUID? = null): WarehousePage<MyMaterialIssue> = jdbc.execute { sql ->
         val query = query(sql, page, access)
         decode(query.result(query.page("""SELECT document.*,issue.snapshot::jsonb frozen FROM inventory_issue_snapshot issue
             JOIN inventory_document document ON document.tenant_id=issue.tenant_id AND document.id=issue.id,request
-            WHERE issue.tenant_id=request.tenant AND document.work_order_id=? AND issue.receiver_id=?
+            WHERE issue.tenant_id=request.tenant AND document.work_order_id=? AND issue.receiver_id=? AND (?::uuid IS NULL OR document.id=?::uuid)
                 AND document.state IN ('DISPATCHED','PART_RECEIVED','RECEIVED')
                 AND EXISTS (SELECT FROM inventory_operation operation WHERE operation.tenant_id=request.tenant AND operation.document_id=document.id AND operation.business_action='DISPATCH')
                 AND NOT EXISTS (SELECT FROM inventory_operation operation JOIN inventory_movement movement ON movement.tenant_id=operation.tenant_id AND movement.operation_id=operation.id
@@ -51,10 +47,10 @@ class MyMaterialQuery(private val jdbc: WarehouseCommandJdbc) {
                     FROM jsonb_array_elements(frozen->'lines') line CROSS JOIN LATERAL (
                         SELECT coalesce(sum(received.accepted_base::numeric),0) amount FROM inventory_material_receipt_line received
                         WHERE received.tenant_id=matches.tenant_id AND received.issue_id=matches.id AND received.issue_line_id=(line->>'id')::uuid) accepted))""", "created_at"),
-            workOrder, actor), MyMaterialIssue::class.java)
+            workOrder, actor, issue, issue), MyMaterialIssue::class.java)
     }
 
-    fun residuals(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<MyMaterialResidual> = jdbc.execute { sql ->
+    fun residuals(workOrder: UUID?, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, returnInbox: Boolean = false): WarehousePage<MyMaterialResidual> = jdbc.execute { sql ->
         val query = query(sql, page, access)
         decode(query.result(query.page("""SELECT residual.id,residual.work_order_id,residual.sender_id,residual.receiver_id,residual.target_location_id,residual.purpose,
                 residual.quantity_base,residual.base_unit,residual.recorded_at,document.code,document.revision,document.state,location.code location_code,location.name location_name,
@@ -66,21 +62,24 @@ class MyMaterialQuery(private val jdbc: WarehouseCommandJdbc) {
             JOIN inventory_location location ON location.tenant_id=residual.tenant_id AND location.id=residual.target_location_id
             LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=line.tenant_id AND asset.id=line.stock_identity_id
             LEFT JOIN inventory_lot lot ON lot.tenant_id=line.tenant_id AND lot.id=line.lot_id,request
-            WHERE residual.tenant_id=request.tenant AND residual.work_order_id=? AND ((residual.sender_id=? AND
+            WHERE residual.tenant_id=request.tenant AND (?::uuid IS NULL OR residual.work_order_id=?::uuid) AND
+                CASE WHEN ?::boolean THEN residual.purpose='RETURN' AND document.state='DISPATCHED' AND residual.sender_id<>?::uuid
+                    AND residual.target_location_id IN (SELECT id FROM visible_locations)
+                ELSE ((residual.sender_id=? AND
                 (residual.source_dimension::jsonb->>'locationId')::uuid IN (SELECT id FROM visible_locations))
-                OR (residual.receiver_id=? AND residual.target_location_id IN (SELECT id FROM visible_locations)))""",
+                OR (residual.receiver_id=? AND residual.target_location_id IN (SELECT id FROM visible_locations))) END""",
             """jsonb_build_object('id',id,'code',code,'workOrderId',work_order_id,'revision',revision,'state',state,'purpose',purpose,
                 'sender',jsonb_build_object('id',sender_id,'name',''),'receiver',CASE WHEN receiver_id IS NULL THEN NULL ELSE jsonb_build_object('id',receiver_id,'name','') END,
                 'location',jsonb_build_object('id',target_location_id,'code',location_code,'name',location_name),
                 'sku',jsonb_build_object('id',sku_id,'revision',sku_revision,'code',sku_code,'name',sku_name,'tracking',tracking,'baseUnit',base_unit),
                 'quantityBase',quantity_base::text,'baseUnit',base_unit,'serial',serial_number,'lotCode',lot_code,'recordedAt',${queryTime("recorded_at")})""", "recorded_at"),
-            workOrder, actor, actor), MyMaterialResidual::class.java)
+            workOrder, workOrder, returnInbox, actor, actor, actor), MyMaterialResidual::class.java)
     }
 
-    fun returnLocations(page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<WarehouseApprovalLocation> = jdbc.execute { sql ->
+    fun returnLocations(page: WarehousePageRequest, access: WarehouseQueryAccess, location: UUID? = null): WarehousePage<WarehouseApprovalLocation> = jdbc.execute { sql ->
         val query = query(sql, page, access)
-        decode(query.result(query.page("SELECT id,code,name FROM visible_locations WHERE kind='QUARANTINE' AND state='ACTIVE'",
-            "jsonb_build_object('id',id,'code',code,'name',name)", "code")), WarehouseApprovalLocation::class.java)
+        decode(query.result(query.page("SELECT id,code,name FROM visible_locations WHERE kind='QUARANTINE' AND state='ACTIVE' AND (?::uuid IS NULL OR id=?::uuid)",
+            "jsonb_build_object('id',id,'code',code,'name',name)", "code"), location, location), WarehouseApprovalLocation::class.java)
     }
     private fun query(sql: PostingSql, page: WarehousePageRequest, access: WarehouseQueryAccess) = WarehouseQuerySql(sql, WarehouseQueryFilter(page = page.page, size = page.size, direction = "desc"), access)
     private fun <T : Any> decode(body: String, type: Class<T>): WarehousePage<T> {

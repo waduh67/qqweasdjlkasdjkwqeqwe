@@ -69,6 +69,7 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
     <section className="stack" aria-label="Kewajiban material"><h3>Sisa kewajiban material</h3>{settlement.obligations.dueAt && <p>Batas penyelesaian: <WarehouseTime value={settlement.obligations.dueAt} /></p>}
       {clear ? <p>Tidak ada barang atau reservasi yang menunggu penyelesaian pada ringkasan ini.</p> : <><p>Masih ada barang di tangan pemegang, dalam perjalanan, menunggu pemeriksaan retur, atau terikat reservasi.</p>
         <WorkOrderMaterialObligations id={workOrder.id} /></>}
+      {can('workorder.order.field') && <Link to={`/my-materials?workOrderId=${workOrder.id}`}>Terima atau kembalikan melalui Material Saya</Link>}
       {can('inventory.return.view') && <Link to="/warehouse/returns">Lihat retur dan pemeriksaan gudang</Link>}
       {can('workorder.order.close') && settlement.materialState !== 'CLOSED' && <Button disabled={!clear} onClick={() => setClosing(true)}>Tutup kewajiban material</Button>}
       {closing && <form className="stack" onSubmit={event => { event.preventDefault(); if (reason.trim()) setClose(closeMaterialSettlement(workOrder.id, { expectedRevision: settlement.revision, workOrderRevision: context.workOrderRevision, reason: reason.trim() })) }}>

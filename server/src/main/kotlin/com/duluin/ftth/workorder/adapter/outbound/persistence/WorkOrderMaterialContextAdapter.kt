@@ -74,7 +74,7 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
         authority.assertHeld()
         val current = this.authority.lockCurrent()
         if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
-        if (!current.platformAdmin && current.permissions.none { it in setOf("workorder.order.view", "workorder.order.field", "workorder.order.close", "workorder.order.assign", "workorder.order.approve") })
+        if (!current.platformAdmin && current.permissions.none { it in setOf("workorder.order.view", "workorder.order.field", "workorder.order.close", "workorder.order.assign", "workorder.order.approve", "inventory.return.manage") })
             fail(WarehouseErrorCode.FORBIDDEN)
         val material = snapshot(workOrderId, current)
         return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
