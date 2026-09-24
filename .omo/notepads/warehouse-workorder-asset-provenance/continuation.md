@@ -1,3 +1,20 @@
+## Task38 settings read backend checkpoint — verification pending
+
+Implemented new /settings/workbench policy-history, delegations and delegation-candidates.
+History requires all version locations visible before totals/pages; delegation rows are
+scoped by location and ACTIVE/EXPIRED/REVOKED before paging. Named users/roles/locations
+project only onto authorized rows. Historical archived locations remain readable through
+current topology/area authorization. Candidate pickers require manage + selected active
+location/current policy, direct-user or explicit source-role eligibility and no delegation
+chains/cycles. Existing create/revoke commands remain canonical. HTTP page25/max100,
+strict unknown/repeated filters and no-store; no raw directory API or UUID entry.
+
+New2 settings-workbench integration tests pending, with existing policy/workbench and
+approval delegation tests. Wrapper .omo/runtime/settings-workbench-server.sh, log
+settings-workbench-server.log; fresh archive task38/settings-workbench. Frontend history/
+delegation still pending. Overview backend4 + web13 verified at4dc77371/adbc8e1e.
+Whole38 still open, then39–48/F1–F4. No migration. Long-run goal ACTIVE.
+
 ## Task38 overview verified; settings history/delegation next
 
 Overview backend4dc77371:4tests/3suites PASS3m22s (Shortages2, Balances1, Privacy1).
