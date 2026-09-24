@@ -1,5 +1,25 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Current continuation: 2026-09-24
+
+- User requests completion of the whole remaining plan with regular committed,
+  pushed recovery checkpoints. Current workspace is on `work/warehouse-task29`;
+  this checkpoint closes task29's outstanding local regression and HTTP proof.
+- Task29:191 selected regression tests and1 clean-build live fixture passed with
+  zero failures/errors/skips. Two packaged HTTP JVMs passed numeric replenishment,
+  authorization, stale receipt rejection and persisted replay checks; eleven
+  physical posting counts remained identical. Details and artifact SHA256 are in
+  `.omo/notepads/warehouse-workorder-asset-provenance/task-29.md`.
+- Global plan still has tasks1–24 checked. Inspect remote tasks25/27, integrate
+  25→27→29 and verify the combined source before marking those tasks complete.
+  Next implementation dependencies are26,28,30 followed by31–48 and final gates.
+- Recovery: fetch all remote branches, read the newest entry here and the ledger,
+  and prefer the newest integration checkpoint once published. Recreate the
+  isolated QA environment; ignored runtime credentials/evidence are host-local.
+  Continue normal explicit branch pushes. Do not merge or deploy main.
+- Everything below is historical context; its former current-state labels do
+  not override this dated continuation entry.
+
 ## Wave 5 Parallel Setup Pending Publication
 
 - Task24 remains the latest completed task: 24 complete, 0 blocked, 28 pending. Ready lanes are task25, task27 and task29; no downstream implementation or checkbox change has started.

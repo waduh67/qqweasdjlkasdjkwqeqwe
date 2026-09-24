@@ -43,3 +43,108 @@
 - Explicit lock-contention test first failed with TimeoutException after8seconds. The task29 entry paths now set transaction-local lock_timeout2s and statement_timeout20s; the same test returns409. The timeout-red is retained as failure, never PASS.
 - Full selected regression executed180/2 failures/0 skips. All18 task29 tests, query15, reservation26, receipt93, authority3, material contracts7, Modularity3 and schema upgrade3 passed. Two unchanged WarehouseContractTest expectations failed: missing customerId in its ConsumeDeploymentRequest fixture and missing observation in its WarehouseMutationMetadata expected fields. Those test/contracts have zero diff from base1f056411; they were not edited or weakened. Combined run remains FAILED, not an aggregate PASS.
 - Remaining live work: exact18 rerun, clean bootJar and two real JVM HTTP sessions, physical equality for planning operations, separate real receipt/putaway stale-acceptance proof, final owned cleanup. Private task29-live.json is generated only by the legitimate integration fixture and removed after manual use.
+
+## 2026-09-24 - Resume in the user's workspace
+
+- Checked out `work/warehouse-task29` from `origin/work/warehouse-task29` at
+  `c2f4089ca7ba3a4edfd2fe21835bce526a4e00cb` in
+  `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe`; the entry worktree was clean.
+- Installed the requested development dependencies: JDK21, Docker/Compose,
+  Node/npm, TypeScript LSP, official Kotlin LSP, jq and ShellCheck. Kotlin LSP
+  answered a real initialize request and was shut down. `web/npm ci` succeeded.
+  A private Gradle home uses JDK21 and single-use daemons; unrelated JVMs remain
+  outside the QA lifecycle.
+- Baseline reproduced37 tests/2 failures/0 errors/0 skips: all18 replenishment
+  tests passed. Both failures were the previously documented stale
+  `WarehouseContractTest` fixtures. Added the required `customerId` and
+  `installationPayload`, and included the existing `observation` metadata field
+  in the exact field assertion. Production contracts and authorization assertions
+  were not relaxed. Original failing XML/logs are retained under
+  `task-29/resume-baseline/` evidence.
+- First creation of the isolated database exposed a readiness race: the temporary
+  PostgreSQL initialization server accepted a Unix socket, then shut down while
+  the runner initialized roles. The Compose health check now waits on TCP.
+  A fresh generated environment passed startup and role/marker/extension checks;
+  the first environment's private marker and both volumes were retained.
+- Added `qa.sh replenishment` with `replenishment-smoke.sh` and
+  `replenishment-http.py`: clean JAR build, legitimate fixture, two real HTTP JVM
+  sessions, numeric/scope/replay checks, separate actual receipt/putaway stale
+  acceptance, persisted resolution, physical API equality and11 posting counts.
+  Cleanup removes private fixture/replay manifests and stops only owned processes.
+- Shared-file delta: `scripts/warehouse/qa.sh`,
+  `deploy/docker-compose.warehouse-test.yml`, and `WarehouseContractTest.kt`.
+  Task-local additions are the two smoke scripts plus replenishment documentation
+  and this note. No migration bytes, task25/task27 implementation, or global plan
+  checkbox/ledger changed. Both175.115 migration hashes still match the preceding
+  checkpoint.
+- User requested a stop before running Codex inside screen. The final regression
+  was deliberately interrupted by terminating only the owned single-use Gradle
+  process group. Its daemon-disappeared message records this interruption, not a
+  newly diagnosed product failure. The runner then stopped owned processes and
+  removed owned containers/network, retaining both generations of volumes.
+- Before interruption, the corrected12 `WarehouseContractTest` assertions,
+  ModularityTests and environment isolation checks had passed. The full selected
+  regression has no final result; packaged HTTP/restart verification has not yet
+  run. Neither is an aggregate PASS. Partial output remains in
+  `task-29/resume-verification.log`, separate from the original failing baseline.
+- Resume by reviewing the working diff and running
+  `bash .omo/runtime/task29-verify.sh` from this workspace. This private wrapper
+  holds the host lock for the regression, report archival, packaged HTTP proof,
+  and cleanup. Fix any reproduced failures and update this note with actual
+  counts/artifact identity. The new smoke scripts remain unverified at runtime.
+- All changes are saved locally and uncommitted on `work/warehouse-task29`.
+  No commits were pushed. Development dependencies remain installed; Java21 is
+  now the default Java runtime.
+
+## 2026-09-24 - Completed local verification after resume
+
+- The user's `lanjut` resumed the stopped work. The selected regression completed
+  with **191 tests, 0 failures, 0 errors, 0 skips**, including all18 replenishment
+  tests. Its49 XML reports are archived in `task-29/resume-regression/xml/`.
+  The separate clean-build live fixture completed1 test with no failures/skips.
+- Packaged HTTP verification completed successfully in two distinct JVMs. The
+  physical60000/reserved20000/available40000/inbound40000 MM fixture produced one
+  75000 MM request; identical acceptance replay survived restart. Changed payload,
+  restricted user and foreign location were rejected. A separate actual HTTP
+  receipt/putaway of100000 MM rejected stale acceptance with409 and preserved its
+  fulfilled window and stock after restart.
+- The eleven posting counts before/after planning and replay were both
+  `[4,7,4,1,0,4,6,3,3,0,0]`; stock API responses also remained identical.
+  JAR SHA256: `f465c71634d9fff60c7449b9b623afc1e169508eb8a7045c98488ff6de74af36`.
+  Assertions, both server logs, counts and hash are archived in
+  `task-29/resume-http/`; the successful lifecycle log is `resume-http-run.log`.
+- Two smoke-runner issues were reproduced and fixed without changing production
+  contracts: optional unconfigured SMTP made the default health endpoint DOWN;
+  a socket without address reuse treated a recently released port as occupied.
+  The test-only readiness group explicitly requires database, disk and ping UP.
+  A real socket probe demonstrated the TIME_WAIT failure, successful reuse and
+  continued rejection of an active listener. Failed attempt logs are retained
+  separately; they are not reported as successful HTTP runs.
+- Final shell syntax, smoke-script ShellCheck and `git diff --check` passed.
+  Both175.115 migration hashes remain unchanged. Owned JVMs, containers, network
+  and private fixture/replay/PID files are gone; ports25432/29000/17880 and the
+  host QA lock are free. Test volumes and unrelated development JVMs remain.
+- Task29's remaining local verification is complete. Changes remain uncommitted
+  on `work/warehouse-task29`. Global task checkboxes, integration of tasks25/27,
+  whole-plan release gates, commits and pushes are outside this completed run.
+
+## 2026-09-24 - Durable checkpoint and whole-plan continuation
+
+- The user now requests sustained completion of the remaining plan, with regular
+  commits for recovery by another agent if this VPS is lost. This supersedes the
+  previous run's limited scope and uncommitted status. The verified task29 fixes,
+  executable HTTP/restart proof and this handoff are committed together and
+  pushed normally to `work/warehouse-task29` before integration work starts.
+- Tasks25 and27 have separate remote work. Inspect their latest notes and source,
+  integrate in migration order, resolve shared-file differences, and run combined
+  verification before changing global completion checkboxes. Continue tasks26,
+  28 and30, then the web/mobile/cutover/regression/release work in the active plan.
+- Portable task29 reproduction: use JDK21, Docker/Compose, Python3 and jq; create
+  an owned environment with `scripts/warehouse/test-environment.sh up`, run
+  `scripts/warehouse/qa.sh replenishment`, then `qa.sh stop` and the environment
+  script's `down`. Hold the shared host QA lock for the entire lifecycle. Read
+  `docs/warehouse-migrations.md` and `docs/warehouse-replenishment.md` for
+  environment constraints. Never restore or commit private runtime credentials.
+- The191-test result and exact JAR hash above are historical evidence for this
+  checkpoint, not a claim that a later combined build or full plan has passed.
+  Raw ignored evidence may be unavailable after VPS loss; rerun relevant checks.
