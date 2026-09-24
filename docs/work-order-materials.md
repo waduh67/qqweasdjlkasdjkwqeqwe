@@ -122,6 +122,9 @@ berpindah atomik. SKU pada template aktif tidak dapat diarsipkan.
 - Penggantian memanggil `InventoryApprovalInvalidationApi` untuk pending unposted
   approval dokumen WO di bawah lock. Status menjadi STALE, tanpa keputusan atau
   posting; terminal approval dan efek historis tidak berubah.
+- Setiap total baris membawa `planLineId` dan `demandLineId` nullable yang dipetakan
+  dari demand persisted. Draft belum mempunyai demandLineId. Reservasi parsial
+  pertama memakai demandLineId dari summary, bukan menurunkannya dari planLineId.
 - Summary menggabungkan baris plan/demand, reservasi durable dan ledger fisik:
   requested, reservedUnpicked, reservedPicked, issued, physicallyUsed, returned,
   transferredOut, disposed, stillAccountable dan backorder. Remnant yang tetap pada

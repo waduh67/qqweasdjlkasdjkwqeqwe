@@ -47,7 +47,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
             if (backorder < 0) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             MaterialLineTotals(line.id, line.sku.id, line.sku.baseUnit, requested.toString(), unpicked.toString(), picked.toString(),
                 facts.issued.toString(), facts.used.toString(), facts.returned.toString(), facts.transferred.toString(), facts.disposed.toString(),
-                facts.accountable.toString(), backorder.toString())
+                facts.accountable.toString(), backorder.toString(), demandLine?.id)
             }
         }
         return MaterialSummary(context.workOrderId, plan?.materialMode ?: MaterialMode.MATERIAL_REQUIRED, plan?.reason,

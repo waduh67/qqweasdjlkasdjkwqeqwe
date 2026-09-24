@@ -82,6 +82,7 @@ data class MaterialLineTotals(
     val disposedBase: String,
     val stillAccountableBase: String,
     val backorderBase: String = "0",
+    val demandLineId: UUID? = null,
 )
 
 data class MaterialSummary(

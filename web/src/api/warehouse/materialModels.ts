@@ -43,7 +43,7 @@ export function materialTotals(value: unknown, path = 'totals') {
     issuedBase: decimal(row.issuedBase, path), physicallyUsedBase: decimal(row.physicallyUsedBase, path), returnedBase: decimal(row.returnedBase, path), transferredOutBase: decimal(row.transferredOutBase, path),
     disposedBase: decimal(row.disposedBase, path), stillAccountableBase: decimal(row.stillAccountableBase, path), backorderBase: decimal(row.backorderBase, path) }
   if (BigInt(amounts.requestedBase) !== BigInt(amounts.reservedUnpickedBase) + BigInt(amounts.reservedPickedBase) + BigInt(amounts.issuedBase) + BigInt(amounts.backorderBase)) throw new WarehouseDataError(path)
-  return { planLineId: uuid(row.planLineId, path), skuId: uuid(row.skuId, path), baseUnit: baseUnit(row.baseUnit, path), ...amounts }
+  return { planLineId: uuid(row.planLineId, path), demandLineId: nullable(row.demandLineId, uuid, path), skuId: uuid(row.skuId, path), baseUnit: baseUnit(row.baseUnit, path), ...amounts }
 }
 export type MaterialTotals = ReturnType<typeof materialTotals>
 export function materialSummary(value: unknown, path = 'material') {

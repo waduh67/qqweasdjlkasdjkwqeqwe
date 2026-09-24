@@ -1,5 +1,29 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 demand line mapping checkpoint — backend verification pending
+
+Issue discovery sourcee90857a3 passed13 tests/5suites in3m39s, including3Modularity,
+actual partial60m/full100m receipt, paging/unpick/repick, source/transit scope,
+substitution revocation and permissions/tenant. Portable issue-list-verification
+saved; all owned cleanup completed, volumes retained. Typed discovery source045611af
+9tests+TS/lintpassed. Actual request/issue UI still notimplemented.
+
+Added MaterialLineTotals.demandLineId nullable default at end (legacy-compatible),
+populated only from actual persisted demandLine?.id; planLineId remains distinct.
+One new real HTTP test: draftnull -> submit returns actualdistinctID -> first explicit
+partial reserve60m of100m ->60mreserved/40mbackorder, unchanged1000mphysical.
+Frontend codec preservesnull oractualID;9webtests+awaitedTS passed. Backend mapping
+case NOTYETRUN. NEXT `.omo/runtime/material-mapping-server.sh` (new mapping plus
+existing demand/postedfacts/supplyprojection). Keep backend stable during run.
+
+Then implement shared MaterialPlanEditor + WarehouseRequestsPage workbench, named
+WO search/pages, request quantities, exact partial/manual identity reserve, named
+allocation pick/unpick, stored issue discovery/current receiver, dispatch and print.
+Plan editor copies template into explicit reviewed lines (do not send lines:null
+and review a potentially changed template); NONE explicitreason, substitutions
+original planline/SKU+reason+override. Actual issue ack remains40/45.
+Continue35–48/F1–F4; goalACTIVE; no migrations (148nextunused,177/178reserved43).
+
 ## Task35 typed issue discovery and paged WO selection — 9 web tests green
 
 Frontend issueModels now decodes current header/revision/unpicked plus actual

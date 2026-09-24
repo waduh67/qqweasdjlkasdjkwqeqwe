@@ -22,6 +22,8 @@ afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
 it('keeps issued and accountable quantities distinct and validates quantitative backorder without rounding', () => {
   expect(materialTotals(totals)).toMatchObject({ issuedBase: '100000', stillAccountableBase: '30000', backorderBase: '30000' })
+  expect(materialTotals(totals).demandLineId).toBeNull()
+  expect(materialTotals({ ...totals, demandLineId: id.piece })).toMatchObject({ planLineId: id.line, demandLineId: id.piece })
   expect(() => materialTotals({ ...totals, backorderBase: '130000' })).toThrow(WarehouseDataError)
   expect(() => materialTotals({ ...totals, issuedBase: 100000 })).toThrow(WarehouseDataError)
   expect(materialTotals({ ...totals, requestedBase: '9007199254940993', backorderBase: '9007199254770993' }).requestedBase).toBe('9007199254940993')
