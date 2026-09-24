@@ -1,3 +1,20 @@
+## Task37 COMPLETE; task38 operational screens next
+
+Actual discrepancy browser at product c155856b / fixture 2b6ff32f / run a51dfd4a:
+2 tests PASS in 63.566s, desktop1280 and touch mobile375. All-UI receipt100m,
+partial60m, independent role/user/grants/policy, separate checker login, cost absent
+from checker HTTP, actual approval effect and final60000MM available+40000MM LOST.
+14 discrepancy screenshots reviewed;12 stable images curated with SHA256. Two modal
+captures caught entrance animation; excluded from portable screenshots. No flow failure.
+Proof task37/discrepancy-browser-verification.json. Owned cleanup complete, volumes retained.
+Together with source-specific count/approval/recovery/evidence/disposition proofs and
+213web/36files PASS, task37 is complete. Plan checkbox updated; tasks1–37 complete.
+
+Task38 policy settings backend8/web7 already verified; overview, replenishment,
+reports/exports/print and remaining settings history/delegation still open. Then39–48
+and F1–F4. Formal long-run goal ACTIVE. No migrations; next free148 (177/178 reserved43).
+Continue from current branch work/warehouse-completion tracking origin/feat/warehouse-workorder.
+
 ## Task37 full web verified; real discrepancy browser starting
 
 213web tests/36files PASS37.19s atc155856b; TypeScript/Vitebuild PASS, warehouse and
