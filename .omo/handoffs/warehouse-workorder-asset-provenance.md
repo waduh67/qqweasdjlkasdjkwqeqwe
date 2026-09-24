@@ -1,5 +1,22 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 source10087229 —149 web tests and7 backend tests passed; browser next
+
+Full warehouse/API/pages/components plusDataTable/WO/Payment/MultiCombobox:
+149tests/22files passed16.96s. Includes9Transferpage cases and6API/helpercases;
+affected15tests+TypeScript+focusedlint passed previously. Server transfer-history
+7tests/3suites passed, cleanupcompleted, proof in task36/workbench-verification.json.
+NineUIcases cover scoped denied links, namedpagedlist, actualsourceBalanceId draft
+and ownrecipient withoutIAMdirectory, bounddispatch, actual60/40partialreceipt,
+409reloadnoblindretry, actor/ownership/resolvednotreceipt, discrepancyawaitsapproval,
+and serverhistorypaging. New browser returns.spec.ts builds real100mreceipt and
+checks draft/dispatch/60received40transit and60available via visibleUI only.
+NEXT run warehouse-transfer-browser.sh transfer-initial, await bothdesktop/mobile,
+review all10PNG, fixifneeded. No otherQA processes running. Task36 stillopen:
+returnsource lookup+inspection/repair/replacement/RMA UI required next;37approvals
+links have sourceDocumentId query to implement. Keepwhole36–48/F1–F4 active.
+No migrations;149webgreen baseline will support relatedreturnUI checks.
+
 ## Task36 Transfer page checkpoint; history verification next
 
 Transfer discovery3newHTTPcases passed @6af0af41,1m46s, alongside18existingcases

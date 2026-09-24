@@ -1,0 +1,37 @@
+{
+  "task": 36,
+  "sourceCommit": "10087229",
+  "server": {
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "tests": 1,
+        "sha256": "974767fc32a3210ede24aff5280e0d8ae3bd04defd60a0a5b80edc35c0c210e4"
+      },
+      {
+        "name": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "tests": 3,
+        "sha256": "2a81a9a6be89e6910d8b9b79b4cd0b0331a095c50d6bf320b66b9255985759d5"
+      },
+      {
+        "name": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "tests": 3,
+        "sha256": "046940feab60b42d3a9c15afc79437fb23211d50311b9591f277ec46798f1c76"
+      }
+    ],
+    "result": "passed",
+    "cleanup": "owned resources stopped; volumes retained"
+  },
+  "web": {
+    "tests": 149,
+    "files": 22,
+    "result": "passed",
+    "durationSeconds": 16.96,
+    "typecheck": "15 affected test run and source typecheck passed",
+    "lint": "focused source + browser test passed; earlier FastRefresh warnings fixed",
+    "pageTestSha256": "03993cd47257b8cec2652ab2d61e9d0930a88e9cad8faccbc04f621e83f39cbb"
+  },
+  "browser": "Not yet run; transfer-initial next",
+  "scope": "Transfer discovery, bounded history, actions and constraints; return/repair UI not implemented yet"
+}
