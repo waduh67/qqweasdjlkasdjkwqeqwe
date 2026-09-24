@@ -1,5 +1,30 @@
 # Whole-plan continuation
 
+## Task31 API foundation —44 tests and TypeScript green
+
+Quantity, runtime codecs, master/stock/lookup DTOs and immutable command transport
+now implemented under web/src/api/warehouse.44 tests passed with plain npm test;
+`npx tsc -b` passed. Portable evidence task31/api-verification.json. Shared
+masters.ts exposes typed list/save/archive commands and stock/identity reads.
+Responses validate UUIDs, safe numeric revisions/pages, string quantities, unit/
+display consistency, tracking/ownership/states and bounded pages; malformed data
+throws WarehouseDataError instead of empty success. Optional nullable fields remain
+null and unknown additive fields do not leak through typed views.
+
+command() captures serialized JSON/key once, coalesces concurrent submissions and
+reuses both after network loss or401 token refresh. It deliberately reauthorizes
+via server on later execute(), never caches a prior successful reply as permission.
+Uses api.request and original Idempotency-Key; no client approval hash. Tests prove
+input-object edits do not mutate captured retries, conflicts retain keys and bad
+success bodies reject. All this is unit evidence, NOT browser acceptance.
+
+Next: shared warehouse route/gate/nav and named controls; replace old inventory
+warehouse shell; build real setup.spec.ts desktop/mobile harness and isolated
+warehouse-e2e profile through existing qa.sh browser. App.tsx also has a misleading
+RequireAnyPermission hardwired to canViewHotspot; do not reuse it blindly for
+warehouse. Add a warehouse-specific gate or correctly generalize with regressions.
+No backend QA active, migrations unchanged,148unused. Task31/whole goal OPEN.
+
 ## Task31 quantity foundation saved —34 web tests green
 
 Task30 complete/published11468066 (53 green,main422cf536). Task31 now has design
