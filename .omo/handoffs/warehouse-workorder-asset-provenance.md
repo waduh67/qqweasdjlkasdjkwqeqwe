@@ -1,5 +1,39 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task28 exact outbox/error contract checkpoint — 20-case rerun pending
+
+The disposition-guards combined run against dac2434b completed28 tests/8 suites,
+12 failures,0 errors/skips,6m18s. All10 return/delegation/expiry regressions and
+3 modularity checks passed. New disposition source-stale, unknown-cost and scoped
+paging checks passed. Failed positive posts raised
+DISPOSITION_EXACT_APPROVED_POSTING_REQUIRED because PostingDocuments generated a
+default DISPATCHED event in addition to supplied DISPOSED. Its new LOSS/SCRAP
+mapping now derives DISPOSED, retaining the existing exactly-one-event DB guard.
+No139 SQL changes;139 remains applied immutable.
+
+Customer-owner and invalid-quantity requests were rejected in the service but
+escaped as ServletException: the new controller was missing from WarehouseHttpErrors
+assignableTypes. Added it, preserving existing error/status contracts. The new
+delegation test failed while creating the grant (INDEPENDENT_APPROVER_REQUIRED):
+its delegator was not configured in policy. Corrected fixture policy to include
+requester + independent checker before requesting approval, then delegates after
+request to test actual decision-time requester exclusion.
+
+Added2 source-control guards (USD vs IDR policy and raw SQL pending-approval effect)
+and docs/warehouse-dispositions.md with current supported workflow/limits. Current
+.omo/runtime/disposition-verified.sh / .log selects only WarehouseDisposition*IT
+and ModularityTests: expected20 tests (2 residual,11 guards,4 asset,3 modularity).
+Archive task28/disposition-verified/xml, DB log disposition-verified-database.log.
+Results pending; do not claim committed disposal until this run passes.
+
+WarehouseCompensationIT is separately authored (2 LOSS/SCRAP cases) and NOT in that
+run. It expects POST /dispositions/{id}/compensations, then independent ADJUSTMENT
+approval of a new document, one REVERSAL linked to the original movement, restored
+QUARANTINE, outstanding17.5m until fresh inspection, original history unchanged,
+replay/duplicate protection. No compensation implementation or140 migration exists.
+Use140 onward for new SQL; reserve before creation. Closed-settlement and reused
+asset reversal guards still needed. Task28 remains OPEN and whole-plan goal active.
+
 ## Task28 approval event and asset coverage checkpoint — regression running
 
 Published base0daab7e3 preserves applied139 (SHAa9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489).

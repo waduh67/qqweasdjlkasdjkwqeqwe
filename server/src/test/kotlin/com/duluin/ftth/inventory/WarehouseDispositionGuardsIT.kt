@@ -11,6 +11,45 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class WarehouseDispositionGuardsIT : WarehouseDispositionFixture() {
+    @Test fun `receipt currency cannot be converted implicitly to the disposition policy currency`() {
+        receiptCurrency = "USD"
+        val case = dispositionCase()
+        val document = disposition(case)
+        val approval = request("POST", "/api/v1/warehouse/approvals/request", case.token,
+            """{"sourceDocumentId":"$document","sourceRevision":0}""", "different-currency-approval")
+        assertThat(approval.status).withFailMessage(approval.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(approval.contentAsString).path("code").asString()).isEqualTo("CURRENCY_MISMATCH")
+        fixture(case.token).transaction {
+            assertThat(scalar("SELECT currency FROM inventory_document_line WHERE document_id='$document'")).isEqualTo("USD")
+            assertThat(scalar("SELECT count(*) FROM inventory_disposition_effect")).isEqualTo("0")
+        }
+    }
+
+    @Test fun `pending approval cannot admit a physical disposition effect through direct SQL`() {
+        val case = dispositionCase()
+        val document = disposition(case)
+        val approval = dispositionApproval(case, document)
+        fixture(case.token).transaction {
+            assertThat(scalar("SELECT current_user")).isEqualTo("warehouse_app")
+            jdbc { connection ->
+                val point = connection.setSavepoint()
+                val failure = runCatching {
+                    connection.createStatement().use {
+                        it.execute("""INSERT INTO inventory_disposition_effect(tenant_id,request_id,approval_id,posting_operation_id,
+                            return_operation_id,return_id,source_return_revision,return_revision)
+                            VALUES(current_setting('app.tenant_id')::uuid,'$document','$approval',gen_random_uuid(),gen_random_uuid(),
+                                '${case.returnId}',1,2)""")
+                        it.execute("SET CONSTRAINTS ALL IMMEDIATE")
+                    }
+                }.exceptionOrNull()
+                connection.rollback(point)
+                assertThat(failure).isInstanceOf(SQLException::class.java)
+                assertThat((failure as SQLException).sqlState).isEqualTo("23514")
+            }
+            assertThat(scalar("SELECT count(*) FROM inventory_disposition_effect")).isEqualTo("0")
+        }
+    }
+
     @Test fun `unknown receipt cost stays unknown and blocks threshold approval without inventing zero`() {
         receiptCost = null
         val case = dispositionCase()
@@ -107,8 +146,11 @@ class WarehouseDispositionGuardsIT : WarehouseDispositionFixture() {
 
     @Test fun `requester delegation cannot turn a configured checker into an independent approver`() {
         val case = dispositionCase()
-        val approval = dispositionApproval(case, disposition(case))
         val maker = mapper.readTree(request("GET", "/api/me", case.token).contentAsString).path("id").asString()
+        val policy = request("PUT", "/api/v1/warehouse/settings/policy", case.token,
+            """{"expectedRevision":1,"currency":"IDR","expiryHours":24,"warehouseIds":["${case.residual.input.targetLocationId}","${case.sink}"],"rules":[{"operation":"SCRAP","tiers":[{"minimumMinor":"1","userIds":["$maker","${case.checker.second}"],"roleIds":[]}]}]}""")
+        assertThat(policy.status).withFailMessage(policy.contentAsString).isEqualTo(200)
+        val approval = dispositionApproval(case, disposition(case))
         val grant = request("POST", "/api/v1/warehouse/settings/delegations", case.token,
             """{"expectedRevision":0,"approverId":"$maker","delegateId":"${case.checker.second}","sourceRoleId":null,"locationId":"${case.residual.input.targetLocationId}","operation":"SCRAP","validUntil":"${Instant.now().plusSeconds(3600)}"}""")
         assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
