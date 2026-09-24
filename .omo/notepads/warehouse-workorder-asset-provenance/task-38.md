@@ -1,3 +1,10 @@
+## Replenishment compile correction; fresh verification next
+
+9dd7fe96 initial backend build failed in13s: missing imports for inbound MasterKind,
+SkuSnapshot and LocationSnapshot. No tests executed; copied old report XML is NOT
+replenishment evidence. Imports corrected; fresh archive task38/replenishment-corrected
+for same12 tests. Reports7 proof remains valid. Replenishment UI under development.
+
 ## Task38 reports verified; replenishment backend checkpoint
 
 Reports7backend/3suites PASS2m1s (compiled c155856b, run bd01230b);18web/3files

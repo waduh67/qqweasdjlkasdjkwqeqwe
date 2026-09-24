@@ -5,6 +5,9 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.ReplenishmentQuery
 import com.duluin.ftth.inventory.adapter.outbound.persistence.ReplenishmentStore
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
+import com.duluin.ftth.inventory.application.port.inbound.LocationSnapshot
+import com.duluin.ftth.inventory.application.port.inbound.MasterKind
+import com.duluin.ftth.inventory.application.port.inbound.SkuSnapshot
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
 import com.duluin.ftth.inventory.domain.model.LocationKind
 import org.springframework.stereotype.Service
