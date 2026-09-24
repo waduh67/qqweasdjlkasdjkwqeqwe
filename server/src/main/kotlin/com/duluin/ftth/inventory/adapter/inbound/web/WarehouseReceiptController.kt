@@ -24,6 +24,9 @@ class WarehouseReceiptController(private val commands: WarehouseCommandService, 
         response(commands.draftReceipt(id, decode(body, ReceiptDraftInput::class.java), key))
 
     @GetMapping("/{id}") fun detail(@PathVariable id: UUID) = receipts.get(id)
+    @GetMapping("/{id}/attachments")
+    fun attachments(@PathVariable id: UUID, @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int) = evidence.list(id, page, size)
     @PostMapping("/{id}/attachments", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun attach(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String,
         @RequestParam expectedRevision: Long, @RequestParam file: org.springframework.web.multipart.MultipartFile,

@@ -70,6 +70,14 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
     }
 
     @Transactional
+    fun list(document: UUID, page: Int, size: Int): WarehousePage<ReceiptEvidenceListItem> {
+        if (page < 0 || size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        // Keep the intake binding and evidence count stable while constructing this page.
+        receipts.lockForEvidenceRead(document)
+        return evidence.list(document, page, size)
+    }
+
+    @Transactional
     fun download(document: UUID, id: UUID): StoredObject {
         receipts.get(document)
         return verified(evidence.get(document, id))

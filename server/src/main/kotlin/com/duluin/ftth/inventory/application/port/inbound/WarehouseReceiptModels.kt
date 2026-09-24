@@ -43,7 +43,8 @@ data class ReceiptLineView(val id: UUID, val inputLineNumber: Int, val skuId: UU
     val acceptedBase: String, val rejectedBase: String, val putawayBase: String)
 data class ReceiptView(val id: UUID, val revision: Long, val state: WarehouseReceiptState, val createdAt: Instant,
     val supplierId: UUID, val supplierName: String, val externalReference: String,
-    val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>, val inspections: List<ReceiptInspectionView>)
+    val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>, val inspections: List<ReceiptInspectionView>,
+    val sourceLocationName: String, val inspectionLocationName: String)
 data class ReceiptInspectionView(val id: UUID, val lineId: UUID, val acceptedBase: String, val rejectedBase: String,
     val baseUnit: WarehouseBaseUnit, val evidenceId: UUID, val reason: String, val disposition: String, val operationId: UUID)
 data class ReceiptHistory(val operationId: UUID, val revision: Long, val action: String, val recordedAt: Instant)
@@ -51,3 +52,5 @@ data class ReceiptFilter(val page: Int = 0, val size: Int = 25, val status: Ware
     val skuId: UUID? = null, val serial: String? = null, val locationId: UUID? = null,
     val from: Instant? = null, val until: Instant? = null, val sort: String = "createdAt", val direction: String = "desc")
 data class ReceiptEvidenceView(val id: UUID, val documentId: UUID, val contentType: String, val sizeBytes: Long, val sha256: String)
+data class ReceiptEvidenceListItem(val id: UUID, val documentId: UUID, val contentType: String, val sizeBytes: Long,
+    val sha256: String, val createdAt: Instant, val matchesCurrentIntake: Boolean)

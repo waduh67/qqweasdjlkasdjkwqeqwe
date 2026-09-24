@@ -2,6 +2,8 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.application.port.inbound.ReceiptEvidenceView
+import com.duluin.ftth.inventory.application.port.inbound.ReceiptEvidenceListItem
+import com.duluin.ftth.inventory.WarehousePage
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
@@ -10,6 +12,19 @@ data class StoredReceiptEvidence(val view: ReceiptEvidenceView, val objectKey: S
 
 @Repository
 class ReceiptEvidencePersistence(private val jdbc: WarehouseCommandJdbc) {
+    fun list(document: UUID, page: Int, size: Int): WarehousePage<ReceiptEvidenceListItem> = jdbc.execute { sql ->
+        val total = requireNotNull(sql.value("SELECT count(*) FROM inventory_receipt_evidence WHERE tenant_id=? AND document_id=?", sql.tenant, document)).toLong()
+        val items = sql.query("""SELECT evidence.id,evidence.document_id,evidence.content_type,evidence.size_bytes,evidence.sha256,evidence.created_at,
+                coalesce(evidence.intake_content_revision=intake.content_revision AND evidence.intake_hash=intake.content_hash,false) matches_current_intake
+            FROM inventory_receipt_evidence evidence JOIN inventory_receipt_intake intake
+                ON intake.tenant_id=evidence.tenant_id AND intake.id=evidence.document_id
+            WHERE evidence.tenant_id=? AND evidence.document_id=? ORDER BY evidence.created_at DESC,evidence.id
+            LIMIT ? OFFSET ?""", sql.tenant, document, size, page.toLong() * size) {
+            ReceiptEvidenceListItem(it.uuid("id"), it.uuid("document_id"), it.getString("content_type"), it.getLong("size_bytes"),
+                it.getString("sha256"), it.getTimestamp("created_at").toInstant(), it.getBoolean("matches_current_intake"))
+        }
+        WarehousePage(items, page, size, total)
+    }
     internal fun settledObjectKey(document: UUID, id: UUID): String? = jdbc.execute { sql ->
         sql.update("SET LOCAL lock_timeout='2s'")
         sql.update("SET LOCAL statement_timeout='5s'")

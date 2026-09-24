@@ -1,5 +1,18 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task33 receipt metadata checkpoint — verification pending
+
+Task32 complete atf9d95a9a,4real browser and76unit green. Task33 adds paginated
+GETreceipt attachments using current receipt authority/scope, locked intake and
+stable createdAt/id order, safe metadata +matchesCurrentIntake flag. Old evidence
+remains downloadable but not eligible for replacement intake. Names of source and
+inspection now come from immutable receipt intake snapshot. No migration changed.
+New WarehouseReceiptITMetadata covers paging, reload, stale binding, permission,
+scope/tenant denial and no storage key/URL leak. Existing receipt regression selected.
+NEXT run .omo/runtime/receipt-metadata-server.sh; compile/tests not yet claimed.
+Then implement typed receipt API, captured upload and receipt UI/browser. Task33
+remains OPEN; continue34–48/F1–F4 after actual acceptance.148 nextunused.
+
 ## Task32 COMPLETE —76 unit tests and4 real browser cases green
 
 catalog-layout-fixed against99868d60:4passed,0failed/skipped/flaky. Real desktop and

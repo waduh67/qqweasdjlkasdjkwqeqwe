@@ -67,10 +67,14 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
     }
 
     @Transactional
-    fun get(id: UUID): ReceiptView {
+    fun get(id: UUID): ReceiptView = read(id, false)
+
+    internal fun lockForEvidenceRead(id: UUID): ReceiptView = read(id, true)
+
+    private fun read(id: UUID, lock: Boolean): ReceiptView {
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.receipt.view")
-        val record = store.get(id)
+        val record = store.get(id, lock)
         authorize(record.intake, current, scopes.currentUnderFence(current.fence))
         return view(record, current.platformAdmin || "inventory.cost.view" in current.permissions)
     }
@@ -134,7 +138,8 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
             line.sku.tracking, line.sku.baseUnit, line.quantityBase, line.serial, line.mac, line.lotCode, line.sku.inspectionRequired,
             line.conversion, if (cost) line.cost else null, store.pieces(line.id),
             inspections.filter { it.lineId == line.id }.sumOf { it.acceptedBase.toLong() }.toString(),
-            inspections.filter { it.lineId == line.id }.sumOf { it.rejectedBase.toLong() }.toString(), store.putawayBase(line.id)) }, inspections)
+            inspections.filter { it.lineId == line.id }.sumOf { it.rejectedBase.toLong() }.toString(), store.putawayBase(line.id)) }, inspections,
+            record.intake.source.name ?: record.intake.source.code, record.intake.inspection.name ?: record.intake.inspection.code)
     }
 }
 

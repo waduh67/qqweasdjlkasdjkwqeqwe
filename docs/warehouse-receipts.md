@@ -23,6 +23,7 @@ Identitas tenant/actor berasal dari sesi; izin dimuat ulang di bawah fence IAM.
 | POST | `/{id}/inspect` | `{expectedRevision,lines:[...]}`; keputusan exact per piece |
 | POST | `/{id}/putaway` | `{expectedRevision,destinationLocationId,lines:[...]}` |
 | POST | `/{id}/attachments` | Multipart `file` dan `expectedRevision`;201, revision+1 |
+| GET | `/{id}/attachments` | Page metadata privat; `page`, `size` maksimal100; urutan waktu terbaru lalu ID |
 | GET | `/{id}/attachments/{evidenceId}` | Download privat melalui aplikasi |
 
 Semua mutasi memakai `Idempotency-Key` ASCII tanpa whitespace, panjang1..240.
@@ -130,7 +131,14 @@ dapat dipakai ulang pada beberapa inspeksi tanpa stale karena revision operation
 Evidence historis sebelum binding tersedia tidak ditebak dari intake terbaru:
 tetap tersimpan dengan binding null, tidak boleh mengotorisasi inspeksi baru.
 
-Response hanya ID, bukan key, secret atau URL publik. Download memakai attachment
+Daftar lampiran memuat ID, jenis, ukuran, SHA256, waktu unggah, dan
+`matchesCurrentIntake`. Penanda ini membandingkan binding tersimpan; bukan hasil
+validasi ulang bytes. Bukti lama tetap dapat diunduh, tetapi tidak dapat dipilih
+untuk inspeksi intake baru. Daftar dikunci bersama dokumen dan memakai izin/scope
+receipt terkini; tidak menampilkan storage key, hash intake, atau URL publik.
+Snapshot receipt juga menyertakan nama source/inspection dari intake tersimpan.
+
+Response unggah hanya metadata, bukan key, secret atau URL publik. Download memakai attachment
 disposition, no-store dan nosniff. Setelah rollback atau completion UNKNOWN,
 reconciler membuka transaksi REQUIRES_NEW dengan tenant yang sama. Lock dokumen
 menunggu transaksi asal settle sebelum memeriksa metadata durable. Hanya absence
