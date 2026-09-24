@@ -20,8 +20,9 @@ export function myReceiptInput(context: MyMaterialContext, issue: MyMaterialIssu
     lines: [{ issueLineId: source.id, stockIdentityId: source.stockIdentityId, baseUnit: source.baseUnit, acceptedBase, missingBase, rejectedBase,
       reason: reason.trim() || undefined, serial: source.serial ?? undefined }] }
 }
-export function myReturnInput(context: MyMaterialContext, source: MaterialCustody | null, quantity: string, target: string | null, reason: string, reference: string): MaterialReturnInput {
-  if (!source || source.sku.tracking === 'SERIAL') throw new Error('Pilih sisa material. Perangkat berserial dikembalikan melalui alur aset pelanggan.')
+export function myReturnInput(context: MyMaterialContext, source: MaterialCustody | null, quantity: string, target: string | null, reason: string, reference: string, observedSerial: string | null = null): MaterialReturnInput {
+  if (!source) throw new Error('Pilih barang yang masih di tangan Anda.')
+  if (source.sku.tracking === 'SERIAL' && (!source.serial || observedSerial?.trim().toUpperCase() !== source.serial)) throw new Error('Pindai atau ketik serial perangkat yang akan dikembalikan.')
   if (!target || !reason.trim() || reason.trim().length > 1000) throw new Error('Pilih karantina tujuan dan isi alasan pengembalian, maksimal 1000 karakter.')
   const quantityBase = quantityFromInput(quantity, source.baseUnit)
   if (BigInt(quantityBase) > BigInt(source.quantityBase)) throw new Error('Jumlah pengembalian melebihi sisa di tangan Anda.')

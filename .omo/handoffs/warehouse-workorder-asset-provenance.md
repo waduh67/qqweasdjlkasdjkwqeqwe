@@ -1,3 +1,22 @@
+## Task40 unused serialized return verified — three-party handover next
+
+Canonical residual return also handles acknowledged unused SERIAL stock; no backend
+change required. MyMaterialsSerialReturnIT1 PASS1m58s proves former-assignee single ONU
+return, exact replay, receiver quarantine and zero customer assignment. MyMaterialsPage
+now exposes return for held serials; form requires a matching observed/manual/keyboard
+serial, exact1EA, actual source/current revision/target refresh before review. Installed
+assets continue through physical customer removal, not this own-ISSUED selector.
+
+Targeted31web/7files PASS10.11s, TypeScript/lint PASS. Previous core full283/55 and build
+PASS at79381bbe. Proof task40/my-materials-serial-return-verification.json. QA cleaned,
+volumes retained. Current next40: add named scoped source/receiver read workbench for
+independent dispatcher authorization plus current sender's immutable pending grants and
+canonical dispatch. Recipient ACK UI already exists in own residuals. Keep40 checkbox
+OPEN until this flow and41 cross-links are handled; browser actual touch/keyboard45.
+39 also OPEN for41 links;41–48/F1–F4 remain. Goal ACTIVE, commit/push checkpoints.
+No migration;148 next free;177/178 reserved43. Branch work/warehouse-completion tracks
+origin/feat/warehouse-workorder; original warehouse-task29 preserved.
+
 ## Task40 Material Saya core verified — continue serialized return and handover
 
 Current branch work/warehouse-completion, remote feat/warehouse-workorder. Original
