@@ -49,5 +49,23 @@ class WarehouseCompensationIT : WarehouseDispositionFixture() {
             assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE status='AVAILABLE'")).isEqualTo("917500")
             assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='REVERSAL'")).isEqualTo("1")
         }
+        val reader = user(case.token, setOf("inventory.custody.view"))
+        val principal = mapper.readTree(request("GET", "/api/users/${reader.second}", case.token).contentAsString)
+        assertThat(request("PUT", "/api/users/${reader.second}/access", case.token, mapper.writeValueAsString(mapOf(
+            "roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(case.token))))).status).isEqualTo(200)
+        for (location in listOf(case.residual.input.targetLocationId.toString(), case.sink)) {
+            assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${reader.second}/$location", case.token,
+                """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+        }
+        val visible = request("GET", "$path?size=1", reader.first)
+        assertThat(visible.status).withFailMessage(visible.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(visible.contentAsString).path("items").single().path("id").asString()).isEqualTo(document)
+        assertThat(request("GET", "$path/$document", reader.first).status).isEqualTo(200)
+        val areaResponse = request("POST", "/api/areas", case.token, """{"code":"OTHER-COMPENSATION","name":"Other compensation area"}""")
+        assertThat(areaResponse.status).isEqualTo(201)
+        val hiddenArea = mapper.readTree(areaResponse.contentAsString).path("id").asString()
+        fixture(case.token).transaction { sql("UPDATE work_order SET area_id='$hiddenArea' WHERE id='${case.residual.usage.receipt.workOrder}'") }
+        assertThat(request("GET", path, reader.first).status).isEqualTo(404)
+        assertThat(request("GET", "$path/$document", reader.first).status).isEqualTo(404)
     }
 }

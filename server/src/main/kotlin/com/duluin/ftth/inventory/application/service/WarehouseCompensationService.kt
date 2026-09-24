@@ -13,15 +13,16 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 @Service
-@Transactional(rollbackFor = [Exception::class], timeout = 30)
 class WarehouseCompensationService(private val cutovers: InventoryTenantCutoverApi,
     private val authorities: com.duluin.ftth.iam.CurrentAuthorityApi, private val access: WarehousePolicyAccess,
     private val workOrders: AssetHandoverWorkOrderPort, private val masters: WarehouseMasterStore,
     private val originals: WarehouseDispositionStore, private val returns: WarehouseReturnStore,
     private val store: WarehouseCompensationStore, private val clock: WarehousePolicyPersistence,
-    private val scopes: InventoryWarehouseScopeApi, private val sites: com.duluin.ftth.network.SiteReferenceApi) : InventoryCompensationApi {
+    private val scopes: InventoryWarehouseScopeApi, private val sites: com.duluin.ftth.network.SiteReferenceApi,
+    private val transactions: org.springframework.transaction.PlatformTransactionManager) : InventoryCompensationApi {
     private val mapper = jacksonObjectMapper()
 
+    @Transactional(rollbackFor = [Exception::class], timeout = 30)
     override fun request(dispositionId: UUID, input: WarehouseCompensationInput, metadata: WarehouseMutationMetadata): WarehouseCompensationView {
         receiptKey(metadata.idempotencyKey)
         if (input.expectedRevision !in 0 until Long.MAX_VALUE || input.expectedReturnRevision !in 0 until Long.MAX_VALUE ||
@@ -68,12 +69,14 @@ class WarehouseCompensationService(private val cutovers: InventoryTenantCutoverA
         return record.view()
     }
 
+    @Transactional(rollbackFor = [Exception::class], timeout = 30)
     override fun get(dispositionId: UUID, id: UUID): WarehouseCompensationView {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authorities.lockCurrent()
         access.permission(current, "inventory.custody.view")
         val record = store.get(id)
         if (record.original.id != dispositionId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+        workOrders.lockTitle(record.context.workOrderId, current.fence)
         masters.lockTopology()
         authorize(record, current)
         return store.view(id)
@@ -81,10 +84,18 @@ class WarehouseCompensationService(private val cutovers: InventoryTenantCutoverA
 
     override fun list(dispositionId: UUID, page: WarehousePageRequest): WarehousePage<WarehouseCompensationView> {
         if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        return exceptionQueryPage(transactions, page, { candidatePage -> candidates(dispositionId, WarehousePageRequest(candidatePage, 100)) },
+            { get(dispositionId, it.id) }, {
+                cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+                access.permission(authorities.lockCurrent(), "inventory.custody.view")
+            })
+    }
+    private fun candidates(dispositionId: UUID, page: WarehousePageRequest): WarehousePage<WarehouseCompensationView> {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authorities.lockCurrent()
         access.permission(current, "inventory.custody.view")
         val original = originals.get(dispositionId)
+        workOrders.lockTitle(original.context.workOrderId, current.fence)
         masters.lockTopology()
         locations(original).distinct().sortedBy(UUID::toString).forEach { access.location(it, current) }
         val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope

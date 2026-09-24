@@ -1,3 +1,24 @@
+## Task37 evidence verified; disposition UI and authority checks checkpoint
+
+2026-09-25: evidence6tests/3suites PASS3m3s at556f435e (receipt real MinIO2,
+actual-WO approval1, baselineworkbench3);12web PASS6.82s. Transfer recovery9backend
+PASS4m34s at28b9b415 +14web atda5a57a0. Portable proofs task37/evidence-verification.json
+and transfer-recovery-verification.json. Owned cleanup finished; volumes retained.
+
+Disposition UI now supports current-return-bound full-quantity LOSS/SCRAP request,
+independent approval links, persisted history and compensation to quarantine using
+actual disposition+return revisions. Customer title/read-only/stale guards and exact
+captured commands tested:13web/2files PASS3.78s. Source reads strengthened to current
+original-WO authority before counts/page, separate transactions for public-port denial.
+Request methods keep original transactions.15backend tests selected next:Disposition2,
+DispositionGuards11(expanded area-revocation case),Compensation2(expanded read area cases).
+Private wrapper .omo/runtime/disposition-workbench-server.sh; log disposition-workbench-server.log.
+
+Next: finish this backend verification, build policy-settings UI (task38 prerequisite
+for task37 all-UI approval browser; currently settings route unavailable). Then extend
+web/e2e/warehouse/returns.spec.ts approved discrepancy separate login, full web gate,
+complete37 and continue38–48/F1–F4. No migrations. Do not mark whole37 complete yet.
+
 # Warehouse Workorder Asset Provenance Checkpoint
 
 

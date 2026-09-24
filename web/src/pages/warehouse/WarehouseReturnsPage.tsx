@@ -18,6 +18,7 @@ import { WarehouseReturnFilters } from './WarehouseReturnFilters'
 import { WarehouseSupplierReplacements } from './WarehouseSupplierReplacement'
 import { WarehouseCustomerRma } from './WarehouseCustomerRma'
 import { WarehouseReturnReacquisition } from './WarehouseReturnReacquisition'
+import { WarehouseReturnDispositions } from './WarehouseReturnDispositions'
 import { completedCustomerRepairInspection, needsPostRepairInspection } from './returnDraft'
 import { returnItemLabel, returnLocationLabel, returnOriginLabels } from './returnPresentation'
 
@@ -83,6 +84,7 @@ function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () =>
     {manage && <WarehouseCustomerRma details={details} reload={reload} />}
     {refs.assetOrigin?.legalOwner === 'CUSTOMER' && can('inventory.approval.view') && <WarehouseReturnReacquisition details={details} reload={reload} />}
     {view.repair && can('inventory.receipt.view') && <WarehouseSupplierReplacements details={details} reload={reload} />}
+    {can('inventory.custody.view') && <WarehouseReturnDispositions details={details} reload={reload} />}
     <ReturnHistory details={details} /></>
 }
 function ReturnHistory({ details }: { details: ReturnDetails }) {

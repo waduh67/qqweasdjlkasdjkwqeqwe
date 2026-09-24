@@ -188,6 +188,17 @@ class WarehouseDispositionGuardsIT : WarehouseDispositionFixture() {
         val body = mapper.readTree(page.contentAsString)
         assertThat(body.path("totalElements").asLong()).isEqualTo(1)
         assertThat(body.path("items").single().path("id").asString()).isEqualTo(visible)
+        val areaResponse = request("POST", "/api/areas", case.token, """{"code":"OTHER-DISPOSITION","name":"Other disposition area"}""")
+        assertThat(areaResponse.status).isEqualTo(201)
+        val other = mapper.readTree(areaResponse.contentAsString).path("id").asString()
+        // Warehouse grants stay visible; the original WO is moved outside the reader's area.
+        fixture(case.token).transaction { sql("UPDATE work_order SET area_id='$other' WHERE id='${case.residual.usage.receipt.workOrder}'") }
+        for (query in listOf("?size=1", "?size=1&sourceDocumentId=${case.returnId}")) {
+            val denied = request("GET", "/api/v1/warehouse/dispositions$query", viewer.first)
+            assertThat(denied.status).withFailMessage(denied.contentAsString).isEqualTo(200)
+            assertThat(mapper.readTree(denied.contentAsString).path("totalElements").asLong()).isZero()
+        }
+        assertThat(request("GET", "/api/v1/warehouse/dispositions/$visible", viewer.first).status).isEqualTo(404)
     }
 
     @Test fun `disposed measured segment cannot be rewritten and rebuild preserves the exact applied ledger`() {
