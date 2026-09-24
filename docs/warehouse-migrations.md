@@ -1,5 +1,15 @@
 # Migrasi dan lingkungan QA warehouse
 
+## Reservasi V175.143: permintaan kehilangan pinjaman aktif (task28)
+
+Slot V175.143 diperiksa belum ada dan dicadangkan sebelum file SQL dibuat.
+Menambah permintaan ASSET_LOSS yang mengikat serah-terima LOAN, penugasan aktif,
+identitas perangkat, judul ISP, revisi WO, bukti tersimpan dan biaya sumber asli.
+Draft belum boleh memindahkan stok atau mengakhiri episode. Efek persetujuan akan
+memakai migrasi maju berikutnya. Seluruh SQL sampai V175.142 sudah applied dan
+immutable; V177/V178 tetap dicadangkan untuk task43.
+
+
 V175.142 applied22:19:08.476 JKT, immutable: `f792dc3f6d64f6190dac9b575e5c74e66022a6fc41ae4922f8a12aeeb4cff83a`. Source corrections use143 onward.
 
 `V175_142__warehouse_disposition_compensation_event.sql` dicadangkan sebelum pembuatan untuk menambahkan event DISPOSITION_REVERSED pada constraint outbox.141 telah diterapkan22:16:00.258 JKT, immutable: `636454e183295ddb3e433cb7a2e1e5056a4881f8dacafc450a12d7ab4e8baac0`.

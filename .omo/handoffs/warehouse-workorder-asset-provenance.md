@@ -1,5 +1,37 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task28 active-loan loss draft checkpoint — validation pending
+
+Added InventoryAssetLossApi, request/get/scoped-list at /api/v1/warehouse/asset-losses,
+WarehouseAssetLossService/Store/models and HTTP error mapping. Request binds an
+accepted LOAN handover, active ISP assignment, exact physical identity/position,
+assignment/title/WO revisions, current evidence object and original receipt cost.
+Replay preserves the original draft after current authority/location/cutover checks.
+No customer name, address, evidence object key or cost appears in the public view.
+
+V175.143 was reserved before creation. inventory_asset_loss_request is forced RLS
+and append-only, captures actual assignment/asset/segment/balance/handover/customer
+installation/ONU revision/evidence/WO/cost rows, and seals one DRAFT0 ASSET_LOSS
+header/line with no posting. Do NOT assume143 applied until the run log confirms.
+All migrations through142 remain immutable. Next SQL must use144 after143 applies.
+
+Current .omo/runtime/asset-loss-request.sh / .log selects WarehouseAssetLossIT
+(LOAN full approval journey, SALE rejection) and ModularityTests (3), expected5.
+Archive task28/asset-loss-request/xml, private DB log asset-loss-request-database.log.
+The approval owner/effect/episode retirement are not implemented yet, so the LOAN
+journey is expected to stop after draft/replay/read at approval. Inspect actual
+execution and migration state before editing SQL or claiming test results.
+
+Next: ASSET_LOSS maps LOSS policy and posts exactly one approved LOSS from customer
+custody to LOST, closes assignment and retires its customer episode in the SAME
+transaction, persists recovery closure and a provisioning outbox. Revalidate all
+captured source revisions; stale/rejected decisions cannot move stock. Extend
+historical deployment/title validation forward to accept the sealed loss closure,
+without fake removal/return records. Add independent/delegated, stale/recovery,
+concurrent, SQL-forgery, replay/scope, rebuild and title/customer-property guards.
+Task28 and whole-plan remain OPEN. Prior6 actual reuse cases and30 combined cases
+are GREEN and portable evidence was published at04ffd8ef (product567a3113).
+
 ## Task28 asset compensation VERIFIED; active loan loss remains open
 
 The compensation-asset run against f87b1f21 passed 6 tests / 3 suites, zero
