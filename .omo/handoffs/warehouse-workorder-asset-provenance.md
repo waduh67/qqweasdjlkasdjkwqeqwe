@@ -1,5 +1,36 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task28 active-loan loss query fixes — five-case verification running
+
+0200fecf is published. Its asset-loss-effect run executed5 tests/2 failures,2m1s.
+144 applied22:42:24.363 JKT and is IMMUTABLE:
+41ffc26a006cdc7b55ac1ffd4e07e02bfc1b5abbd52c05d2bdce4bf846089708.
+Both cases stopped in the shared deployment validator at an unqualified
+`authorization_id` introduced by144.145 was reserved first and qualifies only
+those references; no validation was removed.145 applied22:44:24.291 JKT, immutable:
+95037d52b3ae6acf430c8a5c2c49d9ffafe7b47ac8931cf30812115c87bdeba4.
+
+The asset-loss-effect-fixed run executed5 tests/1 failure,1m40s: SALE rejection
+and3 modularity cases passed. LOAN reached draft source capture then failed on
+PostgreSQL precedence in `body->'evidence'-'receivedAt'`.146 was reserved first
+and adds only the necessary parentheses in the143 function, forward-only.
+
+Authored10 WarehouseAssetLossGuardsIT scenarios plus shared fixture: real recovery
+while approval waits -> durable stale; raw SQL effect/assignment closure denied;
+unknown receipt cost; simultaneous approvals; reject/fresh request; requester
+through delegation; revoked replay; scoped/redacted pagination; projection rebuild
+with dated telemetry preserved; pending replacement authorization retirement.
+These10 cases are NOT verified yet. Current .omo/runtime/asset-loss-evidence-fixed.sh
+/ .log still selects only WarehouseAssetLossIT2 + ModularityTests3 to verify the
+complete effect first. Archive task28/asset-loss-evidence-fixed/xml, private DB log
+asset-loss-evidence-fixed-database.log. No146 apply or LOAN green claim yet.
+
+After that run succeeds, run all12 asset-loss cases + relevant existing removal,
+return disposition/compensation and modularity regressions. Keep task28 OPEN until
+this source path and its guards pass. All143–145 bytes immutable;147 next unused
+once146 applies. Whole-plan goal active;30–48/F1–2–3–4 remain pending.
+Remote checkpoint command uses explicit local key (see previous note).
+
 ## Task28 active-loan loss effect checkpoint — validation pending
 
 143 applied 22:34:18.972 JKT and is immutable:

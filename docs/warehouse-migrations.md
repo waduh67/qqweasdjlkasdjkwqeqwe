@@ -1,5 +1,20 @@
 # Migrasi dan lingkungan QA warehouse
 
+## Reservasi V175.146: perbandingan JSON bukti kehilangan
+
+145 telah diterapkan; jalur draft sekarang mencapai pembandingan bukti pada fungsi143.
+Slot146 dicadangkan sebelum pembuatan untuk kurung eksplisit pada operator JSON
+sebelum pengurangan key receivedAt. SQL143–145 tidak diubah.
+
+
+## Reservasi V175.145: qualifier authorization pada loss
+
+V175.144 sudah diterapkan pada run asset-loss-effect; kegagalan fixture berikutnya
+mengungkap nama parameter authorization_id yang ambigu dalam validator deployment.
+Slot145 dicadangkan sebelum pembuatan untuk qualifier tiga referensi kolom baru.
+Tidak mengubah aturan otorisasi atau byte144.
+
+
 ## Reservasi V175.144: efek persetujuan kehilangan pinjaman (task28)
 
 V175.143 applied 22:34:18.972 JKT dan immutable:
