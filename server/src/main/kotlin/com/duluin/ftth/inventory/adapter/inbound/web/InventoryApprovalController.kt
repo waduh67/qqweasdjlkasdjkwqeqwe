@@ -8,15 +8,19 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
+import org.springframework.util.MultiValueMap
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/warehouse/approvals", "/api/inventory/approvals")
-class InventoryApprovalController(private val approvals: DurableApprovalService, private val legacy: LegacyApprovalQuery) {
+class InventoryApprovalController(private val approvals: DurableApprovalService, private val legacy: LegacyApprovalQuery,
+    private val queries: InventoryApprovalQueryApi) {
     @GetMapping
     @PreAuthorize("@authz.can('inventory.approval.view')")
-    fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
-        @RequestParam(required = false) status: WarehouseApprovalStatus?) = approvals.list(page, size, status)
+    fun list(@RequestParam parameters: MultiValueMap<String, String>): WarehousePage<WarehouseApprovalView> {
+        val result = queries.list(WarehouseApprovalFilters.parse(parameters))
+        return WarehousePage(result.items.map { it.approval }, result.page, result.size, result.totalElements)
+    }
 
     @GetMapping("/pending")
     @PreAuthorize("@authz.can('inventory.approval.view')")
@@ -29,10 +33,13 @@ class InventoryApprovalController(private val approvals: DurableApprovalService,
 
     @GetMapping("/{id}/history")
     @PreAuthorize("@authz.can('inventory.approval.view')")
-    fun history(@PathVariable id: UUID) = approvals.history(id).map { decision ->
-        mapOf("id" to decision.id, "tier" to decision.tier, "approverId" to decision.actorId, "decision" to decision.decision,
+    fun history(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): List<Map<String, Any?>> {
+        val filter = WarehouseApprovalFilters.parse(parameters, history = true)
+        return queries.history(id, WarehousePageRequest(filter.page, filter.size)).items.sortedBy { it.revision }.map { decision ->
+        mapOf("id" to decision.id, "tier" to decision.tier, "approverId" to decision.approver.id, "decision" to decision.decision,
             "reason" to decision.reason, "decidedAt" to decision.decidedAt, "revision" to decision.revision,
-            "delegatedFrom" to decision.delegation?.approverId, "evidenceReference" to decision.evidenceReference)
+            "delegatedFrom" to decision.delegatedFrom?.id, "evidenceReference" to decision.evidenceReference)
+        }
     }
 
     @PostMapping("", "/request")

@@ -199,22 +199,6 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (locked.status == WarehouseApprovalStatus.PENDING && clock.now() >= locked.expiresAt) terminate(locked, WarehouseApprovalStatus.EXPIRED)
         return view(store.get(id))
     }
-    @Transactional(rollbackFor = [Exception::class])
-    fun list(page: Int, size: Int, status: WarehouseApprovalStatus?): WarehousePage<WarehouseApprovalView> {
-        if (page < 0 || size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
-        val current = authority.lockCurrent()
-        access.permission(current, "inventory.approval.view")
-        val visible = store.candidates().mapNotNull { id ->
-            try { eligibility.view(store.get(id), current); view(store.get(id)) } catch (failure: WarehouseContractException) {
-                if (failure.error.code == WarehouseErrorCode.NOT_FOUND) null else throw failure
-            }
-        }.filter { status == null || it.status == status }
-        val offset = page.toLong() * size
-        return WarehousePage(if (offset >= visible.size) emptyList() else visible.drop(offset.toInt()).take(size), page, size, visible.size.toLong())
-    }
-    @Transactional(rollbackFor = [Exception::class])
-    fun history(id: UUID): List<WarehouseApprovalDecisionRecord> { get(id); return store.decisions(id) }
 
     private fun replay(namespace: String, key: String, hash: String, current: CurrentAuthority): WarehouseApprovalResponse? {
         val replay = store.replay(namespace, key) ?: return null

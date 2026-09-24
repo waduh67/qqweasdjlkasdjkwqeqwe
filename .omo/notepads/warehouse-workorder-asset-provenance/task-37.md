@@ -1,6 +1,28 @@
 # Task37 implementation notes
 
 
+
+## Task37 approval read projection implemented; backend verification next
+
+Count milestone feda5972/dcb8ce10 complete within task37: count-verification.json
+17 backend/10 web. New approval query/projection/service/controller now implement
+source/workbench/details/history page; raw list/history preserve response shapes
+and share stricter current owner/WO checks. Candidate SQL filters sealed source,
+SKU+serial on same line, dates/operation/location/code and scans fixed100 keyset
+batches. Each current owner gate has its own transaction; denial caught outside
+avoids rollback-only poisoning. Only selected page retained, totals after gate.
+Explicit document fields omit internal source/cost/storage data; count line capacity
+never projected, comparison only sealed SUBMITTED+ observations. Current action
+eligibility reuses actual tier authority; own/excluded actor blocked. Final effect
+requires actual approval effect+operation+applied movement. Cost omitted unless allowed.
+
+NOT VERIFIED YET. Next private approval-workbench-server.sh runs new3 workbench+
+new1 original-WO revocation workflow, existing count15 with comparison assertions,
+existing approval2/source4/compatibility and transfer discrepancy2. Await real build,
+fix any compilation/HTTP assertions, save proof. Approval UI still pending. Source
+link/source revision/current permissions are server-derived; no client movement/tier.
+No migrations. Whole37–48/F1–F4 active; do not call this task complete yet.
+
 ## Task37 count UI and backend verified; approvals next
 
 Blind count backend 6a4de392: 17 tests/2 suites PASS, BUILD SUCCESSFUL 3m37s,

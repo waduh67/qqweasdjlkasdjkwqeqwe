@@ -180,13 +180,23 @@ class WarehouseCountIT : WarehousePolicyHttpFixture() {
         val id = measured(fixture, "80")
         assertThat(request("GET", "/api/v1/warehouse/counts/$id/review", fixture.setup.token).status).isEqualTo(409)
         assertThat(request("GET", "/api/v1/warehouse/counts/$id/review", fixture.counter.first).status).isEqualTo(403)
+        val blind = request("GET", "/api/v1/warehouse/approvals/sources/$id", fixture.setup.token)
+        assertThat(blind.status).withFailMessage(blind.contentAsString).isEqualTo(200)
+        assertThat(blind.contentAsString).doesNotContain("bookQuantityBase", "quantityBase")
         action(id, fixture.setup.token, "submit", """{"expectedRevision":2}""")
-        val (reviewer, _) = approval(fixture, id)
+        val (reviewer, approvalId) = approval(fixture, id)
         val reviewed = request("GET", "/api/v1/warehouse/counts/$id/review", reviewer)
         assertThat(reviewed.status).withFailMessage(reviewed.contentAsString).isEqualTo(200)
         val comparison = mapper.readTree(reviewed.contentAsString).path("observations")[0]
         assertThat(comparison.path("bookQuantityBase").asString()).isEqualTo("100")
         assertThat(comparison.path("quantityBase").asString()).isEqualTo("80")
+        val details = request("GET", "/api/v1/warehouse/approvals/$approvalId/details", reviewer)
+        assertThat(details.status).withFailMessage(details.contentAsString).isEqualTo(200)
+        val document = mapper.readTree(details.contentAsString).path("document")
+        assertThat(document.path("lines").single().has("quantityBase")).isFalse()
+        assertThat(document.path("comparisons").single().path("bookQuantityBase").asString()).isEqualTo("100")
+        assertThat(document.path("comparisons").single().path("quantityBase").asString()).isEqualTo("80")
+        assertThat(document.path("countId").asString()).isEqualTo(id)
     }
 
     @Test fun `positive count recovers only previously recorded missing units without minting identity`() {

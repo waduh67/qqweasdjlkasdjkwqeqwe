@@ -1,0 +1,93 @@
+package com.duluin.ftth.inventory
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import tools.jackson.databind.JsonNode
+
+class WarehouseApprovalWorkbenchIT : WarehouseApprovalHttpFixture() {
+    private fun read(path: String, token: String): JsonNode {
+        val response = request("GET", "/api/v1/warehouse/approvals$path", token)
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
+        return mapper.readTree(response.contentAsString)
+    }
+    @Test fun `approver only sees named sealed document and current actions without cost then reads actual final effect`() {
+        val case = pending()
+        val path = "/${case.id}/details"
+        val detail = read(path, case.checker.first)
+        assertThat(detail.path("document").path("code").asString()).isNotEqualTo("PENDING")
+        val line = detail.path("document").path("lines").single()
+        assertThat(line.path("name").asString()).isEqualTo("Cable")
+        assertThat(line.path("quantityBase").asString()).isEqualTo("3")
+        assertThat(line.path("lotCode").asString()).isEqualTo("LOT")
+        assertThat(detail.path("actions").path("canDecide").asBoolean()).isTrue()
+        assertThat(detail.path("actions").path("currentTier").asInt()).isEqualTo(1)
+        assertThat(detail.toString()).doesNotContain("\"cost\"", "cost_total", "minimumMinor", "valueNumerator", "bucket", "storage", "payload_hash")
+        assertThat(read(path, case.setup.token).path("cost").path("numerator").asString()).isEqualTo("303")
+        val own = read(path, case.setup.token).path("actions")
+        assertThat(own.path("canDecide").asBoolean()).isFalse()
+        assertThat(own.path("decisionBlock").asString()).isEqualTo("INDEPENDENT_APPROVER_REQUIRED")
+        assertThat(request("GET", "/api/v1/warehouse/receipts/${case.document}", case.checker.first).status).isEqualTo(403)
+        assertThat(read("/sources/${case.document}", case.setup.token).path("requestBlock").asString()).isEqualTo("REQUEST_ALREADY_EXISTS")
+        assertThat(read("/sources/${case.document}", case.checker.first).path("canRequest").asBoolean()).isFalse()
+        assertThat(decide(case).status).isEqualTo(200)
+        val posted = read(path, case.checker.first)
+        assertThat(posted.path("approval").path("status").asString()).isEqualTo("APPROVED")
+        assertThat(posted.path("document").path("state").asString()).isEqualTo("DRAFT")
+        assertThat(posted.path("currentSourceState").asString()).isEqualTo("RECEIVED_IN_INSPECTION")
+        assertThat(posted.path("effect").path("operationId")).isEqualTo(posted.path("approval").path("effectOperationId"))
+        assertThat(posted.path("effect").path("businessAction").asString()).isEqualTo("RECEIVE")
+        assertThat(posted.path("effect").path("movementIds").size()).isEqualTo(1)
+        val history = read("/${case.id}/history/page?size=1", case.checker.first)
+        assertThat(history.path("totalElements").asLong()).isEqualTo(1)
+        assertThat(history.path("items").single().path("approver").path("name").asString()).isEqualTo("Viewer")
+        assertThat(history.toString()).doesNotContain("authorityEpoch", "roleIds", "permissions")
+        assertThat(read("/${case.id}/history/page?size=1&page=1", case.checker.first).path("items").size()).isZero()
+        assertThat(read("/${case.id}/history", case.checker.first).single().path("approverId").asString()).isEqualTo(case.checker.second)
+        counts(case, 1, 1)
+    }
+    @Test fun `queue filters sealed SKU serial source and dates before pagination with strict inputs and revoked access`() {
+        val setup = setupReceipt()
+        val checker = approver(setup.token, listOf(setup.source, setup.inspection))
+        configure(setup.token, policyBody(listOf(setup.inspection), listOf(checker.second)))
+        val first = submit(setup, checker, draft(setup, costLine(setup)).path("id").asString())
+        val serialDocument = draft(setup, """{"skuId":"${setup.onu}","quantityBase":"1","serials":[{"serial":"QUEUE-SERIAL"}],"cost":{"totalMinor":"101","currency":"IDR"}}""").path("id").asString()
+        val second = submit(setup, checker, serialDocument)
+        val page = read("/workbench?size=1", checker.first)
+        assertThat(page.path("totalElements").asLong()).isEqualTo(2)
+        assertThat(page.path("items").single().path("approval").path("requestId").asString()).isEqualTo(second.id)
+        assertThat(read("/workbench?page=1&size=1", checker.first).path("items").single().path("approval").path("requestId").asString()).isEqualTo(first.id)
+        val code = page.path("items").single().path("documentCode").asString()
+        val created = java.time.Instant.parse(page.path("items").single().path("requestedAt").asString())
+        val filtered = read("/workbench?skuId=${setup.onu}&serial=queue-serial&sourceDocumentId=$serialDocument&query=$code&operation=RECEIPT&locationId=${setup.inspection}&from=$created&until=${created.plusSeconds(1)}", checker.first)
+        assertThat(filtered.path("totalElements").asLong()).isEqualTo(1)
+        assertThat(read("/workbench?skuId=${setup.cable}&serial=QUEUE-SERIAL", checker.first).path("totalElements").asLong()).isZero()
+        assertThat(read("/workbench?serial=QUEUE", checker.first).path("totalElements").asLong()).isZero()
+        assertThat(read("/sources/$serialDocument", checker.first).path("document").path("lines").single().path("serial").asString()).isEqualTo("QUEUE-SERIAL")
+        assertThat(read("/workbench", tenant()).path("totalElements").asLong()).isZero()
+        assertThat(request("GET", "/api/v1/warehouse/approvals/${first.id}/details", tenant()).status).isEqualTo(404)
+        for (suffix in listOf("/workbench?size=101", "/workbench?page=0&page=1", "/workbench?from=$created", "/workbench?unknown=x", "/${first.id}/history/page?size=101", "?unknown=x"))
+            assertThat(request("GET", "/api/v1/warehouse/approvals$suffix", checker.first).status).describedAs(suffix).isEqualTo(400)
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${checker.second}/${setup.inspection}", setup.token, """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+        assertThat(read("/workbench?size=1", checker.first).path("totalElements").asLong()).isZero()
+        assertThat(read("?size=1", checker.first).path("totalElements").asLong()).isZero()
+        assertThat(request("GET", "/api/v1/warehouse/approvals/${first.id}/details", checker.first).status).isEqualTo(404)
+    }
+    @Test fun `rejected request exposes actual rework source revision and view only never appears eligible to decide`() {
+        val case = pending()
+        val reader = approver(case.setup.token, listOf(case.setup.source, case.setup.inspection), setOf("inventory.approval.view"))
+        assertThat(read("/${case.id}/details", reader.first).path("actions").path("canDecide").asBoolean()).isFalse()
+        val rejected = request("POST", "/api/v1/warehouse/approvals/decide", case.checker.first, decision(case.id, action = "REJECT", reason = "Correct evidence"))
+        assertThat(rejected.status).withFailMessage(rejected.contentAsString).isEqualTo(200)
+        val details = read("/${case.id}/details", case.setup.token)
+        assertThat(details.path("actions").path("canRework").asBoolean()).isTrue()
+        assertThat(details.path("actions").path("reworkSourceRevision").asLong()).isEqualTo(1)
+        assertThat(details.path("document").path("revision").asLong()).isZero()
+        assertThat(read("/${case.id}/details", case.checker.first).path("actions").path("canRework").asBoolean()).isFalse()
+        val rework = request("POST", "/api/v1/warehouse/approvals/rework", case.setup.token, """{"requestId":"${case.id}","expectedRevision":1}""")
+        assertThat(rework.status).withFailMessage(rework.contentAsString).isEqualTo(200)
+        val source = read("/sources/${case.document}", case.setup.token)
+        assertThat(source.path("document").path("revision").asLong()).isEqualTo(2)
+        assertThat(source.path("canRequest").asBoolean()).isTrue()
+        counts(case, 1, 0)
+    }
+}
