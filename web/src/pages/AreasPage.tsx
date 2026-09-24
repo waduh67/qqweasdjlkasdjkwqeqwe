@@ -86,11 +86,11 @@ export function AreasPage() {
       <PageHeader title="Area / Wilayah" />
 
       {can('iam.area.create') && (
-        <div className="card row" style={{ alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, marginBottom: 0 }}>
+        <div className="card row wrap" style={{ alignItems: 'flex-end' }}>
+          <div style={{ flex: '1 1 12rem', minWidth: 0, marginBottom: 0 }}>
             <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder="BKS" />
           </div>
-          <div style={{ flex: 2, marginBottom: 0 }}>
+          <div style={{ flex: '2 1 16rem', minWidth: 0, marginBottom: 0 }}>
             <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} placeholder="Bekasi" />
           </div>
           <Button

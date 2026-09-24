@@ -1,5 +1,19 @@
 # Whole-plan continuation
 
+## Task32 desktop setup passes; mobile area prerequisite layout fixed
+
+catalog-initial against3dc45f23:3passed/1failed59.67s. Both task31 navigation cases
+and the full task32 desktop setup journey passed. Mobile setup failed at existing
+AreasPage: its unwrapped horizontal create row pushed the Tambah button outside
+viewport. Screenshot inspected: code/name inputs extended past375px. Fixed only
+that prerequisite form to wrap with flexible12rem/16rem bases and min-width0.
+This is a real UI fix, not a forced browser click. All owned cleanup succeeded;
+volumes retained.61 unit tests remain green from the preceding checkpoint.
+
+Next .omo/runtime/warehouse-catalog-browser.sh catalog-area-fixed. Need both full
+setup journeys green and inspect screenshots before32completion. Continue33–48/F1–F4.
+Task33 contract preparation saved in task-33.md; implementation not started.
+
 ## Task32 catalog implemented —61 unit tests; browser setup pending
 
 /warehouse/catalog now routes to actual location, SKU, supplier and user-scope tabs.
