@@ -139,3 +139,4 @@
 {"at": "2026-09-24T16:45:02.038304+00:00", "task": 31, "event": "navigation-controls-checkpoint", "result": "49 unit tests, TypeScript and lint passed; real browser pending", "handoff": ".omo/notepads/warehouse-workorder-asset-provenance/task-31.md"}
 {"at": "2026-09-24T16:48:06.366448+00:00", "task": 31, "event": "browser-readiness-fix", "result": "Initial browser readiness failed, zero browser tests; add owned database identity health and disable unused SMTP health in isolated profile"}
 {"at": "2026-09-24T16:51:42.428599+00:00", "task": 31, "event": "browser-required-label-fix", "result": "Owned API/proxy readiness passed;2 browser cases failed on exact required-label selector; corrected helpers"}
+{"at": "2026-09-24T16:54:06.905854+00:00", "task": 31, "event": "browser-mobile-drawer-fix", "result": "Desktop real journey passed; mobile offscreen drawer selector fixed using aria-expanded and touch taps"}

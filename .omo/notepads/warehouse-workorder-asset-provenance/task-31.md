@@ -1,5 +1,18 @@
 # Task31 — shared warehouse web foundation (IN PROGRESS)
 
+## Task31 desktop passes; mobile drawer selector fixed
+
+setup-label-fixed against9b794f79: real desktop journey PASSED, including signup,
+UI-created approval-only role/user, overview+queue, stock API403, stock route denied,
+unknown route unavailable and no horizontal page overflow. Mobile reached the same
+approver login then failed opening navigation: translated-offscreen drawer still
+satisfies Playwright isVisible(). Helper now reads header aria-expanded at<=820px
+and uses actual touch tap to open drawer and section. No application code changed.
+
+Next run .omo/runtime/warehouse-setup-browser.sh setup-mobile-fixed. Need BOTH
+projects green in one run before marking31complete. Last run1passed/1failed31.4s,
+all owned cleanup passed, volumes retained. No migrations changed. Continue32–48/F1–F4.
+
 ## Task31 browser reached real UI; required-field selectors corrected
 
 setup-health-fixed failed compilation only (Any? health detail); now requireNotNull
