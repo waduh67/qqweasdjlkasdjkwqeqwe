@@ -25,7 +25,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
                 ApprovalPostingKind.TITLE_CORRECTION, ApprovalPostingKind.RETURN_TITLE -> com.duluin.ftth.inventory.domain.model.MovementKind.TITLE_CORRECTION
                 ApprovalPostingKind.ADJUSTMENT -> com.duluin.ftth.inventory.domain.model.MovementKind.TRANSFER
                 ApprovalPostingKind.COUNT -> com.duluin.ftth.inventory.domain.model.MovementKind.COUNT_VARIANCE
-                ApprovalPostingKind.LOSS -> com.duluin.ftth.inventory.domain.model.MovementKind.LOSS
+                ApprovalPostingKind.LOSS, ApprovalPostingKind.ASSET_LOSS -> com.duluin.ftth.inventory.domain.model.MovementKind.LOSS
                 ApprovalPostingKind.SCRAP -> com.duluin.ftth.inventory.domain.model.MovementKind.SCRAP
                 ApprovalPostingKind.DISPOSITION_REVERSAL -> com.duluin.ftth.inventory.domain.model.MovementKind.REVERSAL
             }

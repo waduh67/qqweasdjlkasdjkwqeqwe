@@ -31,6 +31,8 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
                 (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN document.kind='RETURN_TITLE' THEN jsonb_build_object('returnTitle',
                 (SELECT snapshot::jsonb FROM inventory_return_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
+            || CASE WHEN document.kind='ASSET_LOSS' THEN jsonb_build_object('assetLoss',
+                (SELECT snapshot::jsonb FROM inventory_asset_loss_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN document.kind='DISPOSITION_REVERSAL' THEN jsonb_build_object('compensation',
                 (SELECT request.snapshot::jsonb FROM inventory_compensation_request request WHERE request.tenant_id=document.tenant_id AND request.id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN document.kind IN ('LOSS','SCRAP') THEN jsonb_build_object('disposition',

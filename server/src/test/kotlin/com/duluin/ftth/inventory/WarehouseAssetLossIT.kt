@@ -5,6 +5,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
+import java.util.Base64
+import org.springframework.http.HttpMethod
+import org.springframework.mock.web.MockMultipartFile
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 
 class WarehouseAssetLossIT : CustomerAssetReplacementFixture() {
     override fun stockReceiptCost() = mapOf("totalMinor" to "200000", "currency" to "IDR")
@@ -22,9 +26,16 @@ class WarehouseAssetLossIT : CustomerAssetReplacementFixture() {
         }
         val source = fixture(admin).transaction { scalar("SELECT location_id FROM inventory_serialized_asset WHERE id='$asset'") }
         val sink = create("locations", admin, """{"code":"LOAN_LOSS","name":"Approved lost loans","kind":"LOST"}""").path("id").asString()
-        val evidence = removalEvidence(receipt.receiver.first, receipt.workOrder)
+        val png = Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jK1cAAAAASUVORK5CYII=")
+        val signed = mvc.perform(multipart(HttpMethod.PUT, "/api/work-orders/${receipt.workOrder}/signature")
+            .file(MockMultipartFile("file", "loss-assessment.png", "image/png", png))
+            .param("signerName", "Loan loss assessment")
+            .param("correctionReason", "Record a later witnessed loss assessment and preserve the original acceptance")
+            .header("Authorization", "Bearer ${receipt.receiver.first}")).andReturn().response
+        assertThat(signed.status).withFailMessage(signed.contentAsString).isEqualTo(200)
+        val evidence = UUID.fromString(mapper.readTree(signed.contentAsString).path("revisionId").asString())
         val input = WarehouseAssetLossInput(old.installation.operation, UUID.fromString(handover), 1,
-            if (mode == "SALE") 1 else 0, summary(admin, receipt.workOrder).path("revisions").path("workOrderRevision").asLong(),
+            if (mode == "SALE") 1 else 0, fixture(admin).transaction { scalar("SELECT warehouse_revision FROM work_order WHERE id='${receipt.workOrder}'").toLong() },
             UUID.fromString(sink), "Confirmed unrecovered device loss with independent assessment", evidence)
         val body = mapper.writeValueAsString(input)
         val created = request("POST", "/api/v1/warehouse/asset-losses", admin, body, "loan-loss-request")

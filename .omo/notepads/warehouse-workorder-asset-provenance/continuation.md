@@ -1,5 +1,41 @@
 # Whole-plan continuation
 
+## Task28 active-loan loss effect checkpoint — validation pending
+
+143 applied 22:34:18.972 JKT and is immutable:
+d613a31245fe294a38113ff109e3fb52b4467d348f2d6d642cae02bc23f57936.
+Request run: 5 tests, 2 failures, 1m56s. Both fixtures first stopped before the new
+API because signature replacement lacked correctionReason. Fixed fixture signed
+assessment revision then ran5 tests/2 failures/1m50s: LOAN reached new document
+insert and exposed a source FK error (handover ID differs from its posting document
+ID); SALE material-summary helper was not appropriate after accepted sale. The
+request now resolves the actual acceptance operation ID;144 fixes the immutable143
+assertion forward. Fixture reads WO revision directly and does not manufacture stock.
+
+144 was reserved BEFORE creation and now implements the ASSET_LOSS approved effect:
+LOSS policy / one LOSS movement / exact paired CUSTOMER_INSTALLED -> LOST legs,
+original title and quantity retained, one DISPOSED event and immutable approval
+source. It seals current source and closes the existing assignment. Customer and
+fulfillment implement public inventory ports for atomic episode retirement and
+provisioning outbox; original deployment/handover/obligation rows stay intact.
+New loss-linked ONU event/retirement records preserve customer history. Unconsumed
+permits depending on the lost assignment are retired and cannot later be consumed.
+Existing removal and return validators remain intact; historical title/deployment
+validation accepts only a complete sealed loss effect. RLS, old/new deferred routes,
+replay, current source checks and exact ledger projection reconciliation apply.
+
+Current .omo/runtime/asset-loss-effect.sh / .log selects WarehouseAssetLossIT (2)
+and ModularityTests (3), expected5. Archive task28/asset-loss-effect/xml; private
+DB log asset-loss-effect-database.log. No144 apply or green effect claimed yet.
+Check execution before editing SQL. Once applied144 is immutable;145 next unused.
+Next add stale/recovery/title, self/delegate, competing approvals, direct-SQL
+forgery, scope/replay, unknown cost, old permits and rebuild guards; then task28
+completion evidence. Task28 and whole-plan remain OPEN;30–48/F1–F4 pending.
+
+Push f88ba8a5 initially failed public-key authentication. Explicit local key works:
+env -u GIT_SSH_COMMAND -u GIT_SSH git -c core.sshCommand='ssh -i /home/fajar/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes' push origin HEAD:refs/heads/feat/warehouse-workorder
+Confirmed f88ba8a5 published. Do not print private key/env credentials.
+
 ## Task28 active-loan loss draft checkpoint — validation pending
 
 Added InventoryAssetLossApi, request/get/scoped-list at /api/v1/warehouse/asset-losses,

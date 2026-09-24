@@ -49,7 +49,9 @@ class WarehousePostingService(
                     command.operation.namespace == "warehouse.deployment.consume" || command.kind == MovementKind.TITLE_TRANSFER &&
                     command.operation.namespace == "warehouse.asset.handover" || command.kind == MovementKind.TITLE_CORRECTION &&
                     command.operation.namespace == "warehouse.approval.effect" && command.approval?.kind == ApprovalPostingKind.TITLE_CORRECTION ||
-                    command.kind == MovementKind.RETURN && command.operation.namespace == "warehouse.asset.remove" && it.direction == LegDirection.OUT) &&
+                    command.kind == MovementKind.RETURN && command.operation.namespace == "warehouse.asset.remove" && it.direction == LegDirection.OUT ||
+                    command.kind == MovementKind.LOSS && command.operation.namespace == "warehouse.approval.effect" &&
+                    command.approval?.kind == ApprovalPostingKind.ASSET_LOSS && it.direction == LegDirection.OUT) &&
                     it.status == InventoryStatus.CUSTOMER_INSTALLED && it.dimension.custodianKind == OwnerKind.CUSTOMER &&
                     it.quantity == StockQuantity.of(1, StockUnit.EA))
                 PostingEndpoint.PHYSICAL -> require(it.status !in setOf(InventoryStatus.CONSUMED, InventoryStatus.CUSTOMER_INSTALLED))

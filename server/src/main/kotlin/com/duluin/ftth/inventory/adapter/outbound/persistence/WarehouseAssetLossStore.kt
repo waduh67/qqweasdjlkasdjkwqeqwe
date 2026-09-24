@@ -33,10 +33,12 @@ class WarehouseAssetLossStore(private val jdbc: WarehouseCommandJdbc) {
         val input = record.input
         val dimension = record.position.dimension
         val cost = record.source.cost
+        val sourceDocument = sql.value("SELECT operation_id FROM inventory_asset_acceptance WHERE tenant_id=? AND handover_id=?",
+            sql.tenant, input.sourceHandoverId)?.let(UUID::fromString) ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,work_order_id,work_order_revision,
             authority_epoch,cutover_epoch,source_document_id,source_revision,reason)
             VALUES (?,?,?,'ASSET_LOSS',?,?,?,?,?,?,1,?)""", record.id, sql.tenant, record.code, record.actorId,
-            record.ownership.workOrderId, record.workOrderRevision, record.authorityEpoch, record.cutoverEpoch, input.sourceHandoverId, input.reason)
+            record.ownership.workOrderId, record.workOrderRevision, record.authorityEpoch, record.cutoverEpoch, sourceDocument, input.reason)
         sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,document_revision,line_number,sku_id,
             base_unit,tracking,quantity_base,stock_identity_id,source_line_id,location_id,destination_location_id,
             custodian_id,custodian_kind,condition,legal_owner,cost_total_minor,cost_basis_quantity_base,currency)
@@ -48,6 +50,18 @@ class WarehouseAssetLossStore(private val jdbc: WarehouseCommandJdbc) {
             operation_key,payload_hash,canonical_payload,snapshot) VALUES (?,?,?,?,?,?,?,?,?,?)""", record.id, sql.tenant,
             input.assignmentId, input.sourceHandoverId, record.ownership.assetId, record.actorId, key, canonical.hash, canonical.json,
             mapper.writeValueAsString(record))
+        Unit
+    }
+
+    fun sourceMatches(id: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("SELECT warehouse_asset_loss_source_matches(?,?)", sql.tenant, id) == "t"
+    }
+
+    fun beginEffect(record: WarehouseAssetLossRecord, approvalId: UUID,
+        operation: com.duluin.ftth.inventory.application.port.outbound.PostingOperation) = jdbc.execute { sql ->
+        sql.update("""INSERT INTO inventory_asset_loss_effect(tenant_id,request_id,approval_id,posting_operation_id,
+            assignment_id,closed_at) VALUES (?,?,?,?,?,?)""", sql.tenant, record.id, approvalId, operation.id,
+            record.input.assignmentId, operation.recordedAt)
         Unit
     }
 

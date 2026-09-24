@@ -24,7 +24,7 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             "ISSUE" -> PolicyOperation.ISSUE
             "OPENING_BALANCE" -> PolicyOperation.OPENING_BALANCE
             "ADJUSTMENT", "DISPOSITION_REVERSAL" -> PolicyOperation.ADJUSTMENT
-            "LOSS" -> PolicyOperation.LOSS
+            "LOSS", "ASSET_LOSS" -> PolicyOperation.LOSS
             "SCRAP" -> PolicyOperation.SCRAP
             "COUNT" -> PolicyOperation.COUNT_VARIANCE
             "TITLE_CORRECTION", "RETURN_TITLE" -> PolicyOperation.TITLE_REACQUISITION

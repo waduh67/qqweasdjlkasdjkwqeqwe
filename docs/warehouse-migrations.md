@@ -1,5 +1,14 @@
 # Migrasi dan lingkungan QA warehouse
 
+## Reservasi V175.144: efek persetujuan kehilangan pinjaman (task28)
+
+V175.143 applied 22:34:18.972 JKT dan immutable:
+`d613a31245fe294a38113ff109e3fb52b4467d348f2d6d642cae02bc23f57936`.
+Slot V175.144 dicadangkan sebelum pembuatan untuk efek LOSS pada ASSET_LOSS,
+penutupan penugasan/episode, hubungan histori dan antrean provisioning atomik.
+Perubahan riwayat dilakukan melalui fungsi/constraint maju, bukan edit143.
+
+
 ## Reservasi V175.143: permintaan kehilangan pinjaman aktif (task28)
 
 Slot V175.143 diperiksa belum ada dan dicadangkan sebelum file SQL dibuat.
