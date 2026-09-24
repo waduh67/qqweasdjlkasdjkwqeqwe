@@ -2,16 +2,20 @@
 
 ## Active task —26 returns/inspection/repair
 
-- `af0471bb` is published. Combined transfer/count/replenishment verification is
-  complete; tasks25/27/29 are now checked. Remaining26/28/30–48 and F1–F4 stay open.
-- Replenishment rerun passed both packaged JVM phases plus1 live seed with zero
-  failures/errors/skips. Same JAR SHA as wave5 below. Eleven physical posting
-  counts matched `[4,7,4,1,0,4,6,3,3,0,0]`. Owned cleanup completed, volumes kept.
-- New task26 test and migration declaration are in progress. Read task-26.md.
-  Host command `.omo/runtime/return-red.sh`, log `.omo/runtime/return-red.log`
-  exercises the absent inspection endpoint using a real17.5m returned remnant.
-  Finish/preserve the failed result, then implement source-bound inspection.
-  No new SQL has been created or applied yet;175.116 is reserved before creation.
+- Published base `ff530d47` closes25/27/29. The next checkpoint implements initial
+  residual-return inspection:4 tests/0 failures/0 errors/0 skips, real17.5m release,
+  replay, origin/quantity/permission rejection and competing inspector serialization.
+-175.116/175.117 applied successfully and are immutable. The current runner
+  `.omo/runtime/return-green.sh` finished0; log `return-green-second.log`; owned
+  processes/containers cleaned, volumes retained. Full details/hashes task-26.md.
+- Next: recovered asset intake from immutable removal, reset/condition proof,
+  loan reuse and sold repair to original customer, approval-bound reacquisition.
+  Add scoped replay/adversarial tests, bounded list, WO obligation closure and
+  relevant regression/packaged proof.26 remains open along with28/30–48/F1–F4.
+- Earlier task26 attempts: fixture wrong BIN property failed before feature;
+  compile-exclusion baseline rejected by runner; first implemented intake failed
+  document DRAFT invariant. Corrected through175.117, not rewriting175.116.
+  No genuine failing-first feature claim is made for the original missing API.
 
 ## Current step — transfer/count integration verified
 

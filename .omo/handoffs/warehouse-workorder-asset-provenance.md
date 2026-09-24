@@ -2,14 +2,17 @@
 
 ## Active task:26 —2026-09-24
 
-- Remote checkpoint base `af0471bb`; tasks25/27/29 backend acceptance now complete.
-  Both combined wave5 and replenishment real HTTP/restart runs passed.37 selected
-  regression tests and1 separate live seed passed with zero failures/errors/skips.
-- Continue task26 using `continuation.md` and `task-26.md`. Returns inspection test
-  is running against the absent endpoint.175.116 is declared but not yet created.
-  Remaining26/28/30–48 and F1–F4 stay open; no independent signoff is claimed.
-- Latest section overrides historical labels/status below. Normal explicit push
-  to `feat/warehouse-workorder`; never merge/deploy main or reset QA data.
+- Latest slice: source-bound residual return intake/inspection passed4 real HTTP/
+  DB tests with zero failures/errors/skips.17.5m release conserves82500 consumed;
+  replay, invalid origin/measurement and concurrent inspection checked.
+-175.116/175.117 applied; immutable hashes and commands in task-26.md. Host QA
+  cleaned owned processes/containers and retained volumes. No task26 closure:
+  recovered assets, repair/RMA, reacquisition, obligation closure and broader
+  checks remain. Continue using newest continuation.md/task-26.md entries.
+-25/27/29 backend acceptance is complete at published base `ff530d47`. Remaining
+  26/28/30–48 and F1–F4 stay open. Normal explicit pushes to
+  `feat/warehouse-workorder`; no merge/deployment to main or QA data reset.
+- Latest section overrides historical labels/status below.
 
 ## Current integration checkpoint: 2026-09-24
 

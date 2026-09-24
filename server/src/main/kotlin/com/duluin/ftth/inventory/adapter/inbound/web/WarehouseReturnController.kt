@@ -1,0 +1,25 @@
+package com.duluin.ftth.inventory.adapter.inbound.web
+
+import com.duluin.ftth.inventory.*
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+import java.util.UUID
+
+@RestController
+@RequestMapping("/api/v1/warehouse/returns")
+class WarehouseReturnController(private val returns: InventoryReturnApi) {
+    @PostMapping
+    fun receive(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
+        response(returns.receive(WarehouseReceiptJson.decode(body, WarehouseReturnIntake::class.java), WarehouseMutationMetadata(key)))
+
+    @PostMapping("/{id}/inspect")
+    fun inspect(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
+        response(returns.inspect(id, WarehouseReceiptJson.decode(body, WarehouseReturnInspection::class.java), WarehouseMutationMetadata(key)))
+
+    @GetMapping("/{id}") fun get(@PathVariable id: UUID): WarehouseReturnView = returns.get(id)
+    @GetMapping("/{id}/history") fun history(@PathVariable id: UUID): List<WarehouseReturnView> = returns.history(id)
+
+    private fun response(receipt: WarehouseOperationReceipt): ResponseEntity<String> = ResponseEntity.status(receipt.originalStatus)
+        .contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)
+}

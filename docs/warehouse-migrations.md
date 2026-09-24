@@ -27,6 +27,15 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## Task26: retur dan inspeksi
+
+`V175_116__warehouse_return_inspection.sql` dicadangkan sebelum pembuatan untuk
+intake dari sumber retur terverifikasi, inspeksi terukur dan posting pelepasan.
+Versi ini mengikuti175.115.1; seluruh migrasi terdahulu tetap immutable.
+`V175_117__warehouse_return_lifecycle.sql` dicadangkan sebelum pembuatan setelah
+175.116 diterapkan: dokumen inspeksi baru mulai DRAFT dan hanya case yang terikat
+asalnya boleh maju ke hasil inspeksi; dokumen retur sumber tidak diubah.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada
