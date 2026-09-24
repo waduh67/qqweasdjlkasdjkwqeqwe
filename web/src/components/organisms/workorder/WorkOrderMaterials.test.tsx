@@ -31,7 +31,7 @@ it('keeps technical completion, QA, provisioning and residual closure distinct f
   await screen.findByText('Teknis selesai'); expect(screen.getByText('Disetujui QA')).toBeTruthy(); expect(screen.getByText('Menunggu')).toBeTruthy(); expect(screen.getByText('Belum ditutup')).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Catat.*pemakaian/ })).toBeNull(); expect(screen.queryByRole('button', { name: 'Tutup kewajiban material' })).toBeNull()
   expect(screen.queryByRole('link', { name: 'Lihat biaya material WO' })).toBeNull()
-  expect(fetch.mock.calls).toHaveLength(3)
+  await waitFor(() => expect(fetch.mock.calls).toHaveLength(3))
 })
 it('uses the acknowledged named source and exact measured metres after review, replaying response loss unchanged', async () => {
   let writes = 0

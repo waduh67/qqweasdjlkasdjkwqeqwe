@@ -3,11 +3,12 @@ import { Loading, Unavailable, fmtUptime } from './portalFormat'
 import { Text } from '@fluentui/react-components'
 import { StatusBadge } from '@/components/atoms'
 import { Ess } from '@/components/molecules'
+import { PortalAssets } from './PortalAssets'
 
 /** Keadaan sambungan: satu sesi PPPoE yang berlaku + perangkat yang terpantau di rumah. */
 export function PortalKoneksiPage() {
   const { connection, ready } = usePortalData()
-  if (!connection) return ready ? <Unavailable what="Data koneksi" /> : <Loading />
+  if (!connection) return <>{ready ? <Unavailable what="Data koneksi" /> : <Loading />}<PortalAssets /></>
   const s = connection.session
 
   return (
@@ -38,8 +39,9 @@ export function PortalKoneksiPage() {
         )}
       </div>
 
+      <PortalAssets />
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <Text as="h2" size={400} weight="semibold">Perangkat</Text>
+        <Text as="h2" size={400} weight="semibold">Perangkat terpantau</Text>
         {connection.devices.length === 0 ? (
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada perangkat terpantau.</Text>
         ) : (

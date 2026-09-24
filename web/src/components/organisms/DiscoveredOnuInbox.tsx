@@ -13,18 +13,18 @@ import type {
 import type { CustomerView } from '@/api/network'
 import { useCan } from '@/auth/useCan'
 import { DataTable, type Column, type RowAction } from './DataTable'
-import { Badge, Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInbox } from '@/components/atoms/icons'
+import { CustomerAssetInstallation } from '@/components/organisms/customer/CustomerAssetInstallation'
 
 /**
  * Kotak masuk auto-provisioning: ONU yang dilaporkan OLT tapi belum terdaftar.
  *
  * Alih-alih membuang serial tak dikenal ke log, monitoring menangkapnya ke sini
  * lalu menebak {pelanggan, ODP, port} dari topologi PON port + backlog instalasi.
- * Bila cocok tunggal, operator cukup 1-klik "Terima"; selebihnya saran mengisi
- * form di muka agar tinggal diperiksa. `seenCount` tetap ditonjolkan: membedakan
+ * Saran mengisi pelanggan untuk diperiksa bersama sumber gudang yang memenuhi syarat. `seenCount` tetap ditonjolkan: membedakan
  * perangkat yang benar-benar terpasang dari serial yang cuma sekali lewat.
  *
  * Dipakai dua tempat: halaman Provisioning global (semua OLT, plus toggle
@@ -128,21 +128,8 @@ export function DiscoveredOnuInbox({
     }
   }
 
-  // Terima saran apa adanya: menautkan ke pelanggan tertebak tanpa membuka form.
-  // ODP sengaja tak diisi di sini — penempelan ke ODP dilakukan nanti di peta.
-  const accept = (onu: DiscoveredOnuView) => {
-    const s = onu.suggestion!
-    return run(
-      () =>
-        api.post(`/api/monitoring/discovered-onus/${onu.id}/provision`, {
-          customerId: s.customerId,
-          odpId: null,
-          portNumber: null,
-          installRxPowerDbm: onu.lastRxPowerDbm,
-        }),
-      `ONU ${onu.serialNumber} terprovisi`,
-    )
-  }
+  // A suggestion identifies a customer; stock must still be reviewed and authorized.
+  const accept = (onu: DiscoveredOnuView) => setProvision(onu)
 
   // Hapus permanen baris kotak masuk — beda dari "Abaikan" yang cuma menandainya
   // IGNORED (masih tersimpan). Berguna terutama untuk yatim dari OLT yang sudah
@@ -333,7 +320,6 @@ function ProvisionDrawer({
   onClose: () => void
   onDone: () => void
 }) {
-  const toast = useToast()
   const suggestion = discovered.suggestion
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CustomerView[]>([])
@@ -341,9 +327,6 @@ function ProvisionDrawer({
   const [customer, setCustomer] = useState<PickedCustomer | null>(
     suggestion?.customerId ? { id: suggestion.customerId, name: suggestion.customerName ?? '', code: null } : null,
   )
-  const [rx, setRx] = useState(discovered.lastRxPowerDbm != null ? String(discovered.lastRxPowerDbm) : '')
-  const [saving, setSaving] = useState(false)
-
   // Cari pelanggan begitu ketikan cukup panjang; hasil basi dibuang lewat flag `alive`.
   useEffect(() => {
     const q = query.trim()
@@ -364,29 +347,6 @@ function ProvisionDrawer({
       alive = false
     }
   }, [query])
-
-  // Penautan cukup ke pelanggan; penempelan ke ODP/port dikerjakan nanti di peta.
-  const ready = customer != null
-
-  const submit = async () => {
-    if (!ready) return
-    setSaving(true)
-    try {
-      await api.post(`/api/monitoring/discovered-onus/${discovered.id}/provision`, {
-        customerId: customer!.id,
-        // ODP & port ditunda: ONU ditempel ke ODP nanti lewat peta jaringan.
-        odpId: null,
-        portNumber: null,
-        installRxPowerDbm: rx ? Number(rx) : null,
-      })
-      toast.success(`ONU ${discovered.serialNumber} terprovisi`)
-      onDone()
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Provisioning gagal')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   return (
     <Drawer title={`Provisi ${discovered.serialNumber}`} onClose={onClose}>
@@ -442,20 +402,10 @@ function ProvisionDrawer({
           </div>
         )}
 
-        <TextField
-          label="Redaman instalasi (dBm)"
-          value={rx}
-          onChange={(_, data) => setRx(data.value)}
-          placeholder="-22.5"
-          hint="Baseline deteksi degradasi; terisi dari bacaan terakhir bila ada."
-        />
-
-        <div className="row">
-          <Button variant="primary" disabled={!ready || saving} onClick={() => void submit()}>
-            {saving ? 'Memproses…' : 'Provisi ONU'}
-          </Button>
-          <Button onClick={onClose}>Batal</Button>
-        </div>
+        <p>Serial teramati belum menjadi stok atau aset pelanggan. Pilih sumber yang sudah diterima pada WO pelanggan ini.</p>
+        {customer && <CustomerAssetInstallation key={customer.id} customerId={customer.id}
+          observation={{ id: discovered.id, serial: discovered.serialNumber.trim().toUpperCase() }} onDone={onDone} onClose={onClose} />}
+        {!customer && <Button onClick={onClose}>Batal</Button>}
       </div>
     </Drawer>
   )

@@ -70,6 +70,7 @@ function MaterialJobBody({ context, actor, online, readOnly, reload }: { context
     {context.field?.plan && <p>Rencana material revisi {context.field.plan.planRevision} · {context.field.plan.materialMode === 'NONE' ? 'Tanpa material' : 'Memerlukan material'} · Pemakaian revisi {context.field.useRevision}</p>}
     <div className="row wrap"><Button disabled={!online || !!action} onClick={reload}>Segarkan material WO</Button>
       {context.currentAssignee && can('workorder.order.view') && <Link to={`/my-work-orders/${context.id}`}>Detail tugas dan bukti</Link>}
+      {context.field?.plan?.customerId && can('customer.onu.view') && can('customer.customer.view') && <Link to="/customers" state={{ openCustomerId: context.field.plan.customerId }}>Pasang perangkat pada aset pelanggan</Link>}
       {!readOnly && context.currentAssignee && context.active && context.field?.planState === 'SUBMITTED' && (context.field.plan?.materialMode !== 'NONE' || context.field.useRevision === 0) && <Button disabled={!online || !!action} onClick={() => setAction({ kind: 'use' })}>Catat pemakaian</Button>}</div>
   </section>
     {action?.kind === 'receipt' ? <MyMaterialReceipt context={context} issue={action.issue} actor={actor} online={enabled} onDone={reload} onClose={() => setAction(null)} />
