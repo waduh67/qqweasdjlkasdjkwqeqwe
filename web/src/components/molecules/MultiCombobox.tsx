@@ -45,6 +45,7 @@ export function MultiCombobox<T>({
   const [loading, setLoading] = useState(false)
   const [labels, setLabels] = useState<Record<string, string>>(initialLabels ?? {})
   const containerRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
   const requestId = useRef(0)
 
   useEffect(() => {
@@ -60,7 +61,9 @@ export function MultiCombobox<T>({
 
       const trigger = containerRef.current?.querySelector('.fui-Combobox') ?? containerRef.current
       if (trigger && trigger.contains(target)) return
-      if (target.closest?.('[role="listbox"]')) return
+      // Fluent renders a multiselect menu in a portal. Keep its pointer events
+      // inside this picker even when the popup's accessibility role is "menu".
+      if (popupRef.current?.contains(target)) return
 
       setOpen(false)
     }
@@ -130,6 +133,7 @@ export function MultiCombobox<T>({
     <div ref={containerRef} className="multi-combobox">
       <Combobox
         multiselect
+        listbox={{ ref: popupRef }}
         disabled={disabled}
         open={open}
         selectedOptions={values}

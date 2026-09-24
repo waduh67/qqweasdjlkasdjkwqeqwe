@@ -1,5 +1,21 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 real technician-selection bug fixed — checks running
+
+issue-selection-fixed@f2fc7fb4 bothbrowsercases passedvisiblemenu selector but WO
+POST hadassignees:[] despiteclick. Actualpayloadfilteredfromprivate trace confirms;
+no credentials printed. MultiCombobox outsidepointer handler onlyignoredrolelistbox,
+while actualFluentmultiselectportal hasrolemenu. Itclosed onoptionpointerdownbefore
+selection inChromium. Addedref toactualListboxslot andusespopupRef.contains(target),
+soonlyownportal countsinside, regardlessrole. Browsernowassertsaria-checkedtrue.
+New userEventrealFluent regression failsbeforefix (menuclosesafterfirstselection)
+andchecks2persistedchoices+outsideclose. Fixedtest+WO+9request/TS/oxlintRUNNING
+technician-picker-fixed.log. No browsercurrentlyrunning. Lastbrowsercleanupdone.
+NEXT awaitchecks, runissue-picker-fixed viawarehouse-issue-browser.sh,thenvisualreview
+andfurtherfixes asneededbeforetask35complete. Baseline132web@f2fc7fb4 remainsvalid.
+Task36notesready;wholegoal35–48/F1–F4 active. No migrationschanged.
+
+
 ## Task35 sourcef2fc7fb4 — 132 web tests green, second browser running
 
 132tests/18files passed aftersharedModalfix, TSawaitedexit0, focusedoxlint0errors.

@@ -61,7 +61,7 @@ siapkan** pada slip terlebih dahulu.
    centang konfirmasi penerima. Bila pengiriman belum memenuhi sisa kebutuhan,
    konfirmasi **Kirim sebagian** juga wajib.
 4. **Kirim barang** memindahkan barang dari gudang ke transit WO. Jumlah diterima
-   teknisi belum bertambah. Lihat **Stok & Perangkat → Dalam transit** untuk
+   teknisi belum bertambah. Lihat filter **Stok & Perangkat → Dalam perjalanan** untuk
    saldo fisik transit.
 5. **Cetak slip** membaca ulang slip dengan izin terkini sebelum membuka dialog
    cetak browser. Revisi slip adalah revisi kejadian yang dicatat; revisi dokumen
