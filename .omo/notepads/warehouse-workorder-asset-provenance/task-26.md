@@ -1,5 +1,42 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##127 declared — shared regression166, four concrete failures
+
+rma-acceptance-green completed166 tests/5 suites/4 failures/0 errors/skips,8m28s.
+RMA3, forward-fix3 and provenance31 passed; ownership72 had2 race failures (409
+vs200), final-state57 had2 valid draft DELETE failures (count1 vs0). Contrary to
+the initial reading, draft deletion fails at the count assertion BEFORE replay.
+Read-only current pg_trigger capture .omo/runtime/draft-delete-guards.sql proves
+warehouse_transfer_binding_guard always returns NEW even on DELETE, suppressing
+otherwise allowed non-transfer draft deletion. Its scope/transfer immutability
+checks remain necessary. Reserve V175_127__warehouse_draft_delete_return_row.sql
+before creation for conditional RETURN OLD only after those same checks.
+
+Kotlin custody validation was already moved after owner locks and awaits the
+focused race rerun. All166 original results reflect pre-fix Kotlin. RMA reacquisition
+red runner now starting (two cases); no title migration declared until its result.
+All SQL through126 immutable. The fixed retained-pre125 app-role probe succeeded.
+
+##126 retained pre125 evidence validated without rewriting the seal
+
+Read-only `.omo/runtime/verify-retained-rma-origin.sh` passed for the exact tenant/
+handover previously rejected by125. The warehouse_app validator now succeeds;
+raw stored origin still lacks BOTH new RMA execution fields. MD5 before/after
+validation is830f78be6b5c7e982261480deccfc2f1, f/f extension flags; transaction
+ROLLBACK. Archive task26/rma-origin-upgrade-green/probe.log. This is not a claimed
+pre-migration hash capture: the earlier red probe did not capture a hash.126 SQL
+contains no evidence writes. Owner read confirmed175.126|t.
+
+Current Kotlin correction keeps an unchecked immutable custody preview for routing,
+then validates the graph after the existing work-order and assignment locks. The
+prior race failed in shared regression; its assertion now includes response bodies.
+New WarehouseCustomerRmaReacquisitionIT is a real full-cycle probe: repaired RMA,
+signed acceptance/title0, independent approval (requester denied), owner transfer,
+removal, quarantine, reset inspection, ordinary issue/install to a new customer.
+Run `.omo/runtime/rma-reacquisition-red.sh` (queued under host QA lock; two selected
+cases including acceptance race). Source changes are pending compilation/results;
+no127 declared. Current main shared run still in final-state deployment cases.
+
 ##126 applied — RMA acceptance3 and ordinary regression still running
 
 V175.126 has applied in the running integration test and is IMMUTABLE. SHA256

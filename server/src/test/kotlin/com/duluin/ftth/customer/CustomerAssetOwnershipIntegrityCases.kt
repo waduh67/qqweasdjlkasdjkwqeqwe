@@ -70,7 +70,8 @@ abstract class CustomerAssetOwnershipIntegrityCases : CustomerAssetOwnershipFixt
             futures.map { it.get(30, TimeUnit.SECONDS) }
         }
 
-        assertThat(responses.map { it.status }).containsExactly(200, 200)
+        assertThat(responses.map { it.status }).withFailMessage(responses.joinToString("\n") { "${it.status}: ${it.contentAsString}" })
+            .containsExactly(200, 200)
         assertThat(responses.map { it.contentAsString }.distinct()).hasSize(1)
         assertThat(title(case)).isEqualTo("SALE|CUSTOMER|CUSTOMER|CUSTOMER_INSTALLED|1|1")
     }

@@ -1,5 +1,35 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+##126 regression recorded;127 draft deletion correction and RMA reacquisition probe
+
+The completed rma-acceptance-green run has166 tests/5 suites/4 failures/0 errors/
+skips,8m28s. RMA3, forward-fix3, provenance31 all passed; ownership72 had2 races
+409 vs200, final-state57 had2 allowed draft deletions leave count1. Raw XML is in
+task26/rma-acceptance-green/xml. New custody preview routes before locks and runs
+DB validation after owner locks; focused simultaneous duplicate acceptance has
+now PASSED in rma-reacquisition-red, whose other new RMA reacquisition test is
+still running. Read actual result before title corrections; no128 declared.
+
+127 is declared/created, NOT YET APPLIED by current runner (processResources ran
+before creation). It preserves warehouse_transfer_binding_guard scope/bound-
+transfer rejection but returns OLD for permitted DELETE. Previously RETURN NEW
+silently suppressed every non-transfer draft deletion. Do not edit applied126.
+
+The exact retained-pre125 handover now validates as warehouse_app. Its stored
+origin still lacks both extension fields, same hash before/after validation;
+archive task26/rma-origin-upgrade-green/probe.log.175.126|t confirmed. No claim of
+a pre-migration hash (not captured by the original red probe).
+
+Two extra RMA guard tests are UNVERIFIED: unacknowledged custody, wrong customer,
+revoked scope before install/replay, and simultaneous duplicate installs. New
+RMA reacquisition test is real signed title0 -> independent approval -> removal/
+inspection -> normal reissue to a new customer. Checker fixture corrected to the
+actual CUSTOMER_INSTALLED location (current compiled red still has earlier field
+location, but source-title request precedes any approval decision). Next run should
+include127, all4 failed shared cases, RMA3 acceptance and5 custody/install guards.
+26 and whole plan remain OPEN; vendor replacement/direct-quarantine reacquisition
+and packaged evidence still need completion. See task-26.md newest entries.
+
 ##126 applied — RMA acceptance3 and ordinary regression still running
 
 V175.126 has applied in the running integration test and is IMMUTABLE. SHA256

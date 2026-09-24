@@ -29,12 +29,13 @@ class AssetHandoverService(private val cutovers: InventoryTenantCutoverApi, priv
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
         val current = authorities.lockCurrent()
         val authorization = store.authorization(request.assignmentId)
-        val preview = deployments.custodyView(authorization)
+        val preview = deployments.custodyPreview(authorization)
         val workOrder = workOrders.lock(preview.binding, current.fence)
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)
         preview.scopeLocations.distinct().sortedBy(UUID::toString).forEach { locations.authorizeLocation(it, current, scope) }
         store.lock(request.assignmentId, metadata.idempotencyKey)
+        val permit = deployments.custodyView(authorization)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(request))
         store.replay(metadata.idempotencyKey)?.let { prior ->
             if (prior.actorId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
@@ -47,7 +48,7 @@ class AssetHandoverService(private val cutovers: InventoryTenantCutoverApi, priv
         store.assertPending(request.assignmentId, request.expectedRevision)
         val original = deployments.result(authorization).consumption.assignment
         val rma = original.purpose == DeploymentPurpose.RETURN_CUSTOMER_RMA
-        if (!preview.consumed || original.provenance == AssetProvenance.UNKNOWN) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (!permit.consumed || original.provenance == AssetProvenance.UNKNOWN) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val position = store.position(original)
         val customer = customers.lock(original.customerId, original.assignmentId)
         val signature = workOrders.signature(original.workOrderId, request.evidenceId)

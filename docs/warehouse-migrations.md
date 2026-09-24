@@ -85,6 +85,13 @@ Perbandingan origin historis menormalkan hanya dua kolom RMA baru yang null atau
 belum ada; bukti lama tetap byte-identical. Probe app-role atas data nyata sebelum
 125 membuktikan penolakan origin akibat penambahan kolom tersebut.125 immutable.
 
+`V175_127__warehouse_draft_delete_return_row.sql` dicadangkan sebelum pembuatan
+untuk koreksi guard transfer yang mengembalikan NEW (NULL pada DELETE) untuk
+semua draft non-transfer. Dua tes NORMAL/RESTORED membuktikan DELETE diam-diam
+melewati row dan count tetap1. Kembalikan OLD setelah pemeriksaan scope dan
+immutable transfer yang sama; tidak membuka penghapusan dokumen posted/bound.
+175.126 dan seluruh migrasi terdahulu tetap immutable.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada

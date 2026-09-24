@@ -86,8 +86,16 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
     }
 
     fun custodyView(id: UUID): DeploymentCustodyView = jdbc.execute { sql ->
-        sql.query("""SELECT permit.consumed,execution.binding,execution.source FROM warehouse_read_deployment_authorization(?,?) permit
-            JOIN inventory_deployment_execution execution ON execution.tenant_id=permit.tenant_id AND execution.authorization_id=permit.id""",
+        sql.value("SELECT id FROM warehouse_read_deployment_authorization(?,?)", sql.tenant, id)
+            ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        custodyPreview(id)
+    }
+
+    // Immutable routing data is read before owner locks; validate the graph after acquiring them.
+    fun custodyPreview(id: UUID): DeploymentCustodyView = jdbc.execute { sql ->
+        sql.query("""SELECT permit.consumed,execution.binding,execution.source FROM inventory_deployment_authorization permit
+            JOIN inventory_deployment_execution execution ON execution.tenant_id=permit.tenant_id AND execution.authorization_id=permit.id
+            WHERE permit.tenant_id=? AND permit.id=?""",
             sql.tenant, id) {
             val binding = mapper.readValue(it.getString("binding"), DeploymentBinding::class.java)
             val custody = mapper.treeToValue(mapper.readTree(it.getString("source")).path("custody"),
