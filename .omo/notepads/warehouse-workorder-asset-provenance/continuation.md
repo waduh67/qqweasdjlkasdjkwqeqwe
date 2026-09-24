@@ -1,3 +1,19 @@
+## Task39 WO Material UI checkpoint — core flow verified; remaining review/rework ongoing
+
+22web tests/4files PASS3.92s, TypeScript and targeted oxlint PASS. Integrated existing
+WO detail with named plan, canonical planning/editor/request links, exact measured use,
+positive immutable correction, explicit NONE declaration, paged named usage history,
+independent technical/QA/provisioning/material states and actual-revision closure.
+Captured body/key survives uncertain replay; stale409 reloads. Current roster/status
+hides invalid use, and residual obligations remain visible after cancel/reassign.
+No invented allocations or serial consumption bypass. Backend e139250a five tests PASS.
+
+Current additional backend edits for named paged obligation rows and frozen QA review
+are being verified by .omo/runtime/material-review-server.sh/log (8tests expected).
+Next finish those UI reads and positive rework plan form, add targeted tests, then
+full web/build gate before marking39 complete. Task39 remains OPEN;40–48/F1–F4 remain.
+No migrations. Goal ACTIVE. Existing evidence anchor remains in WO proof/evidence flow.
+
 ## Task39 material workbench backend verified — frontend in progress
 
 Added InventoryMaterialWorkbenchApi with current WO plan/use revisions, bounded own

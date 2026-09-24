@@ -37,6 +37,7 @@ import {
 import { AssigneeChips, WoField } from './views'
 import { WorkOrderFiberWork } from './WorkOrderFiberWork'
 import { ProofOfWorkCompletion } from './ProofOfWorkCompletion'
+import { WorkOrderMaterials } from './WorkOrderMaterials'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -232,8 +233,10 @@ export function WorkOrderDetailBody({
         )}
       </div>
 
+      <WorkOrderMaterials workOrder={wo} />
+
       {(showOptical || showEvidence) && (
-        <div className="card stack" style={{ gap: '1.1rem' }}>
+        <div className="card stack" id="work-order-evidence" style={{ gap: '1.1rem' }}>
           {/* Redaman optik (bukti kualitas) + foto & tanda tangan pengerjaan. */}
           {showOptical && <OpticalSection wo={wo} canEdit={canRecordOptical} onAct={onAct} />}
           {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} />}
