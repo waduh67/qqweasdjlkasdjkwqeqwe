@@ -31,7 +31,9 @@ def request(method, path, token=None, body=None, key=None, expected=200, timeout
         response = failure
     with response:
         status = response.status
-        check("application/json" in response.headers.get("Content-Type", ""), f"{method} {path}: non-JSON response")
+        content_type = response.headers.get("Content-Type", "").split(";", 1)[0]
+        check(content_type in {"application/json", "application/problem+json"},
+              f"{method} {path}: expected JSON, got status={status}, Content-Type={content_type!r}")
         value = json.load(response)
     check(status == expected, f"{method} {path}: expected {expected}, got {status}; code={value.get('code') if isinstance(value, dict) else None}")
     return value
@@ -55,5 +57,4 @@ def ready():
 def login(email, slug=None):
     slug = slug or email.split("@", 1)[1].removesuffix(".test")
     return request("POST", "/api/auth/login", body={"tenantSlug": slug, "email": email, "password": "secret12345"})["accessToken"]
-
 

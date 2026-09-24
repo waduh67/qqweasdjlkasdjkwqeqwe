@@ -2,11 +2,14 @@
 
 ## Current integration checkpoint: 2026-09-24
 
-- Latest substep: combined regression117/1 failure/0 errors/0 skips; the sole
-  failure was an obsolete2-migration expectation versus9 combined migrations.
-  Corrected focused upgrade test passed1/0/0/0 with preservation assertions.
-  `qa.sh wave5` is now running on a clean JAR; its HTTP proof remains pending.
-  Chromium tooling is installed and launches. See `continuation.md` for details.
+- Latest substep: scoped Spring permission errors now return warehouse403/
+  FORBIDDEN, with a failing-first regression that has passed. Surrounding count/
+  transfer/approval tests are running, followed by the real HTTP journey. Two
+  harness issues (BIN destination and ProblemDetail media type) are corrected;
+  neither failed run is counted as operational PASS. See `continuation.md`.
+- Earlier combined regression117/1 failure/0 errors/0 skips had only an obsolete
+ 2-migration expectation versus9 combined migrations; corrected focused upgrade
+  passed1/0/0/0 with preservation assertions. Chromium tooling launches.
 
 - Resume from remote `feat/warehouse-workorder`, local continuation branch
   `work/warehouse-completion` in `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe`.

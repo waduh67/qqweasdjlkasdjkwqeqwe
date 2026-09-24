@@ -13,6 +13,10 @@ with socket.socket() as server:
 PY
     PROOF="$RUNTIME/$MODE-http"
     mkdir -p "$PROOF"
+    # A failed phase must not leave a previous run's PASS as current evidence.
+    rm -f -- "$PROOF/before-restart.txt" "$PROOF/after-restart.txt" \
+        "$PROOF/before-restart-server.log" "$PROOF/after-restart-server.log" \
+        "$PROOF/physical-before.json" "$PROOF/physical-after.json" "$PROOF/boot-jar.sha256"
     PACKAGED_TEMP_FILES+=("$PROOF/state.json")
     trap cleanup_packaged_http EXIT
     trap 'exit 130' INT
@@ -34,6 +38,7 @@ PY
 run_packaged_phase() {
     local phase=$1 script=$2
     shift 2
+    PACKAGED_PHASE=$phase
     start_owned backend java -Xmx768m -jar "$PACKAGED_JAR"
     python3 "$ROOT/scripts/warehouse/$script" "$phase" "$@" | tee "$PROOF/$phase.txt"
     stop_owned
@@ -44,6 +49,9 @@ cleanup_packaged_http() {
     local exit_status=$?
     trap - EXIT INT TERM
     stop_owned || exit_status=64
+    if [[ -n "${PACKAGED_PHASE:-}" && -f "$RUNTIME/warehouse-backend.log" ]]; then
+        cp "$RUNTIME/warehouse-backend.log" "$PROOF/$PACKAGED_PHASE-server.log" || exit_status=64
+    fi
     rm -f -- "${PACKAGED_TEMP_FILES[@]}"
     exit "$exit_status"
 }

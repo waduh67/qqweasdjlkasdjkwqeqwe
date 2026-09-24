@@ -109,9 +109,12 @@ def configure(journey):
         code = "RECEIPT_SOURCE" if name == "source" else name.upper()
         journey.state[name] = journey.master("locations", {"code": code, "name": name.title(), "kind": kind,
             "issueEligible": kind == "WAREHOUSE"})["id"]
+    journey.state["warehouse"] = journey.master("locations", {"code": "BIN", "name": "Serviceable bin", "kind": "BIN",
+        "parentLocationId": journey.state["warehouse"], "issueEligible": True})["id"]
     journey.state["supplier"] = journey.master("suppliers", {"code": "SUP", "name": "Supplier"})["id"]
     locations = [journey.state[name] for name in ("warehouse", "destination", "transit", "lost")]
-    user(journey, "receiver", {"inventory.transfer.view", "inventory.transfer.manage", "inventory.approval.view", "inventory.approval.request"}, locations)
+    user(journey, "receiver", {"inventory.transfer.view", "inventory.transfer.manage", "inventory.approval.view",
+        "inventory.approval.request", "inventory.approval.decide"}, locations)
     user(journey, "counter", {"inventory.count.view", "inventory.count.manage"}, [journey.state["warehouse"]])
     user(journey, "reviewer", {"inventory.approval.view", "inventory.approval.decide"}, locations)
     signup(journey, "foreign")

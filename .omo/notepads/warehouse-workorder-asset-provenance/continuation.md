@@ -1,6 +1,31 @@
 # Whole-plan continuation
 
-## Current step — packaged acceptance harness
+## Current step — approval errors and cross-flow HTTP
+
+- Latest published base is `cc96f215`. Two packaged attempts exposed harness
+  issues: putaway requires an actual BIN under a warehouse; the HTTP helper must
+  accept valid `application/problem+json` as well as `application/json`. Both
+  are corrected. These failed attempts are not operational PASS evidence.
+- The permission response was valid ProblemDetail, not an empty/non-JSON server
+  response. It lacked the warehouse `FORBIDDEN` contract code. A new real-DB
+  MockMvc regression first failed on the differing response media type. Scoped
+  `WarehouseHttpErrors` now also handles Spring Security AccessDeniedException,
+  returning the same403/FORBIDDEN body as domain permission denials. The new
+  test has passed; the surrounding approval/count/transfer regression is running.
+- Current host command is `.omo/runtime/integration-permission-green.sh`, log
+  `.omo/runtime/integration-permission-green.log`. It runs the new error test,
+  approval guards, all count tests and transfer guards, archives XML, then runs
+  `qa.sh wave5`. Finish this command, correct any real HTTP failure, and rerun
+  `qa.sh replenishment` before task closure.
+- The HTTP receiver now has decision permission, so its rejected self-approval
+  exercises independent-party enforcement rather than stopping at missing-role
+  preauthorization. Failure cleanup preserves the owned server log. New runs
+  remove stale phase outputs, preventing an old PASS from masking a new failure.
+- No SQL or migration byte changed. All global completion checkboxes remain
+  unchanged. Inspect the mixed AVAILABLE/LOST bulk transfer case when the HTTP
+  journey reaches it; source selection may require an explicit balance identity.
+
+## Recorded integration and harness checks
 
 - Fresh combined regression finished117 tests,1 failure,0 errors,0 skips in34
   suites (9m53s). All14 count and15 transfer tests passed. The only failure was

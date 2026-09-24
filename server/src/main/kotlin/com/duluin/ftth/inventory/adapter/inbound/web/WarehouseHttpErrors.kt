@@ -27,7 +27,7 @@ class WarehouseHttpErrors {
         MissingRequestValueException::class, MethodArgumentTypeMismatchException::class, org.springframework.web.multipart.MultipartException::class)
     fun malformed(error: Exception) = response(WarehouseErrorCode.MALFORMED_REQUEST)
 
-    @ExceptionHandler(AccessDeniedException::class)
+    @ExceptionHandler(AccessDeniedException::class, org.springframework.security.access.AccessDeniedException::class)
     fun forbidden(error: Exception) = response(WarehouseErrorCode.FORBIDDEN)
 
     @ExceptionHandler(AuthenticationException::class)
