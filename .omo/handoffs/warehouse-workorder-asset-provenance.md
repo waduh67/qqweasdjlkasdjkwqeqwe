@@ -1,5 +1,14 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 final browser selector correction
+
+issue-final @2dcabb7a failed both projects at the new release assertion: actual
+cell text includes its responsive column label (Dicadangkan0,000 m). The release
+POST succeeded and actual displayed quantity was correct. Test now targets the
+warehouse-cell-value element for exact quantities. Browser exited1 with cleanup
+completed, volumes retained. NEXT run issue-release-value, then review final PNG.
+No product changes; 14 affected web tests/TS/oxlint remain valid at2dcabb7a.
+
 ## Task35 release alignment and visual spacing — final browser next
 
 Real issue-picker-fixed @76c9bc76 passed both desktop/mobile in 54.9s; eight
