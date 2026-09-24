@@ -20,6 +20,23 @@ class WarehouseTransferDiscrepancyService(private val cutovers: InventoryTenantC
     private val mapper = jacksonObjectMapper()
 
     @Transactional(rollbackFor = [Exception::class], timeout = 30)
+    fun recovery(id: UUID): WarehouseTransferDiscrepancyRecovery {
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val current = authority.lockCurrent()
+        receiptPermission(current, "inventory.transfer.view")
+        val preview = store.get(id)
+        access.authorize(preview, current)
+        val record = store.get(id, true)
+        val block = when {
+            cutovers.read().state != WarehouseCutoverState.ENFORCED -> "CUTOVER_REQUIRED"
+            current.fence.identity.userId != record.binding.receiverId -> "RECIPIENT_REQUIRED"
+            !current.platformAdmin && !current.permissions.containsAll(setOf("inventory.transfer.manage", "inventory.approval.request")) -> "MANAGE_PERMISSION_REQUIRED"
+            else -> resolutions.recoveryBlock(record)
+        }
+        return WarehouseTransferDiscrepancyRecovery(id, record.revision, record.resolutionDocumentId, block == null, block)
+    }
+
+    @Transactional(rollbackFor = [Exception::class], timeout = 30)
     fun report(id: UUID, request: WarehouseTransferDiscrepancy, key: String): WarehouseOperationReceipt {
         receiptKey(key)
         if (request.expectedRevision !in 1 until Long.MAX_VALUE || request.reason.isBlank() || request.reason.length > 1000 ||
@@ -44,8 +61,10 @@ class WarehouseTransferDiscrepancyService(private val cutovers: InventoryTenantC
             if (prior.cutoverEpoch != cutover.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
             return prior.receipt
         }
-        if (record.revision != request.expectedRevision || record.state !in setOf(WarehouseTransferState.DISPATCHED, WarehouseTransferState.PART_RECEIVED))
+        if (record.revision != request.expectedRevision || record.state !in setOf(WarehouseTransferState.DISPATCHED, WarehouseTransferState.PART_RECEIVED, WarehouseTransferState.DISCREPANCY))
             masterFailure(WarehouseErrorCode.STALE_REVISION)
+        if (record.state == WarehouseTransferState.DISCREPANCY && resolutions.recoveryBlock(record) != null)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "The prior discrepancy must have no pending approval or posted effect before creating a replacement report")
         val updated = record.copy(revision = record.revision + 1, state = WarehouseTransferState.DISCREPANCY,
             resolutionDocumentId = UUID.randomUUID(), recordedAt = Instant.now())
         val operation = PostingOperation(UUID.randomUUID(), "warehouse.transfer.discrepancy", key, actor, id, "transfer:$id",

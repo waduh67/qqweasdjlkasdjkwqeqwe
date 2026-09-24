@@ -15,6 +15,21 @@ data class TransferResolution(val id: UUID, val transferId: UUID, val transferRe
 class WarehouseTransferDiscrepancyStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
 
+    /** Caller holds the transfer: approval request/decision lock that same owner first. */
+    fun recoveryBlock(record: TransferRecord): String? = jdbc.execute { sql ->
+        val id = record.resolutionDocumentId
+        if (record.state != WarehouseTransferState.DISCREPANCY || id == null || record.lines.none { it.quantity > it.received + it.resolved })
+            return@execute "NO_UNRESOLVED_REMAINDER"
+        val state = sql.value("SELECT state FROM inventory_document WHERE tenant_id=? AND id=? AND kind='ADJUSTMENT' AND source_document_id=? FOR SHARE",
+            sql.tenant, id, record.id) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+        if (state != "DRAFT") return@execute "DISCREPANCY_ALREADY_POSTED"
+        if (sql.value("SELECT 1 FROM inventory_approval WHERE tenant_id=? AND source_document_id=? AND status IN ('PENDING','APPROVED') LIMIT 1", sql.tenant, id) != null)
+            return@execute "PRIOR_APPROVAL_ACTIVE"
+        if (sql.value("SELECT 1 FROM inventory_approval_effect WHERE tenant_id=? AND source_document_id=? LIMIT 1", sql.tenant, id) != null)
+            return@execute "DISCREPANCY_ALREADY_POSTED"
+        null
+    }
+
     fun find(id: UUID): TransferResolution? = jdbc.execute { sql ->
         sql.query("""SELECT * FROM inventory_document WHERE tenant_id=? AND id=? AND kind='ADJUSTMENT'
             AND transfer_remainder_action IS NOT NULL""", sql.tenant, id) {

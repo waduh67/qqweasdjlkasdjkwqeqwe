@@ -108,7 +108,7 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         }
         val rework = record.status == WarehouseApprovalStatus.REWORK_REQUIRED && source.disposition == "REWORK_REQUIRED" &&
             record.snapshot.requesterId == current.fence.identity.userId && (current.platformAdmin || "inventory.approval.request" in current.permissions) &&
-            source.kind !in setOf("RETURN_TITLE", "LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS", "COUNT") && !store.isReplacement(evaluation.sourceDocumentId)
+            source.kind !in setOf("ADJUSTMENT", "RETURN_TITLE", "LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS", "COUNT") && !store.isReplacement(evaluation.sourceDocumentId)
         val names = projection.people(evaluation.tiers.flatMap { it.approvers.map { it.userId } }.toSet())
         val policyView = WarehouseApprovalPolicyView(requireNotNull(evaluation.policy).id, evaluation.policy.revision,
             evaluation.tiers.map { item -> WarehouseApprovalTierView(item.number, item.approvers.map { projection.person(it.userId, names) }) })

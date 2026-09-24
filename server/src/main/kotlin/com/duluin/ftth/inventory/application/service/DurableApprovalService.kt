@@ -175,6 +175,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (record.status != WarehouseApprovalStatus.REWORK_REQUIRED || source.disposition != "REWORK_REQUIRED") masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (source.kind == "RETURN_TITLE") throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new return title request with current evidence"))
+        if (source.kind == "ADJUSTMENT") throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
+            "Create a new discrepancy report from the current transfer with corrected reason and evidence"))
         if (store.isReplacement(record.snapshot.evaluation.sourceDocumentId)) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new supplier replacement request with current evidence"))
         if (source.kind in setOf("LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS")) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,

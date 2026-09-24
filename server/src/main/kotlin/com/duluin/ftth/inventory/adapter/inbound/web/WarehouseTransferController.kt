@@ -36,6 +36,8 @@ class WarehouseTransferController(private val transfers: WarehouseTransferServic
         transfers.cancel(id, WarehouseReceiptJson.decode(body, WarehouseTransferRevision::class.java))
 
     @GetMapping("/{id}") fun get(@PathVariable id: UUID): WarehouseTransferView = transfers.get(id)
+    @GetMapping("/{id}/discrepancy/recovery") fun recovery(@PathVariable id: UUID): ResponseEntity<WarehouseTransferDiscrepancyRecovery> =
+        ResponseEntity.ok().header("Cache-Control", "no-store").body(discrepancies.recovery(id))
     @PostMapping("/{id}/discrepancy")
     fun discrepancy(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(discrepancies.report(id, WarehouseReceiptJson.decode(body, WarehouseTransferDiscrepancy::class.java), key))

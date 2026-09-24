@@ -1,3 +1,15 @@
+## Transfer discrepancy recovery checkpoint — verification pending
+
+2026-09-25: receiver may create a new revision-bound discrepancy source when the old
+report has no pending/approved approval or posted effect. Prior sources and decisions
+remain immutable; obsolete unsubmitted sources cannot request approval. Generic
+approval rework is unavailable for ADJUSTMENT; the transfer owns its replacement.
+GET discrepancy/recovery uses current permissions, receiver, cutover, route and source.
+Three new integration scenarios cover pending/rejected, superseded unsubmitted and
+expired sources; run with existing transfer discrepancy and approval source suites.
+Backend implementation saved before running checks; no green claim yet. Frontend
+recovery changes are in progress and not included in this checkpoint. Whole37–48/F1–F4 active.
+
 # Task37 implementation notes
 
 

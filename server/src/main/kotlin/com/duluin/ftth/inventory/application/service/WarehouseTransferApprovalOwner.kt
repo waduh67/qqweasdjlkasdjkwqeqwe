@@ -29,6 +29,9 @@ class WarehouseTransferApprovalOwner(private val store: WarehouseTransferDiscrep
         val resolution = store.find(id) ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (source.state != "DRAFT" || source.disposition != null || source.revision != 0L || source.requester != resolution.actorId)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val transfer = transfers.get(resolution.transferId)
+        if (transfer.state != WarehouseTransferState.DISCREPANCY || transfer.revision != resolution.transferRevision || transfer.resolutionDocumentId != id)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "This discrepancy report was superseded; use the current transfer report")
     }
 
     override fun prepare(record: WarehouseApprovalRecord, attempt: WarehouseApprovalAttempt, current: CurrentAuthority): ReceiptPostingApproval {
