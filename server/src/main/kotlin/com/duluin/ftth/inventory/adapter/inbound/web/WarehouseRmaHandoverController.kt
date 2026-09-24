@@ -15,4 +15,5 @@ class WarehouseRmaHandoverController(private val rma: InventoryCustomerRmaApi) {
         return ResponseEntity.status(receipt.originalStatus).contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)
     }
     @GetMapping("/{id}") fun get(@PathVariable id: UUID): CustomerRmaHandover = rma.get(id)
+    @GetMapping("/{id}/details") fun details(@PathVariable id: UUID): CustomerRmaHandoverDetails = rma.details(id)
 }

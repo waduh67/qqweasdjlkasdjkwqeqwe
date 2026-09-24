@@ -32,6 +32,9 @@ class WarehouseReturnController(private val returns: InventoryReturnApi, private
     fun rmaHandover(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(rma.dispatch(id, WarehouseReceiptJson.decode(body, CustomerRmaDispatch::class.java), WarehouseMutationMetadata(key)))
 
+    @GetMapping("/{id}/rma-work-orders/{workOrderId}")
+    fun rmaWorkOrder(@PathVariable id: UUID, @PathVariable workOrderId: UUID): CustomerRmaWorkOrder = rma.workOrder(id, workOrderId)
+
     @PostMapping("/{id}/reacquisition")
     fun reacquisition(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<ReturnReacquisitionRef> =
         ResponseEntity.status(201).body(titles.request(id, WarehouseReceiptJson.decode(body, ReturnReacquisitionInput::class.java), WarehouseMutationMetadata(key)))

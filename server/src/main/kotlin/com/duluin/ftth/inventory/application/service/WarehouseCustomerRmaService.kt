@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.CurrentAuthorityApi
+import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.*
 import com.duluin.ftth.inventory.application.port.outbound.*
@@ -19,7 +20,7 @@ class WarehouseCustomerRmaService(private val cutovers: InventoryTenantCutoverAp
     private val scopes: InventoryWarehouseScopeApi, private val locations: WarehouseReceiptService,
     private val masters: WarehouseMasterStore, private val returns: WarehouseReturnStore,
     private val store: RmaHandoverStore, private val workOrders: InventoryRmaWorkOrderPort,
-    private val operations: WarehouseOperationStore, private val posting: WarehousePosting) : InventoryCustomerRmaApi {
+    private val operations: WarehouseOperationStore, private val posting: WarehousePosting, private val users: IamApi) : InventoryCustomerRmaApi {
     private val mapper = jacksonObjectMapper()
 
     override fun dispatch(returnId: UUID, request: CustomerRmaDispatch, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
@@ -98,6 +99,33 @@ class WarehouseCustomerRmaService(private val cutovers: InventoryTenantCutoverAp
         else receiptPermission(current, "inventory.return.manage")
         authorize(record, current, false)
         return record.view
+    }
+
+    override fun details(id: UUID): CustomerRmaHandoverDetails {
+        val view = get(id)
+        val current = authority.lockCurrent()
+        val order = workOrders.read(view.workOrderId, view.customerId, current.fence, false)
+        val people = users.usersByIds(setOf(view.createdBy, view.technicianId)).associate { it.id to it.name }
+        val names = listOf(view.sourceLocationId, view.transitLocationId, view.technicianLocationId).distinct().map {
+            val location = masters.get(MasterKind.LOCATION, it) as LocationSnapshot
+            WarehouseReturnNamedRef(it, location.code, location.name)
+        }
+        return CustomerRmaHandoverDetails(view, order.code, order.title, people[view.createdBy], people[view.technicianId], names)
+    }
+
+    override fun workOrder(returnId: UUID, workOrderId: UUID): CustomerRmaWorkOrder {
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+        val current = authority.lockCurrent()
+        receiptPermission(current, "inventory.return.manage")
+        masters.lockTopology()
+        val returned = returns.get(returnId)
+        val source = returned.view
+        authorizeLocations(listOfNotNull(returned.intake.quarantineLocationId, source.locationId, source.repair?.repairLocationId), current)
+        if (source.origin != WarehouseReturnOrigin.ASSET_REMOVAL || source.legalOwner != AssetLegalOwner.CUSTOMER ||
+            source.condition != WarehouseCondition.SERVICEABLE || source.inspection?.resetConfirmed != true)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val origin = store.origin(returned)
+        return workOrders.read(workOrderId, origin.customerId, current.fence, true)
     }
 
     private fun authorize(record: RmaHandoverRecord, current: CurrentAuthority, requireCurrent: Boolean = true) {

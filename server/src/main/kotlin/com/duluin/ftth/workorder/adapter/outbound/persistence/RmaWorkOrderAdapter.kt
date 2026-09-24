@@ -16,6 +16,33 @@ import java.util.UUID
 class RmaWorkOrderAdapter(private val entityManager: EntityManager, private val authority: CurrentAuthorityApi,
     private val users: IamApi) : InventoryRmaWorkOrderPort {
     @Transactional(propagation = Propagation.MANDATORY)
+    override fun read(workOrderId: UUID, customerId: UUID, authority: AuthorityFence, activeOnly: Boolean): CustomerRmaWorkOrder {
+        authority.assertHeld()
+        val current = this.authority.lockCurrent()
+        if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
+        val (order, assignees) = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+            val order = connection.prepareStatement("SELECT code,title,customer_id,area_id,type,status,warehouse_revision FROM work_order WHERE tenant_id=? AND id=? FOR SHARE").use { query ->
+                query.setObject(1, authority.identity.tenantId); query.setObject(2, workOrderId)
+                query.executeQuery().use { row ->
+                    if (!row.next()) fail(WarehouseErrorCode.NOT_FOUND)
+                    val scope = current.areaScope
+                    if (scope is AuthorityScope.Restricted && row.getObject("area_id", UUID::class.java) !in scope.ids) fail(WarehouseErrorCode.NOT_FOUND)
+                    if (row.getObject("customer_id", UUID::class.java) != customerId || row.getString("type") != "REPAIR" ||
+                        activeOnly && row.getString("status") !in setOf("ASSIGNED", "IN_PROGRESS")) fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                    CustomerRmaWorkOrder(workOrderId, row.getString("code"), row.getString("title"), customerId, row.getLong("warehouse_revision"), emptyList())
+                }
+            }
+            val assignees = connection.prepareStatement("SELECT technician_id FROM work_order_assignee WHERE tenant_id=? AND work_order_id=? ORDER BY technician_id").use { query ->
+                query.setObject(1, authority.identity.tenantId); query.setObject(2, workOrderId)
+                query.executeQuery().use { row -> buildSet { while (row.next()) add(row.getObject("technician_id", UUID::class.java)) } }
+            }
+            order to assignees
+        }
+        return order.copy(technicians = users.usersByIds(assignees).filter { it.active && it.technician && it.id != current.fence.identity.userId }
+            .sortedBy { it.id.toString() }.map { CustomerRmaPersonRef(it.id, it.name) })
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     override fun lock(workOrderId: UUID, revision: Long, customerId: UUID, technicianId: UUID, authority: AuthorityFence, requireCurrent: Boolean) {
         authority.assertHeld()
         val current = this.authority.lockCurrent()

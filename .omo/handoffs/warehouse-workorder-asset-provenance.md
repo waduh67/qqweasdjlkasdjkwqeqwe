@@ -1,5 +1,21 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 RMA read contracts implemented; backend verification next
+
+Added /returns/{id}/rma-work-orders/{workOrderId} to read actual current revision,
+code/title and active assigned technician names for original customer REPAIR WO.
+Uses return.manage, current return/repair locations and physical closed-repair
+origin, through public InventoryRmaWorkOrderPort implemented by workorder module.
+No unrelated material-request permission needed. Existing named WO list will still
+use workorder.order.view for selection. Added /rma-handovers/{id}/details wrapper
+with current names and locations, preserving raw get/command bytes and owner gates.
+New meaningful manager-only/current-revision/active-tech/type/customer/scope test,
+and existing actual RMA HandoverIT extended to named dispatch/ack details.
+NOT VERIFIED YET: NEXT run rma-reads-server.sh (new read +3 existing RMA suites).
+
+Replacement UI20tests/TS/lint and original-context6backend proof saved b3064bef.
+RMA/reacquisition UI and transferfilters remain. No migrations. Task36 OPEN.
+
 ## Task36 replacement form saved; 20 web and 6 backend checks passed
 
 Backend original assignment metadata @62159f68 passed6 tests/4 suites in4m38s.
