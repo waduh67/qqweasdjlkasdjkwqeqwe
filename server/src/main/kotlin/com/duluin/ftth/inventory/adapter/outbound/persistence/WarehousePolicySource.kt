@@ -27,7 +27,7 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             "LOSS" -> PolicyOperation.LOSS
             "SCRAP" -> PolicyOperation.SCRAP
             "COUNT" -> PolicyOperation.COUNT_VARIANCE
-            "TITLE_CORRECTION" -> PolicyOperation.TITLE_REACQUISITION
+            "TITLE_CORRECTION", "RETURN_TITLE" -> PolicyOperation.TITLE_REACQUISITION
             "RETURN" -> if (action == PolicyOperation.TITLE_REACQUISITION) action else sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             else -> sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
@@ -62,6 +62,13 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             WHERE document.tenant_id=? AND document.id=? AND document.transfer_remainder_action IS NOT NULL""", sql.tenant, input.sourceDocumentId) {
             listOf(it.uuid("actor_id"), it.uuid("transfer_receiver_id"))
         }.flatten()
-        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters + transferParties, lines, header.first == "TITLE_CORRECTION")
+        val returnParties = if (header.first == "RETURN_TITLE") sql.query("""SELECT snapshot::jsonb body FROM inventory_return_title_request
+            WHERE tenant_id=? AND id=?""", sql.tenant, input.sourceDocumentId) {
+            val body = tools.jackson.module.kotlin.jacksonObjectMapper().readTree(it.getString("body"))
+            listOf("customerId", "handoverActorId", "removalActorId").map { key -> UUID.fromString(body.path("context").path(key).asString()) } +
+                UUID.fromString(body.path("returned").path("view").path("receivedBy").asString())
+        }.flatten() else emptyList()
+        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters + transferParties + returnParties,
+            lines, header.first in setOf("TITLE_CORRECTION", "RETURN_TITLE"))
     }
 }

@@ -29,6 +29,8 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             'intake',(SELECT to_jsonb(intake) FROM inventory_receipt_intake intake WHERE intake.tenant_id=document.tenant_id AND intake.id=document.id))
             || CASE WHEN document.kind='TITLE_CORRECTION' THEN jsonb_build_object('title',
                 (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
+            || CASE WHEN document.kind='RETURN_TITLE' THEN jsonb_build_object('returnTitle',
+                (SELECT snapshot::jsonb FROM inventory_return_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
              || CASE WHEN document.kind='COUNT' THEN jsonb_build_object('count',
                  (SELECT jsonb_agg(to_jsonb(observation) ORDER BY observation.id) FROM inventory_cycle_count observation
                   WHERE observation.tenant_id=document.tenant_id AND observation.document_id=document.id

@@ -22,7 +22,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
         command.approval?.let { approval ->
             val expectedKind = when (approval.kind) {
                 ApprovalPostingKind.RECEIPT -> com.duluin.ftth.inventory.domain.model.MovementKind.RECEIVE
-                ApprovalPostingKind.TITLE_CORRECTION -> com.duluin.ftth.inventory.domain.model.MovementKind.TITLE_CORRECTION
+                ApprovalPostingKind.TITLE_CORRECTION, ApprovalPostingKind.RETURN_TITLE -> com.duluin.ftth.inventory.domain.model.MovementKind.TITLE_CORRECTION
                 ApprovalPostingKind.ADJUSTMENT -> com.duluin.ftth.inventory.domain.model.MovementKind.TRANSFER
                 ApprovalPostingKind.COUNT -> com.duluin.ftth.inventory.domain.model.MovementKind.COUNT_VARIANCE
             }

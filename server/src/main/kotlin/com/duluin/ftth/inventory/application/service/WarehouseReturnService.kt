@@ -91,7 +91,7 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
         if (record.view.revision != request.expectedRevision || record.view.state != WarehouseReturnState.RECEIVED_IN_INSPECTION)
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         val expected = record.source.dimension.copy(locationId = record.view.locationId, custodianId = record.view.locationId,
-            custodianKind = OwnerKind.WAREHOUSE, condition = record.view.condition)
+            custodianKind = OwnerKind.WAREHOUSE, condition = record.view.condition, legalOwner = record.view.legalOwner)
         val source = store.position(expected)
         if (source.quantity.toString() != request.measuredQuantityBase || request.measuredQuantityBase != record.view.quantityBase)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)

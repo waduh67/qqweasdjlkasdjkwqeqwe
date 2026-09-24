@@ -1,5 +1,34 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+##132 immutable;133 physical leg revision correction under validation
+
+Checkpoint includes RETURN_TITLE independent approval owner, policy exclusions,
+canonical approval source, one CUSTOMER->ISP quarantine posting and immutable
+return-title effect/return revision. Current return/repair reads now use the
+latest proven owner; original customer assignment remains unchanged.
+
+132 applied and immutable, SHA256 `e38b4f88081afc6c625ec60cb5e5da6fdc4e333f7bf2703e04c4541a19a57f47`.
+First run compiled production/tests, passed3 ModularityTests and failed the one
+full reacquisition case at approval commit: RETURN_TITLE_EXACT_QUARANTINE_POSTING.
+4 tests/2 suites/1 failure/0 errors/skips,1m49s. Evidence
+`task26/return-title-effect-green/xml`; private DB log captures13:32:39.697 UTC.
+The comparison incorrectly equated revisions of distinct CUSTOMER/ISP balances.
+133 is a forward correction excluding only that per-dimension revision.
+
+Current `.omo/runtime/return-title-guards-green.sh` / matching log (session91757)
+runs direct reacquisition,5 new stale/race/SQL-integrity/rejection/repair cases,
+ModularityTests, return integrity, supplier repair and installed RMA reacquisition.
+Read current log before editing133: after any successful apply it is immutable.
+No result claimed yet. New5 cases were not previously compiled. Owned QA cleanup
+retains volumes; fixed host QA lock remains required. Prior131 request/replay201
+and3 modularity cases passed; its only failure was the then-missing approval owner.
+
+Next resolve this run, add current-scope/evidence/exact-history checks as needed,
+finish supplier replacement with actual new-asset/vendor-receipt provenance,
+packaged proof, then remaining plan. Task26 remains OPEN. Push only
+`git push origin HEAD:refs/heads/feat/warehouse-workorder`; origin must remain
+`git@github.com:waduh67/qqweasdjlkasdjkwqeqwe.git`.
+
 ##130 ten green;131 direct quarantine request is in its first validation run
 
 130 is APPLIED AND IMMUTABLE, SHA256 `77379d190d8291dd7303f06fb4c19693e863b28a9653ba0faa6b8a25f079311b`.

@@ -1,5 +1,27 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##132 applied;133 reserved for independent balance revisions
+
+return-title-effect-green compiled both source sets and applied132 successfully
+(Flyway log20:31:53.544 JKT). Four tests/two suites:3 modularity pass, direct
+reacquisition fails at final approval;0 errors/skips,1m49s. Database error
+RETURN_TITLE_EXACT_QUARANTINE_POSTING at13:32:39.697 UTC: full leg JSON comparison
+incorrectly demands equal balance revisions across CUSTOMER and ISP dimensions.
+Reserve133 BEFORE creation to omit only per-dimension revision from this equality.
+PostingStock.legs intentionally uses each position's own prior revision+1; shared
+posting ledger guards retain revision enforcement.132 bytes are now IMMUTABLE.
+New5 guard/repair cases are authored but not yet compiled/run.
+
+##132 reserved before creation — independent quarantine title effect
+
+131 is APPLIED AND IMMUTABLE. Its run compiled production/tests, passed all3
+ModularityTests and created/replayed the request201. Full return reacquisition
+failed at approval request with SOURCE_NOT_VERIFIED: missing approval owner.
+Total4 tests/2 suites/1 failure/0 errors/skips,2m8s; return-title-request-green/xml.
+Reserve132 to add one independently approved CUSTOMER->ISP quarantine posting,
+its immutable return revision link, and exact history/owner/approval validators.
+Owner/policy/source-dispatch Kotlin changes are in progress; not verified yet.
+
 ##130 ten green;131 direct quarantine request is in its first validation run
 
 130 is APPLIED AND IMMUTABLE, SHA256 `77379d190d8291dd7303f06fb4c19693e863b28a9653ba0faa6b8a25f079311b`.

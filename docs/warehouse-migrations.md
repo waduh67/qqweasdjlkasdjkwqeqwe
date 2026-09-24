@@ -29,6 +29,18 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## Task26: retur dan inspeksi
 
+`V175_133__warehouse_return_title_leg_revisions.sql` dicadangkan sebelum pembuatan.
+132 sudah diterapkan; tes approval menemukan perbandingan revision kedua leg
+yang keliru. Revision balance CUSTOMER dan ISP berjalan terpisah, sehingga133
+mengecualikan hanya revision per-dimensi dari perbandingan identitas kedua leg.
+Validasi jumlah, owner, lokasi, custody, kondisi, ledger dan approval tetap wajib.
+
+`V175_132__warehouse_return_reacquisition_effect.sql` dicadangkan sebelum pembuatan.
+131 telah diterapkan dan immutable; request/replay201 serta3 tes modularitas lulus,
+kasus approval berhenti pada owner yang belum tersedia.132 mengikat approval
+independen, satu posting CUSTOMER->ISP dalam karantina, dan revisi retur immutable.
+Riwayat assignment pelanggan tetap utuh; pelepasan memerlukan inspeksi reset baru.
+
 `V175_116__warehouse_return_inspection.sql` dicadangkan sebelum pembuatan untuk
 intake dari sumber retur terverifikasi, inspeksi terukur dan posting pelepasan.
 Versi ini mengikuti175.115.1; seluruh migrasi terdahulu tetap immutable.

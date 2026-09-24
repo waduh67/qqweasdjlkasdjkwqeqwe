@@ -36,7 +36,7 @@ class WarehouseRepairService(private val cutovers: InventoryTenantCutoverApi, pr
         val supplier = masters.get(MasterKind.SUPPLIER, request.vendorId, true) as SupplierSnapshot
         if (supplier.state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val physical = returns.position(access.record.source.dimension.copy(locationId = source.locationId,
-            custodianId = source.locationId, custodianKind = OwnerKind.WAREHOUSE, condition = source.condition))
+            custodianId = source.locationId, custodianKind = OwnerKind.WAREHOUSE, condition = source.condition, legalOwner = source.legalOwner))
         serial(physical, request.observedSerial)
         val progress = WarehouseRepairProgress(UUID.randomUUID(), request.vendorId, request.vendorReference, request.repairLocationId, source.revision + 1)
         val view = source.copy(revision = source.revision + 1, state = WarehouseReturnState.REPAIR,
@@ -58,7 +58,7 @@ class WarehouseRepairService(private val cutovers: InventoryTenantCutoverApi, pr
         if (access.destination.kind != LocationKind.QUARANTINE || access.destination.issueEligible)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val physical = returns.position(access.record.source.dimension.copy(locationId = source.locationId,
-            custodianId = repair.vendorId, custodianKind = OwnerKind.REPAIR, condition = source.condition))
+            custodianId = repair.vendorId, custodianKind = OwnerKind.REPAIR, condition = source.condition, legalOwner = source.legalOwner))
         serial(physical, request.observedSerial)
         val view = source.copy(revision = source.revision + 1, state = WarehouseReturnState.RECEIVED_IN_INSPECTION,
             locationId = request.quarantineLocationId, recordedAt = Instant.now(), repair = repair.copy(
