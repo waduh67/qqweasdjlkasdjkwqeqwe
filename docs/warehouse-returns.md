@@ -9,7 +9,7 @@ pemakaian, kepemilikan, pelanggan, atau episode ONU.
 
 Mutasi intake/inspeksi/servis di bawah membutuhkan `Idempotency-Key` dan izin
 `inventory.return.manage`. Pembacaan membutuhkan `inventory.return.view`.
-Area serta lokasi karantina awal dan lokasi saat ini diperiksa pada setiap
+Area serta lokasi karantina awal, lokasi saat ini, dan lokasi servis diperiksa pada setiap
 permintaan, termasuk pengulangan permintaan lama. Token atau kunci lama tidak
 mengabaikan pencabutan scope. Hasil mutasi memuat revision yang digunakan oleh
 perintah berikutnya; perubahan bersamaan menghasilkan konflik, bukan retry
@@ -29,10 +29,11 @@ dengan revision tebakan.
 | `GET /api/v1/warehouse/returns/{id}/history` | Membaca revision dokumen secara berurutan dan berpaginasi |
 
 Daftar menerima `page` (mulai0), `size` (1–100, default25), serta filter `origin`,
-`state`, `locationId`, `skuId`, `stockIdentityId`, dan `owner`. Urutan daftar adalah
+`state`, `locationId`, `skuId`, `stockIdentityId`, `owner`, `serial`, `query`,
+`from`, dan `until`. Urutan daftar adalah
 waktu intake terbaru, lalu ID sebagai pembeda. Total dan halaman dihitung setelah
 scope lokasi/area diterapkan. Riwayat menerima `page` dan `size` dengan default
-100 serta urutan revision naik; parameter di luar batas ditolak.
+25 (maksimal100) serta urutan revision naik; parameter di luar batas ditolak.
 
 Intake berisi `origin`, `sourceDocumentId`, `quarantineLocationId`, dan
 `evidenceReference`. Receiver perangkat harus berbeda dari pelaku pembongkaran.
@@ -204,44 +205,96 @@ assignment pelanggan yang sudah ditutup dan revision retur sebelumnya tidak beru
 Inspeksi serviceable beserta bukti reset tetap diperlukan sebelum barang tersedia.
 Pengajuan yang ditolak dibuat ulang dengan bukti terkini dan kunci baru.
 
-## Status pengembangan
+## Layar Retur & Servis
 
-Intake, inspeksi, servis perangkat yang sama, pembacaan berpaginasi, penutupan
-material serta pemasangan kembali RMA telah memiliki bukti integrasi PostgreSQL.
-Serah terima bertanda tangan RMA menjaga pemilik CUSTOMER dan titleRevision0.
-Regresi serah terima paralel dan alih kepemilikan RMA sampai reissue telah lolos.
-Reacquisition langsung dari karantina beserta balapan approval, scope terkini,
-replay, riwayat dan repair setelah alih kepemilikan telah lolos integrasi.
-Penerimaan pengganti vendor, approval biaya, stale source, replay dan penjagaan
-title terhadap perubahan database langsung telah lolos integrasi. Regresi
-gabungan53 tes, termasuk pagination, telah lolos. Inspeksi pengganti dan rebuild
-proyeksi juga lolos bersama regresi receipt biasa. Disposition
-barang lama, panduan UI dan bukti browser lengkap dilanjutkan pada task28/36/45.
-# Return workbench reads
+Buka Logistik → Retur & Servis. Daftar menampilkan nama barang, sumber retur,
+pemilik, dan status dokumen. Filter dapat membatasi SKU, serial lengkap, lokasi,
+asal, pemilik, status, serta tanggal pembuatan. Rentang tanggal memakai waktu lokal
+operator, kedua batas wajib diisi dan paling panjang366 hari.
 
-`GET /api/v1/warehouse/returns/workbench` pages `{returnCase,references}`. The
-existing root list and raw `/{id}` response retain their operation-view shapes.
-`/{id}/details` adds current SKU, serial/lot, location, receiver and vendor names
-without rewriting saved operation responses. `rmaHandoverId` is a continuation
-reference; the old return location/state is the last return operation, and does
-not describe the separate customer RMA handover's current physical position.
-Reading that handover still uses its existing permission and work-order checks.
+- **Terima retur baru**: pilih sumber yang masih memenuhi syarat dan bukti
+  penerimaan. Tujuan residual terikat karantina acknowledgement; perangkat hasil
+  pembongkaran memerlukan petugas penerima yang berbeda dari pembongkar.
+- **Periksa retur**: masukkan hasil ukur seluruh potongan atau unit. Untuk
+  perangkat, cocokkan serial fisik dan catat reset beserta bukti sebelum layak
+  pakai. Pelanggan tetap menjadi pemilik sampai ada keputusan alih kepemilikan.
+- **Kirim ke servis / Terima dari servis**: pilih penyedia dan lokasi dari daftar,
+  pindai serial yang sama, lalu catat dokumen vendor. Setelah kembali, lakukan
+  inspeksi dan reset baru. Inspeksi sebelum servis tidak menggantikannya.
+- **Siapkan penerimaan pengganti**: serial berbeda membuat draft receipt baru.
+  Daftar pengganti tersimpan menyediakan tautan melanjutkan receipt tersebut.
+  Nilai biaya opsional; nilai yang belum diketahui tidak diubah menjadi nol.
+- **Siapkan serah-terima RMA**: setelah servis dan reset selesai, pilih WO
+  perbaikan pelanggan asal serta teknisi yang aktif dan ditugaskan. Layar membaca
+  revisi WO saat ini. Pengiriman baru menambah transit; teknisi yang tercatat
+  harus mengonfirmasi penerimaan fisik melalui alur teknisi.
+- **Siapkan alih kepemilikan**: baca tanda tangan WO pemasangan asal, isi alasan
+  dan referensi persetujuan pelanggan. Simpan dokumen, lalu buka tautan persetujuan
+  tersimpan untuk pengajuan/keputusan petugas independen. Daftar tetap tersedia
+  setelah pemilik menjadi ISP dan menunjukkan revisi efek yang benar-benar dicatat.
 
-`GET /returns/sources` requires `inventory.return.manage`. It lists scoped,
-verified whole positions from acknowledged material returns or recovered asset
-removals. Already-intaken sources and the current actor's own asset removals are
-excluded before counting and paging. A residual's quarantine destination is
-bound to its acknowledgement. Intake checks the source again and does not receive
-an acknowledged residual a second time.
+Setiap tindakan menampilkan review sebelum mengirim satu perintah dengan kunci
+idempotensi tetap. Konflik meminta muat ulang dokumen sebelum meninjau ulang.
+Memindai serial saja tidak mengirim transaksi. Tombol yang membutuhkan izin
+pilihan WO, lokasi, pemasok, receipt, approval, atau bukti menjelaskan izin yang
+kurang. Riwayat dan daftar memakai halaman yang dihitung server.
 
-Lists default to25 rows, allow at most100, and sort newest first then ID. Filters:
+## Kontrak pembacaan layar
+
+`GET /api/v1/warehouse/returns/workbench` mengembalikan halaman
+`{returnCase,references}`; `/{id}/details` memakai bentuk yang sama. Daftar root
+serta GET `/{id}` tetap memakai view operasi lama. Referensi nama SKU, serial/lot,
+lokasi, penerima, dan penyedia dibaca dari sumber saat ini tanpa mengubah respons
+operasi tersimpan.
+
+`references.workOrderId` menunjuk WO sumber pembongkaran/residual.
+`references.assetOrigin` menunjuk assignment, pelanggan, WO pemasangan, dan
+pemilik historis asal perangkat. Keduanya berbeda; pengganti dan reacquisition
+menggunakan konteks pemasangan asal. `rmaHandoverId` adalah tautan kelanjutan
+tersimpan. Lokasi dokumen retur menggambarkan operasi retur terakhir; lokasi
+fisik RMA berikutnya dibaca dari handover terpisah.
+
+`GET /returns/sources` memerlukan `inventory.return.manage` dan hanya mengambil
+posisi utuh terverifikasi dari residual yang sudah diterima atau pembongkaran
+perangkat. Sumber yang telah diintake dan pembongkaran oleh penerima sendiri
+keluar sebelum penghitungan/paginasi. Intake tetap memeriksa sumber kembali.
+
+Daftar default25, maksimal100, urutan terbaru lalu ID. Filter
 `page,size,origin,locationId,skuId,stockIdentityId,owner,serial,query,from,until`;
-return lists also accept `state`. `query` searches document code, SKU code/name
-and serial; `serial` is canonical exact matching. Dates filter creation/source
-recording time, from inclusive to until exclusive, require both endpoints, and
-span at most366 days. Blank, repeated, unknown or malformed filters return400.
-Both current and historical repair locations must remain in the reader's scope.
+daftar retur juga menerima `state`. `query` mencari kode dokumen/SKU, nama barang,
+dan serial secara literal; `serial` cocok tepat setelah kanonisasi. Waktu mulai
+inklusif dan waktu akhir eksklusif, keduanya wajib berpasangan, maksimal366 hari.
+Parameter kosong, berulang, tidak dikenal, atau tidak valid menghasilkan400.
+`/{id}/history/page` memberi halaman revisi terbaru dahulu beserta total;
+`/{id}/history` tetap array revisi menaik. Keduanya default25/maksimal100 dan hanya
+menerima `page,size`.
 
-`/{id}/history/page` returns a bounded latest-first page and server count.
-Legacy `/{id}/history` remains an ascending array; its default is now25 (max100).
-Both accept only `page,size`; saved operation JSON remains unchanged.
+`GET /returns/{id}/rma-work-orders/{workOrderId}` memerlukan kelola retur, sumber
+servis yang selesai, serta scope saat ini. Hasil memuat revisi WO, kode/judul dan
+nama teknisi aktif yang ditugaskan. Kontrak ini tidak memerlukan izin permintaan
+material hanya untuk membaca revisi. Pemilihan nama WO memakai daftar WO biasa
+beserta izin `workorder.order.view`.
+`GET /rma-handovers/{id}/details` menambahkan nama WO, pengirim/penerima dan lokasi
+pada handover; gerbang izin/custody/area sama dengan GET handover aslinya.
+
+`GET /returns/{id}/reacquisition-requests` memerlukan `inventory.return.view`
+dan `inventory.approval.view`, area WO pemasangan asal, serta scope lokasi saat
+ini dan historis. Hasil halaman berisi dokumen permintaan, revisi sumber, alasan,
+referensi persetujuan, ID bukti, waktu pencatatan, dan `appliedReturnRevision`
+opsional. Nilai terakhir hanya ada setelah efek alih kepemilikan dibukukan;
+ketiadaannya tidak menyimpulkan status approval. Default25/maksimal100 dengan
+parameter `page,size`; scope diterapkan sebelum total dan halaman dihitung.
+
+Form membaca metadata tanda tangan melalui
+`GET /api/work-orders/{originalWorkOrderId}/signature` (204 bila belum tersedia)
+dan konten terautentikasi melalui `/signature/content`. Izin baca bukti atau
+penugasan field WO tetap diperiksa. Pengaju tidak memasukkan UUID bukti bebas;
+backend memverifikasi tanda tangan aktif serta digest pada saat pengajuan.
+
+## Verifikasi dan kelanjutan
+
+Bukti integrasi backend, tes UI dan browser transfer tersimpan pada checkpoint
+task36. Browser transfer menguji100m dikirim,60m diterima, dan40m tetap transit
+pada desktop serta seluler. Browser lengkap pengembalian teknisi dan RMA pelanggan
+berjalan pada task45 setelah layar teknisi/customer task40/41 selesai. Pengajuan
+serta keputusan dari tautan approval dilengkapi pada task37.

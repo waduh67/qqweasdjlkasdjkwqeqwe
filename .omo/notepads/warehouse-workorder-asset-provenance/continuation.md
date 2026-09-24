@@ -1,5 +1,22 @@
 # Whole-plan continuation
 
+## Task36 reacquisition UI saved;29 web checks passed, backend still running
+
+Reacquisition UI reads actual active original-WO signature, handles204 absence and
+permission denial, checks changed signature before/after authenticated download,
+requires reason/reference/customer-proof confirmation and reviews captured command.
+Persisted paged title requests resume actual sourceDocumentId approval links; current
+CUSTOMER title stays until effect. Original historical owner keeps list reachable
+when current title becomesISP. Applied return revision is distinct from decision.
+29 affected web tests/6files passed10.90s, TypeScript/focused oxlint exit0. Docs updated
+for operator flow, read contracts and default25 history; no return/RMA browser claim.
+
+Backend corrected source5dd0f46e compile/testcompile passed;5 tests/4suites still
+running via session80021, log reacquisition-discovery-corrected-server.log. Await
+actual completion/cleanup and fresh XML (first8cec4ee8 compilefailed, no validproof).
+NEXT save backendproof, implement remaining transferSKU/serial/date/locationfilters,
+then final task36 checks and37 approvals. Whole36–48/F1–F4 remains active; no migrations.
+
 ## Task36 reacquisition discovery compile correction
 
 First verification @8cec4ee8 failed compile: Jackson3 JsonNode.map resolves its

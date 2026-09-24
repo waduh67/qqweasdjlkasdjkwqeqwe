@@ -17,6 +17,7 @@ import { WarehouseReturnEditor } from './WarehouseReturnEditor'
 import { WarehouseReturnFilters } from './WarehouseReturnFilters'
 import { WarehouseSupplierReplacements } from './WarehouseSupplierReplacement'
 import { WarehouseCustomerRma } from './WarehouseCustomerRma'
+import { WarehouseReturnReacquisition } from './WarehouseReturnReacquisition'
 import { completedCustomerRepairInspection, needsPostRepairInspection } from './returnDraft'
 import { returnItemLabel, returnLocationLabel, returnOriginLabels } from './returnPresentation'
 
@@ -80,6 +81,7 @@ function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () =>
     {manage && waiting && view.origin === 'ASSET_REMOVAL' && view.inspection && !view.repair && !can('inventory.receipt.view') && <p className="muted">Pemilihan penyedia servis memerlukan izin lihat penerimaan/pemasok.</p>}
   </section>
     {manage && <WarehouseCustomerRma details={details} reload={reload} />}
+    {refs.assetOrigin?.legalOwner === 'CUSTOMER' && can('inventory.approval.view') && <WarehouseReturnReacquisition details={details} reload={reload} />}
     {view.repair && can('inventory.receipt.view') && <WarehouseSupplierReplacements details={details} reload={reload} />}
     <ReturnHistory details={details} /></>
 }

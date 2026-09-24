@@ -96,6 +96,16 @@ function reacquisition(value: unknown, path = 'reacquisition') {
   const row = record(value, path)
   return { documentId: uuid(row.documentId, path), returnId: uuid(row.returnId, path), revision: integer(row.revision, path) }
 }
+export type ReacquisitionRef = ReturnType<typeof reacquisition>
+export function reacquisitionEntry(value: unknown, path = 'reacquisitionEntry') {
+  const row = record(value, path)
+  const result = { ...reacquisition(row, path), code: text(row.code, path), sourceReturnRevision: integer(row.sourceReturnRevision, path),
+    reason: text(row.reason, path), titleTransferReference: text(row.titleTransferReference, path), evidenceId: uuid(row.evidenceId, path),
+    recordedAt: timestamp(row.recordedAt, path), appliedReturnRevision: nullable(row.appliedReturnRevision, integer, path) }
+  if (result.revision !== 0 || (result.appliedReturnRevision !== null && result.appliedReturnRevision !== result.sourceReturnRevision + 1)) throw new WarehouseDataError(path)
+  return result
+}
+export type ReacquisitionEntry = ReturnType<typeof reacquisitionEntry>
 export function rmaHandover(value: unknown, path = 'rma') {
   const row = record(value, path)
   return { id: uuid(row.id, path), returnId: uuid(row.returnId, path), repairCaseId: uuid(row.repairCaseId, path), originalAssignmentId: uuid(row.originalAssignmentId, path),
@@ -135,6 +145,11 @@ export const receiveRepair = (id: string, input: RepairReceipt) => command(`${ro
 export const listReplacements = (id: string, page = 0) => query(`${root}/${uuid(id)}/replacement-receipts${parameters({ page, size: 25 })}`, value => array(value, replacement, 'replacements', 25))
 export const requestReplacement = (id: string, input: ReplacementInput) => command(`${root}/${uuid(id)}/replacement-receipts`, 'POST', input, replacement)
 export const requestReacquisition = (id: string, input: ReacquisitionInput) => command(`${root}/${uuid(id)}/reacquisition`, 'POST', input, reacquisition)
+export const listReacquisitions = (id: string, page = 0) => query(`${root}/${uuid(id)}/reacquisition-requests${parameters({ page, size: 25 })}`, value => {
+  const result = pageOf(reacquisitionEntry)(value)
+  if (result.items.some(row => row.returnId !== id)) throw new WarehouseDataError('reacquisition.returnId')
+  return result
+})
 export const dispatchRma = (id: string, input: RmaDispatch) => command(`${root}/${uuid(id)}/rma-handover`, 'POST', input, rmaHandover)
 export const getRmaHandover = (id: string) => query(`/api/v1/warehouse/rma-handovers/${uuid(id)}`, rmaHandover)
 export const getRmaDetails = (id: string) => query(`/api/v1/warehouse/rma-handovers/${uuid(id)}/details`, rmaDetails)
