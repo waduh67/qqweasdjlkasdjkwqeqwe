@@ -134,7 +134,7 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
     }
 
     override fun list(filter: WarehouseReturnFilter): WarehousePage<WarehouseReturnView> {
-        validatePage(WarehousePageRequest(filter.page, filter.size))
+        validateReturnFilter(filter)
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.return.view")
@@ -156,7 +156,8 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
 
     private fun authorize(record: WarehouseReturnRecord, current: CurrentAuthority) {
         val scope = scopes.currentUnderFence(current.fence)
-        listOf(record.intake.quarantineLocationId, record.view.locationId).distinct().sortedBy(UUID::toString).forEach {
+        listOfNotNull(record.intake.quarantineLocationId, record.view.locationId, record.view.repair?.repairLocationId)
+            .distinct().sortedBy(UUID::toString).forEach {
             locations.authorizeLocation(it, current, scope)
         }
     }

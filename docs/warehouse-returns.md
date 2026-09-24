@@ -217,3 +217,31 @@ title terhadap perubahan database langsung telah lolos integrasi. Regresi
 gabungan53 tes, termasuk pagination, telah lolos. Inspeksi pengganti dan rebuild
 proyeksi juga lolos bersama regresi receipt biasa. Disposition
 barang lama, panduan UI dan bukti browser lengkap dilanjutkan pada task28/36/45.
+# Return workbench reads
+
+`GET /api/v1/warehouse/returns/workbench` pages `{returnCase,references}`. The
+existing root list and raw `/{id}` response retain their operation-view shapes.
+`/{id}/details` adds current SKU, serial/lot, location, receiver and vendor names
+without rewriting saved operation responses. `rmaHandoverId` is a continuation
+reference; the old return location/state is the last return operation, and does
+not describe the separate customer RMA handover's current physical position.
+Reading that handover still uses its existing permission and work-order checks.
+
+`GET /returns/sources` requires `inventory.return.manage`. It lists scoped,
+verified whole positions from acknowledged material returns or recovered asset
+removals. Already-intaken sources and the current actor's own asset removals are
+excluded before counting and paging. A residual's quarantine destination is
+bound to its acknowledgement. Intake checks the source again and does not receive
+an acknowledged residual a second time.
+
+Lists default to25 rows, allow at most100, and sort newest first then ID. Filters:
+`page,size,origin,locationId,skuId,stockIdentityId,owner,serial,query,from,until`;
+return lists also accept `state`. `query` searches document code, SKU code/name
+and serial; `serial` is canonical exact matching. Dates filter creation/source
+recording time, from inclusive to until exclusive, require both endpoints, and
+span at most366 days. Blank, repeated, unknown or malformed filters return400.
+Both current and historical repair locations must remain in the reader's scope.
+
+`/{id}/history/page` returns a bounded latest-first page and server count.
+Legacy `/{id}/history` remains an ascending array; its default is now25 (max100).
+Both accept only `page,size`; saved operation JSON remains unchanged.

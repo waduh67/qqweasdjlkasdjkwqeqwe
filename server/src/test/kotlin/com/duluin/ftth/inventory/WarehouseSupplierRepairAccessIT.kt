@@ -24,6 +24,15 @@ class WarehouseSupplierRepairAccessIT : WarehouseRepairFixture() {
         scope(setup.location, 2, true)
         assertThat(dispatchRepair(setup, actor.first)).isEqualTo(outbound)
         val inbound = receiveRepair(setup, outbound, actor.first)
+        // Historical repair references remain protected after the asset has returned to quarantine.
+        scope(setup.location, 3, false)
+        for (suffix in listOf("", "/details", "/history", "/history/page"))
+            assertThat(request("GET", "${setup.path}$suffix", actor.first).status).isEqualTo(404)
+        val hidden = request("GET", "/api/v1/warehouse/returns/workbench?size=1", actor.first)
+        assertThat(hidden.status).isEqualTo(200)
+        assertThat(mapper.readTree(hidden.contentAsString).path("totalElements").asLong()).isZero()
+        scope(setup.location, 4, true)
+        assertThat(request("GET", "${setup.path}/details", actor.first).status).isEqualTo(200)
         val movements = fixture(setup.token).transaction { scalar("SELECT count(*) FROM inventory_movement") }
         scope(setup.returned.quarantine, 1, false)
         assertThat(request("GET", "${setup.path}/history", actor.first).status).isEqualTo(404)

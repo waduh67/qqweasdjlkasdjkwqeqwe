@@ -1,5 +1,25 @@
 # Task36 — transfer / return / repair UI investigation
 
+## Task36 return discovery implemented; backend verification next
+
+Added separate named /returns/workbench and /{id}/details, eligible /sources,
+and bounded latest-first /{id}/history/page. Raw GET/list/operation/history shapes
+stay unchanged; legacy history now defaults25/max100. Strict serial/query/date/
+origin/state/location/SKU/identity/owner filters. Sources require return.manage,
+actual verified whole Q position, residual acknowledgement or independent asset
+removal, and exclude previously intaken documents BEFORE paging/count. Read only.
+Named metadata uses current inventory names and public IamApi receiver name.
+Minimal rmaHandoverId points to existing handover owner read; no invented current
+physical state from the old return snapshot. Historical repair location now gates
+ordinary return read/replay/history/list, consistent with repair actions.
+
+New source/scope/names/immutable snapshot integration case plus extended asset
+LOAN/SALE independent sources, bounded6revision history, repaired-location scope
+and persisted RMA reference checks. NOT VERIFIED YET. NEXT run private
+return-discovery-server.sh, await compile/test/cleanup, inspect fresh results.
+Transfer browser proof @49e8a1d4 complete174c6545.149 web/7transfer backend baseline
+unchanged. Return UI still required; task36 remains open. No migrations.
+
 ## Task36 transfer browser verified at49e8a1d4; return implementation next
 
 Final transfer-final passed both projects in 38.005s, no failures,
