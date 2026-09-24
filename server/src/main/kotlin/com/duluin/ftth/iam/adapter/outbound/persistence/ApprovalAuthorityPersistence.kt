@@ -36,7 +36,8 @@ class ApprovalAuthorityPersistence(private val entityManager: EntityManager) : A
                     val roles = memberships[id].orEmpty().toSet()
                     ApprovalPrincipal(id, roles, roles.flatMap { roleGrants[it].orEmpty() }.toSet(), areas[id].orEmpty().toSet())
                 }
-            ApprovalAuthorityDirectory(users, roleGrants)
+            val roleNames = query("SELECT id,name FROM role WHERE tenant_id=?") { it.getObject("id", UUID::class.java) to it.getString("name") }.toMap()
+            ApprovalAuthorityDirectory(users, roleGrants, roleNames)
         }
     }
 }
