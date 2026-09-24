@@ -1,5 +1,39 @@
 # Whole-plan continuation
 
+##128/129 title continuity; focused runs and missing direct-return route
+
+rma-reacquisition-green completed17 tests/5 suites/2 failures/0 errors/skips,4m29s.
+The4 previous shared regressions are repaired:2 acceptance races,2 allowed draft
+DELETEs (all5 scope variants passed). Ordinary title approval, all3 RMA acceptance
+and4/5 RMA guards passed, including simultaneous RMA installs. Failures:
+1. RMA independent approval hits historical ASSET_REMOVAL_HISTORY_POSITION_BINDING.
+  129 now uses the existing continued recovery/APPLIED ledger owner proof while
+  keeping physical identity and original episode title immutable. See task-26.md.
+2. Revoked pending install returns409 STALE_AUTHORITY, matching the existing WO
+  epoch contract; the probe incorrectly expected404. Corrected to assert exact
+  stale code and zero writes, then require a fresh permit after restoration.
+  A unique RMA handover execution constraint may block that legitimate renewal;
+  prove with the queued focused test before any source/schema correction.
+
+127/128 are APPLIED AND IMMUTABLE.129 may already apply in the running direct-
+quarantine red probe; check current status before edits. Migration bytes:
+- V175_127__warehouse_draft_delete_return_row.sql: `1210635a11525370c6e35efcedc919239225a97b776d147907ee632f496eb024`
+- V175_128__warehouse_rma_reacquisition_title.sql: `5c57b1faec84685ac29ecd7b09fb070f7645bcfe227aed3c178fc41fbf5c2da8`
+- V175_129__warehouse_recovered_title_continuity.sql: `9fc3857eb00db6e7dbd4a237fa2e86e9d9b6b13387beae9999f6969ccb01965d`
+
+Active/queued wrappers under the host QA lock (each same-name log/archive):
+- return-reacquisition-red: real SALE recovery/inspection, new direct quarantine
+  reacquisition route missing, NOT YET VERIFIED. Request test requires independent
+  title approval, preserved old assignment, Q until inspection and replay no effects.
+- rma-title-continuity-green: full RMA approval/removal/reissue plus3 physical
+  ledger integrity cases (including unposted CUSTOMER->ISP rewrite). Pending.
+- rma-authorization-renewal-red: one corrected scope/renewal/replay case. Pending.
+Do not infer successful outcomes from stale copied XML on compile failures.
+
+No130 declared. Direct quarantine API and supplier replacement not implemented.
+26 and remaining28/30–48/F1–F4 stay open. Current work branch is
+work/warehouse-completion; ordinary push to origin feat/warehouse-workorder only.
+
 ##126 regression recorded;127 draft deletion correction and RMA reacquisition probe
 
 The completed rma-acceptance-green run has166 tests/5 suites/4 failures/0 errors/

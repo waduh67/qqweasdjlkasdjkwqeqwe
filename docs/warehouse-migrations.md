@@ -92,6 +92,24 @@ melewati row dan count tetap1. Kembalikan OLD setelah pemeriksaan scope dan
 immutable transfer yang sama; tidak membuka penghapusan dokumen posted/bound.
 175.126 dan seluruh migrasi terdahulu tetap immutable.
 
+`V175_128__warehouse_rma_reacquisition_title.sql` dicadangkan sebelum pembuatan
+setelah probe pengajuan alih title RMA yang diterima ditolak SOURCE_NOT_VERIFIED.
+Revisi title awal RMA bernilai0: validator pengajuan memakai purpose pada history
+assignment tersegel. Authorization RMA yang sudah dikonsumsi harus mengikuti
+pemilik episode yang dibuktikan acceptance/transfer; sebelum konsumsi tetap wajib
+CUSTOMER. Semua ikatan source, approval, posting, dan histori tetap berlaku.
+127 belum diterapkan pada run sebelumnya;126 dan semua versi sebelumnya immutable.
+
+`V175_129__warehouse_recovered_title_continuity.sql` dicadangkan sebelum pembuatan.
+Pada keputusan approval RMA, PostgreSQL menolak ASSET_REMOVAL_HISTORY_POSITION_BINDING:
+removal episode lama membandingkan pemilik fisik saat ini dengan pemilik historis.
+Sesudah recovery diterima secara sah, pemilik saat ini sudah divalidasi terhadap
+ledger APPLIED oleh warehouse_received_recovery/warehouse_assert_recovered_position.
+Pisahkan title yang dapat berubah dari identitas fisik immutable hanya pada cabang
+continued tersebut; sumber title/removal/assignment historis tetap terikat utuh.
+Tambahkan probe app-role perubahan title tanpa posting.127/128 sudah applied dan
+immutable; koreksi wajib melalui129.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada

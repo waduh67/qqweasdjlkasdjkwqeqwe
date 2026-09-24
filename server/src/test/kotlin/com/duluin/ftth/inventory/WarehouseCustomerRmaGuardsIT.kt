@@ -11,8 +11,8 @@ class WarehouseCustomerRmaGuardsIT : WarehouseCustomerRmaFixture() {
     @Test fun `RMA authorization needs acknowledged custody and install rechecks customer and current scopes`() {
         val case = prepareRma()
         val outbound = dispatchRma(case)
-        fun authorize() = request("POST", "/api/work-orders/${case.work}/assets/authorize", case.receipt.receiver.first,
-            case.authorization, "rma-guard-authorization")
+        fun authorize(key: String = "rma-guard-authorization") = request("POST", "/api/work-orders/${case.work}/assets/authorize", case.receipt.receiver.first,
+            case.authorization, key)
         val unacknowledged = authorize()
         assertThat(unacknowledged.status).withFailMessage(unacknowledged.contentAsString).isEqualTo(409)
         receiveRma(case, outbound)
@@ -29,7 +29,8 @@ class WarehouseCustomerRmaGuardsIT : WarehouseCustomerRmaFixture() {
         val scope = "/api/v1/warehouse/settings/scopes/${case.receipt.receiver.second}/${case.receipt.field}"
         assertThat(request("PUT", scope, case.repair.token, """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
         val revoked = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, body, "rma-guard-install")
-        assertThat(revoked.status).withFailMessage(revoked.contentAsString).isEqualTo(404)
+        assertThat(revoked.status).withFailMessage(revoked.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(revoked.contentAsString).path("code").asString()).isEqualTo("STALE_AUTHORITY")
         fixture(case.repair.token).transaction {
             assertThat(scalar("SELECT consumed::text FROM inventory_deployment_authorization WHERE id='$id'")).isEqualTo("false")
             assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment WHERE asset_id='${case.repair.asset}'")).isEqualTo("1")
@@ -37,10 +38,18 @@ class WarehouseCustomerRmaGuardsIT : WarehouseCustomerRmaFixture() {
                 .isEqualTo("ISSUED|CUSTOMER")
         }
         assertThat(request("PUT", scope, case.repair.token, """{"expectedRevision":2,"active":true}""").status).isEqualTo(200)
-        val installed = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, body, "rma-guard-install")
+        val stale = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, body, "rma-guard-install")
+        assertThat(stale.status).withFailMessage(stale.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(stale.contentAsString).path("code").asString()).isEqualTo("STALE_AUTHORITY")
+        val renewed = authorize("rma-guard-renewed-authorization")
+        assertThat(renewed.status).withFailMessage(renewed.contentAsString).isEqualTo(200)
+        val renewedBody = body.replace(id, mapper.readTree(renewed.contentAsString).path("authorizationId").asString())
+        val installed = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, renewedBody, "rma-guard-install")
         assertThat(installed.status).withFailMessage(installed.contentAsString).isEqualTo(201)
         assertThat(request("PUT", scope, case.repair.token, """{"expectedRevision":3,"active":false}""").status).isEqualTo(200)
-        assertThat(request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, body, "rma-guard-install").status).isEqualTo(404)
+        val replay = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, renewedBody, "rma-guard-install")
+        assertThat(replay.status).withFailMessage(replay.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(replay.contentAsString).path("code").asString()).isEqualTo("STALE_AUTHORITY")
     }
 
     @Test fun `simultaneous RMA installs return one durable physical installation`() {
