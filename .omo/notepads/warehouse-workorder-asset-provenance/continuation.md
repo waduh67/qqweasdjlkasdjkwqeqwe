@@ -1,5 +1,23 @@
 # Whole-plan continuation
 
+## Combined return regression restarted after pagination compile correction
+
+Published f35e8621 contains the inspected replacement flow and scoped-list change.
+First combined run stopped at main compilation (13s, no executed tests): Jackson3
+JsonNode.map resolved to its member instead of Kotlin collection map. Corrected
+with asSequence().map(...).toList(). No SQL changed;137 remains immutable. The
+failed return-combined-regression/xml may contain copied stale receipt results;
+DO NOT use them as combined evidence.
+
+Corrected run: .omo/runtime/return-combined-check.sh / .log,
+archive task26/return-combined-check/xml and return-combined-check-database.log.
+Main compilation has passed; test compilation/execution remains pending.
+
+Task28 preparation only: WarehouseDispositionIT now describes a real17500MM
+damaged residual -> independent SCRAP approval -> exact disposed sink and WO
+settlement. No disposition endpoint exists yet, so that test has not passed.
+It is not selected by the combined task26 run. Do not infer task28 complete.
+
 ## Supplier inspection verified; scoped pagination under combined regression
 
 Published parent checkpoint11c3b518.

@@ -77,6 +77,6 @@ class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc) {
                 AND (replacement.snapshot::jsonb#>>'{input,sourceLocationId}')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')
                 AND (replacement.snapshot::jsonb#>>'{input,inspectionLocationId}')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')"""
         mapper.readTree(query.result(query.page(rows, "body", "created_at"), id)).path("items")
-            .map { mapper.treeToValue(it, SupplierReplacementView::class.java) }
+            .asSequence().map { mapper.treeToValue(it, SupplierReplacementView::class.java) }.toList()
     }
 }
