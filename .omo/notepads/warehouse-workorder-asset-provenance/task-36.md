@@ -1,0 +1,89 @@
+# Task36 — transfer / return / repair UI investigation
+
+Do not start implementation until task35 actual issue browser and proof complete.
+Initial read during task35 browser, production code unchanged. Read actual source
+alongside docs/warehouse-transfers.md and docs/warehouse-returns.md.
+
+## Transfer
+
+InventoryTransferApi / WarehouseTransferController root /api/v1/warehouse/transfers:
+POST create,/{id}/dispatch,/{id}/receive,/{id}/discrepancy;GET/{id},/{id}/history.
+NO LIST endpoint yet; add current scoped paged discovery beforebuildinglistUI.
+All create/dispatch/receive mutations return actual WarehouseTransferView directly
+(original stored response), not generic ack. GETcurrent is record.view(), history
+plainList<WarehouseTransferView> (currentlyunpaged).
+
+Draft input sourceLocationId,destinationLocationId,transitLocationId,receiverId,
+reason,lines[{stockIdentityId,quantityBase,baseUnit,sourceBalanceId?}]. Use actual
+position.id as sourceBalanceId to disambiguate sameidentitymultiplebuckets.
+Draft doesnotmove/reservestock. Source/dest supported WAREHOUSE/BIN/VEHICLE/
+TECHNICIAN/QUARANTINE;transitdistinctTRANSIT,!issueEligible,notRECEIPT_SOURCE.
+receiveractive IAM, destinationTECHNICIAN/VEHICLEcustodian mustreceiver;
+TECHNICIANreceiver musttechnician. Existing WarehouseTransferAccess.authorize
+checks topology/currentwarehouse/area/effectivesite on all3locationsandactive
+receiver (alsoGET/history). No blankettenantadminbypass.
+Dispatch body expectedRevision, onlypersistedsender;receive bodyexpectedRevision,
+evidenceReference,lines[{lineId,quantityBase,baseUnit}],onlypersistedreceiver.
+View rawIDs currently no names: id/code/revision/state,3locationIDs,sender/receiverIDs,
+reason,recordedAt,lines{id,skuId,stockIdentityId,unit,quantityBase,receivedBase,
+inTransitBase,remainingIdentityId?,condition,legalOwner,resolvedBase},resolutionDoc?.
+Need actual scoped namedmetadata withoutrewriting immutable oldsnapshot or guessing
+names/serial/lineage; newGET additivecurrentmetadata or properpublicreferences.
+CapturepayloadandIDkey, reloadactualGETafterwrites asusual.
+Cancel endpoint exists but ALWAYS throwsSOURCE_NOT_VERIFIED (includingdraft).
+Do not exposecancel asviableaction or callitundo. No drafteditAPI either.
+Discrepancy bodyexpectedRevision,actionLOST|REJECTED,destinationLocationId,reason,
+evidenceReference;createsresolutionDocumentId, stillnomovement untilindependent
+ADJUSTMENTapproval. Sender/receiver/delegates ineligibleapproval. Task37decisionUI.
+
+WarehouseTransferStore keeps latestTransferRecord in inventory_command_identity
+canonical_payload, latest original_body is view. inventory_document has3location
+columns+receiver+actor andkindTRANSFER;filteractualwarehouse.transfer namespace
+becauseothermaterialflowsalsouseTRANSFER. Access-beforecount/page neededforlist.
+Queries shouldalsoconsideractualresolutiondestinationsscope (reviewserviceexisting
+getauthorizesoriginal3only, verifyfinalscopecontract beforeaddinglist).
+
+## Return / repair
+
+InventoryReturnApi root /returns alreadyGETpagedlist andGETdetail/history.
+Listfilters page,size(1..100 default25),originMATERIAL_RESIDUAL|ASSET_REMOVAL,
+state,locationId,skuId,stockIdentityId,owner. Scopedbeforepaging (initialquarantine
+andcurrentlocationACTIVE). Latestviewfrominventory_operation.original_body.
+Historyquerypage/size default100, returnplainList; inspectactualcontrollerforcount
+or addproperpage contract ifneeded. Currentview no names:
+id/revision/state/origin/sourceDocumentId/stockIdentityId/skuId/lotId?,baseUnit,
+quantityBase,locationId,condition,legalOwner,receivedBy,recordedAt,inspection?,repair?.
+Requiresreturn.view;mutationsreturn.manage, currentIAM/initial/currentlocations.
+
+Intake{origin,sourceDocumentId,quarantineLocationId,evidenceReference}.
+Need namedsource lookup (nonefoundyet), notfreeUUIDonly.
+MATERIAL_RESIDUAL requirespurposeRETURN+acknowledged+targetLocation==quarantine;
+physicalstockalreadyreceivedatack, intake MUSTNOTdebit/receiveagain.
+ASSET_REMOVAL requiresvalidoutcome, receivingactordifferentremover, actual1EA
+stockidentitymatchesasset; sourcecurrentlocscope andoriginlegalOwnerpreserved.
+
+Inspect{expectedRevision,measuredQuantityBase,condition,destinationLocationId,
+evidenceReference,resetConfirmed,observedSerial?,resetEvidenceReference?}.
+Cannotinventquantity/joinpieces; exactMM/EA. Serialreset+proof requiredforserviceable,
+CUSTOMERtitle staysQ/unavailable evenserviceable; ISPmaygotoissueeligibleBIN.
+DAMAGED/Q staysQ, scrap usesdispositionapproval. Sameoriginhistoricalepisodekept.
+
+Repairdispatch{expectedRevision,vendorId,repairLocationIdTRANSIT,vendorReference,
+evidenceReference,observedSerial};receive{expectedRevision,observedSerial,
+quarantineLocationId,resultREPAIRED|UNREPAIRED,vendorReference,evidenceReference}.
+Sameactualserialonly;receive returnsQ requiresnewinspect/reset. Onecaseperreturn.
+repairprogress{id,vendorId,vendorReference,repairLocationId,dispatchRevision,
+returnedRevision?,result?,receiptReference?}.
+
+Replacement-receipts and reacquisition andcustomerRMA handover APIs alreadybackend,
+see docs forinputandpermissions. Need UI continuationlinks/dialogs appropriate36,
+not all delegatedtocatchallfuture;task40/41actualtechnicianandassetUI required45.
+Replacementdifferentserial=NEWreceipt provenance, nooldassetdestruction;CUSTOMERtitle
+followsreplacement andneverISPavailable. Alihtitleapprovalindependentlater37.
+Task36 actualbrowser minimumwarehouse-to-warehouse100m/60mpartial40mtransit;
+fulltechreturn/soldRMA deferredactual45after40/41 perplan. No fakeacknowledgement.
+
+Next after35complete: implementdiscovery/namedmetadata andmeaningfulscopebackend
+regressions (keepmigrationsimmutable148nextunused177/178reserved43), thenactual
+Transfer/Return/RepairUI typedcontracts +unit+realbrowserdesktop/mobile. Commit/push
+handoff frequently, goalwholeplan35–48/F1–F4 remainsactive.

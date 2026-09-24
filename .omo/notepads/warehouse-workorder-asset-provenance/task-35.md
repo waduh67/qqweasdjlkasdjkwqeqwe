@@ -1,5 +1,21 @@
 # Task35 — demand and issue implementation
 
+## Task35 first browser failed on test selector — correction prepared
+
+issue-initial@4e6d4b3d builtbackend/web, bothbrowserprojects failed beforeWOcreate:
+Fluent MultiCombobox exposes menuitemcheckbox; testaskedroleoption andmatchedhidden
+native WOtablefilteroption. Screenshot/accessibilitytree confirmsvisibletechnician
+menucheckbox. Changed onlybrowserselector to actualmenuitemcheckbox. No forcingclick
+or simulatedassignment. Allreceiving/putaway/usercreation hadcompleted. Cleanupdone.
+
+Also fixedautoFIFOreview toshow remainingbackorder quantities ratherthan fullplan;
+NONEreview includesreason. NewmeaningfulUIregression makes9pagecases;9page+4action
+andTS/oxlint RUNNINGrequest-review-web.log. Previous127webproofstillvalidbaseline,
+newchangeawaitingchecks. NEXT run warehouse-issue-browser.sh issue-selection-fixed
+withnewsource; currentbrowsernone. task36.md containsread-onlytransfer/returnAPI
+investigationfornexttask. Task35remainsopen;continuewholeplan35–48/F1–F4.
+
+
 ## Task35 source4e6d4b3d — full web verification passed; browser running
 
 127tests/17files passed (warehouseAPI/pages/components,DataTable,existingWOtest),

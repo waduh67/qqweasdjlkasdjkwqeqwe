@@ -84,6 +84,15 @@ it('picks the selected reel with actual reservation and stock revisions then dis
   expect(JSON.parse(String(write[1]?.body))).toMatchObject({ expectedRevision: 1, workOrderRevision: 5, demandRevision: 2, lines: [{ reservationId: id.supplier, expectedRevision: 3, stockIdentityId: id.piece, stockRevision: 4, quantityBase: '60000', baseUnit: 'MM' }] })
 })
 
+it('reviews only the remaining demand before automatic reservation', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => reader(path)))
+  show(); fireEvent.click(await screen.findByRole('button', { name: 'Cadangkan otomatis' }))
+  const review = within(await screen.findByRole('dialog', { name: 'Cadangkan stok otomatis' }))
+  expect(review.getByText('40,000 m')).toBeTruthy()
+  expect(review.queryByText('100,000 m')).toBeNull()
+  expect(review.getByText(/sisa kebutuhan yang akan dicoba dicadangkan/)).toBeTruthy()
+})
+
 it('requires named receiver and partial confirmation before dispatch and does not equate dispatch with receipt', async () => {
   let dispatched = false
   const picked = { ...materialSummaryFixture, demandRevision: 3, lines: [{ ...materialTotalsFixture, reservedUnpickedBase: '0', reservedPickedBase: '60000' }] }

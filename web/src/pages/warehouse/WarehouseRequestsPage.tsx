@@ -121,7 +121,10 @@ function RequestBody({ summary, workOrder, allocations, reload }: { summary: Mat
     <MaterialHistory workOrderId={workOrder.id} />
     {transitEditor && <WarehouseLocationEditor row={null} readOnly={false} preset={{ code: 'WO_TRANSIT', name: 'Transit material WO', kind: 'TRANSIT', issueEligible: false }} onClose={() => setTransitEditor(false)} onSaved={reload} onReload={reload} />}
     {operation && <WarehouseCommandDialog title={operation.action === 'submit' ? 'Ajukan permintaan material' : 'Cadangkan stok otomatis'} confirmLabel={operation.action === 'submit' ? 'Konfirmasi pengajuan' : 'Konfirmasi reservasi'} command={operation.command} onClose={() => setOperation(null)} onDone={reload} onReload={reload}
-      summary={<><p>{workOrder.code} · Rencana {summary.revisions.planRevision}</p><ul>{summary.plan?.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.sku.baseUnit} />{line.substitution && <p>Pengganti {line.originalSku?.name}: {line.substitution.reason}</p>}</li>)}</ul><p>{operation.action === 'submit' ? 'Kebutuhan diajukan untuk dipenuhi gudang. Stok belum berpindah.' : 'Stok layak dipilih menurut FIFO untuk memenuhi sisa kebutuhan. Kekurangan tetap terlihat bila stok belum cukup; stok fisik belum berpindah.'}</p></>} />}
+      summary={<><p>{workOrder.code} · Rencana {summary.revisions.planRevision}</p>{summary.materialMode === 'NONE' && <p>Tanpa material: {summary.noMaterialReason ?? summary.plan?.reason}</p>}<ul>{summary.plan?.lines.map(line => {
+        const amount = operation.action === 'reserve' ? summary.lines.find(total => total.planLineId === line.id)?.backorderBase ?? '0' : line.quantityBase
+        return amount === '0' ? null : <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={amount} unit={line.sku.baseUnit} />{line.substitution && <p>Pengganti {line.originalSku?.name}: {line.substitution.reason}</p>}</li>
+      })}</ul><p>{operation.action === 'submit' ? 'Rencana diajukan untuk pekerjaan ini. Stok belum berpindah.' : 'Jumlah di atas adalah sisa kebutuhan yang akan dicoba dicadangkan menurut FIFO. Kekurangan tetap terlihat bila stok belum cukup; stok fisik belum berpindah.'}</p></>} />}
   </>
 }
 function MaterialHistory({ workOrderId }: { workOrderId: string }) {

@@ -59,7 +59,7 @@ export async function prepareMaterialWorkOrder(page: Page) {
   await selectNamed(page, 'Area pekerjaan', area.optionLabel)
   await page.getByRole('combobox', { name: 'Tipe', exact: true }).selectOption('PREVENTIVE')
   await page.getByRole('combobox', { name: 'Cari teknisi…', exact: true }).click()
-  await page.getByRole('option', { name: technician.name, exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: technician.name, exact: true }).click()
   await page.getByRole('textbox', { name: 'Judul', exact: true }).click()
   const workOrder = await confirmOperation(page, '/api/work-orders', 'Simpan')
   expect(workOrder.areaId).toBe(warehouse.areaId)
