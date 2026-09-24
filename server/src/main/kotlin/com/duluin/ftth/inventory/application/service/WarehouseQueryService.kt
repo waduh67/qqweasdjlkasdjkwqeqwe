@@ -33,10 +33,10 @@ class WarehouseQueryService(private val authority: CurrentAuthorityApi, private 
         lots.lots(WarehouseQueryFilter.parse(parameters, part == "history"), access(), id, part, segmentId)
 
     @Transactional(timeout = 20)
-    fun stock(parameters: Map<String, List<String>>): String = store.stock(WarehouseQueryFilter.parse(parameters), access())
+    fun stock(parameters: Map<String, List<String>>): String = store.stock(WarehouseQueryFilter.parse(parameters, allowBucket = true), access())
 
     @Transactional(timeout = 20)
-    fun positions(parameters: Map<String, List<String>>, id: UUID? = null): String = store.positions(WarehouseQueryFilter.parse(parameters), access(), id)
+    fun positions(parameters: Map<String, List<String>>, id: UUID? = null): String = store.positions(WarehouseQueryFilter.parse(parameters, allowBucket = true), access(), id)
 
     @Transactional(timeout = 20)
     fun unknown(parameters: Map<String, List<String>>): String {

@@ -11,10 +11,11 @@ data class WarehouseQueryFilter(
     val skuId: UUID? = null, val serial: String? = null, val locationId: UUID? = null,
     val status: String? = null, val condition: String? = null, val owner: String? = null,
     val from: Instant? = null, val until: Instant? = null,
+    val bucket: String? = null,
 ) {
     companion object {
-        fun parse(parameters: Map<String, List<String>>, history: Boolean = false): WarehouseQueryFilter {
-            val allowed = setOf("page", "size", "sort", "direction", "skuId", "serial", "locationId", "status", "condition", "owner", "from", "until")
+        fun parse(parameters: Map<String, List<String>>, history: Boolean = false, allowBucket: Boolean = false): WarehouseQueryFilter {
+            val allowed = setOf("page", "size", "sort", "direction", "skuId", "serial", "locationId", "status", "condition", "owner", "from", "until") + if (allowBucket) setOf("bucket") else emptySet()
             if (parameters.any { (key, values) -> key !in allowed || values.size != 1 || values.single().isBlank() || values.single().length > 128 }) invalid()
             fun value(key: String) = parameters[key]?.single()
             try {
@@ -29,6 +30,7 @@ data class WarehouseQueryFilter(
                     "PROVISIONAL", "RETURNED", "QUARANTINE", "LOST", "DISPOSED", "RECEIPT_SOURCE", "ACTIVE", "SPLIT", "RETIRED")) invalid()
                 val condition = value("condition")?.also { WarehouseCondition.valueOf(it) }
                 val owner = value("owner")?.also { AssetLegalOwner.valueOf(it) }
+                val bucket = value("bucket")?.also { if (it !in setOf("AVAILABLE", "RESERVED", "PICKED", "TECHNICIAN", "TRANSIT", "INSTALLED", "QUARANTINE")) invalid() }
                 val from = value("from")?.let(Instant::parse)
                 val until = value("until")?.let(Instant::parse)
                 if ((from == null) != (until == null) || (from != null && until != null &&
@@ -39,7 +41,7 @@ data class WarehouseQueryFilter(
                     parsed
                 }
                 return WarehouseQueryFilter(page, size, sort, direction, uuid("skuId"), value("serial")?.let { SerialIdentity.parse(it).canonical },
-                    uuid("locationId"), status, condition, owner, from, until)
+                    uuid("locationId"), status, condition, owner, from, until, bucket)
             } catch (_: IllegalArgumentException) { invalid() }
               catch (_: java.time.DateTimeException) { invalid() }
         }

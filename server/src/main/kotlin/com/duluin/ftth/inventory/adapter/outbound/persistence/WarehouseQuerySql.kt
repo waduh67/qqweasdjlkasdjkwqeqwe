@@ -16,7 +16,7 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
     }
     fun result(query: String, vararg values: Any?): String {
         val parameters = listOf(sql.tenant, array(access.locations), array(access.areas), jacksonObjectMapper().writeValueAsString(access.sites),
-            filter.skuId, filter.serial, filter.locationId, filter.status, filter.condition, filter.owner, filter.from, filter.until) + values
+            filter.skuId, filter.serial, filter.locationId, filter.status, filter.condition, filter.owner, filter.from, filter.until, filter.bucket) + values
         return sql.connection.prepareStatement(prefix + query).use { statement ->
             statement.queryTimeout = 20
             parameters.forEachIndexed { index, value -> statement.setObject(index + 1,
@@ -36,7 +36,7 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
             $metadata 'page',${filter.page},'size',${filter.size},'totalElements',(SELECT count(*) FROM matches))::text${if (requireTarget) " ELSE NULL END" else ""}"""
 
     val prefix = """WITH RECURSIVE request AS (SELECT ?::uuid tenant,?::uuid[] locations,?::uuid[] areas,?::jsonb sites,
-        ?::uuid sku,?::text serial,?::uuid location,?::text status,?::text condition,?::text owner,?::timestamptz since,?::timestamptz until),
+        ?::uuid sku,?::text serial,?::uuid location,?::text status,?::text condition,?::text owner,?::timestamptz since,?::timestamptz until,?::text bucket),
         location_ancestry AS (
             SELECT location.id root,location.id,location.parent_location_id,location.site_id,location.area_id,ARRAY[location.id] path,false cycle
             FROM inventory_location location,request WHERE location.tenant_id=request.tenant

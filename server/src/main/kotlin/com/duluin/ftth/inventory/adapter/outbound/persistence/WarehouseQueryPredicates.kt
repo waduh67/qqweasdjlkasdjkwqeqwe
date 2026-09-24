@@ -6,7 +6,15 @@ internal object WarehouseQueryPredicates {
         AND (request.location IS NULL OR position.location_id=request.location)
         AND (request.status IS NULL OR position.status=request.status)
         AND (request.condition IS NULL OR position.condition=request.condition)
-        AND (request.owner IS NULL OR position.legal_owner=request.owner)"""
+        AND (request.owner IS NULL OR position.legal_owner=request.owner)
+        AND (request.bucket IS NULL
+            OR (request.bucket='AVAILABLE' AND position.available>0)
+            OR (request.bucket='RESERVED' AND position.unpicked+position.picked>0)
+            OR (request.bucket='PICKED' AND position.picked>0)
+            OR (request.bucket='TECHNICIAN' AND position.custody_owner_kind='TECHNICIAN' AND position.status NOT IN ('CONSUMED','LOST','DISPOSED'))
+            OR (request.bucket='TRANSIT' AND position.status='IN_TRANSIT')
+            OR (request.bucket='INSTALLED' AND position.status='CUSTOMER_INSTALLED')
+            OR (request.bucket='QUARANTINE' AND (position.condition='QUARANTINE' OR position.status='QUARANTINE')))"""
 
     val positionUpdated = dateRange("position.updated_at")
     val lotReceived = dateRange("lot.received_at")

@@ -32,6 +32,14 @@ eksklusif. Tanggal harus berpasangan, ISO instant, urutan benar, maksimum366 har
 Tanpa tanggal, pagination tetap membatasi response dan seluruh histori dapat
 ditelusuri per page. Bukan endpoint export tak berbatas.
 
+Khusus `/stock` dan `/stock/positions` tersedia `bucket`:
+`AVAILABLE` (available positif), `RESERVED` (unpicked+picked positif), `PICKED`,
+`TECHNICIAN` (custody teknisi, belum consumed/lost/disposed), `TRANSIT`,
+`INSTALLED` (status CUSTOMER_INSTALLED), dan `QUARANTINE` (kondisi atau status
+karantina). Filter dijalankan sebelum pagination; parameter status tetap memfilter
+status fisik secara exact. Reservasi tidak mengubah status fisik menjadi RESERVED.
+Endpoint lain menolak bucket400 agar filter tidak diabaikan tanpa pemberitahuan.
+
 Sort `name|createdAt|id`, direction `asc|desc`, secondary ID ascending. History
 default `createdAt` dan hanya menerima `createdAt|id`. Pada page segmen, name
 adalah kind dan status berarti ACTIVE/SPLIT/RETIRED. Filter waktu memakai waktu

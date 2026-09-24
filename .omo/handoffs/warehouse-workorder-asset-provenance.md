@@ -1,5 +1,26 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task34 typed explorer API and bucket filters checkpoint
+
+Metadataquery e1634743:11tests/7suites green2m46s,portable display-metadata-verification.
+Typedstock.ts addspositions/assets/lots/segments/unknown/discriminatedtimeline,cost
+KNOWNvsUNKNOWNvsabsent;legacyunitnullpreserved; compositeevent:reservationIDs; exact
+quantityunitconsistency; treechildcountbeyond100andconservationfalse visible.
+stockRow includesactual nullableminimumQuantityBase.63API/receipttests green,
+TS/lintgreen,portableapi-verification. No StockPage yet, task34 staysOPEN.
+
+Backendbucket filter implementedONLYstocksummary/positions:AVAILABLE/RESERVED/PICKED/
+TECHNICIAN/TRANSIT/INSTALLED/QUARANTINE. Preserves exactphysicalstatus semantics.
+Filtersbeforeserverpaging; reserved usesunpicked+picked notstatusRESERVED; technician
+excludesused/lost/disposed. Unsupportedendpoint/bucket rejected400. Existingbalance
+IT nowasserts900000physical/600000available/200000unpicked/100000pickedreservedreel,
+positivePICKED/TRANSIT/Q andno remainingtech,unchangedwritecounts. NOTYETVERIFIED.
+
+NEXT .omo/runtime/stock-bucket-server.sh. ThenactualWarehouseStockPage+detailpanels
+usingtypedAPIs,quantity/status/nameselectors/history/lineage; browserreceivingextension
+forassettraceandtreewithsame realsetup. See task-34.md earliercontracts/visualnotes.
+Source stable duringserverbuild. GoalACTIVE;continue34–48/F1–F4;nomigrations.
+
 ## Task34 started — scoped stock display metadata; verification pending
 
 Task33 complete andpushed54c7fd16 (2browser40.9s,86distinctunit,11backend;sourcea39aaea8).

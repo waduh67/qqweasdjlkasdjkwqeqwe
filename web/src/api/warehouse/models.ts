@@ -66,6 +66,7 @@ export function stockRow(value: unknown, path = 'stock') {
     .map(([key, amount]) => [oneOf(key, keys, field), decimal(amount, `${field}.${key}`)]))
   return { id: uuid(row.id, `${path}.id`), skuId: uuid(row.skuId, `${path}.skuId`), skuCode: text(row.skuCode, `${path}.skuCode`),
     name: text(row.name, `${path}.name`), tracking: oneOf(row.tracking, TRACKING, `${path}.tracking`), physical, reservedUnpicked, reservedPicked, available,
+    minimumQuantityBase: nullable(row.minimumQuantityBase, decimal, `${path}.minimumQuantityBase`),
     statusBuckets: bucket(row.statusBuckets, `${path}.statusBuckets`, STOCK_STATES), conditionBuckets: bucket(row.conditionBuckets, `${path}.conditionBuckets`, CONDITIONS), ownerBuckets: bucket(row.ownerBuckets, `${path}.ownerBuckets`, LEGAL_OWNERS) }
 }
 export type WarehouseStock = ReturnType<typeof stockRow>

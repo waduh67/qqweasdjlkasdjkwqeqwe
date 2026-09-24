@@ -2,6 +2,7 @@ import { pageOf, uuid } from './codec'
 import { identityLookup, location, sku, stockRow, supplier, type WarehouseLocation, type WarehouseSku } from './models'
 import { command, parameters, query } from './transport'
 import type { BaseUnit } from './quantity'
+import type { PositionFilter } from './stock'
 
 export interface MasterFilter { page?: number; size?: number; search?: string; state?: 'ACTIVE' | 'ARCHIVED'; sort?: 'name' | 'code'; direction?: 'asc' | 'desc' }
 export interface SkuInput {
@@ -27,6 +28,6 @@ export const saveSupplier = (input: SupplierInput, id?: string) => command(`/api
 export const archiveSku = (id: string, revision: number) => command(`/api/v1/warehouse/skus/${uuid(id)}/archive`, 'POST', { expectedRevision: revision }, sku)
 export const archiveLocation = (id: string, revision: number) => command(`/api/v1/warehouse/locations/${uuid(id)}/archive`, 'POST', { expectedRevision: revision }, location)
 export const archiveSupplier = (id: string, revision: number) => command(`/api/v1/warehouse/suppliers/${uuid(id)}/archive`, 'POST', { expectedRevision: revision }, supplier)
-export const listStock = (filter: { page?: number; size?: number; skuId?: string; locationId?: string; serial?: string } = {}) =>
+export const listStock = (filter: PositionFilter = {}) =>
   query(`/api/v1/warehouse/stock${parameters({ ...filter })}`, pageOf(stockRow))
 export const lookupIdentity = (value: string) => query(`/api/v1/warehouse/assets/lookup${parameters({ value: value.trim() })}`, identityLookup)

@@ -1,5 +1,26 @@
 # Task34 preparation — implementation not started
 
+## Task34 typed explorer API and bucket filters checkpoint
+
+Metadataquery e1634743:11tests/7suites green2m46s,portable display-metadata-verification.
+Typedstock.ts addspositions/assets/lots/segments/unknown/discriminatedtimeline,cost
+KNOWNvsUNKNOWNvsabsent;legacyunitnullpreserved; compositeevent:reservationIDs; exact
+quantityunitconsistency; treechildcountbeyond100andconservationfalse visible.
+stockRow includesactual nullableminimumQuantityBase.63API/receipttests green,
+TS/lintgreen,portableapi-verification. No StockPage yet, task34 staysOPEN.
+
+Backendbucket filter implementedONLYstocksummary/positions:AVAILABLE/RESERVED/PICKED/
+TECHNICIAN/TRANSIT/INSTALLED/QUARANTINE. Preserves exactphysicalstatus semantics.
+Filtersbeforeserverpaging; reserved usesunpicked+picked notstatusRESERVED; technician
+excludesused/lost/disposed. Unsupportedendpoint/bucket rejected400. Existingbalance
+IT nowasserts900000physical/600000available/200000unpicked/100000pickedreservedreel,
+positivePICKED/TRANSIT/Q andno remainingtech,unchangedwritecounts. NOTYETVERIFIED.
+
+NEXT .omo/runtime/stock-bucket-server.sh. ThenactualWarehouseStockPage+detailpanels
+usingtypedAPIs,quantity/status/nameselectors/history/lineage; browserreceivingextension
+forassettraceandtreewithsame realsetup. See task-34.md earliercontracts/visualnotes.
+Source stable duringserverbuild. GoalACTIVE;continue34–48/F1–F4;nomigrations.
+
 ## Task34 started — scoped stock display metadata; verification pending
 
 Task33 complete andpushed54c7fd16 (2browser40.9s,86distinctunit,11backend;sourcea39aaea8).
@@ -89,3 +110,31 @@ unknown,assets/lots/positiondetailwithhistory,paging,originlinks,namedquantity/s
 lowstock,permissionawareemptyreceive/setupactions. Do85webregressionsplusnewmeaningful
 unitpage/filter/cost/scope tests,real receivingbrowserbothprojects,screenshotsreview.
 No migrations anticipated;148nextunused;177/178reservedtask43.
+
+## Required bucket-query follow-up discovered after initial metadata checkpoint
+
+Existing WarehouseQueryPredicates.positionDimensions filters request.status EXACTLY
+against physical position.status. Reserved/picked goods normally remainAVAILABLE;
+therefore usingstatusRESERVED/PICKED foroperator tabs wouldsilentlyomitencumbrances.
+Do NOTfilteronlyfirst25client-side. Addoptional strictbucket query filter supported
+ONLYstocksummary/positions endpoints (othersrejectparameter): AVAILABLE,RESERVED,
+PICKED,TECHNICIAN,TRANSIT,INSTALLED,QUARANTINE. Keep existingstatussemantics unchanged.
+Appendbucket toWarehouseQueryFilter defaultnull; parseallowBucket optionalfalse,
+service.stock/positions calltrue. Extendprefix/request bind afteruntil soallexisting
+queries retainnullbucketdefault. Predicate onscopedposition:
+AVAILABLE available>0; RESERVED unpicked+picked>0; PICKED picked>0;
+TECHNICIAN custody_owner_kindTECHNICIAN excludingCONSUMED/LOST/DISPOSED;
+TRANSIT statusIN_TRANSIT; INSTALLED statusCUSTOMER_INSTALLED;
+QUARANTINE conditionQUARANTINE orstatusQUARANTINE.
+Otherendpointsfilters mustrejectbucket, notsilentlyignore. Existingbalancefixture
+canprove RESERVE200000+PICK100000 onphysicalAVAILABLE900000remainingreel; response
+shouldphysical900000/available600000 (returned17500notreserved). Queryunchangedcounts.
+TRANSIT1positive andTECHNICIAN0afteralloriginaltechgoodsconsumed/returned; current
+actualfieldtechniciancustody cases laterissue/MaterialSaya browsers task45.
+Do noteditbackendduringstock-display-server currentbuild/test; pollsession/logfirst.
+
+Visual follow-up in task34: mobilewarehouse table numeric-cell rightalignment also
+rightaligns visible fieldlabels. Addtext-align:left towarehouse-mobile-label only;
+keepquantitiesrightaligned. Task33receipt screenshotdesktop scrollIntoView puttitle
+underfixedappheader; nextreceivingbrowser screenshot shouldwindow.scrollTo(0,0)
+beforeviewportcapture (orfullPage), preservingactualproductlayout.

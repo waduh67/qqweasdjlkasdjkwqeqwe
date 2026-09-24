@@ -56,6 +56,21 @@ class WarehouseQueryITBalances : WarehouseReceiptHttpFixture() {
         assertThat(cable.path("available").path("quantityBase").asString()).isEqualTo("617500")
         assertThat(cable.path("reservedUnpicked").path("quantityBase").asString()).isEqualTo("200000")
         assertThat(cable.path("reservedPicked").path("quantityBase").asString()).isEqualTo("100000")
+        val reservedResponse = request("GET", "/api/v1/warehouse/stock?bucket=RESERVED", token)
+        assertThat(reservedResponse.status).withFailMessage(reservedResponse.contentAsString).isEqualTo(200)
+        val reserved = mapper.readTree(reservedResponse.contentAsString).path("items").single()
+        assertThat(reserved.path("physical").path("quantityBase").asString()).isEqualTo("900000")
+        assertThat(reserved.path("available").path("quantityBase").asString()).isEqualTo("600000")
+        assertThat(reserved.path("reservedUnpicked").path("quantityBase").asString()).isEqualTo("200000")
+        assertThat(reserved.path("reservedPicked").path("quantityBase").asString()).isEqualTo("100000")
+        for ((bucket, count) in listOf("PICKED" to 1, "TRANSIT" to 1, "TECHNICIAN" to 0, "QUARANTINE" to 1)) {
+            val positions = request("GET", "/api/v1/warehouse/stock/positions?bucket=$bucket", token)
+            assertThat(positions.status).withFailMessage(positions.contentAsString).isEqualTo(200)
+            assertThat(mapper.readTree(positions.contentAsString).path("totalElements").asInt()).describedAs(bucket).isEqualTo(count)
+        }
+        assertThat(request("GET", "/api/v1/warehouse/stock?bucket=anything", token).status).isEqualTo(400)
+        for (path in listOf("assets", "lots", "stock/unknown"))
+            assertThat(request("GET", "/api/v1/warehouse/$path?bucket=RESERVED", token).status).isEqualTo(400)
         val devices = items.single { it.path("skuId").asString()==fixture.serialSku.toString() }
         assertThat(devices.path("physical").path("quantityBase").asString()).isEqualTo("9")
         assertThat(devices.path("available").path("quantityBase").asString()).isEqualTo("5")
