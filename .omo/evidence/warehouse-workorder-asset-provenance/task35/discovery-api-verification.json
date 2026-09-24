@@ -1,0 +1,15 @@
+{
+  "task": 35,
+  "phase": "typed issue list and paged work orders",
+  "tests": 9,
+  "typescriptExitCode": 0,
+  "warehouseApiLintExitCode": 0,
+  "sourceFiles": {
+    "web/src/api/warehouse/issueModels.ts": "808e3d7c486f86f42f642a70ef3ed95f622280d9fb9e94bfd9d010641215fe81",
+    "web/src/api/warehouse/materials.ts": "f3c5d44fc04355b1350e557d6cd87f69116b2bee168f4ebacd9625182e6933c7",
+    "web/src/api/warehouse/workOrders.ts": "84f0ea89f05bde1ff8398173543b7fb10b0999599e4b2af90ac79617373c0a00",
+    "web/src/api/warehouse/materialModels.test.ts": "e092d7469a546240fd38d72d3e04337c9de2dabaf7ed0c27a00bee2f89fd162f"
+  },
+  "backend": "issue-list-initial running at e90857a3",
+  "remaining": "demand line mapping; request/picking/issue UI and browser"
+}

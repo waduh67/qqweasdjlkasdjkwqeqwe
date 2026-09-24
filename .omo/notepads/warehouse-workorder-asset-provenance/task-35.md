@@ -1,5 +1,31 @@
 # Task35 preparation — implementation not started
 
+## Task35 typed issue discovery and paged WO selection — 9 web tests green
+
+Frontend issueModels now decodes current header/revision/unpicked plus actual
+accepted/dispatched/picked totals; refuses accepted>dispatched or inconsistentunits.
+materials.listIssues uses actual newpagedendpoint. workOrders.ts uses strict small
+WO views and legacy PageResponse.content conversion, server query/page25; preserves
+nullable customer/assignee names, no first-page truncation.9focused tests passed;
+TypeScript exit0 and warehouse API lint passed after defaulting optional decoder
+error-path argument. No UI yet. Backend issue-list-initial remainsRUNNING against
+e90857a3;3Modularity +1actual partial/fullreceipt case passed sofar. Await fullrun.
+
+IMPORTANT remaining backend mapping before manual/partial reserve UI: current
+MaterialLineTotals exposes planLineId but not demandLineId. IDs are DIFFERENT.
+Add nullable demandLineId at end of public MaterialLineTotals and populate from
+actual demandLine?.id in InventoryMaterialService.summary. Draft maynull; submitted
+must match actual persisted demandline. Do NOTderive UUID or assume equalsplanline.
+Only one production constructor exists; add defaultnull for compatibility and test
+actual query/reserve beforeallocation exists. materialTotals decoder mustpreserve
+null/notguess; UI requiremapping for selectedpartial/override. Do after active
+backend run completes, keeping current proofsource stable. No migrationsneeded.
+
+After metadata/discovery complete: build shared plan editor, paged WO selection,
+request totals/reservation choices, allocations namedmetadata, issue-aware pick/
+unpick/dispatch/currentreceiver and printable immutable slip. Browser actualUI
+setup+WOplan/reserve/pick/transit; technicianack added40/45. Continuewholeplan.
+
 ## Task35 persisted issue discovery implemented — verification pending
 
 Allocation metadata source2671ff3a passed10 tests/4suites in4m9s, zero failure/skips;

@@ -3,8 +3,9 @@ import { receiptIds as id } from '@/test/warehouseReceiptFixture'
 import { tokenStore } from '@/api/client'
 import { WarehouseDataError } from './codec'
 import { materialPlan, materialSummary, materialTotals } from './materialModels'
-import { issueSlip } from './issueModels'
+import { issueRow, issueSlip } from './issueModels'
 import { materialRequestAction, pickMaterials, saveMaterialPlan } from './materials'
+import { listMaterialWorkOrders } from './workOrders'
 
 const totals = { planLineId: id.line, skuId: id.sku, baseUnit: 'MM', requestedBase: '200000', reservedUnpickedBase: '50000', reservedPickedBase: '20000', issuedBase: '100000',
   physicallyUsedBase: '60000', returnedBase: '10000', transferredOutBase: '0', disposedBase: '0', stillAccountableBase: '30000', backorderBase: '30000' }
@@ -75,4 +76,20 @@ it('preserves named receiver and actual warehouse transit instead of declaring t
   expect(decoded.state).toBe('DISPATCHED')
   expect(() => issueSlip({ ...slip, receiver: null })).toThrow(WarehouseDataError)
   expect(() => issueSlip({ ...slip, lines: [{ ...slip.lines[0], baseUnit: 'EA' }] })).toThrow(WarehouseDataError)
+})
+
+it('reads the current receipt revision separately from a historical dispatch slip and rejects impossible accepted totals', () => {
+  const value = { ...slip, id: slip.issueId, revision: 3, state: 'PART_RECEIVED', unpicked: false, createdAt: slip.recordedAt,
+    lines: [{ issueLineId: id.line, planLineId: id.source, sku, serial: null, lotCode: 'R1', locationName: 'Rak A', baseUnit: 'MM', pickedBase: '0', dispatchedBase: '100000', acceptedBase: '60000' }] }
+  expect(issueRow(value)).toMatchObject({ revision: 3, state: 'PART_RECEIVED', lines: [{ acceptedBase: '60000', dispatchedBase: '100000' }] })
+  expect(issueSlip({ ...slip, revision: 2, state: 'DISPATCHED' }).revision).toBe(2)
+  expect(() => issueRow({ ...value, lines: [{ ...value.lines[0], acceptedBase: '100001' }] })).toThrow(WarehouseDataError)
+})
+
+it('requests server pages for work order names without truncating a first page into a search result', async () => {
+  const fetch = vi.fn().mockResolvedValue(response({ content: [{ id: id.source, code: 'WO-LAST', title: 'Pemeliharaan', status: 'ASSIGNED', type: 'PREVENTIVE', customerId: null, customerName: null, assignees: [{ id: id.inspection, name: 'Teknisi' }] }], page: 1, size: 25, totalElements: 26, totalPages: 2 }))
+  vi.stubGlobal('fetch', fetch)
+  const result = await listMaterialWorkOrders({ query: 'Pemeliharaan', page: 1 })
+  expect(result).toMatchObject({ page: 1, totalElements: 26, items: [{ code: 'WO-LAST', customerId: null, assignees: [{ name: 'Teknisi' }] }] })
+  expect(fetch.mock.calls[0][0]).toBe('/api/work-orders?query=Pemeliharaan&page=1&size=25')
 })

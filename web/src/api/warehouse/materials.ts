@@ -1,6 +1,6 @@
 import { boolean, integer, oneOf, pageOf, record, uuid } from './codec'
 import { baseUnit, DEMAND_STATES, materialHistory, materialPlan, materialSummary, type MaterialSubstitution } from './materialModels'
-import { issueSlip } from './issueModels'
+import { issueRow, issueSlip } from './issueModels'
 import { command, parameters, query } from './transport'
 
 export interface PlanLineInput { skuId: string; quantityBase: string; baseUnit: ReturnType<typeof baseUnit>; continuousCut: boolean; substitution?: MaterialSubstitution }
@@ -22,3 +22,4 @@ export const materialRequestAction = (documentId: string, action: 'reserve' | 'r
 export const pickMaterials = (workOrderId: string, input: PickInput) => command(`${root(workOrderId)}/pick`, 'POST', input, issueSlip)
 export const transitionIssue = (workOrderId: string, action: 'unpick' | 'dispatch', input: IssueTransition) => command(`${root(workOrderId)}/${action}`, 'POST', input, issueSlip)
 export const getIssueSlip = (workOrderId: string, issueId: string) => query(`${root(workOrderId)}/issues/${uuid(issueId)}/slip`, issueSlip)
+export const listIssues = (workOrderId: string, filter: { page?: number; size?: number; state?: string } = {}) => query(`${root(workOrderId)}/issues${parameters(filter)}`, pageOf(issueRow))

@@ -1,5 +1,5 @@
 import { timestamp } from './approvals'
-import { array, decimal, integer, nullable, oneOf, record, text, uuid, WarehouseDataError } from './codec'
+import { array, boolean, decimal, integer, nullable, oneOf, record, text, uuid, WarehouseDataError } from './codec'
 import { CONDITIONS, LEGAL_OWNERS } from './models'
 import { baseUnit, ISSUE_STATES, materialSku, materialSubstitution } from './materialModels'
 import { CUSTODIAN_KINDS } from './stock'
@@ -31,3 +31,17 @@ export function issueSlip(value: unknown, path = 'issue') {
     destinations: row.destinations === undefined ? [] : array(row.destinations, stockDimension, path, 100) }
 }
 export type IssueSlip = ReturnType<typeof issueSlip>
+
+function issueTotals(value: unknown, path = 'totals') {
+  const row = record(value, path), sku = materialSku(row.sku, path), unit = baseUnit(row.baseUnit, path)
+  const pickedBase = decimal(row.pickedBase, path), dispatchedBase = decimal(row.dispatchedBase, path), acceptedBase = decimal(row.acceptedBase, path)
+  if (unit !== sku.baseUnit || BigInt(acceptedBase) > BigInt(dispatchedBase)) throw new WarehouseDataError(path)
+  return { issueLineId: uuid(row.issueLineId, path), planLineId: uuid(row.planLineId, path), sku, serial: nullable(row.serial, text, path), lotCode: nullable(row.lotCode, text, path), locationName: text(row.locationName, path), baseUnit: unit, pickedBase, dispatchedBase, acceptedBase }
+}
+export function issueRow(value: unknown, path = 'issue') {
+  const row = record(value, path)
+  return { id: uuid(row.id, path), issueId: uuid(row.issueId, path), code: text(row.code, path), state: oneOf(row.state, ISSUE_STATES, path), revision: integer(row.revision, path), unpicked: boolean(row.unpicked, path),
+    workOrderId: uuid(row.workOrderId, path), workOrderCode: text(row.workOrderCode, path), planRevision: integer(row.planRevision, path), sender: issuePerson(row.sender, path), receiver: issuePerson(row.receiver, path),
+    createdAt: timestamp(row.createdAt, path), lines: array(row.lines, issueTotals, path, 100) }
+}
+export type IssueRow = ReturnType<typeof issueRow>
