@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
-import { dispatchTransfer, getTransfer, listTransfers, transferHistory, TRANSFER_STATES, type TransferDetails, type TransferState, type WarehouseTransfer } from '@/api/warehouse/transfers'
+import { dispatchTransfer, getTransfer, listTransfers, transferHistory, type TransferDetails, type TransferFilter, type WarehouseTransfer } from '@/api/warehouse/transfers'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
+import { Button, EmptyState } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
@@ -17,10 +17,10 @@ import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatu
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { WarehouseTransferEditor } from './WarehouseTransferEditor'
 import { WarehouseTransferActions } from './WarehouseTransferActions'
+import { WarehouseTransferFilters } from './WarehouseTransferFilters'
 import { transferLineLabel, transferLocationLabel, transferPersonLabel } from './transferPresentation'
 
 const detailPath = (id: string) => `/warehouse/transfers?transferId=${encodeURIComponent(id)}`
-const stateLabels: Record<TransferState, string> = { DRAFT: 'Draf', DISPATCHED: 'Dikirim', PART_RECEIVED: 'Sebagian diterima', RECEIVED: 'Diterima', DISCREPANCY: 'Penanganan selisih' }
 export function WarehouseTransfersPage() {
   const { can } = useCan(), [params] = useSearchParams(), navigate = useNavigate()
   const [creating, setCreating] = useState(false)
@@ -37,10 +37,9 @@ export function WarehouseTransfersPage() {
   </div>
 }
 function TransferList() {
-  const [search, setSearch] = useState(''), [state, setState] = useState<TransferState | ''>(''), [page, setPage] = useState(0)
-  const loader = useCallback(() => listTransfers({ page, query: search.trim() || undefined, state: state || undefined }), [page, search, state]), result = useWarehouseQuery(loader)
-  return <><div className="row wrap"><TextField label="Cari kode transfer" value={search} maxLength={200} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
-    <SelectField label="Status transfer" value={state} onChange={(_, data) => { setState(data.value as TransferState | ''); setPage(0) }}><option value="">Semua status</option>{TRANSFER_STATES.map(state => <option key={state} value={state}>{stateLabels[state]}</option>)}</SelectField><Button onClick={result.reload}>Segarkan transfer</Button></div>
+  const [filter, setFilter] = useState<TransferFilter>({}), [page, setPage] = useState(0)
+  const loader = useCallback(() => listTransfers({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
+  return <><WarehouseTransferFilters onApply={filter => { setFilter(filter); setPage(0) }} /><Button onClick={result.reload}>Segarkan transfer</Button>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.transfer.id} empty={<EmptyState title="Belum ada transfer dalam cakupan Anda" hint="Buat transfer dari stok fisik yang sudah diterima dan belum terikat pengeluaran WO." />} columns={[
       { key: 'code', header: 'Transfer', cell: row => <Link to={detailPath(row.transfer.id)}>{row.transfer.code}</Link> },
       { key: 'route', header: 'Asal → Tujuan', cell: row => <span>{transferLocationLabel(row, row.transfer.sourceLocationId)} → {transferLocationLabel(row, row.transfer.destinationLocationId)}</span> },

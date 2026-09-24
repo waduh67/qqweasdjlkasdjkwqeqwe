@@ -48,7 +48,14 @@ hasil split; perangkat berserial mempertahankan assetId dan asal biayanya.
 ## Daftar dan referensi tampilan
 
 `GET /api/v1/warehouse/transfers` menerima `page` (mulai0), `size` (1–100),
-`state`, `locationId` dan `query` (pencarian kode, maksimal200 karakter).
+`state`, `locationId`, `skuId`, `serial`, `from`, `until`, dan `query` (pencarian
+kode literal, maksimal200 karakter). SKU dan serial harus cocok pada baris barang
+yang sama. Serial dicocokkan tepat setelah kanonisasi, bukan pencarian awalan.
+Lokasi mencakup asal, transit, tujuan, dan tujuan penanganan selisih. Tanggal
+membatasi waktu pembuatan transfer, bukan waktu penerimaan terakhir: `from`
+inklusif, `until` eksklusif, wajib berpasangan dan maksimal366 hari. Parameter
+kosong, berulang, tidak dikenal, atau tidak valid menghasilkan400. Filter layar
+memakai tanggal lokal operator dan kembali ke halaman pertama saat diterapkan.
 Hasilnya halaman `{items,page,size,totalElements}`. Setiap item berisi
 `{transfer,references}`; bentuk `transfer` sama dengan respons operasi lama.
 `GET /transfers/{id}/details` mengembalikan bentuk yang sama untuk satu dokumen.

@@ -1,5 +1,23 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 transfer filters implemented; backend verification next
+
+Reacquisition backend corrected5dd0f46e passed5 tests/4 suites in3m36s with no
+compiler warnings; fresh portable proof saved. Owned cleanup completed. UI29tests
+plusTS/lint passed and saved ddac902a. Transfer frontend filters passed12 tests/2files
+5.27s plusTS/oxlint; existing3 transferDraft tests included in upcoming fullweb.
+Added server SKU+exact canonical serial bound to SAME document line, paired created
+from-inclusive/until-exclusive dates max366days, strict filter/history parsing.
+Scope and receiver eligibility still precede count/page. New actual mixed cable+
+serial HTTP case verifies no cross-line matching, pagination, time boundary and
+transit scope; malformed filters extended. NOT BACKEND VERIFIED YET.
+
+NEXT run transfer-filters-server.sh (List4+Contract3+Transfer1+Serial1 =9 expected),
+full warehouse web suite and build/lint; await fresh proof. Actual100/60/40 transfer
+browser @49e8a1d4 remains valid for unchanged commands; full return/RMA browser45
+is deferred until40/41 per plan. Task36 OPEN until these checks pass and finalscope
+review; then37 approvals/counts/adjustments. No migrations; remote checkpoints active.
+
 ## Task36 reacquisition UI saved;29 web checks passed, backend still running
 
 Reacquisition UI reads actual active original-WO signature, handles204 absence and

@@ -20,7 +20,8 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
 
     fun list(filter: WarehouseTransferFilter, access: WarehouseQueryAccess, receivers: Map<UUID, Boolean>): WarehousePage<WarehouseTransferView> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(filter.page, filter.size, "createdAt", "desc",
-            locationId = filter.locationId, status = filter.state?.name), access)
+            locationId = filter.locationId, status = filter.state?.name, skuId = filter.skuId, serial = filter.serial,
+            from = filter.from, until = filter.until), access)
         val rows = """SELECT candidate.* FROM transfer_candidates candidate,request,(SELECT ?::jsonb people) receiver
             WHERE jsonb_exists(receiver.people,candidate.transfer_receiver_id::text)
                 AND (candidate.destination_kind NOT IN ('TECHNICIAN','VEHICLE') OR candidate.destination_custodian=candidate.transfer_receiver_id)
@@ -28,6 +29,14 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
                 AND (request.status IS NULL OR candidate.body->>'state'=request.status)
                 AND (request.location IS NULL OR request.location IN (candidate.transfer_source_location_id,
                     candidate.transfer_transit_location_id,candidate.transfer_destination_location_id,candidate.resolution_location_id))
+                AND (request.since IS NULL OR candidate.created_at>=request.since)
+                AND (request.until IS NULL OR candidate.created_at<request.until)
+                AND ((request.sku IS NULL AND request.serial IS NULL) OR EXISTS (
+                    SELECT FROM inventory_document_line line
+                    LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=line.tenant_id AND asset.id=line.stock_identity_id
+                    WHERE line.tenant_id=request.tenant AND line.document_id=candidate.id AND line.document_revision=0
+                        AND (request.sku IS NULL OR line.sku_id=request.sku)
+                        AND (request.serial IS NULL OR asset.canonical_serial=request.serial)))
                 AND (?::text IS NULL OR position(lower(?::text) IN lower(candidate.code))>0)"""
         val result = mapper.readTree(query.result(candidates + query.page(rows, "body", "created_at"),
             mapper.writeValueAsString(receivers), filter.query, filter.query))

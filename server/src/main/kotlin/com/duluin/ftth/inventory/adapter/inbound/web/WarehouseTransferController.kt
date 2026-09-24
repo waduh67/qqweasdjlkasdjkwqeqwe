@@ -14,21 +14,8 @@ class WarehouseTransferController(private val transfers: WarehouseTransferServic
     private val discrepancies: com.duluin.ftth.inventory.application.service.WarehouseTransferDiscrepancyService,
     private val queries: InventoryTransferQueryApi) {
     @GetMapping
-    fun list(@RequestParam parameters: MultiValueMap<String, String>): WarehousePage<WarehouseTransferDetails> {
-        fun invalid(): Nothing = throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Invalid transfer filter"))
-        if (parameters.any { (key, values) -> key !in setOf("page", "size", "state", "locationId", "query") || values.size != 1 || values.single().isBlank() }) invalid()
-        fun number(key: String, default: Int): Int = parameters[key]?.single()?.let {
-            if (!it.matches(Regex("[0-9]+"))) invalid()
-            it.toIntOrNull() ?: invalid()
-        } ?: default
-        val state = parameters["state"]?.single()?.let { value -> WarehouseTransferState.entries.singleOrNull { it.name == value } ?: invalid() }
-        val location = parameters["locationId"]?.single()?.let {
-            val id = try { UUID.fromString(it) } catch (_: IllegalArgumentException) { invalid() }
-            if (!id.toString().equals(it, ignoreCase = true)) invalid()
-            id
-        }
-        return queries.list(WarehouseTransferFilter(number("page", 0), number("size", 25), state, location, parameters["query"]?.single()))
-    }
+    fun list(@RequestParam parameters: MultiValueMap<String, String>): WarehousePage<WarehouseTransferDetails> =
+        queries.list(WarehouseTransferFilters.parse(parameters))
 
     @GetMapping("/{id}/details") fun details(@PathVariable id: UUID): WarehouseTransferDetails = queries.details(id)
 
@@ -57,15 +44,8 @@ class WarehouseTransferController(private val transfers: WarehouseTransferServic
     @GetMapping("/{id}/history/page") fun historyPage(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): WarehousePage<WarehouseTransferView> =
         queries.history(id, historyPage(parameters))
 
-    private fun historyPage(parameters: MultiValueMap<String, String>): WarehousePageRequest {
-        fun invalid(): Nothing = throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Invalid transfer history page"))
-        if (parameters.any { (key, values) -> key !in setOf("page", "size") || values.size != 1 || values.single().isBlank() }) invalid()
-        fun number(key: String, default: Int) = parameters[key]?.single()?.let {
-            if (!it.matches(Regex("[0-9]+"))) invalid()
-            it.toIntOrNull() ?: invalid()
-        } ?: default
-        return WarehousePageRequest(number("page", 0), number("size", 25))
-    }
+    private fun historyPage(parameters: MultiValueMap<String, String>): WarehousePageRequest =
+        WarehouseTransferFilters.parse(parameters, history = true).let { WarehousePageRequest(it.page, it.size) }
 
     private fun response(receipt: WarehouseOperationReceipt): ResponseEntity<String> = ResponseEntity.status(receipt.originalStatus)
         .contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)

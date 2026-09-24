@@ -7,7 +7,7 @@ import { command, parameters, query } from './transport'
 
 export const TRANSFER_STATES = ['DRAFT', 'DISPATCHED', 'PART_RECEIVED', 'RECEIVED', 'DISCREPANCY'] as const
 export type TransferState = typeof TRANSFER_STATES[number]
-export interface TransferFilter { page?: number; size?: number; state?: TransferState; locationId?: string; query?: string }
+export interface TransferFilter { page?: number; size?: number; state?: TransferState; locationId?: string; skuId?: string; serial?: string; query?: string; from?: string; until?: string }
 export interface TransferDraft {
   sourceLocationId: string; destinationLocationId: string; transitLocationId: string; receiverId: string; reason: string;
   lines: { stockIdentityId: string; quantityBase: string; baseUnit: BaseUnit; sourceBalanceId: string }[];

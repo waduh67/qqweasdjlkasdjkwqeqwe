@@ -12,6 +12,7 @@ import com.duluin.ftth.network.SiteReferenceApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import java.time.Duration
 
 @Service
 @Transactional(rollbackFor = [Exception::class], timeout = 30)
@@ -21,6 +22,8 @@ class WarehouseTransferQueryService(private val cutovers: InventoryTenantCutover
     override fun list(filter: WarehouseTransferFilter): WarehousePage<WarehouseTransferDetails> {
         if (filter.page < 0 || filter.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         if (filter.query != null && (filter.query.isBlank() || filter.query.length > 200)) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        if ((filter.from == null) != (filter.until == null) || (filter.from != null && filter.until != null &&
+            (filter.from >= filter.until || Duration.between(filter.from, filter.until) > Duration.ofDays(366)))) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.view")

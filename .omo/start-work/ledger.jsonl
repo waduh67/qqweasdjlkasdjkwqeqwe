@@ -190,3 +190,4 @@
 {"at": "2026-09-24T20:08:02.555653+00:00", "task": 36, "event": "reacquisition-discovery-implemented", "result": "persisted scoped paged title request continuation and original title read; verification next; no migrations"}
 {"at": "2026-09-24T20:10:00.039358+00:00", "task": 36, "event": "reacquisition-compile-correction", "result": "Jackson3 sequence conversion fixed; failed compile contains no valid test proof; corrected run next"}
 {"at": "2026-09-24T20:12:22.335290+00:00", "task": 36, "event": "reacquisition-ui-29web-green", "result": "signed original evidence and persisted request continuation UI passed29web/TS/lint; correctedbackend5tests running; transferfilters next"}
+{"at": "2026-09-24T20:15:23.053152+00:00", "task": 36, "event": "transfer-filters-implemented-reacquisition-green", "backendSourceCommit": "5dd0f46e", "result": "reacquisition5green proof; transfer12webgreen filters; new backend mixed-line/date/scope verification next"}

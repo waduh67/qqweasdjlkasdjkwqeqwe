@@ -89,8 +89,48 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
         transferAction(stock, firstId, "dispatch", """{"expectedRevision":0}""")
         balances(stock, "0", "100000", "0")
         for (invalid in listOf("page=-1", "size=0", "size=101", "page=1.5", "page=2147483648", "state=BOGUS",
-            "state=", "state=DRAFT&state=RECEIVED", "page=0&page=1", "query=", "query=" + "a".repeat(201), "locationId=1-1-1-1-1", "extra=true"))
+            "state=", "state=DRAFT&state=RECEIVED", "page=0&page=1", "query=", "query=" + "a".repeat(201), "locationId=1-1-1-1-1", "extra=true",
+            "skuId=1-1-1-1-1", "serial=", "serial=" + "A".repeat(201), "serial=A&serial=B", "from=2026-01-01", "until=2026-01-02T00:00:00Z",
+            "from=2026-01-01T00:00:00Z&until=2026-01-01T00:00:00Z", "from=2025-01-01T00:00:00Z&until=2026-09-01T00:00:00Z"))
             assertThat(request("GET", "/api/v1/warehouse/transfers?$invalid", admin).status).describedAs(invalid).isEqualTo(400)
+    }
+
+    @Test fun `SKU and exact serial match the same line with creation dates and scopes before pagination`() {
+        val stock = transferStock()
+        val setup = stock.setup
+        val cableOnly = transfer(stock)
+        assertThat(request("PUT", "/api/v1/warehouse/skus/${setup.onu}", setup.token,
+            """{"code":"ONU","name":"ONU","tracking":"SERIAL","baseUnit":"EA","inspectionRequired":false,"expectedRevision":0}""").status).isEqualTo(200)
+        val receipt = draft(setup, """{"skuId":"${setup.onu}","quantityBase":"1","serials":[{"serial":"FILTER-SERIAL"}]}""")
+        val receiptId = receipt.path("id").asString()
+        transition(setup, receiptId, "receive", """{"expectedRevision":0}""")
+        val line = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$receiptId", setup.token).contentAsString).path("lines")[0]
+        val identity = line.path("pieces")[0].path("stockIdentityId").asString()
+        transition(setup, receiptId, "putaway", """{"expectedRevision":1,"destinationLocationId":"${setup.bin}","lines":[{
+            "lineId":"${line.path("id").asString()}","stockIdentityId":"$identity","quantityBase":"1","baseUnit":"EA"}]}""")
+        val body = transferBody(stock).replace("}]}", """},{"stockIdentityId":"$identity","quantityBase":"1","baseUnit":"EA"}]}""")
+        val mixed = create("transfers", setup.token, body)
+        val mixedId = mixed.path("id").asString()
+        assertThat(list(setup.token, "skuId=${setup.cable}&size=1").path("totalElements").asLong()).isEqualTo(2)
+        val selected = list(setup.token, "skuId=${setup.onu}&serial=%20filter-serial%20&size=1")
+        assertThat(selected.path("totalElements").asLong()).isEqualTo(1)
+        assertThat(selected.path("items").single().path("transfer").path("id").asString()).isEqualTo(mixedId)
+        assertThat(list(setup.token, "skuId=${setup.cable}&serial=FILTER-SERIAL").path("totalElements").asLong()).isZero()
+        assertThat(list(setup.token, "serial=FILTER").path("totalElements").asLong()).isZero()
+        assertThat(list(setup.token, "serial=FILTER-SERIAL&size=1&page=1").path("items").size()).isZero()
+        val micros = fixture(setup.token).transaction {
+            scalar("SELECT (extract(epoch FROM created_at)*1000000)::bigint FROM inventory_document WHERE id='$mixedId'").toLong()
+        }
+        val createdAt = java.time.Instant.ofEpochSecond(micros / 1000000, (micros % 1000000) * 1000)
+        assertThat(list(setup.token, "serial=FILTER-SERIAL&from=$createdAt&until=${createdAt.plusSeconds(1)}").path("totalElements").asLong()).isEqualTo(1)
+        assertThat(list(setup.token, "serial=FILTER-SERIAL&from=${createdAt.minusSeconds(1)}&until=$createdAt").path("totalElements").asLong()).isZero()
+        val viewer = approver(setup.token, listOf(setup.bin, stock.destination), setOf("inventory.transfer.view"))
+        assertThat(list(viewer.first, "serial=FILTER-SERIAL&size=1").path("totalElements").asLong()).isZero()
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${viewer.second}/${stock.transit}", setup.token,
+            """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+        assertThat(list(viewer.first, "serial=FILTER-SERIAL&locationId=${stock.transit}&state=DRAFT&size=1").path("totalElements").asLong()).isEqualTo(1)
+        assertThat(details(setup.token, cableOnly.path("id").asString()).path("transfer")).isEqualTo(cableOnly)
+        assertThat(details(setup.token, mixedId).path("transfer")).isEqualTo(mixed)
     }
 
     @Test fun `partial quantities and discrepancy destination stay scoped on discovery detail and history`() {

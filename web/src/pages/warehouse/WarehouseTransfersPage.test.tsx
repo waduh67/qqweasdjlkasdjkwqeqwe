@@ -36,8 +36,12 @@ it('blocks inaccessible or malformed deep links before reading warehouse data', 
   show(`/warehouse/transfers?transferId=${id.document}&transferId=${id.document}`)
   expect(screen.getByText('Alamat transfer tidak dikenal.')).toBeTruthy(); expect(fetch).not.toHaveBeenCalled()
 })
-it('pages discoverable transfers with current named locations and receiver', async () => {
+it('pages discoverable transfers and applies SKU serial location status and paired dates from page zero', async () => {
+  mocks.permissions.add('inventory.sku.view')
   const fetch = vi.fn(async (path: string) => {
+    if (path.includes('/locations?')) return response(page(transferLocations))
+    if (path.includes('/skus?')) return response(page([{ id: id.sku, code: 'ONU', name: 'ONU pelanggan', state: 'ACTIVE', revision: 0,
+      tracking: 'SERIAL', baseUnit: 'EA', category: null, model: null, allowedOwnershipModes: ['LOAN', 'SALE'], inspectionRequired: true, minimumQuantityBase: '0' }]))
     const second = path.includes('page=1'), details = transferDetailsFixture({ ...transferFixture(), code: second ? 'TR-LAST' : 'TR-FIRST' })
     return response(page([details], second ? 1 : 0, 1, 2))
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/transfers')
@@ -45,6 +49,25 @@ it('pages discoverable transfers with current named locations and receiver', asy
   expect(screen.getByText('Rak A · BIN-A → Gudang B · WH-B')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Berikutnya' }))
   await screen.findByRole('link', { name: 'TR-LAST' }); expect(fetch.mock.calls.at(-1)![0]).toContain('page=1')
+  fireEvent.click(screen.getByText('Filter transfer'))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Serial lengkap transfer' }), { target: { value: 'ONU-001' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Cari kode transfer' }), { target: { value: 'TR' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Status transfer' }), { target: { value: 'DRAFT' } })
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang pada transfer' })).not.toHaveProperty('disabled', true))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Barang pada transfer' }), { target: { value: id.sku } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi pada transfer' }), { target: { value: id.transit } })
+  fireEvent.change(screen.getByLabelText('Transfer dibuat mulai tanggal'), { target: { value: '2026-09-01' } })
+  const before = fetch.mock.calls.length
+  fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter transfer' }))
+  expect(screen.getByRole('alert').textContent).toContain('tanggal awal dan akhir')
+  expect(fetch.mock.calls).toHaveLength(before)
+  fireEvent.change(screen.getByLabelText('Transfer sampai tanggal'), { target: { value: '2026-09-25' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter transfer' }))
+  await screen.findByRole('link', { name: 'TR-FIRST' })
+  const parameters = new URLSearchParams(fetch.mock.calls.at(-1)![0].split('?')[1])
+  expect(Object.fromEntries(parameters)).toMatchObject({ page: '0', skuId: id.sku, serial: 'ONU-001', locationId: id.transit, state: 'DRAFT', query: 'TR' })
+  expect(parameters.get('from')).toBe(new Date('2026-09-01T00:00:00').toISOString())
+  expect(parameters.get('until')).toBe(new Date('2026-09-26T00:00:00').toISOString())
 })
 it('creates a reviewed draft with a real position and own recipient without reading the IAM directory', async () => {
   const created = { ...transferFixture(), receiverId: id.sender }, details = transferDetailsFixture(created)
