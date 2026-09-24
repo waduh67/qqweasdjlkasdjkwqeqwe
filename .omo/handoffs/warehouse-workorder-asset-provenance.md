@@ -1,5 +1,44 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 typed material/picking contracts checkpoint
+
+Added materialModels.ts, issueModels.ts and materials.ts using actual source DTOs.
+Plan PUT returns MaterialPlanSnapshot; submit-request returns MaterialSummary;
+warehouse owner reserve/release returns document/revision/operation/shortage ack;
+pick/unpick/dispatch returns immutable IssueSnapshot with named sender/receiver.
+Strict decimal strings and requested=unpicked+picked+issued+backorder; no received
+quantity fabricated from dispatched or still-accountable. Parent sourceIdentityId
+and resulting cut dimension.stockIdentityId remain distinct. Missing plan remains
+unplanned, nullable customer preserved, substitution keeps original named snapshot.
+Captured commands use existing retry key/body; no new permission bypass.
+Seven focused tests + awaited TypeScript exit0 + focused lint passed.
+
+Backend allocation metadata run against2671ff3a stillRUNNING at checkpoint:
+3WarehouseIssueITSerial +2WarehouseQueryITCompatibility passed; reservation
+compatibility/supplyprojection pending. `.omo/runtime/issue-metadata-fixed.log`,
+wrapper issue-metadata-server.sh archives task35/allocation-metadata-fixed. Initial
+run1f8003e7 failed only test compilation and stale copied XML must not count.
+Do not alter backend source until run completes; save portable proof afterwards.
+
+NEXT implement discoverable paged issue list under material workflow context via
+InventoryIssueApi, then request UI. Reuse WarehouseQuerySql visible_locations and
+current IAM/location/area/effective-site scope beforepaging; issue.view+request.view;
+source document lines and ALL actual issue movement destinations including receipt
+mustbe visible; substituted snapshots need override. Add header currentstate/revision
+separately from immutable sliprevision, named sender/receiver and line totals from
+actual dispatch plus SUM(material_receipt_line.accepted_base), never infer accepted.
+Do not label dispatched-minus-accepted as physical transit: issue exception/loss
+can close pending goods. Physical transit already comes stock query. List tests must
+cover paging/unpick/repick/dispatch, source/transit revocation beforecount/paging,
+substitution override revocation, tenant/read permission and partial/full receipt.
+MaterialReceiptFixture provides real100m dispatch/60m ack then40m; no mockedwrites.
+
+Existing WO selector API is paged legacy content/page/size/totalElements. Avoid
+searchOpenWorkOrders (truncatesfirst50). Reservation ownerroute is needed forwarehouse
+operators: outer workflow reserve uses WO edit-context; plan save/submit requires
+WOupdate/assign (or assignedfield). Physical picking uses lockForIssue with WOread.
+No issue list or request UI yet,task35OPEN. Continue35–48/F1–F4,goalACTIVE.
+
 ## Task35 metadata test compilation correction
 
 First metadata check at1f8003e7 failed compileTestKotlin before tests: Jackson3
