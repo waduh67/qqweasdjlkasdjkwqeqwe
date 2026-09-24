@@ -1,5 +1,37 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+##130 ten green;131 direct quarantine request is in its first validation run
+
+130 is APPLIED AND IMMUTABLE, SHA256 `77379d190d8291dd7303f06fb4c19693e863b28a9653ba0faa6b8a25f079311b`.
+The renewal run passed10 tests in3 suites,0 failures/errors/skips,2m47s:
+6 RMA guards including scope restoration/new permit and competing distinct permits,
+3 signed acceptance/key/history cases and full independently approved RMA ->
+removal/inspection/new-customer normal reissue. Archive
+`task26/rma-authorization-renewal-green/xml`.129 earlier passed4/2/0/0/0,2m30s.
+
+Source now includes InventoryReturnReacquisitionApi POST returns/{id}/reacquisition,
+strict input, current WO/return/asset/scope locks, canonical replay and a separate
+RETURN_TITLE draft request.131 captures real CUSTOMER quarantine position,
+original closed assignment/accepted handover and signature evidence, then seals
+source/request/document binding. No stock/title posting is enabled in131. The
+full direct-return test previously proved404 after a genuine recovered SALE.
+
+Current `.omo/runtime/return-title-request-green.sh`, matching log and archive
+`task26/return-title-request-green/xml`, runs that full case plus ModularityTests.
+Compilation and first131 apply/status are pending. It should next expose missing
+approval owner/policy dispatch; those and the approved posting/return revision
+transition are NOT IMPLEMENTED. Read current logs before editing131; after any
+successful apply it is immutable. No132 declared or created.
+
+Needed next: implement RETURN_TITLE approval owner and policy exclusions from
+requester/receiver/original handover/removal actors; approved CUSTOMER->ISP posting
+must remain in QUARANTINE at the same custody/condition, append linked return
+revision/operation without editing closed assignment, and require reset inspection
+before availability. Adapt return inspection to view.legalOwner and strict return
+history validator through explicit approved-title step. Keep one physical posting
+and preserve current source/approval/cutover/replay fences. Then vendor replacement,
+packaged proof and remaining plan.26 stays OPEN.
+
 ##128/129 title continuity; focused runs and missing direct-return route
 
 rma-reacquisition-green completed17 tests/5 suites/2 failures/0 errors/skips,4m29s.

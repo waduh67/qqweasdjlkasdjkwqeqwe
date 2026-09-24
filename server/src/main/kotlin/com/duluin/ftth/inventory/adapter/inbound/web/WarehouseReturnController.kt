@@ -9,7 +9,7 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/warehouse/returns")
 class WarehouseReturnController(private val returns: InventoryReturnApi, private val repairs: InventoryReturnRepairApi,
-    private val rma: InventoryCustomerRmaApi) {
+    private val rma: InventoryCustomerRmaApi, private val titles: InventoryReturnReacquisitionApi) {
     @PostMapping
     fun receive(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(returns.receive(WarehouseReceiptJson.decode(body, WarehouseReturnIntake::class.java), WarehouseMutationMetadata(key)))
@@ -29,6 +29,10 @@ class WarehouseReturnController(private val returns: InventoryReturnApi, private
     @PostMapping("/{id}/rma-handover")
     fun rmaHandover(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(rma.dispatch(id, WarehouseReceiptJson.decode(body, CustomerRmaDispatch::class.java), WarehouseMutationMetadata(key)))
+
+    @PostMapping("/{id}/reacquisition")
+    fun reacquisition(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<ReturnReacquisitionRef> =
+        ResponseEntity.status(201).body(titles.request(id, WarehouseReceiptJson.decode(body, ReturnReacquisitionInput::class.java), WarehouseMutationMetadata(key)))
 
     @GetMapping("/{id}") fun get(@PathVariable id: UUID): WarehouseReturnView = returns.get(id)
     @GetMapping("/{id}/history") fun history(@PathVariable id: UUID,

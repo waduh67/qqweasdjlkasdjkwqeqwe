@@ -110,6 +110,23 @@ continued tersebut; sumber title/removal/assignment historis tetap terikat utuh.
 Tambahkan probe app-role perubahan title tanpa posting.127/128 sudah applied dan
 immutable; koreksi wajib melalui129.
 
+`V175_130__warehouse_rma_consumption_once.sql` dicadangkan sebelum pembuatan.
+Probe pemulihan scope membuat izin lama STALE_AUTHORITY secara benar, tetapi mint
+baru dengan key baru ditolak IDEMPOTENCY_CONFLICT oleh batas unik handover pada
+execution. Pindahkan batas sekali ke konsumsi yang terikat hasil immutable, dengan
+tabel mapping handover/result yang diisi dari hasil nyata yang sudah ada. Mint
+baru tetap memvalidasi custody dan authority saat ini. Hasil konsumsi tetap unik
+per handover; jangan menambah kolom pada execution/result yang disegel acceptance.
+Seluruh migrasi sampai129 sudah applied dan immutable.
+
+`V175_131__warehouse_return_reacquisition_request.sql` dicadangkan sebelum pembuatan
+untuk dokumen pengajuan alih title perangkat CUSTOMER yang benar-benar diterima di
+karantina. Capture mengikat retur/removal/assignment lama, posisi saat ini, bukti
+tanda tangan, canonical request dan dokumen draft; tidak memindahkan stok/title.
+Keputusan approval dan posting alih title menjadi langkah berikutnya, dengan
+validator yang tetap menolak efek sebelum ikatan approval lengkap tersedia.
+130 sudah applied dan10 tes RMA lulus; seluruh migrasi sampai130 immutable.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada

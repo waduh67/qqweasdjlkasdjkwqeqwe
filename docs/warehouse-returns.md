@@ -124,11 +124,39 @@ serial, pelanggan, asal fisik dan title ditentukan server. Barang CUSTOMER tidak
 menjadi stok ISP yang tersedia. Assignment dan episode ONU lama tetap utuh;
 pemasangan kembali membuat episode baru untuk pelanggan asal.
 
+Perubahan akses membuat izin lama tidak berlaku (`STALE_AUTHORITY`). Setelah
+akses yang diperlukan dipulihkan, teknisi meminta izin baru dengan kunci baru;
+sumber dan custody diperiksa kembali. Satu handover tetap hanya dapat menghasilkan
+satu pemasangan, termasuk jika beberapa izin berbeda mencoba dipakai bersamaan.
+
+## Alih kepemilikan setelah pemasangan RMA
+
+RMA yang sudah dipasang dan ditandatangani tetap memakai `ownershipMode: SALE`,
+`legalOwner: CUSTOMER`, assignment revision1 dan titleRevision0. Bila pelanggan
+secara eksplisit menyerahkan kepemilikannya kepada ISP, ajukan dokumen melalui
+`POST /api/v1/warehouse/asset-title-corrections` dengan assignment dan handover
+RMA tersebut, `expectedAssignmentRevision: 1`, `expectedTitleRevision: 0`,
+`targetOwner: ISP`, alasan dan ID bukti tanda tangan. Dokumen kemudian diajukan ke
+approval melalui `/api/v1/warehouse/approvals/request`; keputusan memakai
+`/api/v1/warehouse/approvals/decide` dan pemeriksa independen sesuai kebijakan
+`TITLE_REACQUISITION`. Pemohon dan pihak terkait tidak dapat menyetujui sendiri.
+
+Approval menghasilkan titleRevision1 dan assignment revision2. Perangkat masih
+terpasang di pelanggan. Bila hendak dipakai pelanggan lain, lanjutkan penarikan
+melalui WO DISMANTLE, penerimaan gudang ke karantina, inspeksi dan reset. Hanya
+setelah kondisi serviceable dan title ISP terbukti, perangkat dapat masuk BIN
+tersedia dan melewati issue/penerimaan teknisi biasa untuk pemasangan baru.
+Penjualan, penarikan dan episode lama tetap tersimpan; replay approval tidak
+menambah posting.
+
+Pembelian kembali langsung ketika barang sudah berada di karantina sedang
+dikerjakan melalui alur retur tersendiri.
+
 ## Status pengembangan
 
 Intake, inspeksi, servis perangkat yang sama, pembacaan berpaginasi, penutupan
 material serta pemasangan kembali RMA telah memiliki bukti integrasi PostgreSQL.
-Serah terima bertanda tangan RMA menjaga pemilik CUSTOMER dan titleRevision0;
-regresi konkurensi lintas pemasangan masih dalam validasi.
-Penggantian fisik oleh vendor, reacquisition dengan approval independen,
-panduan UI dan bukti packaged HTTP masih menjadi pekerjaan task26/lanjutan.
+Serah terima bertanda tangan RMA menjaga pemilik CUSTOMER dan titleRevision0.
+Regresi serah terima paralel dan alih kepemilikan RMA sampai reissue telah lolos.
+Penggantian fisik oleh vendor, reacquisition langsung dari karantina, panduan UI
+dan bukti packaged HTTP masih menjadi pekerjaan task26/lanjutan.

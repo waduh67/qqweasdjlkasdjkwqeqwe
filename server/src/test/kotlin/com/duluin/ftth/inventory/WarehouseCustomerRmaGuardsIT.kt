@@ -8,6 +8,41 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class WarehouseCustomerRmaGuardsIT : WarehouseCustomerRmaFixture() {
+    @Test fun `distinct RMA authorizations still permit only one physical handover consumption`() {
+        val case = prepareRma()
+        val outbound = dispatchRma(case)
+        receiveRma(case, outbound)
+        val permits = List(2) { index ->
+            val result = request("POST", "/api/work-orders/${case.work}/assets/authorize", case.receipt.receiver.first,
+                case.authorization, "rma-candidate-$index")
+            assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(200)
+            mapper.readTree(result.contentAsString).path("authorizationId").asString()
+        }
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val responses = Executors.newFixedThreadPool(2).use { pool ->
+            val futures = permits.mapIndexed { index, id ->
+                pool.submit<org.springframework.mock.web.MockHttpServletResponse> {
+                    ready.countDown()
+                    check(start.await(20, TimeUnit.SECONDS))
+                    request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first,
+                        """{"authorizationId":"$id","expectedRevision":0,"topology":null}""", "rma-candidate-install-$index")
+                }
+            }
+            check(ready.await(20, TimeUnit.SECONDS))
+            start.countDown()
+            futures.map { it.get(30, TimeUnit.SECONDS) }
+        }
+        assertThat(responses.map { it.status }).withFailMessage(responses.joinToString("\n") { it.contentAsString })
+            .containsExactlyInAnyOrder(201, 409)
+        fixture(case.repair.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_rma_consumption WHERE handover_id='${outbound.path("id").asString()}'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_deployment_result WHERE authorization_id IN ('${permits[0]}','${permits[1]}')")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment WHERE asset_id='${case.repair.asset}' AND ended_at IS NULL")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM onu WHERE asset_id='${case.repair.asset}'")).isEqualTo("2")
+        }
+    }
+
     @Test fun `RMA authorization needs acknowledged custody and install rechecks customer and current scopes`() {
         val case = prepareRma()
         val outbound = dispatchRma(case)
