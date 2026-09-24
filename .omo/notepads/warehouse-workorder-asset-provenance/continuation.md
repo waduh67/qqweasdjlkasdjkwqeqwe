@@ -1,5 +1,31 @@
 # Whole-plan continuation
 
+## Task36 return workbench checkpoint — 11 backend and 17 web tests passed
+
+Return discovery backend @d1395e7b passed 11 tests / 7 suites in 4m56s. Fresh
+portable return-discovery-verification.json saved; owned cleanup completed and
+volumes retained. Scope, source eligibility, no double receipt, LOAN/SALE,
+6-revision repair history and persisted RMA continuation were verified.
+
+New typed return/source/repair/replacement/reacquisition/RMA contracts plus exact
+intake/inspection/repair builders. Return page now has scoped named list and
+filters (including paired dates), source lookup, intake, measured whole remnant,
+serial/reset inspection, same-serial vendor dispatch/receipt, ownership warning,
+old inspection vs post-repair reset warning, history and permission reasons.
+Actual writes capture one body/key, then reload GET;409 reload discards old form.
+Existing handoverId disables duplicate warehouse inspection.17 affected web tests
+(9 page /4 API /4 helper) passed3.66s; TypeScript and focused oxlint exit0.
+No real return browser claim; task36 transfer browser remains verified @49e8a1d4.
+
+NEXT implement supplier replacement receipt form and persisted continuation list,
+customer RMA dispatch/actual handover read and signed-evidence reacquisition link
+flow. These APIs exist but page actions are not built yet. RMA needs original
+customer context and named eligible repair WO/technician selection, not free UUID.
+Check source document customerId metadata and public work-order/evidence reads.
+Task37 approval request/decision deep links still to build. Transfer C8 list
+SKU/serial/date filters remain to review before marking36complete. Task36 OPEN;
+whole36–48/F1–F4 continues, no migrations changed. No active QA processes.
+
 ## Task36 return discovery implemented; backend verification next
 
 Added separate named /returns/workbench and /{id}/details, eligible /sources,
