@@ -1,5 +1,31 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Applied123 verified; RMA handover implementation pending validation
+
+V175.123 is APPLIED AND IMMUTABLE, SHA256 `fb47bf2fd2c6bf6c13fb1bac13addccacf5ad20628c609f8bbd619dbad6f1dde`.
+The corrected run passed79 tests in16 suites, zero failures/errors/skips,3m56s:
+serial LOAN/SALE once-only usage, omitted-close-history rejection and full material
+lifecycle/rework/return closure. Archive task26/material-obligation-green-second/xml.
+
+RMA custody baseline failed1/1 at missing rma-handover route404 AFTER a real SALE,
+removal, warehouse recovery, supplier round trip and reset inspection. Archive
+task26/rma-handover-red/xml,1m18s, zero errors/skips. Its main/test compilation
+completed before new sources were copied from private staging; baseline ran123.
+
+Current source adds dedicated CUSTOMER RMA handover: closed inspected repair,
+original customer/assignment, assigned REPAIR WO, independent warehouse sender,
+physical dispatch to transit and technician acknowledgement, unchanged title.
+Inventory calls a workorder-owned validation port. Reads retain access to closed
+WO history; commands/replays require current WO revision/assignment and scopes.
+Declared124 captures origin, seals exact requests/legs/outbox and immutable
+custody history. No regular ISSUE or ISP availability is created. Installation
+permit/reinstall, vendor replacement and approved reacquisition remain unfinished.
+
+Run `.omo/runtime/rma-handover-green.sh`, matching log, archive
+`task26/rma-handover-green/xml`: custody case, supplier LOAN/SALE and ModularityTests.
+Compilation/result/first124 application are pending; inspect before editing SQL.
+Do not edit any successfully applied migration. Task26 and remaining plan open.
+
 ## Material obligation correction — verification pending
 
 V175.122 passed76 tests in14 suites (zero failures/errors/skips). New serial and

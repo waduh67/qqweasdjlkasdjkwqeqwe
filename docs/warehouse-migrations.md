@@ -66,6 +66,12 @@ sekali dari hasil deployment APPLIED yang terikat issue; handover title tidak
 menambah penggunaan. Snapshot lifecycle baru wajib memuat tepat seluruh kunci
 sumber material saat transaksi ditutup.175.122 sudah diterapkan dan immutable.
 
+`V175_124__warehouse_customer_rma_handover.sql` dicadangkan sebelum pembuatan
+untuk serah terima perangkat CUSTOMER dari servis yang sudah diinspeksi kepada
+teknisi WO REPAIR pelanggan asal. Dokumen dan penerimaan dua pihak terikat
+sumber, serial, revisi dan posting fisik; tidak membuat issue stok ISP atau
+memindahkan title. Izin pemasangan kembali ditambahkan sesudah jalur ini.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada
