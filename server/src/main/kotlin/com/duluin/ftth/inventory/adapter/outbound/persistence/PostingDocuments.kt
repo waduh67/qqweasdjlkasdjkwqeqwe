@@ -151,6 +151,7 @@ internal class PostingDocuments(private val sql: PostingSql) {
             MovementKind.TITLE_CORRECTION -> WarehouseEventKind.TITLE_REACQUIRED
             MovementKind.COUNT_VARIANCE -> WarehouseEventKind.COUNT_POSTED
             MovementKind.LOSS, MovementKind.SCRAP -> WarehouseEventKind.DISPOSED
+            MovementKind.REVERSAL -> WarehouseEventKind.DISPOSITION_REVERSED
             else -> if(command.splits.isNotEmpty()) WarehouseEventKind.SEGMENT_SPLIT else WarehouseEventKind.DISPATCHED
         }
         val supplied = command.events

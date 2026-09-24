@@ -1,5 +1,38 @@
 # Task28 — independent loss, scrap and compensation (in progress)
 
+## Task28 compensation effect checkpoint — 141 authored, validation pending
+
+Published base27ec2709 compensation-request actually executed5 tests/2 suites,
+2 failures,0 errors/skips,1m59s. Both LOSS/SCRAP compensation draft201 and exact
+replay succeeded; both stopped at approval/request because owner was missing.
+140 applied22:10:14.007 JKT and is IMMUTABLE:
+ebbc1297ff12996825eac5601ec7367b282e8f564b25eacd9eaaa35343f0fd4e.
+
+This checkpoint adds WarehouseCompensationAdmission/Owner/EffectStore. It maps
+DISPOSITION_REVERSAL to ADJUSTMENT policy, binds the compensation snapshot into
+approval source, rechecks original source/current sink/WO/material/asset revisions,
+and posts one REVERSAL linked to originalPostingId. A matching single
+DISPOSITION_REVERSED outbox event is wired in PostingDocuments and approval event
+lookup. The nonphysical warehouse.return.restore step advances only return history
+back to RECEIVED_IN_INSPECTION/QUARANTINE. Old posting stays POSTED1; no original
+ledger rewrite. Generic rework requires a fresh compensation request.
+
+141 was reserved BEFORE creation. It captures approved live source, enforces one
+compensation per original movement, exact paired legs/approval/operation/outbox and
+return transition, and routes old/new row changes through deferred guards. It
+extends140 DRAFT lifecycle and existing return validators forward. Existing139
+settled-return calculation already excludes restored Q until fresh accepted
+inspection. Current ledger guard allows later legitimate reinspection/reuse.
+
+Current .omo/runtime/compensation-effect.sh / .log selects WarehouseCompensationIT
+(2 full reversal/reinspection journeys) and ModularityTests (3). Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-effect/xml;
+DB log compensation-effect-database.log. No141 successful apply or test result
+claimed yet; check logs before modifying SQL. Never edit140 or older applied SQL.
+Next add closed-before/after-request, competing/rejected/duplicate corrections,
+revoked scopes, raw SQL bypass, rebuild and reused installed asset rejection.
+Task28/whole-plan goal remain active; vendor/outstanding loss scope still open.
+
 ## Task28 compensation draft implementation checkpoint — validation pending
 
 The published20-green initial return-disposition evidence is adb4ca79 (product

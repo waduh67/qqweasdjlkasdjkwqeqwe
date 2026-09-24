@@ -1,5 +1,7 @@
 # Migrasi dan lingkungan QA warehouse
 
+`V175_141__warehouse_disposition_compensation_effect.sql` dicadangkan sebelum pembuatan untuk approval ADJUSTMENT pada sumber DISPOSITION_REVERSAL, posting REVERSAL yang terhubung, dan pemulihan retur ke karantina.140 telah diterapkan22:10:14.007 JKT, immutable: `ebbc1297ff12996825eac5601ec7367b282e8f564b25eacd9eaaa35343f0fd4e`.
+
 `V175_140__warehouse_disposition_compensation_request.sql` dicadangkan sebelum pembuatan untuk draft koreksi yang menunjuk posting loss/scrap asli, stok sink terkini, dan kewajiban material yang belum ditutup. Efek approval akan diperluas dengan migrasi berikutnya.
 
 V175.139 applied21:49:43.056 JKT, immutable: `a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489`. Runtime corrections must use140 or later.

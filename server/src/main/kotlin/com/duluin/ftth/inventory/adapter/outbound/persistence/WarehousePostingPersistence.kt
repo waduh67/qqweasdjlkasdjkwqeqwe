@@ -27,6 +27,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
                 ApprovalPostingKind.COUNT -> com.duluin.ftth.inventory.domain.model.MovementKind.COUNT_VARIANCE
                 ApprovalPostingKind.LOSS -> com.duluin.ftth.inventory.domain.model.MovementKind.LOSS
                 ApprovalPostingKind.SCRAP -> com.duluin.ftth.inventory.domain.model.MovementKind.SCRAP
+                ApprovalPostingKind.DISPOSITION_REVERSAL -> com.duluin.ftth.inventory.domain.model.MovementKind.REVERSAL
             }
             require(command.kind == expectedKind && command.splits.isEmpty() && command.reservations.isEmpty())
             stock.lockBalances(command, command.operation.recordedAt)

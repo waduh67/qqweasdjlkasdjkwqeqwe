@@ -144,7 +144,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (final) {
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
                 record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash,
-                when (source.kind) { "TITLE_CORRECTION", "RETURN_TITLE" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; "COUNT" -> "COUNT_VARIANCE"; "LOSS", "SCRAP" -> source.kind; else -> "RECEIVE" }, 200, result, current.fence.epoch)
+                when (source.kind) { "TITLE_CORRECTION", "RETURN_TITLE" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; "COUNT" -> "COUNT_VARIANCE"; "LOSS", "SCRAP" -> source.kind; "DISPOSITION_REVERSAL" -> "DISPOSITION_REVERSED"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
             owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
@@ -177,7 +177,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             "Create a new return title request with current evidence"))
         if (store.isReplacement(record.snapshot.evaluation.sourceDocumentId)) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new supplier replacement request with current evidence"))
-        if (source.kind in setOf("LOSS", "SCRAP")) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
+        if (source.kind in setOf("LOSS", "SCRAP", "DISPOSITION_REVERSAL")) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new disposition request with current evidence"))
         if (source.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         store.reworkDisposition(record.snapshot.evaluation.sourceDocumentId, source.revision, false)

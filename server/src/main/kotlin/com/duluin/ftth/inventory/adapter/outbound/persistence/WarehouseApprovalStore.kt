@@ -31,6 +31,8 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
                 (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN document.kind='RETURN_TITLE' THEN jsonb_build_object('returnTitle',
                 (SELECT snapshot::jsonb FROM inventory_return_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
+            || CASE WHEN document.kind='DISPOSITION_REVERSAL' THEN jsonb_build_object('compensation',
+                (SELECT request.snapshot::jsonb FROM inventory_compensation_request request WHERE request.tenant_id=document.tenant_id AND request.id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN document.kind IN ('LOSS','SCRAP') THEN jsonb_build_object('disposition',
                 (SELECT snapshot::jsonb FROM inventory_disposition_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN EXISTS(SELECT FROM inventory_repair_replacement_request WHERE tenant_id=document.tenant_id AND receipt_id=document.id)
@@ -123,7 +125,7 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision, operation, body, event)
     }
     fun event(operation: UUID): UUID = jdbc.execute { sql ->
-        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','RETURN_RECEIVED','COUNT_POSTED','DISPOSED')", sql.tenant, operation) { it.uuid("id") }.single()
+        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','RETURN_RECEIVED','COUNT_POSTED','DISPOSED','DISPOSITION_REVERSED')", sql.tenant, operation) { it.uuid("id") }.single()
     }
     fun candidates(): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_approval WHERE tenant_id=? AND evaluation_snapshot IS NOT NULL ORDER BY requested_at DESC,id", sql.tenant) { it.uuid("id") }
