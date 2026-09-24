@@ -1,3 +1,27 @@
+## Task40 handover verified; task41 customer asset workbench IN PROGRESS
+
+Handover production workflow at4e877146 validated. Last ten-test run had8 related
+regressions PASS plus PartiesIT1PASS/1FAIL; failure was test accounting baseline taken
+before a deliberate master-location update (which legitimately records an operation).
+Baseline moved after that update; fresh PartiesIT2 PASS / BUILD SUCCESSFUL2m12s.
+No production fix required. Full web291/58 PASS89.48s, TypeScript/build/new-product lint
+PASS. Safe proof task40/material-handover-verification.json records both runs honestly.
+Owned cleanup completed, volumes retained.39/40 stay OPEN for41 asset links; actual
+mobile touch/keyboard browser45. No migration beyond148;149 next free,177/178 reserved43.
+
+CURRENT task41 uncommitted backend read work: public CustomerAssetReadApi/customer
+owner scope check and episode metadata; WorkOrderAssetWorkbenchApi own assigned jobs
+with actual revisions and signature references; InventoryAssetWorkbenchApi named eligible
+acknowledged SERIAL sources/current bounded customer assignment history. Coordinator
+/api/customers/{id}/assets/workbench root,history,jobs,job,sources and direct references.
+CustomerAssetWorkbenchIT4 and existing CustomerAssetReplacementIT queued/running via
+.omo/runtime/customer-asset-workbench-server.sh/log; archive task41/customer-asset-workbench.
+These new reads are NOT verified yet. Inspect compile/runtime failures before claiming.
+Next41: typed frontend API, CustomerAssetPanel in existing customer blade, actual canonical
+install/replace/remove/accept/relocate controls, discovered inbox eligible source, safe portal
+presentation, tests and links from WO/Material Saya. Then42-48/F1-F4. Goal remains ACTIVE.
+Continue coherent commits/pushes to origin feat/warehouse-workorder; no merge/deployment.
+
 ## Task40 handover recovery checkpoint — final backend verification PENDING
 
 Three-party handover UI implemented: current named scoped dispatcher sources/targets on

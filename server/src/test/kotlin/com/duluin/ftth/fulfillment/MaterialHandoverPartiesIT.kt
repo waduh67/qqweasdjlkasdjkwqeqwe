@@ -26,12 +26,13 @@ class MaterialHandoverPartiesIT : MaterialLifecycleFixture() {
         val p = parties()
         val receipt = p.case.usage.receipt
         val input = p.input.copy(expectedSenderId = UUID.fromString(receipt.receiver.second), expectedReceiverId = UUID.fromString(p.receiver.second))
-        val before = usageAccounting(p.case.usage)
         val changed = request("PUT", "/api/v1/warehouse/locations/${p.target}", receipt.stock.token,
             mapper.writeValueAsString(mapOf("expectedRevision" to 0, "code" to "PARTY_FIELD", "name" to "Changed receiver custody", "kind" to "TECHNICIAN",
                 "areaId" to area(receipt.stock.token), "custodianId" to p.other.second)))
         assertThat(changed.status).withFailMessage(changed.contentAsString).isEqualTo(200)
         assertThat(summary(receipt.stock.token, receipt.workOrder).path("revisions").path("workOrderRevision").asLong()).isEqualTo(input.workOrderRevision)
+        // The deliberate master edit records its own operation; only the rejected commands must be inert.
+        val before = usageAccounting(p.case.usage)
         val endpoint = "/api/work-orders/${receipt.workOrder}/materials/handover/authorize"
         val stale = request("POST", endpoint, receipt.stock.token, mapper.writeValueAsString(input), "reviewed-parties")
         assertThat(stale.status).withFailMessage(stale.contentAsString).isEqualTo(409)
