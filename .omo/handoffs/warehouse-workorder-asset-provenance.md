@@ -1,5 +1,28 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task28 COMPLETE —183 affected regression tests green
+
+asset-loss-regression against c09c6da9 completed183 tests/11 suites with zero
+failures/errors/skips in13m20s. Replacement48, ownership72, episode revisions30,
+returned dispositions17, compensation12, actual returned-device reuse1 and
+modularity3 all passed. Owned QA stopped cleanly with volumes retained. Portable
+sanitized evidence: task28/existing-flow-regression-verification.json.
+
+Together with30 disposition/compensation guards,6 compensated-asset reuse cases
+and15 active-loan-loss/guard cases already verified, task28 acceptance is satisfied:
+approved document-bound exact quantities; immutable original costs/evidence;
+independent policy approvals; loss of a live ISP loan closes the existing episode
+without fake recovery; customer-owned SALE property is denied; exact original
+posting linkage for correction; closed/reused/installed downstream state cannot
+be casually reversed. Plan task28 is now checked. Compensation remains scoped to
+returned LOSS/SCRAP, as documented; arbitrary ledger rewrites are not exposed.
+All migrations through147 remain immutable;148 next unused, reserve before use.
+
+Whole plan remains ACTIVE. Task30 initial report foundation4414f9b6 is pushed;
+its7-case reports-initial QA is now running, NOT yet green. See task-30 notes.
+30–48 and F1–F4 remain. Continue autonomously with commits, remote checkpoints,
+sanitized evidence and recovery notes. No main merge/deploy/reset.
+
 ## Task30 report foundation checkpoint — NOT yet verified
 
 Task28 existing-flow regression still runs against c09c6da9 in
