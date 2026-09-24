@@ -2,6 +2,11 @@
 
 ## Current integration checkpoint: 2026-09-24
 
+- Latest substep: integration `675d5007` is published; fresh combined regression
+  has booted all migrations and is running. New `qa.sh wave5` packaged HTTP proof
+  and shared replenishment lifecycle are syntax-checked WIP pending execution.
+  See the first section of `continuation.md` for the exact next step.
+
 - Resume from remote `feat/warehouse-workorder`, local continuation branch
   `work/warehouse-completion` in `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe`.
   Task29's separately verified checkpoint remains `work/warehouse-task29` at

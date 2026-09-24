@@ -1,5 +1,31 @@
 # Whole-plan continuation
 
+## Current step — packaged acceptance harness
+
+- Integration checkpoint `675d5007` was pushed to `feat/warehouse-workorder`.
+  The fresh combined regression is running against a newly generated owned
+  environment; it has passed migration boot and is executing approval tests.
+  No final combined test count/result is claimed yet.
+- Added `qa.sh wave5`: clean packaged JAR, two real HTTP JVMs, public signup,
+  actual IAM/area/master/receipt/putaway setup, partial transfer plus approved
+  discrepancy, blind serial/bulk counts, independent variance, real transfer
+  invalidating count approval, recount and original-response replay after restart.
+  This harness is syntax-checked WIP and has not yet run. Its stock setup uses
+  public HTTP only, with no SQL seeds or mocked business services.
+- Reused the existing bounded HTTP helper and owned packaged-process lifecycle
+  between replenishment and wave5. Rerun both modes after the combined regression
+  finishes, preserving failure logs and correcting any reproduced problems.
+- Source inspection initially suspected serial counts were excluded, but receipt
+  admission actually creates a `SERIAL` inventory_segment with the asset's ID.
+  No product fix was justified by that suspicion; the new HTTP scenario verifies
+  unchanged serialized counts explicitly. A mixed AVAILABLE/LOST bulk identity
+  may expose ambiguous transfer source selection; the new real flow tests it.
+- Exact next commands inside one outer-lock/up/stop/down lifecycle:
+  `scripts/warehouse/qa.sh wave5` and `scripts/warehouse/qa.sh replenishment`.
+  `.omo/runtime/integration-verify.sh` is the current host-local regression wrapper;
+  its ignored log is `.omo/runtime/integration-first.log`. Restore the portable
+  command list below if the private wrapper is unavailable after recovery.
+
 ## Recovery position — 2026-09-24 integration checkpoint
 
 - Remote recovery branch: `feat/warehouse-workorder`. Local working branch:
