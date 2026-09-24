@@ -7,6 +7,7 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAcce
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryPersistence
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseAssetQueries
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseLotQueries
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseShortageQuery
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseQueryFilter
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.network.SiteReferenceApi
@@ -17,7 +18,7 @@ import java.util.UUID
 @Service
 class WarehouseQueryService(private val authority: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
     private val sites: SiteReferenceApi, private val store: WarehouseQueryPersistence,
-    private val assets: WarehouseAssetQueries, private val lots: WarehouseLotQueries) {
+    private val assets: WarehouseAssetQueries, private val lots: WarehouseLotQueries, private val shortages: WarehouseShortageQuery) {
     @Transactional(timeout = 20)
     fun legacyStock(): String = store.legacyStock(access())
 
@@ -34,6 +35,12 @@ class WarehouseQueryService(private val authority: CurrentAuthorityApi, private 
 
     @Transactional(timeout = 20)
     fun stock(parameters: Map<String, List<String>>): String = store.stock(WarehouseQueryFilter.parse(parameters, allowBucket = true), access())
+
+    @Transactional(timeout = 20)
+    fun shortages(parameters: Map<String, List<String>>): String {
+        if (parameters.keys.any { it !in setOf("page", "size", "skuId", "locationId") }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        return shortages.list(WarehouseQueryFilter.parse(parameters), access())
+    }
 
     @Transactional(timeout = 20)
     fun positions(parameters: Map<String, List<String>>, id: UUID? = null): String = store.positions(WarehouseQueryFilter.parse(parameters, allowBucket = true), access(), id)

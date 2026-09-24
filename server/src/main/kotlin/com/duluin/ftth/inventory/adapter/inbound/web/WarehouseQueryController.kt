@@ -35,6 +35,9 @@ class WarehouseQueryController(private val queries: WarehouseQueryService) {
     @GetMapping("/stock")
     fun stock(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.stock(parameters))
 
+    @GetMapping("/stock/shortages")
+    fun shortages(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.shortages(parameters))
+
     @GetMapping("/stock/positions")
     fun positions(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.positions(parameters))
 

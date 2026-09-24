@@ -1,3 +1,13 @@
+## Task38 overview shortage query checkpoint — verification pending
+
+Added GET /stock/shortages for inventory.item.view: active SKU minimum compared with
+current admitted available stock inside current visible locations, including zero-stock
+SKUs. Positive shortages filter in SQL before totals/pages; no costs or legacy quantity
+projection. Only page/size/SKU/location filters allowed to avoid misleading partial
+status/date comparisons. Two new HTTP tests cover exact MM, zero-stock EA, pagination,
+current authority, empty scopes/foreign tenants and strict filters. UI overview next.
+Reports and replenishment checkpoints verified; whole38 remains open.
+
 ## Task38 replenishment verified; overview next
 
 Replenishment backend d874d2d0:12tests/4suites PASS2m13s, including new2 workbench
