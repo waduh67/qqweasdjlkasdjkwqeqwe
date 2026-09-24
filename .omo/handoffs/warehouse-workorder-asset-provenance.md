@@ -1,5 +1,35 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+##125 applied — original-customer RMA installation passed, shared run pending
+
+V175.125 is APPLIED AND IMMUTABLE, SHA256 `61ce87ff20a7fcf0fc5eafc85c6618223a781074a853f6d0939b51d98eb5c00a`.
+Read-only owner query during this run returned175.124|t and175.125|t. Normal
+main/test compilation passed. Core WarehouseCustomerRmaDeploymentIT PASSED:
+real acknowledged repair reinstalls the same physical asset for original customer,
+CUSTOMER title retained, null issue, two historical assignments/ONU episodes,
+one active episode, zero ISP availability and exact install replay.
+
+RmaDeploymentSource is explicit; no fake material receipt/plan/issue IDs. Common
+execution stores nullable receipt/plan ONLY for sealed RMA handover source, with
+captured CUSTOMER asset/original assignment/SKU. Shared deployment result/document,
+physical posting and episode validators remain in force. Inventory routes RMA
+intent/consume to a dedicated service; WO owner validates REPAIR and current
+assigned technician. Common mint/consumption/document writers are reused.
+
+Current `.omo/runtime/rma-deployment-green.sh` and matching log/archive
+`task26/rma-deployment-green/xml` still running custody guards and replacement
+regressions. NOTE selector '*CustomerDeploymentIT*' matches no current class;
+do not claim generic deployment coverage from that selector. Correct class names
+are CustomerDeploymentFinalStateIT/ForwardFixIT/StrictInputIT/RootInputIT/
+TwoCustomerIT/UpgradeIT, plus CustomerWarehouseProvenanceIT. Run appropriate
+shared source/graph cases after the remaining RMA compatibility changes.
+
+Next probes/fixes: signed customer handover for already-CUSTOMER RMA must be
+non-posting (existing handover source loader assumes normal issue and PSB);
+normal/RMA mint-key collisions and public assignment-history source decoding.
+These are source-audit follow-ups, not yet reproduced tests. Then vendor
+replacement, approved reacquisition and full packaged proof.26 remains open.
+
 ## Applied124 verified; RMA installation baseline and custody guards running
 
 V175.124 is APPLIED AND IMMUTABLE, SHA256 `2c246b66a003534f27816277606f95447fb5d16de3f4efa0db5831bba246b2d2`.

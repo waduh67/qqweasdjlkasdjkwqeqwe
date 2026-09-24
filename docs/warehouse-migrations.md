@@ -72,6 +72,13 @@ teknisi WO REPAIR pelanggan asal. Dokumen dan penerimaan dua pihak terikat
 sumber, serial, revisi dan posting fisik; tidak membuat issue stok ISP atau
 memindahkan title. Izin pemasangan kembali ditambahkan sesudah jalur ini.
 
+`V175_125__warehouse_customer_rma_deployment.sql` dicadangkan sebelum pembuatan
+untuk izin pemasangan kembali yang bersumber dari handover RMA yang sudah
+diterima teknisi. Sumber eksplisit tidak memakai issue/receipt/plan material
+buatan; snapshot CUSTOMER dan assignment asal terikat. Guard deployment umum,
+posting, title dan episode ONU tetap berlaku dengan cabang RMA yang dibuktikan.
+Seluruh migrasi sampai175.124 sudah diterapkan dan immutable.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada

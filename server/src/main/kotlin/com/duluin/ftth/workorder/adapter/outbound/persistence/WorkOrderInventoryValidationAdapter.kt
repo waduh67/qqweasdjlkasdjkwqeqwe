@@ -31,7 +31,8 @@ class WorkOrderInventoryValidationAdapter(private val entityManager: EntityManag
         val workType = when (binding.purpose) {
             DeploymentPurpose.INSTALL -> "PSB"
             DeploymentPurpose.REPLACE -> "MIGRATION"
-            DeploymentPurpose.REMOVE, DeploymentPurpose.RETURN_CUSTOMER_RMA -> fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            DeploymentPurpose.RETURN_CUSTOMER_RMA -> "REPAIR"
+            DeploymentPurpose.REMOVE -> fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         }
         entityManager.unwrap(Session::class.java).doWork { connection ->
             connection.prepareStatement("SELECT customer_id,area_id,type,status,warehouse_revision FROM work_order WHERE tenant_id=? AND id=? FOR UPDATE").use { query ->

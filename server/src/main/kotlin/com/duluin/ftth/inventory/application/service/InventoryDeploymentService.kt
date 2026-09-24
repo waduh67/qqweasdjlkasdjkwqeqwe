@@ -24,10 +24,12 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     private val operations: WarehouseOperationStore, private val handovers: AssetHandoverService,
     private val deliveryAuthority: com.duluin.ftth.iam.DeliveryAuthorityApi,
     private val currentUser: com.duluin.ftth.common.security.CurrentUserProvider,
-    private val transactionManager: org.springframework.transaction.PlatformTransactionManager) : InventoryDeploymentApi {
+    private val transactionManager: org.springframework.transaction.PlatformTransactionManager,
+    private val rma: RmaDeploymentService) : InventoryDeploymentApi {
     private val mapper = jacksonObjectMapper()
 
     override fun authorize(workOrderId: UUID, request: DeploymentIntentRequest, metadata: WarehouseMutationMetadata): DeploymentAuthorizationRef {
+        if (request.purpose == DeploymentPurpose.RETURN_CUSTOMER_RMA) return rma.authorize(workOrderId, request, metadata)
         key(metadata)
         if (request.expectedRevision < 0 || request.repairCaseId != null)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
@@ -68,7 +70,8 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
     }
 
     override fun consume(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
-        consumePurpose(request, metadata, DeploymentPurpose.INSTALL)
+        if (store.isCustomerRma(request.authorizationId)) rma.consume(request, metadata)
+        else consumePurpose(request, metadata, DeploymentPurpose.INSTALL)
 
     override fun consumeDiscovered(request: ConsumeDeploymentRequest, metadata: WarehouseMutationMetadata): DeploymentConsumption =
         consumePurpose(request, metadata, DeploymentPurpose.INSTALL, true)

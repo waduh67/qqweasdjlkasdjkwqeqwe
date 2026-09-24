@@ -11,6 +11,10 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
     private val totals: MaterialPhysicalTotalsStore) {
     private val mapper = jacksonObjectMapper()
 
+    fun isCustomerRma(id: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("SELECT purpose FROM inventory_deployment_authorization WHERE tenant_id=? AND id=?", sql.tenant, id) == "RETURN_CUSTOMER_RMA"
+    }
+
     fun assignmentRevisions(ids: Set<UUID>): Map<UUID, Long> = jdbc.execute { sql ->
         ids.chunked(1000).flatMap { chunk ->
             sql.query("SELECT id,revision FROM inventory_asset_assignment WHERE tenant_id=? AND id IN (${chunk.joinToString(",") { "?" }})",
@@ -103,9 +107,7 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
         preview(id)
     }
 
-    fun mint(mint: DeploymentMint) = jdbc.execute { sql ->
-        val binding = mint.permit.binding
-        val source = mint.permit.source
+    fun mintAuthorization(binding: DeploymentBinding) = jdbc.execute { sql ->
         sql.update("""INSERT INTO inventory_deployment_authorization(id,tenant_id,asset_id,issue_line_id,work_order_id,customer_id,
             actor_id,purpose,ownership_mode,operation_id,expected_asset_revision,expected_work_order_revision,expected_plan_revision,
             expected_issue_revision,authority_epoch,cutover_epoch,previous_assignment_id,expected_assignment_revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
@@ -113,6 +115,13 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
             binding.actorId, binding.purpose, binding.ownershipMode, binding.operationId, binding.assetRevision,
             binding.revisions.workOrderRevision, binding.revisions.planRevision, binding.issueRevision, binding.authorityEpoch, binding.cutoverEpoch,
             binding.previousAssignmentId, binding.previousAssignmentRevision)
+        Unit
+    }
+
+    fun mint(mint: DeploymentMint) = jdbc.execute { sql ->
+        val binding = mint.permit.binding
+        val source = mint.permit.source
+        mintAuthorization(binding)
         sql.update("""INSERT INTO inventory_deployment_execution(tenant_id,authorization_id,receipt_id,receipt_revision,use_revision,
             plan_id,mint_key,mint_hash,binding,source) VALUES (?,?,?,?,?,?,?,?,?,?)""", sql.tenant, binding.authorizationId,
             source.receiptId, source.receiptRevision, binding.revisions.useRevision, source.planId, mint.key, mint.hash,
@@ -127,8 +136,9 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
 
-    fun consume(permit: DeploymentPermit, result: DeploymentResult) = jdbc.execute { sql ->
-        val binding = permit.binding
+    fun consume(permit: DeploymentPermit, result: DeploymentResult) = recordConsumption(permit.binding, result)
+
+    fun recordConsumption(binding: DeploymentBinding, result: DeploymentResult) = jdbc.execute { sql ->
         val operation = binding.operationId
         sql.update("""UPDATE inventory_deployment_authorization SET consumed=true,consumed_at=clock_timestamp(),revision=revision+1
             WHERE tenant_id=? AND id=? AND NOT consumed""", sql.tenant, binding.authorizationId).also {
