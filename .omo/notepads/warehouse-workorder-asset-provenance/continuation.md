@@ -1,5 +1,33 @@
 # Whole-plan continuation
 
+## Task28 approval event and asset coverage checkpoint — regression running
+
+Published base0daab7e3 preserves applied139 (SHAa9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489).
+The disposition-costed run executed5 tests/2 suites,2 failures,0 errors/skips,
+2m12s. Costed draft and independent approval request passed; requester self-decide
+returned403 as expected. Both actual checker decisions reached posting but the
+transaction rolled back before commit: WarehouseApprovalStore.event selected only
+older event kinds and threw NoSuchElementException for DISPOSED. Added that exact
+event to its lookup; no SQL changes and no fallback success.
+
+Added4 actual serialized-device cases: LOAN LOSS/SCRAP retain closed assignment
+history and survive balance rebuild; SALE LOSS/SCRAP must reject customer-title
+writeoff without creating a request. Shared serial receipt fixture now also uses
+the optional actual-cost hook, default unknown for all prior fixture users.
+
+Current .omo/runtime/disposition-guards.sh / .log runs WarehouseDisposition*IT,
+WarehouseReturnSettlementIT, WarehouseReturnITIntegrity, WarehouseApprovalITDelegation,
+WarehouseApprovalITExpiry and ModularityTests. Archive task28/disposition-guards/xml;
+database log disposition-guards-database.log. Results pending; do not claim a
+committed loss/scrap effect until this run proves it.13 new guard/asset cases are
+included with the2 full residual settlement cases and affected regressions.
+
+Next complete missing compensation as a NEW linked approved movement restoring
+only quarantine, with a source-bound return transition and open/closed obligation
+checks. Do not duplicate ADJUSTMENT owner (transfer discrepancy owns that kind).
+Active/reused/consumed downstream state must reject implicit rollback. Vendor and
+other outstanding loss paths remain to assess before task28 can be marked done.
+
 ## Task28 source-cost checkpoint — 139 applied, posting validation pending
 
 139 is now APPLIED and IMMUTABLE. SHA256:

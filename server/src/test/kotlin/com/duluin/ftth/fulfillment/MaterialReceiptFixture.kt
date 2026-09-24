@@ -21,7 +21,8 @@ abstract class MaterialReceiptFixture : WarehouseIssueFixture() {
             assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
                 """{"expectedRevision":0,"code":"ONU","name":"ONU","category":"ONU","tracking":"SERIAL","baseUnit":"EA","inspectionRequired":false,"allowedOwnershipModes":${if (loanOnly) "[\"LOAN\"]" else "[\"LOAN\",\"SALE\"]"}}""").status).isEqualTo(200)
             val receipt = draft(stock, mapper.writeValueAsString(mapOf("skuId" to stock.onu, "quantityBase" to "2",
-                "serials" to serials.map { mapOf("serial" to it) }))).path("id").asString()
+                "serials" to serials.map { mapOf("serial" to it) }) + (stockReceiptCost()?.let { mapOf("cost" to it) } ?: emptyMap())))
+                .path("id").asString()
             transition(stock, receipt, "receive", """{"expectedRevision":0}""")
             val received = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$receipt", stock.token).contentAsString)
             val pieces = received.path("lines").asSequence().flatMap { line -> line.path("pieces").asSequence().map { piece ->

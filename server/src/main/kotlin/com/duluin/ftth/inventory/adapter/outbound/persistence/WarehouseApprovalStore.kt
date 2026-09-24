@@ -123,7 +123,7 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision, operation, body, event)
     }
     fun event(operation: UUID): UUID = jdbc.execute { sql ->
-        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','RETURN_RECEIVED','COUNT_POSTED')", sql.tenant, operation) { it.uuid("id") }.single()
+        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','RETURN_RECEIVED','COUNT_POSTED','DISPOSED')", sql.tenant, operation) { it.uuid("id") }.single()
     }
     fun candidates(): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_approval WHERE tenant_id=? AND evaluation_snapshot IS NOT NULL ORDER BY requested_at DESC,id", sql.tenant) { it.uuid("id") }
