@@ -1,5 +1,32 @@
 # Task28 — independent loss, scrap and compensation (in progress)
 
+## Task28 source-cost checkpoint — 139 applied, posting validation pending
+
+139 is now APPLIED and IMMUTABLE. SHA256:
+a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489.
+The first effect run failed42601 from ERaRCODE at SQL187 (4 tests,1 failure,
+1m7s); Flyway rolled back21:46:37.717 JKT. The next run failed the guarded
+return terminal-state anchor:117 had inserted DRAFT handling (4 tests,1 failure);
+Flyway rolled back21:48:04.973 JKT. Both fixes preceded139's FIRST successful
+application at21:49:43.056 JKT. Never edit139 or earlier applied migrations again.
+
+The disposition-ledger run executed5 tests/2 suites,2 failures,0 errors/skips,
+1m53s. Both real LOSS and SCRAP request201/replay paths passed. Approval request
+correctly returned COST_BASIS_REQUIRED because the shared material fixture had
+no receipt cost. No physical disposition has passed yet;3 modularity tests passed.
+
+Added a shared fixture cost hook (default unknown preserves prior behavior),
+WarehouseDispositionFixture with declared actual source receipt cost, and9 new
+behavioral guards: unknown cost, bad quantities, changed inspection, rejection
+and fresh request, competing approvals, requester delegation, revoked scope,
+scoped paging and posted MM rewrite/rebuild. Guards are authored, not yet run.
+
+Current validation .omo/runtime/disposition-costed.sh / .log selects the2 full
+LOSS/SCRAP settlement cases plus3 modularity checks. Archive task28/disposition-costed/xml.
+After it passes run WarehouseDispositionGuardsIT and affected return/approval
+regressions; add forward migration140 if runtime invariants need correction.
+Compensation, returned asset loss/scrap and remaining task28 acceptance still open.
+
 ## Task28 approved physical effect checkpoint — validation running
 
 Supersedes the older draft-only status below. Published base7944bb50 includes

@@ -35,10 +35,15 @@ abstract class MaterialWorkflowFixture : WarehouseReceiptHttpFixture() {
         assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(200)
         return mapper.readTree(result.contentAsString)
     }
+    protected open fun stockReceiptCost(): Map<String, String>? = null
     protected fun receiveStock(setup: Setup, amount: String = "60000") {
         assertThat(request("PUT", "/api/v1/warehouse/skus/${setup.cable}", setup.token,
             """{"expectedRevision":0,"code":"CABLE","name":"Cable","tracking":"LOT","baseUnit":"MM","inspectionRequired":false}""").status).isEqualTo(200)
-        val id = draft(setup, """{"skuId":"${setup.cable}","quantityBase":"$amount","lotCode":"MATERIAL"}""").path("id").asString()
+        val source = buildMap<String, Any> {
+            put("skuId", setup.cable); put("quantityBase", amount); put("lotCode", "MATERIAL")
+            stockReceiptCost()?.let { put("cost", it) }
+        }
+        val id = draft(setup, mapper.writeValueAsString(source)).path("id").asString()
         transition(setup, id, "receive", """{"expectedRevision":0}""")
         val line = mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$id", setup.token).contentAsString).path("lines")[0]
         transition(setup, id, "putaway", """{"expectedRevision":1,"destinationLocationId":"${setup.bin}","lines":[{"lineId":"${line.path("id").asString()}",

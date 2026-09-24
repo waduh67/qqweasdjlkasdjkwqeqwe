@@ -1,5 +1,7 @@
 # Migrasi dan lingkungan QA warehouse
 
+V175.139 applied21:49:43.056 JKT, immutable: `a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489`. Runtime corrections must use140 or later.
+
 Baseline `ebf98fdf270b30ac30b7a01b1f609b39e8414618` memiliki 169 migrasi,
 versi maksimum `V172__evidence_retention_claim_state.sql`. Celah V56-V58
 adalah riwayat, bukan slot bebas. Manifest ini dibekukan untuk branch

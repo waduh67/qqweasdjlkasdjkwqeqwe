@@ -1,38 +1,19 @@
 package com.duluin.ftth.inventory
 
-import com.duluin.ftth.fulfillment.MaterialLifecycleFixture
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
-class WarehouseDispositionIT : MaterialLifecycleFixture() {
-    @Test fun `independently approved scrap settles only the damaged returned remnant and keeps its physical audit`() {
-        val case = residualCase()
+class WarehouseDispositionIT : WarehouseDispositionFixture() {
+    @ParameterizedTest
+    @ValueSource(strings = ["SCRAP", "LOSS"])
+    fun `independently approved disposal settles only the returned remnant and keeps its physical audit`(action: String) {
+        val prepared = dispositionCase(WarehouseDispositionAction.valueOf(action))
+        val case = prepared.residual
         val receipt = case.usage.receipt
-        val admin = receipt.stock.token
-        val residual = dispatchedResidual(case)
-        assertThat(acknowledgeResidual(case, residual).status).isEqualTo(200)
-        val intake = request("POST", "/api/v1/warehouse/returns", admin,
-            """{"origin":"MATERIAL_RESIDUAL","sourceDocumentId":"$residual","quarantineLocationId":"${case.input.targetLocationId}","evidenceReference":"damaged-remnant-intake"}""")
-        assertThat(intake.status).withFailMessage(intake.contentAsString).isEqualTo(201)
-        val returned = mapper.readTree(intake.contentAsString)
-        val returnId = returned.path("id").asString()
-        val identity = returned.path("stockIdentityId").asString()
-        val inspected = request("POST", "/api/v1/warehouse/returns/$returnId/inspect", admin,
-            """{"expectedRevision":0,"measuredQuantityBase":"17500","condition":"DAMAGED","destinationLocationId":"${case.input.targetLocationId}","evidenceReference":"damaged-remnant-inspection","resetConfirmed":false}""")
-        assertThat(inspected.status).withFailMessage(inspected.contentAsString).isEqualTo(200)
-        val sink = create("locations", admin, """{"code":"SCRAP_SINK","name":"Approved scrap","kind":"DISPOSED"}""").path("id").asString()
-        val checker = user(admin, setOf("inventory.approval.view", "inventory.approval.decide"))
-        val principal = mapper.readTree(request("GET", "/api/users/${checker.second}", admin).contentAsString)
-        assertThat(request("PUT", "/api/users/${checker.second}/access", admin, mapper.writeValueAsString(mapOf(
-            "roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(admin))))).status).isEqualTo(200)
-        for (location in listOf(case.input.targetLocationId.toString(), sink)) {
-            assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${checker.second}/$location", admin,
-                """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
-        }
-        val policy = request("PUT", "/api/v1/warehouse/settings/policy", admin,
-            """{"expectedRevision":0,"currency":"IDR","expiryHours":24,"warehouseIds":["${case.input.targetLocationId}","$sink"],"rules":[{"operation":"SCRAP","tiers":[{"minimumMinor":"1","userIds":["${checker.second}"],"roleIds":[]}]}]}""")
-        assertThat(policy.status).withFailMessage(policy.contentAsString).isEqualTo(200)
-        val body = """{"sourceDocumentId":"$returnId","expectedRevision":1,"stockIdentityId":"$identity","quantityBase":"17500","baseUnit":"MM","destinationLocationId":"$sink","action":"SCRAP","reason":"Measured remnant is irreparably damaged","evidenceReference":"signed-scrap-assessment"}"""
+        val admin = prepared.token
+        val checker = prepared.checker
+        val body = mapper.writeValueAsString(prepared.input)
         val draft = request("POST", "/api/v1/warehouse/dispositions", admin, body, "scrap-remnant")
         assertThat(draft.status).withFailMessage(draft.contentAsString).isEqualTo(201)
         assertThat(request("POST", "/api/v1/warehouse/dispositions", admin, body, "scrap-remnant").contentAsString).isEqualTo(draft.contentAsString)
@@ -62,8 +43,8 @@ class WarehouseDispositionIT : MaterialLifecycleFixture() {
             assertThat(scalar("SELECT count(*) FROM inventory_movement")).isEqualTo(movements)
             assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE status='AVAILABLE'")).isEqualTo("900000")
             assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE status='CONSUMED'")).isEqualTo("82500")
-            assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE status='DISPOSED' AND condition='SCRAP'")).isEqualTo("17500")
-            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='SCRAP'")).isEqualTo("1")
+            assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE status='${if (action == "LOSS") "LOST" else "DISPOSED"}' AND condition='${if (action == "LOSS") "DAMAGED" else "SCRAP"}'")).isEqualTo("17500")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='$action'")).isEqualTo("1")
         }
     }
 }

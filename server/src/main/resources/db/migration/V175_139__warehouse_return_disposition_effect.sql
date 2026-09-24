@@ -195,7 +195,7 @@ BEGIN
     IF effect.request_id IS NULL OR effect.return_id<>target
         OR previous IS DISTINCT FROM request.snapshot::jsonb#>'{returned,view}'
         OR snapshot IS DISTINCT FROM operation.original_body::jsonb THEN
-        RAISE EXCEPTION 'DISPOSITION_RETURN_HISTORY_REQUIRED' USING ERaRCODE='23514'; END IF;
+        RAISE EXCEPTION 'DISPOSITION_RETURN_HISTORY_REQUIRED' USING ERRCODE='23514'; END IF;
     PERFORM warehouse_assert_disposition_effect(scope,effect.request_id);
 END $function$;
 
@@ -213,10 +213,10 @@ BEGIN
             previous:=snapshot; expected_revision:=expected_revision+1; CONTINUE;
         END IF;
         IF expected_revision=0 THEN$body$);
-        anchor:='CASE WHEN snapshot->>''state''=''ACCEPTED'' THEN ''ACCEPTED''';
+        anchor:='WHEN snapshot->>''state''=''ACCEPTED'' THEN ''ACCEPTED''';
         IF position(anchor IN definition)=0 THEN RAISE EXCEPTION 'return terminal state changed'; END IF;
         EXECUTE replace(definition,anchor,
-            'CASE WHEN snapshot->>''state'' IN (''SCRAP'',''LOST'') THEN snapshot->>''state'' WHEN snapshot->>''state''=''ACCEPTED'' THEN ''ACCEPTED''');
+            'WHEN snapshot->>''state'' IN (''SCRAP'',''LOST'') THEN snapshot->>''state'' WHEN snapshot->>''state''=''ACCEPTED'' THEN ''ACCEPTED''');
     END LOOP;
     definition:=pg_get_functiondef('warehouse_assert_disposition_request(uuid,uuid)'::regprocedure);
     anchor:='OR document.state<>''DRAFT'' OR document.revision<>0 OR document.approval_disposition IS NOT NULL';
