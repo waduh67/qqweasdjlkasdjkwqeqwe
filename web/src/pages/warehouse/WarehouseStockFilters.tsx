@@ -14,7 +14,7 @@ const buckets = { AVAILABLE: 'Tersedia', RESERVED: 'Dipesan', PICKED: 'Disiapkan
 // Archived masters can still identify historical stock; filtering must include them.
 const stockSkus = (search: string, page: number) => listSkus({ search, page })
 const stockLocations = (search: string, page: number) => listLocations({ search, page })
-type Props = { filter: PositionFilter; buckets: boolean; onApply: (values: Record<string, string>) => void }
+type Props = { filter: PositionFilter; buckets: boolean; history?: boolean; label?: string; onApply: (values: Record<string, string>) => void }
 export function WarehouseStockFilters(props: Props) {
   const { can } = useCan()
   const loader = useCallback(async () => {
@@ -25,14 +25,14 @@ export function WarehouseStockFilters(props: Props) {
     return { sku, location }
   }, [props.filter.skuId, props.filter.locationId, can])
   const result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Filter stok</summary><WarehouseState {...result}>{data => <StockFilterForm {...props} initialSku={data.sku} initialLocation={data.location} />}</WarehouseState></details>
+  return <details className="card"><summary>{props.label ?? 'Filter stok'}</summary><WarehouseState {...result}>{data => <StockFilterForm {...props} initialSku={data.sku} initialLocation={data.location} />}</WarehouseState></details>
 }
-function StockFilterForm({ filter, buckets: showBuckets, onApply, initialSku, initialLocation }: Props & { initialSku: WarehouseSku | null; initialLocation: WarehouseLocation | null }) {
+function StockFilterForm({ filter, buckets: showBuckets, history, onApply, initialSku, initialLocation }: Props & { initialSku: WarehouseSku | null; initialLocation: WarehouseLocation | null }) {
   const { can } = useCan()
   const [sku, setSku] = useState(initialSku), [location, setLocation] = useState(initialLocation)
   const [serial, setSerial] = useState(filter.serial ?? ''), [bucket, setBucket] = useState(filter.bucket ?? '')
   const [condition, setCondition] = useState(filter.condition ?? ''), [owner, setOwner] = useState(filter.owner ?? '')
-  const [sort, setSort] = useState(filter.sort ?? 'name'), [direction, setDirection] = useState(filter.direction ?? 'asc')
+  const [sort, setSort] = useState(filter.sort ?? (history ? 'createdAt' : 'name')), [direction, setDirection] = useState(filter.direction ?? 'asc')
   function submit(event: FormEvent) {
     event.preventDefault()
     onApply({ skuId: sku?.id ?? (!can('inventory.sku.view') ? filter.skuId ?? '' : ''), locationId: location?.id ?? (!can('inventory.location.view') ? filter.locationId ?? '' : ''),
@@ -46,7 +46,7 @@ function StockFilterForm({ filter, buckets: showBuckets, onApply, initialSku, in
       {showBuckets && <SelectField label="Kelompok stok" value={bucket} onChange={(_, data) => setBucket(data.value as typeof bucket)}><option value="">Semua stok</option>{STOCK_BUCKETS.map(value => <option key={value} value={value}>{buckets[value]}</option>)}</SelectField>}
       <SelectField label="Kondisi" value={condition} onChange={(_, data) => setCondition(data.value)}><option value="">Semua kondisi</option>{CONDITIONS.map(value => <option key={value} value={value}>{({ SERVICEABLE: 'Layak pakai', QUARANTINE: 'Karantina', DAMAGED: 'Rusak', SCRAP: 'Tidak dapat dipakai' })[value]}</option>)}</SelectField>
       <SelectField label="Kepemilikan" value={owner} onChange={(_, data) => setOwner(data.value)}><option value="">Semua pemilik</option>{LEGAL_OWNERS.map(value => <option key={value} value={value}>{({ ISP: 'Milik ISP', CUSTOMER: 'Milik pelanggan', UNKNOWN: 'Belum diketahui' })[value]}</option>)}</SelectField>
-      <SelectField label="Urutkan stok" value={sort} onChange={(_, data) => setSort(data.value as typeof sort)}><option value="name">Nama</option><option value="createdAt">Tanggal</option><option value="id">Referensi</option></SelectField>
+      <SelectField label="Urutkan stok" value={sort} onChange={(_, data) => setSort(data.value as typeof sort)}>{!history && <option value="name">Nama</option>}<option value="createdAt">Tanggal</option><option value="id">Referensi</option></SelectField>
       <SelectField label="Arah urutan" value={direction} onChange={(_, data) => setDirection(data.value as typeof direction)}><option value="asc">Naik / terlama</option><option value="desc">Turun / terbaru</option></SelectField>
     </div><Button type="submit" variant="primary">Terapkan filter</Button>
   </form>

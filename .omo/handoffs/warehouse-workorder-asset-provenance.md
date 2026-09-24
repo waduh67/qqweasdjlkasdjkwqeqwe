@@ -1,3 +1,17 @@
+## Task38 reports UI checkpoint
+
+Reports page now supports all nine scoped report kinds, named SKU/location and WO
+filters, bounded server pages, paired date range, exact signed ledger/cost values,
+unknown cost totals distinct from zero, CSV all-filter export (server max1000), and
+revision-bound receipt/issue/return print preview with fresh authority read before print.
+Cost/provenance/report gates run before fetch; report-only users need no master reads.
+Blob URLs and temporary print portal cleaned on close/navigation. Existing route wired.
+18web tests/3files PASS4.64s (reportAPI4/reportUI6/stockUI8), TypeScript PASS.
+Oxlint initial two refresh warnings extracted constants into reportPresentation.ts;
+final lint next. No backend changes. Run existing ReportIT4/PrivacyIT2/ExportIT1 next
+against owned PostgreSQL, then save portable proof. Whole38 still OPEN:
+overview/replenishment/settings history-delegation remain; then39–48/F1–F4.
+
 ## Task37 COMPLETE; task38 operational screens next
 
 Actual discrepancy browser at product c155856b / fixture 2b6ff32f / run a51dfd4a:

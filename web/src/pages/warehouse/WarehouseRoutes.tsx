@@ -20,6 +20,7 @@ import { WarehouseReturnsPage } from './WarehouseReturnsPage'
 import { WarehouseCountsPage } from './WarehouseCountsPage'
 import { WarehouseApprovalsPage } from './WarehouseApprovalsPage'
 import { WarehouseSettingsPage } from './WarehouseSettingsPage'
+import { WarehouseReportsPage } from './WarehouseReportsPage'
 
 function WarehouseGate({ permissions, children }: { permissions: readonly string[]; children: ReactNode }) {
   const { can } = useCan()
@@ -30,7 +31,7 @@ export function WarehouseRoutes() {
   return <Routes>
     <Route index element={<WarehouseGate permissions={WAREHOUSE_VIEW_PERMISSIONS}><WarehouseHome /></WarehouseGate>} />
     {WAREHOUSE_PAGES.map(page => <Route key={page.path} path={page.path} element={<WarehouseGate permissions={page.permissions}>
-      {page.path === 'catalog' ? <WarehouseCatalogPage /> : page.path === 'receipts' ? <WarehouseReceiptsPage /> : page.path === 'approvals' ? <WarehouseApprovalsPage /> : page.path === 'stock' ? <WarehouseStockPage /> : page.path === 'requests' ? <WarehouseRequestsPage /> : page.path === 'transfers' ? <WarehouseTransfersPage /> : page.path === 'returns' ? <WarehouseReturnsPage /> : page.path === 'counts' ? <WarehouseCountsPage /> : page.path === 'settings' ? <WarehouseSettingsPage /> : <WarehouseUnavailable />}
+      {page.path === 'catalog' ? <WarehouseCatalogPage /> : page.path === 'receipts' ? <WarehouseReceiptsPage /> : page.path === 'approvals' ? <WarehouseApprovalsPage /> : page.path === 'stock' ? <WarehouseStockPage /> : page.path === 'requests' ? <WarehouseRequestsPage /> : page.path === 'transfers' ? <WarehouseTransfersPage /> : page.path === 'returns' ? <WarehouseReturnsPage /> : page.path === 'counts' ? <WarehouseCountsPage /> : page.path === 'settings' ? <WarehouseSettingsPage /> : page.path === 'reports' ? <WarehouseReportsPage /> : <WarehouseUnavailable />}
     </WarehouseGate>} />)}
     <Route path="*" element={<WarehouseUnavailable />} />
   </Routes>
