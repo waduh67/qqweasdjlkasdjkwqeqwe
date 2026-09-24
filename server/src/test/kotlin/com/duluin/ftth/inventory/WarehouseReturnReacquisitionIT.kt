@@ -50,7 +50,7 @@ class WarehouseReturnReacquisitionIT : WarehouseReturnAssetFixture() {
         val reader = user(admin, setOf("inventory.return.view", "inventory.approval.view"))
         val readerPrincipal = mapper.readTree(request("GET", "/api/users/${reader.second}", admin).contentAsString)
         assertThat(request("PUT", "/api/users/${reader.second}/access", admin, mapper.writeValueAsString(mapOf(
-            "roleIds" to readerPrincipal.path("roleIds").map { it.asString() }, "areaIds" to listOf(area(admin))))).status).isEqualTo(200)
+            "roleIds" to readerPrincipal.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(admin))))).status).isEqualTo(200)
         assertThat(request("GET", listPath, reader.first).status).isEqualTo(404)
         assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${reader.second}/${returned.quarantine}", admin,
             """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)

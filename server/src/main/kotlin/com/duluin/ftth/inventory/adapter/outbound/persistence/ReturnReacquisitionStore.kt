@@ -24,12 +24,12 @@ class ReturnReacquisitionStore(private val jdbc: WarehouseCommandJdbc) {
                 AND (title.snapshot::jsonb->'returned'->'view'->'repair'->>'repairLocationId' IS NULL OR
                     (title.snapshot::jsonb->'returned'->'view'->'repair'->>'repairLocationId')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE'))"""
         val result = mapper.readTree(query.result(query.page(rows, "body", "created_at"), id))
-        val items = result.path("items").map { item ->
+        val items = result.path("items").asSequence().map { item ->
             val record = mapper.treeToValue(item.path("snapshot"), ReturnTitleRecord::class.java)
             ReturnReacquisitionEntry(record.id, record.returned.view.id, 0, record.code, record.returned.view.revision,
                 record.request.reason, record.request.titleTransferReference, record.signature.id, record.recordedAt,
                 item.path("appliedReturnRevision").takeUnless { it.isNull }?.asLong())
-        }
+        }.toList()
         WarehousePage(items, page.page, page.size, result.path("totalElements").asLong())
     }
 

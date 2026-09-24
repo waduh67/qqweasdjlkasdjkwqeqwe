@@ -1,5 +1,14 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 reacquisition discovery compile correction
+
+First verification @8cec4ee8 failed compile: Jackson3 JsonNode.map resolves its
+own transformation overload. Replaced with explicit asSequence().map().toList()
+in paged result and test role extraction. No tests from this failed run count as
+proof (copied XML can be stale). NEXT reacquisition-discovery-corrected run with
+fresh archive,5 tests/4 suites expected. Frontend form/evidence implementation is
+uncommitted, TS and focused oxlint passed; behavior tests next. Task36 OPEN.
+
 ## Task36 persisted reacquisition discovery implemented; verification next
 
 Added bounded /returns/{id}/reacquisition-requests with current return/approval
