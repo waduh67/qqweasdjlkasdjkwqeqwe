@@ -137,6 +137,9 @@ validasi ulang bytes. Bukti lama tetap dapat diunduh, tetapi tidak dapat dipilih
 untuk inspeksi intake baru. Daftar dikunci bersama dokumen dan memakai izin/scope
 receipt terkini; tidak menampilkan storage key, hash intake, atau URL publik.
 Snapshot receipt juga menyertakan nama source/inspection dari intake tersimpan.
+`costVisible` membedakan rincian biaya yang boleh dibaca dari biaya yang disembunyikan;
+response mutasi selalu false. Editor draft memuat GET terbaru dan membutuhkan true
+sebelum mengganti draft lengkap agar biaya tersembunyi tidak terhapus sebagai null.
 
 Response unggah hanya metadata, bukan key, secret atau URL publik. Download memakai attachment
 disposition, no-store dan nosniff. Setelah rollback atau completion UNKNOWN,

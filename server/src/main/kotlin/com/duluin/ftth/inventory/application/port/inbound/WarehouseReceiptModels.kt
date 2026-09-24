@@ -44,7 +44,7 @@ data class ReceiptLineView(val id: UUID, val inputLineNumber: Int, val skuId: UU
 data class ReceiptView(val id: UUID, val revision: Long, val state: WarehouseReceiptState, val createdAt: Instant,
     val supplierId: UUID, val supplierName: String, val externalReference: String,
     val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>, val inspections: List<ReceiptInspectionView>,
-    val sourceLocationName: String, val inspectionLocationName: String)
+    val sourceLocationName: String, val inspectionLocationName: String, val costVisible: Boolean)
 data class ReceiptInspectionView(val id: UUID, val lineId: UUID, val acceptedBase: String, val rejectedBase: String,
     val baseUnit: WarehouseBaseUnit, val evidenceId: UUID, val reason: String, val disposition: String, val operationId: UUID)
 data class ReceiptHistory(val operationId: UUID, val revision: Long, val action: String, val recordedAt: Instant)

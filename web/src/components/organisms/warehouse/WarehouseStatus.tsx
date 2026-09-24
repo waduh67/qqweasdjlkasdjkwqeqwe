@@ -9,6 +9,7 @@ const states: Record<string, [string, Tone]> = {
   PENDING: ['Menunggu persetujuan', 'warning'], APPROVED: ['Disetujui', 'good'], REJECTED: ['Ditolak', 'serious'],
   REWORK_REQUIRED: ['Perlu diperbaiki', 'warning'], EXPIRED: ['Kedaluwarsa', 'serious'], STALE: ['Sumber berubah', 'serious'],
   POSTED: ['Dibukukan', 'good'], PARTIAL: ['Sebagian selesai', 'warning'], COMPLETED: ['Selesai', 'good'],
+  RECEIVED_IN_INSPECTION: ['Diterima — dalam pemeriksaan', 'warning'], PUTAWAY: ['Selesai ditempatkan', 'good'], CLOSED: ['Ditutup', 'neutral'], ACCEPTED: ['Lolos pemeriksaan', 'good'], SUPPLIER_RETURN: ['Untuk retur pemasok', 'serious'],
   SERVICEABLE: ['Layak pakai', 'good'], DAMAGED: ['Rusak', 'serious'], SCRAP: ['Tidak dapat dipakai', 'critical'],
   UNKNOWN: ['Belum diketahui', 'warning'], LEGACY_UNRESOLVED: ['Asal belum diverifikasi', 'warning'],
   ISP: ['Milik ISP', 'accent'], CUSTOMER: ['Milik pelanggan', 'neutral'], LOAN: ['Pinjaman', 'accent'], SALE: ['Penjualan', 'neutral'],

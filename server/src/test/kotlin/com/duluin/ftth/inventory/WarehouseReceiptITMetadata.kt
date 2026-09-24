@@ -14,6 +14,8 @@ class WarehouseReceiptITMetadata : WarehouseReceiptHttpFixture() {
         val id = original.path("id").asString()
         assertThat(original.path("sourceLocationName").asString()).isEqualTo("Boundary")
         assertThat(original.path("inspectionLocationName").asString()).isEqualTo("Inspection")
+        assertThat(original.path("costVisible").asBoolean()).isFalse()
+        assertThat(mapper.readTree(request("GET", "/api/v1/warehouse/receipts/$id", setup.token).contentAsString).path("costVisible").asBoolean()).isTrue()
         val path = "/api/v1/warehouse/receipts/$id/attachments"
         fun upload(revision: Int): String {
             val response = mvc.perform(multipart(path).file(MockMultipartFile("file", "proof.pdf", "application/pdf", ReceiptEvidenceFixtures.pdf()))

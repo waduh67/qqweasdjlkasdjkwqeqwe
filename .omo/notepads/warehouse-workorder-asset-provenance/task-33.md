@@ -1,5 +1,30 @@
 # Task33 preparation — not yet implemented
 
+## Task33 receipt UI implemented —85 unit tests; real browser pending
+
+Task32 complete atf9d95a9a. Task33 now routes to actual receipt list/draft/detail,
+receive, inspection, partial putaway, private evidence upload/download/pages and
+history/reference save. Named selectors; explicit source setup preset; bulk serial
+and scanner Enter (never stock submission); exact quantities; original grouped
+serial cost/conversion preserved on edit. Full draft replacement requires server
+costVisible plus cost.view so hidden costs cannot become null. Receipts can still
+be received/inspected by operators without cost access. Fresh GET after every command.
+Multipart retry captures immutable bytes/file name/revision/key; no public URL.
+Current piece IDs/revisions/dispositions from server, accepted remainsQ untilbin;
+rejected never bypasses inspection. No stock seed or request/response mocks in E2E.
+
+85unit passed +TypeScript/lint; no warnings in changed warehouse files. Metadata
+backend beforecostVisible addition:11real tests passed at052df40a in2m46s. Portable
+foundation-verification.json +metadata-verification.json saved. costVisible addition
+and receipt UI browser still need verification; task33 checkbox stays OPEN.
+
+NEXT .omo/runtime/receipt-metadata-final-server.sh (same11 aftercostVisible) then
+.omo/runtime/warehouse-receiving-browser.sh receiving-initial. E2E real setup,
+1000m/10ONU receipt/edit, duplicate serial correction, scanner, evidence reload/
+download,100m+2ONU rejection,800m+8ONU putaway thenremaining100m, final900m/8ONU
+available, revision6/history7/reference download. Inspect screenshots after green.
+Continue34–48/F1–F4. No migrations;148unused; source stable while QA runs.
+
 ## Task33 receipt metadata checkpoint — verification pending
 
 Task32 complete atf9d95a9a,4real browser and76unit green. Task33 adds paginated

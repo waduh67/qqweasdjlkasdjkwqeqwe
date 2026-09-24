@@ -1,0 +1,34 @@
+{
+  "task": 33,
+  "phase": "receipt UI foundation",
+  "verifiedAt": "2026-09-24T17:38:59.214953+00:00",
+  "passed": 85,
+  "failed": 0,
+  "skipped": 0,
+  "checks": [
+    "Exact quantities and package conversion",
+    "Serial and MAC duplicates across lines",
+    "Expanded serial group retains original cost once",
+    "Draft and multipart retry retain original body bytes key revision",
+    "Stale revision explicit reload no overwrite",
+    "Server cost redaction blocks full draft replacement",
+    "Scoped document failure never becomes successful empty UI",
+    "Rejected piece cannot use SKU inspection bypass"
+  ],
+  "typeScript": "PASS",
+  "lint": "PASS; no warning in changed warehouse files",
+  "browser": "pending",
+  "files": {
+    "web/src/pages/warehouse/WarehouseReceiptEditor.tsx": "e36d8bbea839383d217a3e215ef8071c22e6d41c12676c341e0fc5f7cd122f53",
+    "web/src/pages/warehouse/WarehouseReceiptEvidence.tsx": "5931b16eb7b3c8d19a6647dd96b17a427fce591a294acbba7607a821ced2d9d7",
+    "web/src/pages/warehouse/WarehouseReceiptActions.tsx": "9a847e81c893041e41171ec91dc2075e33876103ec9c90be0d9ed13af3497581",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.tsx": "043aba981992155d523d13301eb96549dcfe5cfbeeac294ade2e34949eb6f756",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx": "b397582c4c57c85207548e699d4d88f24f43715687330d6abca04c83a9b3d53b",
+    "web/src/pages/warehouse/receiptDraft.ts": "b0b1a37feebe1900d24020ccdaadb408787031962ddccef5895ccaa820ba1af6",
+    "web/src/pages/warehouse/receiptChoices.ts": "72c419a476d22a55f1a5568ade3817f6f3822cb570cf57d1367301d4b7976f32",
+    "web/src/pages/warehouse/receiptActions.ts": "5f58afe89841c7511c0a931badc98008c465654567f7bcd18c7220d68deb3c07",
+    "web/src/pages/warehouse/receiptFiles.ts": "20641f85844b464d99fd5e67ee90955a34ec3011346af71ecc9f48977e941b18",
+    "web/src/api/warehouse/receipts.ts": "ceffb7f35c21452db85b65a48139cfc847e8132893db79a743e96b951d034a12",
+    "web/src/api/warehouse/transport.ts": "4352b0bbfbf68038394896ed86ab1bde9abfe1e13cd2a6516c4613fa3e48151c"
+  }
+}

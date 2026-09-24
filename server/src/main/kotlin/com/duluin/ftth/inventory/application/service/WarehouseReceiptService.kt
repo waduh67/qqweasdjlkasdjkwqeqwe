@@ -139,7 +139,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
             line.conversion, if (cost) line.cost else null, store.pieces(line.id),
             inspections.filter { it.lineId == line.id }.sumOf { it.acceptedBase.toLong() }.toString(),
             inspections.filter { it.lineId == line.id }.sumOf { it.rejectedBase.toLong() }.toString(), store.putawayBase(line.id)) }, inspections,
-            record.intake.source.name ?: record.intake.source.code, record.intake.inspection.name ?: record.intake.inspection.code)
+            record.intake.source.name ?: record.intake.source.code, record.intake.inspection.name ?: record.intake.inspection.code, cost)
     }
 }
 

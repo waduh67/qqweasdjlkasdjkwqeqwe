@@ -102,3 +102,10 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   widths each row pairs a visible field label with its value and keeps the action
   menu reachable. Repeated visual labels are hidden from the accessibility tree;
   cell names and table semantics continue to identify the original data.
+- Receipt work uses a full-width draft form and a separate saved document detail.
+  Show supplier, delivery reference, source, quarantine and exact material lines.
+  Serial entry accepts newline batches and scanner Enter without submitting stock.
+  Receive, inspection and bin placement are separate reviewed actions with explicit
+  quantities and destinations. Accepted stock remains quarantined until placement.
+  Private evidence has named type/date labels, pagination, download and a visible
+  stale-intake state. Success reloads the durable document and revision.

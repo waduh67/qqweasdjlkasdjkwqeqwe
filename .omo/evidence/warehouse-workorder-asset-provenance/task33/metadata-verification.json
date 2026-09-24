@@ -1,0 +1,50 @@
+{
+  "task": 33,
+  "sourceCommit": "052df40a",
+  "phase": "attachment paging and snapshot names before costVisible addition",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReceiptITAttachments",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "889fc562dc5d1deb611e4c99edd559a39420191339875a0beb5261daab625cfd"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReceiptITGuards",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "c7eb73df898cada1f7ca0be31e1a865d9dc173d044958bd694e484ac0a0f4430"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReceiptITIntakeEvidence",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "6a748b02c3d7df67ed2b95f294303fe60394ba25f11d6d3e7871a1d469c8f56d"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReceiptITMetadata",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "7eb41d04a825366941147dd15da25fd537d1898c93a7d7ccc5c0867f47a540a5"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReceiptITReceive",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "288d5e880218d981c0b5cc5ee131702994714c2b9eb93ab223bc83cd887dfb1a"
+    }
+  ],
+  "result": "11 passed;BUILD SUCCESSFUL 2m46s",
+  "cleanup": "owned processes containers network stopped;volumes retained",
+  "remaining": "costVisible addition requires final verification; UI/browser pending"
+}

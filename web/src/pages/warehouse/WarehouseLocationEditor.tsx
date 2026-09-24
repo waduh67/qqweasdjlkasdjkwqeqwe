@@ -18,7 +18,7 @@ import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 type LocationChoice = { id: string; label: string; areaId?: string | null; siteId?: string | null; kind?: WarehouseLocation['kind'] }
 type UserChoice = { id: string; label: string; active?: boolean }
 type SiteChoice = { id: string; label: string; areaId?: string | null }
-type EditorProps = { row: WarehouseLocation | null; readOnly: boolean; onClose: () => void; onSaved: () => void; onReload: () => void }
+type EditorProps = { row: WarehouseLocation | null; readOnly: boolean; onClose: () => void; onSaved: () => void; onReload: () => void; preset?: Pick<WarehouseLocation, 'code' | 'name' | 'kind' | 'issueEligible'> }
 const kinds: Record<WarehouseLocation['kind'], string> = { WAREHOUSE: 'Gudang', BIN: 'Bin / rak', VEHICLE: 'Kendaraan', TECHNICIAN: 'Teknisi', CUSTOMER_SITE: 'Lokasi pelanggan', QUARANTINE: 'Karantina', LOST: 'Barang hilang', DISPOSED: 'Penghapusan', TRANSIT: 'Transit' }
 const canIssue = (kind: WarehouseLocation['kind']) => ['WAREHOUSE', 'BIN', 'VEHICLE', 'TECHNICIAN'].includes(kind)
 const locationChoice = (row: WarehouseLocation): LocationChoice => ({ id: row.id, label: `${row.name ?? row.code} · ${row.code}`, areaId: row.areaId, siteId: row.siteId, kind: row.kind })
@@ -50,20 +50,20 @@ export function WarehouseLocationEditor(props: EditorProps) {
     initialSite={row?.siteId ? site ? { id: site.id, label: `${site.name} · ${site.code}`, areaId: site.areaId } : { id: row.siteId, label: 'Site tersimpan (nama tidak dapat diakses)' } : null} />
 }
 
-function LocationForm({ row, readOnly, onClose, onSaved, onReload, areas, initialParent, initialCustodian, initialSite }: EditorProps & {
+function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas, initialParent, initialCustodian, initialSite }: EditorProps & {
   areas: SetupArea[]; initialParent: LocationChoice | null; initialCustodian: UserChoice | null; initialSite: SiteChoice | null
 }) {
   const { can } = useCan()
   const { user } = useAuth()
   const formId = useId()
-  const [code, setCode] = useState(row?.code ?? '')
-  const [name, setName] = useState(row?.name ?? '')
-  const [kind, setKind] = useState<WarehouseLocation['kind']>(row?.kind ?? 'WAREHOUSE')
+  const [code, setCode] = useState(row?.code ?? preset?.code ?? '')
+  const [name, setName] = useState(row?.name ?? preset?.name ?? '')
+  const [kind, setKind] = useState<WarehouseLocation['kind']>(row?.kind ?? preset?.kind ?? 'WAREHOUSE')
   const [areaId, setAreaId] = useState(row?.areaId ?? '')
   const [parent, setParent] = useState(initialParent)
   const [custodian, setCustodian] = useState(initialCustodian)
   const [site, setSite] = useState(initialSite)
-  const [issueEligible, setIssueEligible] = useState(row?.issueEligible ?? true)
+  const [issueEligible, setIssueEligible] = useState(row?.issueEligible ?? preset?.issueEligible ?? true)
   const [error, setError] = useState<string | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseLocation> | null>(null)
   const areaIds = new Set(user?.areaIds ?? [])
