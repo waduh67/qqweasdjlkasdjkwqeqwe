@@ -2,17 +2,17 @@
 
 ## Active task:26 —2026-09-24
 
-- Published base `62139d01`; current recovered-asset receipt/inspection passed6
-  real HTTP/DB tests, zero failures/errors/skips. Exact asset identity survives;
-  LOAN can become ISP available after reset, SALE stays CUSTOMER-owned quarantine.
-  Residual17.5m, replay, wrong source/quantity/reset/serial and concurrency checked.
--175.116–175.119 applied and immutable. Read newest task-26.md/continuation.md.
-  Shared replacement/ownership/source/lifecycle/modularity/contract regression
-  is running; no final aggregate result yet. Task26 remains open: real reuse,
-  repair/RMA/reacquisition, closure and further validation are still required.
--25/27/29 backend acceptance complete at `ff530d47`; remaining26/28/30–48/F1–F4
-  stay open. Normal explicit pushes to `feat/warehouse-workorder`; no main merge,
-  deployment or QA reset. Latest section overrides historical status below.
+- Published production6868f1a8 passed179 shared regression tests/0 failures/0
+  errors/0 skips, plus separate return6-test proof. Latest checkpoint saves
+  unverified reuse/access/integrity tests; it makes no new feature PASS claim.
+- Host runs return-reuse-red.sh then queued return-access-integrity.sh under
+  shared lock. Read newest continuation.md/task-26.md and actual XML/log results.
+  New tests exercise second installation, revoked replay and unposted rewrite.
+-175.116–175.119 applied and immutable. No production change after179-test proof.
+  Next: repair proved findings, then repair/RMA/reacquisition, closure and further
+  checks.26/28/30–48/F1–F4 stay open;25/27/29 backend acceptance is complete.
+- Normal explicit push to feat/warehouse-workorder; no main merge/deployment or
+  QA reset. Latest entry overrides historical status below.
 
 ## Current integration checkpoint: 2026-09-24
 

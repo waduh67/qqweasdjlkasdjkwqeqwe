@@ -1,5 +1,37 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Current step — recovery regression complete, reuse/integrity probes
+
+Production checkpoint `6868f1a8` passed179 tests in7 suites, zero failures/errors/
+skips,8m28s: CustomerAssetReplacementIT (including inherited guards/races),
+CustomerAssetOwnershipIT, CustomerWarehouseProvenanceIT,
+WorkOrderMaterialLifecycleITReturns, ModularityTests and WarehouseContractTest.
+Ignored full XML: `task26/recovery-regression/xml`. Owned lifecycle exited0 and
+removed only its containers/processes, retaining volumes.
+
+This test checkpoint adds unverified next-step scenarios, not product success:
+- WarehouseReturnITReuse: legitimate return/reset, new customer and WO,
+  reservation/issue/acknowledgement and installation with the same physical ID.
+- WarehouseReturnITAccess: original JWT/key replay after revocation/restoration.
+- WarehouseReturnITIntegrity: app-role attempt to rewrite asset and balance
+  condition without a posting after a valid return. A savepoint always rolls
+  the probe back; it must reject with23514. No bypass is assumed proven yet.
+- WarehouseReturnAssetFixture reuses the already verified receipt/reset journey.
+
+Current host commands in order under the shared QA lock:
+1. `.omo/runtime/return-reuse-red.sh`, log `return-reuse-red.log`, archive
+   `task26/red-reuse/xml`; currently running/compiling all new test source.
+2. `.omo/runtime/return-access-integrity.sh`, log `return-access-integrity.log`,
+   archive `task26/access-integrity/xml`; queued behind reuse,600s bounded lock.
+Read actual final outcomes; correct fixture/compile issues separately from
+product findings. Do not claim these new cases passed until verified. No
+production or SQL change since6868f1a8; ceiling175.119 remains immutable.
+
+After these results, fix proved reuse/current-position issues with declared
+forward migrations, then proceed to repair/vendor replacement/RMA/reacquisition,
+scoped bounded list, material obligation closure and real packaged proof.26 is open.
+
+
 ## Latest checkpoint — recovered asset receipt and inspection
 
 Published base `62139d01`; this checkpoint adds ASSET_REMOVAL intake with an

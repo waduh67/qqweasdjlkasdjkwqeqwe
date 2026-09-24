@@ -2,20 +2,23 @@
 
 ## Active task —26 returns/inspection/repair
 
-- Published base `62139d01`; this checkpoint adds recovered-asset intake/reset
-  inspection. Exact6 tests/0 failures/0 errors/0 skips: residual17.5m, LOAN/SALE
-  asset identity/title, serial/reset/customer-stock denial, replay and concurrency.
-- Applied175.116–175.119 are immutable; hashes and receipts in task-26.md. Current
-  `.omo/runtime/return-recovery-regression.sh` runs replacement/ownership/source
-  validation/lifecycle/modularity/contracts. Read `return-recovery-regression.log`
-  and final XML; no final broader result yet. The six-test lifecycle cleaned
-  owned processes/containers, retained volumes and exited0.
-- Next: real second loan issue/install and repeated episodes; supplier repair,
-  vendor replacement, sold RMA to original customer, approval-bound reacquisition;
-  scoped lists/replay and adversarial seals, WO closure and packaged proof.
-  New migration must be declared above175.119.26/28/30–48/F1–F4 remain open.
-- Do not treat historical WIP/running notes below as current status.25/27/29
-  backend acceptance closed at `ff530d47`; all work stays on integration branch.
+- Production `6868f1a8` is published and passed179 tests/0 failures/0 errors/0 skips
+  in7 suites (8m28s). Separate return6-test proof also passed. Task26 remains open.
+- This checkpoint saves new reuse/access/integrity tests. They are not yet
+  verified. Current host command `return-reuse-red.sh` then queued
+  `return-access-integrity.sh`, with matching `.omo/runtime/*.log` files and
+  separate XML archives under ignored `task26/`. Inspect final results first.
+- Reuse performs actual second WO issue/acknowledgement and new-customer install.
+  Access checks old JWT/replay after scope revocation. Integrity probes an
+  unposted asset+balance rewrite, always rolling the probe back to a savepoint.
+- No production/SQL change since6868f1a8. Applied175.116–175.119 are immutable.
+  New SQL must be declared above175.119 before creation. Correct source using
+  reproduced failures; retain179 regression evidence as prior source identity.
+- Next: fix real reuse/integrity issues, supplier repair/vendor replacement,
+  original-customer sold RMA, approved reacquisition, list/replay, WO closure and
+  packaged proof.26/28/30–48/F1–F4 remain open.25/27/29 closed at ff530d47.
+- Latest task-26.md entry holds details and exact commands. Ignore historical
+  running/status labels below. All pushes stay on feat/warehouse-workorder.
 
 ## Current step — transfer/count integration verified
 
