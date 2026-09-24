@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { WAREHOUSE_PAGES } from '@/pages/warehouse/navigation'
 import {
   Breadcrumb,
   BreadcrumbButton,
@@ -17,7 +18,7 @@ const LABELS: Record<string, string> = {
   subscription: 'Langganan Aplikasi',
   map: 'Peta Jaringan',
   inventory: 'Inventory',
-  warehouse: 'Operasi Gudang',
+  warehouse: 'Gudang & Logistik',
   olts: 'OLT',
   bras: 'BRAS & RADIUS',
   acs: 'ACS / TR-069',
@@ -46,6 +47,8 @@ const LABELS: Record<string, string> = {
   billing: 'Billing Langganan',
 }
 
+const WAREHOUSE_LABELS = Object.fromEntries(WAREHOUSE_PAGES.map(page => [`/warehouse/${page.path}`, page.label]))
+
 function labelFor(segment: string): string {
   if (LABELS[segment]) return LABELS[segment]
   // Segmen id (angka atau uuid) → "Detail".
@@ -63,7 +66,7 @@ export function Breadcrumbs() {
   let acc = ''
   for (const seg of segments) {
     acc += `/${seg}`
-    crumbs.push({ label: labelFor(seg), path: acc })
+    crumbs.push({ label: WAREHOUSE_LABELS[acc] ?? labelFor(seg), path: acc })
   }
 
   return (

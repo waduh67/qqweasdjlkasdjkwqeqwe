@@ -6,7 +6,7 @@ import { WarehouseStatus } from './WarehouseStatus'
 
 export interface WarehouseLine { id: string; name: string; code?: string; serial?: string | null; locationName?: string; quantityBase: string; baseUnit: BaseUnit; status?: string }
 export function WarehouseLines<T extends WarehouseLine>({ rows, extra = [], onOpen, empty }: { rows: T[]; extra?: Column<T>[]; onOpen?: (line: T) => void; empty?: ReactNode }) {
-  return <DataTable rows={rows} rowKey={row => row.id} onRowClick={onOpen} empty={empty} columns={[
+  return <DataTable presentation="warehouse" rows={rows} rowKey={row => row.id} onRowClick={onOpen} empty={empty} columns={[
     { key: 'name', header: 'Barang', cell: row => <div className="stack" style={{ gap: '0.25rem', overflowWrap: 'anywhere' }}><strong>{row.name}</strong><span className="muted">{[row.code, row.serial].filter(Boolean).join(' · ')}</span></div> },
     { key: 'quantity', header: 'Jumlah', align: 'right', cell: row => <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> },
     { key: 'location', header: 'Lokasi', cell: row => row.locationName ?? '—' },

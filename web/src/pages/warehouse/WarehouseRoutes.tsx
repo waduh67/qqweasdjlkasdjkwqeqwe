@@ -59,7 +59,7 @@ function ApprovalQueue() {
   const result = useWarehouseQuery(loader)
   return <div className="stack"><PageHeader title="Persetujuan Gudang" subtitle="Keputusan membutuhkan pemeriksa yang berbeda dari pembuat permintaan." />
     <WarehouseState {...result}>{data => <>
-      <DataTable rows={data.items} rowKey={row => row.requestId} empty={<EmptyState title="Tidak ada persetujuan dalam cakupan Anda" hint="Permintaan yang masuk akan terlihat setelah diajukan untuk pemeriksaan." />} columns={[
+      <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.requestId} empty={<EmptyState title="Tidak ada persetujuan dalam cakupan Anda" hint="Permintaan yang masuk akan terlihat setelah diajukan untuk pemeriksaan." />} columns={[
         { key: 'document', header: 'Referensi', cell: row => <span style={{ overflowWrap: 'anywhere' }}>{row.code}<br /><span className="muted">Revisi sumber {row.sourceRevision}</span></span> },
         { key: 'status', header: 'Status', cell: row => <WarehouseStatus status={row.status} /> },
         { key: 'expires', header: 'Berlaku sampai', cell: row => <WarehouseTime value={row.expiresAt} /> },
@@ -77,7 +77,7 @@ function StockSummary({ embedded = false }: { embedded?: boolean }) {
   return <section className="stack" aria-label="Stok terverifikasi">
     {embedded ? <h2>Stok terverifikasi</h2> : <PageHeader title="Stok & Perangkat" subtitle="Jumlah hanya mencakup lokasi yang dapat Anda akses." />}
     <WarehouseState {...result}>{data => <>
-      <DataTable rows={data.items} rowKey={row => row.id} empty={<div className="stack"><EmptyState title="Belum ada stok terverifikasi dalam cakupan Anda" hint="Siapkan lokasi dan barang, lalu catat penerimaan untuk menambah stok." />{can('inventory.location.view') && <Link to="/warehouse/catalog">Siapkan lokasi dan barang</Link>}</div>} columns={[
+      <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<div className="stack"><EmptyState title="Belum ada stok terverifikasi dalam cakupan Anda" hint="Siapkan lokasi dan barang, lalu catat penerimaan untuk menambah stok." />{can('inventory.location.view') && <Link to="/warehouse/catalog">Siapkan lokasi dan barang</Link>}</div>} columns={[
         { key: 'name', header: 'Barang', cell: row => <span>{row.name}<br /><span className="muted">{row.skuCode}</span></span> },
         { key: 'physical', header: 'Fisik', align: 'right', cell: row => <WarehouseQuantity value={row.physical.quantityBase} unit={row.physical.baseUnit} /> },
         { key: 'reserved', header: 'Dipesan', align: 'right', cell: row => <WarehouseQuantity value={row.reservedUnpicked.quantityBase} unit={row.reservedUnpicked.baseUnit} /> },

@@ -98,3 +98,7 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   empty choice. Scope changes show the selected user, location, current access and
   revision before confirmation. Empty area grants explain the warehouse restriction
   and link to authorized area/user setup.
+- Warehouse tables keep their column headers for assistive technology. At mobile
+  widths each row pairs a visible field label with its value and keeps the action
+  menu reachable. Repeated visual labels are hidden from the accessibility tree;
+  cell names and table semantics continue to identify the original data.

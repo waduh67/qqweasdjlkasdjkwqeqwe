@@ -79,7 +79,7 @@ export type Selection = {
  * Variasi penyajian daftar. `olt` adalah alias migrasi usang untuk `resource`;
  * pertahankan hingga pemanggil OLT dimigrasikan ke nama semantik.
  */
-export type DataTablePresentation = 'default' | 'resource' | 'olt'
+export type DataTablePresentation = 'default' | 'resource' | 'olt' | 'warehouse'
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 
@@ -166,7 +166,8 @@ export function DataTable<T>({
   const styles = useStyles()
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
-  const resourcePresentation = presentation === 'resource' || presentation === 'olt'
+  const warehousePresentation = presentation === 'warehouse'
+  const resourcePresentation = presentation === 'resource' || presentation === 'olt' || warehousePresentation
 
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -309,7 +310,7 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card')}>
+    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card')}>
       {!loading && (
         <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')}>
           <DataGrid
@@ -404,7 +405,10 @@ export function DataTable<T>({
                           }
                           style={{ textAlign: column?.align }}
                         >
-                          {renderCell(item)}
+                          {warehousePresentation ? <>
+                            <span className="warehouse-mobile-label" aria-hidden="true">{isActionCell ? 'Tindakan' : column?.header}</span>
+                            <div className="warehouse-cell-value">{renderCell(item)}</div>
+                          </> : renderCell(item)}
                         </DataGridCell>
                       )
                     }}

@@ -1,5 +1,18 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task32 functional setup green; mobile table and breadcrumb refinement
+
+catalog-area-fixed against beecbc60:4 passed,0 failed/skipped/flaky,59.084s.
+All owned cleanup succeeded, volumes retained. Reviewed desktop/mobile screenshots
+revealed resource-table mobile header/value alignment and the global catalog crumb
+incorrectly saying Paket Internet. Added warehouse-only responsive label/value rows
+with accessible column headers retained, full-size row actions, and full-path warehouse
+breadcrumbs. Other resource tables retain their existing presentation.
+76 targeted tests (61 warehouse +15 DataTable regressions), TypeScript and lint passed.
+Browser assertions now cover the actual warehouse breadcrumb and action target size.
+NEXT: run catalog-layout-fixed, review both screenshots, then save portable task32
+proof and mark32 complete. Task33 contract notes ready; continue33–48/F1–F4.
+
 ## Task32 desktop setup passes; mobile area prerequisite layout fixed
 
 catalog-initial against3dc45f23:3passed/1failed59.67s. Both task31 navigation cases
