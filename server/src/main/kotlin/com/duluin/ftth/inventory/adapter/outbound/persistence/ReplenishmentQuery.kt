@@ -52,13 +52,16 @@ class ReplenishmentQuery(private val jdbc: WarehouseCommandJdbc) {
             FROM filtered_positions"""), ReplenishmentPosition::class.java)
     }
 
-    fun ruleIds(access: WarehouseQueryAccess, page: Int, size: Int, location: UUID?, sku: UUID?, requests: Boolean): Pair<List<UUID>, Long> = jdbc.execute { sql ->
+    fun ruleIds(access: WarehouseQueryAccess, page: Int, size: Int, location: UUID?, sku: UUID?, requests: Boolean,
+        active: Boolean? = null, state: ReplenishmentState? = null): Pair<List<UUID>, Long> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(skuId = sku, locationId = location), access)
         val source = if (requests) "JOIN inventory_replenishment_request pending ON pending.tenant_id=rule.tenant_id AND pending.rule_id=rule.id" else ""
         val id = if (requests) "pending.id" else "rule.id"
         val result = mapper.readTree(query.result(""", matches AS (SELECT $id id FROM inventory_replenishment_rule rule $source,request
             WHERE rule.tenant_id=request.tenant AND rule.location_id IN (SELECT id FROM visible_locations)
-            AND (request.sku IS NULL OR rule.sku_id=request.sku) AND (request.location IS NULL OR rule.location_id=request.location)),
+            AND (request.sku IS NULL OR rule.sku_id=request.sku) AND (request.location IS NULL OR rule.location_id=request.location)
+            ${active?.let { "AND rule.active=$it" } ?: ""}
+            ${if (requests && state != null) "AND pending.state='${state.name}'" else ""}),
             selected AS (SELECT id FROM matches ORDER BY id LIMIT $size OFFSET ${page.toLong() * size})
             SELECT jsonb_build_object('ids',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM selected),'[]'::jsonb),
                 'total',(SELECT count(*) FROM matches))::text"""))

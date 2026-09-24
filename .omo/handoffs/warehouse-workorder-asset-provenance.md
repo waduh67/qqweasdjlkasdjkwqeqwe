@@ -1,3 +1,18 @@
+## Task38 reports verified; replenishment backend checkpoint
+
+Reports7backend/3suites PASS2m1s (compiled c155856b, run bd01230b);18web/3files
+PASS4.64s, TypeScript and final oxlint PASS. Proof task38/reports-workbench-verification.json.
+All owned QA cleanup completed; volumes retained. Reports route operational.
+
+Replenishment named workbench implemented; verification NEXT. New read API requires
+request.view and current warehouse/area, never general SKU/location permission. SQL
+filters active rules/pending state before totals/pages. Read-only detail compares live
+position/suggestion with captured request; never creates a request on GET. Archived
+location/history remains readable within current scope, but ineligible for replenishment.
+New2 backend tests plus old3 basic/4 commands/3 inbound scheduled via private
+.omo/runtime/replenishment-workbench-server.sh (log replenishment-workbench-server.log).
+No migrations. UI replenishment/overview/settings history-delegations pending;38 open.
+
 ## Task38 reports UI checkpoint
 
 Reports page now supports all nine scoped report kinds, named SKU/location and WO

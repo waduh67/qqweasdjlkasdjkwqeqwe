@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = [WarehouseReplenishmentController::class])
+@RestControllerAdvice(assignableTypes = [WarehouseReplenishmentController::class, WarehouseReplenishmentQueryController::class])
 class ReplenishmentConflictAdvice {
     @ExceptionHandler(LockAcquisitionException::class, ConcurrencyFailureException::class)
     fun conflict(error: Exception): ResponseEntity<WarehouseError> = ResponseEntity.status(409)
