@@ -1,3 +1,13 @@
+## Task43 M05 reservation: V177 preservation snapshots
+
+V175.148 is the latest packaged applied version. V177 and V178 remain reserved
+for task43; V176 was never consumed (M04 shipped as V175.48 onward). V177 will
+add immutable legacy provenance cases and migration-batch snapshot structures.
+Boot-time staging preserves original IDs/raw units/identities and never chooses
+collision winners or posts stock. V178 remains reserved for final admission and
+cutover constraints. Once V177 is applied, corrections must use forward versions
+(V177.x before the reserved V178, or later), never edit applied SQL.
+
 # Migrasi dan lingkungan QA warehouse
 
 V175.147 applied22:49:14.237 JKT, immutable: `5da98c83d788aa398a8b70e43e583b2fa1f694e25dd9bf334c27f8f25cccb31f`. All143–147 immutable;148 next unused. Active-loan loss verified15 tests/3 suites.

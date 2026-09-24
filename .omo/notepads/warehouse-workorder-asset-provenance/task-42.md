@@ -1,3 +1,19 @@
+## Task42 complete; task43 preservation/cutover in progress
+
+At eef43d24, 41 JVM tests and module graph PASS; both actual iOS application
+compile tasks PASS locally and on macOS CI run36074462296 (success). Commit-bound
+safe proofs: task42/material-ios-local-verification.json and material-ios-macos-
+verification.json, plus material-feature-verification.json. Native runtime/release
+not claimed. Local QA services cleaned; volumes retained. 1–42 done,43–48/F1–F4
+remain; goal ACTIVE. No merge/deploy.
+
+Task43 research and next steps in task-43.md. V177/M05 and V178/M06 unused and
+reserved. Max current175.148; actual M04 shipped175.48 onward (no V176 file).
+Begin immutable legacy source snapshots + full packaged collision upgrade proof;
+then batch-bound resolution, existing durable independent approval/posting owner,
+per-tenant finalization and /warehouse/provenance. Do not synthesize origin/units/
+prices or re-enable ordinary writes in VALIDATING. No43 product SQL/code yet.
+
 ## Task42 shared Material Saya verified; iOS CI proof pending, task43 NEXT
 
 KMP gate41 tests PASS / BUILD SUCCESSFUL21s; module graph PASS. Suites: domain5,

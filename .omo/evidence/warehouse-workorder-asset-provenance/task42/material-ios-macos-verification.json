@@ -1,0 +1,12 @@
+{
+  "commit": "eef43d2418cf08250688d444a02c6ba09988ca1e",
+  "runner": "macos-latest",
+  "tasks": {
+    "compileKotlinIosArm64": "COMPILED",
+    "compileKotlinIosSimulatorArm64": "COMPILED"
+  },
+  "nativeRuntimeOrRelease": false,
+  "workflowRunId": 36074462296,
+  "conclusion": "success",
+  "url": "https://github.com/waduh67/qqweasdjlkasdjkwqeqwe/actions/runs/36074462296"
+}
