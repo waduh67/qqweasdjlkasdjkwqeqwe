@@ -2,10 +2,11 @@
 
 ## Current integration checkpoint: 2026-09-24
 
-- Latest substep: integration `675d5007` is published; fresh combined regression
-  has booted all migrations and is running. New `qa.sh wave5` packaged HTTP proof
-  and shared replenishment lifecycle are syntax-checked WIP pending execution.
-  See the first section of `continuation.md` for the exact next step.
+- Latest substep: combined regression117/1 failure/0 errors/0 skips; the sole
+  failure was an obsolete2-migration expectation versus9 combined migrations.
+  Corrected focused upgrade test passed1/0/0/0 with preservation assertions.
+  `qa.sh wave5` is now running on a clean JAR; its HTTP proof remains pending.
+  Chromium tooling is installed and launches. See `continuation.md` for details.
 
 - Resume from remote `feat/warehouse-workorder`, local continuation branch
   `work/warehouse-completion` in `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe`.

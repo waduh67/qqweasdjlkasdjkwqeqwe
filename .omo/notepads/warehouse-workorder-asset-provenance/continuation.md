@@ -2,6 +2,25 @@
 
 ## Current step — packaged acceptance harness
 
+- Fresh combined regression finished117 tests,1 failure,0 errors,0 skips in34
+  suites (9m53s). All14 count and15 transfer tests passed. The only failure was
+  `WarehouseReplenishmentITUpgrade` expecting2 migrations after175.112 when the
+  combined source correctly applies9. The unchanged production migration boot
+  succeeded; the test stopped before its preservation assertions.
+- Corrected the test to require both175.115 and175.115.1 among applied versions,
+  while retaining second-run zero migrations and all original quantity/rule/
+  acceptance-preservation assertions. Exact rerun passed1/0/0/0 in48s. This is a
+  corrected focused result, not a claim of a fresh117-test aggregate rerun.
+  Original reports are in ignored `integration-20260924/first/`; focused XML is
+  in `integration-20260924/focused-http/xml/`.
+- Current command: `bash .omo/runtime/integration-focused-http.sh`; after the
+  focused test, it built a clean JAR successfully and is running `qa.sh wave5`.
+  Review `.omo/runtime/integration-focused-http.log` and the owned server log.
+  Complete/fix this HTTP proof, then rerun replenishment's shared lifecycle.
+- Installed Playwright Chromium1234/Chrome151 plus its required Arch `alsa-lib`.
+  A real headless Chromium launch and local-document evaluation passed. This
+  verifies browser tooling only, not a warehouse browser journey.
+
 - Integration checkpoint `675d5007` was pushed to `feat/warehouse-workorder`.
   The fresh combined regression is running against a newly generated owned
   environment; it has passed migration boot and is executing approval tests.

@@ -21,7 +21,8 @@ class WarehouseReplenishmentITUpgrade {
                     sql.execute("INSERT INTO inventory_replenishment_request(id,tenant_id,rule_id,rule_revision,business_key,quantity_base,state) VALUES (gen_random_uuid(),'$tenant','$rule',0,'preserved',15,'PENDING')")
                 }
             }
-            assertThat(database.migrate().migrationsExecuted).isEqualTo(2)
+            assertThat(database.migrate().migrations.map { it.version })
+                .contains("175.115", "175.115.1")
             assertThat(database.migrate().migrationsExecuted).isZero()
             database.dataSource.connection.use { connection ->
                 connection.createStatement().use { sql ->
