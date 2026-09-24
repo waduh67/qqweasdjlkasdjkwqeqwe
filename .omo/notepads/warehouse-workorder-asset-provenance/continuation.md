@@ -1,5 +1,15 @@
 # Whole-plan continuation
 
+## Task36 transfer browser verified at49e8a1d4; return implementation next
+
+Final transfer-final passed both projects in 38.005s, no failures,
+skips, flaky or global errors. All10 current synthetic PNG reviewed; mobile label
+now readable. Saved screenshots and portable transfer-browser-verification.json.
+Owned cleanup completed and volumes retained.149 web tests and7 transfer backend
+baseline remain green (source-specific workbench proof). Task36 NOT complete:
+next source lookup, named return reads, inspection/repair/replacement/RMA UI.
+No migrations changed; keep36–48/F1–F4 active and push coherent checkpoints.
+
 ## Task36 transfer browser passed; final mobile label check next
 
 Actual transfer-initial browser @5305ce67 passed both desktop/mobile in39.501s,

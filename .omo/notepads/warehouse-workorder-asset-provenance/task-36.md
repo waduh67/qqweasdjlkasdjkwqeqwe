@@ -1,5 +1,15 @@
 # Task36 — transfer / return / repair UI investigation
 
+## Task36 transfer browser verified at49e8a1d4; return implementation next
+
+Final transfer-final passed both projects in 38.005s, no failures,
+skips, flaky or global errors. All10 current synthetic PNG reviewed; mobile label
+now readable. Saved screenshots and portable transfer-browser-verification.json.
+Owned cleanup completed and volumes retained.149 web tests and7 transfer backend
+baseline remain green (source-specific workbench proof). Task36 NOT complete:
+next source lookup, named return reads, inspection/repair/replacement/RMA UI.
+No migrations changed; keep36–48/F1–F4 active and push coherent checkpoints.
+
 ## Task36 transfer browser passed; final mobile label check next
 
 Actual transfer-initial browser @5305ce67 passed both desktop/mobile in39.501s,
@@ -216,3 +226,37 @@ Use actual named document/SKU/serial/location lookup, never free UUID-only comma
 Stock not received twice for acknowledged residual. New source query must not claim
 eligibility if current whole stock/source/title is no longer valid. Mutation remains
 last authority and conflicts force re-read/review. No migration needed for queries.
+
+## Return implementation decisions after transfer proof
+
+Use separate InventoryReturnQueryApi /workbench and /{id}/details wrappers;
+raw GET/mutation bodies stay immutable. /sources offers eligible named document
+sources and measured whole stock (not free UUID). /{id}/history/page supplies
+bounded latest-first history/count, keep legacy array ascending default25/max100.
+Add serial/query/date filters with strict unknown/repeated/blank rejection.
+Source candidates: acknowledged MATERIAL_RESIDUAL purpose RETURN at its bound Q,
+whole exact quantity and actual verified Q/WAREHOUSE position. Never receive twice.
+ASSET_REMOVAL: different receiver actor, actual verified 1EA SERIAL recovery at
+remover TRANSIT custody, owner preserved. Exclude already-intaken source episodes.
+Owner still validates source functions on mutation; do not turn void assertions
+into boolean read filters. Later migrations patch these functions; initial SQL
+is not their final definition. No migration needed for these queries.
+
+Named read refs are current names, not operation snapshots. Keep receivedBy names
+via public IamApi. Repair location must be authorized on list/detail/history even
+after it returns to Q, matching existing repair action authorization. Return state
+and location describe the return operation: customer RMA creates a separate doc
+without updating return view. Include a minimal persisted handoverId continuation
+reference; do not claim old Q view is current physical stock or offer duplicate
+handover. Full RMA read continues through existing authority/WO checks.
+
+Repair: ASSET_REMOVAL only, one case, inspected DAMAGED/Q device; dispatch same
+serial to supplier TRANSIT, custody REPAIR/status QUARANTINE. Receive same serial
+back to Q; old inspection remains in view but new post-repair inspection/reset
+is mandatory. CUSTOMER stays Q even serviceable; ISP can go to issue-eligible BIN.
+Replacement is separate new receipt of same SKU/new serial and preserved title;
+old physical asset remains at vendor. Use actual receipt link and persisted list.
+Reacquisition needs actual signed evidence and independent approval (task37),
+never fake evidence or infer ownership change. RMA dispatch binds originalcustomer
+repair WO/current revision/assigned technician; actual acknowledgement task40.
+C8 transfer list currently lacks SKU/serial/date UI filters; revisit before36done.

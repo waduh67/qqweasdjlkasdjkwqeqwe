@@ -180,3 +180,4 @@
 {"at": "2026-09-24T19:23:37.077045+00:00", "task": 36, "event": "transfer-page-and-bounded-history-checkpoint", "result": "21distinctbackend discovery verified; UIbuilt6APIhelper+TS+lintgreen; boundedhistory and page behavior/browser unverified"}
 {"at": "2026-09-24T19:28:29.420399+00:00", "task": 36, "event": "transfer-149web-7server-green-browser-next", "sourceCommit": "10087229", "result": "149web22files+TS+lintgreen;7server3suitesgreen;actualtransferbrowsernext;returnUIpending"}
 {"at": "2026-09-24T19:33:14.214969+00:00", "task": 36, "event": "transfer-browser-green-mobile-label", "sourceCommit": "5305ce67", "result": "2 actual browser cases passed;10PNG reviewed; shorten truncated mobile header then final screenshots; returns pending"}
+{"at": "2026-09-24T19:35:49.867413+00:00", "task": 36, "event": "transfer-browser-evidence-saved", "sourceCommit": "49e8a1d4", "result": "2 passed;10 reviewed PNG saved; cleanup complete; return UI remains"}
