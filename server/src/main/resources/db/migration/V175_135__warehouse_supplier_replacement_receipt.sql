@@ -150,7 +150,8 @@ BEGIN
             RAISE EXCEPTION 'REPLACEMENT_POSTED_IDENTITY_REQUIRED' USING ERRCODE='23514'; END IF;
         PERFORM warehouse_assert_replacement_receipt(scope,target);
     END IF;
-END $function$$patch$);
+END $function$
+$patch$);
     EXECUTE definition;
 END $$;
 

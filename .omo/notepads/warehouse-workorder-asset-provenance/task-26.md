@@ -1,5 +1,29 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##135 first SQL attempt rolled back; delimiter corrected before any successful apply
+
+return-replacement-admission-green compiled but failed Spring/Flyway startup:
+SQLSTATE42601 syntax error near patch$, at135 line126. Log20:57:27.517 JKT explicitly
+says changes successfully rolled back (also repeated in later test contexts).
+The adjacent dollar tags at END $function$$patch$ accidentally contain the outer
+DO $$ terminator. Inserted a newline between the tags.135 had NOT applied, so this
+is a correction to an unapplied failed version;134 and all older bytes unchanged.
+
+Current `.omo/runtime/return-replacement-posting-green.sh` / matching log, DB log
+return-replacement-posting-database.log, archive return-replacement-posting-green/xml,
+session74078 re-runs the12 selected cases. Check log for actual135 success before
+any further SQL edits. Last70536553 published; correction follows in new commit.
+
+Further functional gap found during source audit: replacement input currently has
+no optional declared cost, while configured RECEIPT policy correctly rejects
+unknown cost (COST_BASIS_REQUIRED). Add explicit optional public replacement cost
+only from actual vendor evidence, never synthesize zero. Omit null new input field
+from serialization to preserve canonical replay of existing134 requests; update
+capture validator via a later declared version after135 applies. Then test the
+actual replacement approval path, not merely ordinary receipt approval regression.
+Rejection/new immutable request lifecycle and receipt source/physical graph guards
+also remain pending, followed by inspection and original-customer handover.
+
 ##135 replacement admission/effect — first database validation pending
 
 134 is APPLIED AND IMMUTABLE. Corrected initial creation (internal
