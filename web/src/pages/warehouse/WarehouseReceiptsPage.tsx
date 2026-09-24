@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getReceipt, getReceiptHistory, listReceipts, RECEIPT_STATES, receiveReceipt, type WarehouseReceipt } from '@/api/warehouse/receipts'
+import { getReceipt, getReceiptHistory, listReceipts, RECEIPT_STATES, receiveReceipt, type ReceiptTransition, type WarehouseReceipt } from '@/api/warehouse/receipts'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { formatBaseQuantity, displayUnit } from '@/api/warehouse/quantity'
 import { useCan } from '@/auth/useCan'
@@ -76,7 +76,7 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
   const { can } = useCan()
   const [edit, setEdit] = useState(false)
   const [action, setAction] = useState<'inspect' | 'putaway' | null>(null)
-  const [operation, setOperation] = useState<WarehouseCommand<WarehouseReceipt> | null>(null)
+  const [operation, setOperation] = useState<WarehouseCommand<ReceiptTransition> | null>(null)
   const manage = can('inventory.receipt.manage')
   if (edit) return <WarehouseReceiptEditor receipt={receipt} onClose={() => setEdit(false)} onSaved={reload} onReload={reload} />
   function saveReference() {

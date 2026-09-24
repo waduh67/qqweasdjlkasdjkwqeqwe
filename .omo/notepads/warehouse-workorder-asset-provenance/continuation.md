@@ -1,5 +1,23 @@
 # Whole-plan continuation
 
+## Task33 receive acknowledgement corrected; browser rerun pending
+
+receiving-initial againstf16352e6:both desktop/mobile reached real draftcreate/edit,
+serialduplicate correction,scanner,private upload/reload/download andsuccessfulreceive.
+Both failed at32.85s because the client/test assumedtransitionreturnedReceiptView.
+Actual ReceiptTransitionService returns{id,revision,state,operationId}; stockcommitted
+but strictclientdecoder rejectedshape and correctlyretaineduncertaincommand.
+CorrectedAPI withseparate stricttransitiondecoder;receive/inspect/putaway nowreloadGET
+before renderingnewactions. Browser transitionhelper observes thatrealGET,thenchecks
+lines/pieces fromdurablesnapshot. Addedunitactualack->GET->inspection;57focusedAPI/
+receipt tests passed (85baseline+1new totalcoverage86),TS/lintpassed.
+
+Finalbackendmetadata+costVisible againstf16352e6:11tests/5suites green2m47s,portable
+metadata-final-verification.json. AllQAownedcleanup passed,volumesretained. Firstbrowser
+failureprivate under task33/receiving-initial; no completionclaim. NEXT run
+.omo/runtime/warehouse-receiving-browser.sh receiving-transition-fixed,inspectboth
+screenshots aftergreen. Continue34–48/F1–F4; task34 preparation saved. No migration.
+
 ## Task33 receipt UI implemented —85 unit tests; real browser pending
 
 Task32 complete atf9d95a9a. Task33 now routes to actual receipt list/draft/detail,

@@ -11,10 +11,17 @@ async function select(page: Page, name: string, label: string) {
 }
 async function transition(page: Page, id: string, action: string, button: string) {
   const response = page.waitForResponse(res => new URL(res.url()).pathname === `/api/v1/warehouse/receipts/${id}/${action}` && res.request().method() === 'POST')
+  const refreshed = page.waitForResponse(res => new URL(res.url()).pathname === `/api/v1/warehouse/receipts/${id}` && res.request().method() === 'GET')
   await page.getByRole('button', { name: button, exact: true }).click()
   const result = await response
   expect(result.status()).toBe(200)
-  return result.json()
+  const confirmed = await result.json()
+  expect(confirmed.operationId).toBeTruthy()
+  const detail = await refreshed
+  expect(detail.ok()).toBeTruthy()
+  const snapshot = await detail.json()
+  expect(snapshot).toMatchObject({ id, revision: confirmed.revision, state: confirmed.state })
+  return snapshot
 }
 
 test('real receipt receives 1000 metres and10 ONUs, rejects a subset and puts away accepted goods in stages', async ({ page }, testInfo) => {

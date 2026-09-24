@@ -74,14 +74,19 @@ function evidenceItem(value: unknown, path = 'evidence') {
   return { ...receiptEvidence(value, path), createdAt: timestamp(row.createdAt, path), matchesCurrentIntake: boolean(row.matchesCurrentIntake, path) }
 }
 export type ReceiptEvidence = ReturnType<typeof evidenceItem>
+export function receiptTransition(value: unknown, path = 'receiptTransition') {
+  const row = record(value, path)
+  return { id: uuid(row.id, path), revision: integer(row.revision, path), state: oneOf(row.state, RECEIPT_STATES, path), operationId: uuid(row.operationId, path) }
+}
+export type ReceiptTransition = ReturnType<typeof receiptTransition>
 const root = '/api/v1/warehouse/receipts'
 export const listReceipts = (filter: { page?: number; size?: number; status?: WarehouseReceipt['state']; serial?: string; skuId?: string; locationId?: string; from?: string; until?: string } = {}) => query(`${root}${parameters({ ...filter })}`, pageOf(receipt))
 export const getReceipt = (id: string) => query(`${root}/${uuid(id)}`, receipt)
 export const getReceiptHistory = (id: string) => query(`${root}/${uuid(id)}/history`, value => array(value, history, 'history', 10000))
 export const listReceiptEvidence = (id: string, page = 0) => query(`${root}/${uuid(id)}/attachments${parameters({ page, size: 25 })}`, pageOf(evidenceItem))
 export const saveReceipt = (input: ReceiptDraftInput, id?: string) => command(`${root}${id ? `/${uuid(id)}` : ''}`, id ? 'PUT' : 'POST', input, receipt)
-export const receiveReceipt = (id: string, revision: number) => command(`${root}/${uuid(id)}/receive`, 'POST', { expectedRevision: revision }, receipt)
-export const inspectReceipt = (id: string, revision: number, lines: ReceiptInspectionInput[]) => command(`${root}/${uuid(id)}/inspect`, 'POST', { expectedRevision: revision, lines }, receipt)
-export const putawayReceipt = (id: string, revision: number, destinationLocationId: string, lines: ReceiptPutawayInput[]) => command(`${root}/${uuid(id)}/putaway`, 'POST', { expectedRevision: revision, destinationLocationId, lines }, receipt)
+export const receiveReceipt = (id: string, revision: number) => command(`${root}/${uuid(id)}/receive`, 'POST', { expectedRevision: revision }, receiptTransition)
+export const inspectReceipt = (id: string, revision: number, lines: ReceiptInspectionInput[]) => command(`${root}/${uuid(id)}/inspect`, 'POST', { expectedRevision: revision, lines }, receiptTransition)
+export const putawayReceipt = (id: string, revision: number, destinationLocationId: string, lines: ReceiptPutawayInput[]) => command(`${root}/${uuid(id)}/putaway`, 'POST', { expectedRevision: revision, destinationLocationId, lines }, receiptTransition)
 export const attachReceipt = (id: string, revision: number, file: File) => uploadCommand(`${root}/${uuid(id)}/attachments`, revision, file, receiptEvidence)
 export const downloadReceiptEvidence = (id: string, evidenceId: string) => api.blob(`${root}/${uuid(id)}/attachments/${uuid(evidenceId)}`)

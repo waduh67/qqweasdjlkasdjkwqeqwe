@@ -1,6 +1,6 @@
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
-import { inspectReceipt, listReceiptEvidence, putawayReceipt, type ReceiptEvidence, type ReceiptLine, type WarehouseReceipt } from '@/api/warehouse/receipts'
+import { inspectReceipt, listReceiptEvidence, putawayReceipt, type ReceiptEvidence, type ReceiptLine, type ReceiptTransition, type WarehouseReceipt } from '@/api/warehouse/receipts'
 import type { WarehouseLocation } from '@/api/warehouse/models'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { formatBaseQuantity, quantityFromInput } from '@/api/warehouse/quantity'
@@ -26,7 +26,7 @@ export function WarehouseReceiptActions({ receipt, mode, onClose, onChanged }: P
   const [rejection, setRejection] = useState<'QUARANTINE' | 'SUPPLIER_RETURN'>('QUARANTINE')
   const [destination, setDestination] = useState<WarehouseLocation | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [operation, setOperation] = useState<WarehouseCommand<WarehouseReceipt> | null>(null)
+  const [operation, setOperation] = useState<WarehouseCommand<ReceiptTransition> | null>(null)
   const [summary, setSummary] = useState<{ name: string; line: ReceiptLine; accepted: string; rejected: string }[]>([])
   const title = mode === 'inspect' ? 'Periksa penerimaan' : 'Tempatkan ke bin'
   function patch(id: string, value: Partial<typeof values[string]>) { setValues(current => ({ ...current, [id]: { ...current[id], ...value } })) }

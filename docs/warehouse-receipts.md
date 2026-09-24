@@ -27,6 +27,9 @@ Identitas tenant/actor berasal dari sesi; izin dimuat ulang di bawah fence IAM.
 | GET | `/{id}/attachments/{evidenceId}` | Download privat melalui aplikasi |
 
 Semua mutasi memakai `Idempotency-Key` ASCII tanpa whitespace, panjang1..240.
+Draft create/update mengembalikan `ReceiptView`. Receive/inspect/putaway mengembalikan
+konfirmasi `{id,revision,state,operationId}`; client kemudian GET detail terkini.
+Konfirmasi transisi tidak berisi lines/pieces atau rincian biaya.
 Transisi wajib expectedRevision integer JSON, bukan string/float/exponent/null.
 Decoder menolak field unknown/duplicate, scalar coercion, enum angka dan trailing
 JSON. Body JSON maksimal131072 karakter; draft maksimal100 input lines dan500

@@ -103,6 +103,29 @@ it('does not expose receipt mutations or an empty successful document after a sc
   expect(screen.queryByRole('button', { name: 'Buat penerimaan' })).toBeNull()
 })
 
+it('accepts the real transition acknowledgement and reloads the durable receipt before offering inspection', async () => {
+  let posted = false
+  const current = receiptFixture()
+  const fetch = vi.fn(async (path: string, init: RequestInit) => {
+    if (path.endsWith('/receive') && init.method === 'POST') {
+      posted = true
+      expect(JSON.parse(init.body as string)).toEqual({ expectedRevision: 4 })
+      return response({ id: id.document, revision: 5, state: 'RECEIVED_IN_INSPECTION', operationId: id.evidence })
+    }
+    if (path.endsWith('/history')) return response([])
+    if (path.includes('/attachments?')) return response(page([]))
+    if (path.endsWith(`/receipts/${id.document}`)) return response(posted ? { ...current, revision: 5, state: 'RECEIVED_IN_INSPECTION', lines: [{ ...current.lines[0], pieces: [receiptPieceFixture()] }] } : current)
+    throw new Error('Unexpected fixture request: ' + path)
+  })
+  vi.stubGlobal('fetch', fetch)
+  render(<MemoryRouter initialEntries={[`/warehouse/receipts?id=${id.document}`]}><WarehouseReceiptsPage /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Terima barang' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi penerimaan' }))
+  expect(await screen.findByRole('button', { name: 'Periksa barang' })).toHaveProperty('disabled', false)
+  expect(screen.queryByRole('button', { name: 'Coba transaksi yang sama' })).toBeNull()
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(1)
+})
+
 it('never offers rejected pieces for putaway through the SKU inspection bypass', () => {
   const receipt = receiptFixture(), line = { ...receipt.lines[0], inspectionRequired: false, pieces: [receiptPieceFixture(), { ...receiptPieceFixture(), stockIdentityId: id.source, disposition: 'QUARANTINE' as const }, { ...receiptPieceFixture(), stockIdentityId: id.supplier, disposition: 'ACCEPTED' as const }] }
   expect(receiptCandidates(receipt, line, 'putaway').map(piece => piece.stockIdentityId)).toEqual([id.piece, id.supplier])
