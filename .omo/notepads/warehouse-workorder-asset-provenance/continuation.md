@@ -1,5 +1,19 @@
 # Whole-plan continuation
 
+## Task35 sourcef2fc7fb4 — 132 web tests green, second browser running
+
+132tests/18files passed aftersharedModalfix, TSawaitedexit0, focusedoxlint0errors.
+Portableworkbench-dialog-verification.json saved. Task35 actual browser RUNNING
+warehouse-issue-browser.sh issue-selection-fixed, session4450/runtime
+issue-selection-fixed.log; sourcef2fc7fb4. Initialsource4e6d4b3d bothbrowserfailures
+werewrongselectorrole(option vsactualmenuitemcheckbox), corrected2f101b2d.
+
+Added docs/warehouse-workbench.md operatorsteps matchingcurrentUI andcorrected
+warehouse-issues.md staleintro/unpick-cancelclaim againstactualcontext. Docs only
+whilebrowserruns; product/testsourcekeptstable. NEXT awaitdesktop/mobileoutcome,
+visualreviewPNG, fixandrerunbefore35complete. Continue36–48/F1–F4.
+
+
 ## Task35 confirmation dialog accessibility correction — verification running
 
 New remaining-demand review test found actual Modal had two nested unnamed dialog

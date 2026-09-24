@@ -1,0 +1,14 @@
+{
+  "task": 35,
+  "sourceCommit": "f2fc7fb4",
+  "web": {
+    "tests": 132,
+    "files": 18,
+    "result": "passed",
+    "scope": "warehouse API/pages/components,DataTable,WorkOrdersPage,PaymentGatewaySettingsPage"
+  },
+  "typecheck": "tsc --noEmit -p tsconfig.app.json exit0",
+  "focusedLint": "request page/tests and sharedModal oxlint exit0",
+  "browser": "RUNNING issue-selection-fixed;notyetverified",
+  "priorFailure": "remaining-demand review identified unnamed nested dialog roles;native dialog now has heading label and inner duplicate role removed"
+}

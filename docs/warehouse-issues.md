@@ -4,7 +4,8 @@ Task14 mengaktifkan picking, unpick dan dispatch melalui `WarehouseIssueService`
 milik inventory. Fulfillment hanya memperoleh konteks terkunci dari workorder dan
 memanggil `InventoryIssueApi`; stok tetap ditulis oleh `WarehousePostingService`.
 Task15 acknowledgement tersedia melalui [receipt teknisi](warehouse-material-receipts.md).
-Pemakaian, pemasangan dan settlement **belum diaktifkan**.
+Pemakaian, pemasangan dan settlement dijelaskan pada dokumen alurnya masing-masing.
+Panduan antarmuka permintaan dan slip tersedia di [workbench gudang](warehouse-workbench.md).
 
 ## Prasyarat dan otorisasi
 
@@ -101,8 +102,10 @@ Contoh dispatch atau unpick:
 Di sini `expectedRevision` adalah revisi issue. `partial:true` menyatakan bahwa
 bundle yang didispatch belum memenuhi seluruh kebutuhan tersisa. Tanpanya,
 partial issue ditolak; backorder tidak pernah dihitung sebagai barang terkirim.
-Unpick dapat dilakukan oleh petugas berizin setelah reassignment/cancellation;
-ini tidak memberikan izin issue baru pada assignment yang sudah dicabut.
+Unpick memakai izin terkini dan konteks WO yang masih aktif. Setelah reassignment,
+petugas tetap harus memuat ulang revisi WO/permintaan; pengiriman memeriksa kembali
+penerima yang terikat pada slip. Batalkan persiapan sebelum menutup atau membatalkan
+WO sesuai alur lifecycle material.
 
 ## Kuantitas dan identitas
 
