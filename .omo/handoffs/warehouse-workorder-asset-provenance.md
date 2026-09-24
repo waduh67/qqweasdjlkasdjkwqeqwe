@@ -1,5 +1,37 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Full numeric report passes; delivery replay lifecycle fix under validation
+
+reports-full against aae97d92 executed11 tests/5 suites,2 failures,0 errors/skips,
+3m22s. All4 report basics,3 modularity,CSV formula test and actual1002-ledger export
+bound passed. BOTH full LOAN/SALE journeys reached correct917500MM/9ONU/zero field
+cable, exact82500IDR and200000USD totals, captured original bases and visible serial
+chain. They failed only at final acknowledgement REPLAY after WO start: fulfillment
+checked the old expected WO revision before inventory could return the stored reply.
+
+Moved that expected-WO-revision check to InventoryMaterialReceiptService AFTER its
+existing actor/resource/hash/cutover/location-authorized replay path, together with
+the existing issue/current-WO revision check. New postings keep both comparisons.
+Current field permission, active assignee, active WO, live plan, same receiver,
+authority/cutover fences and scoped receipt checks all remain before any reply.
+No SQL or persisted contracts changed. Added WorkOrderMaterialReceiptITReplayLifecycle2:
+progress replay returns identical original, changed payload/new stale action denied,
+revoked field scope denied, and stale first receipt cannot post.
+
+Added WarehouseReportPrivacyIT2: current cost revocation removes historical print
+cost and blocks cost export; explicit migration-owner staged unknown raw quantity
+never receives inferred units/available balance. Enhanced historical-cost test with
+a new supplier quote draft and a later price edit, which must not reprice old use.
+Added docs/warehouse-reports.md with paths, filters, exact cost math, snapshot/age
+semantics and bounded exports.
+
+Current .omo/runtime/reports-replay-fixed.sh / .log selects *WarehouseReport*IT,
+*WarehouseReportCsvTest,*WorkOrderMaterialReceiptIT* and ModularityTests. Expected
+reports13 plus receipt regression cases; do NOT assume final count/result yet.
+Archive task30/reports-replay-fixed/xml; private reports-replay-fixed-database.log.
+Task28 COMPLETE183 green; task30 OPEN pending this run and final acceptance review.
+Allthrough147 immutable;148unused. Whole-plan goal ACTIVE;keep commits/pushes.
+
 ## Report custody correction and full11-case validation running
 
 reports-compile-fixed executed7 tests with2 failures,0 errors/skips,2m8s. Unknown

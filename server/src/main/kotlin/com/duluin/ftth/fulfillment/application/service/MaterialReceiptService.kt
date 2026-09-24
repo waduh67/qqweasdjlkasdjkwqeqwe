@@ -32,8 +32,6 @@ class MaterialReceiptService(
             throw WarehouseContractException(WarehouseError(WarehouseErrorCode.WRONG_CUSTODIAN, "Current assigned receiver required"))
         if (!workOrder.active || workOrder.cancelled)
             throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Active work order required"))
-        if (request.workOrderRevision != workOrder.workOrderRevision)
-            throw WarehouseContractException(WarehouseError(WarehouseErrorCode.STALE_REVISION, "Work order revision changed"))
         val context = MaterialPlanningContext(workOrderId, workOrder.code, workOrder.workType, workOrder.action.name,
             workOrder.workOrderRevision, workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover)
         return inventory.acknowledge(context, request, WarehouseMutationMetadata(key))

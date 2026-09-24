@@ -56,6 +56,10 @@ class WarehouseReportIT : MaterialLifecycleFixture() {
         assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.cable}", token,
             """{"expectedRevision":1,"code":"CABLE","name":"=HYPERLINK(\"example\")","tracking":"LOT","baseUnit":"MM","inspectionRequired":false}""").status).isEqualTo(200)
         prints.forEach { (path, body) -> assertThat(report(token, "documents/$path/print").toString()).isEqualTo(body) }
+        val laterQuote = draft(stock, """{"skuId":"${stock.cable}","quantityBase":"1000000","lotCode":"LATER-QUOTE","cost":{"totalMinor":"9999999","currency":"USD"}}""")
+        val revisedQuote = draftBody(stock, """{"skuId":"${stock.cable}","quantityBase":"1000000","lotCode":"LATER-QUOTE","cost":{"totalMinor":"1","currency":"IDR"}}""")
+            .replaceFirst("{", "{\"expectedRevision\":0,")
+        assertThat(request("PUT", "/api/v1/warehouse/receipts/${laterQuote.path("id").asString()}", token, revisedQuote).status).isEqualTo(200)
         assertThat(report(token, "work-order-costs").path("items").single().path("lineTotalMinor").asString()).isEqualTo("82500")
         val csv = request("GET", "/api/v1/warehouse/reports/stock/export.csv", token)
         assertThat(csv.status).isEqualTo(200)

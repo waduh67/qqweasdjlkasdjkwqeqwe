@@ -63,7 +63,9 @@ class InventoryMaterialReceiptService(
             authorizeReceipt(store.get(prior.receipt.operationId), current)
             return prior.receipt
         }
-        if (issue.workOrderRevision != context.workOrderRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        // A permitted retry reads the immutable receipt above; only new physical work needs the current revisions.
+        if (request.workOrderRevision != context.workOrderRevision || issue.workOrderRevision != context.workOrderRevision)
+            masterFailure(WarehouseErrorCode.STALE_REVISION)
         val dispatch = issues.dispatchDestinations(issue.issueId)
         if (dispatch.size != issue.lines.size) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         masters.lockTopology()
