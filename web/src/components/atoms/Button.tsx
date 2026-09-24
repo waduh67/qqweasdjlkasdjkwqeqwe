@@ -48,7 +48,9 @@ const VARIANT_APPEARANCE: Record<ButtonVariant, ButtonProps['appearance']> = {
   danger: 'subtle',
 }
 
-export type AppButtonProps = Omit<ButtonProps, 'appearance'> & { variant?: ButtonVariant }
+// Preserve native button-only props (e.g. form) and anchor-only props across the union.
+type WithVariant<T> = T extends unknown ? Omit<T, 'appearance'> & { variant?: ButtonVariant } : never
+export type AppButtonProps = WithVariant<ButtonProps>
 
 export const Button: ForwardRefComponent<AppButtonProps> = forwardRef(
   ({ variant = 'default', className, ...rest }, ref) => {

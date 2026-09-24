@@ -4,11 +4,12 @@ import { Link, Route, Routes } from 'react-router-dom'
 import { listApprovals } from '@/api/warehouse/approvals'
 import { listStock } from '@/api/warehouse/masters'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState } from '@/components/atoms'
+import { EmptyState } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseTime } from '@/components/organisms/warehouse/WarehouseLines'
 import { WarehouseQuantity } from '@/components/organisms/warehouse/WarehouseQuantity'
+import { WarehousePagination } from '@/components/organisms/warehouse/WarehousePagination'
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
 import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatus'
 import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from './navigation'
@@ -85,11 +86,4 @@ function StockSummary({ embedded = false }: { embedded?: boolean }) {
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>
   </section>
-}
-
-export function WarehousePagination({ page, size, total, onChange }: { page: number; size: number; total: number; onChange: (page: number) => void }) {
-  if (total <= size && page === 0) return null
-  return <nav className="spread wrap" aria-label="Halaman data"><span>{total} entri · Halaman {page + 1}</span><div className="row">
-    <Button disabled={page === 0} onClick={() => onChange(page - 1)}>Sebelumnya</Button><Button disabled={(page + 1) * size >= total} onClick={() => onChange(page + 1)}>Berikutnya</Button>
-  </div></nav>
 }

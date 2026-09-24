@@ -91,3 +91,10 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   Unknown warehouse routes show an explicit unavailable page. Browser acceptance
   uses the isolated real API on desktop and a 375px mobile viewport, with no warehouse
   response mocks.
+- Master forms use named, searchable selectors with explicit previous/next pages.
+  A selector keeps its current selection visible when searching another page; an
+  empty result means no matches in the current access scope. It must not silently
+  treat the first page as the whole directory. Optional references have an explicit
+  empty choice. Scope changes show the selected user, location, current access and
+  revision before confirmation. Empty area grants explain the warehouse restriction
+  and link to authorized area/user setup.

@@ -1,5 +1,36 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task32 IN PROGRESS — editor/picker foundation57 unit tests green
+
+Task31 complete and published170d2158 (real browser source55b19223; desktop+mobile2
+passed and49unit, portable evidence/screenshots). All owned QA stopped; volumes kept.
+Task32 has generic WarehouseMasterPanel (search/page/state, create/edit/read-only,
+archive confirmation with real revision), SKU and supplier editors using captured
+commands and native form validation; they are NOT yet wired to /warehouse/catalog.
+Location editor, user-scope panel, actual catalog/setup checklist and browser setup
+extension remain to implement. No task32 browser claim or checkbox completion.
+
+WarehousePicker uses named bounded search/pages and preserves selected references
+across searches; no silent first-page truncation. API setup.ts decodes existing IAM
+user/site pages, areas and warehouse-scope grants; malformed/missing revision fails.
+masters.ts adds typed get-by-id. Error messages preserve archive/business reasons
+instead of treating every409 as stale. Pagination moved to shared warehouse control.
+Button AppButtonProps now distributes Omit over Fluent's button/anchor union to
+preserve native form prop (type-only change; no runtime implementation change).
+DESIGN.md picker/scope conventions updated before these controls.
+
+57unit cases passed (prior49 +8new setup/editor/picker cases); fullweb tsc-b and lint
+passed. Portable task32/foundation-verification.json. Tests cover actual MM minimum
+payload, retained editable supplier draft after409, archived/read-only no save,
+actual stale revision+explicit reload, selector preserves chosen name acrosspages,
+invalid IAM paging/missing grantrevision, and meaningful archive reason. Extend with
+location/scope/archive-page behaviour and actual browser setup before32completion.
+
+Next read task-32.md contract preparation below. New tenant listener really exists:
+WarehouseTenantCreatedListener initializes ENFORCED/NEW_EMPTY atomically on tenant
+created event (so later receipt UI needs no fake cutover for new tenants).
+Continue32–48/F1–F4. No migrations changed;148unused; no active backend/QA sessions.
+
 ## Task31 COMPLETE —49 unit tests and both real browser projects green
 
 setup-mobile-fixed against55b19223: desktop1280x900 and touch/mobile375x812 both
