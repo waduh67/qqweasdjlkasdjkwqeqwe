@@ -1,5 +1,37 @@
 # Task32 preparation (implementation not started)
 
+## Task32 catalog implemented —61 unit tests; browser setup pending
+
+/warehouse/catalog now routes to actual location, SKU, supplier and user-scope tabs.
+Setup checklist explains explicit area grants and links existing area/user admin.
+Location editor supports kind, same-area warehouse/bin parent, optional named site
+and active custodian selection, issue eligibility, read-only/archive and confirmations.
+Current reference404 preserves its stored ID with an explicit unavailable-name label;
+other failures show error, never fabricated names or a successful empty directory.
+No mutation follows merely selecting a parent/user. Named selectors are searchable
+and paginated. Master list now uses existing DataTable resource presentation.
+
+Scope panel reads actual grants including revoked revision. It cannot infer zero
+when GET fails; only an absent entry in a successfully read list uses expected0.
+Grant/revoke review names user/location and explains inherited versus direct access.
+409 reloads the current grant without automatic resubmission. Role and area remain
+independent authority.61 unit tests passed (57prior+4 location/scope); TS+lint passed.
+Portable task32/catalog-verification.json. No task32 browser success claimed yet.
+
+Extended e2e/warehouse/setup.spec.ts to4 real cases total across desktop/mobile:
+existing task31 journey + new UI area creation/self-assignment/login; warehouse/bin/
+quarantine setup; SKUcable exact82500MM minimum andONU; supplier; edits of all3;
+referenced root archive denied; unused SKU archive succeeds/read-only; duplicate code
+keeps editable draft; UI role/user/area creation and scoped readonly grant; reader
+sees main+child but not standalone quarantine. No SQL seed or API bypass for setup.
+New catalog.ts browser helpers use only UI actions and observe actual responses.
+helpers.createUser accepts optional area checkbox labels/prefix, original31 unchanged.
+
+NEXT: run .omo/runtime/warehouse-catalog-browser.sh catalog-initial with private log.
+Wrapper archives under task32, retains volumes and owns cleanup/locks as before.
+Resolve real UI failures, inspect mobile screenshot, capture portable proof and mark32
+only after required cases pass. Then33–48/F1–F4. Goal ACTIVE. No migrations added.
+
 ## Task32 IN PROGRESS — editor/picker foundation57 unit tests green
 
 Task31 complete and published170d2158 (real browser source55b19223; desktop+mobile2

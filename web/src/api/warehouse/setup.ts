@@ -25,6 +25,8 @@ export type SetupArea = ReturnType<typeof area>
 export type SetupSite = ReturnType<typeof site>
 export const listSetupUsers = (search: string, page: number) => query(`/api/users${parameters({ query: search, page, size: 25 })}`, legacyPage(user))
 export const listSetupSites = (search: string, page: number) => query(`/api/sites${parameters({ query: search, page, size: 25 })}`, legacyPage(site))
+export const getSetupUser = (id: string) => query(`/api/users/${uuid(id)}`, user)
+export const getSetupSite = (id: string) => query(`/api/sites/${uuid(id)}`, site)
 export const listSetupAreas = () => query('/api/areas', value => array(value, area, 'areas', 10000))
 
 function scope(value: unknown, path = 'scope') {

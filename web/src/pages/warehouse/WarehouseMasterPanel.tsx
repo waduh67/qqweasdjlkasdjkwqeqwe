@@ -34,7 +34,7 @@ export function WarehouseMasterPanel<T extends Master>({ title, load, archive, c
       <Button onClick={result.reload}>Segarkan</Button>
     </div>
     <WarehouseState {...result}>{data => <>
-      <DataTable rows={data.items} rowKey={row => row.id} onRowClick={row => setEditing(row)} empty={<EmptyState title={`Tidak ada ${title.toLowerCase()} yang cocok`} hint={emptyHint} />} columns={[
+      <DataTable presentation="resource" rows={data.items} rowKey={row => row.id} onRowClick={row => setEditing(row)} empty={<EmptyState title={`Tidak ada ${title.toLowerCase()} yang cocok`} hint={canManage ? emptyHint : 'Tidak ada data sesuai pencarian dan cakupan akses Anda.'} />} columns={[
         { key: 'name', header: 'Nama', cell: row => <span>{row.name ?? row.code}<br /><span className="muted">{row.code}</span></span> },
         ...columns,
         { key: 'status', header: 'Status', cell: row => <WarehouseStatus status={row.state} /> },
