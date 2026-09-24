@@ -18,7 +18,7 @@ class WarehouseTransferPlanning(private val stock: WarehouseTransferStock) {
             request.lines.distinctBy { it.stockIdentityId }.size != request.lines.size) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         return request.lines.map { selection ->
             val quantity = transferQuantity(selection.quantityBase)
-            val source = stock.get(selection.stockIdentityId, request.sourceLocationId)
+            val source = stock.get(selection.stockIdentityId, request.sourceLocationId, balanceId = selection.sourceBalanceId)
             stock.assertUnallocated(selection.stockIdentityId)
             if (source.unit != selection.baseUnit) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             if (source.status !in setOf(InventoryStatus.AVAILABLE, InventoryStatus.QUARANTINE, InventoryStatus.RETURNED))
@@ -33,10 +33,10 @@ class WarehouseTransferPlanning(private val stock: WarehouseTransferStock) {
 
     fun dispatch(record: TransferRecord): TransferPosting {
         val movements = record.lines.map { line ->
-            val current = stock.get(line.source.dimension.stockIdentityId, record.binding.sourceLocationId)
+            val current = stock.get(line.source.dimension.stockIdentityId, record.binding.sourceLocationId, dimension = line.source.dimension)
             stock.assertUnallocated(current.dimension.stockIdentityId)
             if (current != line.source) masterFailure(WarehouseErrorCode.STALE_REVISION)
-            move(line, current, transit(record, current.dimension), InventoryStatus.IN_TRANSIT, line.quantity, true)
+            move(line, current, record.transitDimension(current.dimension), InventoryStatus.IN_TRANSIT, line.quantity, true)
         }
         return combine(movements)
     }
@@ -50,8 +50,9 @@ class WarehouseTransferPlanning(private val stock: WarehouseTransferStock) {
             if (quantity > line.quantity - line.received) masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
             if (selection.baseUnit != line.source.unit) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             val identity = line.remainingIdentity ?: masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
-            val current = stock.get(identity, record.binding.transitLocationId)
-            if (current.dimension != transit(record, line.source.dimension).copy(stockIdentityId = identity) ||
+            val expectedDimension = record.transitDimension(line.source.dimension).copy(stockIdentityId = identity)
+            val current = stock.get(identity, record.binding.transitLocationId, dimension = expectedDimension)
+            if (current.dimension != expectedDimension ||
                 current.status != InventoryStatus.IN_TRANSIT || current.quantity != line.quantity - line.received)
                 masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
             val custody = when (destination.kind) {
@@ -89,9 +90,6 @@ class WarehouseTransferPlanning(private val stock: WarehouseTransferStock) {
             line.copy(received = Math.addExact(line.received, quantity), remainingIdentity = if (rest == 0L) null else remainderIdentity)
         return TransferPosting(listOf(updated), legs, splits)
     }
-
-    private fun transit(record: TransferRecord, source: PostingDimension): PostingDimension = source.copy(
-        locationId = record.binding.transitLocationId, custodianKind = OwnerKind.TRANSIT, custodianId = record.id)
 
     private fun combine(movements: List<TransferPosting>): TransferPosting = TransferPosting(
         movements.flatMap { it.lines }, movements.flatMap { it.legs }, movements.flatMap { it.splits })

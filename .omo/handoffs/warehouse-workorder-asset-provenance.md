@@ -2,13 +2,18 @@
 
 ## Current integration checkpoint: 2026-09-24
 
-- Latest substep: scoped Spring permission errors now return warehouse403/
-  FORBIDDEN, with a failing-first regression that has passed. Surrounding count/
-  transfer/approval tests are running, followed by the real HTTP journey. Two
-  harness issues (BIN destination and ProblemDetail media type) are corrected;
-  neither failed run is counted as operational PASS. See `continuation.md`.
+- Transfer position correction passed37 tests in10 suites, zero failures/errors/
+  skips. Optional source balance selection and document-owned transit dimensions
+  fix mixed AVAILABLE/LOST stock and concurrent transfers of the same identity.
+  All three real-DB regressions failed first. Legacy payload hashing is preserved.
+- Packaged `qa.sh wave5` passed real public signup, transfer/count/independent
+  approvals, stale recount and both JVM phases:14 response replays and16 stock/
+  document/history snapshots. Artifact and reproduction are in `continuation.md`.
+- Current follow-up is shared `qa.sh replenishment`, then closure25/27/29 and
+  implementation26. No migration changed. Newest section overrides historical
+  running/pending claims below; final whole-plan checks remain outstanding.
 - Earlier combined regression117/1 failure/0 errors/0 skips had only an obsolete
- 2-migration expectation versus9 combined migrations; corrected focused upgrade
+  2-migration expectation versus9 combined migrations; corrected focused upgrade
   passed1/0/0/0 with preservation assertions. Chromium tooling launches.
 
 - Resume from remote `feat/warehouse-workorder`, local continuation branch
@@ -20,11 +25,10 @@
   Shared error registration includes all three controllers. Approval dispatch,
   posting kinds and effect-event lookup retain both transfer and count paths.
   All nine imported migration files are byte-identical to their child branches.
-- This is an integration WIP checkpoint, not a combined test or completed-task
-  claim. Tasks1–24 remain checked. Next: fresh combined PostgreSQL verification,
-  complete task25/27 packaged HTTP/restart and missing acceptance coverage, then
-  tasks26/28/30 and the remaining plan. Read `continuation.md` in the plan's
-  notepad directory for current commands and test receipts.
+- Tasks1–24 remain checked pending shared replenishment confirmation. Continue
+  tasks26/28/30 and the remaining plan after closing the integrated child tasks.
+  Read `continuation.md` in the plan's notepad directory for current commands
+  and test receipts.
 - Existing task29 QA environment/volumes are retained separately; generate a new
   owned environment to test the full migration order. Never apply the earlier
   child migrations out of order to task29's already migrated database.

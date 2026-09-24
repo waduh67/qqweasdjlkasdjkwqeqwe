@@ -297,4 +297,33 @@ class WarehouseCountIT : WarehousePolicyHttpFixture() {
             assertThat(scalar("SELECT count(*) FROM inventory_approval_decision WHERE approval_id='$approval'")).isEqualTo("1")
         }
     }
+
+    @Test fun `mixed count positions require exact balance selection for subsequent transfer`() {
+        val fixture = stock()
+        val count = measured(fixture, "80")
+        action(count, fixture.setup.token, "submit", """{"expectedRevision":2}""")
+        val (reviewer, approval) = approval(fixture, count)
+        assertThat(request("POST", "/api/v1/warehouse/approvals/decide", reviewer,
+            """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""").status).isEqualTo(200)
+        val position = mapper.readTree(request("GET", "/api/v1/warehouse/stock/positions/${fixture.balance}", fixture.setup.token).contentAsString)
+        val destination = create("locations", fixture.setup.token,
+            """{"code":"DEST","name":"Destination","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        val transit = create("locations", fixture.setup.token,
+            """{"code":"TRANSIT","name":"Transit","kind":"TRANSIT"}""").path("id").asString()
+        val actor = mapper.readTree(request("GET", "/api/me", fixture.setup.token).contentAsString).path("id").asString()
+        val body = """{"sourceLocationId":"${fixture.setup.bin}","destinationLocationId":"$destination",
+            "transitLocationId":"$transit","receiverId":"$actor","reason":"Move counted goods","lines":[{
+            "stockIdentityId":"${position.path("stockIdentityId").asString()}","quantityBase":"10","baseUnit":"EA"}]}"""
+        assertThat(request("POST", "/api/v1/warehouse/transfers", fixture.setup.token, body).status).isEqualTo(409)
+        val selected = body.replace("\"baseUnit\":\"EA\"", "\"baseUnit\":\"EA\",\"sourceBalanceId\":\"${fixture.balance}\"")
+        val draft = create("transfers", fixture.setup.token, selected)
+        val path = "/api/v1/warehouse/transfers/${draft.path("id").asString()}"
+        assertThat(request("POST", path + "/dispatch", fixture.setup.token, """{"expectedRevision":0}""").status).isEqualTo(200)
+        fixture(fixture.setup.token).transaction {
+            assertThat(scalar("SELECT quantity_base FROM inventory_balance_projection WHERE id='${fixture.balance}'")).isEqualTo("70")
+            assertThat(scalar("SELECT sum(quantity_base) FROM inventory_balance_projection WHERE stock_identity_id='${position.path("stockIdentityId").asString()}' AND status='LOST'")).isEqualTo("20")
+        }
+        val wrong = selected.replace(fixture.balance, UUID.randomUUID().toString())
+        assertThat(request("POST", "/api/v1/warehouse/transfers", fixture.setup.token, wrong).status).isEqualTo(409)
+    }
 }

@@ -132,7 +132,8 @@ def configure(journey):
 def transfer(journey, stock, quantity=None):
     body = {"sourceLocationId": journey.state["warehouse"], "destinationLocationId": journey.state["destination"],
         "transitLocationId": journey.state["transit"], "receiverId": journey.state["actors"]["receiver"]["id"],
-        "reason": "Verified relocation", "lines": [{"stockIdentityId": stock["identity"], "quantityBase": quantity or stock["quantity"], "baseUnit": stock["unit"]}]}
+        "reason": "Verified relocation", "lines": [{"stockIdentityId": stock["identity"], "sourceBalanceId": stock["balance"],
+            "quantityBase": quantity or stock["quantity"], "baseUnit": stock["unit"]}]}
     return journey.master("transfers", body)
 
 

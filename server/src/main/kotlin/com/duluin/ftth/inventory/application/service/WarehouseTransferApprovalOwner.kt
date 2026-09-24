@@ -47,7 +47,8 @@ class WarehouseTransferApprovalOwner(private val store: WarehouseTransferDiscrep
         val source = transfers.get(resolution.transferId)
         val lineIds = store.lines(resolution.id)
         val legs = source.lines.filter { it.received < it.quantity }.flatMap { line ->
-            val position = stock.get(requireNotNull(line.remainingIdentity), source.binding.transitLocationId)
+            val expected = source.transitDimension(line.source.dimension).copy(stockIdentityId = requireNotNull(line.remainingIdentity))
+            val position = stock.get(expected.stockIdentityId, source.binding.transitLocationId, dimension = expected)
             val dimension = position.dimension
             if (dimension.custodianId != source.id || dimension.custodianKind != OwnerKind.TRANSIT || position.status != InventoryStatus.IN_TRANSIT ||
                 position.quantity != line.quantity - line.received || dimension.legalOwner != line.source.dimension.legalOwner)

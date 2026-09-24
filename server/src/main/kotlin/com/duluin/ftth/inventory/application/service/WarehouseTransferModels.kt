@@ -4,6 +4,7 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.PostingDimension
 import com.duluin.ftth.inventory.domain.model.InventoryStatus
+import com.duluin.ftth.inventory.domain.model.OwnerKind
 import java.time.Instant
 import java.util.UUID
 
@@ -20,6 +21,9 @@ data class TransferRecord(val id: UUID, val code: String, val revision: Long, va
             line.source.dimension.stockIdentityId, line.source.unit, line.quantity.toString(), line.received.toString(),
             (if (state == WarehouseTransferState.DRAFT) 0 else line.quantity - line.received - line.resolved).toString(),
             line.remainingIdentity, line.source.dimension.condition, line.source.dimension.legalOwner, line.resolved.toString()) }, resolutionDocumentId)
+
+    fun transitDimension(source: PostingDimension): PostingDimension = source.copy(
+        locationId = binding.transitLocationId, custodianKind = OwnerKind.TRANSIT, custodianId = id)
 }
 
 internal fun transferQuantity(value: String): Long {

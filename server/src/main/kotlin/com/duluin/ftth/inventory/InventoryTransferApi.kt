@@ -13,7 +13,9 @@ interface InventoryTransferApi {
 
 data class WarehouseTransferDraft(val sourceLocationId: UUID, val destinationLocationId: UUID,
     val transitLocationId: UUID, val receiverId: UUID, val reason: String, val lines: List<WarehouseTransferSelection>)
-data class WarehouseTransferSelection(val stockIdentityId: UUID, val quantityBase: String, val baseUnit: WarehouseBaseUnit)
+data class WarehouseTransferSelection(val stockIdentityId: UUID, val quantityBase: String, val baseUnit: WarehouseBaseUnit,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val sourceBalanceId: UUID? = null)
 data class WarehouseTransferRevision(val expectedRevision: Long)
 data class WarehouseTransferReceipt(val expectedRevision: Long, val evidenceReference: String,
     val lines: List<WarehouseTransferAcceptance>)

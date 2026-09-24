@@ -10,8 +10,21 @@ import java.util.UUID
 
 @Repository
 class WarehouseTransferStock(private val jdbc: WarehouseCommandJdbc) {
-    fun get(identity: UUID, location: UUID): TransferStock = jdbc.execute { sql ->
-        sql.query("""SELECT balance.*,segment.revision piece_revision,sku.tracking,
+    fun get(identity: UUID, location: UUID, balanceId: UUID? = null, dimension: PostingDimension? = null): TransferStock = jdbc.execute { sql ->
+        if (dimension != null) require(dimension.stockIdentityId == identity && dimension.locationId == location)
+        val selection = buildString {
+            if (balanceId != null) append(" AND balance.id=?")
+            if (dimension != null) append(""" AND balance.sku_id=? AND balance.lot_id IS NOT DISTINCT FROM ?::uuid
+                AND balance.custody_owner_id IS NOT DISTINCT FROM ?::uuid AND balance.custody_owner_kind=?
+                AND balance.condition=? AND balance.legal_owner=?""")
+        }
+        val parameters = buildList<Any?> {
+            addAll(listOf(sql.tenant, identity, location))
+            if (balanceId != null) add(balanceId)
+            if (dimension != null) addAll(listOf(dimension.skuId, dimension.lotId, dimension.custodianId,
+                dimension.custodianKind, dimension.condition, dimension.legalOwner))
+        }
+        val positions = sql.query("""SELECT balance.*,segment.revision piece_revision,sku.tracking,
             coalesce(origin.cost_total_minor,lot.cost_total_minor) cost_total,
             coalesce(origin.cost_basis_quantity_base,lot.cost_basis_quantity_base) cost_basis,
             coalesce(origin.currency,lot.currency) cost_currency
@@ -23,7 +36,7 @@ class WarehouseTransferStock(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN inventory_document_line origin ON origin.tenant_id=asset.tenant_id AND origin.id=asset.origin_document_line_id
             WHERE balance.tenant_id=? AND balance.stock_identity_id=? AND balance.location_id=? AND balance.quantity_base>0
             AND balance.warehouse_admission='VERIFIED' AND segment.warehouse_admission='VERIFIED'
-            AND segment.state='ACTIVE' AND sku.state='ACTIVE'""", sql.tenant, identity, location) {
+            AND segment.state='ACTIVE' AND sku.state='ACTIVE'$selection""", *parameters.toTypedArray()) {
             TransferStock(PostingDimension(it.uuid("sku_id"), identity, it.optionalUuid("lot_id"), location,
                 it.uuid("custody_owner_id"), OwnerKind.valueOf(it.getString("custody_owner_kind")),
                 WarehouseCondition.valueOf(it.getString("condition")), AssetLegalOwner.valueOf(it.getString("legal_owner"))),
@@ -31,7 +44,8 @@ class WarehouseTransferStock(private val jdbc: WarehouseCommandJdbc) {
                 WarehouseTracking.valueOf(it.getString("tracking")), InventoryStatus.valueOf(it.getString("status")),
                 it.getLong("piece_revision"), it.getString("cost_total")?.let { total ->
                     ReceiptCostSnapshot(total, it.getString("cost_currency"), it.getString("cost_basis")) })
-        }.singleOrNull() ?: sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
+        }
+        positions.singleOrNull() ?: sql.fail(if (positions.isEmpty()) WarehouseErrorCode.INSUFFICIENT_STOCK else WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
 
     fun assertUnallocated(identity: UUID) = jdbc.execute { sql ->

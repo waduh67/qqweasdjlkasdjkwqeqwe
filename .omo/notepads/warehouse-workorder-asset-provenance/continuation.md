@@ -1,29 +1,34 @@
 # Whole-plan continuation
 
-## Current step — approval errors and cross-flow HTTP
+## Current step — transfer/count integration verified
 
-- Latest published base is `cc96f215`. Two packaged attempts exposed harness
-  issues: putaway requires an actual BIN under a warehouse; the HTTP helper must
-  accept valid `application/problem+json` as well as `application/json`. Both
-  are corrected. These failed attempts are not operational PASS evidence.
-- The permission response was valid ProblemDetail, not an empty/non-JSON server
-  response. It lacked the warehouse `FORBIDDEN` contract code. A new real-DB
-  MockMvc regression first failed on the differing response media type. Scoped
-  `WarehouseHttpErrors` now also handles Spring Security AccessDeniedException,
-  returning the same403/FORBIDDEN body as domain permission denials. The new
-  test has passed; the surrounding approval/count/transfer regression is running.
-- Current host command is `.omo/runtime/integration-permission-green.sh`, log
-  `.omo/runtime/integration-permission-green.log`. It runs the new error test,
-  approval guards, all count tests and transfer guards, archives XML, then runs
-  `qa.sh wave5`. Finish this command, correct any real HTTP failure, and rerun
-  `qa.sh replenishment` before task closure.
-- The HTTP receiver now has decision permission, so its rejected self-approval
-  exercises independent-party enforcement rather than stopping at missing-role
-  preauthorization. Failure cleanup preserves the owned server log. New runs
-  remove stale phase outputs, preventing an old PASS from masking a new failure.
-- No SQL or migration byte changed. All global completion checkboxes remain
-  unchanged. Inspect the mixed AVAILABLE/LOST bulk transfer case when the HTTP
-  journey reaches it; source selection may require an explicit balance identity.
+- Latest published base before this checkpoint is `d23bba73`. The permission
+  correction passed27 tests with zero failures/errors/skips. Its subsequent
+  real HTTP run exposed a product bug: one bulk identity can have both AVAILABLE
+  and LOST positions, and multiple transfers can share a transit location.
+- Three real-DB failing-first regressions reproduced ambiguous selection:
+  count100->80 then dispatch, two simultaneous bulk transfers with independent
+  receipts, and independent LOST remainder approval. Added optional
+  `sourceBalanceId`; dispatch and receipt now match the frozen source/full
+  document-owned transit dimension. Old payload hashes remain unchanged.
+- Corrected source passed37 tests in10 suites, zero failures/errors/skips,
+  including the three regressions, all count/transfer cases, permission errors,
+  module boundaries and legacy payload hashing. `qa.sh wave5` also passed both
+  packaged JVM phases with actual public signup and real HTTP: partial receipts,
+  independent loss/count approvals, stale count/recount and tenant rejection;
+  restart replay matched14 original responses and16 immutable read snapshots.
+- JAR SHA256: `70c7ddb8f239cb553d71379c15d4a25742ae3e08859a9f8061695dc1f08f03da`.
+  Ignored raw proof: `.omo/evidence/warehouse-workorder-asset-provenance/` +
+  `integration-20260924/positions-green/{xml,proof}`. Regression/HTTP lifecycle
+  completed and removed only owned containers/processes; volumes retained.
+- Current host command is `bash .omo/runtime/integration-http.sh replenishment`,
+  log `.omo/runtime/integration-replenishment.log`. It verifies the shared
+  packaged lifecycle against task29 again. Finish it before closing25/27/29.
+  Then implement26 returns/inspection/RMA, followed by28/30 and remaining plan.
+- No migration byte changed; ceiling175.115.1. See `docs/warehouse-transfers.md`
+  and `docs/warehouse-wave5-verification.md` for portable behavior and commands.
+  Global checkboxes remain unchanged at this checkpoint. Newest entry supersedes
+  all historical running/pending descriptions below.
 
 ## Recorded integration and harness checks
 
