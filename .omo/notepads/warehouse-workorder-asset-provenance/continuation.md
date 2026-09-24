@@ -1,5 +1,21 @@
 # Whole-plan continuation
 
+## Task36 full178web green; transfer test input corrected, rerun next
+
+Product99b98b41 passed178 web tests/28 files in36.10s, TypeScript+Vite production
+build and warehouseAPI/pages/components oxlint exit0. Portable full-web proof saved.
+Transfer backend9 tests:8passed, new mixed-line filter case failed at padded serial
+lookup. Confirmed separately using JShell with same Spring request builder: encoded
+URL serial=%20filter-serial%20 becomes literal %20filter-serial%20, while .param gets
+real spaces. Corrected test to actual .param, no product behavior changed.
+NEXT rerun WarehouseTransferListIT4 tests via transfer-filters-corrected-server.sh;
+remaining5 transfer backend tests @99b98b41 passed and unchanged. Need collectactual
+success/freshXML and cleanup before mark36complete. Fullweb no repeat needed for
+this test-only correction. Earlierreacquisition5/RMA11 proofs saved. No migrations.
+
+Task37 preparation notes saved task-37.md (approval read/actor/cost gates, blind
+count constraints, persisted deep links).36stillOPEN;37–48/F1–F4 remain active.
+
 ## Task36 transfer filters implemented; backend verification next
 
 Reacquisition backend corrected5dd0f46e passed5 tests/4 suites in3m36s with no

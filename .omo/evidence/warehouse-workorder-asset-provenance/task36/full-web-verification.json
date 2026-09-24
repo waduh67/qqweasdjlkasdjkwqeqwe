@@ -1,0 +1,18 @@
+{
+  "task": 36,
+  "sourceCommit": "99b98b41",
+  "web": {
+    "tests": 178,
+    "files": 28,
+    "durationSeconds": 36.1,
+    "failed": 0,
+    "logSha256": "aa15dbf89d324f38bca71972c295b6535d95e6621d2bcbe073ea86a49b0b085a"
+  },
+  "build": "TypeScript + Vite production build passed (Vite1.49s)",
+  "lint": "oxlint warehouse API/pages/components passed",
+  "notes": [
+    "Vite existing large-chunk advisory remains non-blocking",
+    "This is one actual178-test batch, including29 return/RMA/reacquisition and15 transfer checks",
+    "No new full return/RMA browser claim; task45 after40/41"
+  ]
+}

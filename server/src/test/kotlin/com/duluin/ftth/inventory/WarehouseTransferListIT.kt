@@ -112,7 +112,11 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
         val mixed = create("transfers", setup.token, body)
         val mixedId = mixed.path("id").asString()
         assertThat(list(setup.token, "skuId=${setup.cable}&size=1").path("totalElements").asLong()).isEqualTo(2)
-        val selected = list(setup.token, "skuId=${setup.onu}&serial=%20filter-serial%20&size=1")
+        val serialResponse = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/warehouse/transfers")
+            .param("skuId", setup.onu).param("serial", " filter-serial ").param("size", "1")
+            .header("Authorization", "Bearer ${setup.token}")).andReturn().response
+        assertThat(serialResponse.status).withFailMessage(serialResponse.contentAsString).isEqualTo(200)
+        val selected = mapper.readTree(serialResponse.contentAsString)
         assertThat(selected.path("totalElements").asLong()).isEqualTo(1)
         assertThat(selected.path("items").single().path("transfer").path("id").asString()).isEqualTo(mixedId)
         assertThat(list(setup.token, "skuId=${setup.cable}&serial=FILTER-SERIAL").path("totalElements").asLong()).isZero()
