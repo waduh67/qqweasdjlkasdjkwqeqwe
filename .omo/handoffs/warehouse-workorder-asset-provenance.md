@@ -1,5 +1,17 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task34 compilation correction — real browser still pending
+
+stock-explorer-initial at e9e57a60 stopped BEFORE Playwright: bootJar passed but
+web TypeScript found unsupported `exact` in two Testing Library ByRoleOptions.
+The preceding TS pass claim was premature; the actual pending compiler failed.
+100 unit tests did pass. Corrected two test queries (string name is already exact),
+then awaited TypeScript exit0 and reran all8 stock page tests: passed. Initial
+ui-verification.json now records the real failure; compile-correction.json records
+cause/fix. Owned cleanup passed with volumes retained. No browser acceptance yet.
+NEXT `.omo/runtime/warehouse-stock-browser.sh stock-explorer-compiled`, review
+both screenshots only after actual success; then finish34 and continue35–48/F1–F4.
+
 ## Task34 explorer UI implemented — 100 web tests green; browser pending
 
 Backend operational buckets against 3046bb05: 11 tests / 7 suites passed in 2m54s,
@@ -11,7 +23,8 @@ asset/position details, origin receipt links, exact costs and permission redacti
 lot conservation and paginated parent/child segment navigation, immutable history.
 Drilldown retains location/condition/bucket; invalid/blank/duplicate URL rejected;
 unknown legacy units remain unknown and inconsistent conservation remains an alert.
-100 tests / 12 files passed (full warehouse + DataTable), TypeScript and lint green.
+100 tests / 12 files passed (full warehouse + DataTable); lint passed. Initial
+TypeScript failed in test queries, corrected in the next checkpoint above.
 Eight new stock page tests cover quantities/pages, server buckets, archived named
 filters, provenance denial, unknown units, hidden/exact costs, scope failure and
 inconsistent/truncated lineage. No warnings in changed warehouse files.

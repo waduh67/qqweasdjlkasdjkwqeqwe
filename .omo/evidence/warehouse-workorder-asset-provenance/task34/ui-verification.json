@@ -5,7 +5,7 @@
   "testFiles": 12,
   "durationSeconds": 9.53,
   "checks": [
-    "TypeScript passed",
+    "TypeScript FAILED in two new test ByRoleOptions; initial completion claim corrected",
     "lint passed; existing unrelated warnings",
     "11 bucket backend cases passed at3046bb05"
   ],
@@ -16,5 +16,6 @@
     "web/src/pages/warehouse/WarehouseStockPage.test.tsx": "a6fbbbc2350e33f99b1e78bebed837a2107e78451756da59ecdbbae94f7305ad",
     "web/e2e/warehouse/receiving.spec.ts": "03152b6fbe10c2d903413336055318d3be8d062be1fc001d3d34ffa3b3f0de91"
   },
-  "browser": "pending real desktop/mobile run; task not complete"
+  "browser": "pending real desktop/mobile run; task not complete",
+  "sourceCommit": "e9e57a60"
 }

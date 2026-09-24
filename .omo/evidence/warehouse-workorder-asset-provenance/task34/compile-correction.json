@@ -1,0 +1,15 @@
+{
+  "task": 34,
+  "sourceBeforeFix": "e9e57a60",
+  "attempt": "stock-explorer-initial",
+  "result": "browser not started; web build failed TS2769 in new test queries",
+  "fix": "remove unsupported exact option from two Testing Library role queries; string name already exact",
+  "verification": {
+    "typescriptExitCode": 0,
+    "focusedTestsPassed": 8,
+    "baselineTestsPassed": 100,
+    "lint": "passed; existing unrelated warnings"
+  },
+  "cleanup": "owned processes containers/network stopped; volumes retained",
+  "next": "stock-explorer-compiled real browser attempt"
+}
