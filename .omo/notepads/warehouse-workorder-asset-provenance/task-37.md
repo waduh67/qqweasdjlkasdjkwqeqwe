@@ -3,6 +3,17 @@
 
 
 
+
+## Task37 approval baseline verified; evidence and discrepancy recovery next
+
+Approval baseline source0ccf3ab1 verified: correctedWorkbench3 PASS1m53s plus
+25 unchanged tests/6suites PASS at7b84c704 (not one combined28green batch).
+28web/5files PASS5.66s, TS and targeted oxlint PASS. Portable proof:
+.omo/evidence/warehouse-workorder-asset-provenance/task37/approval-verification.json.
+Owned cleanup completed; volumes retained. No migrations. Required next work is
+listed immediately below: approver evidence review, owner-bound discrepancy recovery,
+disposition UI, actual separate-login discrepancy browser. Whole37–48/F1–F4 active.
+
 ## Task37 approval UI green; corrected backend test rerun next
 
 Approval backend 7b84c704 compiled and ran28tests/7suites in6m29s:27passed,1failed.
