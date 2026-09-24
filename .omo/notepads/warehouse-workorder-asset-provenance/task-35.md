@@ -1,5 +1,17 @@
 # Task35 — demand and issue implementation
 
+## Task35 confirmation dialog accessibility correction — verification running
+
+New remaining-demand review test found actual Modal had two nested unnamed dialog
+roles. Added useId/aria-labelledby to native dialog, keptone native role andmoved
+headingid; removedredundantinnerrole. This enables namedconfirmation access for
+screenreaders andtest. Requestreview initial1of13failed;12passed. Fullwarehouse+
+DataTable+WO+PaymentGateway tests/TS/focusedlint RUNNING request-review-accessibility-web.log
+because sharedModal changed. NEXT await then browser issue-selection-fixed. Browser
+notrunning, lastinitialbothfailedtesttechnicianselector whichisfixed2f101b2d.
+No completed35claim. Continue35–48/F1–F4.
+
+
 ## Task35 first browser failed on test selector — correction prepared
 
 issue-initial@4e6d4b3d builtbackend/web, bothbrowserprojects failed beforeWOcreate:

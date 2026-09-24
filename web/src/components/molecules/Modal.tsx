@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { typographyStyles } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
@@ -27,6 +27,7 @@ export function Modal({
   // ini dipromosikan ke top layer setelah drawer, ia otomatis menumpuk di atasnya. ESC
   // ditangani native lewat event `cancel`.
   const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
   useEffect(() => {
     const dlg = ref.current
     if (dlg && !dlg.open) dlg.showModal()
@@ -39,15 +40,17 @@ export function Modal({
     <dialog
       ref={ref}
       className="modal-host"
+      aria-labelledby={titleId}
+      aria-modal="true"
       onCancel={(e) => {
         e.preventDefault()
         onClose()
       }}
     >
       <div className="scrim" onClick={onClose} />
-      <div className={`modal${wide ? ' modal-wide' : ''}`} role="dialog" aria-modal="true">
+      <div className={`modal${wide ? ' modal-wide' : ''}`}>
         <div className="modal-head">
-          <h3 style={typographyStyles.subtitle1}>{title}</h3>
+          <h3 id={titleId} style={typographyStyles.subtitle1}>{title}</h3>
           <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
         </div>
         <div className="modal-body">{children}</div>
