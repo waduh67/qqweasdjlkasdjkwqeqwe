@@ -74,9 +74,10 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         return record.view()
     }
 
-    override fun history(id: UUID): List<WarehouseTransferView> {
+    override fun history(id: UUID, page: WarehousePageRequest): List<WarehouseTransferView> {
+        if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         get(id)
-        return store.history(id)
+        return store.history(id, page)
     }
 
     private fun execute(id: UUID, revision: Long, input: Any, metadata: WarehouseMutationMetadata, action: String,

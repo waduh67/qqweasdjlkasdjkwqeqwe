@@ -108,12 +108,29 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
         assertThat(line.path("receivedBase").asString()).isEqualTo("60000")
         assertThat(line.path("inTransitBase").asString()).isEqualTo("40000")
         assertThat(line.path("resolvedBase").asString()).isEqualTo("0")
+        fun history(query: String): JsonNode {
+            val response = request("GET", "/api/v1/warehouse/transfers/$id/history/page?$query", viewer.first)
+            assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
+            return mapper.readTree(response.contentAsString)
+        }
+        val latest = history("page=0&size=2")
+        assertThat(latest.path("totalElements").asLong()).isEqualTo(3)
+        assertThat(latest.path("items").asSequence().map { it.path("revision").asLong() }.toList()).containsExactly(2L,1L)
+        assertThat(history("page=1&size=2").path("items").single()).isEqualTo(draft)
+        assertThat(history("page=2&size=2").path("items").size()).isZero()
+        val oldPage = request("GET", "/api/v1/warehouse/transfers/$id/history?page=1&size=1", viewer.first)
+        assertThat(oldPage.status).isEqualTo(200)
+        assertThat(mapper.readTree(oldPage.contentAsString).single().path("revision").asLong()).isEqualTo(1)
+        for (suffix in listOf("/history", "/history/page")) {
+            for (invalid in listOf("size=101", "page=-1", "size=0", "page=1&page=2", "state=DRAFT", "size="))
+                assertThat(request("GET", "/api/v1/warehouse/transfers/$id$suffix?$invalid", viewer.first).status).isEqualTo(400)
+        }
         val target = create("locations", admin, """{"code":"LOST","name":"Lost goods","kind":"LOST"}""").path("id").asString()
         transferAction(stock, id, "discrepancy", """{"expectedRevision":2,"action":"LOST","destinationLocationId":"$target",
             "reason":"Missing remainder","evidenceReference":"signed-receipt"}""")
         assertThat(list(admin, "locationId=$target&state=DISCREPANCY").path("totalElements").asLong()).isEqualTo(1)
         assertThat(list(viewer.first).path("totalElements").asLong()).isZero()
-        for (suffix in listOf("", "/details", "/history"))
+        for (suffix in listOf("", "/details", "/history", "/history/page"))
             assertThat(request("GET", "/api/v1/warehouse/transfers/$id$suffix", viewer.first).status).isEqualTo(404)
         val scope = "/api/v1/warehouse/settings/scopes/${viewer.second}/$target"
         assertThat(request("PUT", scope, admin, """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)

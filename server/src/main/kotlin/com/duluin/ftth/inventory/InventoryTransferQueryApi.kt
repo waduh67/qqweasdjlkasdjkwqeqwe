@@ -6,6 +6,7 @@ import java.util.UUID
 interface InventoryTransferQueryApi {
     fun list(filter: WarehouseTransferFilter): WarehousePage<WarehouseTransferDetails>
     fun details(id: UUID): WarehouseTransferDetails
+    fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseTransferView>
 }
 
 data class WarehouseTransferFilter(val page: Int = 0, val size: Int = 25,

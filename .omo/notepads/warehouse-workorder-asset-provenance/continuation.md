@@ -1,5 +1,29 @@
 # Whole-plan continuation
 
+## Task36 Transfer page checkpoint; history verification next
+
+Transfer discovery3newHTTPcases passed @6af0af41,1m46s, alongside18existingcases
+passed @496d1d85. Portable task36/discovery-verification.json records per-suite
+hashes/source (21distinct, not one21testgreenbatch). Cleanup completed.
+
+Implemented actual Transfer route/list/detail/create, named locations/receiver,
+source position+exactqty+lot read, dispatch, partialreceive, fullremainderdiscrepancy,
+permission/actor reasons, currentquantity table and saved history. Inputs capture
+sourceBalanceId and server-boundreceiver; read fresh GET after command. Customer
+ownership warning; nocancel or fakeavailable/receipt. Ownuser can be selected
+withoutIAMdirectory permission. Approval deep link needs task37 destination flow.
+Build+6helper/APItests+TS passed; newFastRefreshwarnings fixed by separate helper,
+finalTS/oxlint passed. Page behavior tests and actual browser NOTRUNYET.
+
+C8 review found oldtransferhistory unbounded. Added bounded legacyarray (default25,
+max100, oldascendingorder) and /{id}/history/page typed server count/latest-first;
+strict pageparams and currenttargetscope. Added true3operation paging/assertions
+and denied newhistory path tointegrationcase. Backend history changes UNVERIFIED:
+NEXT run transfer-history (ListIT+Contract+basicTransferIT), then page tests and
+actual100/60/40 desktop/mobile. Return source/inspection/repair/replacement still
+needed before36complete. Newdocs describe history compatibility explicitly.
+No migrations; whole36–48/F1–F4 active. Commit/push everycoherentcheckpoint.
+
 ## Task36 typed transfer commands green; scope assertion correction
 
 Server @496d1d85 compiled and ran21tests:19passed,2failed only because new scope

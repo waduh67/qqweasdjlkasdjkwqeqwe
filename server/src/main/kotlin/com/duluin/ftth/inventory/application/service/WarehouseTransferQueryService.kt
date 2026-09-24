@@ -39,6 +39,12 @@ class WarehouseTransferQueryService(private val cutovers: InventoryTenantCutover
         return details(view, names)
     }
 
+    override fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseTransferView> {
+        if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        transfers.get(id)
+        return query.history(id, page)
+    }
+
     private fun details(view: WarehouseTransferView, names: Map<UUID, String>) = WarehouseTransferDetails(view,
         WarehouseTransferReferences(query.locationReferences(view), listOf(view.senderId,view.receiverId).distinct().map {
             WarehouseTransferPersonRef(it, names[it])

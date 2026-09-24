@@ -62,7 +62,7 @@ export type TransferDetails = ReturnType<typeof transferDetails>
 const root = '/api/v1/warehouse/transfers'
 export const listTransfers = (filter: TransferFilter = {}) => query(`${root}${parameters({ ...filter })}`, pageOf(transferDetails))
 export const getTransfer = (id: string) => query(`${root}/${uuid(id)}/details`, transferDetails)
-export const transferHistory = (id: string) => query(`${root}/${uuid(id)}/history`, value => array(value, transferView, 'history', Number.MAX_SAFE_INTEGER))
+export const transferHistory = (id: string, page = 0) => query(`${root}/${uuid(id)}/history/page${parameters({ page, size: 25 })}`, pageOf(transferView))
 export const createTransfer = (input: TransferDraft) => command(root, 'POST', input, transferView)
 export const dispatchTransfer = (id: string, expectedRevision: number) => command(`${root}/${uuid(id)}/dispatch`, 'POST', { expectedRevision }, transferView)
 export const receiveTransfer = (id: string, input: TransferReceipt) => command(`${root}/${uuid(id)}/receive`, 'POST', input, transferView)

@@ -52,7 +52,20 @@ class WarehouseTransferController(private val transfers: WarehouseTransferServic
     @PostMapping("/{id}/discrepancy")
     fun discrepancy(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(discrepancies.report(id, WarehouseReceiptJson.decode(body, WarehouseTransferDiscrepancy::class.java), key))
-    @GetMapping("/{id}/history") fun history(@PathVariable id: UUID): List<WarehouseTransferView> = transfers.history(id)
+    @GetMapping("/{id}/history") fun history(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): List<WarehouseTransferView> =
+        transfers.history(id, historyPage(parameters))
+    @GetMapping("/{id}/history/page") fun historyPage(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): WarehousePage<WarehouseTransferView> =
+        queries.history(id, historyPage(parameters))
+
+    private fun historyPage(parameters: MultiValueMap<String, String>): WarehousePageRequest {
+        fun invalid(): Nothing = throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Invalid transfer history page"))
+        if (parameters.any { (key, values) -> key !in setOf("page", "size") || values.size != 1 || values.single().isBlank() }) invalid()
+        fun number(key: String, default: Int) = parameters[key]?.single()?.let {
+            if (!it.matches(Regex("[0-9]+"))) invalid()
+            it.toIntOrNull() ?: invalid()
+        } ?: default
+        return WarehousePageRequest(number("page", 0), number("size", 25))
+    }
 
     private fun response(receipt: WarehouseOperationReceipt): ResponseEntity<String> = ResponseEntity.status(receipt.originalStatus)
         .contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)

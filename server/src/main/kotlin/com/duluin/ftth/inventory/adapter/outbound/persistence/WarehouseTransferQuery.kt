@@ -42,6 +42,18 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
         }
     }
 
+    fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseTransferView> = jdbc.execute { sql ->
+        val result = mapper.readTree(sql.value("""WITH matches AS MATERIALIZED (
+                SELECT document_revision,original_body::jsonb body FROM inventory_operation
+                WHERE tenant_id=? AND document_id=? AND namespace LIKE 'warehouse.transfer.%'),
+            selected AS (SELECT * FROM matches ORDER BY document_revision DESC LIMIT ? OFFSET ?)
+            SELECT jsonb_build_object('items',coalesce((SELECT jsonb_agg(body ORDER BY document_revision DESC) FROM selected),'[]'::jsonb),
+                'totalElements',(SELECT count(*) FROM matches))::text""", sql.tenant, id, page.size, page.page.toLong() * page.size)
+            ?: sql.fail(WarehouseErrorCode.NOT_FOUND))
+        WarehousePage(result.path("items").asSequence().map { mapper.treeToValue(it, WarehouseTransferView::class.java) }.toList(),
+            page.page, page.size, result.path("totalElements").asLong())
+    }
+
     fun lineReferences(view: WarehouseTransferView): List<WarehouseTransferLineRef> = jdbc.execute { sql ->
         sql.query("""SELECT line.id,sku.code sku_code,sku.name sku_name,asset.serial_number,lot.code lot_code
             FROM inventory_document_line line

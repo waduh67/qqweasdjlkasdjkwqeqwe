@@ -8,7 +8,7 @@ interface InventoryTransferApi {
     fun dispatch(id: UUID, request: WarehouseTransferRevision, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun receive(id: UUID, request: WarehouseTransferReceipt, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun get(id: UUID): WarehouseTransferView
-    fun history(id: UUID): List<WarehouseTransferView>
+    fun history(id: UUID, page: WarehousePageRequest = WarehousePageRequest()): List<WarehouseTransferView>
 }
 
 data class WarehouseTransferDraft(val sourceLocationId: UUID, val destinationLocationId: UUID,

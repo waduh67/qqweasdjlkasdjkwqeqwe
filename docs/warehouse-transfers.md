@@ -53,6 +53,12 @@ Hasilnya halaman `{items,page,size,totalElements}`. Setiap item berisi
 `{transfer,references}`; bentuk `transfer` sama dengan respons operasi lama.
 `GET /transfers/{id}/details` mengembalikan bentuk yang sama untuk satu dokumen.
 
+`GET /transfers/{id}/history/page?page=0&size=25` mengembalikan halaman operasi
+asli, revisi terbaru lebih dahulu, dengan total hasil yang dihitung server.
+Endpoint lama `/history` mempertahankan respons array dan urutan revisi menaik;
+kini juga menerima `page`/`size`, default25 dan maksimal100, sehingga pembacaan
+riwayat tidak mengambil seluruh dokumen tanpa batas.
+
 `references` memuat nama lokasi, pengirim/penerima, SKU dan serial/lot dari data
 saat ini. Nama ini bukan snapshot historis. Respons mutasi, GET lama dan riwayat
 operasi tetap memakai kontrak aslinya; mengganti nama SKU tidak mengubah balasan

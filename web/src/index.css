@@ -3741,6 +3741,11 @@ td.dg-actions {
 .warehouse-requests h3 {
   margin: 0;
 }
+.warehouse-transfers p,
+.warehouse-transfers h2,
+.warehouse-transfers h3 {
+  margin: 0;
+}
 @media (max-width: 720px) {
   .warehouse-data-table-card {
     border: 0;

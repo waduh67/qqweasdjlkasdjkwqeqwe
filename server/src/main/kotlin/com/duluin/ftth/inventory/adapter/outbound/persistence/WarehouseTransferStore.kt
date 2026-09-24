@@ -72,9 +72,9 @@ class WarehouseTransferStore(private val jdbc: WarehouseCommandJdbc, private val
         seal(record, operation, session)
     }
 
-    fun history(id: UUID): List<WarehouseTransferView> = jdbc.execute { sql ->
+    fun history(id: UUID, page: WarehousePageRequest): List<WarehouseTransferView> = jdbc.execute { sql ->
         sql.query("""SELECT original_body FROM inventory_operation WHERE tenant_id=? AND document_id=?
-            AND namespace LIKE 'warehouse.transfer.%' ORDER BY document_revision""", sql.tenant, id) {
+            AND namespace LIKE 'warehouse.transfer.%' ORDER BY document_revision LIMIT ? OFFSET ?""", sql.tenant, id, page.size, page.page.toLong() * page.size) {
             mapper.readValue(it.getString("original_body"), WarehouseTransferView::class.java)
         }
     }
