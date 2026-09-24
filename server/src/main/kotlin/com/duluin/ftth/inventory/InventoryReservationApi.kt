@@ -39,6 +39,8 @@ data class ReservationAllocation(
     val reservedUnpickedBase: String, val reservedPickedBase: String, val baseUnit: WarehouseBaseUnit,
     val state: String, val expiresAt: Instant, val customerId: UUID?, val actorId: UUID, val itemCategory: String,
     val demandSupply: ReservationDemandSupply,
+    val skuCode: String? = null, val skuName: String? = null, val serial: String? = null,
+    val lotCode: String? = null, val locationName: String? = null,
 )
 
 data class ReservationDemandSupply(

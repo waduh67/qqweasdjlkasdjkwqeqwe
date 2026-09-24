@@ -106,13 +106,18 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc, private 
     fun allocations(document: ReservationDemand): List<ReservationAllocation> = jdbc.execute { sql ->
         val bindings = sql.query("""SELECT allocation.*,reservation.*,allocation.id allocation_id,reservation.revision reservation_revision,
             document.customer_id,operation.actor_id,sku.name item_category,supply.id supply_id,supply.operation_id supply_operation_id,
-            supply.requested_base,supply.reserved_unpicked_base demand_unpicked,supply.reserved_picked_base demand_picked,supply.backorder_base,supply.issued_base
+            supply.requested_base,supply.reserved_unpicked_base demand_unpicked,supply.reserved_picked_base demand_picked,supply.backorder_base,supply.issued_base,
+            sku.code sku_code,sku.name sku_name,asset.canonical_serial,lot.code lot_code,location.name location_name
             FROM inventory_reservation_allocation allocation
             JOIN inventory_reservation reservation ON reservation.tenant_id=allocation.tenant_id AND reservation.id=allocation.reservation_id
             JOIN inventory_document_line line ON line.tenant_id=reservation.tenant_id AND line.id=reservation.document_line_id
             JOIN inventory_document document ON document.tenant_id=line.tenant_id AND document.id=line.document_id
             JOIN inventory_operation operation ON operation.tenant_id=allocation.tenant_id AND operation.id=allocation.operation_id
             JOIN inventory_sku sku ON sku.tenant_id=reservation.tenant_id AND sku.id=reservation.sku_id
+            LEFT JOIN inventory_segment segment ON segment.tenant_id=reservation.tenant_id AND segment.id=reservation.stock_identity_id
+            LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=segment.tenant_id AND asset.id=segment.asset_id
+            LEFT JOIN inventory_lot lot ON lot.tenant_id=reservation.tenant_id AND lot.id=reservation.lot_id
+            LEFT JOIN inventory_location location ON location.tenant_id=reservation.tenant_id AND location.id=reservation.location_id
             JOIN inventory_operation supply_operation ON supply_operation.tenant_id=document.tenant_id AND supply_operation.document_id=document.id
                 AND supply_operation.document_revision=document.revision
             JOIN inventory_demand_supply_snapshot supply ON supply.tenant_id=document.tenant_id AND supply.operation_id=supply_operation.id
@@ -126,7 +131,8 @@ class WarehouseReservationStore(private val jdbc: WarehouseCommandJdbc, private 
                 ReservationDemandSupply(it.uuid("supply_id"), it.uuid("supply_operation_id"), document.revision, document.planRevision,
                     it.getLong("requested_base").toString(), it.getLong("demand_unpicked").toString(), it.getLong("demand_picked").toString(),
                     Math.addExact(it.getLong("demand_unpicked"), it.getLong("demand_picked")).toString(), it.getLong("backorder_base").toString(),
-                     WarehouseBaseUnit.valueOf(it.getString("base_unit")), MaterialDemandState.valueOf(document.state), it.getLong("issued_base").toString()))
+                     WarehouseBaseUnit.valueOf(it.getString("base_unit")), MaterialDemandState.valueOf(document.state), it.getLong("issued_base").toString()),
+                it.getString("sku_code"), it.getString("sku_name"), it.getString("canonical_serial"), it.getString("lot_code"), it.getString("location_name"))
         }
         if (bindings.size != rows(document.id).size) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         bindings

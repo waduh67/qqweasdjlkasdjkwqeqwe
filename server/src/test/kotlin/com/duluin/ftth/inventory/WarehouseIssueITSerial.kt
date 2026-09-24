@@ -9,6 +9,12 @@ import java.util.UUID
 class WarehouseIssueITSerial : WarehouseIssueFixture() {
     @Test fun `ten exact serials remain in warehouse on pick and dispatch once into transit`() {
         val setup = issuedSetup(serials = 10)
+        val allocationResponse = request("GET", "/api/v1/warehouse/material-requests/allocations/${setup.workOrder}", setup.stock.token)
+        assertThat(allocationResponse.status).isEqualTo(200)
+        val allocationNames = mapper.readTree(allocationResponse.contentAsString)
+        assertThat(allocationNames.map { it.path("serial").asString() }).containsExactlyInAnyOrderElementsOf((1..10).map { "SERIAL-$it" })
+        val locationName = mapper.readTree(request("GET", "/api/v1/warehouse/locations/${setup.stock.bin}", setup.stock.token).contentAsString).path("name").asString()
+        assertThat(allocationNames.all { it.path("skuCode").asString() == "ONU" && it.path("skuName").asString() == "ONU" && it.path("locationName").asString() == locationName }).isTrue()
         val body = pickBody(setup)
         val original = fixture(setup.stock.token).transaction { scalar("SELECT count(*) FROM inventory_movement_leg") }
         val picked = issueRequest(setup, "pick", body, "ten-serials")

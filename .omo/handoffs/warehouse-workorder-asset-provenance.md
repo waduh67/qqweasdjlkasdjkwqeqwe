@@ -1,5 +1,18 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 started — named allocation metadata; verification pending
+
+Task34 complete0e42889a (final source75f8ba41,2browser45.5s,100web,11backend).
+ReservationAllocation now adds nullable skuCode/skuName/serial/lotCode/locationName
+from actual scoped reservation dimensions and current master metadata. The existing
+serial issue regression asserts10 canonical serials and correct names before pick.
+No quantity/revision/permission changes; legacy fields retained; no migrations.
+NEXT run `.omo/runtime/issue-metadata-server.sh`, then implement scoped persisted
+issue discovery/received totals with proper source/transit/receipt destination scope
+and current request+issue permissions, before typed request/picking/slip frontend.
+Task35 UI/browser notimplemented. Read detailed task-35.md actual API contracts.
+Continue35–48/F1–F4. GoalACTIVE;148nextunused,177/178reserved43.
+
 ## Task34 COMPLETE — stock explorer verified on desktop and mobile
 
 Final source75f8ba41, stock-explorer-readable:2passed45.5s, zero failure/skipped/flaky.

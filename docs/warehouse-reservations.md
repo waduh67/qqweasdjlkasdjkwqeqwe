@@ -130,7 +130,11 @@ menemukan tidak ada due quantity lagi, bukan menerbitkan event duplikat.
 `GET /api/v1/warehouse/material-requests/allocations/{workOrderId}` memerlukan
 `inventory.request.view`, WO/warehouse/area/site scope terkini dan mengembalikan
 links berikut revision allocation/reservation/document/plan/source. Terminal
-allocations tetap terlihat sebagai history. Demand sah tanpa stock boleh
+allocations tetap terlihat sebagai history. Setiap allocation juga membawa nama
+master saat ini (`skuCode`, `skuName`, `locationName`) serta `serial` dan `lotCode`
+untuk pemilihan barang yang dapat dibaca petugas. Field tambahan nullable untuk
+kompatibilitas; field tersebut tidak mengganti identitas/revisi alokasi atau
+snapshot immutable pada slip. Otorisasi lokasi tetap dilakukan sebelum hasil dibaca. Demand sah tanpa stock boleh
 mengembalikan list kosong pada endpoint ini; API fulfillment menolak keadaan
 tanpa allocation atau binding dengan error eksplisit.
 
