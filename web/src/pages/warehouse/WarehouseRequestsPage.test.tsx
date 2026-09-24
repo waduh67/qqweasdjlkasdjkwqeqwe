@@ -20,7 +20,11 @@ function reader(path: string, summary: unknown = materialSummaryFixture, allocat
   if (path.endsWith('/slip')) return response(issueSlipFixture)
   throw new Error(`Unexpected request ${path}`)
 }
-beforeEach(() => { mocks.permissions.clear(); for (const permission of ['inventory.request.view', 'inventory.request.manage', 'inventory.issue.view', 'inventory.issue.manage', 'inventory.sku.view', 'workorder.order.view', 'workorder.order.update']) mocks.permissions.add(permission); tokenStore.clear() })
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
+  mocks.permissions.clear(); for (const permission of ['inventory.request.view', 'inventory.request.manage', 'inventory.issue.view', 'inventory.issue.manage', 'inventory.sku.view', 'workorder.order.view', 'workorder.order.update']) mocks.permissions.add(permission); tokenStore.clear()
+})
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
 it('requires both request and work-order visibility before reading any scoped data', () => {
@@ -97,8 +101,8 @@ it('requires named receiver and partial confirmation before dispatch and does no
   fireEvent.click(detail.getByRole('checkbox', { name: 'Kirim sebagian; sisa kebutuhan masih harus dipenuhi' }))
   fireEvent.click(detail.getByRole('button', { name: 'Kirim barang' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Konfirmasi kirim' }))
-  await screen.findByText('Dikirim', { selector: '.badge' }).catch(() => undefined)
   await waitFor(() => expect(screen.queryByRole('region', { name: 'Detail slip pengeluaran' })).toBeNull())
+  await screen.findByRole('button', { name: 'ISS-MATERIAL' })
   const write = fetch.mock.calls.find(([, init]) => init?.method === 'POST')!
   expect(write[0]).toBe(`${root}/dispatch`)
   expect(JSON.parse(String(write[1]?.body))).toEqual({ issueId: id.issue, expectedRevision: 1, workOrderRevision: 5, planRevision: 1, demandRevision: 3, partial: true, reason: 'Kiriman pertama untuk Budi' })

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Text, ToggleButton } from '@fluentui/react-components'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { PageResponse, User } from '../api/types'
+import type { Area, PageResponse, User } from '../api/types'
 import type { CustomerView } from '../api/network'
 import type {
   WorkOrderApprovalStatus,
@@ -13,6 +13,7 @@ import type {
   WorkOrderView,
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
+import { useAuth } from '../auth/useAuth'
 import { DataTable, type Column } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
@@ -44,6 +45,7 @@ type Draft = {
   description: string
   priority: WorkOrderPriority
   customerId: string
+  areaId: string
   scheduledAt: string
   assignees: string[]
 }
@@ -54,6 +56,7 @@ const EMPTY_DRAFT: Draft = {
   description: '',
   priority: 'NORMAL',
   customerId: '',
+  areaId: '',
   scheduledAt: '',
   assignees: [],
 }
@@ -174,6 +177,7 @@ export function WorkOrdersPage() {
         description: draft.description.trim() || null,
         priority: draft.priority,
         customerId: draft.customerId || null,
+        areaId: draft.areaId || null,
         scheduledAt: toInstant(draft.scheduledAt),
         assignees: draft.assignees,
       })
@@ -464,6 +468,25 @@ function WorkOrderForm({
   onSubmit: () => void
   onCancel: () => void
 }) {
+  const { can } = useCan()
+  const { user } = useAuth()
+  const [areas, setAreas] = useState<Area[]>([])
+  const [areaError, setAreaError] = useState<string | null>(null)
+  const [areasLoading, setAreasLoading] = useState(false)
+  useEffect(() => {
+    if (!open || !can('iam.area.view')) return
+    let active = true
+    setAreasLoading(true); setAreaError(null)
+    void api.get<Area[]>('/api/areas').then(rows => { if (active) setAreas(rows) }, () => { if (active) setAreaError('Area belum berhasil dimuat. Tutup dan buka kembali formulir untuk mencoba lagi.') }).finally(() => { if (active) setAreasLoading(false) })
+    return () => { active = false }
+  }, [open, can])
+  const areaIds = new Set(user?.areaIds ?? [])
+  for (let pass = 0; pass < areas.length; pass++) {
+    const previous = areaIds.size
+    for (const area of areas) if (area.parentId && areaIds.has(area.parentId)) areaIds.add(area.id)
+    if (previous === areaIds.size) break
+  }
+  const areaChoices = user?.platformAdmin ? areas : areas.filter(area => areaIds.has(area.id))
   return (
     <Blade
       open={open}
@@ -487,6 +510,12 @@ function WorkOrderForm({
             onChange={(_, data) => onChange({ ...draft, title: data.value })}
             placeholder="mis. Ganti drop core putus"
           />
+          <SelectField label="Area pekerjaan" value={draft.areaId} disabled={areasLoading || !can('iam.area.view')} onChange={(_, data) => onChange({ ...draft, areaId: data.value })}>
+            <option value="">Pilih area pekerjaan…</option>
+            {areaChoices.map(area => <option key={area.id} value={area.id}>{area.name} · {area.code}</option>)}
+          </SelectField>
+          {areaError && <p className="error" role="alert">{areaError}</p>}
+          {!can('iam.area.view') && <p className="muted">Izin lihat area diperlukan untuk memilih area pekerjaan.</p>}
           <div className="row wrap">
             <SelectField
               label="Tipe"

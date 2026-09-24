@@ -1,5 +1,28 @@
 # Task35 — demand and issue implementation
 
+## Task35 real browser scenario prepared — full web checks running
+
+Request workbench source2bd54f5d initially had3of8 UItests fail because jsdom lacks
+HTMLDialogElement.showModal, not product actions. Added dialog stub matching other
+warehouse tests;22tests/3files +awaitedTS+oxlint nowpassed. No swallowed assertions.
+Added4meaningful action tests (historic allocations, exactrelease, bounds/mapping,
+stale/issuebound/serial mismatch). Fullwarehouse+DataTable+WO tests/TS/oxlint RUNNING
+request-workbench-full-web.log. Must await trueexit before claim.
+
+Actual UI browser issue.spec.ts prepared with fulfillment.ts helper: signup/area/
+masters/1000m10ONUreceipt/putaway/technician/WOcreation/100m2ONUplan/60m1ONUreserve/
+pick/unpick/repick/namedreceiverpartialdispatch/current immutable slip print/transit.
+No browser API writes or seededbusinessdata, nofakeack. Actual browser NOTYETRUN.
+Found old WO create form omitted areaId entirely; added scoped namedarea selector
+and includesareaId inPOST, neededfor real restricted-area operator flow. Backend
+alreadyrequiresarea; existingauthorizationunchanged. Addedoptional inspectionRequired
+flag to catalogbrowserhelper (defaultsunchanged) for receiptwithoutmandatoryinspection.
+
+NEXT await fullwebchecks thenrun new warehouse-issue-browser.sh issue-initial wrapper
+(basedonstockwrapper archive35 specissue.spec.ts); actual desktop/mobilevisualreview,
+fixandrerunaffectedchecks before35complete. Continue36–48/F1–F4. No migrations.
+
+
 ## Task35 workbench UI wired — focused tests running; browser pending
 
 Mapping/backend sourcef7bbd0d5 passed7tests/4suites in3m59s. Old posting fixture
