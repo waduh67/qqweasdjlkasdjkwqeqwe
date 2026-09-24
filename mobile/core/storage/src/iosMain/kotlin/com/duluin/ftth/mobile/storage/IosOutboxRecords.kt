@@ -1,6 +1,7 @@
 package com.duluin.ftth.mobile.storage
 
 import com.duluin.ftth.mobile.domain.SecureOutboxOperation
+import com.duluin.ftth.mobile.domain.SecureDeliveryState
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
@@ -24,18 +25,23 @@ internal class IosOutboxRecords(private val userId: String) : SecureOutboxRecord
         ).also { NSFileManager.defaultManager.createDirectoryAtURL(it, true, null, null) }
 
     override fun entries(): List<SecureOutboxRecord> = NSFileManager.defaultManager.contentsOfDirectoryAtURL(directory, null, 0.toULong(), null)
-        .orEmpty().mapNotNull { url -> NSData.dataWithContentsOfURL(url as NSURL)?.toByteArray()?.let(::decode) }
+        .orEmpty().map { url -> NSData.dataWithContentsOfURL(url as NSURL)?.toByteArray()?.let(::decode) ?: throw OutboxDecryptionException() }
 
     override fun write(record: SecureOutboxRecord) {
         val bytes = encode(record)
-        bytes.usePinned { pinned -> NSData.dataWithBytes(pinned.addressOf(0), bytes.size.toULong()) }
-            .writeToURL(directory.URLByAppendingPathComponent(fileName(record), isDirectory = false) ?: error("Record URL unavailable"), atomically = true)
+        check(bytes.usePinned { pinned -> NSData.dataWithBytes(pinned.addressOf(0), bytes.size.toULong()) }
+            .writeToURL(directory.URLByAppendingPathComponent(fileName(record), isDirectory = false) ?: error("Record URL unavailable"), atomically = true)) { "Outbox write failed" }
     }
 
     override fun delete(userId: String) {
         entries().filter { it.operation.userId == userId }.forEach { record ->
-            NSFileManager.defaultManager.removeItemAtURL(directory.URLByAppendingPathComponent(fileName(record), isDirectory = false) ?: return@forEach, null)
+            remove(identity(record))
         }
+    }
+
+    override fun remove(key: String) {
+        val record = entries().singleOrNull { identity(it) == key } ?: return
+        check(NSFileManager.defaultManager.removeItemAtURL(directory.URLByAppendingPathComponent(fileName(record), isDirectory = false) ?: error("Record URL unavailable"), null)) { "Outbox completion failed" }
     }
 
     override fun retry(key: String): Boolean = entries().firstOrNull { identity(it) == key }?.let { record ->
@@ -51,13 +57,14 @@ internal class IosOutboxRecords(private val userId: String) : SecureOutboxRecord
         record.operation.namespace, record.operation.key, record.operation.payloadHash,
         record.operation.revision.toString(), record.retries.toString(), record.payload.keyVersion,
         record.payload.bytes.toHex(),
+        record.state.name,
     ).joinToString("\u0000").encodeToByteArray()
 
     private fun decode(bytes: ByteArray): SecureOutboxRecord? = runCatching {
         val fields = bytes.decodeToString().split('\u0000')
-        require(fields.size == 10)
+        require(fields.size in 10..11)
         val operation = SecureOutboxOperation(fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6].toLong(), byteArrayOf())
-        SecureOutboxRecord(operation, EncryptedBlob(fields[8], fields[9].fromHex()), fields[7].toInt())
+        SecureOutboxRecord(operation, EncryptedBlob(fields[8], fields[9].fromHex()), fields[7].toInt(), fields.getOrNull(10)?.let(SecureDeliveryState::valueOf) ?: SecureDeliveryState.QUEUED)
     }.getOrNull()
 
     private fun ByteArray.toHex() = joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }

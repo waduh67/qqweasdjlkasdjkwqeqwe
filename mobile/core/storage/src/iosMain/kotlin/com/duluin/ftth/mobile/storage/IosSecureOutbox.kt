@@ -3,6 +3,8 @@ package com.duluin.ftth.mobile.storage
 import com.duluin.ftth.mobile.domain.OutboxOperation
 import com.duluin.ftth.mobile.domain.SecureOutboxOperation
 import com.duluin.ftth.mobile.domain.SecureOutboxPort
+import com.duluin.ftth.mobile.domain.OutboxIdentity
+import com.duluin.ftth.mobile.domain.SecureDeliveryState
 
 class IosSecureOutbox(userId: String) : SecureOutboxPort {
     private val keyStore = IosKeychainKeyStore(userId)
@@ -19,6 +21,9 @@ class IosSecureOutbox(userId: String) : SecureOutboxPort {
         keyStore.deleteAllVersions()
     }
     override fun status() = delegate.status()
+    override fun entries(identity: OutboxIdentity, namespace: String) = delegate.entries(identity, namespace)
+    override fun mark(identity: OutboxIdentity, namespace: String, key: String, state: SecureDeliveryState) = delegate.mark(identity, namespace, key, state)
+    override fun complete(identity: OutboxIdentity, namespace: String, key: String) = delegate.complete(identity, namespace, key)
 
     fun rotateKeyAndMigrate() {
         val oldVersions = keyStore.versions()

@@ -17,10 +17,16 @@ data class SecureOutboxOperation(
 
 data class OutboxIdentity(val userId: String, val deviceId: String, val sessionId: String)
 
+enum class SecureDeliveryState { QUEUED, ATTEMPTED, CONFLICT, REJECTED }
+data class SecureOutboxEntry(val operation: SecureOutboxOperation, val state: SecureDeliveryState)
+
 interface SecureOutboxPort : Outbox {
     fun enqueueSecure(operation: SecureOutboxOperation): EnqueueResult
     fun retry(key: String): Boolean
     fun purge(userId: String)
+    fun entries(identity: OutboxIdentity, namespace: String): List<SecureOutboxEntry>
+    fun mark(identity: OutboxIdentity, namespace: String, key: String, state: SecureDeliveryState)
+    fun complete(identity: OutboxIdentity, namespace: String, key: String)
 }
 
 class ObserveWorkOrders(private val port: WorkOrderPort) {

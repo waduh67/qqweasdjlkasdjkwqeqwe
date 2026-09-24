@@ -71,4 +71,7 @@ private class FakeSecureOutbox : SecureOutboxPort {
     override fun enqueueSecure(operation: com.duluin.ftth.mobile.domain.SecureOutboxOperation) = com.duluin.ftth.mobile.domain.EnqueueResult.Accepted
     override fun retry(key: String) = false
     override fun purge(userId: String) = Unit
+    override fun entries(identity: com.duluin.ftth.mobile.domain.OutboxIdentity, namespace: String) = emptyList<com.duluin.ftth.mobile.domain.SecureOutboxEntry>()
+    override fun mark(identity: com.duluin.ftth.mobile.domain.OutboxIdentity, namespace: String, key: String, state: com.duluin.ftth.mobile.domain.SecureDeliveryState) = Unit
+    override fun complete(identity: com.duluin.ftth.mobile.domain.OutboxIdentity, namespace: String, key: String) = Unit
 }
