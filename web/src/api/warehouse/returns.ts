@@ -60,7 +60,7 @@ function itemRef(value: unknown, path = 'item') {
 }
 function assetOrigin(value: unknown, path = 'assetOrigin') {
   const row = record(value, path)
-  return { assignmentId: uuid(row.assignmentId, path), customerId: uuid(row.customerId, path), workOrderId: uuid(row.workOrderId, path) }
+  return { assignmentId: uuid(row.assignmentId, path), customerId: uuid(row.customerId, path), workOrderId: uuid(row.workOrderId, path), legalOwner: oneOf(row.legalOwner, LEGAL_OWNERS, path) }
 }
 export function returnDetails(value: unknown, path = 'details') {
   const row = record(value, path), returnCase = returnView(row.returnCase, path), refs = record(row.references, path)

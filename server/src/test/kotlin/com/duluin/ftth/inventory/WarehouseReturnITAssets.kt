@@ -57,6 +57,7 @@ class WarehouseReturnITAssets : CustomerAssetReplacementFixture() {
         assertThat(original.path("assignmentId").asString()).isEqualTo(old.installation.operation.toString())
         assertThat(original.path("customerId").asString()).isEqualTo(old.installation.customer.toString())
         assertThat(original.path("workOrderId").asString()).isEqualTo(receipt.workOrder)
+        assertThat(original.path("legalOwner").asString()).isEqualTo(if (mode == "SALE") "CUSTOMER" else "ISP")
         assertThat(original.path("workOrderId")).isNotEqualTo(references.path("workOrderId"))
         val serial = fixture(admin).transaction { scalar("SELECT serial_number FROM inventory_serialized_asset WHERE id='$asset'") }
         val destination = if (mode == "SALE") quarantine else receipt.stock.bin

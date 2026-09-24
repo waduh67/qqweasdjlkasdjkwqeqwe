@@ -1,5 +1,21 @@
 # Whole-plan continuation
 
+## Task36 persisted reacquisition discovery implemented; verification next
+
+Added bounded /returns/{id}/reacquisition-requests with current return/approval
+read permissions, original WO area and current/historical location scopes before
+pagination/count. Entries bind actual title document, source revision, signed proof,
+and separately recorded applied return revision. Raw command response unchanged.
+Original assignment references now include historical legalOwner so the list remains
+reachable after approved CUSTOMER→ISP change. No cross-module name joins or migrations.
+Reacquisition command now also checks historical repair location, matching return read.
+Extended actual independent approval test with two persisted source docs, paging,
+read-only reader, tenant/permission/revoked scope and actual applied-vs-unapplied refs.
+Kotlin JDBC lambda inference warnings and redundant String conversion cleaned up.
+NEXT run reacquisition-discovery-server.sh (5 tests/4 suites expected); frontend form
+and signature read still to implement. RMA24web/11backend checkpoint ac1c59f2 pushed.
+Task36 OPEN; keep remaining36–48/F1–F4 and remote commits active.
+
 ## Task36 RMA UI saved; 24 web and 11 backend checks passed
 
 RMA read backend @c7612c9e passed11 tests/4 suites in3m45s; portable

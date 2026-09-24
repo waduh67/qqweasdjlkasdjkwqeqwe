@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.iam.CurrentAuthorityApi
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.*
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
@@ -16,8 +17,25 @@ import java.util.UUID
 class ReturnReacquisitionService(private val cutovers: InventoryTenantCutoverApi, private val authorities: CurrentAuthorityApi,
     private val returns: WarehouseReturnStore, private val titles: ReturnReacquisitionStore,
     private val workOrders: AssetHandoverWorkOrderPort, private val masters: WarehouseMasterStore,
-    private val access: WarehousePolicyAccess, private val clock: WarehousePolicyPersistence) : InventoryReturnReacquisitionApi {
+    private val access: WarehousePolicyAccess, private val clock: WarehousePolicyPersistence,
+    private val scopes: InventoryWarehouseScopeApi, private val sites: com.duluin.ftth.network.SiteReferenceApi) : InventoryReturnReacquisitionApi {
     private val mapper = jacksonObjectMapper()
+
+    override fun list(id: UUID, page: WarehousePageRequest): WarehousePage<ReturnReacquisitionEntry> {
+        if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val current = authorities.lockCurrent()
+        listOf("inventory.return.view", "inventory.approval.view").forEach { access.permission(current, it) }
+        val returned = returns.get(id)
+        // Read the original assignment's WO area even after the title effect has completed.
+        workOrders.lockTitle(titles.context(id).workOrderId, current.fence)
+        masters.lockTopology()
+        listOfNotNull(returned.intake.quarantineLocationId, returned.view.locationId, returned.view.repair?.repairLocationId)
+            .distinct().sortedBy(UUID::toString).forEach { access.location(it, current) }
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        val visibility = WarehouseQueryAccess(scopes.currentUnderFence(current.fence), areas, sites.visibleAreas(areas), false, false)
+        return titles.list(id, page, visibility)
+    }
 
     override fun request(id: UUID, input: ReturnReacquisitionInput, metadata: WarehouseMutationMetadata): ReturnReacquisitionRef {
         receiptKey(metadata.idempotencyKey)
@@ -31,7 +49,7 @@ class ReturnReacquisitionService(private val cutovers: InventoryTenantCutoverApi
         val workRevision = workOrders.lockTitle(context.workOrderId, current.fence)
         masters.lockTopology()
         val returned = returns.get(id, true)
-        listOf(returned.intake.quarantineLocationId, returned.view.locationId).distinct().sortedBy(UUID::toString)
+        listOfNotNull(returned.intake.quarantineLocationId, returned.view.locationId, returned.view.repair?.repairLocationId).distinct().sortedBy(UUID::toString)
             .forEach { access.location(it, current) }
         val assetRevision = titles.lockAsset(returned.view.stockIdentityId)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("id" to id, "request" to input)))

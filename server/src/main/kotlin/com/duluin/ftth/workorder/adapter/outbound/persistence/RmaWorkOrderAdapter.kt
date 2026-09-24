@@ -20,7 +20,7 @@ class RmaWorkOrderAdapter(private val entityManager: EntityManager, private val 
         authority.assertHeld()
         val current = this.authority.lockCurrent()
         if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
-        val (order, assignees) = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+        val (order, assignees) = entityManager.unwrap(Session::class.java).doReturningWork { connection: java.sql.Connection ->
             val order = connection.prepareStatement("SELECT code,title,customer_id,area_id,type,status,warehouse_revision FROM work_order WHERE tenant_id=? AND id=? FOR SHARE").use { query ->
                 query.setObject(1, authority.identity.tenantId); query.setObject(2, workOrderId)
                 query.executeQuery().use { row ->
@@ -32,9 +32,9 @@ class RmaWorkOrderAdapter(private val entityManager: EntityManager, private val 
                     CustomerRmaWorkOrder(workOrderId, row.getString("code"), row.getString("title"), customerId, row.getLong("warehouse_revision"), emptyList())
                 }
             }
-            val assignees = connection.prepareStatement("SELECT technician_id FROM work_order_assignee WHERE tenant_id=? AND work_order_id=? ORDER BY technician_id").use { query ->
+            val assignees: Set<UUID> = connection.prepareStatement("SELECT technician_id FROM work_order_assignee WHERE tenant_id=? AND work_order_id=? ORDER BY technician_id").use { query ->
                 query.setObject(1, authority.identity.tenantId); query.setObject(2, workOrderId)
-                query.executeQuery().use { row -> buildSet { while (row.next()) add(row.getObject("technician_id", UUID::class.java)) } }
+                query.executeQuery().use { row -> buildSet<UUID> { while (row.next()) add(row.getObject("technician_id", UUID::class.java)) } }
             }
             order to assignees
         }
@@ -47,7 +47,7 @@ class RmaWorkOrderAdapter(private val entityManager: EntityManager, private val 
         authority.assertHeld()
         val current = this.authority.lockCurrent()
         if (current.fence.identity != authority.identity || current.fence.epoch != authority.epoch) fail(WarehouseErrorCode.STALE_AUTHORITY)
-        entityManager.unwrap(Session::class.java).doWork { connection ->
+        entityManager.unwrap(Session::class.java).doWork { connection: java.sql.Connection ->
             connection.prepareStatement("SELECT customer_id,area_id,type,status,warehouse_revision FROM work_order WHERE tenant_id=? AND id=? FOR UPDATE").use { query ->
                 query.setObject(1, authority.identity.tenantId); query.setObject(2, workOrderId)
                 query.executeQuery().use { row ->

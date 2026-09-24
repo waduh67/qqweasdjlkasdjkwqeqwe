@@ -39,6 +39,10 @@ class WarehouseReturnController(private val returns: InventoryReturnApi, private
     fun reacquisition(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<ReturnReacquisitionRef> =
         ResponseEntity.status(201).body(titles.request(id, WarehouseReceiptJson.decode(body, ReturnReacquisitionInput::class.java), WarehouseMutationMetadata(key)))
 
+    @GetMapping("/{id}/reacquisition-requests")
+    fun reacquisitionRequests(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): WarehousePage<ReturnReacquisitionEntry> =
+        titles.list(id, page(parameters))
+
     @PostMapping("/{id}/replacement-receipts")
     fun replacement(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<SupplierReplacementView> =
         ResponseEntity.status(201).body(replacements.request(id, WarehouseReceiptJson.decode(body, SupplierReplacementInput::class.java), WarehouseMutationMetadata(key)))

@@ -15,7 +15,7 @@ data class WarehouseReturnDetails(val returnCase: WarehouseReturnView, val refer
 data class WarehouseReturnNamedRef(val id: UUID, val code: String, val name: String?)
 data class WarehouseReturnItemRef(val id: UUID, val code: String, val name: String, val tracking: WarehouseTracking,
     val serial: String?, val lotCode: String?)
-data class WarehouseReturnAssetOriginRef(val assignmentId: UUID, val customerId: UUID, val workOrderId: UUID)
+data class WarehouseReturnAssetOriginRef(val assignmentId: UUID, val customerId: UUID, val workOrderId: UUID, val legalOwner: AssetLegalOwner)
 data class WarehouseReturnReferences(val code: String, val sourceCode: String,
     val workOrderId: UUID?, val workOrderCode: String?, val item: WarehouseReturnItemRef,
     val locations: List<WarehouseReturnNamedRef>, val receivedByName: String?,

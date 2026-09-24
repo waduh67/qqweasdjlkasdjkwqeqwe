@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.service.*
 import com.duluin.ftth.inventory.application.port.outbound.*
+import com.duluin.ftth.inventory.application.port.inbound.WarehouseQueryFilter
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
@@ -10,6 +11,27 @@ import java.util.UUID
 @Repository
 class ReturnReacquisitionStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
+
+    fun list(id: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<ReturnReacquisitionEntry> = jdbc.execute { sql ->
+        val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page.page, page.size, "createdAt", "desc"), access)
+        val rows = """SELECT document.id,document.created_at,
+                jsonb_build_object('snapshot',title.snapshot::jsonb,'appliedReturnRevision',effect.return_revision) body
+            FROM inventory_return_title_request title
+            JOIN inventory_document document ON document.tenant_id=title.tenant_id AND document.id=title.id
+            LEFT JOIN inventory_return_title_effect effect ON effect.tenant_id=title.tenant_id AND effect.request_id=title.id,request
+            WHERE title.tenant_id=request.tenant AND title.return_id=?::uuid
+                AND (title.snapshot::jsonb->'source'->'dimension'->>'locationId')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')
+                AND (title.snapshot::jsonb->'returned'->'view'->'repair'->>'repairLocationId' IS NULL OR
+                    (title.snapshot::jsonb->'returned'->'view'->'repair'->>'repairLocationId')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE'))"""
+        val result = mapper.readTree(query.result(query.page(rows, "body", "created_at"), id))
+        val items = result.path("items").map { item ->
+            val record = mapper.treeToValue(item.path("snapshot"), ReturnTitleRecord::class.java)
+            ReturnReacquisitionEntry(record.id, record.returned.view.id, 0, record.code, record.returned.view.revision,
+                record.request.reason, record.request.titleTransferReference, record.signature.id, record.recordedAt,
+                item.path("appliedReturnRevision").takeUnless { it.isNull }?.asLong())
+        }
+        WarehousePage(items, page.page, page.size, result.path("totalElements").asLong())
+    }
 
     fun context(id: UUID): ReturnTitleContext = jdbc.execute { sql ->
         sql.query("""SELECT assignment.id,assignment.customer_id,assignment.work_order_id,assignment.revision,

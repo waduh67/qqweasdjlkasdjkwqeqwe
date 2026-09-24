@@ -27,7 +27,7 @@ class WarehouseRmaWorkOrderReadIT : WarehouseRepairFixture() {
         assertThat(order.path("id").asString()).isEqualTo(work)
         assertThat(order.path("code").asString()).isNotBlank()
         assertThat(order.path("customerId").asString()).isEqualTo(customer.toString())
-        assertThat(order.path("technicians").single().path("id").asString()).isEqualTo(receipt.receiver.second.toString())
+        assertThat(order.path("technicians").single().path("id").asString()).isEqualTo(receipt.receiver.second)
         assertThat(order.path("technicians").single().path("name").asString()).isNotBlank()
         assertThat(request("GET", "/api/work-orders/$work/materials", actor.first).status).isEqualTo(403)
         assertThat(request("GET", path, user(setup.token, setOf("inventory.return.view")).first).status).isEqualTo(403)
