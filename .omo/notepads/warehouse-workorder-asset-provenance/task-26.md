@@ -1,5 +1,53 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Inspected material closure implementation checkpoint — tests running
+
+Sourceb78489df passed read/access4 tests in4 suites, zero failures/errors/skips,
+1m59s: scoped list counts and pages after two real residuals, paged repair history,
+return and repair revoked replay. Archive task26/return-reads-green/xml.
+
+WarehouseReturnSettlementIT then reproduced the outstanding bug: after actual
+17.5m accepted inspection, expected0 but actual17500;1 failed,0 errors/skips.
+Archive task26/return-settlement-red/xml. The earlier DAMAGED inspection and close
+rejection passed; the failure occurred at post-acceptance outstanding read.
+
+Declared V175.122 adds a separately derived settled return quantity from exact
+acknowledged origin, terminal accepted inspection and matching APPLIED inbound.
+Historical returned_base and conservation remain unchanged. Nullable response
+settledReturnBase is absent for zero/old payloads. Lifecycle snapshots bind the
+settled amount and outstanding; insert/final close checks retain reservations,
+accountable quantities and rework-demand fences. Close still posts no stock.
+Material summary now reads real CLOSED lifecycle instead of a constant OPEN.
+
+Normal main/test compilation passed. Current command
+`.omo/runtime/return-settlement-green.sh`, matching log, archive
+`task26/return-settlement-green/xml`, runs new closure plus material lifecycle and
+rework suites. Results and first122 applied status pending; inspect logs before
+changing SQL. Existing175.121 and earlier stay immutable. Task26 remains OPEN.
+
+Source-audit follow-ups requiring reproduced tests: serial deployment is not yet
+included by old warehouse_material_obligation_totals used_base; check real serial
+lifecycle totals. Old lifecycle final guard only counts supplied snapshots vs
+body lines; test omission of all lines after accepted return before altering it.
+Then continue vendor replacement, original-customer RMA, approved reacquisition,
+packaged proof and remaining plan. No new feature closure is claimed here.
+
+
+## Material closure declaration — next step
+
+Reserve V175_122__warehouse_inspected_return_settlement.sql BEFORE creation.
+Current source still computes outstanding as accountable+returned even after
+accepted inspection. Preserve historical returned quantity/conservation and
+add a separately proved settledReturnBase. Snapshot/header and close validators
+must use the same sealed inspection evidence. Do not weaken unresolved or
+damaged quarantine, reservations or rework-demand close guards.
+
+New WarehouseReturnSettlementIT exercises17.5m acknowledged return, damaged
+inspection/denied close, serviceable release, zero outstanding with returned
+17500 retained, non-posting close and exact replay. Current baseline command
+return-settlement-red.sh/log, archive task26/return-settlement-red/xml; pending.
+Read actual failure before claiming reproduced defect. No122 SQL created yet.
+
 ## Scoped return list/history implementation — validation pending
 
 Supplier repair access/integrity, ModularityTests, WarehouseContractTest and

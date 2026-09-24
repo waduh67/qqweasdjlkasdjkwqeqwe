@@ -45,6 +45,8 @@ data class MaterialObligationLine(
     val issuedBase: String, val usedBase: String, val returnedBase: String,
     val transferredBase: String, val disposedBase: String, val stillAccountableBase: String,
     val transitBase: String, val acknowledgedBase: String,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val settledReturnBase: String? = null,
 )
 data class MaterialObligations(
     val workOrderId: UUID, val revision: Long, val materialState: ResidualSettlementState,

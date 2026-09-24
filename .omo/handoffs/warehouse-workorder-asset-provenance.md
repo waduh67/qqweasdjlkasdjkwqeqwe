@@ -2,22 +2,24 @@
 
 ## Active task:26 —2026-09-24
 
-- Supplier round trip plus return regression passed12/6 suites; repair access,
-  integrity, module and contracts passed24/5 suites; all zero failures/errors/skips.
-  V175.121 applied/immutable; no new migration in current read implementation.
-- This checkpoint adds scoped SQL return list/count/pagination and paged history.
-  Two real baseline failures: list GET405 after two residual intakes in one tenant;
-  history returned6 when size2 requested after vendor repair. Initial compile-only
-  fixture mistake was fixed separately and is not feature-red evidence.
-- Current `.omo/runtime/return-reads-green.sh`, matching log, archive
-  task26/return-reads-green/xml. Normal compilation passed; final4-test results
-  pending. Read newest task-26.md before interpreting stale historical statuses.
-- Next: inspected material return obligation closure, actual vendor replacement,
-  original-customer sold RMA handover/ack/authorization/install, independent title
-  reacquisition, broader regression and packaged proof.26 stays OPEN.
-- Keep whole plan28/30–48/F1–F4 active.25/27/29 closed. Continue
-  work/warehouse-completion and ordinary push to feat/warehouse-workorder;
-  no main deployment, reset or agent delegation.
+- Supplier/return12 tests, repair guard/module/contracts24, scoped reads/access4
+  all passed with zero failures/errors/skips in their respective runs.
+- New material closure test reproduced outstanding17500 after accepted17.5m
+  inspection (expected0). This checkpoint adds declared V175.122: separate
+  settledReturnBase from sealed accepted return, preserves historical returned
+  quantity, binds snapshots/header and retains other close fences. No new stock
+  posting on close; material summary now reports actual CLOSED lifecycle.
+- Main/test compilation passed. `.omo/runtime/return-settlement-green.sh` and
+  matching log, archive task26/return-settlement-green/xml; new closure plus
+  lifecycle/rework suites. Check full outcomes and122 applied status before edits.
+- Earlier migrations through175.121 are immutable.122 is in its first run.
+  Latest task-26.md has receipts and source-audit follow-ups (serial used totals,
+  omitted lifecycle snapshot lines) requiring real tests before correction.
+- Continue actual vendor replacement, original-customer sold RMA handover/ack/
+  authorization/install, approved title reacquisition and packaged proof.26 OPEN.
+  Whole remaining plan28/30–48/F1–F4 remains active;25/27/29 closed.
+- Work on work/warehouse-completion, ordinary push to feat/warehouse-workorder;
+  no main deployment, database reset or agent delegation.
 
 ## Current integration checkpoint: 2026-09-24
 

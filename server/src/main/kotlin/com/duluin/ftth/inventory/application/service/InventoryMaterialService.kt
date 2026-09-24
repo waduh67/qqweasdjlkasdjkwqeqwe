@@ -17,7 +17,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
     private val templates: MaterialTemplateStore, private val commands: MaterialCommandStore, private val validation: MaterialPlanValidation,
     private val reservations: InventoryReservationApi, private val reservationStore: WarehouseReservationStore,
     private val invalidation: InventoryApprovalInvalidationApi, private val physical: MaterialPhysicalTotalsStore,
-    private val reworks: MaterialReworkStore) : UnavailableMaterialActions() {
+    private val reworks: MaterialReworkStore, private val lifecycle: MaterialLifecycleStore) : UnavailableMaterialActions() {
     private val mapper = jacksonObjectMapper()
 
     override fun summary(context: MaterialPlanningContext): MaterialSummary {
@@ -54,7 +54,8 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
             MaterialRevisions(context.workOrderRevision, plan?.planRevision ?: 0, physical.useRevision(context.workOrderId), 0),
             demand?.let { MaterialDemandState.valueOf(it.state) } ?: if (history?.state == "SUBMITTED") MaterialDemandState.SUBMITTED else MaterialDemandState.DRAFT,
             if (context.customerId == null) MaterialInstallationState.NOT_APPLICABLE else MaterialInstallationState.NOT_INSTALLED,
-            context.qaState, MaterialProvisioningState.NOT_APPLICABLE, MaterialSettlementState.OPEN, totals,
+            context.qaState, MaterialProvisioningState.NOT_APPLICABLE,
+            if (lifecycle.closed(context.workOrderId)) MaterialSettlementState.CLOSED else MaterialSettlementState.OPEN, totals,
             plan, demand?.id, demand?.revision, templates.current(context.workType, context.action))
     }
 

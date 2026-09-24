@@ -33,10 +33,12 @@ class MaterialLifecycleStore(private val jdbc: WarehouseCommandJdbc) {
     }
 
     fun summary(workOrder: UUID): MaterialObligations = jdbc.execute { sql ->
-        val lines = sql.query("SELECT * FROM warehouse_material_obligation_totals(?,?)", sql.tenant, workOrder) {
+        val lines = sql.query("""SELECT totals.*,warehouse_material_settled_return_base(?,issue_line_id) settled_return_base
+            FROM warehouse_material_obligation_totals(?,?) totals""", sql.tenant, sql.tenant, workOrder) {
             MaterialObligationLine(it.uuid("issue_line_id"), it.uuid("stock_identity_id"), WarehouseBaseUnit.valueOf(it.getString("base_unit")),
                 it.getString("issued_base"), it.getString("used_base"), it.getString("returned_base"), it.getString("transferred_base"),
-                "0", it.getString("accountable_base"), it.getString("transit_base"), it.getString("acknowledged_base"))
+                "0", it.getString("accountable_base"), it.getString("transit_base"), it.getString("acknowledged_base"),
+                it.getString("settled_return_base").takeUnless { amount -> amount == "0" })
         }
         val totals = sql.query("""SELECT coalesce(sum(reservation.reserved_unpicked_base),0) unpicked,
             coalesce(sum(reservation.reserved_picked_base),0) picked FROM inventory_reservation reservation
@@ -50,7 +52,8 @@ class MaterialLifecycleStore(private val jdbc: WarehouseCommandJdbc) {
         val due = latest?.third ?: sql.query("SELECT min(due_at) FROM inventory_material_obligation WHERE tenant_id=? AND work_order_id=?", sql.tenant, workOrder) {
             it.getTimestamp(1)?.toInstant()
         }.single()
-        val outstanding = lines.fold(0L) { total, line -> Math.addExact(total, Math.addExact(line.stillAccountableBase.toLong(), line.returnedBase.toLong())) }
+        val outstanding = lines.fold(0L) { total, line -> Math.addExact(total, Math.addExact(line.stillAccountableBase.toLong(),
+            Math.subtractExact(line.returnedBase.toLong(), line.settledReturnBase?.toLong() ?: 0))) }
         val state = when {
             latest?.second == "CLOSED" -> ResidualSettlementState.CLOSED
             outstanding > 0 && due != null && due < now() -> ResidualSettlementState.OVERDUE
@@ -61,6 +64,11 @@ class MaterialLifecycleStore(private val jdbc: WarehouseCommandJdbc) {
     }
 
     fun now(): Instant = jdbc.execute { sql -> sql.query("SELECT clock_timestamp()") { it.getTimestamp(1).toInstant() }.single() }
+
+    fun closed(workOrder: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("""SELECT material_state FROM inventory_material_lifecycle WHERE tenant_id=? AND work_order_id=?
+            ORDER BY revision DESC LIMIT 1""", sql.tenant, workOrder) == "CLOSED"
+    }
 
     fun record(context: MaterialPlanningContext, action: MaterialLifecycleAction, key: String, hash: String): WarehouseOperationReceipt = jdbc.execute { sql ->
         val before = summary(context.workOrderId)
@@ -77,10 +85,10 @@ class MaterialLifecycleStore(private val jdbc: WarehouseCommandJdbc) {
             context.workOrderRevision, action, result.materialState, key, hash, body, context.cutover.snapshot.epoch, result.dueAt, time)
         before.lines.forEach { line ->
             sql.update("""INSERT INTO inventory_material_obligation_snapshot(id,tenant_id,lifecycle_id,issue_line_id,stock_identity_id,base_unit,
-                issued_base,used_base,returned_base,transferred_base,disposed_base,accountable_base,transit_base,acknowledged_base)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", UUID.randomUUID(), sql.tenant, id, line.issueLineId, line.stockIdentityId, line.baseUnit,
+                issued_base,used_base,returned_base,transferred_base,disposed_base,accountable_base,transit_base,acknowledged_base,settled_return_base)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", UUID.randomUUID(), sql.tenant, id, line.issueLineId, line.stockIdentityId, line.baseUnit,
                 line.issuedBase.toLong(), line.usedBase.toLong(), line.returnedBase.toLong(), line.transferredBase.toLong(), 0,
-                line.stillAccountableBase.toLong(), line.transitBase.toLong(), line.acknowledgedBase.toLong())
+                line.stillAccountableBase.toLong(), line.transitBase.toLong(), line.acknowledgedBase.toLong(), line.settledReturnBase?.toLong() ?: 0)
         }
         WarehouseOperationReceipt(id, context.workOrderId, result.revision, 200, body, time)
     }

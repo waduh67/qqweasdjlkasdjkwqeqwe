@@ -52,6 +52,12 @@ case servis vendor yang terikat retur, custody outbound/inbound aset yang sama,
 request dan riwayat immutable, serta inspeksi ulang setelah barang kembali.
 Title pelanggan tetap CUSTOMER. Penggantian perangkat dan izin RMA kembali ke
 pelanggan asal akan ditambahkan tersendiri;175.120 tetap immutable.
+`V175_122__warehouse_inspected_return_settlement.sql` dicadangkan sebelum pembuatan
+untuk membedakan quantity historis yang dikembalikan dari quantity retur yang
+sudah lolos inspeksi. Penutupan material mengurangi outstanding hanya dengan
+retur terikat yang telah diterima/diinspeksi, tanpa menghapus returned_base atau
+mem-posting stok lagi. Snapshot dan guard penutupan tetap memeriksa sumbernya.
+Seluruh versi sampai175.121 sudah diterapkan dan tetap immutable.
 
 ## Wave 5: reservasi paralel task25, task27, task29
 

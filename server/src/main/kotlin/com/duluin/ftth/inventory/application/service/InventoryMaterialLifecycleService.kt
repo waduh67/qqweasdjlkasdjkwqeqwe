@@ -43,7 +43,8 @@ class InventoryMaterialLifecycleService(
         val identities = custody.map { it.first }.toSet()
         val lines = summary.lines.filter { it.issueLineId in identities }
         return summary.copy(lines = lines, outstandingBase = lines.fold(0L) { total, line ->
-            Math.addExact(total, Math.addExact(line.stillAccountableBase.toLong(), line.returnedBase.toLong()))
+            Math.addExact(total, Math.addExact(line.stillAccountableBase.toLong(),
+                Math.subtractExact(line.returnedBase.toLong(), line.settledReturnBase?.toLong() ?: 0)))
         }.toString())
     }
 
