@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.*
+import com.duluin.ftth.inventory.application.port.inbound.WarehouseQueryFilter
 import com.duluin.ftth.inventory.application.service.*
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
@@ -66,12 +67,16 @@ class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc) {
         Unit
     }
 
-    fun list(id: UUID, page: WarehousePageRequest): List<Pair<SupplierReplacementRecord, UUID?>> = jdbc.execute { sql ->
-        sql.query("""SELECT request.snapshot,line.stock_identity_id FROM inventory_repair_replacement_request request
-            JOIN inventory_document_line line ON line.tenant_id=request.tenant_id AND line.document_id=request.receipt_id
-            WHERE request.tenant_id=? AND request.return_id=? ORDER BY request.created_at,request.id LIMIT ? OFFSET ?""",
-            sql.tenant, id, page.size, page.page.toLong() * page.size) {
-            mapper.readValue(it.getString("snapshot"), SupplierReplacementRecord::class.java) to it.optionalUuid("stock_identity_id")
-        }
+    fun list(id: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): List<SupplierReplacementView> = jdbc.execute { sql ->
+        val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page.page, page.size, "createdAt", "asc"), access)
+        val rows = """SELECT replacement.id,replacement.created_at,(replacement.snapshot::jsonb->'view')
+                || jsonb_build_object('replacementAssetId',line.stock_identity_id) body
+            FROM inventory_repair_replacement_request replacement
+            JOIN inventory_document_line line ON line.tenant_id=replacement.tenant_id AND line.document_id=replacement.receipt_id,request
+            WHERE replacement.tenant_id=request.tenant AND replacement.return_id=?
+                AND (replacement.snapshot::jsonb#>>'{input,sourceLocationId}')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')
+                AND (replacement.snapshot::jsonb#>>'{input,inspectionLocationId}')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')"""
+        mapper.readTree(query.result(query.page(rows, "body", "created_at"), id)).path("items")
+            .map { mapper.treeToValue(it, SupplierReplacementView::class.java) }
     }
 }

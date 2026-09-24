@@ -8,6 +8,24 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class WarehouseSupplierReplacementGuardsIT : WarehouseSupplierReplacementFixture() {
+    @Test fun `replacement pages apply current receipt location scope before the page limit`() {
+        val repair = repairSetup()
+        val outbound = dispatchRepair(repair)
+        val hidden = create("locations", repair.token,
+            """{"code":"HIDDEN_REPLACEMENT","name":"Separate receipt inspection","kind":"QUARANTINE"}""").path("id").asString()
+        replacement(repair, outbound, "HIDDEN-REPLACEMENT", "hidden-replacement", inspection = hidden)
+        val visible = replacement(repair, outbound, "VISIBLE-REPLACEMENT", "visible-replacement")
+        val viewer = receiver(visible, setOf("inventory.return.view", "inventory.receipt.view"))
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${viewer.second}/${repair.location}", repair.token,
+            """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+        val path = "${repair.path}/replacement-receipts"
+        val first = request("GET", "$path?page=0&size=1", viewer.first)
+        assertThat(first.status).withFailMessage(first.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(first.contentAsString).single().path("receiptId").asString()).isEqualTo(visible.receipt)
+        assertThat(mapper.readTree(request("GET", "$path?page=1&size=1", viewer.first).contentAsString).isEmpty).isTrue()
+        assertThat(mapper.readTree(request("GET", "$path?page=0&size=100", repair.token).contentAsString).size()).isEqualTo(2)
+    }
+
     @Test fun `unknown replacement cost stays unknown and cannot bypass a configured value policy`() {
         val case = replacement(cost = null)
         replacementPolicy(case)

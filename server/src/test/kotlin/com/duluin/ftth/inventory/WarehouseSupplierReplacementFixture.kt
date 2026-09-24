@@ -13,9 +13,10 @@ abstract class WarehouseSupplierReplacementFixture : WarehouseRepairFixture() {
         return replacement(repair, dispatchRepair(repair), "VENDOR-NEW-1", "vendor-new-1", cost)
     }
 
-    protected fun replacement(repair: RepairSetup, outbound: JsonNode, serial: String, key: String, cost: String? = "100"): ReplacementCase {
+    protected fun replacement(repair: RepairSetup, outbound: JsonNode, serial: String, key: String, cost: String? = "100",
+        inspection: String = repair.returned.quarantine): ReplacementCase {
         val stock = repair.returned.old.installation.receipt.stock
-        val body = """{"expectedRevision":${outbound.path("revision").asLong()},"externalReference":"$key","sourceLocationId":"${stock.source}","inspectionLocationId":"${repair.returned.quarantine}","skuId":"${stock.onu}","serial":"$serial","evidenceReference":"vendor-delivery-$key"${cost?.let { ",\"cost\":{\"totalMinor\":\"$it\",\"currency\":\"IDR\"}" } ?: ""}}"""
+        val body = """{"expectedRevision":${outbound.path("revision").asLong()},"externalReference":"$key","sourceLocationId":"${stock.source}","inspectionLocationId":"$inspection","skuId":"${stock.onu}","serial":"$serial","evidenceReference":"vendor-delivery-$key"${cost?.let { ",\"cost\":{\"totalMinor\":\"$it\",\"currency\":\"IDR\"}" } ?: ""}}"""
         val result = request("POST", "${repair.path}/replacement-receipts", repair.token, body, key)
         assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(201)
         return ReplacementCase(repair, outbound, mapper.readTree(result.contentAsString).path("receiptId").asString(), body)

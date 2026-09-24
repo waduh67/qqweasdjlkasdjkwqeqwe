@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReceiptPersistence
+import com.duluin.ftth.inventory.adapter.outbound.persistence.SupplierReplacementStore
 import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
@@ -13,16 +14,18 @@ data class ReceiptDispositionPlan(val legs: List<PostingLeg>, val splits: List<P
     val decisions: List<ReceiptDecision>, val state: WarehouseReceiptState)
 
 @Component
-class ReceiptDispositionPlanning(private val store: WarehouseReceiptPersistence, private val evidence: ReceiptEvidenceService) {
+class ReceiptDispositionPlanning(private val store: WarehouseReceiptPersistence, private val evidence: ReceiptEvidenceService,
+    private val replacements: SupplierReplacementStore) {
     fun inspect(record: ReceiptRecord, input: ReceiptInspectInput): ReceiptDispositionPlan {
         uniqueLines(input.lines.map { it.lineId })
         val legs = mutableListOf<PostingLeg>()
         val splits = mutableListOf<PostingSplit>()
+        val owner = replacements.forReceipt(record.id)?.view?.legalOwner ?: AssetLegalOwner.ISP
         val decisions = input.lines.map { inspection ->
             receiptText(inspection.reason, 1000)
             val line = record.intake.lines.singleOrNull { it.id == inspection.lineId } ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
             if (inspection.baseUnit != line.sku.baseUnit) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-            val piece = source(record, line, inspection.stockIdentityId)
+            val piece = source(record, line, inspection.stockIdentityId, owner)
             if (piece.disposition != null) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             val unit = StockUnit.valueOf(line.sku.baseUnit.name)
             val accepted = StockQuantity.parseBase(inspection.acceptedBase, unit)
@@ -77,9 +80,9 @@ class ReceiptDispositionPlanning(private val store: WarehouseReceiptPersistence,
         return ReceiptDispositionPlan(legs, splits, emptyList(), record.state)
     }
 
-    private fun source(record: ReceiptRecord, line: ReceiptIntakeLine, identity: UUID): ReceiptPiece {
+    private fun source(record: ReceiptRecord, line: ReceiptIntakeLine, identity: UUID, owner: AssetLegalOwner = AssetLegalOwner.ISP): ReceiptPiece {
         val piece = store.pieces(line.id).singleOrNull { it.stockIdentityId == identity } ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if (piece.locationId != record.intake.inspection.id || piece.condition != WarehouseCondition.QUARANTINE || piece.legalOwner != AssetLegalOwner.ISP ||
+        if (piece.locationId != record.intake.inspection.id || piece.condition != WarehouseCondition.QUARANTINE || piece.legalOwner != owner ||
             piece.status != "QUARANTINE" || piece.custodianKind != "WAREHOUSE" || piece.custodianId != record.intake.inspection.id)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         return piece

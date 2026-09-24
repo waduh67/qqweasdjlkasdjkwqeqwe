@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.common.domain.identity.SerialIdentity
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.*
@@ -18,7 +19,8 @@ class SupplierReplacementService(private val cutovers: InventoryTenantCutoverApi
     private val returns: WarehouseReturnStore, private val replacements: SupplierReplacementStore,
     private val receipts: WarehouseReceiptService, private val receiptStore: WarehouseReceiptPersistence,
     private val workOrders: AssetHandoverWorkOrderPort, private val masters: WarehouseMasterStore,
-    private val access: WarehousePolicyAccess, private val clock: WarehousePolicyPersistence) : InventorySupplierReplacementApi {
+    private val access: WarehousePolicyAccess, private val clock: WarehousePolicyPersistence,
+    private val scopes: InventoryWarehouseScopeApi, private val sites: com.duluin.ftth.network.SiteReferenceApi) : InventorySupplierReplacementApi {
     private val mapper = jacksonObjectMapper()
 
     override fun request(id: UUID, input: SupplierReplacementInput, metadata: WarehouseMutationMetadata): SupplierReplacementView {
@@ -71,14 +73,8 @@ class SupplierReplacementService(private val cutovers: InventoryTenantCutoverApi
         masters.lockTopology()
         val returned = returns.get(id)
         listOf(returned.intake.quarantineLocationId, returned.view.locationId).distinct().forEach { access.location(it, current) }
-        return replacements.list(id, page).mapNotNull { (record, asset) ->
-            try {
-                listOf(record.input.sourceLocationId, record.input.inspectionLocationId).distinct().forEach { access.location(it, current) }
-                record.view.copy(replacementAssetId = asset)
-            } catch (failure: WarehouseContractException) {
-                if (failure.error.code != WarehouseErrorCode.NOT_FOUND) throw failure
-                null
-            }
-        }
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        val visibility = WarehouseQueryAccess(scopes.currentUnderFence(current.fence), areas, sites.visibleAreas(areas), false, false)
+        return replacements.list(id, page, visibility)
     }
 }

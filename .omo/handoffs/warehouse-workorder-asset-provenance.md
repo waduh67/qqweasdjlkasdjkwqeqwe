@@ -1,5 +1,31 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Supplier inspection verified; scoped pagination under combined regression
+
+Published parent checkpoint11c3b518.
+return-replacement-inspection-green passed10 tests/4 suites/0 failures/errors/skips,
+4m44s: replacement LOAN/SALE inspection and putaway/rebuild2, ordinary receipt
+11-line disposition1, receipt inspection guards4, modularity3. Evidence archive:
+task26/return-replacement-inspection-green/xml. Real private MinIO attachment used.
+Receipt inspection derives expected owner from the immutable vendor replacement
+request; ISP putaway remains mandatory. CUSTOMER inspection succeeds but stays
+QUARANTINE, ISP inspection+putaway becomes AVAILABLE/SERVICEABLE. Both preserve
+origin/old vendor custody and rebuild without extra movement.
+
+Additional review found replacement list filtering after LIMIT. It now reuses
+WarehouseQuerySql visible_locations (location/area/site ancestry) before pagination,
+returning only public link views. One new guard puts a hidden draft before a
+visible draft at size1. This pagination change is NOT yet verified.
+
+Combined run queued/starting: .omo/runtime/return-combined-regression.sh and .log,
+archive task26/return-combined-regression/xml, database log return-combined-database.log.
+It selects WarehouseReturn*, WarehouseSupplierRepair*, WarehouseCustomerRma*,
+WarehouseSupplierReplacement* and ModularityTests under the host QA lock. Confirm
+nonzero full counts and zero failures/skips before marking26 complete.137 remains
+immutable; this checkpoint contains no SQL edits. Full new-device CUSTOMER RMA is
+not inferred from same-asset RMA permits. Task28 explicitly handles old-device
+loss/scrap; receipt of a replacement does not dispose the old physical device.
+
 ##137 verified supplier replacement policy and current position
 
 Published checkpoint a0d5f17b contains136. It applied at21:05:46.921 JKT;

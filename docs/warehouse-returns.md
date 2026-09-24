@@ -21,6 +21,8 @@ dengan revision tebakan.
 | `POST /api/v1/warehouse/returns/{id}/inspect` | Mencatat ukuran, kondisi, bukti dan tujuan inspeksi |
 | `POST /api/v1/warehouse/returns/{id}/repair-dispatch` | Menyerahkan perangkat hasil inspeksi ke custody vendor |
 | `POST /api/v1/warehouse/returns/{id}/repair-receive` | Menerima perangkat yang sama kembali ke karantina |
+| `POST /api/v1/warehouse/returns/{id}/replacement-receipts` | Membuat receipt untuk perangkat berbeda yang dikirim vendor |
+| `GET /api/v1/warehouse/returns/{id}/replacement-receipts` | Membaca hubungan perangkat lama, receipt vendor dan perangkat pengganti |
 | `POST /api/v1/warehouse/returns/{id}/reacquisition` | Mengajukan alih kepemilikan barang pelanggan dalam karantina |
 | `GET /api/v1/warehouse/returns` | Daftar retur dan total dokumen dalam scope pengguna |
 | `GET /api/v1/warehouse/returns/{id}` | Membaca kondisi dokumen terkini |
@@ -82,6 +84,42 @@ lalu operator melakukan inspeksi dan reset ulang melalui endpoint inspeksi.
 Case servis ditutup ketika inspeksi menyatakan serviceable; barang milik pelanggan
 tetap tidak tersedia bagi issue ISP. Satu dokumen retur saat ini mendukung satu
 case servis. Dokumen dan riwayat memuat detail case pada field `repair`.
+
+### Perangkat pengganti dari vendor
+
+Gunakan `replacement-receipts` bila vendor mengirim perangkat berbeda. Pengaju
+memerlukan izin retur dan receipt. Isinya `expectedRevision` retur,
+`externalReference` dokumen vendor, `sourceLocationId` RECEIPT_SOURCE,
+`inspectionLocationId` karantina, `skuId` yang sama, `serial` baru,
+`evidenceReference`, serta `mac` opsional. Respons201 memberi `receiptId` dan ID
+request. Barang belum diterima sampai receipt tersebut diproses melalui
+`POST /api/v1/warehouse/receipts/{receiptId}/receive` dengan revision0, atau
+approval RECEIPT jika kebijakan mengharuskannya.
+
+Field `cost` opsional berisi `totalMinor` sebagai string bilangan bulat dan
+`currency`, misalnya `{"totalMinor":"150001","currency":"IDR"}`. Nilai ini
+berasal dari dokumen vendor, dengan denominator1EA. Tanpa nilai yang diketahui,
+biaya tetap UNKNOWN; kebijakan approval berbasis nilai menolak biaya yang belum
+diketahui. Penolakan approval mempertahankan draft beserta auditnya. Buat request
+baru dengan bukti terkini untuk mengajukan ulang.
+
+Penerimaan menghasilkan aset baru dengan serial dan asal receipt tersendiri.
+Satu case servis hanya dapat menerima satu pengganti, meskipun ada beberapa
+draft. Penerimaan ulang dengan kunci sama mengembalikan hasil semula. Jika
+perangkat lama sudah diterima kembali atau sumber servis berubah, permintaan
+lama menjadi stale dan tidak membuat identitas perangkat baru.
+
+Hak milik pengganti mengikuti sumber: ISP untuk barang ISP, CUSTOMER untuk
+barang pelanggan. Inspeksi memakai attachment receipt dan endpoint `inspect`
+receipt biasa. Barang ISP yang lolos inspeksi dapat dipindahkan melalui
+`putaway`; barang CUSTOMER tetap di karantina dan putaway ISP ditolak.
+Alur `RETURN_CUSTOMER_RMA` di bawah hanya berlaku untuk perangkat lama yang sama
+setelah servis, dengan assignment asalnya.
+
+Penerimaan pengganti tidak menghapus atau membuang perangkat lama secara
+otomatis. Perangkat lama tetap tercatat dalam custody vendor sampai ada
+penerimaan atau disposition yang sah. Daftar pengganti memakai `page` dan
+`size` (1–100); scope lokasi receipt diterapkan sebelum pembagian halaman.
 
 ## Penutupan material
 
@@ -173,5 +211,9 @@ material serta pemasangan kembali RMA telah memiliki bukti integrasi PostgreSQL.
 Serah terima bertanda tangan RMA menjaga pemilik CUSTOMER dan titleRevision0.
 Regresi serah terima paralel dan alih kepemilikan RMA sampai reissue telah lolos.
 Reacquisition langsung dari karantina beserta balapan approval, scope terkini,
-replay, riwayat dan repair setelah alih kepemilikan telah lolos integrasi. Penggantian fisik oleh vendor, panduan UI
-dan bukti packaged HTTP masih menjadi pekerjaan task26/lanjutan.
+replay, riwayat dan repair setelah alih kepemilikan telah lolos integrasi.
+Penerimaan pengganti vendor, approval biaya, stale source, replay dan penjagaan
+title terhadap perubahan database langsung telah lolos integrasi. Regresi
+gabungan termasuk pagination masih berjalan. Inspeksi pengganti dan rebuild
+proyeksi telah lolos bersama regresi receipt biasa. Disposition
+barang lama, panduan UI dan bukti browser lengkap dilanjutkan pada task28/36/45.
