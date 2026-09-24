@@ -41,7 +41,22 @@ duplicate JSON keys, numeric quantity dan coercion. Prefix:
 | POST | `/pick` | Pilih exact reservation/stock identity; hasil satu issue PICKED |
 | POST | `/unpick` | Batalkan seluruh picked bundle issue secara eksplisit |
 | POST | `/dispatch` | Dispatch seluruh picked bundle; partial demand harus eksplisit |
+| GET | `/issues?page=0&size=25&state=PICKED` | Daftar slip tersimpan dan total diterima; filter state opsional |
 | GET | `/issues/{issueId}/slip` | Payload immutable transisi issue terkini |
+
+
+Daftar issue memakai izin baca issue/request serta konteks WO yang sama. Pagination
+(size1..100) dan hitungan total dilakukan setelah pengecekan cakupan sumber dan
+seluruh lokasi movement issue, termasuk penerimaan teknisi. Snapshot substitusi
+memerlukan izin override. Hasil berisi state/revisi header terkini, flag `unpicked`,
+nama sender/receiver dari slip immutable terakhir, serta jumlah per line yang
+dipick, didispatch dan benar-benar diterima (`acceptedBase`, penjumlahan receipt
+persisted). Riwayat unpick tetap dapat ditemukan sesudah reload. Field tersebut
+tidak berisi biaya atau bukti privat. Jumlah dispatched dikurangi accepted bukan
+saldo fisik transit: kehilangan/pengecualian dapat menyelesaikan sisa yang tidak
+pernah diterima. Gunakan query stok untuk saldo fisik. GET slip tetap mengembalikan
+snapshot transisi historis, sehingga revisinya dapat lebih tua dari header yang
+sudah PART_RECEIVED atau RECEIVED.
 
 Contoh pick satu potong100m:
 

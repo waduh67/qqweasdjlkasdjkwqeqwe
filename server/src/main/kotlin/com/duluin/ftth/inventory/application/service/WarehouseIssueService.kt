@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.iam.CurrentAuthority
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.*
@@ -8,6 +9,7 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.*
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
+import com.duluin.ftth.network.SiteReferenceApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -21,7 +23,7 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
     private val plans: MaterialPlanningStore, private val reservations: WarehouseReservationStore,
     private val issues: WarehouseIssueStore, private val picking: WarehouseIssuePicking, private val operations: WarehouseOperationStore,
     private val posting: WarehousePosting, private val validation: MaterialPlanValidation, private val stock: ReservationStockQueries,
-    private val reworks: MaterialReworkStore) : InventoryIssueApi {
+    private val reworks: MaterialReworkStore, private val issueQueries: WarehouseIssueQueries, private val sites: SiteReferenceApi) : InventoryIssueApi {
     private val mapper = jacksonObjectMapper()
 
     override fun pick(context: MaterialPlanningContext, request: WarehousePickRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
@@ -135,6 +137,16 @@ class WarehouseIssueService(private val authority: CurrentAuthorityApi, private 
         authorizeSubstitution(snapshot, current)
         authorize(snapshot.lines.map { it.dimension.locationId } + issues.dispatchDestinations(issueId).map { it.locationId }, current)
         return issues.print(issueId)
+    }
+
+    override fun list(context: MaterialPlanningContext, page: WarehousePageRequest, state: WarehouseIssueState?): String {
+        val current = current(context, false)
+        if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        masters.lockTopology()
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        val access = WarehouseQueryAccess(if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence),
+            areas, sites.visibleAreas(areas), cost = false, provenance = false)
+        return issueQueries.list(context.workOrderId, page, state, access, current.platformAdmin || "inventory.request.override" in current.permissions)
     }
 
     private fun current(context: MaterialPlanningContext, mutation: Boolean): CurrentAuthority {

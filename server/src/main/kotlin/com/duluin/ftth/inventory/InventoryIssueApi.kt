@@ -6,6 +6,7 @@ interface InventoryIssueApi {
     fun pick(context: MaterialPlanningContext, request: WarehousePickRequest, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun transition(context: MaterialPlanningContext, request: WarehouseIssueRequest, metadata: WarehouseMutationMetadata, dispatch: Boolean): WarehouseOperationReceipt
     fun slip(context: MaterialPlanningContext, issueId: UUID): String
+    fun list(context: MaterialPlanningContext, page: WarehousePageRequest, state: WarehouseIssueState? = null): String
 }
 
 data class WarehousePickRequest(val expectedRevision: Long, val workOrderRevision: Long, val demandRevision: Long,

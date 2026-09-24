@@ -1,5 +1,28 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 persisted issue discovery implemented — verification pending
+
+Allocation metadata source2671ff3a passed10 tests/4suites in4m9s, zero failure/skips;
+portable allocation-metadata-verification.json saved; owned cleanup completed.
+Seven typed material/issue web tests +TS/focusedlint passed84591d57.
+
+New GET /api/work-orders/{id}/materials/issues accepts strict page,size,state;
+public InventoryIssueApi + existing workflow obtains currentWO/IAM/cutover context.
+WarehouseIssueQueries uses current visible_locations before count/paging, requires
+all source and actual movement destinations (includingreceipt), and excludes
+substituted snapshots withoutoverride. No cost/evidence metadata. Returns header
+state/revision/unpicked, latest immutable sender/receiver, createdAt, and per-line
+actual picked/dispatched/summed accepted quantities. It does NOT infer physical
+transit from dispatched-minus-accepted (loss/exception canclose pendinggoods).
+Existing slip endpoint unchanged; receipt advances header beyond sliprevision.
+New tests cover2issue cases(paging/unpick/repick/dispatch/scoperevocation/substitution/
+permission/tenant/invalidqueries) +1partial/fullreceipt case. NOTYETRUN.
+
+NEXT `.omo/runtime/issue-list-server.sh` against new source:3new tests, existing
+serial/replayguards +Modularity. Keep backend source stable. Then actual typed
+issue list frontend +request/plan/pick/dispatch/slip UI and realbrowser task35.
+No migrations changed. Continue35–48/F1–F4,goalACTIVE.
+
 ## Task35 typed material/picking contracts checkpoint
 
 Added materialModels.ts, issueModels.ts and materials.ts using actual source DTOs.

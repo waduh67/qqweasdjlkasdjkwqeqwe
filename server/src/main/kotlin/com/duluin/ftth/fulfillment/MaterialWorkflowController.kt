@@ -3,6 +3,7 @@ package com.duluin.ftth.fulfillment
 import com.duluin.ftth.inventory.*
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.util.MultiValueMap
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
@@ -37,6 +38,18 @@ class MaterialWorkflowController(private val workflow: MaterialWorkflowService) 
         response(workflow.issueTransition(id, MaterialWorkflowJson.decode(body, WarehouseIssueRequest::class.java), key, false))
     @GetMapping("/issues/{issueId}/slip")
     fun slip(@PathVariable id: UUID, @PathVariable issueId: UUID) = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(workflow.issueSlip(id, issueId))
+    @GetMapping("/issues")
+    fun issues(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        fun invalid(): Nothing = throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Invalid issue filter"))
+        if (parameters.any { (key, values) -> key !in setOf("page", "size", "state") || values.size != 1 || values.single().isBlank() }) invalid()
+        fun number(key: String, default: Int): Int = parameters[key]?.single()?.let {
+            if (!it.matches(Regex("[0-9]+"))) invalid()
+            it.toIntOrNull() ?: invalid()
+        } ?: default
+        val state = parameters["state"]?.single()?.let { value -> WarehouseIssueState.entries.singleOrNull { it.name == value } ?: invalid() }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(workflow.issueList(id,
+            WarehousePageRequest(number("page", 0), number("size", 25)), state))
+    }
     private fun response(receipt: WarehouseOperationReceipt) = ResponseEntity.status(receipt.originalStatus)
         .contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)
 }

@@ -27,6 +27,7 @@ class MaterialWorkflowService(private val workOrders: WorkOrderMaterialContextAp
     fun issueTransition(id: UUID, request: WarehouseIssueRequest, key: String, dispatch: Boolean) =
         issues.transition(context(id, if (dispatch) request.workOrderRevision else null, true), request, WarehouseMutationMetadata(key), dispatch)
     fun issueSlip(id: UUID, issueId: UUID) = issues.slip(context(id, null), issueId)
+    fun issueList(id: UUID, page: WarehousePageRequest, state: WarehouseIssueState?) = issues.list(context(id, null), page, state)
     private fun context(id: UUID, revision: Long?, issue: Boolean = false): MaterialPlanningContext {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch,
             if (revision == null) WarehouseOperationClass.CONTROL_PLANE else WarehouseOperationClass.ORDINARY_STOCK)

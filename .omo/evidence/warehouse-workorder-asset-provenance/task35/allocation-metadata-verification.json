@@ -1,0 +1,42 @@
+{
+  "task": 35,
+  "phase": "named allocation metadata",
+  "sourceCommit": "2671ff3a",
+  "tests": 10,
+  "suites": [
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseIssueITSerial",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "3236339fe5cd2e58eaf51f7db8567227382d9ee9557915c2a2b27d5f8e35456a"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseQueryITCompatibility",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "d4c6f0c824afd7bedd6b722c437542161cc95c6fc757e6c42eb547ee65d8089e"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "a1073c6318ad3da6f455340b84e7acc73ab4c95185a61d48256d7467d7903266"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "b97fcfc4f6d9e16bb52b978a07ee14e1004b5adc0e38f8beba999d114935231f"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in4m9s",
+  "cleanup": "owned processes containers network stopped;volumes retained"
+}
