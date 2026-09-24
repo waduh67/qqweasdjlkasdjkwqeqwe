@@ -15,7 +15,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import tools.jackson.core.JacksonException
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = [MaterialWorkflowController::class, MaterialWorkbenchController::class, MyMaterialsController::class, MaterialReturnInboxController::class, MaterialHandoverWorkbenchController::class, MaterialReceiptController::class, MaterialUsageController::class, MaterialSettlementController::class, MaterialReworkController::class, CustomerAssetWorkflowController::class, AssetReplacementController::class])
+@RestControllerAdvice(assignableTypes = [MaterialWorkflowController::class, MaterialWorkbenchController::class, MyMaterialsController::class, MaterialReturnInboxController::class, MaterialHandoverWorkbenchController::class, CustomerAssetWorkbenchController::class, MaterialReceiptController::class, MaterialUsageController::class, MaterialSettlementController::class, MaterialReworkController::class, CustomerAssetWorkflowController::class, AssetReplacementController::class])
 class MaterialWorkflowErrors {
     @ExceptionHandler(WarehouseContractException::class)
     fun contract(error: WarehouseContractException) = ResponseEntity.status(error.error.code.httpStatus).body(error.error)

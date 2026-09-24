@@ -1,0 +1,26 @@
+{
+  "sourceCommit": "accompanying customer asset read workbench checkpoint",
+  "backend": {
+    "tests": 52,
+    "failures": 0,
+    "result": "BUILD SUCCESSFUL in 6m 26s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+        "tests": 48,
+        "failures": 0,
+        "sha256": "dc2d8dcbc215e179897d658b7fbf0fc7fb5810f58af61e521e5e3c0f8c2d9eb3"
+      },
+      {
+        "suite": "com.duluin.ftth.customer.CustomerAssetWorkbenchIT",
+        "tests": 4,
+        "failures": 0,
+        "sha256": "3a9aabc4bffccad9a7818b82c915b1c0520a6734ab18c4307a63c056bd477669"
+      }
+    ]
+  },
+  "coverage": "4 new real PostgreSQL/HTTP cases plus48 existing customer replacement regressions. Own acknowledged serialized source; actual WO/asset/assignment/title/episode/signature references; no GET stock posting; source disappears after installation; exact replay; sale title transition; old/new replacement history; current source location revocation before pagination; other actor/tenant and unsupported selectors denied.",
+  "migration": "None",
+  "cleanup": "Owned services stopped; volumes retained",
+  "remaining": "Task41 frontend implemented but awaiting more tests/build and portal-safe presentation; browser45.39/40 final links in uncommitted frontend.42-48/F1-F4 remain."
+}
