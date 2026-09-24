@@ -1,3 +1,17 @@
+## Approval evidence implementation checkpoint — verification pending
+
+Allowlisted document evidence references now project from sealed receipt/transfer/
+disposition/compensation/title sources. Approval attachments are bounded and current-
+authority checked; receipt files must match captured intake hash/revision and precede
+request time. Download verifies private storage bytes/type/size/digest. Signed title
+proof uses a narrow inventory public port implemented inside workorder, preserving
+current WO area and exact COMMITTED/ACTIVE signature/registry/digest checks without
+requiring general workorder.evidence.view. No storage keys/raw snapshot/cost in DTOs.
+Two new real-MinIO integration tests plus expanded actual-WO approval test are pending.
+Transfer recovery's three new scenarios and four approval source regressions already
+passed in its separate 28b9b415 run; awaiting remaining two original discrepancy tests.
+Whole task37 and38–48/F1–F4 active. UI evidence panel next. No migration.
+
 ## Transfer recovery UI verified; backend run in progress
 
 Frontend permits report replacement only after server recovery state matches the exact

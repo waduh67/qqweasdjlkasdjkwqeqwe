@@ -27,6 +27,18 @@ class WarehouseApprovalWorkbenchWorkOrderIT : WarehouseReturnAssetFixture() {
         assertThat(detail.status).withFailMessage(detail.contentAsString).isEqualTo(200)
         assertThat(mapper.readTree(detail.contentAsString).path("document").path("returnId").asString()).isEqualTo(returned.id)
         assertThat(detail.contentAsString).doesNotContain("\"cost\"", "signature", "storageKey", "sha256", "payload_hash")
+        assertThat(mapper.readTree(detail.contentAsString).path("document").path("evidenceReferences").single().path("reference").asString()).isEqualTo("TRANSFER-TITLE")
+        val files = "/api/v1/warehouse/approvals/$id/attachments"
+        val listed = request("GET", files, checker.first)
+        assertThat(listed.status).withFailMessage(listed.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(listed.contentAsString).path("items").single().path("id").asString()).isEqualTo(returned.old.signature.toString())
+        assertThat(listed.contentAsString).doesNotContain("reference", "digest", "workOrderId", "storageKey", "sha256")
+        val image = request("GET", "$files/${returned.old.signature}", checker.first)
+        assertThat(image.status).withFailMessage(image.contentAsString).isEqualTo(200)
+        assertThat(image.contentType).isEqualTo("image/png")
+        assertThat(image.contentAsByteArray).isEqualTo(request("GET", "/api/work-orders/${receipt.workOrder}/signature/content", admin).contentAsByteArray)
+        assertThat(request("GET", "/api/work-orders/${receipt.workOrder}/signature/content", checker.first).status).isIn(403, 404)
+        assertThat(request("GET", "$files/${java.util.UUID.randomUUID()}", checker.first).status).isEqualTo(404)
         val initial = request("GET", "/api/v1/warehouse/approvals/workbench?size=1", checker.first)
         assertThat(initial.status).withFailMessage(initial.contentAsString).isEqualTo(200)
         assertThat(mapper.readTree(initial.contentAsString).path("totalElements").asLong()).isEqualTo(1)
@@ -43,5 +55,7 @@ class WarehouseApprovalWorkbenchWorkOrderIT : WarehouseReturnAssetFixture() {
         }
         assertThat(request("GET", "/api/v1/warehouse/approvals/$id/details", checker.first).status).isEqualTo(404)
         assertThat(request("GET", "/api/v1/warehouse/approvals/sources/$document", checker.first).status).isEqualTo(404)
+        assertThat(request("GET", files, checker.first).status).isEqualTo(404)
+        assertThat(request("GET", "$files/${returned.old.signature}", checker.first).status).isEqualTo(404)
     }
 }

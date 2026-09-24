@@ -40,10 +40,18 @@ class WarehouseApprovalProjection(private val query: WarehouseApprovalQuery, pri
             fact.path("prior_quantity_base").asLong().toString(), fact.path("observed_quantity_base").asLong().toString(), fact.path("evidence_reference").asString()) }
         val returnId = listOf("returnTitle", "disposition", "compensation").firstNotNullOfOrNull { key -> source.path(key).path("returned").path("view").optionalId("id") }
             ?: source.path("replacement").path("view").optionalId("returnId")
+        val references = buildList {
+            fun reference(kind: String, value: String?) { if (!value.isNullOrBlank()) add(WarehouseApprovalEvidenceReference(kind, value)) }
+            reference("RECEIPT", intake?.optionalText("externalReference"))
+            reference("TRANSFER", document.optionalText("transfer_remainder_request")?.let(mapper::readTree)?.optionalText("evidenceReference"))
+            reference("DISPOSITION", source.path("disposition").path("input").optionalText("evidenceReference"))
+            reference("COMPENSATION", source.path("compensation").path("input").optionalText("evidenceReference"))
+            reference("TITLE_TRANSFER", source.path("returnTitle").path("request").optionalText("titleTransferReference"))
+        }
         return WarehouseApprovalDocument(id, document.path("revision").asLong(), kind, document.path("code").asString(), state,
             document.optionalText("reason"), Instant.parse(document.path("created_at").asString()), person(requester, names), query.locations(locations), lines, measured,
             receiptId = id.takeIf { kind == "RECEIPT" }, countId = id.takeIf { kind == "COUNT" },
-            transferId = document.optionalId("source_document_id").takeIf { kind == "ADJUSTMENT" }, returnId = returnId)
+            transferId = document.optionalId("source_document_id").takeIf { kind == "ADJUSTMENT" }, returnId = returnId, evidenceReferences = references)
     }
     private fun JsonNode.optionalText(key: String): String? = path(key).takeUnless { it.isNull || it.isMissingNode }?.asString()
     private fun JsonNode.optionalId(key: String): UUID? = optionalText(key)?.let(UUID::fromString)

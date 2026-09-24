@@ -89,7 +89,7 @@ class ReceiptEvidenceService(private val cutovers: InventoryTenantCutoverApi, pr
         verified(stored)
     }
 
-    private fun verified(value: StoredReceiptEvidence): StoredObject {
+    internal fun verified(value: StoredReceiptEvidence): StoredObject {
         val result = try { storage.get(value.objectKey) } catch (_: NotFoundException) { masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED) }
         if (result.size != value.view.sizeBytes || result.contentType != value.view.contentType || digest(result.bytes) != value.view.sha256)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)

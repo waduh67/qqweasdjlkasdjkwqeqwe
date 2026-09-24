@@ -17,7 +17,7 @@ import java.util.UUID
 
 @Service
 class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, private val projection: WarehouseApprovalProjection,
-    private val store: WarehouseApprovalStore, private val approvals: DurableApprovalService,
+    private val store: WarehouseApprovalStore, private val approvals: DurableApprovalService, private val evidence: WarehouseApprovalEvidence,
     private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi, private val access: WarehousePolicyAccess,
     private val eligibility: WarehouseApprovalAuthority, private val masters: WarehouseMasterStore,
     private val sourceLocks: List<WarehouseApprovalSourceLock>, private val owners: List<WarehouseApprovalOwner>,
@@ -87,6 +87,15 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
             }
         }
         WarehouseApprovalSourceView(projection.document(source.content, source.locations), block == null, block)
+    }
+
+    override fun attachments(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseApprovalAttachment> = ownTransaction {
+        if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        evidence.list(locked(id).record, page)
+    }
+    override fun attachment(id: UUID, evidenceId: UUID): com.duluin.ftth.common.storage.StoredObject = ownTransaction {
+        val (record, _, current) = locked(id)
+        evidence.download(record, evidenceId, current.fence)
     }
 
     override fun details(id: UUID): WarehouseApprovalDetails = ownTransaction {

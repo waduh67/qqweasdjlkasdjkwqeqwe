@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.duluin.ftth.common.storage.StoredObject
 import java.time.Instant
 import java.util.UUID
 
@@ -9,6 +10,8 @@ interface InventoryApprovalQueryApi {
     fun source(id: UUID): WarehouseApprovalSourceView
     fun details(id: UUID): WarehouseApprovalDetails
     fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseApprovalHistoryEntry>
+    fun attachments(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseApprovalAttachment>
+    fun attachment(id: UUID, evidenceId: UUID): StoredObject
 }
 data class WarehouseApprovalFilter(val page: Int = 0, val size: Int = 25, val status: WarehouseApprovalStatus? = null,
     val sourceDocumentId: UUID? = null, val query: String? = null, val operation: PolicyOperation? = null,
@@ -21,11 +24,16 @@ data class WarehouseApprovalLine(val id: UUID, val skuId: UUID, val code: String
     val locationId: UUID?, val destinationLocationId: UUID?, val condition: WarehouseCondition, val legalOwner: AssetLegalOwner)
 data class WarehouseApprovalComparison(val balanceId: UUID, val skuId: UUID, val counter: WarehouseApprovalPerson,
     val baseUnit: WarehouseBaseUnit, val bookQuantityBase: String, val quantityBase: String, val documentReference: String)
+data class WarehouseApprovalEvidenceReference(val kind: String, val reference: String)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class WarehouseApprovalAttachment(val id: UUID, val kind: String, val recordedAt: Instant,
+    val contentType: String? = null, val sizeBytes: Long? = null, val signerLabel: String? = null)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class WarehouseApprovalDocument(val id: UUID, val revision: Long, val kind: String, val code: String, val state: String,
     val reason: String?, val createdAt: Instant, val requester: WarehouseApprovalPerson, val locations: List<WarehouseApprovalLocation>,
     val lines: List<WarehouseApprovalLine>, val comparisons: List<WarehouseApprovalComparison>,
-    val receiptId: UUID? = null, val countId: UUID? = null, val transferId: UUID? = null, val returnId: UUID? = null)
+    val receiptId: UUID? = null, val countId: UUID? = null, val transferId: UUID? = null, val returnId: UUID? = null,
+    val evidenceReferences: List<WarehouseApprovalEvidenceReference> = emptyList())
 data class WarehouseApprovalSourceView(val document: WarehouseApprovalDocument, val canRequest: Boolean, val requestBlock: String?)
 data class WarehouseApprovalSummary(val approval: WarehouseApprovalView, val documentCode: String, val operation: PolicyOperation,
     val requester: WarehouseApprovalPerson, val requestedAt: Instant)

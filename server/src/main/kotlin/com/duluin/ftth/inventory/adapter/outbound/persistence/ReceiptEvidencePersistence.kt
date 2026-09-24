@@ -6,12 +6,31 @@ import com.duluin.ftth.inventory.application.port.inbound.ReceiptEvidenceListIte
 import com.duluin.ftth.inventory.WarehousePage
 import org.springframework.stereotype.Repository
 import java.util.UUID
+import java.time.Instant
+import com.duluin.ftth.inventory.WarehouseApprovalAttachment
+import com.duluin.ftth.inventory.WarehousePageRequest
 
 data class ReceiptIntakeBinding(val contentRevision: Long, val contentHash: String)
 data class StoredReceiptEvidence(val view: ReceiptEvidenceView, val objectKey: String, val intakeBinding: ReceiptIntakeBinding?)
 
 @Repository
 class ReceiptEvidencePersistence(private val jdbc: WarehouseCommandJdbc) {
+    /** The approval captured this exact intake before requestedAt; later uploads are not evidence for that request. */
+    fun forApproval(document: UUID, binding: ReceiptIntakeBinding, requestedAt: Instant, page: WarehousePageRequest): WarehousePage<WarehouseApprovalAttachment> = jdbc.execute { sql ->
+        val where = "tenant_id=? AND document_id=? AND intake_content_revision=? AND intake_hash=? AND created_at<=?"
+        val total = requireNotNull(sql.value("SELECT count(*) FROM inventory_receipt_evidence WHERE $where", sql.tenant, document,
+            binding.contentRevision, binding.contentHash, requestedAt)).toLong()
+        val items = sql.query("SELECT id,content_type,size_bytes,created_at FROM inventory_receipt_evidence WHERE $where ORDER BY created_at DESC,id LIMIT ? OFFSET ?",
+            sql.tenant, document, binding.contentRevision, binding.contentHash, requestedAt, page.size, page.page.toLong() * page.size) {
+            WarehouseApprovalAttachment(it.uuid("id"), "RECEIPT", it.getTimestamp("created_at").toInstant(), it.getString("content_type"), it.getLong("size_bytes"))
+        }
+        WarehousePage(items, page.page, page.size, total)
+    }
+    fun requireApprovalBinding(document: UUID, id: UUID, binding: ReceiptIntakeBinding, requestedAt: Instant) = jdbc.execute { sql ->
+        if (sql.value("""SELECT id FROM inventory_receipt_evidence WHERE tenant_id=? AND document_id=? AND id=?
+            AND intake_content_revision=? AND intake_hash=? AND created_at<=? FOR SHARE""", sql.tenant, document, id,
+                binding.contentRevision, binding.contentHash, requestedAt) == null) sql.fail(WarehouseErrorCode.NOT_FOUND)
+    }
     fun list(document: UUID, page: Int, size: Int): WarehousePage<ReceiptEvidenceListItem> = jdbc.execute { sql ->
         val total = requireNotNull(sql.value("SELECT count(*) FROM inventory_receipt_evidence WHERE tenant_id=? AND document_id=?", sql.tenant, document)).toLong()
         val items = sql.query("""SELECT evidence.id,evidence.document_id,evidence.content_type,evidence.size_bytes,evidence.sha256,evidence.created_at,
