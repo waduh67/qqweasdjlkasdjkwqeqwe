@@ -1,0 +1,303 @@
+{
+  "recordedAt": "2026-09-24T14:26:58.766619+00:00",
+  "task": 26,
+  "verifiedProductCommit": "c050efeb",
+  "verifiedMainTree": "d533f9950b0e714962f0e4a61789e9ae80a9c9b8",
+  "result": "PASS",
+  "run": "return-combined-check",
+  "duration": "6m47s",
+  "counts": {
+    "tests": 53,
+    "suites": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "command": "scripts/warehouse/qa.sh server --tests '*WarehouseReturn*' --tests '*WarehouseSupplierRepair*' --tests '*WarehouseCustomerRma*' --tests '*WarehouseSupplierReplacement*' --tests '*ModularityTests' --no-parallel",
+  "environment": "Owned isolated PostgreSQL app role NOSUPERUSER NOBYPASSRLS; private MinIO; JDK21; serialized QA lock; no volume reset",
+  "redaction": "Only test names, counts and source/result digests; HTTP headers, tokens and logs are omitted.",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "cetak peta module()",
+        "hotspot accesses only public BNG and catalog APIs()",
+        "struktur module valid()"
+      ],
+      "xmlSha256": "6e57e88c77446d6bea4020379d453273f49c8ee6e6130b6c01b61a49fb7ec182"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "assignment history reads both original issue and RMA execution sources()",
+        "signed original-customer RMA handover accepts custody without another sale or physical posting()",
+        "normal install intent cannot parse or reuse an existing RMA authorization key()"
+      ],
+      "xmlSha256": "a8014edee853661fb84bb3a69d6c2ee4baf009ea22a1fe36c2b789c0c068ce31"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "acknowledged inspected sold RMA installs again only for its original customer with title unchanged()"
+      ],
+      "xmlSha256": "bb419504a52f88e4616b4e2e62ae2217cba3b4e4a499b11708ebc3e0976bb749"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "app role cannot rewrite RMA source or acknowledge without custody posting()",
+        "distinct RMA authorizations still permit only one physical handover consumption()",
+        "RMA rejects a substituted serial and non-repair work order before dispatch()",
+        "RMA authorization needs acknowledged custody and install rechecks customer and current scopes()",
+        "RMA acknowledgement and read replay require current location scope()",
+        "simultaneous RMA installs return one durable physical installation()"
+      ],
+      "xmlSha256": "1add489b2ed2ddcd6a304b9625f28c1ae28c5334aa07c889b5957df1b3b1554a"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "inspected sold repair moves to its assigned technician for original customer without ISP availability()"
+      ],
+      "xmlSha256": "cf7b706409fc5cbac689b47d2ef4e4c2ff6a59405218fb51d1f523d16346e219"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCustomerRmaReacquisitionIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "independently reacquired RMA can return through inspection and normal issue to another customer()"
+      ],
+      "xmlSha256": "8c075b6483d04e7fd4a6e110991b834a59ba7fe356b4708e94cfb99ab47bf727"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnHistoryIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "paged return history includes repair transitions exactly once and rejects unbounded requests()"
+      ],
+      "xmlSha256": "0371670361cbc1691a282ab42b2564ec78ad147bad581e4bfab927069cac708b"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "returned seventeen point five metre remnant becomes available only after measured inspection()",
+        "concurrent inspection cannot post the same return twice()",
+        "unacknowledged foreign and wrong return origins cannot create inspection stock()",
+        "overmeasurement and damaged available destination are rejected before any posting()"
+      ],
+      "xmlSha256": "6c48c44fc7e3a5091b7221779389f2145f2ed913094090c5af3a71d6f34d13eb"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "original JWT and command keys cannot reveal a return after warehouse scope revocation()"
+      ],
+      "xmlSha256": "7fbe27791e9eba2f363c2694b07aa1e1e08ddd42f02c5fe6defb9c909f69a883"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\"",
+        "[2] mode = \"SALE\""
+      ],
+      "xmlSha256": "f5cba27bcf07fdeaec9b2d322a9595e525c3435006eb9c63fb1bd3ab6116301d"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] change = \"CONDITION\"",
+        "[2] change = \"TITLE\"",
+        "returned physical position survives an atomic projection rebuild without new movements()"
+      ],
+      "xmlSha256": "346d6bf7a82291d5c0a84138fb8332a507174085132122428ac5db0cb9457346"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "inspected loan is issued and installed for a new customer with its physical identity and old episode intact()"
+      ],
+      "xmlSha256": "abaef60370484cf6cb779993d4584aef63ca962a440ca2291f99352e4e77e94d"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnListIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "return pages and counts use current location scope before pagination()"
+      ],
+      "xmlSha256": "7a55b0c4af4b87a19917c6c0e267ce5fc456a55bcf1ba730f1477d06b8a05160"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnReacquisitionIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "customer asset in quarantine requires independent reacquisition then reset inspection before ISP release()"
+      ],
+      "xmlSha256": "647d824cc1342aef2a6578585822dccdf03bf4c646b8df9d61a096b6ae63d781"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnSettlementIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "accepted residual inspection closes the return obligation without erasing returned quantity or posting stock twice()"
+      ],
+      "xmlSha256": "b0efa2032d95128b4e7bf10558df5e7d3ad3adc2e42f48787b34305da828c023"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnTitleGuardsIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "changed return inspection makes pending title approval stale without transferring ownership()",
+        "competing independent approvals transfer one quarantined physical device only once()",
+        "approved quarantine title survives vendor repair and reset inspection with historical customer title intact()",
+        "current quarantine scope gates both pending approval and replay after posting()",
+        "app role cannot mark title posted without approval and posted title links remain append only()",
+        "rejected title request has no effect and customer can submit a new request()"
+      ],
+      "xmlSha256": "3bfc271444817a7820a44156f6240944a000e25a7f3f055536b8072061fb1aae"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "repair command replay checks current warehouse scope before returning supplier receipts()"
+      ],
+      "xmlSha256": "3bc0fb8da57c2dbe70b887302da37967d9adfc7bd7b108e07585710a14dfbce4"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseSupplierRepairIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\"",
+        "[2] mode = \"SALE\""
+      ],
+      "xmlSha256": "769d55cc8e7a0c243def557a49278e45155676d450297b5450973df2006fa096"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseSupplierRepairIntegrityIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "app role cannot substitute a repair vendor or claim a return without its physical posting()"
+      ],
+      "xmlSha256": "b2d632c6caa508a84860d9f470f534d9b76e42f7908fdb105e96b32bdc7525a7"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseSupplierReplacementGuardsIT",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "approved vendor replacement preserves customer title and declared cost with exact decision replay()",
+        "unknown replacement cost stays unknown and cannot bypass a configured value policy()",
+        "approval records durable stale when original repair source changes after request()",
+        "customer replacement cannot become ISP stock through an unposted asset and balance rewrite()",
+        "returned old device makes pending replacement source stale without admitting the new serial()",
+        "rejected replacement approval preserves source and permits a fresh receipt request()",
+        "competing vendor drafts receive only one replacement without leaking a second physical identity()",
+        "current receipt scope is required to replay a committed replacement receive()",
+        "replacement pages apply current receipt location scope before the page limit()"
+      ],
+      "xmlSha256": "98a960d788b41656272a4ab249e7750c88d8ed094c9e1822f024561564b2f482"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseSupplierReplacementIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\"",
+        "[2] mode = \"SALE\""
+      ],
+      "xmlSha256": "35c9f4228f5983a12b9af76fcb36cfa933c95be68b1a183ea2004b0cab6bef61"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseSupplierReplacementInspectionIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\"",
+        "[2] mode = \"SALE\""
+      ],
+      "xmlSha256": "3cad21a52e7924223ce3eccc0ec899892c0f9882ce844bf3b3641a05abb82f71"
+    }
+  ],
+  "migrationSha256": {
+    "V175_131__warehouse_return_reacquisition_request.sql": "4e510b92f977a328418133702e9cdf83a1d97780ff6cad736fe083b56df44d34",
+    "V175_132__warehouse_return_reacquisition_effect.sql": "e38b4f88081afc6c625ec60cb5e5da6fdc4e333f7bf2703e04c4541a19a57f47",
+    "V175_133__warehouse_return_title_leg_revisions.sql": "c874e69adf2098a8caf956ebf5918f6154f1b2188979601e45c40d40c0700410",
+    "V175_134__warehouse_supplier_replacement_request.sql": "6718a8b769b948ebe4a17b6534129f0d634ab45f790e94edd1f88ff6366fa628",
+    "V175_135__warehouse_supplier_replacement_receipt.sql": "ab998db9effece220beed9b979164b54aee915531ec81a3c9bc4f722ba1b2abd",
+    "V175_136__warehouse_replacement_receipt_policy_context.sql": "9c1eb477eca82db04b769074e0f60d400637ea724953593515478594b0b5cb50",
+    "V175_137__warehouse_replacement_cost_and_position.sql": "847e1c48684fba0f9d59bb987d3b682875c2e2023e78e10d45b46caf2a1502c3"
+  }
+}

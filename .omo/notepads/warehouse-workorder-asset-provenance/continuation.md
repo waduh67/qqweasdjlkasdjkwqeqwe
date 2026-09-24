@@ -1,5 +1,29 @@
 # Whole-plan continuation
 
+## Task26 COMPLETE —53 combined tests passed
+
+return-combined-check passed53 tests/22 suites/0 failures/errors/skips,
+6m47s, against product source c050efeb. All return, recovered-loan reuse, original
+customer RMA/reacquisition, source/title integrity, independent approval, scope
+revocation, vendor repair/replacement, inspection/rebuild and pagination cases
+passed together. Separate ordinary receipt inspection regression passed10 tests
+in4m44s. Product source has not changed since that successful compilation.
+
+Sanitized portable evidence is committed at
+.omo/evidence/warehouse-workorder-asset-provenance/task26/verification.json:
+actual suite/case names, nonzero counts, XML digests, main tree identity and131–137
+SQL digests. Raw XML/logs remain private because they may contain HTTP tokens.
+All applied migrations remain immutable; no QA volumes were reset. Task26's plan
+row is now checked. Original-device CUSTOMER RMA is supported; distinct customer
+replacement remains quarantined and cannot borrow the old device's permit.
+
+Continue task28 (not complete): real17.5m scrap scenario and design notes are in
+task-28.md / WarehouseDispositionIT. Its queued disposition-red run starts after
+combined QA cleanup. Record its actual failure, then implement the document,
+independent approval, exact posting, return transition and obligation settlement.
+No task28 migration is reserved yet. Tasks28,30–48,F1–F4 remain open; the overall
+goal is still active, not achieved. Commit and push each coherent checkpoint.
+
 ## Task28 behavioral checkpoint; task26 combined checks still running
 
 Task26 compiled product source c050efeb is under return-combined-check. RMA
