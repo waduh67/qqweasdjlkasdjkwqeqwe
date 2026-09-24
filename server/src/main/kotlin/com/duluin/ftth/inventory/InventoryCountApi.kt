@@ -9,7 +9,7 @@ interface InventoryCountApi {
     fun submit(id: UUID, input: WarehouseCountRevision, key: String): WarehouseOperationReceipt
     fun recount(id: UUID, input: WarehouseCountRevision, key: String): WarehouseOperationReceipt
     fun get(id: UUID): WarehouseCountView
-    fun history(id: UUID): List<WarehouseCountFact>
+    fun history(id: UUID, page: WarehousePageRequest = WarehousePageRequest()): List<WarehouseCountFact>
     fun review(id: UUID): WarehouseCountReview
     fun list(page: Int, size: Int): WarehousePage<WarehouseCountView>
 }

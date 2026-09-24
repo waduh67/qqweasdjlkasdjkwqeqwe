@@ -15,7 +15,8 @@ import java.util.UUID
 @Transactional(rollbackFor = [Exception::class])
 class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehousePolicyAccess, private val masters: WarehouseMasterStore,
-    private val store: WarehouseCountStore, private val receipts: WarehouseCountReceipts, private val operations: WarehouseOperationStore) : InventoryCountApi {
+    private val store: WarehouseCountStore, private val receipts: WarehouseCountReceipts, private val operations: WarehouseOperationStore,
+    private val query: WarehouseCountQuery) : InventoryCountApi {
     private val mapper = jacksonObjectMapper()
 
     override fun create(input: WarehouseCountDraft, key: String): WarehouseOperationReceipt {
@@ -105,11 +106,13 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         return session.view
     }
 
-    override fun history(id: UUID): List<WarehouseCountFact> {
+    override fun history(id: UUID, page: WarehousePageRequest): List<WarehouseCountFact> {
+        validateCountFilter(WarehouseCountFilter(page.page, page.size))
         get(id)
         val current = authority.lockCurrent()
         val session = store.get(id)
-        return store.facts(id).filter { session.requester == current.fence.identity.userId || it.counterId == current.fence.identity.userId }
+        val counter = current.fence.identity.userId.takeUnless { it == session.requester }
+        return query.history(id, page, counter, latestFirst = false).items.map { it.fact }
     }
 
     override fun review(id: UUID): WarehouseCountReview {

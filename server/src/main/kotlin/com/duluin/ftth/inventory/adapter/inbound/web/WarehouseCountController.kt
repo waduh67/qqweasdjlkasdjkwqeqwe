@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.adapter.inbound.web
 import com.duluin.ftth.inventory.*
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.util.MultiValueMap
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
@@ -25,7 +26,10 @@ class WarehouseCountController(private val counts: InventoryCountApi) {
     fun recount(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         response(counts.recount(id, WarehouseReceiptJson.decode(body, WarehouseCountRevision::class.java), key))
     @GetMapping("/{id}") fun get(@PathVariable id: UUID) = counts.get(id)
-    @GetMapping("/{id}/history") fun history(@PathVariable id: UUID) = counts.history(id)
+    @GetMapping("/{id}/history") fun history(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): List<WarehouseCountFact> {
+        val filter = WarehouseCountFilters.parse(parameters, "history")
+        return counts.history(id, WarehousePageRequest(filter.page, filter.size))
+    }
     @GetMapping("/{id}/review") fun review(@PathVariable id: UUID) = ResponseEntity.ok().header("Cache-Control", "no-store").body(counts.review(id))
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) = counts.list(page, size)
     private fun response(receipt: WarehouseOperationReceipt) = ResponseEntity.status(receipt.originalStatus)

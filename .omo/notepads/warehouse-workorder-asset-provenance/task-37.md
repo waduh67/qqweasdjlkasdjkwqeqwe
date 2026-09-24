@@ -1,5 +1,39 @@
 # Task37 discovery notes (task36 verification still pending)
 
+## Task37 blind count reads implemented; backend verification next
+
+Task36 COMPLETE a95c35a0 (product99b98b41/test2c82db3f), proof completion.json,
+178web/build/lint plus source-specific backend and actual transfer browser saved.
+
+Task37 now has raw typed count commands/review and approval request/decide/rework
+wrappers; TypeScript/oxlint passed. New InventoryCountQueryApi and isolated query
+DAO/service/controller provide named /counts/workbench, /{id}/details, submitted-only
+/{id}/review/details, /positions and /locations/{locationId}/counters. Position
+choices OMIT all physical/book/reserved/capacity/cost quantities, including HTTP.
+Zero verified positions remain selectable; identity/status/custody distinguish them.
+Count list filters SKU/serial/location/state/code/paired dates; creator or assigned
+counter and current topology scopes apply BEFORE page/count. Reviewer-only users
+use review owner without count/stock permissions. Public IAM names/current count
+permissions+scopes filter counter choices. Raw mutation/views unchanged.
+New /{id}/history/page bounds latest facts and own-counter visibility before total;
+legacy history now default25/max100 ascending. Internal mutation facts stay complete.
+
+New WarehouseCountWorkbenchIT two HTTP workflows cover no stock permission/quantity
+leak, named assignments, scoped paging, reviewer-only submitted comparison, revoked
+scope and two counters/history pages. NOT BACKEND VERIFIED YET. NEXT run private
+count-workbench-server.sh (new2+existingWarehouseCountIT15 =17 expected/2suites),
+await compilation/tests/cleanup and save fresh proof. No migrations; V175_147 current.
+UI not built yet; next typed named reads+count screen, approval document/action/cost
+projection and saved source links, disposition forms, actual separate-actor browser.
+Whole37–48/F1–F4 active. Keep remote checkpoint commits; no merge/deploy.
+
+Approval discovery caution: raw source() contains full internal canonical JSON,
+including cost/storage references—never expose raw. Calling owner locks and catching
+access exceptions inside a shared transaction may poison rollback-only via mandatory
+public WO proxies; use nonthrowing visibility or well-defined transaction boundaries.
+Current list only checks snapshot locations; current owner/WO gates must match get.
+See task-37.md for further contract notes and task40 camera requirement.
+
 Scope: blind count create/start/observe/submit/recount, independent approval queue
 source detail/history/effect, adjustment/disposition forms as owner contracts allow.
 Actual separate-login transfer discrepancy browser extends returns.spec.ts.
