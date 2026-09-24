@@ -1,5 +1,20 @@
 # Whole-plan continuation
 
+## Task28 behavioral checkpoint; task26 combined checks still running
+
+Task26 compiled product source c050efeb is under return-combined-check. RMA
+acceptance/deployment/guards/handover/reacquisition have passed so far; the full
+suite is still pending, not a completed gate. No new SQL has been reserved.
+
+Task28 adds WarehouseDispositionIT and task-28.md. The exact17.5m damaged residual
+scenario is authored; .omo/runtime/disposition-red.sh is queued under the same
+QA lock after task26. It selects only WarehouseDispositionIT, archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/disposition-red/xml.
+No disposition endpoint exists yet. Expected initial failure is POST404 after
+real return+inspection setup. Do not call this task28 implementation or success.
+Continue with its owner/approval/effect/settlement implementation after recording
+that actual baseline; retain all task26 and137 immutability checks.
+
 ## Combined return regression restarted after pagination compile correction
 
 Published f35e8621 contains the inspected replacement flow and scoped-list change.
