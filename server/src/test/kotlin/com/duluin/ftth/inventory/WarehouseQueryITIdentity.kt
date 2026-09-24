@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Test
 class WarehouseQueryITIdentity : WarehouseReceiptHttpFixture() {
     @Test fun `asset detail and immutable timeline expose real receipt origin and no fabricated movements`() {
         val setup = setupReceipt()
+        val minimum = request("PUT", "/api/v1/warehouse/skus/${setup.onu}", setup.token,
+            """{"expectedRevision":0,"code":"ONU","name":"ONU","tracking":"SERIAL","baseUnit":"EA","minimumQuantityBase":"2"}""")
+        assertThat(minimum.status).withFailMessage(minimum.contentAsString).isEqualTo(200)
         val draft = draft(setup, """{"skuId":"${setup.onu}","quantityBase":"1","serials":[{"serial":"TIMELINE"}],"cost":{"totalMinor":"25000","currency":"IDR"}}""")
         val id = draft.path("id").asString()
         transition(setup, id, "receive", """{"expectedRevision":0}""")
@@ -15,6 +18,10 @@ class WarehouseQueryITIdentity : WarehouseReceiptHttpFixture() {
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
         val asset = mapper.readTree(response.contentAsString)
         assertThat(asset.path("assetId").asString()).isEqualTo(assetId)
+        assertThat(asset.path("locationName").asString()).isEqualTo("Inspection")
+        val stock = mapper.readTree(request("GET", "/api/v1/warehouse/stock", setup.token).contentAsString).path("items").single()
+        assertThat(stock.path("minimumQuantityBase").asString()).isEqualTo("2")
+        assertThat(stock.path("available").path("quantityBase").asString()).isEqualTo("0")
         assertThat(asset.path("origin").path("documentId").asString()).isEqualTo(id)
         assertThat(asset.path("cost").path("totalMinor").asString()).isEqualTo("25000")
         val history = request("GET", "/api/v1/warehouse/assets/$assetId/history", setup.token)
@@ -22,6 +29,7 @@ class WarehouseQueryITIdentity : WarehouseReceiptHttpFixture() {
         val events = mapper.readTree(history.contentAsString).path("items")
         assertThat(events.size()).isEqualTo(2)
         assertThat(events.asSequence().map { it.path("direction").asString() }.toList()).containsExactlyInAnyOrder("OUT", "IN")
+        assertThat(events.asSequence().map { it.path("currentLocationName").asString() }.toList()).containsExactlyInAnyOrder("Boundary", "Inspection")
         assertThat(events.all { it.path("documentId").asString() == id }).isTrue()
         assertThat(events.all { it.path("recordedAt").asString().endsWith("Z") }).isTrue()
         assertThat(request("GET", "/api/v1/warehouse/assets/$assetId/history", tenant()).status).isEqualTo(404)

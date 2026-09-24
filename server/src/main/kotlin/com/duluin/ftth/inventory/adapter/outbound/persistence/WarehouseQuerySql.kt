@@ -51,7 +51,7 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
                 (ancestor.parent_location_id IS NOT NULL AND NOT EXISTS (SELECT FROM inventory_location parent WHERE parent.tenant_id=request.tenant AND parent.id=ancestor.parent_location_id)) OR
                 (ancestor.site_id IS NOT NULL AND NOT EXISTS (SELECT FROM jsonb_each_text(request.sites) site WHERE site.key=ancestor.site_id::text AND site.value IS NOT DISTINCT FROM ancestor.area_id::text))))
             AND (SELECT count(DISTINCT site_id) FROM location_ancestry WHERE root=location.id)<=1),
-        scoped_positions AS MATERIALIZED (SELECT balance.*,sku.code sku_code,sku.name sku_name,sku.tracking,asset.serial_number,
+        scoped_positions AS MATERIALIZED (SELECT balance.*,sku.code sku_code,sku.name sku_name,sku.tracking,sku.minimum_quantity_base,asset.serial_number,
             segment.state segment_state,location.name location_name,location.kind location_kind,
             coalesce(reserved.unpicked,0) unpicked,coalesce(reserved.picked,0) picked,
             CASE WHEN balance.warehouse_admission='VERIFIED' AND segment.warehouse_admission='VERIFIED' AND segment.state='ACTIVE'

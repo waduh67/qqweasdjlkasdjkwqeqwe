@@ -25,12 +25,12 @@ class WarehouseQueryPersistence(private val jdbc: WarehouseCommandJdbc) {
 
     fun stock(filter: WarehouseQueryFilter, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, filter, access)
-        val rows = """SELECT sku_id id,sku_id,sku_code,sku_name name,tracking,base_unit,sum(quantity_base::numeric) physical,
+        val rows = """SELECT sku_id id,sku_id,sku_code,sku_name name,tracking,base_unit,minimum_quantity_base,sum(quantity_base::numeric) physical,
             sum(unpicked) unpicked,sum(picked) picked,sum(available) available,min(created_at) created_at
-            FROM filtered_positions WHERE warehouse_admission='VERIFIED' AND legal_owner<>'UNKNOWN' GROUP BY sku_id,sku_code,sku_name,tracking,base_unit"""
+            FROM filtered_positions WHERE warehouse_admission='VERIFIED' AND legal_owner<>'UNKNOWN' GROUP BY sku_id,sku_code,sku_name,tracking,base_unit,minimum_quantity_base"""
         fun buckets(column: String) = """(SELECT jsonb_object_agg(bucket,quantity::text) FROM (SELECT $column bucket,sum(quantity_base::numeric) quantity
             FROM filtered_positions position WHERE position.sku_id=matches.sku_id AND position.warehouse_admission='VERIFIED' AND position.legal_owner<>'UNKNOWN' GROUP BY $column) grouped)"""
-        val json = """jsonb_build_object('id',id,'skuId',sku_id,'skuCode',sku_code,'name',name,'tracking',tracking,
+        val json = """jsonb_build_object('id',id,'skuId',sku_id,'skuCode',sku_code,'name',name,'tracking',tracking,'minimumQuantityBase',minimum_quantity_base::text,
             'physical',${queryQuantity("physical", "base_unit")},'reservedUnpicked',${queryQuantity("unpicked", "base_unit")},
             'reservedPicked',${queryQuantity("picked", "base_unit")},'available',${queryQuantity("available", "base_unit")},
             'statusBuckets',${buckets("status")},'conditionBuckets',${buckets("condition")},'ownerBuckets',${buckets("legal_owner")})"""

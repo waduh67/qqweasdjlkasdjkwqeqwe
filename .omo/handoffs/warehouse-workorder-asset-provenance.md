@@ -1,5 +1,21 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task34 started — scoped stock display metadata; verification pending
+
+Task33 complete andpushed54c7fd16 (2browser40.9s,86distinctunit,11backend;sourcea39aaea8).
+Task34 beginsadditivequerymetadata:stock.minimumQuantityBase fromactualSKU,
+asset.locationName fromvisiblelocations,movement.currentLocationName explicitly
+currentnot historicalsnapshot. ExistingQueryITIdentityextendedfornames/minimum;
+no migrationsorlegacyDTOchanges. Frontendstockexplorer notimplemented yet.
+
+NEXT .omo/runtime/stock-display-server.sh tests querybalances/identity/privacy/
+compatibility/serialfilters/lotfilters/staged. Then typedstockassetlottimeline APIs,
+WarehouseStockPage+tests and receivingbrowserextension as task-34.md describes.
+Do notmark34completebeforebothrealbrowserprojects/visualreview. Current task33
+receipt contracts: draft->ReceiptView,receive/inspect/putaway->{id,revision,state,
+operationId}thenGETdetail. Avoid previous assumedfullmutationresponse mistake.
+Continue34–48/F1–F4;148nextunused;177/178reserved43.
+
 ## Task33 COMPLETE — real receiving desktop/mobile green
 
 receiving-transition-fixed againsta39aaea8:2passed,0failed/skipped/flaky,40.9s.

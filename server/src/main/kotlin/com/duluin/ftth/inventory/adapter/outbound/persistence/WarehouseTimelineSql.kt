@@ -8,7 +8,8 @@ internal fun warehouseTimeline(query: WarehouseQuerySql): String {
                 'documentId',document.id,'documentCode',document.code,'documentRevision',movement.document_revision,
                 'lineId',leg.document_line_id,'operationId',movement.operation_id,'compensatesPostingId',movement.compensates_movement_id,
                 'recordedAt',${queryTime("movement.server_received_at")},'direction',leg.direction,'stockIdentityId',leg.stock_identity_id,
-                'locationId',leg.location_id,'custodianId',leg.custody_owner_id,'custodianKind',leg.custody_owner_kind,
+                'locationId',leg.location_id,'currentLocationName',(SELECT coalesce(location.name,location.code) FROM visible_locations location WHERE location.id=leg.location_id),
+                'custodianId',leg.custody_owner_id,'custodianKind',leg.custody_owner_kind,
                 'condition',leg.condition,'legalOwner',leg.legal_owner,'status',leg.status,'quantity',${queryQuantity("leg.quantity_base", "leg.base_unit")},
                 'customerLabelSnapshot',document.customer_label_snapshot,'workOrderCodeSnapshot',document.work_order_code_snapshot) body
         FROM inventory_movement_leg leg JOIN inventory_movement movement ON movement.tenant_id=leg.tenant_id AND movement.id=leg.movement_id

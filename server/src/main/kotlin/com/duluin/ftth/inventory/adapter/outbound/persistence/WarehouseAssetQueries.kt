@@ -23,7 +23,8 @@ class WarehouseAssetQueries(private val jdbc: WarehouseCommandJdbc) {
         val cost = if (access.cost) """coalesce((SELECT ${queryCost("line", true)} FROM inventory_document_line line,request
             WHERE line.tenant_id=request.tenant AND line.id=matches.origin_document_line_id AND $origin IS NOT NULL),'{}'::jsonb)""" else "'{}'::jsonb"
         val json = """jsonb_build_object('id',id,'assetId',asset_id,'skuId',sku_id,'skuCode',code,'name',name,'serial',serial_number,'mac',mac_address,
-            'status',status,'condition',condition,'legalOwner',legal_owner,'locationId',location_id,'custodianId',custody_owner_id,
+            'status',status,'condition',condition,'legalOwner',legal_owner,'locationId',location_id,
+            'locationName',(SELECT coalesce(location.name,location.code) FROM visible_locations location WHERE location.id=matches.location_id),'custodianId',custody_owner_id,
             'custodianKind',custody_owner_kind,'quantity',${queryQuantity("quantity_base", "base_unit")},'admission',warehouse_admission,
             'installedOnuId',installed_onu_id,'origin',$origin) || $cost"""
         when {

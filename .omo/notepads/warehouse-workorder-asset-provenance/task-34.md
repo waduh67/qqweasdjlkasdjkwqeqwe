@@ -1,5 +1,21 @@
 # Task34 preparation — implementation not started
 
+## Task34 started — scoped stock display metadata; verification pending
+
+Task33 complete andpushed54c7fd16 (2browser40.9s,86distinctunit,11backend;sourcea39aaea8).
+Task34 beginsadditivequerymetadata:stock.minimumQuantityBase fromactualSKU,
+asset.locationName fromvisiblelocations,movement.currentLocationName explicitly
+currentnot historicalsnapshot. ExistingQueryITIdentityextendedfornames/minimum;
+no migrationsorlegacyDTOchanges. Frontendstockexplorer notimplemented yet.
+
+NEXT .omo/runtime/stock-display-server.sh tests querybalances/identity/privacy/
+compatibility/serialfilters/lotfilters/staged. Then typedstockassetlottimeline APIs,
+WarehouseStockPage+tests and receivingbrowserextension as task-34.md describes.
+Do notmark34completebeforebothrealbrowserprojects/visualreview. Current task33
+receipt contracts: draft->ReceiptView,receive/inspect/putaway->{id,revision,state,
+operationId}thenGETdetail. Avoid previous assumedfullmutationresponse mistake.
+Continue34–48/F1–F4;148nextunused;177/178reserved43.
+
 Finish task33 real receiving browser acceptance first. Extend the SAME receiving.spec.ts
 with stock explorer/serial timeline and reel conservation. Current task33 expected final
 900000MM+8EA available,100000MM+2EA quarantined, after partial800m then100m placement.

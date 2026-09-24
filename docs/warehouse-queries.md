@@ -61,6 +61,13 @@ quantity/serial yang berizin dan `available=false`. Unknown unit tetap null,
 bukan ditebak EA. Harga optional receipt tetap UNKNOWN, bukan nol atau harga SKU
 terkini; query tidak menciptakan aturan harga baru sebagai otoritas stock.
 
+Ringkasan juga membawa `minimumQuantityBase` dari master SKU untuk penanda stok
+rendah. Bandingkan dengan available dalam filter/cakupan saat ini; ambang SKU ini
+tidak menggantikan kebijakan replenishment per lokasi. Asset membawa `locationName`
+dari lokasi yang sudah lolos scope. Event movement membawa `currentLocationName`:
+ini nama lokasi saat dibaca, bukan snapshot nama pada tanggal transaksi. ID lokasi
+dan fakta movement tetap immutable; lokasi tersembunyi tidak ditampilkan.
+
 ## Privasi dan histori
 
 Cost hanya dipilih dan diserialkan bila current `inventory.cost.view` tersedia.
