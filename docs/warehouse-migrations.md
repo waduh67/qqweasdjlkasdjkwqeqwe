@@ -42,6 +42,11 @@ sudah diterapkan dan tetap immutable.
 `V175_119__warehouse_return_asset_origin_scope.sql` dicadangkan sebelum pembuatan
 untuk memperjelas referensi kolom origin sesudah175.118 diterapkan; tidak ada
 perubahan aturan asal barang atau perubahan byte175.118.
+`V175_120__warehouse_recovered_position_ledger.sql` dicadangkan sebelum pembuatan
+setelah tes app-role membuktikan perubahan kondisi aset+saldo tanpa posting bisa
+lolos sesudah retur sah. Kelanjutan recovery wajib cocok dengan saldo ledger
+APPLIED per dimensi dan posisi aset tunggal; rebuild proyeksi tetap diperbolehkan.
+Seluruh byte175.119 dan sebelumnya tetap immutable.
 
 ## Wave 5: reservasi paralel task25, task27, task29
 

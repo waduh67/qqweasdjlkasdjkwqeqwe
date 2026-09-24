@@ -2,17 +2,23 @@
 
 ## Active task:26 —2026-09-24
 
-- Published production6868f1a8 passed179 shared regression tests/0 failures/0
-  errors/0 skips, plus separate return6-test proof. Latest checkpoint saves
-  unverified reuse/access/integrity tests; it makes no new feature PASS claim.
-- Host runs return-reuse-red.sh then queued return-access-integrity.sh under
-  shared lock. Read newest continuation.md/task-26.md and actual XML/log results.
-  New tests exercise second installation, revoked replay and unposted rewrite.
--175.116–175.119 applied and immutable. No production change after179-test proof.
-  Next: repair proved findings, then repair/RMA/reacquisition, closure and further
-  checks.26/28/30–48/F1–F4 stay open;25/27/29 backend acceptance is complete.
-- Normal explicit push to feat/warehouse-workorder; no main merge/deployment or
-  QA reset. Latest entry overrides historical status below.
+- Actual loan reuse to a new customer passed1; revoked access/replay passed1.
+  A separate app-role probe proved unposted asset+balance rewrites were accepted.
+- This checkpoint adds declared/applied V175.120, requiring the recovered asset
+  and positive balance to match APPLIED ledger quantities/status. It preserves
+  projection rebuild (new test passed); prior migrations remain immutable.
+- First corrected integrity run rejected SQL23514 but the test's JDBC exception
+  handling caused outer UnexpectedRollbackException. The test now catches and
+  rolls back inside doReturningWork; no production weakening. Complete rerun
+  `.omo/runtime/return-position-correction-second.sh` queued/running under lock.
+  Check matching log and `task26/position-correction-second/xml` for actual counts.
+- Last broad regression:179 tests/7 suites/0 failures/errors/skips at6868f1a8.
+  This guard still needs complete regression evidence. Read latest task-26.md.
+- Next: supplier repair/vendor replacement, original-customer sold RMA, approved
+  reacquisition, scoped list, material closure and packaged proof, then28/30–48
+  and final gates.26 is OPEN;25/27/29 closed atff530d47.
+- Work on work/warehouse-completion, push ordinary recovery checkpoints to
+  feat/warehouse-workorder. No main deployment, database reset or agent delegation.
 
 ## Current integration checkpoint: 2026-09-24
 

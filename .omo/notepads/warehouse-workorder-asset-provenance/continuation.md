@@ -2,23 +2,23 @@
 
 ## Active task —26 returns/inspection/repair
 
-- Production `6868f1a8` is published and passed179 tests/0 failures/0 errors/0 skips
-  in7 suites (8m28s). Separate return6-test proof also passed. Task26 remains open.
-- This checkpoint saves new reuse/access/integrity tests. They are not yet
-  verified. Current host command `return-reuse-red.sh` then queued
-  `return-access-integrity.sh`, with matching `.omo/runtime/*.log` files and
-  separate XML archives under ignored `task26/`. Inspect final results first.
-- Reuse performs actual second WO issue/acknowledgement and new-customer install.
-  Access checks old JWT/replay after scope revocation. Integrity probes an
-  unposted asset+balance rewrite, always rolling the probe back to a savepoint.
-- No production/SQL change since6868f1a8. Applied175.116–175.119 are immutable.
-  New SQL must be declared above175.119 before creation. Correct source using
-  reproduced failures; retain179 regression evidence as prior source identity.
-- Next: fix real reuse/integrity issues, supplier repair/vendor replacement,
-  original-customer sold RMA, approved reacquisition, list/replay, WO closure and
-  packaged proof.26/28/30–48/F1–F4 remain open.25/27/29 closed at ff530d47.
-- Latest task-26.md entry holds details and exact commands. Ignore historical
-  running/status labels below. All pushes stay on feat/warehouse-workorder.
+- Actual loan reuse to a new customer passed1; revoked access/replay passed1.
+  A separate app-role probe proved unposted asset+balance rewrites were accepted.
+- This checkpoint adds declared/applied V175.120, requiring the recovered asset
+  and positive balance to match APPLIED ledger quantities/status. It preserves
+  projection rebuild (new test passed); prior migrations remain immutable.
+- First corrected integrity run rejected SQL23514 but the test's JDBC exception
+  handling caused outer UnexpectedRollbackException. The test now catches and
+  rolls back inside doReturningWork; no production weakening. Complete rerun
+  `.omo/runtime/return-position-correction-second.sh` queued/running under lock.
+  Check matching log and `task26/position-correction-second/xml` for actual counts.
+- Last broad regression:179 tests/7 suites/0 failures/errors/skips at6868f1a8.
+  This guard still needs complete regression evidence. Read latest task-26.md.
+- Next: supplier repair/vendor replacement, original-customer sold RMA, approved
+  reacquisition, scoped list, material closure and packaged proof, then28/30–48
+  and final gates.26 is OPEN;25/27/29 closed atff530d47.
+- Work on work/warehouse-completion, push ordinary recovery checkpoints to
+  feat/warehouse-workorder. No main deployment, database reset or agent delegation.
 
 ## Current step — transfer/count integration verified
 

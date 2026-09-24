@@ -1,5 +1,37 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Position correction checkpoint — validation in progress
+
+V175.120 applied, SHA256 `c76419bc97d7fecd225f6f5e9e393f8b71ab92ffa308e3b7488426e736bed9d0`. Never edit its bytes.
+The recovered-asset continuation now checks ledger net quantities by full
+physical dimension, latest inbound status and the one positive asset position.
+Atomic projection deletion/rebuild passed. Initial corrected integrity test
+rejected23514 as intended but failed at the outer commit because its expected
+exception crossed Hibernate doReturningWork and marked rollback-only. Catching
+and rolling back inside the JDBC callback fixes the test, not product behavior.
+The second complete return run is queued/running under the shared QA lock:
+`.omo/runtime/return-position-correction-second.sh`; matching log; XML archive
+`task26/position-correction-second/xml`. Preserve first run separately at
+`task26/position-correction/xml`. Inspect full results before claiming success.
+No complete task26/repair/RMA claim. Actual new-customer reuse and access checks
+already passed separately against prior source; now rerunning with the guard.
+
+
+## Proven recovery position gap — forward correction declared
+
+At f6331db6, real second-customer reuse passed1/1 with no product change.
+Access revocation/restoration with original JWT and replay keys passed1/1.
+The app-role integrity probe failed1/1: jointly changing asset and balance to
+DAMAGED/QUARANTINE without any posting was accepted after a valid return.
+The SAVEPOINT probe rolled back, so the test did not retain altered stock.
+Archived XML: task26/red-reuse/xml and task26/access-integrity/xml; no errors/skips.
+
+Reserve V175_120__warehouse_recovered_position_ledger.sql BEFORE creation.
+Require returned-asset continuation to reconcile the positive physical position
+and all net quantities with immutable APPLIED movement legs, preserving lawful
+reuse and projection rebuild. Prior migrations through175.119 are immutable.
+Rerun all return suites plus meaningful projection/history regressions after fix.
+
 ## Current step — recovery regression complete, reuse/integrity probes
 
 Production checkpoint `6868f1a8` passed179 tests in7 suites, zero failures/errors/
