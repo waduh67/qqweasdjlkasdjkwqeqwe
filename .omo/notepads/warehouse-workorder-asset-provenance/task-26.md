@@ -1,5 +1,41 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Supplier repair verified — current checkpoint
+
+Corrected first-application121 passed12 tests in6 suites, zero failures/errors/
+skips,1m36s. This includes both LOAN/SALE vendor dispatch/receipt, wrong-serial
+and premature inspection denial, exact replay, separate post-repair inspection,
+unchanged physical identity/customer title, plus all10 prior return scenarios.
+Archive task26/repair-green-second/xml. Owned lifecycle exited0 and retained
+volumes. V175.121 is NOW APPLIED AND IMMUTABLE, SHA256 `2ffd54f2adb0668687daff40ac43a98ea300d2728b366d35a03d52f0982cb7a4`.
+The only in-place change was its parenthesized CASE before any successful apply;
+first failure's explicit Flyway rollback evidence is preserved below.
+
+This checkpoint adds two unverified guard scenarios and a shared repair fixture:
+WarehouseSupplierRepairAccessIT (revoked scope blocks original JWT/key replay)
+and WarehouseSupplierRepairIntegrityIT (vendor reference immutable, fabricated
+receipt without physical posting denied; legitimate receipt/inspection closes
+case). Current host command `.omo/runtime/return-repair-guards.sh`, matching log,
+archive task26/repair-guards/xml. Also runs ModularityTests and WarehouseContractTest.
+Read final outcomes. No new production change after12-test success except docs.
+
+Next: physical vendor replacement with verified new receipt; purpose-bound
+original-customer RMA handover/acknowledgement/authorization and installation,
+independent title reacquisition, bounded lists, material closure and packaged
+proof.26 remains open. Declare new migrations above175.121 before creating them.
+
+
+## Repair bootstrap correction —121 never applied in first run
+
+The first implementation run compiled normally but all12 tests failed at
+Spring bootstrap, before feature execution. PostgreSQL42601 at121 line116:
+PL/pgSQL needs the CASE expression parenthesized inside the IF condition.
+Flyway explicitly logged at19:01:43JKT: migration175.121 failed and "Changes
+successfully rolled back." Therefore121 never applied and its syntax is fixed
+in place; no earlier applied migration changed. Raw XML retained at
+task26/repair-green/xml. Second run: return-repair-green-second.sh/log, archive
+task26/repair-green-second/xml. Check actual result and applied status.
+
 ## Supplier repair implementation checkpoint — not yet verified
 
 Source3bde6567 passed the complete return suite:10 tests/5 suites/zero failures,

@@ -120,7 +120,7 @@ BEGIN
     SELECT * INTO repair FROM inventory_repair_case WHERE tenant_id=NEW.tenant_id AND id=NEW.id;
     IF repair.id IS NULL OR repair.state NOT IN ('OUTBOUND','RETURNED','CLOSED')
         OR repair.vendor_id IS NULL OR nullif(btrim(repair.vendor_reference),'') IS NULL
-        OR repair.revision IS DISTINCT FROM CASE repair.state WHEN 'OUTBOUND' THEN 0::bigint WHEN 'RETURNED' THEN 1::bigint ELSE 2::bigint END
+        OR repair.revision IS DISTINCT FROM (CASE repair.state WHEN 'OUTBOUND' THEN 0::bigint WHEN 'RETURNED' THEN 1::bigint ELSE 2::bigint END)
         OR NOT EXISTS(SELECT FROM inventory_operation WHERE tenant_id=NEW.tenant_id AND document_id=repair.return_document_id
             AND document_revision=repair.source_return_revision+1 AND namespace='warehouse.return.repair-dispatch'
             AND original_body::jsonb->'repair'->>'id'=repair.id::text)

@@ -19,6 +19,8 @@ dengan revision tebakan.
 | --- | --- |
 | `POST /api/v1/warehouse/returns` | Menerima asal `MATERIAL_RESIDUAL` atau `ASSET_REMOVAL` |
 | `POST /api/v1/warehouse/returns/{id}/inspect` | Mencatat ukuran, kondisi, bukti dan tujuan inspeksi |
+| `POST /api/v1/warehouse/returns/{id}/repair-dispatch` | Menyerahkan perangkat hasil inspeksi ke custody vendor |
+| `POST /api/v1/warehouse/returns/{id}/repair-receive` | Menerima perangkat yang sama kembali ke karantina |
 | `GET /api/v1/warehouse/returns/{id}` | Membaca kondisi dokumen terkini |
 | `GET /api/v1/warehouse/returns/{id}/history` | Membaca sampai100 revision awal dokumen |
 
@@ -56,10 +58,27 @@ Ledger APPLIED menjadi pembuktian posisi setelah recovery. Perubahan langsung
 ke aset sekaligus saldo tidak dianggap pergerakan yang sah. Rebuild proyeksi
 dijalankan secara atomik dari ledger dan tidak menambah transaksi fisik.
 
+## Servis vendor
+
+Perangkat yang sudah diinspeksi dan masih karantina dapat dikirim ke vendor
+aktif. Perintah `repair-dispatch` memuat `expectedRevision`, `vendorId`,
+`repairLocationId` berupa lokasi TRANSIT, `vendorReference`, `evidenceReference`,
+dan `observedSerial`. Dokumen berubah menjadi `REPAIR`; custody menunjuk vendor
+dan kondisi serta pemilik tetap sama. Izin lokasi asal dan tujuan wajib tersedia.
+
+Perintah `repair-receive` memuat `expectedRevision`, `observedSerial`,
+`quarantineLocationId`, `result` (`REPAIRED` atau `UNREPAIRED`), `vendorReference`,
+dan `evidenceReference`. Serial berbeda ditolak. Hasil vendor dicatat terpisah
+dari keputusan inspeksi: barang kembali ke karantina dengan kondisi sebelumnya,
+lalu operator melakukan inspeksi dan reset ulang melalui endpoint inspeksi.
+Case servis ditutup ketika inspeksi menyatakan serviceable; barang milik pelanggan
+tetap tidak tersedia bagi issue ISP. Satu dokumen retur saat ini mendukung satu
+case servis. Dokumen dan riwayat memuat detail case pada field `repair`.
+
 ## Status pengembangan
 
-Dokumen ini mencatat implementasi intake/inspeksi dan reuse yang sudah tersedia.
-Supplier repair, penggantian fisik oleh vendor, pengembalian RMA kepada pelanggan
+Dokumen ini mencatat intake/inspeksi, reuse dan servis vendor atas perangkat yang
+sama. Penggantian fisik oleh vendor, pengembalian RMA kepada pelanggan
 asal, reacquisition dengan approval independen, daftar berpaginasi, dan
 penutupan kewajiban material masih dikerjakan pada task26. Riwayat saat ini
 dibatasi100 revision awal; jangan menganggapnya sebagai ekspor audit lengkap.

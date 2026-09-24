@@ -2,23 +2,23 @@
 
 ## Active task —26 returns/inspection/repair
 
-- Source3bde6567 passed10 return tests in5 suites, zero failures/errors/skips.
-  Covers source/title/reset,17.5m remnant, revoked replay, real second installation,
-  unposted physical rewrite rejection23514 and atomic ledger projection rebuild.
-- Supplier repair baseline failed2/2 at absent dispatch route404 after legitimate
-  recovery. Current checkpoint implements vendor outbound/inbound on the original
-  return, sealed repair case and separate reset/inspection. Not yet verified.
-- Declared V175.121 is in the current normal compile/test run; inspect actual
-  output before deciding whether it is applied.175.120 and earlier are immutable.
-- Host command `.omo/runtime/return-repair-green.sh`, matching log, archive
-  `task26/repair-green/xml`: supplier repair and all return suites. Capture final
-  counts and correct actual failures with forward SQL once applied.
-- Next: repair scoped replay/adversarial guards, physical vendor replacement,
-  original-customer sold RMA, approved reacquisition, bounded lists, material
-  closure, regression and packaged proof.26 stays OPEN;25/27/29 closed atff530d47.
-- Continue work/warehouse-completion and ordinary push to feat/warehouse-workorder.
-  Whole plan still includes28/30–48/F1–F4. No main deployment/reset/delegation.
-  Read latest task-26.md entry; historical status labels below do not override it.
+- Supplier repair plus all return regression passed12 tests/6 suites/0 failures,
+  errors or skips,1m36s. LOAN/SALE same-asset dispatch/receipt, replay, wrong serial,
+  separate reset/inspection; old10 tests include real reuse and ledger integrity.
+- V175.121 NOW APPLIED/IMMUTABLE. Its initial syntax failure rolled back entirely;
+  only the never-applied CASE syntax was corrected before successful rerun.
+  Exact hash and receipts are in latest task-26.md. Ceiling175.121.
+- This checkpoint adds unverified supplier repair access/integrity tests and
+  reusable fixture. Current `.omo/runtime/return-repair-guards.sh`, matching log,
+  archive task26/repair-guards/xml; also runs modularity and contract. Check results.
+- Production repair uses the linked return document with REPAIR then
+  RECEIVED_IN_INSPECTION, one immutable-origin case and physical vendor custody.
+  Repaired is a vendor result; only later inspection can release ISP stock.
+- Next: actual vendor replacement, original-customer sold RMA handover/ack/
+  authorization/install, independently approved reacquisition, bounded list,
+  material closure, regression and packaged proof.26 remains OPEN;25/27/29 closed.
+- Continue work/warehouse-completion, ordinary push to feat/warehouse-workorder.
+  Whole remaining plan28/30–48/F1–F4 stays active. No main deploy/reset/delegation.
 
 ## Current step — transfer/count integration verified
 
