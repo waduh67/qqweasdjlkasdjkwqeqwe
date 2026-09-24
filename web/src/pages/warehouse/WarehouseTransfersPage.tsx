@@ -82,7 +82,7 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
       { key: 'quantity', header: transfer.state === 'DRAFT' ? 'Rencana kirim' : 'Dikirim', cell: line => <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /> },
       { key: 'received', header: 'Diterima', cell: line => <WarehouseQuantity value={line.receivedBase} unit={line.baseUnit} /> },
       { key: 'transit', header: 'Dalam perjalanan', cell: line => <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /> },
-      { key: 'resolved', header: 'Selesai lewat keputusan', cell: line => <WarehouseQuantity value={line.resolvedBase} unit={line.baseUnit} /> },
+      { key: 'resolved', header: 'Diselesaikan', cell: line => <WarehouseQuantity value={line.resolvedBase} unit={line.baseUnit} /> },
       { key: 'condition', header: 'Kondisi / Pemilik', cell: line => <span><WarehouseStatus status={line.condition} /> · <WarehouseStatus status={line.legalOwner} /></span> },
     ]} />
     <TransferHistory details={details} />

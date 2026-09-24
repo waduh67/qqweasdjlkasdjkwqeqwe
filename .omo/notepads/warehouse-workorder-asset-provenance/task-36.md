@@ -1,5 +1,17 @@
 # Task36 — transfer / return / repair UI investigation
 
+## Task36 transfer browser passed; final mobile label check next
+
+Actual transfer-initial browser @5305ce67 passed both desktop/mobile in39.501s,
+0 failures/skips/flaky/global errors; owned cleanup completed, volumes retained.
+Reviewed all10 synthetic PNG: real100m intake, draft, dispatch100m, receive60m,
+40m transit0available and60m destination available. One mobile label truncated;
+shortened resolved header to Diselesaikan while existing explanation distinguishes
+independent resolution from receipt. NEXT rerun transfer-final, review/save10PNG
+and portable proof. Task36 stays open for return/repair UI.149web and7backend
+baseline remains valid; no migrations. Current source and return investigation
+saved for recovery; keep whole36–48/F1–final active.
+
 ## Task36 source10087229 —149 web tests and7 backend tests passed; browser next
 
 Full warehouse/API/pages/components plusDataTable/WO/Payment/MultiCombobox:
