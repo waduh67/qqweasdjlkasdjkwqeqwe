@@ -1,0 +1,47 @@
+{
+  "task": 37,
+  "scope": "Blind count reads and UI; approval/adjustment UI and actual browser acceptance remain open",
+  "backend": {
+    "sourceCommit": "6a4de392",
+    "tests": 17,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "eea743c4f256db16940acb9bbc357c858abdc31ec343a62d49c4af00d1b0cf16"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "a55a5ce54854b819cb0f8ce5abb89368fdc6f3e840e4ddea1e97555a7f0c1edf"
+      }
+    ],
+    "build": "BUILD SUCCESSFUL in 3m37s"
+  },
+  "web": {
+    "sourceCommit": "dcb8ce10",
+    "tests": 10,
+    "files": 2,
+    "durationSeconds": 4.44,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "acceptance": [
+    "Quantity-free HTTP position and detail reads; named current counters",
+    "Scope and assignment before page totals, reviewer-only submitted comparison",
+    "Owner-only start/submit/recount and assigned counter immutable observations",
+    "Exact measured metres, captured retry bytes/key, COUNT_STALE reload with actual revision",
+    "Scoped paged immutable history, wrong actor/tenant/revoked scope denials"
+  ],
+  "priorFailures": [
+    "7b5f4687 new controller omitted from error advice; fixed at6a4d; full17rerun green",
+    "Two initial UI assertions raced refresh; now await resulting controls,10rerun green"
+  ],
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}
