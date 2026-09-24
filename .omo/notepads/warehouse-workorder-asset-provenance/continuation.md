@@ -2,20 +2,20 @@
 
 ## Active task —26 returns/inspection/repair
 
-- Published base `ff530d47` closes25/27/29. The next checkpoint implements initial
-  residual-return inspection:4 tests/0 failures/0 errors/0 skips, real17.5m release,
-  replay, origin/quantity/permission rejection and competing inspector serialization.
--175.116/175.117 applied successfully and are immutable. The current runner
-  `.omo/runtime/return-green.sh` finished0; log `return-green-second.log`; owned
-  processes/containers cleaned, volumes retained. Full details/hashes task-26.md.
-- Next: recovered asset intake from immutable removal, reset/condition proof,
-  loan reuse and sold repair to original customer, approval-bound reacquisition.
-  Add scoped replay/adversarial tests, bounded list, WO obligation closure and
-  relevant regression/packaged proof.26 remains open along with28/30–48/F1–F4.
-- Earlier task26 attempts: fixture wrong BIN property failed before feature;
-  compile-exclusion baseline rejected by runner; first implemented intake failed
-  document DRAFT invariant. Corrected through175.117, not rewriting175.116.
-  No genuine failing-first feature claim is made for the original missing API.
+- Published base `62139d01`; this checkpoint adds recovered-asset intake/reset
+  inspection. Exact6 tests/0 failures/0 errors/0 skips: residual17.5m, LOAN/SALE
+  asset identity/title, serial/reset/customer-stock denial, replay and concurrency.
+- Applied175.116–175.119 are immutable; hashes and receipts in task-26.md. Current
+  `.omo/runtime/return-recovery-regression.sh` runs replacement/ownership/source
+  validation/lifecycle/modularity/contracts. Read `return-recovery-regression.log`
+  and final XML; no final broader result yet. The six-test lifecycle cleaned
+  owned processes/containers, retained volumes and exited0.
+- Next: real second loan issue/install and repeated episodes; supplier repair,
+  vendor replacement, sold RMA to original customer, approval-bound reacquisition;
+  scoped lists/replay and adversarial seals, WO closure and packaged proof.
+  New migration must be declared above175.119.26/28/30–48/F1–F4 remain open.
+- Do not treat historical WIP/running notes below as current status.25/27/29
+  backend acceptance closed at `ff530d47`; all work stays on integration branch.
 
 ## Current step — transfer/count integration verified
 

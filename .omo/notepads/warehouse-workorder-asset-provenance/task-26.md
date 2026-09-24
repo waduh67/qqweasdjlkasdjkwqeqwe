@@ -1,5 +1,41 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Latest checkpoint — recovered asset receipt and inspection
+
+Published base `62139d01`; this checkpoint adds ASSET_REMOVAL intake with an
+atomic open0/physical receipt1, immutable capture of recovery asset/balance and
+independent receiving actor. The old removal permits live position changes only
+through this sealed receipt, retaining original customer/ONU/title evidence.
+
+Actual LOAN/SALE tests first failed2/2 at unsupported ASSET_REMOVAL intake after
+legitimate handover and dismantle. Initial implementation applied175.118 but
+failed both asset cases on ambiguous SQL origin; four residual tests passed.
+Forward175.119 qualifies the column. Corrected run passed6 tests in2 suites,
+zero failures/errors/skips, with exact receipt/inspection replay. Failed reset,
+wrong serial and CUSTOMER-to-available release are rejected. LOAN becomes
+AVAILABLE/SERVICEABLE/ISP; SALE stays QUARANTINE/SERVICEABLE/CUSTOMER and adds zero
+ISP availability. One ended assignment remains. This is release proof, not yet
+a complete second installation, supplier repair or original-customer RMA proof.
+
+Applied immutable additions:
+-175.118: `1c22a6ebf5eadc6050f45569d9e2b51787123c79da4c163d3346ef14aa8dcdfe`
+-175.119: `ecf1bbe749782a18d1ecf910e6f3ec4f0657827d2bfc8db5e70d4bd5d7560db8`
+
+Current host command `.omo/runtime/return-recovery-regression.sh`, stdout log
+`.omo/runtime/return-recovery-regression.log`. It runs customer replacement,
+ownership, source validation, residual returns, modularity and contract tests.
+Archive: ignored `task26/recovery-regression/xml`. Wait for complete counts;
+there is no regression PASS claim yet. The previous six-test owned lifecycle
+exited0, stopped containers/processes and retained volumes. Full phase XML under
+`task26/green-assets-second/xml`.
+
+Next after regression: actual second loan issue/install (V175.83's asset-only
+removal lookup needs assignment-specific handling), supplier repair and vendor
+replacement, sold RMA original-customer authorization and approved reacquisition;
+scoped lists/replay, adversarial SQL/physical continuity, material closure and
+packaged HTTP.26 stays open. Declare any new migration above175.119 first.
+
+
 ## Latest checkpoint — verified residual inspection slice
 
 Normal compilation and `qa.sh server --tests '*WarehouseReturnIT' --no-parallel`
@@ -77,3 +113,34 @@ implementation failure.175.116 is now immutable. Before creation, reserve
 document initially DRAFT while its view explains already received quarantine;
 allow only source-bound return cases to inspect from DRAFT, and bind the sealed
 initial document state to revision0. Preserve every other document lifecycle rule.
+
+## Asset recovery continuation design (not yet implemented)
+
+Published residual checkpoint `62139d01`. New WarehouseReturnITAssets uses actual
+LOAN/SALE handover, witnessed dismantle, warehouse receipt and reset checks. Run
+`.omo/runtime/return-assets-red.sh` before the asset implementation; preserve its
+result, avoiding any missing-route success claim.
+
+Reserve before creation: `V175_118__warehouse_returned_asset_continuity.sql` above
+applied175.117. Add ASSET_REMOVAL origin, capture the locked recovery asset/balance
+as immutable intake evidence, validate open/receipt/inspection operation chain,
+and permit the prior removal's live position to advance only through that
+proven receipt. Retain old assignment, title, removal evidence and ONU history.
+Do not let receipt flip CUSTOMER title or add ISP availability. Use an internal
+open revision0 followed atomically by physical receipt revision1; residual
+intake stays non-posting revision0. Avoid recursive removal/return validation.
+
+Follow-ups: V175.83 currently selects recovery by asset alone; repeat removal
+cycles will need assignment-specific lookup. Existing title/history validators
+use removal's frozen source after assignment ends and must continue doing so.
+Stock release is not yet proof of complete reissue/install or sold RMA workflow.
+
+## Asset test result and forward correction
+
+Genuine asset feature red:2/2 tests reached return intake after actual LOAN/SALE
+handover and dismantle, then400 because ASSET_REMOVAL was not supported. The
+implementation compiled and175.118 applied. Both asset tests then failed on a
+PostgreSQL ambiguous `origin` identifier in the new validator; residual tests
+still pass. Reserve before creation `V175_119__warehouse_return_asset_origin_scope.sql`
+to qualify that table column. Keep applied175.118 unchanged. The failing run is
+`return-assets-green.log`, not PASS evidence.

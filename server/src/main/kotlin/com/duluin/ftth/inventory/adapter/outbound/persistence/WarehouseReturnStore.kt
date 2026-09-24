@@ -4,6 +4,7 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.port.outbound.PostingDimension
 import com.duluin.ftth.inventory.application.port.outbound.PostingOperation
 import com.duluin.ftth.inventory.application.service.*
+import com.duluin.ftth.inventory.domain.model.OwnerKind
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
@@ -11,6 +12,19 @@ import java.util.UUID
 @Repository
 class WarehouseReturnStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
+
+    fun recovered(id: UUID): WarehouseReturnSource {
+        val dimension = jdbc.execute { sql ->
+            sql.query("""SELECT asset.sku_id,removal.asset_id,removal.recovery_location_id,removal.actor_id,removal.legal_owner
+                FROM inventory_asset_removal removal JOIN inventory_serialized_asset asset
+                    ON asset.tenant_id=removal.tenant_id AND asset.id=removal.asset_id
+                WHERE removal.tenant_id=? AND removal.id=?""", sql.tenant, id) {
+                PostingDimension(it.uuid("sku_id"), it.uuid("asset_id"), null, it.uuid("recovery_location_id"),
+                    it.uuid("actor_id"), OwnerKind.TRANSIT, WarehouseCondition.QUARANTINE, AssetLegalOwner.valueOf(it.getString("legal_owner")))
+            }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+        }
+        return position(dimension)
+    }
 
     fun sourceLine(id: UUID): UUID = jdbc.execute { sql ->
         UUID.fromString(sql.value("SELECT id FROM inventory_document_line WHERE tenant_id=? AND document_id=?", sql.tenant, id)
@@ -51,7 +65,7 @@ class WarehouseReturnStore(private val jdbc: WarehouseCommandJdbc) {
             dimension.custodianId, dimension.custodianKind, dimension.condition, dimension.legalOwner)
         sql.update("""INSERT INTO inventory_return_case(id,tenant_id,origin,source_document_id,stock_identity_id,quarantine_location_id,body)
             VALUES (?,?,?,?,?,?,?)""", view.id, sql.tenant, record.intake.origin, record.intake.sourceDocumentId,
-            dimension.stockIdentityId, dimension.locationId, mapper.writeValueAsString(record))
+            dimension.stockIdentityId, record.intake.quarantineLocationId, mapper.writeValueAsString(record))
         sql.update("""INSERT INTO inventory_operation(id,tenant_id,namespace,operation_key,actor_id,resource_id,resource_scope,
             payload_hash,document_id,document_revision,business_action,original_status,original_body,cutover_epoch,authority_epoch,created_at)
             VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?)""", operation.id, sql.tenant, operation.namespace, operation.key,

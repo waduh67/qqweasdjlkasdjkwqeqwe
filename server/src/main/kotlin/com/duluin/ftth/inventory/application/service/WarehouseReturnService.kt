@@ -17,7 +17,7 @@ import java.util.UUID
 @Transactional(rollbackFor = [Exception::class], timeout = 30)
 class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val locations: WarehouseReceiptService,
-    private val masters: WarehouseMasterStore, private val residuals: MaterialResidualStore,
+    private val masters: WarehouseMasterStore, private val origins: WarehouseReturnOrigins,
     private val store: WarehouseReturnStore, private val operations: WarehouseOperationStore,
     private val posting: WarehousePosting) : InventoryReturnApi {
     private val mapper = jacksonObjectMapper()
@@ -38,21 +38,32 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
             authorize(store.get(prior.resourceId), current)
             return prior.receipt
         }
-        val residual = residuals.get(request.sourceDocumentId)
-        if (residual.purpose != ResidualPurpose.RETURN || !residuals.acknowledged(residual.id) ||
-            residual.request.targetLocationId != request.quarantineLocationId)
-            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        val source = store.position(residual.transit.copy(custodianKind = OwnerKind.WAREHOUSE,
-            custodianId = request.quarantineLocationId))
-        if (source.quantity.toString() != residual.request.quantityBase || source.unit != residual.request.baseUnit)
-            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        val view = WarehouseReturnView(UUID.randomUUID(), 0, WarehouseReturnState.RECEIVED_IN_INSPECTION, request.origin,
+        val source = origins.resolve(request, current)
+        val recovered = request.origin == WarehouseReturnOrigin.ASSET_REMOVAL
+        val view = WarehouseReturnView(UUID.randomUUID(), 0,
+            if (recovered) WarehouseReturnState.DRAFT else WarehouseReturnState.RECEIVED_IN_INSPECTION, request.origin,
             request.sourceDocumentId, source.dimension.stockIdentityId, source.dimension.skuId, source.dimension.lotId,
-            source.unit, source.quantity.toString(), request.quarantineLocationId, source.dimension.condition,
+            source.unit, source.quantity.toString(), source.dimension.locationId, source.dimension.condition,
             source.dimension.legalOwner, current.fence.identity.userId, Instant.now())
-        val record = WarehouseReturnRecord(request, source, store.sourceLine(residual.id), view)
-        val operation = operation("receive", view, metadata, canonical, current, 201)
+        val record = WarehouseReturnRecord(request, source, store.sourceLine(request.sourceDocumentId), view)
+        val operation = operation(if (recovered) "open" else "receive", view, metadata, canonical, current, 201)
         store.create(record, operation, cutover.snapshot.epoch)
+        operations.storeIdentity(operation.id, canonical.json, current.fence.identity.sessionId)
+        return if (recovered) receiveRecovered(record, metadata, canonical, current, cutover) else receipt(view, operation)
+    }
+
+    private fun receiveRecovered(record: WarehouseReturnRecord, metadata: WarehouseMutationMetadata,
+        canonical: WarehouseCanonicalPayload, current: CurrentAuthority, cutover: TenantCutoverFence): WarehouseOperationReceipt {
+        val view = record.view.copy(revision = 1, state = WarehouseReturnState.RECEIVED_IN_INSPECTION,
+            locationId = record.intake.quarantineLocationId, recordedAt = Instant.now())
+        val operation = operation("receive", view, metadata, canonical, current, 201)
+        val quantity = StockQuantity.of(1, StockUnit.EA)
+        val destination = record.source.dimension.copy(locationId = view.locationId,
+            custodianId = view.locationId, custodianKind = OwnerKind.WAREHOUSE)
+        posting.post(WarehousePost(view.id, 0, "RECEIVED_IN_INSPECTION", operation, MovementKind.RETURN,
+            record.intake.evidenceReference, listOf(
+                PostingLeg(LegDirection.OUT, record.source.dimension, quantity, view.id, InventoryStatus.QUARANTINE),
+                PostingLeg(LegDirection.IN, destination, quantity, view.id, InventoryStatus.QUARANTINE))), cutover)
         operations.storeIdentity(operation.id, canonical.json, current.fence.identity.sessionId)
         return receipt(view, operation)
     }
@@ -78,7 +89,7 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
         if (record.view.revision != request.expectedRevision || record.view.state == WarehouseReturnState.ACCEPTED)
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         val expected = record.source.dimension.copy(locationId = record.view.locationId, custodianId = record.view.locationId,
-            condition = record.view.condition)
+            custodianKind = OwnerKind.WAREHOUSE, condition = record.view.condition)
         val source = store.position(expected)
         if (source.quantity.toString() != request.measuredQuantityBase || request.measuredQuantityBase != record.view.quantityBase)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)

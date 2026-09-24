@@ -2,17 +2,17 @@
 
 ## Active task:26 —2026-09-24
 
-- Latest slice: source-bound residual return intake/inspection passed4 real HTTP/
-  DB tests with zero failures/errors/skips.17.5m release conserves82500 consumed;
-  replay, invalid origin/measurement and concurrent inspection checked.
--175.116/175.117 applied; immutable hashes and commands in task-26.md. Host QA
-  cleaned owned processes/containers and retained volumes. No task26 closure:
-  recovered assets, repair/RMA, reacquisition, obligation closure and broader
-  checks remain. Continue using newest continuation.md/task-26.md entries.
--25/27/29 backend acceptance is complete at published base `ff530d47`. Remaining
-  26/28/30–48 and F1–F4 stay open. Normal explicit pushes to
-  `feat/warehouse-workorder`; no merge/deployment to main or QA data reset.
-- Latest section overrides historical labels/status below.
+- Published base `62139d01`; current recovered-asset receipt/inspection passed6
+  real HTTP/DB tests, zero failures/errors/skips. Exact asset identity survives;
+  LOAN can become ISP available after reset, SALE stays CUSTOMER-owned quarantine.
+  Residual17.5m, replay, wrong source/quantity/reset/serial and concurrency checked.
+-175.116–175.119 applied and immutable. Read newest task-26.md/continuation.md.
+  Shared replacement/ownership/source/lifecycle/modularity/contract regression
+  is running; no final aggregate result yet. Task26 remains open: real reuse,
+  repair/RMA/reacquisition, closure and further validation are still required.
+-25/27/29 backend acceptance complete at `ff530d47`; remaining26/28/30–48/F1–F4
+  stay open. Normal explicit pushes to `feat/warehouse-workorder`; no main merge,
+  deployment or QA reset. Latest section overrides historical status below.
 
 ## Current integration checkpoint: 2026-09-24
 

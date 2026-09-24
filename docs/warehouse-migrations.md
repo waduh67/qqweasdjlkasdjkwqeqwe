@@ -35,6 +35,13 @@ Versi ini mengikuti175.115.1; seluruh migrasi terdahulu tetap immutable.
 `V175_117__warehouse_return_lifecycle.sql` dicadangkan sebelum pembuatan setelah
 175.116 diterapkan: dokumen inspeksi baru mulai DRAFT dan hanya case yang terikat
 asalnya boleh maju ke hasil inspeksi; dokumen retur sumber tidak diubah.
+`V175_118__warehouse_returned_asset_continuity.sql` dicadangkan sebelum pembuatan
+untuk snapshot penerimaan aset hasil bongkar, posting penerimaan/inspeksi, serta
+kelanjutan posisi fisik yang dibuktikan oleh penerimaan tersebut.175.116–175.117
+sudah diterapkan dan tetap immutable.
+`V175_119__warehouse_return_asset_origin_scope.sql` dicadangkan sebelum pembuatan
+untuk memperjelas referensi kolom origin sesudah175.118 diterapkan; tidak ada
+perubahan aturan asal barang atau perubahan byte175.118.
 
 ## Wave 5: reservasi paralel task25, task27, task29
 

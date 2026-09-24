@@ -10,7 +10,7 @@ interface InventoryReturnApi {
     fun history(id: UUID): List<WarehouseReturnView>
 }
 
-enum class WarehouseReturnOrigin { MATERIAL_RESIDUAL }
+enum class WarehouseReturnOrigin { MATERIAL_RESIDUAL, ASSET_REMOVAL }
 
 data class WarehouseReturnIntake(val origin: WarehouseReturnOrigin, val sourceDocumentId: UUID,
     val quarantineLocationId: UUID, val evidenceReference: String)
