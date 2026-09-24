@@ -1,5 +1,15 @@
 # Task35 preparation — implementation not started
 
+## Task35 metadata test compilation correction
+
+First metadata check at1f8003e7 failed compileTestKotlin before tests: Jackson3
+JsonNode.map chose its member, not Kotlin Iterable.map, so AssertJ list assertion
+had the wrong receiver type. Convert through asSequence().map().toList().
+Production Kotlin compiled. Do not treat copied stale XML from first attempt as
+proof. Rerun archives allocation-metadata-fixed; runtime issue-metadata-fixed.log.
+Frontend materialModels.ts is independent UNVERIFIED preparation, not yet committed.
+Next await actual backend tests then implement issue discovery/received totals.
+
 ## Task35 started — named allocation metadata; verification pending
 
 Task34 complete0e42889a (final source75f8ba41,2browser45.5s,100web,11backend).
