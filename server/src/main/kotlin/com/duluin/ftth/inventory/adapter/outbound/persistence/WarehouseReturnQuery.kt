@@ -51,9 +51,13 @@ class WarehouseReturnQuery(private val jdbc: WarehouseCommandJdbc) {
         }
         sql.query("""SELECT document.code,source.code source_code,source.work_order_id,source.work_order_code_snapshot,
                 sku.code sku_code,sku.name sku_name,sku.tracking,asset.serial_number,lot.code lot_code,
-                supplier.id supplier_id,supplier.code supplier_code,supplier.name supplier_name,handover.id handover_id
+                supplier.id supplier_id,supplier.code supplier_code,supplier.name supplier_name,handover.id handover_id,
+                assignment.id assignment_id,assignment.customer_id origin_customer_id,assignment.work_order_id origin_work_order_id
             FROM inventory_document document
             JOIN inventory_document source ON source.tenant_id=document.tenant_id AND source.id=document.source_document_id
+            LEFT JOIN inventory_asset_removal removal ON removal.tenant_id=source.tenant_id AND removal.id=source.id
+            LEFT JOIN inventory_asset_assignment assignment ON assignment.tenant_id=removal.tenant_id AND assignment.id=removal.assignment_id
+                AND assignment.asset_id=removal.asset_id
             JOIN inventory_sku sku ON sku.tenant_id=document.tenant_id AND sku.id=?
             LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=document.tenant_id AND asset.id=?
             LEFT JOIN inventory_lot lot ON lot.tenant_id=document.tenant_id AND lot.id=?
@@ -65,7 +69,9 @@ class WarehouseReturnQuery(private val jdbc: WarehouseCommandJdbc) {
                     WarehouseTracking.valueOf(it.getString("tracking")), it.getString("serial_number"), it.getString("lot_code")),
                 locations, receivedByName, it.optionalUuid("supplier_id")?.let { id ->
                     WarehouseReturnNamedRef(id, it.getString("supplier_code"), it.getString("supplier_name"))
-                }, it.optionalUuid("handover_id"))
+                }, it.optionalUuid("handover_id"), it.optionalUuid("assignment_id")?.let { id ->
+                    WarehouseReturnAssetOriginRef(id, it.uuid("origin_customer_id"), it.uuid("origin_work_order_id"))
+                })
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 

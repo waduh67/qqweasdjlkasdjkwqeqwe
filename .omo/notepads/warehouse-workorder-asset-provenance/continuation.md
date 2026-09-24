@@ -1,5 +1,18 @@
 # Whole-plan continuation
 
+## Task36 original assignment references added; verification next
+
+RMA/ownership investigation found source workOrderId is the REMOVAL work order,
+while replacement/reacquisition owner uses the ORIGINAL assignment work order.
+Added nullable references.assetOrigin {assignmentId,customerId,workOrderId} from
+persisted local inventory lineage, separate from source workOrderId. No new name
+snapshot or cross-module implementation join. Extended LOAN/SALE and remnant
+HTTP tests to distinguish these IDs. Frontend decoder and fixtures updated.
+NEXT run return-asset-context-server.sh (6 tests /4 suites expected), then continue
+replacement form/list, RMA named customer repair WO/current revision, signed
+original-WO evidence and reacquisition continuation. Changes not yet verified.
+Previous11backend @d1395e7b and17web @33200083 remain baseline. No migrations.
+
 ## Task36 return workbench checkpoint — 11 backend and 17 web tests passed
 
 Return discovery backend @d1395e7b passed 11 tests / 7 suites in 4m56s. Fresh

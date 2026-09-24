@@ -49,6 +49,15 @@ class WarehouseReturnITAssets : CustomerAssetReplacementFixture() {
         assertThat(result.path("stockIdentityId").asString()).isEqualTo(asset.toString())
         assertThat(result.path("legalOwner").asString()).isEqualTo(if (mode == "SALE") "CUSTOMER" else "ISP")
         val id = result.path("id").asString()
+        val detail = request("GET", "/api/v1/warehouse/returns/$id/details", admin)
+        assertThat(detail.status).withFailMessage(detail.contentAsString).isEqualTo(200)
+        val references = mapper.readTree(detail.contentAsString).path("references")
+        assertThat(references.path("workOrderId").asString()).isEqualTo(order)
+        val original = references.path("assetOrigin")
+        assertThat(original.path("assignmentId").asString()).isEqualTo(old.installation.operation.toString())
+        assertThat(original.path("customerId").asString()).isEqualTo(old.installation.customer.toString())
+        assertThat(original.path("workOrderId").asString()).isEqualTo(receipt.workOrder)
+        assertThat(original.path("workOrderId")).isNotEqualTo(references.path("workOrderId"))
         val serial = fixture(admin).transaction { scalar("SELECT serial_number FROM inventory_serialized_asset WHERE id='$asset'") }
         val destination = if (mode == "SALE") quarantine else receipt.stock.bin
         val inspection = """{"expectedRevision":${result.path("revision").asLong()},"measuredQuantityBase":"1","condition":"SERVICEABLE","destinationLocationId":"$destination","evidenceReference":"identity-and-condition-verified","observedSerial":"$serial","resetConfirmed":true,"resetEvidenceReference":"factory-reset-and-configuration-erasure"}"""

@@ -17,7 +17,8 @@ export function returnDetailsFixture(view = returnFixture()): ReturnDetails {
   return { returnCase: view, references: { code: 'RET-001', sourceCode: serial ? 'REMOVE-001' : 'RESIDUAL-001', workOrderId: id.source, workOrderCode: serial ? null : 'WO-001',
     item: { id: id.sku, code: serial ? 'ONU' : 'CABLE', name: serial ? 'ONU pelanggan' : 'Sisa kabel drop', tracking: serial ? 'SERIAL' : 'LOT', serial: serial ? 'ONU-001' : null, lotCode: serial ? null : 'REEL-001' },
     locations: [returnQuarantine, returnBin, repairTransit].map(({ id, code, name }) => ({ id, code, name })), receivedByName: 'Petugas penerimaan',
-    vendor: view.repair ? { id: id.supplier, code: 'SERVICE', name: 'Penyedia servis' } : null, rmaHandoverId: null } }
+    vendor: view.repair ? { id: id.supplier, code: 'SERVICE', name: 'Penyedia servis' } : null, rmaHandoverId: null,
+    assetOrigin: serial ? { assignmentId: id.demandLine, customerId: id.evidence, workOrderId: id.source } : null } }
 }
 export function returnSourceFixture(serial = false): ReturnSource {
   const { returnCase: view, references } = returnDetailsFixture(returnFixture(serial))

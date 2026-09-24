@@ -15,10 +15,11 @@ data class WarehouseReturnDetails(val returnCase: WarehouseReturnView, val refer
 data class WarehouseReturnNamedRef(val id: UUID, val code: String, val name: String?)
 data class WarehouseReturnItemRef(val id: UUID, val code: String, val name: String, val tracking: WarehouseTracking,
     val serial: String?, val lotCode: String?)
+data class WarehouseReturnAssetOriginRef(val assignmentId: UUID, val customerId: UUID, val workOrderId: UUID)
 data class WarehouseReturnReferences(val code: String, val sourceCode: String,
     val workOrderId: UUID?, val workOrderCode: String?, val item: WarehouseReturnItemRef,
     val locations: List<WarehouseReturnNamedRef>, val receivedByName: String?,
-    val vendor: WarehouseReturnNamedRef?, val rmaHandoverId: UUID?)
+    val vendor: WarehouseReturnNamedRef?, val rmaHandoverId: UUID?, val assetOrigin: WarehouseReturnAssetOriginRef?)
 
 /** Only current, whole, verified positions that have not been intaken appear here. */
 data class WarehouseReturnSourceOption(val sourceDocumentId: UUID, val origin: WarehouseReturnOrigin,

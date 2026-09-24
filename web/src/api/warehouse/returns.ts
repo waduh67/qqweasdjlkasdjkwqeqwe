@@ -58,11 +58,15 @@ function itemRef(value: unknown, path = 'item') {
   const row = record(value, path)
   return { ...namedRef(row, path), name: text(row.name, path), tracking: oneOf(row.tracking, TRACKING, path), serial: nullable(row.serial, text, path), lotCode: nullable(row.lotCode, text, path) }
 }
+function assetOrigin(value: unknown, path = 'assetOrigin') {
+  const row = record(value, path)
+  return { assignmentId: uuid(row.assignmentId, path), customerId: uuid(row.customerId, path), workOrderId: uuid(row.workOrderId, path) }
+}
 export function returnDetails(value: unknown, path = 'details') {
   const row = record(value, path), returnCase = returnView(row.returnCase, path), refs = record(row.references, path)
   const references = { code: text(refs.code, path), sourceCode: text(refs.sourceCode, path), workOrderId: nullable(refs.workOrderId, uuid, path), workOrderCode: nullable(refs.workOrderCode, text, path),
     item: itemRef(refs.item, path), locations: array(refs.locations, namedRef, path, 3), receivedByName: nullable(refs.receivedByName, text, path),
-    vendor: nullable(refs.vendor, namedRef, path), rmaHandoverId: nullable(refs.rmaHandoverId, uuid, path) }
+    vendor: nullable(refs.vendor, namedRef, path), rmaHandoverId: nullable(refs.rmaHandoverId, uuid, path), assetOrigin: nullable(refs.assetOrigin, assetOrigin, path) }
   if (references.item.id !== returnCase.skuId || !references.locations.some(row => row.id === returnCase.locationId) ||
     new Set(references.locations.map(row => row.id)).size !== references.locations.length ||
     (references.item.tracking === 'SERIAL' && (!references.item.serial || returnCase.baseUnit !== 'EA' || returnCase.quantityBase !== '1')) ||

@@ -68,6 +68,7 @@ class WarehouseReturnWorkbenchIT : MaterialLifecycleFixture() {
         assertThat(detail.path("returnCase")).isEqualTo(view)
         assertThat(detail.path("references").path("sourceCode")).isEqualTo(option.path("code"))
         assertThat(detail.path("references").path("receivedByName").asString()).isNotBlank()
+        assertThat(detail.path("references").path("assetOrigin").isNull).isTrue()
         assertThat(detail.path("references").has("email")).isFalse()
         assertThat(read("/workbench?size=1", viewer.first).path("items").single()).isEqualTo(detail)
         assertThat(read("/workbench?skuId=${option.path("item").path("id").asString()}", viewer.first).path("totalElements").asLong()).isEqualTo(1)
