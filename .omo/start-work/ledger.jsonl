@@ -161,3 +161,4 @@
 {"at": "2026-09-24T18:27:24.803345+00:00", "task": 35, "event": "persisted-issue-discovery", "result": "10allocationmetadata backend green; scoped issue list/accepted totals implemented with3new tests pending; UI notimplemented"}
 {"at": "2026-09-24T18:30:49.580767+00:00", "task": 35, "event": "typed-issue-discovery", "result": "9web+TS/lint green; issue query backend running; demandLineId mapping and UI next"}
 {"at": "2026-09-24T18:33:34.452931+00:00", "task": 35, "event": "demand-line-mapping", "result": "13issue-list backend green; actual demandLineId mapping implemented,9web+TS green; mapping backend pending; UI next"}
+{"at": "2026-09-24T18:38:41.516616+00:00", "task": 35, "event": "plan-editor-posting-fixture", "result": "Mapping6of7passed; oldfixtureFKfailure rewritten throughactualAPIs. Editor5draft tests plus9API/TS/lint running; UI notwired."}

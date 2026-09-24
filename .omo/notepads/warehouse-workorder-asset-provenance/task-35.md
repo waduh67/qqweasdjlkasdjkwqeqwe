@@ -1,5 +1,24 @@
 # Task35 — demand and issue implementation
 
+## Task35 editor and posting fixture checkpoint — verification running
+
+Demand mapping sourcea8a1cd41: 6/7 tests passed (new mapping,2demand,3supply);
+old WorkOrderMaterialsITPostedFacts failed on obligation FK because direct issue
+fixture omitted inventory_issue_line. Rewritten to actual owner pick/dispatch/
+acknowledge/report-use APIs, preserving60missued/40mused/20maccountable/40mbackorder.
+No production/schema change. Rerun all7 via material-mapping-server.sh aftercommit;
+first failure archived demand-mapping, do not mark whole suite green.
+
+Shared MaterialPlanEditor now implements explicit reviewed template copy, exact
+MM/EA, NONEreason, current-plan-line substitution permission+reason+compatibility;
+never carries older substitution into next revision. Five meaningful draft tests
+plus9APItests/TS/lint RUNNING material-editor-web.log. New typed allocation reader
+retains actual metadata/revisions and complete unpaged historical list.
+UI is not wired yet; no browser proof. NEXT finish request workbench/list/reserve/
+pick/unpick/dispatch/slip, focused tests and actualissue.spec desktop/mobile.
+Continue35–48/F1–F4. No migrations;148nextunused,177/178reserved43.
+
+
 ## Task35 demand line mapping checkpoint — backend verification pending
 
 Issue discovery sourcee90857a3 passed13 tests/5suites in3m39s, including3Modularity,
