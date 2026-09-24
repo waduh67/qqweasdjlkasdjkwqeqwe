@@ -1,4 +1,4 @@
-import { api } from '../client'
+import { api, ApiError, tokenStore } from '../client'
 import type { Decoder } from './codec'
 
 /** A captured command can be retried without changing its original key or serialized payload. */
@@ -7,6 +7,12 @@ export interface WarehouseCommand<T> {
   readonly body: string
   readonly path: string
   execute(): Promise<T>
+}
+
+/** A later stage must never continue under a newly logged-in account. Token refresh retains the session. */
+export function captureCommandSession() {
+  const version = tokenStore.getSessionVersion()
+  return () => { if (tokenStore.getSessionVersion() !== version) throw new ApiError(409, 'Sesi berubah. Muat ulang sebelum membuat transaksi baru.') }
 }
 
 export function command<T>(path: string, method: 'POST' | 'PUT', input: unknown, decode: Decoder<T>, key = crypto.randomUUID()): WarehouseCommand<T> {

@@ -58,7 +58,7 @@ class WarehouseCustomerRmaService(private val cutovers: InventoryTenantCutoverAp
             source.locationId, request.transitLocationId, request.technicianLocationId, AssetLegalOwner.CUSTOMER,
             0, CustomerRmaHandoverState.DRAFT, source.locationId, current.fence.identity.userId, Instant.now())
         val record = RmaHandoverRecord(request, origin, initial)
-        store.create(record, cutover.snapshot.epoch, current.fence.epoch)
+        store.create(record, cutover.snapshot.epoch, current.fence.epoch, workOrders.read(request.workOrderId, origin.customerId, current.fence, true).code)
         val view = initial.copy(revision = 1, state = CustomerRmaHandoverState.DISPATCHED, locationId = request.transitLocationId)
         return move(record, view, origin.source.dimension,
             origin.source.dimension.copy(locationId = view.transitLocationId, custodianId = view.technicianId, custodianKind = OwnerKind.TRANSIT),

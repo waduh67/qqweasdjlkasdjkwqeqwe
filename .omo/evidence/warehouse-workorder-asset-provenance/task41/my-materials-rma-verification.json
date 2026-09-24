@@ -1,0 +1,56 @@
+{
+  "sourceCommit": "accompanying RMA technician UI checkpoint",
+  "backend": {
+    "tests": 10,
+    "failures": 0,
+    "result": "BUILD SUCCESSFUL in 4m 13s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "tests": 3,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "9bffe2adb0459e87c0e616a4d6ee17264a0c6b42e446f5f5591aa975971dcdf6"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.MyMaterialsRmaIT",
+        "tests": 2,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "9ac37b1f06087de6a41187ea953ef9244ed2b3bedcce90646a0a6179b06fb22d"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+        "tests": 3,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "49c037ba710721073e9849582c92284214891a11b5b9a9b9554ea141b7404665"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "5f5dcffa99e1ce4a518b3bd11f4f3cf6bedc2fc84c012783494971f829fce61c"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "4f8340a4f39e62d422ea8872fbd211c9d2b5510a8c7eb5843973c09c594cd293"
+      }
+    ]
+  },
+  "web": {
+    "tests": 320,
+    "files": 66,
+    "durationSeconds": 53.77,
+    "targetedTests": 27,
+    "build": "TypeScript project build and Vite PASS; existing chunk-size warning",
+    "changedProductLint": "PASS"
+  },
+  "coverage": "Self-only named RMA reads and actual physical position before paging; current location revocation, foreign actor/tenant rejection. Actual receipt, original-customer reinstall and same-key replay retain CUSTOMER title and never become ISP available. Web scan/manual entry, fresh source/context, offline draft/revoked session, source disappeared, readonly denial, two-stage exact retry, account-change stop between authorization and installation.",
+  "cleanup": "Owned services stopped; volumes retained; no migration",
+  "remaining": "Tasks 40/41 implemented and unit/integration verified. Real desktop/mobile acceptance remains task45. Tasks42-48 and F1-F4 remain; no deployment or main merge."
+}

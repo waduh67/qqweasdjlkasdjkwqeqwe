@@ -28,16 +28,16 @@ class RmaHandoverStore(private val jdbc: WarehouseCommandJdbc, private val retur
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
 
-    fun create(record: RmaHandoverRecord, epoch: Long, authorityEpoch: Long) = jdbc.execute { sql ->
+    fun create(record: RmaHandoverRecord, epoch: Long, authorityEpoch: Long, workOrderCode: String) = jdbc.execute { sql ->
         val view = record.view
         val source = record.origin.source.dimension
         if (sql.value("SELECT id FROM inventory_rma_handover WHERE tenant_id=? AND return_id=?", sql.tenant, view.returnId) != null)
             sql.fail(WarehouseErrorCode.STALE_REVISION)
         sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,state,actor_id,customer_id,work_order_id,
-            source_document_id,source_revision,cutover_epoch,authority_epoch,source_reference,reason)
-            VALUES (?,?,?,'RMA_HANDOVER','DRAFT',?,?,?,?,?,?,?,?,?)""", view.id, sql.tenant, "RMA-${view.id}", view.createdBy,
+            source_document_id,source_revision,cutover_epoch,authority_epoch,source_reference,reason,work_order_code_snapshot)
+            VALUES (?,?,?,'RMA_HANDOVER','DRAFT',?,?,?,?,?,?,?,?,?,?)""", view.id, sql.tenant, "RMA-${view.id}", view.createdBy,
             view.customerId, view.workOrderId, view.returnId, record.request.expectedRevision, epoch, authorityEpoch,
-            record.request.evidenceReference, "Return inspected customer-owned repair")
+            record.request.evidenceReference, "Return inspected customer-owned repair", workOrderCode)
         sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,document_revision,line_number,sku_id,
             stock_identity_id,source_line_id,base_unit,tracking,quantity_base,location_id,custodian_id,custodian_kind,condition,legal_owner)
             VALUES (?,?,?,0,1,?,?,?,'EA','SERIAL',1,?,?,'WAREHOUSE','SERVICEABLE','CUSTOMER')""",

@@ -11,6 +11,7 @@ import type { TokenResponse } from './types'
 const REFRESH_KEY = 'ftth.refreshToken'
 
 let accessToken: string | null = null
+let sessionVersion = 0
 let onSessionLost: (() => void) | null = null
 let onSubscriptionLocked: (() => void) | null = null
 
@@ -26,7 +27,11 @@ let refreshInFlight: Promise<TokenResponse | null> | null = null
 
 export const tokenStore = {
   setAccessToken(token: string | null) {
+    sessionVersion++
     accessToken = token
+  },
+  getSessionVersion(): number {
+    return sessionVersion
   },
   /**
    * Dipakai MapLibre lewat `transformRequest`: request tile berangkat dari dalam
@@ -44,6 +49,7 @@ export const tokenStore = {
     else localStorage.removeItem(REFRESH_KEY)
   },
   clear() {
+    sessionVersion++
     accessToken = null
     localStorage.removeItem(REFRESH_KEY)
   },

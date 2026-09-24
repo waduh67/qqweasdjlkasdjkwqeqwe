@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(propagation = Propagation.MANDATORY, rollbackFor = [Exception::class])
 class InventoryMyMaterialsService(private val authority: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
     private val masters: WarehouseMasterStore, private val sites: SiteReferenceApi, private val query: MyMaterialQuery,
-    private val workbench: MaterialWorkbenchQuery, private val users: IamApi) : InventoryMyMaterialsApi {
+    private val workbench: MaterialWorkbenchQuery, private val users: IamApi, private val rma: InventoryCustomerRmaApi) : InventoryMyMaterialsApi {
     override fun jobs(page: WarehousePageRequest): WarehousePage<MyMaterialJob> {
         val current = current(null, page)
         return query.jobs(current.fence.identity.userId, page, access(current))
@@ -36,6 +36,11 @@ class InventoryMyMaterialsService(private val authority: CurrentAuthorityApi, pr
         val current = current(context, page)
         val found = query.residuals(context.workOrderId, current.fence.identity.userId, page, access(current))
         return names(found)
+    }
+    override fun rmas(context: MaterialPlanningContext, page: WarehousePageRequest, handover: UUID?): WarehousePage<CustomerRmaHandoverDetails> {
+        val current = current(context, page)
+        val rows = query.rmas(context.workOrderId, current.fence.identity.userId, page, access(current), handover)
+        return WarehousePage(rows.items.map { rma.details(it.id) }, rows.page, rows.size, rows.totalElements)
     }
     override fun pendingReturns(page: WarehousePageRequest): WarehousePage<MyMaterialResidual> {
         if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)

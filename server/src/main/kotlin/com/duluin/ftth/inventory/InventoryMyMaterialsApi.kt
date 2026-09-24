@@ -10,6 +10,7 @@ interface InventoryMyMaterialsApi {
     fun custody(context: MaterialPlanningContext, page: WarehousePageRequest, identity: UUID? = null): WarehousePage<MaterialCustodyChoice>
     fun issues(context: MaterialPlanningContext, page: WarehousePageRequest, issue: UUID? = null): WarehousePage<MyMaterialIssue>
     fun residuals(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MyMaterialResidual>
+    fun rmas(context: MaterialPlanningContext, page: WarehousePageRequest, handover: UUID? = null): WarehousePage<CustomerRmaHandoverDetails>
     fun returnLocations(context: MaterialPlanningContext, page: WarehousePageRequest, location: UUID? = null): WarehousePage<WarehouseApprovalLocation>
 }
 data class MyMaterialJob(val id: UUID, val code: String, val updatedAt: Instant)

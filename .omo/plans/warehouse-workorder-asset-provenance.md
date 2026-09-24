@@ -429,12 +429,12 @@ All tasks inherit C1–C11, the dependency matrix, tenant/auth/idempotency rules
   Do/accept: templates/demand edits, stock availability/request links, outstanding custody, actual metre/serial use, evidence links, frozen submission review, no-material declaration and residual obligations. Keep existing proof/approval flow; clearly distinguish technical completed, QA approved, provisioning and materials closed. No button submits invented revision/allocations.
   QA: `W(WorkOrderMaterials)` full line lifecycle and reject/reassign/cancel/no-material cases; browser fixture later proves approve does not debit twice. Save E(39). Commit: `feat(web): satukan material dengan detail work order`.
 
-- [ ] 40. Technician Material Saya responsive page: support acknowledged custody and field reporting to make mobile-width web usable — expect own stock/obligations only.
+- [x] 40. Technician Material Saya responsive page: support acknowledged custody and field reporting to make mobile-width web usable — expect own stock/obligations only.
   References: R13–R14,task15–18; NEW `web/src/pages/MyMaterialsPage.tsx` and tests.
   Do/accept: pending handovers, stock on hand by lot/serial, assigned WO allocation, acknowledge/use/return and mismatch states. Keyboard scanner and manual input; camera progressive enhancement with permission/error fallback. Offline edits labelled draft and never confirmed server stock; reconnect revalidates scope/revision. Revoked job still permits own-stock return, not new use.
   QA: `W(MyMaterialsPage)` happy receipt/use and offline/revoked/foreign actor/same-key retry; browser mobile project in task45 executes touch/keyboard, not just desktop resize. Save E(40). Commit: `feat(web): kelola material di tangan teknisi`.
 
-- [ ] 41. Customer device provenance and monitoring UI: replace free serial creation with eligible-asset workflow to make source visible — expect loan/sale/history and no bypass.
+- [x] 41. Customer device provenance and monitoring UI: replace free serial creation with eligible-asset workflow to make source visible — expect loan/sale/history and no bypass.
   References: R15,task19–24; NEW `web/src/components/organisms/customer/CustomerAssetPanel.tsx` and tests.
   Do/accept: eligible acknowledged-asset picker, install/replace/remove/handover actions, origin/history/ownership badge, legacy reconcile CTA for authorized roles. Existing customer blade and discovered inbox preserve observation experience but require eligible source before provisioning. Sold-device return shows customer title; ODP move does not imply warehouse return. Portal uses separate safe presentation.
   QA: `W(CustomerAssetPanel)` loan/sale/install/history and legacy/raw-serial/foreign/readonly denial; `B(customer-assets.spec.ts)` (new) exercises old/new serial chain and portal redaction. Save E(41). Commit: `feat(web): tampilkan sumber gudang perangkat pelanggan`.

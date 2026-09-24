@@ -23,9 +23,38 @@ class MyMaterialQuery(private val jdbc: WarehouseCommandJdbc) {
             UNION ALL SELECT document.work_order_id,document.work_order_code_snapshot,residual.recorded_at
             FROM inventory_material_residual residual JOIN inventory_document document ON document.tenant_id=residual.tenant_id AND document.id=residual.id,request,actor
             WHERE residual.tenant_id=request.tenant AND ((residual.sender_id=actor.id AND (residual.source_dimension::jsonb->>'locationId')::uuid IN (SELECT id FROM visible_locations))
-                OR (residual.receiver_id=actor.id AND residual.target_location_id IN (SELECT id FROM visible_locations))))""" + query.page(
+                OR (residual.receiver_id=actor.id AND residual.target_location_id IN (SELECT id FROM visible_locations)))
+            UNION ALL SELECT rma.work_order_id,coalesce(document.work_order_code_snapshot,document.code),document.created_at
+            FROM inventory_rma_handover rma JOIN inventory_document document ON document.tenant_id=rma.tenant_id AND document.id=rma.id,request,actor
+            WHERE rma.tenant_id=request.tenant AND rma.technician_id=actor.id AND document.state IN ('DISPATCHED','RECEIVED')
+                AND (rma.body::jsonb#>>'{view,sourceLocationId}')::uuid IN (SELECT id FROM visible_locations)
+                AND (rma.body::jsonb#>>'{view,transitLocationId}')::uuid IN (SELECT id FROM visible_locations)
+                AND (rma.body::jsonb#>>'{view,technicianLocationId}')::uuid IN (SELECT id FROM visible_locations))""" + query.page(
             "SELECT work_order_id id,max(code) code,max(created_at) updated_at FROM owned WHERE (?::uuid IS NULL OR work_order_id=?::uuid) GROUP BY work_order_id",
             """jsonb_build_object('id',id,'code',code,'updatedAt',${queryTime("updated_at")})""", "updated_at"), actor, workOrder, workOrder), MyMaterialJob::class.java)
+    }
+
+    /** Customer-owned repair stock has its own source chain and never enters ordinary ISP custody choices. */
+    fun rmas(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, handover: UUID?): WarehousePage<CustomerRmaHandover> = jdbc.execute { sql ->
+        val query = query(sql, page, access)
+        decode(query.result(query.page("""SELECT rma.id,document.created_at,operation.original_body::jsonb body
+            FROM inventory_rma_handover rma JOIN inventory_document document ON document.tenant_id=rma.tenant_id AND document.id=rma.id
+            JOIN inventory_operation operation ON operation.tenant_id=document.tenant_id AND operation.document_id=document.id AND operation.document_revision=document.revision
+            JOIN scoped_positions position ON position.tenant_id=rma.tenant_id AND position.stock_identity_id=rma.asset_id
+            JOIN inventory_serialized_asset asset ON asset.tenant_id=rma.tenant_id AND asset.id=rma.asset_id
+            JOIN inventory_sku sku ON sku.tenant_id=asset.tenant_id AND sku.id=asset.sku_id,request
+            WHERE rma.tenant_id=request.tenant AND rma.work_order_id=? AND rma.technician_id=? AND (?::uuid IS NULL OR rma.id=?::uuid)
+                AND (rma.body::jsonb#>>'{view,sourceLocationId}')::uuid IN (SELECT id FROM visible_locations)
+                AND (rma.body::jsonb#>>'{view,transitLocationId}')::uuid IN (SELECT id FROM visible_locations)
+                AND (rma.body::jsonb#>>'{view,technicianLocationId}')::uuid IN (SELECT id FROM visible_locations)
+                AND position.custody_owner_id=rma.technician_id AND position.quantity_base=1 AND position.base_unit='EA'
+                AND position.legal_owner='CUSTOMER' AND position.condition='SERVICEABLE' AND position.warehouse_admission='VERIFIED'
+                AND asset.warehouse_admission='VERIFIED' AND sku.state='ACTIVE' AND sku.tracking='SERIAL' AND sku.base_unit='EA'
+                AND ((document.state='DISPATCHED' AND position.status='IN_TRANSIT' AND position.custody_owner_kind='TRANSIT'
+                    AND position.location_id=(rma.body::jsonb#>>'{view,transitLocationId}')::uuid)
+                  OR (document.state='RECEIVED' AND position.status='ISSUED' AND position.custody_owner_kind='TECHNICIAN'
+                    AND position.location_id=(rma.body::jsonb#>>'{view,technicianLocationId}')::uuid))""", "body", "created_at"),
+            workOrder, actor, handover, handover), CustomerRmaHandover::class.java)
     }
 
     fun issues(workOrder: UUID, actor: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, issue: UUID? = null): WarehousePage<MyMaterialIssue> = jdbc.execute { sql ->

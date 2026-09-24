@@ -59,3 +59,12 @@ it('provisions an observed serial only after eligible source authorization and b
   expect(fetch.mock.calls.map(([path]) => path)).toEqual([`/api/work-orders/${id.source}/assets/authorize`, `/api/monitoring/discovered-onus/${id.document}/provision`])
   expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({ customerId: id.customer, authorizationId: id.plan, expectedRevision: 3 })
 })
+
+it('does not continue an authorized installation under a changed account', async () => {
+  const fetch = vi.fn(async () => { tokenStore.clear(); tokenStore.setAccessToken('another-user'); return response({ authorizationId: id.plan, operationId: id.assignment, revision: 0 }) })
+  vi.stubGlobal('fetch', fetch)
+  const action = deployCustomerAsset(assetJobFixture(), assetSourceFixture(), 'LOAN', null)
+  await expect(action.execute()).rejects.toThrow('Sesi berubah')
+  await expect(action.execute()).rejects.toThrow('Sesi berubah')
+  expect(fetch).toHaveBeenCalledTimes(1)
+})

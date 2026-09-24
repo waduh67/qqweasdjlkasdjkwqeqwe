@@ -2,7 +2,7 @@ import { timestamp } from './approvals'
 import { array, boolean, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { materialCustody } from './materialExecution'
 import { materialSku } from './materialModels'
-import { command, parameters, query, type WarehouseCommand } from './transport'
+import { captureCommandSession, command, parameters, query, type WarehouseCommand } from './transport'
 
 export const ASSET_PROVENANCE = ['RECEIPT', 'OPENING_BALANCE', 'UNKNOWN'] as const
 export function assetWorkspace(value: unknown, path = 'customer') {
@@ -73,11 +73,14 @@ export function deployCustomerAsset(job: AssetJob, source: AssetSource, mode: 'L
     ...(previous ? { previousAssignmentId: previous.asset.id } : {}),
   }, authorization)
   const consumeKey = crypto.randomUUID()
+  const checkSession = captureCommandSession()
   let consume: WarehouseCommand<unknown> | null = null
   const body = JSON.stringify({ authorization: JSON.parse(authorize.body), topology, previous: previous ? { id: previous.asset.id, revision: previous.asset.revision, titleRevision: previous.asset.titleRevision, evidenceId: job.signature?.id } : null, observation })
   return Object.freeze({ key: authorize.key, body, path: `${root(job.customerId)}/${previous ? 'replace' : 'install'}`, async execute() {
+    checkSession()
     if (!consume) {
       const permit = await authorize.execute()
+      checkSession()
       const input = { authorizationId: permit.authorizationId, expectedRevision: permit.revision, topology }
       consume = observation ? command(`/api/monitoring/discovered-onus/${uuid(observation.id)}/provision`, 'POST', { customerId: job.customerId,
         authorizationId: permit.authorizationId, expectedRevision: permit.revision, odpId: topology?.odpId ?? null, portNumber: topology?.portNumber ?? null, installRxPowerDbm: topology?.installRxPowerDbm ?? null }, value => {

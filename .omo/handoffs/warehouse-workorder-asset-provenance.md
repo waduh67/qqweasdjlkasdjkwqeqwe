@@ -1,3 +1,37 @@
+## Tasks40/41 complete; task42 mobile material contracts NEXT
+
+RMA technician flow verified: backend10 tests PASS / BUILD SUCCESSFUL4m13s;
+full web320 tests/66files PASS53.77s, project TypeScript/build/changed-product lint PASS.
+Proof: task41/my-materials-rma-verification.json. Owned services cleaned; volumes retained.
+No migration.149 remains next free;177/178 reserved43.
+
+MyMaterialQuery now includes own repair-only WO jobs and scoped RMA reads. All3 recorded
+location grants and actual CUSTOMER SERVICEABLE1EA physical position checked before count;
+after reinstall source disappears. New dispatch captures actual WO code; old rows use
+readable document fallback. Material Saya has named own RMA receipt/reinstall, manual/
+keyboard/camera scan, current context/source recheck, separate original-customer source
+chain, exact canonical ACK then authorize/install commands and safe retries. Customer
+blade completes signed acceptance; ownership remains CUSTOMER. Offline remains a draft.
+Two-stage customer and RMA installs stop before a later request if account/session changes;
+normal access-token refresh does not invalidate the captured session.
+
+39-41 now implemented/verified. Full actual browser desktop/mobile and numeric acceptance
+still task45, not claimed by web unit tests.42-48/F1-F4 OPEN. Goal ACTIVE; keep working.
+Next42: existing mobile foundation has MviViewModel, Fluent primitives, Koin app and native
+SecureOutboxPort, but secure records currently lack scoped decrypted listing and per-key
+completion needed for durable material retry. Add typed domain MaterialContracts, actual
+canonical request/decoder repository, shared feature/materials ViewModel/screens and app
+DI/navigation. Only allowed material report/ACK intents may queue; accepted only from
+server, reconnect checks current source/scope/revision, uncertain retries keep exact keys.
+Bind tenant+user/device/session and purge on logout/switch. Reuse existing encrypted storage,
+not a production in-memory queue. Unit test restart/response loss/offline conflict/DI.
+Current Android target is pre-existing disabled; iOS targets configured but Linux may skip
+native compilation. Record actual executed checks, no native runtime/release claim.
+
+Current branch work/warehouse-completion tracks origin/feat/warehouse-workorder;
+original warehouse-task29 preserved. Commit/push each coherent checkpoint. Never commit
+runtime env/tokens/raw private XML. No deployment/main merge.
+
 ## Task41 core customer asset UI + safe portal verified; customer-owned RMA NEXT
 
 All current changes validated: full web304tests/63files PASS69.01s, TypeScript/production
