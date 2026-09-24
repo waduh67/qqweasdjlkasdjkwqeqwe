@@ -2,6 +2,11 @@
 
 ## Active task —26 returns/inspection/repair
 
+- Latest:175.122 applied and is IMMUTABLE. Core17.5m accepted inspection/close
+  test passed; full lifecycle/rework run still active in return-settlement-green.
+  Two new unverified serial-quantity and missing-close-history probes are saved
+  here and queued in material-obligation-red.sh under the same QA lock. Read the
+  newest task-26.md and final logs before claiming outcomes or editing SQL.
 - Supplier/return12 tests, repair guard/module/contracts24, scoped reads/access4
   all passed with zero failures/errors/skips in their respective runs.
 - New material closure test reproduced outstanding17500 after accepted17.5m

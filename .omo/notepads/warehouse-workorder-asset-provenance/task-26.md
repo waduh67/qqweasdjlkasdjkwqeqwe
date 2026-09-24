@@ -1,5 +1,28 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Applied122 — core closure passed, shared regression still running
+
+V175.122 applied successfully and is immutable, SHA256 `97b18a1b9ffbd7eac315da93788df8d572575b001373b31700277557b0edd0c4`.
+WarehouseReturnSettlementIT passed the real17.5m closure/replay and quantity
+preservation case. The complete lifecycle/rework run is still running at
+`.omo/runtime/return-settlement-green.sh` (log same stem); do not infer the final
+count from this one pass. Archive destination task26/return-settlement-green/xml.
+
+This test checkpoint adds WarehouseMaterialSerialSettlementIT (LOAN/SALE actual
+deployment must count one used issue unit before/after handover) and
+WarehouseMaterialSettlementIntegrityIT (app-role close cannot omit all historical
+material lines after accepted inspection). Both are unverified probes, not proven
+bugs yet. Their command `.omo/runtime/material-obligation-red.sh` is queued under
+the shared host lock after lifecycle/rework. Log same stem; archive destination
+`task26/material-obligation-red/xml`. The omission probe always rolls back its
+savepoint, including if the invalid close is accepted. Inspect actual failures
+before changing production. No code change sincec40bc0a1; no123 declared/created.
+
+After these results, correct reproduced issues with a new declared forward SQL
+version above175.122, then finish task26 replacement/RMA/reacquisition and shared
+packaged proof.26 and the whole remaining plan stay open.
+
+
 ## Inspected material closure implementation checkpoint — tests running
 
 Sourceb78489df passed read/access4 tests in4 suites, zero failures/errors/skips,
