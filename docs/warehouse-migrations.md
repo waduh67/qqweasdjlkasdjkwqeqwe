@@ -40,11 +40,19 @@ membuat atau menerapkan SQL:
 | 27 | `V175.114` | `V175_114__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_114_N__*.sql` | blind count/recount; pemilik utama dispatch approval Wave 5 |
 | 29 | `V175.115` | `V175_115__*.sql`; koreksi sebelum versi lebih tinggi diterapkan: `V175_115_N__*.sql` | replenishment suggestion/request |
 
-Task29 declares and implements `V175_115__warehouse_replenishment.sql` and
-`V175_115_1__warehouse_replenishment_snapshot_binding.sql` in its isolated child.
-These extend the existing rule/request tables, immutable command receipts,
-bounded scheduler cursor and receiving snapshot/destination binding. Predecessor
-SQL is unchanged; the integrator reconciles this namespace in Wave5 order.
+Integrasi 2026-09-24 membawa sembilan file yang sudah ada pada branch child,
+tanpa mengubah byte migrasi:
+
+| Tugas | Versi yang diimpor | Cakupan |
+| --- | --- | --- |
+| 25 | `175.113`, `175.113.1`, `175.113.2` | Transfer bindings, approved discrepancy, quarantine continuity |
+| 27 | `175.114`, `175.114.1`, `175.114.2`, `175.114.3` | Blind sessions, approved result, variance variable correction, bound observation commands |
+| 29 | `175.115`, `175.115.1` | Replenishment windows, bounded scheduler cursor and receiving snapshot/destination binding |
+
+Maksimum source gabungan adalah `175.115.1`. Koreksi integrasi berikutnya harus
+memakai versi lebih tinggi; jangan menyisipkan migrasi child. Database QA task29
+yang sudah mencapai `175.115.1` tetap disimpan sebagai bukti child. Integrasi
+membuat lingkungan QA baru untuk menjalankan urutan25→27→29 secara utuh.
 
 Hanya worker pemilik namespace yang boleh menambah file di namespace tersebut,
 dan nama/file yang hendak dibuat wajib dideklarasikan lebih dahulu di catatan

@@ -1,5 +1,25 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Current integration checkpoint: 2026-09-24
+
+- Resume from remote `feat/warehouse-workorder`, local continuation branch
+  `work/warehouse-completion` in `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe`.
+  Task29's separately verified checkpoint remains `work/warehouse-task29` at
+  `9ccd5bb0`. No merge/deployment to main is part of this continuation.
+- Cherry-picked all task25 source through `f4297aef`, task27 through `57bc533a`,
+  and task29 through `9ccd5bb0`, in25→27→29 order, recording original SHAs.
+  Shared error registration includes all three controllers. Approval dispatch,
+  posting kinds and effect-event lookup retain both transfer and count paths.
+  All nine imported migration files are byte-identical to their child branches.
+- This is an integration WIP checkpoint, not a combined test or completed-task
+  claim. Tasks1–24 remain checked. Next: fresh combined PostgreSQL verification,
+  complete task25/27 packaged HTTP/restart and missing acceptance coverage, then
+  tasks26/28/30 and the remaining plan. Read `continuation.md` in the plan's
+  notepad directory for current commands and test receipts.
+- Existing task29 QA environment/volumes are retained separately; generate a new
+  owned environment to test the full migration order. Never apply the earlier
+  child migrations out of order to task29's already migrated database.
+
 ## Current continuation: 2026-09-24
 
 - User requests completion of the whole remaining plan with regular committed,
