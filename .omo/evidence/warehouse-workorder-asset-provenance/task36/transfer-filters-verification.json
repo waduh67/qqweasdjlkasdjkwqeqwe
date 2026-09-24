@@ -1,0 +1,59 @@
+{
+  "task": 36,
+  "productSourceCommit": "99b98b41",
+  "runs": [
+    {
+      "sourceCommit": "2c82db3f",
+      "tests": 4,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e2f0353a9f269cba96ce62ad3fea6892e515ccccff4e40bb02b6db9deebc19ac"
+        }
+      ],
+      "build": "BUILD SUCCESSFUL in 1m55s"
+    },
+    {
+      "sourceCommit": "99b98b41",
+      "tests": 5,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6b4d5c508eb34c85714d0361158e554b838cf07df3d2f4b7a10a9edb13849c67"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b2d6f0f6e27659269751cca3b4d9a91dbd142a5ac4f0cef2d83b2addc155738c"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4d5dcc54c1aee62fa08311f3e9d470b3bc1df4962f8d2adb1c8cbb2204fcb038"
+        }
+      ],
+      "note": "These three unchanged suites passed in the earlier nine-test run; that overall run failed its padded-serial test input"
+    }
+  ],
+  "acceptance": [
+    "SKU and canonical exact serial must match the same line of a mixed transfer",
+    "Creation date start inclusive and end exclusive; strict malformed/repeated/unknown filter rejection",
+    "Current route and resolution scopes plus receiver eligibility applied before page/count",
+    "100m dispatch,60m receipt,40m transit; serial identity/title/cost and legacy payload compatibility preserved"
+  ],
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

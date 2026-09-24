@@ -1,5 +1,30 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 COMPLETE —178 web, source-specific backend and actual transfer browser proof
+
+Task36 product99b98b41 and test-only correction2c82db3f complete. Full178web/28files
+passed36.10s plusTS/Vite production build/warehouse oxlint. Corrected transferList4
+passed1m55s, plus unchanged5 transfer tests passed in earlier run (not one9greenbatch).
+Fresh transfer-filters-verification.json and completion.json map all source-specific
+proofs including return11/original-context6/RMA11/reacquisition5 backend runs and
+actual2 desktop/mobile100/60/40 transfer browser @49e8a1d4 (see proof for exact SHA).
+All10 browser screenshots reviewed earlier. Cleanup completed; volumes retained.
+
+Delivered source-bound return intake, measurement/inspection/reset, vendor service,
+replacement receipt continuation, original-customer RMA/current revision/receiver,
+signed original-WO title request plus persisted approval link, current owner/scope
+and bounded named lists/history/filters. Raw operation replies remain unchanged.
+No migrations. V175_147 remains latest applied. Task36 checkbox now complete.
+
+NEXT TASK37: see task-37.md for approval/count/disposition owner constraints.
+New counts.ts and approval command wrappers are currently UNCOMMITTED task37
+foundation; TypeScript/oxlint passed, no page/business verification claimed yet.
+Need named source/current actor action reads with cost redaction, paged history,
+blind count source choices without expected quantities, full UI and actual separate
+approver discrepancy browser.37–48/F1–F4 remains active. Task40/41→45 explicitly
+owns full technician return/RMA browser, and task40 camera progressive enhancement.
+Continue commits and remote checkpoints; no QA processes running.
+
 ## Task36 full178web green; transfer test input corrected, rerun next
 
 Product99b98b41 passed178 web tests/28 files in36.10s, TypeScript+Vite production
