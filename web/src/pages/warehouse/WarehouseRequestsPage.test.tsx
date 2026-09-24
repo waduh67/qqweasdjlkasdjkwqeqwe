@@ -93,6 +93,25 @@ it('reviews only the remaining demand before automatic reservation', async () =>
   expect(review.getByText(/sisa kebutuhan yang akan dicoba dicadangkan/)).toBeTruthy()
 })
 
+it('allows an authorized planner to declare NONE without SKU access and requires its reason', async () => {
+  mocks.permissions.delete('inventory.sku.view')
+  let saved = false
+  const plan = { ...materialSummaryFixture.plan, materialMode: 'NONE', lines: [], reason: 'Hanya pemeriksaan visual' }
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') { saved = true; return response(plan) }
+    return reader(path, { ...materialSummaryFixture, materialMode: saved ? 'NONE' : 'MATERIAL_REQUIRED', revisions: { ...materialSummaryFixture.revisions, planRevision: saved ? 1 : 0 }, demandState: 'DRAFT', plan: saved ? plan : null, lines: [], demandDocumentId: null, demandRevision: null, noMaterialReason: saved ? plan.reason : null }, [])
+  }); vi.stubGlobal('fetch', fetch); show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Susun rencana material' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Kebutuhan material' }), { target: { value: 'NONE' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Alasan tanpa material' }), { target: { value: plan.reason } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau rencana' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Simpan rencana' }))
+  expect(await screen.findByRole('button', { name: 'Ajukan rencana tanpa material' })).toHaveProperty('disabled', false)
+  const write = fetch.mock.calls.find(([, init]) => init?.method === 'PUT')!
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({ materialMode: 'NONE', reason: plan.reason, lines: [] })
+  expect(fetch.mock.calls.some(([path]) => path.includes('/skus'))).toBe(false)
+})
+
 it('requires named receiver and partial confirmation before dispatch and does not equate dispatch with receipt', async () => {
   let dispatched = false
   const picked = { ...materialSummaryFixture, demandRevision: 3, lines: [{ ...materialTotalsFixture, reservedUnpickedBase: '0', reservedPickedBase: '60000' }] }

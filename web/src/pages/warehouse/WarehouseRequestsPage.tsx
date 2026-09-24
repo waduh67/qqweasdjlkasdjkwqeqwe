@@ -48,7 +48,7 @@ function WorkOrderList() {
     <SelectField label="Status work order" value={status} onChange={(_, data) => { setStatus(data.value); setPage(0) }}><option value="">Semua status</option>{WORK_ORDER_STATES.map(state => <option value={state} key={state}>{labels[state]}</option>)}</SelectField><Button onClick={result.reload}>Segarkan</Button></div>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada work order dalam cakupan Anda" hint="Pilih atau buat work order pada menu pekerjaan, lalu susun kebutuhan materialnya." />} columns={[
       { key: 'workOrder', header: 'Work order', cell: row => <Link to={requestLink(row.id)}>{row.code} · {row.title}</Link> },
-      { key: 'customer', header: 'Pelanggan', cell: row => row.customerName ?? 'Tidak terkait pelanggan' },
+      { key: 'customer', header: 'Pelanggan', cell: row => row.customerId ? row.customerName ?? 'Nama pelanggan tidak tersedia' : 'Tidak terkait pelanggan' },
       { key: 'status', header: 'Status', cell: row => labels[row.status] },
       { key: 'assignees', header: 'Teknisi ditugaskan', cell: row => row.assignees.map(person => person.name ?? 'Nama tidak tersedia').join(', ') || 'Belum ditugaskan' },
     ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></>}</WarehouseState>
@@ -84,13 +84,13 @@ function RequestBody({ summary, workOrder, allocations, reload }: { summary: Mat
   if (editor === 'pick' || editor === 'release') return <WarehouseAllocationEditor summary={summary} allocations={current} action={editor} onDone={reload} onClose={() => setEditor(null)} />
   return <>
     <section className="card stack" aria-label="Permintaan work order"><h2>{workOrder.code} · {workOrder.title}</h2>
-      <p>{workOrder.customerName ?? 'Pekerjaan tanpa pelanggan'} · Teknisi: {workOrder.assignees.map(person => person.name ?? 'Nama tidak tersedia').join(', ') || 'Belum ditugaskan'}</p>
+      <p>{workOrder.customerId ? workOrder.customerName ?? 'Nama pelanggan tidak tersedia' : 'Pekerjaan tanpa pelanggan'} · Teknisi: {workOrder.assignees.map(person => person.name ?? 'Nama tidak tersedia').join(', ') || 'Belum ditugaskan'}</p>
       <p>Rencana {summary.revisions.planRevision} · WO revisi {summary.revisions.workOrderRevision}{summary.demandRevision !== null && ` · Permintaan revisi ${summary.demandRevision}`} · <WarehouseStatus status={summary.demandState} /></p>
       {!summary.plan ? <p>Rencana material belum disusun.</p> : summary.materialMode === 'NONE' ? <p>Tanpa material: {summary.noMaterialReason ?? summary.plan.reason}</p> : <p>Jumlah diminta, dicadangkan dan dikirim berasal dari catatan permintaan. Konfirmasi diterima ditampilkan per slip di bawah.</p>}
       {shortage && <p role="status">Masih ada kekurangan material. Reservasi atau pengiriman sebagian tetap mencatat sisa yang harus dipenuhi.</p>}
       {stale && <p role="alert">Alokasi berubah saat halaman dimuat. Muat ulang permintaan sebelum memilih barang.</p>}
       <div className="row wrap"><Button onClick={reload}>Muat ulang permintaan</Button>
-        {planManage && <Button disabled={!active || hasObligations || (summary.materialMode !== 'NONE' && !can('inventory.sku.view'))} onClick={() => setEditor('plan')}>{summary.plan ? 'Revisi rencana' : 'Susun rencana material'}</Button>}
+        {planManage && <Button disabled={!active || hasObligations} onClick={() => setEditor('plan')}>{summary.plan ? 'Revisi rencana' : 'Susun rencana material'}</Button>}
         {planManage && summary.plan && summary.demandState === 'DRAFT' && <Button variant="primary" disabled={!active || !override || (summary.materialMode === 'MATERIAL_REQUIRED' && !can('inventory.sku.view'))} onClick={() => setOperation({ action: 'submit', command: submitMaterialRequest(workOrder.id, { expectedRevision: summary.revisions.planRevision, workOrderRevision: summary.revisions.workOrderRevision }) })}>{summary.materialMode === 'NONE' ? 'Ajukan rencana tanpa material' : 'Ajukan permintaan'}</Button>}
         {manage && summary.demandDocumentId && <><Button disabled={!active || stale || !shortage || !override} onClick={() => setOperation({ action: 'reserve', command: materialRequestAction(summary.demandDocumentId!, 'reserve', buildReservation(summary, [], '', false, true)) })}>Cadangkan otomatis</Button>
           <Button disabled={!active || stale || !shortage || !override} onClick={() => setEditor('reserve')}>Reservasi sebagian / pilih stok</Button><Button disabled={!active || stale || !canSelect || !override} onClick={() => setEditor('release')}>Lepas reservasi</Button></>}

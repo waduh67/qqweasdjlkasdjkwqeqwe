@@ -1,5 +1,18 @@
 # Task35 — demand and issue implementation
 
+## Task35 technician fix verified; NONE planning permission alignment
+
+7c606fb2:11tests/3files (newMultiCombobox regression,9request,1WO) +TSexit0 passed.
+Oxlint0errors, pre-existinginitialLabels effectwarning inMultiCombobox recorded.
+Portalref fix isverified beforebrowser. Also removedextraSKUview gatefromopening
+planeditor: authorizedplanner withoutSKUview canstilldeclareNONE+reason, asbackend
+permits; editoralreadyblocksrequiredmaterialrowswithoutSKUview. NewactualUIflowtest
+and9existingrequesttests/TS/oxlint RUNNINGrequest-none-permission.log.
+Customerfallback now distinguishes missingname from absentcustomerID.
+NEXT awaitchecks then thirdbrowser issue-picker-fixed; no browserrunningcurrently.
+Baseline132web@f2fc7fb4 +newpickerregression, newNONEtestpending. Keep whole35–48/F1–F4.
+
+
 ## Task35 real technician-selection bug fixed — checks running
 
 issue-selection-fixed@f2fc7fb4 bothbrowsercases passedvisiblemenu selector but WO
