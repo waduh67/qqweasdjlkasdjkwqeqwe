@@ -1,0 +1,27 @@
+{
+  "task": 35,
+  "picker": {
+    "sourceCommit": "7c606fb2",
+    "tests": 11,
+    "files": 3,
+    "result": "passed",
+    "typecheck": "exit0",
+    "lint": "0errors;pre-existing initialLabels effectwarning"
+  },
+  "nonePlanning": {
+    "sourceCommit": "76c9bc76",
+    "tests": 10,
+    "files": 1,
+    "result": "passed",
+    "typecheck": "exit0",
+    "focusedLint": "exit0"
+  },
+  "baseline": {
+    "sourceCommit": "f2fc7fb4",
+    "tests": 132,
+    "files": 18
+  },
+  "distinctTestsVerified": 134,
+  "browser": "RUNNING issue-picker-fixed;notyetverified",
+  "reasonForRerun": "Actual browser showed technician selection absent from WO POST; popup ref fixes outside-pointer handling; NONE permission aligned with server"
+}

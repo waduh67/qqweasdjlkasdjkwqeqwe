@@ -1,5 +1,18 @@
 # Task35 — demand and issue implementation
 
+## Task35 source76c9bc76 — third browser running; 134 distinct web cases verified
+
+NONEplanning10requesttests+TS+focusedlintpassed. Pickerfix11cases+TSpassed;
+baseline132cases plusnewpicker andNONE =134distinct cases acrossaffectedruns
+(notone134testbatch). Portablepicker-none-verification.json captures exactsources.
+Actual thirdbrowser warehouse-issue-browser.sh issue-picker-fixed RUNNING,
+session84397, .omo/runtime/issue-picker-fixed.log, source76c9bc76.
+No product/testchangeswhilebrowserruns. Await full desktop/mobile results,
+review screenshots, fix/rerun ifneeded before35complete. Earlierbrowserfailed
+technicianselectorthenrealMultiCombobox selection; bothfixedwithregression.
+Next36investigationnotepadready;wholeplan35–48/F1–F4 active. No migrations.
+
+
 ## Task35 technician fix verified; NONE planning permission alignment
 
 7c606fb2:11tests/3files (newMultiCombobox regression,9request,1WO) +TSexit0 passed.
