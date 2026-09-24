@@ -1,5 +1,21 @@
 # Task36 — transfer / return / repair UI investigation
 
+## Task36 replacement form saved; 20 web and 6 backend checks passed
+
+Backend original assignment metadata @62159f68 passed6 tests/4 suites in4m38s.
+Proof return-asset-context-verification.json saved; cleanup completed, volumes
+retained. Prior11 return discovery tests @d1395e7b remain valid for unchanged areas.
+Replacement UI now creates only a new draft receipt, bound sameSKU/newserial and
+original title, with optional exact cost (unknown is not zero). Existing drafts
+and received replacements are discovered through bounded persisted list and real
+receipt GET; actual named receipt link resumes receiving/inspection. No auto
+physical receipt or disappearance of original device. Cost fields absent without
+cost permission.20 affected web tests/4 files passed6.97s plusTS/oxlint exit0.
+
+NEXT RMA dispatch and read UI, signed-evidence reacquisition and its persisted
+continuation, transfer C8 filters. Task36 still OPEN, all36–48/F1–F4 active.
+No migrations changed. Current QA processes stopped. Commit/push each checkpoint.
+
 ## Task36 original assignment references added; verification next
 
 RMA/ownership investigation found source workOrderId is the REMOVAL work order,
@@ -319,3 +335,42 @@ Reacquisition needs actual signed evidence and independent approval (task37),
 never fake evidence or infer ownership change. RMA dispatch binds originalcustomer
 repair WO/current revision/assigned technician; actual acknowledgement task40.
 C8 transfer list currently lacks SKU/serial/date UI filters; revisit before36done.
+
+## RMA / reacquisition next implementation notes
+
+Existing GET /api/work-orders accepts customerId,type=REPAIR,status,query,page,size.
+Typed listMaterialWorkOrders currently only exposes query/status/page: extend typed
+filter for customerId/type. Named assignees are in MaterialWorkOrder. It has NO
+warehouseRevision. GET /materials has actual revision but requires inventory.request.view
+and may inspect other stock scopes; prefer minimal return-owned RMA work-order
+context read instead of requiring unrelated material authority just for a revision.
+Suggested /returns/{id}/rma-work-orders/{workOrderId}: return.manage and current
+return physical eligibility; read current customer/type/status/revision/active
+assignees through InventoryRmaWorkOrderPort implemented in workorder module.
+Keep existing named WO picker with workorder.order.view and exact original customer
+filter. Exclude current sender from receiver. Do not invent WO revision or users.
+Owner RmaWorkOrderAdapter.lock requires REPAIR +ASSIGNED/IN_PROGRESS + original
+customer + current warehouse_revision + assigned active technician + current area.
+Dispatch binds actual TRANSIT and TECHNICIAN custodian location; sender != receiver.
+RMA get checks source/transit/tech scope and current WO area; assigned tech needs
+field permission, other readers return.manage. Existing return ref handoverId is
+persisted; show actual GET state to avoid reusing old return Q as physical location.
+
+Original ownership context references.assetOrigin uses the OLD assignment/install
+WO, while references.workOrderId is the removal WO. Reacquisition requires a valid
+current signature from ORIGINAL WO. GET /api/work-orders/{workOrderId}/signature
+returns SignatureView or204. Requires workorder.evidence.view OR assigned field;
+metadata revisionId/signerName/signedAt, blob /signature/content. Owner downloads
+current signature and checks persisted digest; do not fabricate evidence IDs.
+ReturnReacquisitionService.request requires return.manage+approval.request+view,
+current1EA CUSTOMER Q, no active assignment and no open repair. It creates separate
+RETURN_TITLE doc with original WO signature, not actual title transfer; approval37.
+Need persisted request discovery/continuation after reload, not only transientID.
+
+Potential UI trap found: WarehouseRepairStore.inspected closes only RETURNED/rev1;
+RmaHandoverStore.origin requires repair.inspected_revision==current return revision.
+After successful post-repair SERVICEABLE+reset inspection, do not offer another
+inspection that would advance return revision beyond closed repair's bound revision.
+Use completed post-repair inspection condition to hide/disable repeat action with
+reason. Backend currently allows generic repeat inspect; investigate guard if needed
+rather than weakening RMA identity/revision checks. No change made for this yet.

@@ -15,6 +15,7 @@ import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { WarehouseReturnActions, type ReturnAction } from './WarehouseReturnActions'
 import { WarehouseReturnEditor } from './WarehouseReturnEditor'
 import { WarehouseReturnFilters } from './WarehouseReturnFilters'
+import { WarehouseSupplierReplacements } from './WarehouseSupplierReplacement'
 import { needsPostRepairInspection } from './returnDraft'
 import { returnItemLabel, returnLocationLabel, returnOriginLabels } from './returnPresentation'
 
@@ -76,7 +77,9 @@ function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () =>
     {!manage && <p className="muted">Akses baca saja. Tindakan memerlukan izin kelola retur.</p>}
     {manage && !locations && <p className="muted">Izin lihat lokasi diperlukan untuk memilih tujuan pemeriksaan atau servis.</p>}
     {manage && waiting && view.origin === 'ASSET_REMOVAL' && view.inspection && !view.repair && !can('inventory.receipt.view') && <p className="muted">Pemilihan penyedia servis memerlukan izin lihat penerimaan/pemasok.</p>}
-  </section><ReturnHistory details={details} /></>
+  </section>
+    {view.repair && can('inventory.receipt.view') && <WarehouseSupplierReplacements details={details} reload={reload} />}
+    <ReturnHistory details={details} /></>
 }
 function ReturnHistory({ details }: { details: ReturnDetails }) {
   const id = details.returnCase.id, [page, setPage] = useState(0), loader = useCallback(() => returnHistory(id, page), [id, page]), result = useWarehouseQuery(loader)

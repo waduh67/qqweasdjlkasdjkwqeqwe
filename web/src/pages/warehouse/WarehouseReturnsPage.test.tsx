@@ -14,6 +14,7 @@ const root = '/api/v1/warehouse/returns'
 const vendor = { id: id.vendor, revision: 0, state: 'ACTIVE', code: 'SERVIS', name: 'Penyedia servis', contactReference: null }
 function show(path = `/warehouse/returns?returnId=${id.returnCase}`) { return render(<MemoryRouter initialEntries={[path]}><WarehouseReturnsPage /></MemoryRouter>) }
 function read(path: string, view = returnFixture()) {
+  if (path.includes('/replacement-receipts?')) return response([])
   if (path.endsWith('/details')) return response(returnDetailsFixture(view))
   if (path.includes('/history/page?')) return response(page([view]))
   if (path.includes('/locations?')) return response(page([returnQuarantine, returnBin, repairTransit]))

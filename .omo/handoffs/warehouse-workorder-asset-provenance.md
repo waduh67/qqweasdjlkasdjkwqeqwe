@@ -1,5 +1,21 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 replacement form saved; 20 web and 6 backend checks passed
+
+Backend original assignment metadata @62159f68 passed6 tests/4 suites in4m38s.
+Proof return-asset-context-verification.json saved; cleanup completed, volumes
+retained. Prior11 return discovery tests @d1395e7b remain valid for unchanged areas.
+Replacement UI now creates only a new draft receipt, bound sameSKU/newserial and
+original title, with optional exact cost (unknown is not zero). Existing drafts
+and received replacements are discovered through bounded persisted list and real
+receipt GET; actual named receipt link resumes receiving/inspection. No auto
+physical receipt or disappearance of original device. Cost fields absent without
+cost permission.20 affected web tests/4 files passed6.97s plusTS/oxlint exit0.
+
+NEXT RMA dispatch and read UI, signed-evidence reacquisition and its persisted
+continuation, transfer C8 filters. Task36 still OPEN, all36–48/F1–F4 active.
+No migrations changed. Current QA processes stopped. Commit/push each checkpoint.
+
 ## Task36 original assignment references added; verification next
 
 RMA/ownership investigation found source workOrderId is the REMOVAL work order,
