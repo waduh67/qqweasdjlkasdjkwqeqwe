@@ -87,3 +87,37 @@ Next after35complete: implementdiscovery/namedmetadata andmeaningfulscopebackend
 regressions (keepmigrationsimmutable148nextunused177/178reserved43), thenactual
 Transfer/Return/RepairUI typedcontracts +unit+realbrowserdesktop/mobile. Commit/push
 handoff frequently, goalwholeplan35–48/F1–F4 remainsactive.
+
+## Read review during final task35 browser (no task36 implementation yet)
+
+Transfer discovery design: preserve raw mutation/GET/history immutable view contract.
+Add paged list and /{id}/details with wrapper {transfer,references}; reference names
+are explicitly current, not invented historical snapshots or new TransferStock fields.
+Query local inventory metadata after access, resolve people through public IamApi.
+Stock source equality includes TransferStock so never add cosmetic labels there.
+
+List must scope all source/transit/destination and discrepancy target before count
+and page, use WarehouseQuerySql visible_locations (area/effective site/active).
+Also match existing Access topology and active receiver; technician destinations
+require active technician and bound custodian. Candidate receiver IDs from scoped
+records -> IamApi.usersByIds -> active/technician map -> SQL filter BEFORE paging.
+Do not join IAM implementation tables or filter unauthorized results after LIMIT.
+Stable recordedAt/id ordering, strict unknown/repeated/blank query rejection.
+Existing get/history only authorize original3, so extend record access to actual
+resolution destination as well; reuse same gate for details/replays. Resolution
+store reads its requested target. Keep cost/secret data out of discovery DTOs.
+Meaningful IT: two drafts different destinations, page count/filter, revoked
+source/destination/transit/target and permission, othertenant, inactive receiver,
+partial60/40 exact ledger, names from current refs and unchanged old response.
+
+Return names/source lookup should likewise use separate read wrapper, not rewrite
+old WarehouseReturnView JSON. Existing return list may be reused with detail wrapper;
+if list names are needed add distinct /workbench list or enhance documented read.
+Returns owner source validation: MATERIAL_RESIDUAL purpose RETURN and persisted
+acknowledged, current whole quantity in targetQ with WAREHOUSE custody. ASSET_REMOVAL
+actual validated removal, different receiving actor, current 1EA TRANSIT recovery
+position matching asset ID and legal owner. Exclude already-intaken source episodes.
+Use actual named document/SKU/serial/location lookup, never free UUID-only command.
+Stock not received twice for acknowledged residual. New source query must not claim
+eligibility if current whole stock/source/title is no longer valid. Mutation remains
+last authority and conflicts force re-read/review. No migration needed for queries.

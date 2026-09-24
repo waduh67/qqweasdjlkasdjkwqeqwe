@@ -1,5 +1,24 @@
 # Whole-plan continuation
 
+## Task35 COMPLETE — final source31b26399; task36 next
+
+Actual issue-release-value browser passed2/2 (desktop1280/mobile375),58.245s;
+0 failed/skipped/flaky, no global errors. Packaged backend+web builds passed.
+All8 final synthetic screenshots reviewed and saved with SHA256 in task35/
+verification.json. Release60m/re-reserve preservedONU allocation; pick physical
+cut+serial scan, unpick/repick same cut, reload, named receiver+partial review,
+print, dispatch and actual60m+1ONU transit0available verified through real UI.
+No simulated technician receipt. Final14 affected web cases/TS/oxlint passed;
+134distinct web cases verified across relevant runs. Backend allocation10,
+issue-list13,demand-mapping7 cases have separate source-specific portable proof.
+Cleanup completed; volumes retained. Task35 checkbox nowcomplete;1–35 complete.
+
+NEXT task36 transfer/return/repair screens; investigation in task-36.md includes
+actual contracts, access-before-page query design and named source lookup.
+No task36 production implementation yet. Whole36–48/F1–F4 goal remains active.
+Applied migrations throughV175_147 unchanged;148unused,177/178reserved43.
+Use per-commit handoff+ledger and push feat/warehouse-workorder; no main merge.
+
 ## Task35 final browser selector correction
 
 issue-final @2dcabb7a failed both projects at the new release assertion: actual
