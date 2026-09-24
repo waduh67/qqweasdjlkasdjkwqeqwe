@@ -1,5 +1,19 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task31 quantity foundation saved —34 web tests green
+
+Task30 complete/published11468066 (53 green,main422cf536). Task31 now has design
+specs, exact bigint quantity conversion/formatting and20 quantity tests.14 existing
+API-client/session and shell-nav tests also pass. Vitest workers disable Node native
+webstorage when supported so jsdom owns localStorage; plain npm test works on Node26.
+Portable evidence task31/quantity-verification.json. No package/dependency changes.
+
+Task31 remains OPEN: runtime DTO validation, retained mutation retry keys, actual
+warehouse routes/navigation/shared controls and real desktop/mobile browser harness
+plus isolated warehouse-e2e backend profile are next. Detailed source paths and
+acceptance notes in task-31.md. No backend QA active.147 immutable;148unused.
+Whole-plan goal ACTIVE;31–48/F1–F4 remain. Keep committing/pushing recovery notes.
+
 ## Task30 COMPLETE —53 reports/receipt regression tests green;task31 started
 
 reports-replay-fixed against422cf536 passed53 tests with zero failures/errors/skips

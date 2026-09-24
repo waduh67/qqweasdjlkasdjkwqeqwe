@@ -1,0 +1,76 @@
+{
+  "recordedAt": "2026-09-24T16:26:57.769791+00:00",
+  "task": 31,
+  "result": "PASS",
+  "scope": "Initial quantity primitives and Node26/jsdom worker storage;not full task31 completion",
+  "counts": {
+    "tests": 34,
+    "failures": 0,
+    "skipped": 0
+  },
+  "environment": "Node26,Vitest4;localStorage provided by jsdom;Node native webstorage disabled in test workers when supported",
+  "sourceSha256": {
+    "web/DESIGN.md": "d91cc84dc0e94ed77d56633b5ddc683b9e4d48b6d5119eaf35ee623313ad9794",
+    "web/vite.config.ts": "1bf159e809e19bb98c56ca4c0eb03cf75fa2768b9c0ec23d804208470aaf0665",
+    "web/src/api/warehouse/quantity.ts": "086bfde898eae2e243be68462bd1a80e6cdba6e909510184d68d38cb357828b7",
+    "web/src/api/warehouse/quantity.test.ts": "99834150f68f62fac2c946115ae186e4acb9c3b9003547bae9711130192db249"
+  },
+  "runs": [
+    {
+      "command": "npm test -- src/api/warehouse/quantity.test.ts --maxWorkers=2 --reporter=json --outputFile=../.omo/runtime/warehouse-quantity-vitest.json",
+      "workingDirectory": "web",
+      "tests": 20,
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        "warehouse quantity boundary converts measured 82.5 metres exactly",
+        "warehouse quantity boundary converts measured 82,5 metres exactly",
+        "warehouse quantity boundary converts measured 82.500 metres exactly",
+        "warehouse quantity boundary converts measured 82,500 metres exactly",
+        "warehouse quantity boundary retains the maximum bigint value through metre input and display",
+        "warehouse quantity boundary rejects malformed or overflowing metres 17.5000",
+        "warehouse quantity boundary rejects malformed or overflowing metres 1.000,5",
+        "warehouse quantity boundary rejects malformed or overflowing metres 1,000.5",
+        "warehouse quantity boundary rejects malformed or overflowing metres -1",
+        "warehouse quantity boundary rejects malformed or overflowing metres +1",
+        "warehouse quantity boundary rejects malformed or overflowing metres 1e3",
+        "warehouse quantity boundary rejects malformed or overflowing metres 01",
+        "warehouse quantity boundary rejects malformed or overflowing metres ",
+        "warehouse quantity boundary rejects malformed or overflowing metres 0",
+        "warehouse quantity boundary rejects malformed or overflowing metres 9223372036854775.808",
+        "warehouse quantity boundary rejects fractional or overflowing items 1.0",
+        "warehouse quantity boundary rejects fractional or overflowing items 0.5",
+        "warehouse quantity boundary rejects fractional or overflowing items 1,5",
+        "warehouse quantity boundary rejects fractional or overflowing items 9223372036854775808",
+        "warehouse quantity boundary keeps explicit zero and signed ledger deltas without rounding"
+      ],
+      "rawResultSha256": "9e5618d2887a2cf8d736e7727a6e11f12ca6bb669f5125c1069daafbacbfe8e4"
+    },
+    {
+      "command": "npm test -- src/api/client.test.ts src/hooks/useAppShellNav.test.tsx --maxWorkers=2 --reporter=json --outputFile=../.omo/runtime/warehouse-storage-vitest.json",
+      "workingDirectory": "web",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        "api.request menyertakan Bearer token pada request",
+        "api.request memasang Content-Type JSON untuk body string, tidak untuk FormData",
+        "api.request mengubah ProblemDetail server jadi ApiError yang membawa status & kode",
+        "api.request mengembalikan undefined untuk 204, bukan gagal mem-parse body kosong",
+        "rotasi 401 merotasi refresh token lalu mengulang request yang gagal",
+        "rotasi 401 membersihkan sesi & memberi tahu aplikasi saat rotasi ikut ditolak",
+        "rotasi 401 tak menembak /auth/refresh sama sekali bila tak ada refresh token",
+        "rotasi 401 men-dedupe rotasi yang berbarengan jadi satu panggilan",
+        "rotasi 401 membebaskan kunci rotasi setelah selesai agar rotasi berikutnya tetap bisa jalan",
+        "useAppShellNav di layar lebar menciutkan sidebar, bukan membuka laci",
+        "useAppShellNav di layar lebar mengingat pilihan ciut antar sesi lewat localStorage",
+        "useAppShellNav di lebar ponsel membuka laci nav tanpa mengubah keadaan ciut",
+        "useAppShellNav di lebar ponsel menutup laci lewat closeNav (latar gelap disentuh)",
+        "useAppShellNav di lebar ponsel menutup laci saat pindah halaman"
+      ],
+      "rawResultSha256": "c6d938efbe08ddb66397892ee0cd803a5d6f537951bba5add28946fb5932d774"
+    }
+  ]
+}

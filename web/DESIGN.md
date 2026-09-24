@@ -60,3 +60,34 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 - Target WCAG 2.2 AA, visible focus, complete keyboard reachability, semantic labels, non-color status communication, and responsive reflow at 375px.
 - Production apply remains disabled whenever preview validation, capability certification, or management protection is incomplete.
 - Accepted debt: none.
+
+## 9. Warehouse transaction controls
+
+- Keep the existing flat tables, command bars, Fluent fields, `Modal`, `ConfirmDialog`,
+  `Badge`, `EmptyState`, and page stacks. Put warehouse operations in a separate
+  `Gudang & Logistik` navigation group; field custody belongs under `Material Saya`.
+- Quantity fields show the unit in their label. Cable is entered in metres with at
+  most three decimal places; decimal comma or point is accepted without thousands
+  separators. Whole items reject fractions. Convert with integer arithmetic and
+  send base-unit strings; never pass a material quantity through floating point.
+  Readouts use Indonesian decimal commas and always keep the visible unit.
+- Serial lookup accepts keyboard/scanner Enter and an explicit search button.
+  Lookup only selects a candidate; it never submits a movement. Manual entry remains
+  available. Show the SKU name, serial, location name, condition and owner together.
+- Repeated line tables show names first, exact quantity/unit and a labelled state.
+  Stable IDs are available as secondary audit references, never the only row label.
+  On narrow screens retain the same controls and reading order with wrapping rows.
+- A mutation confirmation describes the document, revision, quantity and destination.
+  A pending request disables duplicate submission and dismissal. A failed request
+  retains the original payload and idempotency key for retry; editing creates a new
+  explicit command only after its previous outcome is resolved. No browser-generated
+  approval hash or guessed stock identity is sent as authority.
+- Shared states are loading, actionable empty setup, denied, scoped empty, pending,
+  field validation, stale/conflict, retry and confirmed success. Unknown response
+  shapes display an error, not an empty successful table. History shows local dates
+  while preserving the server's UTC timestamp and exact document revision.
+- Route permissions are independent: an approval-only user can reach approvals
+  without stock-browsing permission. Cost controls require their separate permission.
+  Unknown warehouse routes show an explicit unavailable page. Browser acceptance
+  uses the isolated real API on desktop and a 375px mobile viewport, with no warehouse
+  response mocks.
