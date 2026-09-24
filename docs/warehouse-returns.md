@@ -21,8 +21,15 @@ dengan revision tebakan.
 | `POST /api/v1/warehouse/returns/{id}/inspect` | Mencatat ukuran, kondisi, bukti dan tujuan inspeksi |
 | `POST /api/v1/warehouse/returns/{id}/repair-dispatch` | Menyerahkan perangkat hasil inspeksi ke custody vendor |
 | `POST /api/v1/warehouse/returns/{id}/repair-receive` | Menerima perangkat yang sama kembali ke karantina |
+| `GET /api/v1/warehouse/returns` | Daftar retur dan total dokumen dalam scope pengguna |
 | `GET /api/v1/warehouse/returns/{id}` | Membaca kondisi dokumen terkini |
-| `GET /api/v1/warehouse/returns/{id}/history` | Membaca sampai100 revision awal dokumen |
+| `GET /api/v1/warehouse/returns/{id}/history` | Membaca revision dokumen secara berurutan dan berpaginasi |
+
+Daftar menerima `page` (mulai0), `size` (1–100, default25), serta filter `origin`,
+`state`, `locationId`, `skuId`, `stockIdentityId`, dan `owner`. Urutan daftar adalah
+waktu intake terbaru, lalu ID sebagai pembeda. Total dan halaman dihitung setelah
+scope lokasi/area diterapkan. Riwayat menerima `page` dan `size` dengan default
+100 serta urutan revision naik; parameter di luar batas ditolak.
 
 Intake berisi `origin`, `sourceDocumentId`, `quarantineLocationId`, dan
 `evidenceReference`. Receiver perangkat harus berbeda dari pelaku pembongkaran.
@@ -79,7 +86,7 @@ case servis. Dokumen dan riwayat memuat detail case pada field `repair`.
 
 Dokumen ini mencatat intake/inspeksi, reuse dan servis vendor atas perangkat yang
 sama. Penggantian fisik oleh vendor, pengembalian RMA kepada pelanggan
-asal, reacquisition dengan approval independen, daftar berpaginasi, dan
-penutupan kewajiban material masih dikerjakan pada task26. Riwayat saat ini
-dibatasi100 revision awal; jangan menganggapnya sebagai ekspor audit lengkap.
+asal, reacquisition dengan approval independen, dan
+penutupan kewajiban material masih dikerjakan pada task26. Daftar serta paginasi
+riwayat sedang melalui verifikasi integrasi.
 Panduan UI dan bukti packaged HTTP menyusul sebelum task dinyatakan selesai.

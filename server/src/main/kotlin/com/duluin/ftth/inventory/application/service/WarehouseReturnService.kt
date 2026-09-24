@@ -1,5 +1,6 @@
 package com.duluin.ftth.inventory.application.service
 
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
@@ -19,7 +20,8 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
     private val scopes: InventoryWarehouseScopeApi, private val locations: WarehouseReceiptService,
     private val masters: WarehouseMasterStore, private val origins: WarehouseReturnOrigins,
     private val store: WarehouseReturnStore, private val repairs: WarehouseRepairStore, private val operations: WarehouseOperationStore,
-    private val posting: WarehousePosting) : InventoryReturnApi {
+    private val posting: WarehousePosting, private val query: WarehouseReturnQuery,
+    private val sites: com.duluin.ftth.network.SiteReferenceApi) : InventoryReturnApi {
     private val mapper = jacksonObjectMapper()
 
     override fun receive(request: WarehouseReturnIntake, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
@@ -131,9 +133,25 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
         return record.view
     }
 
-    override fun history(id: UUID): List<WarehouseReturnView> {
+    override fun list(filter: WarehouseReturnFilter): WarehousePage<WarehouseReturnView> {
+        validatePage(WarehousePageRequest(filter.page, filter.size))
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val current = authority.lockCurrent()
+        receiptPermission(current, "inventory.return.view")
+        masters.lockTopology()
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        val access = WarehouseQueryAccess(scopes.currentUnderFence(current.fence), areas, sites.visibleAreas(areas), false, false)
+        return query.list(filter, access)
+    }
+
+    override fun history(id: UUID, page: WarehousePageRequest): List<WarehouseReturnView> {
+        validatePage(page)
         get(id)
-        return store.history(id)
+        return store.history(id, page)
+    }
+
+    private fun validatePage(request: WarehousePageRequest) {
+        if (request.page < 0 || request.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
     }
 
     private fun authorize(record: WarehouseReturnRecord, current: CurrentAuthority) {

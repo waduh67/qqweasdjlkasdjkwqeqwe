@@ -86,9 +86,10 @@ class WarehouseReturnStore(private val jdbc: WarehouseCommandJdbc) {
         row
     }
 
-    fun history(id: UUID): List<WarehouseReturnView> = jdbc.execute { sql ->
+    fun history(id: UUID, page: WarehousePageRequest): List<WarehouseReturnView> = jdbc.execute { sql ->
         sql.query("""SELECT original_body FROM inventory_operation WHERE tenant_id=? AND document_id=?
-            AND namespace LIKE 'warehouse.return.%' ORDER BY document_revision LIMIT 100""", sql.tenant, id) {
+            AND namespace LIKE 'warehouse.return.%' ORDER BY document_revision LIMIT ? OFFSET ?""",
+            sql.tenant, id, page.size, page.page.toLong() * page.size) {
             mapper.readValue(it.getString("original_body"), WarehouseReturnView::class.java)
         }
     }

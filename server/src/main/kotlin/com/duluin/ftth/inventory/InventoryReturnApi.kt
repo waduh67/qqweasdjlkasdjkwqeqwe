@@ -8,10 +8,15 @@ interface InventoryReturnApi {
     fun receive(request: WarehouseReturnIntake, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun inspect(id: UUID, request: WarehouseReturnInspection, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun get(id: UUID): WarehouseReturnView
-    fun history(id: UUID): List<WarehouseReturnView>
+    fun list(filter: WarehouseReturnFilter): WarehousePage<WarehouseReturnView>
+    fun history(id: UUID, page: WarehousePageRequest = WarehousePageRequest(0, 100)): List<WarehouseReturnView>
 }
 
 enum class WarehouseReturnOrigin { MATERIAL_RESIDUAL, ASSET_REMOVAL }
+
+data class WarehouseReturnFilter(val page: Int = 0, val size: Int = 25, val origin: WarehouseReturnOrigin? = null,
+    val state: WarehouseReturnState? = null, val locationId: UUID? = null, val skuId: UUID? = null,
+    val stockIdentityId: UUID? = null, val owner: AssetLegalOwner? = null)
 
 data class WarehouseReturnIntake(val origin: WarehouseReturnOrigin, val sourceDocumentId: UUID,
     val quarantineLocationId: UUID, val evidenceReference: String)

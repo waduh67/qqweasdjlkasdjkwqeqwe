@@ -1,5 +1,31 @@
 # Task26 — returns, inspection and repair (in progress)
 
+## Scoped return list/history implementation — validation pending
+
+Supplier repair access/integrity, ModularityTests, WarehouseContractTest and
+MaterialWarehouseContractTest passed24 tests in5 suites with zero failures,
+errors/skips,1m32s. Archive task26/repair-guards/xml; lifecycle exited0, volumes
+retained. This completes those guard checks, not all of task26.
+
+New read tests initially failed compilation because Jackson JsonNode.map shadows
+Kotlin iterable map; using asSequence fixed the fixture. No feature-red claim for
+that compile run (its copied XML may be stale). Correct baseline then failed2/2:
+list GET405 after two real residual intakes in one tenant; history ignored size2
+and returned6 revisions after a real supplier round trip. Archive
+`task26/return-reads-red-second/xml`, zero errors/skips.
+
+Current implementation adds SQL-scoped list totals/pagination/filtering using the
+existing effective-area/site/location ancestry gates, plus bounded history pages.
+No SQL migration added or changed; ceiling175.121 immutable. Normal Kotlin/test
+compilation passed. `.omo/runtime/return-reads-green.sh` currently tests these
+reads plus prior return and repair access checks; matching log and archive
+`task26/return-reads-green/xml`. Final results pending; do not claim success yet.
+
+Next: inspected material return obligation closure, actual vendor replacement,
+original-customer sold RMA and approved reacquisition; remaining regressions and
+packaged proof.26 remains open; continue whole plan after completion.
+
+
 ## Supplier repair verified — current checkpoint
 
 Corrected first-application121 passed12 tests in6 suites, zero failures/errors/
