@@ -1,5 +1,19 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task35 source4e6d4b3d — full web verification passed; browser running
+
+127tests/17files passed (warehouseAPI/pages/components,DataTable,existingWOtest),
+TypeScript awaitedexit0. Oxlint exit0/noerrors,1warning WOarea fetchloadingstate set
+insideeffect; recordedinportableworkbench-web-verification.json. Initial focused
+three failureswerejsdomdialogpolyfill, fixed; no producterrors hidden.
+Actual warehouse-issue-browser.sh issue-initial RUNNING (.omo/runtime/issue-initial.log),
+source4e6d4b3d. Keep product/tests stable untilfinish; wrapperarchives35/issue-initial.
+Await actualdesktop/mobile results, visuallyreviewsyntheticPNGs, correctissues and
+rerunbefore35complete. Ownedcleanuptrap retainsvolumes. Continuewholeplan35–48/F1–F4.
+Reviewconcernfornextedit: autoreserve dialog currently lists fullplan quantities;
+label remainingbackorderperline to make exact reviewed remainingneed clear.
+
+
 ## Task35 real browser scenario prepared — full web checks running
 
 Request workbench source2bd54f5d initially had3of8 UItests fail because jsdom lacks

@@ -1,0 +1,19 @@
+{
+  "task": 35,
+  "sourceCommit": "4e6d4b3d",
+  "web": {
+    "tests": 127,
+    "files": 17,
+    "result": "passed",
+    "command": "NODE_OPTIONS=--no-experimental-webstorage npx --no-install vitest run src/api/warehouse src/pages/warehouse src/components/organisms/warehouse src/components/organisms/DataTable.test.tsx src/pages/WorkOrdersPage.test.tsx"
+  },
+  "typecheck": "tsc --noEmit -p tsconfig.app.json exit0",
+  "lint": {
+    "command": "oxlint warehouse API/pages/components and WorkOrdersPage",
+    "exit": 0,
+    "warnings": [
+      "WorkOrdersPage loading state is set inside fetch effect (react/set-state-in-effect); no lint errors"
+    ]
+  },
+  "browser": "RUNNING issue-initial; notyetverified"
+}
