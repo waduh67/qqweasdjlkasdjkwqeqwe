@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { signup } from './helpers'
+import { login, signup } from './helpers'
 import { addLocation, addSku, addSupplier, setupOwnArea } from './catalog'
 import { confirmOperation, selectNamed } from './fulfillment'
+import { setupDiscrepancyApprover } from './approvals'
 
-// Task36: actual warehouse transfer. Technician returns and sold-device RMA are added in task45.
-test('warehouse transfers one hundred metres and receives sixty while forty remain in transit', async ({ page }, testInfo) => {
-  test.setTimeout(240_000)
+// Tasks36/37: actual partial transfer and independent discrepancy. Technician returns/RMA follow in task45.
+test('warehouse receives sixty metres and independently resolves forty metres after partial transfer', async ({ page }, testInfo) => {
+  test.setTimeout(360_000)
   const admin = await signup(page), area = await setupOwnArea(page, admin)
   const warehouse = await addLocation(page, { code: 'SOURCE', name: 'Gudang asal', area: area.optionLabel })
   const bin = await addLocation(page, { code: 'BIN-A', name: 'Rak asal', area: area.optionLabel, kind: 'BIN', parent: warehouse.label })
@@ -24,6 +25,9 @@ test('warehouse transfers one hundred metres and receives sixty while forty rema
   await selectNamed(page, 'Barang 1', `${cable.name} · ${cable.code}`)
   await page.getByRole('textbox', { name: 'Panjang reel aktual (m)', exact: true }).fill('100')
   await page.getByRole('textbox', { name: 'Kode lot / reel', exact: true }).fill('REEL-TRANSFER')
+  await page.getByText('Konversi kemasan dan biaya', { exact: true }).click()
+  await page.getByRole('checkbox', { name: 'Catat biaya kelompok barang', exact: true }).check()
+  await page.getByRole('textbox', { name: 'Total biaya (satuan minor)', exact: true }).fill('1000000')
   await page.getByRole('button', { name: 'Tinjau draft', exact: true }).click()
   const receipt = await confirmOperation(page, '/api/v1/warehouse/receipts', 'Simpan draft')
   await page.getByRole('button', { name: 'Terima barang', exact: true }).click()
@@ -98,5 +102,67 @@ test('warehouse transfers one hundred metres and receives sixty while forty rema
     await page.evaluate(() => window.scrollTo(0, 0))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
     await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true })
+  }
+
+  const lost = await addLocation(page, { code: 'LOST', name: 'Kehilangan terverifikasi', area: area.optionLabel, kind: 'LOST' })
+  const checker = await setupDiscrepancyApprover(page, area.checkboxLabel, [bin, destination, transit, lost], [transit, lost])
+  await page.screenshot({ path: testInfo.outputPath('discrepancy-policy.png'), fullPage: true })
+  await page.goto(`/warehouse/transfers?transferId=${draft.id}`)
+  await page.getByRole('button', { name: 'Laporkan selisih', exact: true }).click()
+  await selectNamed(page, 'Tujuan penanganan selisih', lost.label)
+  await page.getByRole('textbox', { name: 'Alasan selisih', exact: true }).fill('Sisa 40 meter tidak ditemukan setelah penelusuran pengiriman')
+  await page.getByRole('textbox', { name: 'Referensi bukti transfer', exact: true }).fill('BA-SELISIH-40')
+  await page.getByRole('button', { name: 'Tinjau selisih', exact: true }).click()
+  const report = await confirmOperation(page, `${root}/${draft.id}/discrepancy`, 'Catat selisih')
+  expect(report).toMatchObject({ state: 'DISCREPANCY', revision: 3, lines: [{ receivedBase: '60000', inTransitBase: '40000', resolvedBase: '0' }] })
+  await page.getByRole('link', { name: 'Buka persetujuan gudang', exact: true }).click()
+  await expect(page.getByText('Berita acara transfer: BA-SELISIH-40', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Periksa persyaratan persetujuan', exact: true }).click()
+  await page.getByRole('button', { name: 'Ajukan persetujuan', exact: true }).click()
+  const approval = await confirmOperation(page, '/api/v1/warehouse/approvals/request', 'Kirim permintaan persetujuan')
+  expect(approval).toMatchObject({ sourceDocumentId: report.resolutionDocumentId, sourceRevision: 0, revision: 0, status: 'PENDING' })
+  await expect(page.getByRole('region', { name: 'Status persetujuan', exact: true })).toContainText('Menunggu persetujuan')
+  await expect(page.getByRole('button', { name: 'Setujui permintaan', exact: true })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('discrepancy-own-denied.png'), fullPage: true })
+
+  await page.getByRole('button', { name: 'Keluar', exact: true }).click()
+  await login(page, checker)
+  const readReview = page.waitForResponse(res => new URL(res.url()).pathname === `/api/v1/warehouse/approvals/${approval.requestId}/details`)
+  await page.goto(`/warehouse/approvals?approvalId=${approval.requestId}`)
+  const review = await (await readReview).json()
+  expect(review).not.toHaveProperty('cost')
+  expect(review).toMatchObject({ actions: { canDecide: true }, document: { kind: 'ADJUSTMENT', lines: [{ quantityBase: '40000' }], evidenceReferences: [{ kind: 'TRANSFER', reference: 'BA-SELISIH-40' }] } })
+  await expect(page.getByRole('link', { name: 'Buka transfer sumber', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Setujui permintaan', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Alasan keputusan / referensi pemeriksaan', exact: true }).fill('Bukti BA-SELISIH-40 dan penerimaan 60 meter sudah diperiksa secara independen')
+  await page.getByRole('button', { name: 'Tinjau keputusan', exact: true }).click()
+  await page.screenshot({ path: testInfo.outputPath('discrepancy-independent-review.png'), fullPage: true })
+  const decisionRequest = page.waitForRequest(req => new URL(req.url()).pathname === '/api/v1/warehouse/approvals/decide' && req.method() === 'POST')
+  const accepted = await confirmOperation(page, '/api/v1/warehouse/approvals/decide', 'Simpan keputusan')
+  expect((await decisionRequest).postDataJSON()).toEqual({ requestId: approval.requestId, expectedRevision: 0, decision: 'APPROVE', reason: 'Bukti BA-SELISIH-40 dan penerimaan 60 meter sudah diperiksa secara independen' })
+  expect(accepted).toMatchObject({ status: 'APPROVED' })
+  await expect(page.getByRole('region', { name: 'Hasil persetujuan dibukukan', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Hasil persetujuan dibukukan', exact: true })).toContainText(accepted.effectOperationId)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  await page.screenshot({ path: testInfo.outputPath('discrepancy-approved.png'), fullPage: true })
+
+  await page.getByRole('button', { name: 'Keluar', exact: true }).click()
+  await login(page, admin)
+  const currentRead = page.waitForResponse(res => new URL(res.url()).pathname === `${root}/${draft.id}/details`)
+  await page.goto(`/warehouse/transfers?transferId=${draft.id}`)
+  expect(await (await currentRead).json()).toMatchObject({ transfer: { revision: 4, state: 'DISCREPANCY', lines: [{ receivedBase: '60000', inTransitBase: '0', resolvedBase: '40000' }] } })
+  const resolved = page.getByRole('row').filter({ hasText: 'Identitas asal:' })
+  await expect(resolved.getByRole('gridcell').nth(2).locator('.warehouse-cell-value')).toHaveText('60,000 m')
+  await expect(resolved.getByRole('gridcell').nth(4).locator('.warehouse-cell-value')).toHaveText('40,000 m')
+  await expect(page.getByRole('button', { name: 'Perbaiki laporan selisih', exact: true })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('discrepancy-resolved-transfer.png'), fullPage: true })
+  for (const [status, quantity, available] of [['AVAILABLE', '60000', '60000'], ['LOST', '40000', '0']]) {
+    const read = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/stock/positions' && new URL(res.url()).searchParams.get('status') === status)
+    await page.goto(`/warehouse/stock?tab=positions&status=${status}`)
+    const stock = await (await read).json()
+    expect(stock.items).toHaveLength(1)
+    expect(stock.items[0]).toMatchObject({ skuId: cable.id, status, physical: { quantityBase: quantity }, available: { quantityBase: available } })
+    await expect(page.getByRole('row').filter({ hasText: 'Kabel transfer' })).toContainText(status === 'AVAILABLE' ? '60,000 m' : '40,000 m')
+    await page.screenshot({ path: testInfo.outputPath(`discrepancy-final-${status.toLowerCase()}.png`), fullPage: true })
   }
 })
