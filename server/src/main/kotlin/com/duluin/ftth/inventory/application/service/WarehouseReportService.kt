@@ -21,14 +21,24 @@ class WarehouseReportService(private val authority: CurrentAuthorityApi, private
     @Transactional(timeout = 20)
     fun report(path: String, parameters: Map<String, List<String>>, csv: Boolean = false): String {
         val kind = WarehouseReportKind.parse(path)
-        var filter = WarehouseQueryFilter.parse(parameters, kind.history)
+        val workOrder = if (kind == WarehouseReportKind.WORK_ORDER_COSTS) parameters["workOrderId"]?.let { values ->
+            val value = values.singleOrNull() ?: masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            val id = runCatching { UUID.fromString(value) }.getOrNull() ?: masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            if (!id.toString().equals(value, true)) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            id
+        } else null
+        var filter = WarehouseQueryFilter.parse(if (kind == WarehouseReportKind.WORK_ORDER_COSTS) parameters - "workOrderId" else parameters, kind.history)
         if (csv) {
             if ("page" in parameters || "size" in parameters) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
             filter = filter.copy(page = 0, size = WarehouseReportCsv.MAX_ROWS)
         }
         val access = access()
         if (kind == WarehouseReportKind.WORK_ORDER_COSTS && !access.cost) masterFailure(WarehouseErrorCode.FORBIDDEN)
-        val body = if (kind == WarehouseReportKind.STOCK) queries.stock(filter, access) else reports.report(kind, filter, access)
+        val body = when (kind) {
+            WarehouseReportKind.STOCK -> queries.stock(filter, access)
+            WarehouseReportKind.UNKNOWN_STOCK -> queries.unknown(filter, access)
+            else -> reports.report(kind, filter, access, workOrder)
+        }
         return if (csv) WarehouseReportCsv.render(mapper.readTree(body)) else body
     }
 

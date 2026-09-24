@@ -116,7 +116,7 @@ class WarehouseReportJourneyIT : MaterialLifecycleFixture() {
         assertThat(assignments.size()).isEqualTo(1)
         assertThat(assignments.single().path("assignmentState").asString()).isEqualTo("ACTIVE")
         assertThat(assignments.single().path("legalOwner").asString()).isEqualTo(if (mode == "LOAN") "ISP" else "CUSTOMER")
-        val costs = report(token, "work-order-costs")
+        val costs = report(token, "work-order-costs?workOrderId=$workOrder")
         assertThat(costs.path("totalElements").asInt()).isEqualTo(2)
         val totals = costs.path("currencyTotals").asSequence().associate { it.path("currency").asString() to it.path("totalMinor").asString() }
         assertThat(totals).containsExactlyInAnyOrderEntriesOf(mapOf("IDR" to "82500", "USD" to "200000"))
@@ -129,7 +129,8 @@ class WarehouseReportJourneyIT : MaterialLifecycleFixture() {
         assertThat(result(200, request("POST", "/api/work-orders/$workOrder/materials/acknowledge", technician.first, ackBody, "report-ack"))).isEqualTo(ack)
         assertThat(result(200, request("POST", inspectPath, token, inspectBody, "report-inspect"))).isEqualTo(inspected)
         assertThat(result(201, request("POST", installPath, technician.first, installBody, "report-install"))).isEqualTo(installed)
-        assertThat(report(token, "work-order-costs")).isEqualTo(costs)
+        assertThat(report(token, "work-order-costs?workOrderId=$workOrder")).isEqualTo(costs)
+        assertThat(report(token, "work-order-costs?workOrderId=${UUID.randomUUID()}").path("totalElements").asInt()).isZero()
         assertThat(fixture(token).transaction { counts() }).isEqualTo(before)
     }
 }

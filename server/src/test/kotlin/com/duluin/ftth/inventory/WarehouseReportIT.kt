@@ -98,7 +98,7 @@ class WarehouseReportIT : MaterialLifecycleFixture() {
         assertThat(report(foreign, "movements?size=1").path("totalElements").asInt()).isZero()
         assertThat(request("GET", "/api/v1/warehouse/reports/serial-chain/$asset", foreign).status).isEqualTo(404)
         assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/$viewerId/${setup.inspection}", setup.token,
-            """{"expectedRevision":0,"active":false}""").status).isEqualTo(200)
+            """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
         assertThat(report(viewer, "movements?size=1").path("totalElements").asInt()).isZero()
         assertThat(request("GET", "/api/v1/warehouse/reports/serial-chain/$asset", viewer).status).isEqualTo(404)
         assertThat(request("GET", "/api/v1/warehouse/reports/documents/${receipt.path("id").asString()}/revisions/1/print", viewer).status).isEqualTo(404)

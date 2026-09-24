@@ -16,10 +16,9 @@ internal fun warehouseReportCosts(query: WarehouseQuerySql): String {
     val metadata = """'scope','VISIBLE_LOCATIONS','costBasis','OPERATIONAL_USE','currencyTotals',coalesce((SELECT jsonb_agg(
         jsonb_build_object('currency',currency,'totalMinor',total::text) ORDER BY currency)
         FROM (SELECT currency,sum(rounded_minor) total FROM matches WHERE currency IS NOT NULL GROUP BY currency) totals),'[]'::jsonb),
-        'unknownQuantities',coalesce((SELECT jsonb_agg(jsonb_build_object('workOrderId',work_order_id,'skuId',sku_id,
-            'baseUnit',base_unit,'quantityBase',quantity::text) ORDER BY work_order_id,sku_id,base_unit)
-            FROM (SELECT work_order_id,sku_id,base_unit,sum(delta) quantity FROM matches WHERE cost_total_minor IS NULL
-                GROUP BY work_order_id,sku_id,base_unit) unknowns),'[]'::jsonb),"""
+        'unknownQuantities',coalesce((SELECT jsonb_agg(jsonb_build_object('baseUnit',base_unit,'quantityBase',quantity::text) ORDER BY base_unit)
+            FROM (SELECT base_unit,sum(delta) quantity FROM matches WHERE cost_total_minor IS NULL
+                GROUP BY base_unit) unknowns),'[]'::jsonb),"""
     return """, cost_events AS (
         SELECT ledger.id,ledger.created_at,ledger.sku_id,ledger.location_id,ledger.status,ledger.condition,ledger.legal_owner,
             ledger.work_order_id,ledger.work_order_code_snapshot,ledger.movement_id,ledger.compensates_movement_id,
@@ -33,6 +32,6 @@ internal fun warehouseReportCosts(query: WarehouseQuerySql): String {
             AND (ledger.origin_destination_id IS NULL OR ledger.origin_destination_id IN (SELECT id FROM visible_locations)) source_visible) visibility,request
         WHERE (ledger.movement_kind IN ('CONSUME','DEPLOY') OR EXISTS (SELECT FROM inventory_movement original
             WHERE original.tenant_id=request.tenant AND original.id=ledger.compensates_movement_id AND original.kind IN ('CONSUME','DEPLOY')))
-        AND ledger.status IN ('CONSUMED','CUSTOMER_INSTALLED') AND (request.areas IS NULL OR work.area_id=ANY(request.areas)))""" +
+        AND (?::uuid IS NULL OR work.id=?::uuid) AND ledger.status IN ('CONSUMED','CUSTOMER_INSTALLED') AND (request.areas IS NULL OR work.area_id=ANY(request.areas)))""" +
         query.page(rows, json, if (query.filter.sort == "id") "id" else "created_at", metadata = metadata)
 }

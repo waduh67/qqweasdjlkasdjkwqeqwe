@@ -15,7 +15,7 @@ class WarehouseReportDocuments(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN inventory_command_identity identity ON identity.tenant_id=operation.tenant_id AND identity.id=operation.id
             LEFT JOIN inventory_issue_snapshot issue ON issue.tenant_id=document.tenant_id AND issue.id=document.id,request
             WHERE document.tenant_id=request.tenant AND document.id=? AND document.kind IN ('RECEIPT','ISSUE','RETURN')
-            AND document.state<>'DRAFT' AND jsonb_exists(operation.original_body::jsonb,'state')
+            AND document.state<>'DRAFT' AND operation.original_body::jsonb->>'state'<>'DRAFT' AND jsonb_exists(operation.original_body::jsonb,'state')
             AND EXISTS (SELECT FROM inventory_document_line line WHERE line.tenant_id=request.tenant AND line.document_id=document.id)
             AND NOT EXISTS (SELECT FROM inventory_document_line line WHERE line.tenant_id=request.tenant AND line.document_id=document.id
                 AND ((line.location_id IS NOT NULL AND line.location_id NOT IN (SELECT id FROM visible_locations))

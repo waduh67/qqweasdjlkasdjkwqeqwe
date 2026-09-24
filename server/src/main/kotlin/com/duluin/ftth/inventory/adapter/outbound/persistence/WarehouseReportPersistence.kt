@@ -7,9 +7,9 @@ import java.util.UUID
 
 @Repository
 class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
-    fun report(kind: WarehouseReportKind, filter: WarehouseQueryFilter, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
+    fun report(kind: WarehouseReportKind, filter: WarehouseQueryFilter, access: WarehouseQueryAccess, workOrder: UUID? = null): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, filter, access)
-        query.result(when (kind) {
+        val statement = when (kind) {
             WarehouseReportKind.STOCK_CARD -> ledger + card(query)
             WarehouseReportKind.MOVEMENTS -> ledger + movements(query)
             WarehouseReportKind.CUSTODY_AGING -> ledger + custody(query, false)
@@ -17,8 +17,9 @@ class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
             WarehouseReportKind.LOAN_ASSETS -> assignments(query, "LOAN")
             WarehouseReportKind.SOLD_ASSETS -> assignments(query, "SALE")
             WarehouseReportKind.WORK_ORDER_COSTS -> ledger + warehouseReportCosts(query)
-            WarehouseReportKind.STOCK -> error("Stock uses the shared physical stock projection")
-        })
+            WarehouseReportKind.STOCK, WarehouseReportKind.UNKNOWN_STOCK -> error("Stock uses the shared physical stock projection")
+        }
+        if (kind == WarehouseReportKind.WORK_ORDER_COSTS) query.result(statement, workOrder, workOrder) else query.result(statement)
     }
 
     fun serialChain(id: UUID, filter: WarehouseQueryFilter, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
@@ -55,7 +56,7 @@ class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN custody_entries entry ON entry.stock_identity_id=position.stock_identity_id AND entry.location_id=position.location_id
             AND entry.custody_owner_id=position.custody_owner_id AND entry.custody_owner_kind=position.custody_owner_kind
             AND entry.status=position.status AND entry.condition=position.condition AND entry.legal_owner=position.legal_owner,request
-            WHERE position.warehouse_admission='VERIFIED' AND position.quantity_base>0
+            WHERE position.warehouse_admission='VERIFIED' AND position.quantity_base>0 AND position.status NOT IN ('CONSUMED','LOST','DISPOSED')
             AND (${if (transit) "position.status='IN_TRANSIT' OR position.custody_owner_kind='TRANSIT'" else "position.custody_owner_kind IN ('TECHNICIAN','VEHICLE','CUSTOMER')"})
             AND (request.since IS NULL OR entry.entered_at>=request.since) AND (request.until IS NULL OR entry.entered_at<request.until)""",
         """jsonb_build_object('id',id,'skuId',sku_id,'skuCode',sku_code,'name',name,'stockIdentityId',stock_identity_id,

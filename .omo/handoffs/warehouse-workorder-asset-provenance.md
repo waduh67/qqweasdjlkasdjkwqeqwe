@@ -1,5 +1,27 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Report custody correction and full11-case validation running
+
+reports-compile-fixed executed7 tests with2 failures,0 errors/skips,2m8s. Unknown
+cost, filter guards and3 modularity tests passed. Privacy reached revoked scope but
+the test used0 instead of1 as the grant revision; corrected fixture. Physical917500
+available/82500 consumed passed, then custody-aging counted the consumed sink under
+the former technician. Custody/transit reports now exclude CONSUMED/LOST/DISPOSED.
+No ledger or stock quantities were changed to fix the report.
+
+Added strict optional workOrderId filter only for work-order-costs; invalid UUID,
+duplicate value and unsupported-filter paths reject. Unknown quantity summary is
+bounded by base unit (line pages still carry SKU/WO). Added unknown-stock report
+using existing explicit legacy-unverified projection; no inferred units. Historical
+print rejects DRAFT versions whose mutable lines are not guaranteed frozen.
+
+Current .omo/runtime/reports-full.sh / .log selects *WarehouseReport*IT plus
+*WarehouseReportCsvTest and ModularityTests, expected11. New complete numeric2,
+real1002-ledger export1 andCSV1 cases compile; execution result not yet known.
+Archive task30/reports-full/xml; private reports-full-database.log. All migration
+versions through147 immutable,148 still unused. Task28 COMPLETE with183 green;
+task30 OPEN until full acceptance/evidence, later30–48/F1–F4 work remains.
+
 ## Report CSV compilation fixed; initial integration running
 
 reports-initial failed compileKotlin before any tests (14s): Jackson JsonNode.map
