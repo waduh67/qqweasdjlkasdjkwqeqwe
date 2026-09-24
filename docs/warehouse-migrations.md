@@ -29,6 +29,12 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## Task26: retur dan inspeksi
 
+`V175_137__warehouse_replacement_cost_and_position.sql` dicadangkan sebelum
+pembuatan.136 telah diterapkan dan immutable. Tes20 kasus menemukan7 kegagalan
+pada precedence operator JSON biaya yang terisi.137 memperbaiki ekspresi itu
+serta mengikat posisi terkini aset pengganti ke ledger APPLIED, termasuk
+validasi deferred terhadap perubahan saldo/identitas aset.
+
 `V175_136__warehouse_replacement_receipt_policy_context.sql` dicadangkan sebelum
 pembuatan.135 telah diterapkan dengan12 tes lulus.136 mengikat nilai vendor yang
 opsional pada snapshot receipt dan mengizinkan penolakan approval tanpa mengubah

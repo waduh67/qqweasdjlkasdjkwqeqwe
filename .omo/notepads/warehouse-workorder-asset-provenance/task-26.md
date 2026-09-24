@@ -1,5 +1,32 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##137 verified supplier replacement policy and current position
+
+Published checkpoint a0d5f17b contains136. It applied at21:05:46.921 JKT;
+20 tests/5 suites/7 failures/0 errors/skips,4m35s. All7 failures were filled-cost
+requests rejected before admission: JSON operator precedence interpreted `cost`
+as JSON. Null-cost requests and existing receipt/approval/modularity passed.
+136 is IMMUTABLE, SHA2569c1eb477eca82db04b769074e0f60d400637ea724953593515478594b0b5cb50.
+
+Forward137 fixes only that cost expression and connects replacement current
+asset/balance/movement dimensions to the existing APPLIED-ledger validator.
+return-replacement-policy-green passed10 tests/2 suites/0 failures/errors/skips,
+2m53s: supplier guards8 plus LOAN/SALE admission2. Actual approval+replay, unknown
+cost, stale source/direct and approval, rejection/fresh request, concurrent drafts,
+revoked-scope replay and raw CUSTOMER->ISP asset/balance rewrite all pass.
+137 is now APPLIED AND IMMUTABLE, SHA256847e1c48684fba0f9d59bb987d3b682875c2e2023e78e10d45b46caf2a1502c3.
+Evidence archive: task26/return-replacement-policy-green/xml; private matching
+runtime .log and return-replacement-policy-database.log. No DB reset.
+
+Next validation queued under the same host lock: return-replacement-inspection-green,
+new2 LOAN/SALE inspection/putaway/rebuild cases, ordinary receipt disposition and
+inspection guards, modularity. Its two source files remain a separate uncommitted
+change: receipt inspection derives CUSTOMER title only from verified replacement;
+normal putaway still requires ISP. Do not claim these tests have passed yet.
+Task26 remains open pending this and combined return regressions. Task28 remains
+open for loss/scrap/compensation, including explicit old-vendor disposition; do not
+silently close old repair when a distinct replacement arrives.
+
 ##136 declared cost/rejection and8 supplier guards — first validation running
 
 135 is APPLIED AND IMMUTABLE, SHA256: `ab998db9effece220beed9b979164b54aee915531ec81a3c9bc4f722ba1b2abd`.
