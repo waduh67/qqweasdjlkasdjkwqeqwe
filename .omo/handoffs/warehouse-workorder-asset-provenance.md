@@ -1,5 +1,24 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+
+## Task37 count UI and backend verified; approvals next
+
+Blind count backend 6a4de392: 17 tests/2 suites PASS, BUILD SUCCESSFUL 3m37s,
+owned cleanup completed, volumes retained. Initial 7b5f4687 run had 15 old tests
+passing and two new rejection checks unhandled; fixed the new controller advice.
+Count UI: 10 API/component tests PASS (4.44s), TypeScript and targeted oxlint PASS.
+Implemented named quantity-free assignments, actor-only start/observe/submit/recount,
+immutable history pages, exact quantity input including zero, COUNT_STALE reload,
+submitted-only reviewer comparison and canonical counts route. New docs/warehouse-counts.md.
+UI needs location.view for creating a location selection; assigned counters need only
+count permissions. No normal stock/lot reads in blind flow; no initial measured value.
+
+NEXT: approval source/detail/current actor action projection, safe scoped workbench,
+bounded history, cost redaction, actual request/decide/rework UI and typed effects;
+disposition forms where owner contracts allow. Separate-login discrepancy browser
+still pending. No approval/count browser completion claim yet. Whole37–48/F1–F4 active.
+No migrations; V175_147 remains current. Save next portable proofs before continuing.
+
 ## Task37 blind count reads implemented; backend verification next
 
 Task36 COMPLETE a95c35a0 (product99b98b41/test2c82db3f), proof completion.json,
