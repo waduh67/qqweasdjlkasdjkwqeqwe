@@ -1,0 +1,34 @@
+{
+  "sourceCommit": "accompanying material workbench backend commit",
+  "tests": 5,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "9adb6271f1f4e5db29ba8f15f0d78bed17dfcc45d21a2675fc0e7f286322b102"
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITDelta",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "facb8eeb39d5afeb96dbf653d7fd15933382b6074a02cc53ed84f067137c773b"
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITLifecycle",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "bc392b3904b8c2a42b413bf807e82aa2c7f8bc1826512533c82c292c381f50e6"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in 3m 22s",
+  "coverage": "Current WO authority, actor-owned acknowledged custody including actual post-use remainder; scoped name projections and no cost/raw source DTOs; no GET mutation; actual82.500m use from100m; read pagination and revoked-scope totals; existing QA rejection/resubmission and positive delta contracts.",
+  "cleanup": "Owned services stopped; volumes retained",
+  "task39": "OPEN; frontend integration and remaining review/rework UX pending"
+}
