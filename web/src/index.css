@@ -3735,7 +3735,10 @@ td.dg-actions {
   text-overflow: clip;
   overflow-wrap: anywhere;
 }
-.warehouse-stock-detail p {
+.warehouse-stock-detail p,
+.warehouse-requests p,
+.warehouse-requests h2,
+.warehouse-requests h3 {
   margin: 0;
 }
 @media (max-width: 720px) {

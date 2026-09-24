@@ -33,7 +33,7 @@ export function WarehouseRequestsPage() {
     if (params.has('workOrderId')) id = uuid(params.get('workOrderId'))
   } catch { return <div className="card stack" role="alert"><p>Alamat permintaan tidak dikenal.</p><Link to="/warehouse/requests">Kembali ke daftar work order</Link></div> }
   if (!can('inventory.request.view') || !can('workorder.order.view')) return <div className="card" role="alert"><EmptyState title="Akses permintaan dibatasi" hint="Workbench gudang memerlukan izin lihat permintaan dan lihat work order, beserta cakupan lokasi yang sesuai." /></div>
-  return <div className="stack"><PageHeader title="Permintaan & Pengeluaran" subtitle="Rencanakan kebutuhan work order, cadangkan stok, lalu siapkan dan kirim barang." />
+  return <div className="stack warehouse-requests"><PageHeader title="Permintaan & Pengeluaran" subtitle="Rencanakan kebutuhan work order, cadangkan stok, lalu siapkan dan kirim barang." />
     {id ? <RequestDetail key={id} id={id} /> : <WorkOrderList />}
   </div>
 }

@@ -45,9 +45,10 @@ terpenuhi tetap terlihat sebagai **Kekurangan**.
 izin override dan alasan; kosongkan identitas untuk FIFO. Jumlah fisik tetap
 sama saat reservasi dibuat.
 
-**Lepas reservasi** mengembalikan bagian yang belum disiapkan menjadi tersedia
-untuk permintaan lain. Barang yang terikat slip aktif harus melalui **Batal
-siapkan** pada slip terlebih dahulu.
+**Lepas reservasi** melepas seluruh jumlah pada setiap alokasi yang dipilih agar
+tersedia untuk permintaan lain. Untuk mengubah jumlah, lepas alokasinya lalu
+cadangkan kembali. Barang yang terikat slip aktif harus melalui **Batal siapkan**
+pada slip terlebih dahulu.
 
 ## Siapkan, kirim, dan cetak
 

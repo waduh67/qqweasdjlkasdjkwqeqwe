@@ -39,6 +39,7 @@ export function buildAllocationCommand(summary: MaterialSummary, drafts: Allocat
     if (row.reservedPickedBase !== '0') throw new Error('Alokasi terikat slip yang sedang disiapkan. Gunakan batal siapkan pada slip tersebut.')
     const quantityBase = quantityFromInput(quantity, row.baseUnit)
     if (BigInt(quantityBase) > BigInt(row.reservedUnpickedBase)) throw new Error('Jumlah melebihi reservasi yang belum disiapkan.')
+    if (action === 'release' && BigInt(quantityBase) !== BigInt(row.reservedUnpickedBase)) throw new Error('Reservasi dilepas seluruhnya per alokasi. Lepas lalu cadangkan kembali untuk mengubah jumlah.')
     if (row.serial && (quantityBase !== '1' || (scan.trim() && scan.trim().toUpperCase() !== row.serial.toUpperCase()))) throw new Error('Serial hasil pindai harus sesuai dengan satu unit yang dipilih.')
     return { reservationId: row.reservationId, expectedRevision: row.reservationRevision, stockIdentityId: row.stockIdentityId, stockRevision: row.stockRevision, quantityBase, baseUnit: row.baseUnit, ...(row.serial && scan.trim() ? { scan: scan.trim() } : {}) }
   })

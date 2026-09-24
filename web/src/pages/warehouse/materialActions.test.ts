@@ -22,6 +22,7 @@ it('requires real submitted line mapping and refuses reservation above the remai
   expect(() => buildReservation(materialSummaryFixture, [draft], '', false)).toThrow('melebihi sisa')
   expect(() => buildReservation({ ...materialSummaryFixture, lines: materialSummaryFixture.lines.map(line => ({ ...line, demandLineId: null })) }, [{ ...draft, quantity: '40' }], '', false)).toThrow('belum terverifikasi')
 })
-it('releases exact amounts with an explanation without sending picking-only identity fields', () => {
-  expect(buildAllocationCommand(materialSummaryFixture, [{ allocation, selected: true, quantity: '12,345', scan: '' }], 'release', ' Revisi kebutuhan ')).toEqual({ expectedRevision: 2, workOrderRevision: 5, planRevision: 1, reason: 'Revisi kebutuhan', allocations: [{ reservationId: id.supplier, expectedRevision: 3, quantityBase: '12345' }] })
+it('releases an entire allocation with an explanation and rejects partial release', () => {
+  expect(() => buildAllocationCommand(materialSummaryFixture, [{ allocation, selected: true, quantity: '12,345', scan: '' }], 'release', 'Revisi kebutuhan')).toThrow('seluruhnya per alokasi')
+  expect(buildAllocationCommand(materialSummaryFixture, [{ allocation, selected: true, quantity: '60', scan: '' }], 'release', ' Revisi kebutuhan ')).toEqual({ expectedRevision: 2, workOrderRevision: 5, planRevision: 1, reason: 'Revisi kebutuhan', allocations: [{ reservationId: id.supplier, expectedRevision: 3, quantityBase: '60000' }] })
 })

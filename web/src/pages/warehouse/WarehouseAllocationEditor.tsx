@@ -25,12 +25,12 @@ export function WarehouseAllocationEditor({ summary, allocations, action, onDone
   }
   return <><form className="card stack" onSubmit={prepare} aria-label={action === 'pick' ? 'Siapkan barang' : 'Lepas reservasi'}>
     <h2>{action === 'pick' ? 'Siapkan barang dari reservasi' : 'Lepas reservasi yang belum disiapkan'}</h2>
-    <p>{action === 'pick' ? 'Pilih serial / potongan dan jumlah fisik yang disiapkan. Kabel dapat dipotong; batal siapkan tidak menyambung kembali potongannya.' : 'Barang kembali tersedia untuk permintaan lain. Barang yang terikat slip perlu dibatalkan persiapannya melalui slip terlebih dahulu.'}</p>
+    <p>{action === 'pick' ? 'Pilih serial / potongan dan jumlah fisik yang disiapkan. Kabel dapat dipotong; batal siapkan tidak menyambung kembali potongannya.' : 'Setiap alokasi yang dipilih dilepas seluruhnya. Untuk mengubah jumlah, lepas lalu cadangkan kembali. Barang yang terikat slip perlu dibatalkan persiapannya melalui slip terlebih dahulu.'}</p>
     {drafts.map(row => <fieldset key={row.allocation.id} className="stack" style={{ minWidth: 0 }}><legend>{row.allocation.skuName ?? 'Barang reservasi'} · {row.allocation.serial ?? row.allocation.lotCode ?? 'Identitas stok'}</legend>
       <p>{row.allocation.locationName ?? 'Lokasi tanpa nama'} · Dicadangkan <WarehouseQuantity value={row.allocation.reservedUnpickedBase} unit={row.allocation.baseUnit} /></p>
       <p className="muted" style={{ overflowWrap: 'anywhere' }}>Potongan / unit: {row.allocation.stockIdentityId}</p>
       <Checkbox label={`Pilih ${row.allocation.serial ?? row.allocation.lotCode ?? row.allocation.skuName ?? row.allocation.stockIdentityId}`} checked={row.selected} onChange={(_, data) => update(row.allocation.id, { selected: data.checked === true })} />
-      {row.selected && <><WarehouseQuantityField label={action === 'pick' ? 'Jumlah disiapkan' : 'Jumlah dilepas'} unit={row.allocation.baseUnit} value={row.quantity} onChange={quantity => update(row.allocation.id, { quantity })} />
+      {row.selected && <><WarehouseQuantityField label={action === 'pick' ? 'Jumlah disiapkan' : 'Jumlah dilepas'} unit={row.allocation.baseUnit} value={row.quantity} disabled={action === 'release'} onChange={quantity => update(row.allocation.id, { quantity })} />
         {action === 'pick' && row.allocation.serial && <TextField label={`Pindai ${row.allocation.serial}`} value={row.scan} maxLength={128} onChange={(_, data) => update(row.allocation.id, { scan: data.value })} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault() }} hint="Opsional. Jika dipindai, serial harus cocok dengan barang yang dipilih." />}</>}
     </fieldset>)}
     {drafts.length === 0 && <p>Tidak ada reservasi yang dapat dipilih. Muat ulang permintaan atau batalkan persiapan slip yang masih aktif.</p>}

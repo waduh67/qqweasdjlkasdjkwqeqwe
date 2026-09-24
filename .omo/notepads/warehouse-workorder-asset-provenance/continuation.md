@@ -1,5 +1,19 @@
 # Whole-plan continuation
 
+## Task35 release alignment and visual spacing — final browser next
+
+Real issue-picker-fixed @76c9bc76 passed both desktop/mobile in 54.9s; eight
+synthetic screenshots reviewed. Pick/unpick/repick/dispatch, named receiver,
+partial confirmation and actual 60 m + 1 ONU transit worked. Cleanup completed.
+Final review found release owner only permits the full unpicked allocation, so
+UI now locks release quantity and explains release/re-reserve; helper rejects
+partial release. Browser adds actual cable-only release/re-reserve while ONU
+reservation stays intact. Scoped paragraph margins reduce mobile scroll gaps.
+14 affected web tests, TypeScript and focused oxlint passed (0 errors/warnings).
+NEXT commit current source, run issue-final via warehouse-issue-browser.sh,
+review all final PNG and save portable evidence before checking task35 complete.
+Task36 investigation ready; whole plan 35–48/F1–F4 active. No migrations changed.
+
 ## Task35 source76c9bc76 — third browser running; 134 distinct web cases verified
 
 NONEplanning10requesttests+TS+focusedlintpassed. Pickerfix11cases+TSpassed;
