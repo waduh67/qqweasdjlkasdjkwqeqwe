@@ -1,0 +1,40 @@
+{
+  "sourceCommit": "2dbab388",
+  "tests": 8,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "2576d683b1295fc7f45c6fa1ef60480aad48c38228bd3d9d1b42992bc114c986"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "14a2b14f9a6e1bd717f68d7ab175738caea5e393ca858ad777e05e972bbd976f"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehousePolicyWorkbenchIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "f7d3740ec6063ecf46cd330de32664e74512587933bd557c788dd0ca97651b8b"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in2m17s",
+  "web": {
+    "tests": 7,
+    "files": 2,
+    "durationSeconds": 3.03,
+    "typeScript": "PASS after new test mock signature correction",
+    "targetedOxlint": "PASS",
+    "sourceCommit": "recorded in accompanying policy UI commit"
+  },
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

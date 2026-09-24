@@ -1,0 +1,40 @@
+{
+  "sourceCommit": "bccb6feb",
+  "tests": 15,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCompensationIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "883e9de5dadd2bacbfce78e2f1541749905587ca050e1afa5d004d75a2cd1958"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDispositionGuardsIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "5c9a55743bdc257e3b380182419f358e259a1787695f4a71a3c239f891e72328"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "caf3b95b4315e14725f49e2b7d4bcd4697a3f29c6ef8b35ee66fb2184ebfed9d"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in4m2s",
+  "web": {
+    "sourceCommit": "bccb6feb",
+    "tests": 13,
+    "files": 2,
+    "durationSeconds": 3.78,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

@@ -1,3 +1,14 @@
+## Disposition backend and UI verified; actual discrepancy browser next
+
+Disposition15tests/3suites PASS4m2s atbccb6feb, including unchanged posting+compensation,
+current original-WO area before reads/counts and rollback-only avoidance.13web PASS3.78s.
+Proof task37/disposition-workbench-verification.json. All owned cleanup done/volumes retained.
+Task38 policy prerequisite now implemented/verified backend8 and web7; details in task-38.
+Full web gate running; next execute extended returns.spec.ts against actual desktop/mobile
+UI with created independent role/user/grants/policy, separate checker login and real final
+60000MM AVAILABLE +40000MM LOST. No browser completion claim until run and screenshot review.
+Whole37 and38–48/F1–F4 active; no migrations.
+
 ## Task37 evidence verified; disposition UI and authority checks checkpoint
 
 2026-09-25: evidence6tests/3suites PASS3m3s at556f435e (receipt real MinIO2,

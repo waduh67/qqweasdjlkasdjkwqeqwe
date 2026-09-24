@@ -1,3 +1,15 @@
+## Policy UI checkpoint verified; task37 discrepancy browser next
+
+Policy backend8tests/3suites PASS2m17s at2dbab388. Saved-vs-draft policy UI now
+supports named location/user/role selection, up to9 operation rules/10 ordered tiers,
+exact integer thresholds, diff confirmation and actual revision/key retry. Named
+choices require all selected current scopes; no IAM directory reads. Policy UI/API
+7tests/2files PASS3.03s, TypeScript and targeted oxlint PASS. Initial TypeScript test
+mock took no path argument; corrected before the green rerun. Settings route now
+works; WarehouseScopePanel remains under catalog access. Full web gate running;
+actual returns.spec.ts discrepancy extension is written but not yet executed.
+Task38 overview/replenishment/reports/delegations/history remain. Whole37 and38–48/F1–F4 active.
+
 # Task38 implementation notes
 
 ## Policy settings prerequisite for task37 browser
