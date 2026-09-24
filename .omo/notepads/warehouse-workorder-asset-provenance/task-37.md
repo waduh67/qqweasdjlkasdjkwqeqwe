@@ -1,3 +1,16 @@
+## Task37 full web verified; real discrepancy browser starting
+
+213web tests/36files PASS37.19s atc155856b; TypeScript/Vitebuild PASS, warehouse and
+browser-fixture oxlint PASS.8policy backend PASS2m17s at2dbab388 and15disposition
+backend PASS4m2s atbccb6feb. Source-mapped proofs under task37/task38.
+Browser fixture at2b6ff32f extends returns.spec.ts with real role/user/area/scopes/policy
+setup, separate approver login, actual decision and60000MM AVAILABLE+40000MM LOST.
+Run .omo/runtime/warehouse-discrepancy-browser.sh discrepancy-initial, log
+.omo/runtime/warehouse-discrepancy-initial.log. Archive task37/discrepancy-initial.
+Do not mark37 complete until this desktop/mobile run passes and screenshots reviewed.
+Task38 remaining overview/replenishment/reports/delegations/history; then39–48/F1–F4.
+No migrations; next free148. All prior owned QA cleanup done; volumes retained.
+
 ## Disposition backend and UI verified; actual discrepancy browser next
 
 Disposition15tests/3suites PASS4m2s atbccb6feb, including unchanged posting+compensation,

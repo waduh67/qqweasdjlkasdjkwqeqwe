@@ -1,0 +1,12 @@
+{
+  "task": 37,
+  "sourceCommit": "c155856b",
+  "tests": 213,
+  "files": 36,
+  "durationSeconds": 37.19,
+  "scope": "Warehouse API/pages/shared controls and selected affected existing components",
+  "typeScript": "PASS",
+  "viteBuild": "PASS 2.32s; existing large-chunk advisory",
+  "oxlint": "PASS warehouse paths and discrepancy browser fixtures",
+  "browser": "Separate actual discrepancy run next; not part of unit evidence"
+}
