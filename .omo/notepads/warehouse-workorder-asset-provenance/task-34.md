@@ -1,5 +1,27 @@
 # Task34 — stock explorer implementation and verification
 
+## Task34 COMPLETE — stock explorer verified on desktop and mobile
+
+Final source75f8ba41, stock-explorer-readable:2passed45.5s, zero failure/skipped/flaky.
+BootJar/TypeScript/webbuild passed.100 web tests across12 files passed,8 stock page
+cases rerun after test-typing correction.11 backend query/bucket tests across7suites
+passed at3046bb05. Portable task34/verification.json and6 reviewed synthetic images
+saved. Earlier premature TS claim corrected; initial failure record remains.
+
+Real UI:1000m/10ONU intake,900m/8available and100m/2quarantine; exact lowstockminimum,
+serial lookup/5events/origin, lot5segments/3active/2split with1000m conservation,
+parent/child navigation, known/unknown costs, scoped quarantine/position drilldown.
+No stock explorer mutation. Textwrap now keeps current location names and document
+revisions readable on desktop/mobile. All owned QA processes/containers/network
+stopped;volumes retained. Task34 checkbox complete; goal remains ACTIVE.
+
+NEXT task35 demand/picking/issue. Read task-35.md actual contract preparation.
+Need discoverable persisted issue list after reload (currently only slip byUUID),
+actual received totals distinct from dispatch, and named allocation metadata; then
+typed APIs/shared plan editor/request workbench, actual browser reserve/pick/unpick/
+dispatch with transit. Receiver acknowledgement UI belongs40, E2Eextension45.
+Continue35–48/F1–F4. No migrations changed;148 nextunused,177/178reserved43.
+
 ## Task34 functional browser green; visual refinement pending recheck
 
 stock-explorer-compiled at3d377e6f: both actual desktop/mobile passed44.8s, zero

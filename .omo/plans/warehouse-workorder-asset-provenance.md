@@ -399,7 +399,7 @@ All tasks inherit C1–C11, the dependency matrix, tenant/auth/idempotency rules
   Do/accept: source details, bulk serial entry/scanner, cable measured reel length and line quantities, attachments, inspection discrepancy and putaway location. Draft vs posted labels, confirm exact stock delta, print/save reference, retry retains business operation. Failure recovers editable draft and reloads stale version, not duplicate receipt.
   QA: `W(WarehouseReceiptsPage)` submit/retry/duplicate serial/scope states; `B(receiving.spec.ts)` actual receive1000m/10ONUs and inspect reject subset. Save E(33). Commit: `feat(web): operasikan penerimaan dan pemeriksaan barang`.
 
-- [ ] 34. Stock/device/lot explorer: render the durable stock model for operators to find eligible goods — expect filterable names, quantities, lineage and actionable status.
+- [x] 34. Stock/device/lot explorer: render the durable stock model for operators to find eligible goods — expect filterable names, quantities, lineage and actionable status.
   References: R12,R13,task09; NEW `web/src/pages/warehouse/WarehouseStockPage.tsx` and tests.
   Do/accept: available/reserved/technician/transit/installed/quarantine/unknown views, serial timeline and lot/reel/remnant tree, origin receipt links, lookup/scan, low-stock highlights. Selected quantity explicitly labels unit; display unknown cost/provenance distinctly. Empty state offers authorized receive/setup action, not an unusable read-only panel.
   QA: `W(WarehouseStockPage)` bulk+serial totals/filter/pagination and restricted cost/warehouse cases; browser `B(receiving.spec.ts)` confirms posted stock and serial trace. Save E(34). Commit: `feat(web): telusuri stok perangkat dan potongan kabel`.
