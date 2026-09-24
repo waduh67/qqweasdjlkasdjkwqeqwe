@@ -110,7 +110,7 @@ it('keeps an ambiguous decision captured and reloads a stale response without ch
   expect(screen.queryByRole('button', { name: 'Setujui permintaan' })).toBeNull()
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(writes).toHaveLength(2); expect(writes[0][1]?.body).toBe(writes[1][1]?.body)
-  expect((writes[0][1]?.headers as Headers).get('Idempotency-Key')).toBe((writes[1][1]?.headers as Headers).get('Idempotency-Key'))
+  expect((writes[0][1]!.headers as Headers).get('Idempotency-Key')).toBe((writes[1][1]!.headers as Headers).get('Idempotency-Key'))
 })
 it('does not offer self or currently ineligible decisions and requires a reason for rejection', async () => {
   mocks.user.id = id.requester

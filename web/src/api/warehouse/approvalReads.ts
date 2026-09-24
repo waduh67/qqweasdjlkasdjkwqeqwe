@@ -28,11 +28,15 @@ function comparison(value: unknown, path = 'comparison') {
   return { balanceId: uuid(row.balanceId, path), skuId: uuid(row.skuId, path), counter: person(row.counter, path), baseUnit: baseUnit(row.baseUnit, path),
     bookQuantityBase: decimal(row.bookQuantityBase, path), quantityBase: decimal(row.quantityBase, path), documentReference: text(row.documentReference, path) }
 }
+function evidenceReference(value: unknown, path = 'reference') {
+  const row = record(value, path)
+  return { kind: oneOf(row.kind, ['RECEIPT', 'TRANSFER', 'DISPOSITION', 'COMPENSATION', 'TITLE_TRANSFER'], path), reference: text(row.reference, path) }
+}
 export function approvalDocument(value: unknown, path = 'document') {
   const row = record(value, path)
   const document = { id: uuid(row.id, path), revision: integer(row.revision, path), kind: oneOf(row.kind, APPROVAL_KINDS, path), code: text(row.code, path), state: text(row.state, path),
     reason: nullable(row.reason, text, path), createdAt: timestamp(row.createdAt, path), requester: person(row.requester, path), locations: array(row.locations, location, path, 1000),
-    lines: array(row.lines, line, path, 1000), comparisons: array(row.comparisons, comparison, path, 100),
+    lines: array(row.lines, line, path, 1000), comparisons: array(row.comparisons, comparison, path, 100), evidenceReferences: array(row.evidenceReferences ?? [], evidenceReference, path, 5),
     receiptId: nullable(row.receiptId, uuid, path), countId: nullable(row.countId, uuid, path), transferId: nullable(row.transferId, uuid, path), returnId: nullable(row.returnId, uuid, path) }
   if (!document.lines.length || new Set(document.lines.map(line => line.id)).size !== document.lines.length ||
     document.lines.some(line => [line.locationId, line.destinationLocationId].some(id => id !== null && !document.locations.some(location => location.id === id))) ||
@@ -92,6 +96,15 @@ export function approvalDetails(value: unknown, path = 'details') {
   return result
 }
 export type ApprovalDetails = ReturnType<typeof approvalDetails>
+export function approvalAttachment(value: unknown, path = 'attachment') {
+  const row = record(value, path)
+  const file = { id: uuid(row.id, path), kind: oneOf(row.kind, ['RECEIPT', 'SIGNATURE'], path), recordedAt: timestamp(row.recordedAt, path),
+    contentType: nullable(row.contentType, (value, path) => oneOf(value, ['image/png', 'image/jpeg', 'application/pdf'], path), path),
+    sizeBytes: nullable(row.sizeBytes, integer, path), signerLabel: nullable(row.signerLabel, text, path) }
+  if (file.kind === 'RECEIPT' && (file.contentType === null || file.sizeBytes === null || file.sizeBytes < 1 || file.sizeBytes > 15728640)) throw new WarehouseDataError(path)
+  return file
+}
+export type ApprovalAttachment = ReturnType<typeof approvalAttachment>
 export function approvalHistoryEntry(value: unknown, path = 'history') {
   const row = record(value, path)
   return { id: uuid(row.id, path), tier: integer(row.tier, path), approver: person(row.approver, path), decision: oneOf(row.decision, ['APPROVE', 'REJECT'], path),
@@ -104,6 +117,13 @@ export const approvalWorkbench = (filter: ApprovalFilter = {}) => query(`${root}
 export const getApprovalSource = (id: string) => query(`${root}/sources/${uuid(id)}`, approvalSource)
 export const getApprovalDetails = (id: string) => query(`${root}/${uuid(id)}/details`, approvalDetails)
 export const approvalHistory = (id: string, page = 0) => query(`${root}/${uuid(id)}/history/page${parameters({ page, size: 25 })}`, pageOf(approvalHistoryEntry))
+export const approvalAttachments = (id: string, page = 0) => query(`${root}/${uuid(id)}/attachments${parameters({ page, size: 25 })}`, pageOf(approvalAttachment))
+export async function downloadApprovalAttachment(id: string, file: ApprovalAttachment): Promise<Blob> {
+  const blob = await api.blob(`${root}/${uuid(id)}/attachments/${uuid(file.id)}`)
+  const types = file.kind === 'SIGNATURE' ? ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] : ['image/png', 'image/jpeg', 'application/pdf']
+  if (!types.includes(blob.type) || blob.size < 1 || blob.size > 15728640 || (file.contentType !== null && file.contentType !== blob.type) || (file.sizeBytes !== null && file.sizeBytes !== blob.size)) throw new WarehouseDataError('attachment.file')
+  return blob
+}
 export async function evaluateApprovalSource(sourceDocumentId: string, sourceRevision: number) {
   const row = record(await api.post<unknown>('/api/v1/warehouse/settings/evaluate', { sourceDocumentId: uuid(sourceDocumentId), sourceRevision: integer(sourceRevision) }))
   if (uuid(row.sourceDocumentId) !== sourceDocumentId || integer(row.sourceRevision) !== sourceRevision) throw new WarehouseDataError('evaluation.source')

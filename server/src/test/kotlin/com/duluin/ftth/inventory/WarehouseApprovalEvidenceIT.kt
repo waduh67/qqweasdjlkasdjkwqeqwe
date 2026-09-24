@@ -74,7 +74,7 @@ class WarehouseApprovalEvidenceIT : WarehouseApprovalHttpFixture() {
         val root = "/api/v1/warehouse/approvals/${case.id}/attachments"
         val page = request("GET", root, checker.first)
         assertThat(page.status).withFailMessage(page.contentAsString).isEqualTo(200)
-        assertThat(mapper.readTree(page.contentAsString).path("items").map { it.path("id").asString() }).containsExactly(current)
+        assertThat(mapper.readTree(page.contentAsString).path("items").asSequence().map { it.path("id").asString() }.toList()).containsExactly(current)
         assertThat(request("GET", "$root/$old", checker.first).status).isEqualTo(404)
         assertThat(request("GET", "$root/$later", checker.first).status).isEqualTo(404)
         assertThat(request("GET", "$root/$current", checker.first).contentAsByteArray).isEqualTo(bytes)

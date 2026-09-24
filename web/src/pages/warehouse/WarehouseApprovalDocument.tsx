@@ -16,6 +16,7 @@ export function WarehouseApprovalDocument({ document }: { document: ApprovalDocu
     <p>{approvalKindLabels[document.kind]} · <WarehouseStatus status={document.state} /> · Revisi sumber {document.revision}</p>
     <p>Pembuat: {approvalPersonLabel(document.requester)} · <WarehouseTime value={document.createdAt} /></p>
     {document.reason && <p>{document.reason}</p>}
+    {document.evidenceReferences.length > 0 && <div><h3>Referensi bukti sumber</h3><ul>{document.evidenceReferences.map((row, index) => <li key={index} style={{ overflowWrap: 'anywhere' }}>{({ RECEIPT: 'Dokumen penerimaan', TRANSFER: 'Berita acara transfer', DISPOSITION: 'Bukti disposisi', COMPENSATION: 'Bukti koreksi', TITLE_TRANSFER: 'Serah terima hak milik' } as const)[row.kind]}: {row.reference}</li>)}</ul></div>}
     <div className="row wrap">
       {document.receiptId && can('inventory.receipt.view') && <Link to={receiptLink(document.receiptId)}>Buka penerimaan sumber</Link>}
       {document.countId && can('inventory.count.view') && <Link to={`/warehouse/counts?countId=${encodeURIComponent(document.countId)}`}>Buka stock opname sumber</Link>}

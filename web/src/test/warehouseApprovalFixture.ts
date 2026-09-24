@@ -7,7 +7,7 @@ export function approvalDocumentFixture(revision = 5): ApprovalDocument {
   return { id: ids.document, revision, kind: 'RECEIPT', code: 'RCPT-001', state: 'DRAFT', reason: 'Penerimaan pemasok', createdAt: '2026-09-25T01:00:00Z', requester: { id: ids.requester, name: 'Petugas penerima' },
     locations: [{ id: ids.source, code: 'RECEIPT_SOURCE', name: 'Batas penerimaan' }, { id: ids.target, code: 'INSPECT', name: 'Karantina pemeriksaan' }],
     lines: [{ id: ids.line, skuId: ids.sku, code: 'DROP', name: 'Kabel drop', tracking: 'LOT', baseUnit: 'MM', quantityBase: '40000', serial: null, lotCode: 'REEL-A', locationId: ids.source, destinationLocationId: ids.target, condition: 'SERVICEABLE', legalOwner: 'ISP' }],
-    comparisons: [], receiptId: ids.document, countId: null, transferId: null, returnId: null }
+    comparisons: [], evidenceReferences: [{ kind: 'RECEIPT', reference: 'SJ-REVIEW-001' }], receiptId: ids.document, countId: null, transferId: null, returnId: null }
 }
 export function approvalDetailsFixture(): ApprovalDetails {
   const ids = approvalIds

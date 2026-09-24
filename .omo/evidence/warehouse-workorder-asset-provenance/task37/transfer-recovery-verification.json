@@ -1,0 +1,52 @@
+{
+  "task": 37,
+  "scope": "Transfer discrepancy owner recovery and UI",
+  "backend": {
+    "sourceCommit": "28b9b415",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITSource",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "7995b8565b291ec866516c485dbde1afa45b4e8e5ac2b90b56a9147865527cf2"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "b684cba53b50c4b6cf953ab7a182df921d456e36cceb8d77492050583aa58249"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "d96e18faef7bd57efa8bd61487188cc532a6b7ee8e5dc277796d02ae3d42b8e7"
+      }
+    ],
+    "tests": 9,
+    "result": "BUILD SUCCESSFUL in4m34s"
+  },
+  "web": {
+    "sourceCommit": "da5a57a0",
+    "tests": 14,
+    "files": 2,
+    "durationSeconds": 6.22,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "acceptance": [
+    "Pending/posted report cannot be superseded",
+    "Rejected or durably expired report is replaced using current transfer revision and immutable new source",
+    "Unsubmitted obsolete report cannot request approval",
+    "60000MM received + 40000MM lost conserved, one new approval effect",
+    "Captured report replay after final effect returns original result",
+    "Server recovery revision/source binding checked before UI replacement; old history remains linked"
+  ],
+  "cleanup": "Owned processes and containers/network stopped, volumes retained"
+}

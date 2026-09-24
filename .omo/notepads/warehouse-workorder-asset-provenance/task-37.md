@@ -1,3 +1,17 @@
+## Transfer recovery verified; evidence UI verified; evidence backend rerun next
+
+Transfer recovery 9 backend tests/3 suites PASS4m34s at28b9b415, all owned cleanup
+completed, volumes retained. 14 transfer UI/API tests PASS6.22s atda5a57a0.
+Portable proof: task37/transfer-recovery-verification.json.
+Evidence UI adds bounded on-demand attachment list, authenticated image preview/PDF
+download, URL cleanup, errors, sealed manual references. Approval UI/API/evidence
+12 tests/3 files PASS6.82s; TypeScript and oxlint pass (existing optional-chain test
+warning now corrected). Evidence backend7c426e5d compiled product but test compile
+failed in26s: Jackson3 JsonNode.map overload did not yield a Kotlin List. Corrected
+asSequence().map().toList(); fresh approval-evidence-corrected archive for rerun.
+Whole37 open: backend evidence proof, disposition forms, actual separate-login browser.
+Whole38–48/F1–4 active. No migration.
+
 ## Approval evidence implementation checkpoint — verification pending
 
 Allowlisted document evidence references now project from sealed receipt/transfer/
