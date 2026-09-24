@@ -73,8 +73,10 @@ class RmaDeploymentStore(private val jdbc: WarehouseCommandJdbc, private val dep
     }
     fun findMint(key: String): RmaDeploymentMint? = jdbc.execute { sql ->
         sql.query("""SELECT authorization_id,mint_hash FROM inventory_deployment_execution
-            WHERE tenant_id=? AND mint_key=? AND rma_handover_id IS NOT NULL""", sql.tenant, key) {
-            RmaDeploymentMint(preview(it.uuid("authorization_id")), key, it.getString("mint_hash"))
+            WHERE tenant_id=? AND mint_key=?""", sql.tenant, key) {
+            val id = it.uuid("authorization_id")
+            if (!deployments.isCustomerRma(id)) sql.fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+            RmaDeploymentMint(preview(id), key, it.getString("mint_hash"))
         }.singleOrNull()
     }
     fun mint(mint: RmaDeploymentMint) = jdbc.execute { sql ->

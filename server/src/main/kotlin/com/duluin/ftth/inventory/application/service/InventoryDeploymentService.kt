@@ -212,7 +212,9 @@ class InventoryDeploymentService(private val cutovers: InventoryTenantCutoverApi
         receiptPermission(current, "customer.onu.view")
         val rows = store.history(assetId).map { permit ->
             if (permit.binding.actorId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
-            authorizeScope(permit.source, current)
+            masters.lockTopology()
+            val scope = scopes.currentUnderFence(current.fence)
+            permit.scopeLocations.distinct().sortedBy(UUID::toString).forEach { locations.authorizeLocation(it, current, scope) }
             store.result(permit.binding.authorizationId).consumption.assignment
         }
         val offset = page.page.toLong() * page.size

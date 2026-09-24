@@ -1,5 +1,56 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##126 applied — RMA acceptance3 and ordinary regression still running
+
+V175.126 has applied in the running integration test and is IMMUTABLE. SHA256
+`cd894209c09945e323c4cc80f397f6857bde25d7f066aad5071e28e57bda0e30`. Main/test compilation passed. All3
+WarehouseCustomerRmaAcceptanceIT cases passed: signed non-posting acceptance with
+CUSTOMER titleRevision0 (including public ownership read), cross-purpose mint-key
+conflict409 and history decoding both normal/RMA sources.
+
+Shared `.omo/runtime/rma-acceptance-green.sh` is still running, same-name log and
+archive `task26/rma-acceptance-green/xml`. CustomerAssetOwnershipIT simultaneous
+acceptance race has FAILED; most other observed cases passed. Read final XML and
+response details before fixing. Source audit: new custodyView invokes a multi-read
+DB validator BEFORE work-order/assignment serialization; previous preview did not.
+Do not remove validation; investigate moving validation after the normal locks.
+The read-only retained-pre125 origin validation is queued at script end and will
+not run if Gradle fails, so run it separately after the lock if needed. The prior
+red probe and fixed exact SQL are under .omo/runtime/rma-origin-upgrade-* and
+rma-origin-upgrade-probe.sql.126 changes comparison only, no stored seal writes.
+
+No127 declared. Next real probe: independently approved reacquisition after signed
+RMA (source title revision0), then removal/inspection/reissue. Source audit finds
+old title-request revision formula and current RMA-owner assumptions may reject it;
+prove before forward correction. Also remaining actual vendor replacement and
+packaged proof.26 and whole remaining plan stay OPEN. Save/push ordinary checkpoints
+on work/warehouse-completion -> origin feat/warehouse-workorder, no main deployment.
+
+##126 declared — accepted RMA and stable historical origin comparison
+
+All3 acceptance probes failed as intended after valid RMA installs: signed
+handover and normal-key reuse returned MALFORMED_REQUEST; public history failed
+KotlinInvalidNullException decoding a RMA source as normal DeploymentSource
+(receiptId missing).3 tests/1 suite/3 failures/0 errors/skips,1m31s; archive
+`task26/rma-acceptance-red/xml`.
+
+An additional READ-ONLY retained-data probe found a real125 upgrade regression:
+pre125 immutable acceptance origin contains to_jsonb(execution) without the new
+nullable RMA columns; live generated origin now includes them. App-role validator
+rejected a genuine retained pre125 handover with TITLE_ACCEPTANCE_RECONCILIATION_REQUIRED.
+Private command `.omo/runtime/probe-rma-origin-upgrade.sh`, log
+`.omo/runtime/rma-origin-upgrade-red.log`, fixed probe SQL same stem. Transaction
+only reads and rolls back/disconnects; no stored evidence was changed.
+
+Reserve V175_126__warehouse_rma_customer_acceptance.sql BEFORE creation. Add
+non-posting signed RMA acceptance with CUSTOMER unchanged, exact witness/origin
+seal and original customer. Normalize ONLY absent/null RMA extension columns on
+both sides of the historical execution-origin comparison; preserve every sealed
+byte and verify retained evidence unchanged after upgrade. All applied SQL through
+125 remains immutable. Kotlin source readers distinguish shared custody data from
+normal issue source; mint-key conflicts reject before decoding the wrong source.
+
+
 ##125 shared52 green — signed handover/key/history probes pending
 
 Source567dc234 passed52 tests in3 suites, zero failures/errors/skips,4m47s:

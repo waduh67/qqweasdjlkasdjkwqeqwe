@@ -107,6 +107,7 @@ harus berbeda dari teknisi penerima. Semua langkah menggunakan `Idempotency-Key`
 | `GET /api/v1/warehouse/rma-handovers/{id}` | Pengelola retur atau teknisi yang ditunjuk, sesuai scope |
 | `POST /api/work-orders/{id}/assets/authorize` | Teknisi WO, izin field dan assign; terbitkan izin tujuan RMA |
 | `POST /api/customers/{id}/assets/install` | Konsumsi izin sekali pada pelanggan asal |
+| `POST /api/customers/{id}/assets/handover` | Bukti tanda tangan pelanggan; tanpa posting stok/title kedua |
 
 Dispatch memuat `expectedRevision` retur, `workOrderId`, `workOrderRevision`,
 `technicianId`, `transitLocationId`, `technicianLocationId`, `observedSerial`,
@@ -127,6 +128,7 @@ pemasangan kembali membuat episode baru untuk pelanggan asal.
 
 Intake, inspeksi, servis perangkat yang sama, pembacaan berpaginasi, penutupan
 material serta pemasangan kembali RMA telah memiliki bukti integrasi PostgreSQL.
-Serah terima bertanda tangan setelah pemasangan RMA sedang diselesaikan.
+Serah terima bertanda tangan RMA menjaga pemilik CUSTOMER dan titleRevision0;
+regresi konkurensi lintas pemasangan masih dalam validasi.
 Penggantian fisik oleh vendor, reacquisition dengan approval independen,
 panduan UI dan bukti packaged HTTP masih menjadi pekerjaan task26/lanjutan.

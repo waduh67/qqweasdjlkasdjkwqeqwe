@@ -79,6 +79,12 @@ buatan; snapshot CUSTOMER dan assignment asal terikat. Guard deployment umum,
 posting, title dan episode ONU tetap berlaku dengan cabang RMA yang dibuktikan.
 Seluruh migrasi sampai175.124 sudah diterapkan dan immutable.
 
+`V175_126__warehouse_rma_customer_acceptance.sql` dicadangkan sebelum pembuatan
+untuk penerimaan pelanggan RMA bertanda tangan tanpa penjualan/posting ulang.
+Perbandingan origin historis menormalkan hanya dua kolom RMA baru yang null atau
+belum ada; bukti lama tetap byte-identical. Probe app-role atas data nyata sebelum
+125 membuktikan penolakan origin akibat penambahan kolom tersebut.125 immutable.
+
 ## Wave 5: reservasi paralel task25, task27, task29
 
 Pemeriksaan source pada checkpoint task24 memastikan migrasi tertinggi yang ada

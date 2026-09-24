@@ -79,8 +79,26 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
 
     fun findMint(key: String): DeploymentMint? = jdbc.execute { sql ->
         sql.query("SELECT authorization_id,mint_hash FROM inventory_deployment_execution WHERE tenant_id=? AND mint_key=?", sql.tenant, key) {
-            DeploymentMint(preview(it.uuid("authorization_id")), key, it.getString("mint_hash"))
+            val id = it.uuid("authorization_id")
+            if (isCustomerRma(id)) sql.fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+            DeploymentMint(preview(id), key, it.getString("mint_hash"))
         }.singleOrNull()
+    }
+
+    fun custodyView(id: UUID): DeploymentCustodyView = jdbc.execute { sql ->
+        sql.query("""SELECT permit.consumed,execution.binding,execution.source FROM warehouse_read_deployment_authorization(?,?) permit
+            JOIN inventory_deployment_execution execution ON execution.tenant_id=permit.tenant_id AND execution.authorization_id=permit.id""",
+            sql.tenant, id) {
+            val binding = mapper.readValue(it.getString("binding"), DeploymentBinding::class.java)
+            val custody = mapper.treeToValue(mapper.readTree(it.getString("source")).path("custody"),
+                com.duluin.ftth.inventory.application.port.outbound.PostingDimension::class.java)
+            val locations = binding.repairReturn?.let { repair ->
+                val handover = mapper.readTree(sql.value("SELECT body FROM inventory_rma_handover WHERE tenant_id=? AND id=?",
+                    sql.tenant, repair.returnHandoverId) ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)).path("view")
+                listOf("sourceLocationId", "transitLocationId", "technicianLocationId").map { key -> UUID.fromString(handover.path(key).asString()) }
+            } ?: listOf(custody.locationId)
+            DeploymentCustodyView(binding, custody, it.getBoolean("consumed"), locations)
+        }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
 
     fun read(id: UUID): DeploymentPermit = jdbc.execute { sql ->
@@ -188,11 +206,11 @@ class DeploymentStore(private val jdbc: WarehouseCommandJdbc, private val receip
         Unit
     }
 
-    fun history(assetId: UUID): List<DeploymentPermit> = jdbc.execute { sql ->
+    fun history(assetId: UUID): List<DeploymentCustodyView> = jdbc.execute { sql ->
         sql.query("""SELECT permit.id FROM inventory_deployment_authorization permit JOIN inventory_deployment_result result
             ON result.tenant_id=permit.tenant_id AND result.authorization_id=permit.id
             WHERE permit.tenant_id=? AND permit.asset_id=? ORDER BY permit.created_at,permit.id""", sql.tenant, assetId) {
-            read(it.uuid("id"))
+            custodyView(it.uuid("id"))
         }
     }
 }

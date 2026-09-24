@@ -33,7 +33,8 @@ class AssetHandoverStore(private val jdbc: WarehouseCommandJdbc) {
 
     fun assertPending(assignment: UUID, revision: Long) = jdbc.execute { sql ->
         if (sql.value("""SELECT id FROM inventory_asset_assignment WHERE tenant_id=? AND id=? AND revision=?
-            AND warehouse_admission='VERIFIED' AND ended_at IS NULL AND legal_owner='ISP'
+            AND warehouse_admission='VERIFIED' AND ended_at IS NULL
+            AND (legal_owner='ISP' OR (purpose='RETURN_CUSTOMER_RMA' AND legal_owner='CUSTOMER'))
             AND NOT EXISTS(SELECT FROM inventory_asset_handover WHERE tenant_id=? AND assignment_id=?)""",
                 sql.tenant, assignment, revision, sql.tenant, assignment) == null) sql.fail(WarehouseErrorCode.STALE_REVISION)
     }
@@ -41,15 +42,15 @@ class AssetHandoverStore(private val jdbc: WarehouseCommandJdbc) {
     fun position(assignment: AssetAssignmentRef): AssetHandoverPosition = jdbc.execute { sql ->
         val position = sql.query("""SELECT asset.sku_id,asset.id,asset.location_id,asset.custody_owner_id,asset.revision
             FROM inventory_serialized_asset asset WHERE asset.tenant_id=? AND asset.id=? AND asset.warehouse_admission='VERIFIED'
-            AND asset.status='CUSTOMER_INSTALLED' AND asset.condition='SERVICEABLE' AND asset.legal_owner='ISP'
-            AND asset.custody_owner_kind='CUSTOMER' AND asset.custody_owner_id=? FOR UPDATE""", sql.tenant, assignment.assetId, assignment.customerId) {
+            AND asset.status='CUSTOMER_INSTALLED' AND asset.condition='SERVICEABLE' AND asset.legal_owner=?
+            AND asset.custody_owner_kind='CUSTOMER' AND asset.custody_owner_id=? FOR UPDATE""", sql.tenant, assignment.assetId, assignment.legalOwner, assignment.customerId) {
             AssetHandoverPosition(PostingDimension(it.uuid("sku_id"), it.uuid("id"), null, it.uuid("location_id"),
-                it.uuid("custody_owner_id"), OwnerKind.CUSTOMER, WarehouseCondition.SERVICEABLE, AssetLegalOwner.ISP), it.getLong("revision"))
+                it.uuid("custody_owner_id"), OwnerKind.CUSTOMER, WarehouseCondition.SERVICEABLE, assignment.legalOwner), it.getLong("revision"))
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (sql.value("""SELECT quantity_base FROM inventory_balance_projection WHERE tenant_id=? AND stock_identity_id=?
             AND location_id=? AND custody_owner_id=? AND custody_owner_kind='CUSTOMER' AND status='CUSTOMER_INSTALLED'
-            AND legal_owner='ISP' AND condition='SERVICEABLE' AND quantity_base=1 FOR UPDATE""", sql.tenant,
-                assignment.assetId, position.dimension.locationId, assignment.customerId) != "1") sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            AND legal_owner=? AND condition='SERVICEABLE' AND quantity_base=1 FOR UPDATE""", sql.tenant,
+                assignment.assetId, position.dimension.locationId, assignment.customerId, assignment.legalOwner) != "1") sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         position
     }
 

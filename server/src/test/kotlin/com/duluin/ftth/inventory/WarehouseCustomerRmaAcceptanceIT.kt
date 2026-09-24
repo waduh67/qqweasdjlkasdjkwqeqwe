@@ -23,6 +23,11 @@ class WarehouseCustomerRmaAcceptanceIT : WarehouseCustomerRmaFixture() {
         assertThat(view.path("legalOwner").asString()).isEqualTo("CUSTOMER")
         assertThat(view.path("titleRevision").asLong()).isEqualTo(0)
         assertThat(view.path("revision").asLong()).isEqualTo(1)
+        val ownership = request("GET", "/api/customers/${case.customer}/assets/ownership", case.repair.token)
+        assertThat(ownership.status).withFailMessage(ownership.contentAsString).isEqualTo(200)
+        val title = mapper.readTree(ownership.contentAsString).single { it.path("assignmentId").asString() == installed.operation }
+        assertThat(title.path("titleRevision").asLong()).isEqualTo(0)
+        assertThat(title.path("legalOwner").asString()).isEqualTo("CUSTOMER")
         assertThat(physical()).isEqualTo(before)
         assertThat(request("POST", "/api/customers/${case.customer}/assets/handover", case.receipt.receiver.first, body, "rma-customer-handover").contentAsString)
             .isEqualTo(accepted.contentAsString)

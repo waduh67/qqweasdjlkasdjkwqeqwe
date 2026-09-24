@@ -11,3 +11,6 @@ data class DeploymentSource(val receiptId: UUID, val receiptRevision: Long, val 
 data class DeploymentPermit(val binding: DeploymentBinding, val source: DeploymentSource, val consumed: Boolean)
 data class DeploymentMint(val permit: DeploymentPermit, val key: String, val hash: String)
 data class DeploymentResult(val consumption: DeploymentConsumption, val key: String, val hash: String)
+
+data class DeploymentCustodyView(val binding: DeploymentBinding, val custody: PostingDimension,
+    val consumed: Boolean, val scopeLocations: List<UUID>)

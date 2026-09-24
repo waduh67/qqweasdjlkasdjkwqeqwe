@@ -30,11 +30,18 @@ class AssetHandoverWorkOrderAdapter(private val authorities: CurrentAuthorityApi
             ?: fail(WarehouseErrorCode.FORBIDDEN)
         return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
             connection.prepareStatement("""SELECT code,warehouse_revision,area_id FROM work_order
-                WHERE tenant_id=? AND id=? AND customer_id=? AND type='PSB' AND status IN ('ASSIGNED','IN_PROGRESS','DONE')
+                WHERE tenant_id=? AND id=? AND customer_id=? AND type=? AND status IN ('ASSIGNED','IN_PROGRESS','DONE')
                 AND EXISTS(SELECT FROM work_order_assignee WHERE tenant_id=work_order.tenant_id
                     AND work_order_id=work_order.id AND technician_id=?) FOR UPDATE""").use { query ->
                 query.setObject(1, binding.tenantId); query.setObject(2, binding.workOrderId)
-                query.setObject(3, binding.customerId); query.setObject(4, binding.actorId)
+                query.setObject(3, binding.customerId)
+                query.setString(4, when (binding.purpose) {
+                    DeploymentPurpose.INSTALL -> "PSB"
+                    DeploymentPurpose.REPLACE -> "MIGRATION"
+                    DeploymentPurpose.RETURN_CUSTOMER_RMA -> "REPAIR"
+                    DeploymentPurpose.REMOVE -> fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                })
+                query.setObject(5, binding.actorId)
                 query.executeQuery().use { row ->
                     if (!row.next()) fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
                     val scope = current.areaScope

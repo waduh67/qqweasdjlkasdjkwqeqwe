@@ -24,7 +24,7 @@ class AssetTitleStore(private val jdbc: WarehouseCommandJdbc) {
     fun current(id: UUID): CurrentAssetOwnership = jdbc.execute { sql ->
         sql.value("SELECT warehouse_assert_current_asset_title(?,?)", sql.tenant, id)
         sql.query("""SELECT assignment.*,handover.id handover_id,latest.id transfer_id,
-            (CASE WHEN handover.ownership_mode='SALE' THEN 1 ELSE 0 END)+
+            (CASE WHEN handover.ownership_mode='SALE' AND assignment.purpose<>'RETURN_CUSTOMER_RMA' THEN 1 ELSE 0 END)+
                 (SELECT count(*) FROM inventory_asset_title_transfer WHERE tenant_id=assignment.tenant_id AND assignment_id=assignment.id) title_revision
             FROM inventory_asset_assignment assignment LEFT JOIN inventory_asset_handover handover
                 ON handover.tenant_id=assignment.tenant_id AND handover.assignment_id=assignment.id
