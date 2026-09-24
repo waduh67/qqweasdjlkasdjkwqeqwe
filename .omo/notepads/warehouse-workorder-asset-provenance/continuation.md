@@ -1,5 +1,48 @@
 # Whole-plan continuation
 
+## Task28 draft request implementation checkpoint — validation pending
+
+Task26 completion checkpoint7c6eb6e5 is published with53 green tests/22 suites and
+sanitized portable evidence. Overall goal remains active. Task28 is NOT complete.
+
+The real initial disposition-red baseline executed1 test/1 failure/0 errors/skips,
+1m32s. All actual receipt/use/residual return/inspection/policy setup passed; the
+new POST /api/v1/warehouse/dispositions returned404 at test line37. Archive:
+.omo/evidence/warehouse-workorder-asset-provenance/task28/disposition-red/xml.
+
+Authored InventoryDispositionApi, typed LOSS/SCRAP input/view, controller/service,
+WarehouseDispositionStore/Record. Initial request accepts exact ISP-owned RETURN
+quantity in RECEIVED_IN_INSPECTION; SCRAP additionally requires DAMAGED. It locks
+WO through the public inventory-owned port before warehouse topology/documents
+and physical source, captures actual receipt/lot cost, checks custody/return and
+approval-request permissions, and stores immutable actor/key/source snapshots.
+Read/list expose no cost or customer fields; current location/area/site scope is
+applied before pagination. No physical posting or approval owner exists yet.
+
+138 was reserved BEFORE creation in docs/warehouse-migrations.md. It captures the
+real return operation, current balances/asset/segment, WO revision and original
+cost, and seals a DRAFT0 header/line with NO movements/operations. Draft-only
+restriction must be extended forward when implementing real independent effects.
+
+First disposition-draft compile succeeded;4 tests/2 suites/1 failure/0 errors/skips,
+59s:3 modularity passed,1 context startup failed. Flyway138 failed42601 near CASE
+inside the large IF at SQL line29 (position5663), and logged at21:32:45.351 JKT
+"Changes successfully rolled back". No138 apply succeeded. Added parentheses to
+that CASE before successful application; old137 and earlier files unchanged.
+Minor get/list state handling was also tightened before the corrected build.
+
+Corrected run is .omo/runtime/disposition-request.sh / .log, archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/disposition-request/xml,
+database log disposition-request-database.log. It selects WarehouseDispositionIT
+and ModularityTests. Confirm migration application before treating138 immutable.
+The behavioral test should next reach approval/request; that owner and posting
+are deliberately unfinished, so do not call4 tests green without actual results.
+
+Next: implement independent LOSS/SCRAP owner + exact effect, nonphysical linked
+return state transition, and settled-return calculation for authorized disposal.
+Then add loss/vendor custody, compensation, and adversarial/scoping/replay cases.
+Detailed design constraints follow below; no resetting DB or changing applied SQL.
+
 ## Task26 COMPLETE —53 combined tests passed
 
 return-combined-check passed53 tests/22 suites/0 failures/errors/skips,

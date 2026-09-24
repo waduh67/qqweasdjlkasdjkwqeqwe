@@ -27,6 +27,15 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
 
+## Task28: kehilangan, scrap dan kompensasi
+
+`V175_138__warehouse_disposition_request.sql` dicadangkan sebelum pembuatan.
+137 tetap immutable. Tes awal task28 telah mencapai retur dan inspeksi nyata,
+lalu gagal pada POST dispositions404 (1 tes,1 kegagalan,1m32s).138 mengikat draft
+LOSS/SCRAP ke sumber retur, posisi fisik, bukti dan biaya asli. Draft tidak boleh
+memiliki efek fisik; posting dan penutupan kewajiban wajib memakai approval
+independen yang dibuktikan terpisah sebelum task28 dianggap selesai.
+
 ## Task26: retur dan inspeksi
 
 `V175_137__warehouse_replacement_cost_and_position.sql` dicadangkan sebelum
