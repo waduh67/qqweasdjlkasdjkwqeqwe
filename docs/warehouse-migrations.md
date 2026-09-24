@@ -1,5 +1,7 @@
 # Migrasi dan lingkungan QA warehouse
 
+V175.147 applied22:49:14.237 JKT, immutable: `5da98c83d788aa398a8b70e43e583b2fa1f694e25dd9bf334c27f8f25cccb31f`. All143–147 immutable;148 next unused. Active-loan loss verified15 tests/3 suites.
+
 ## Reservasi V175.147: payload event kehilangan pinjaman
 
 146 applied22:46:28.708 JKT, immutable: `d7126fe6d9ab06ef9415d3ebbebf86de03193a142359d7db31c0bd6c8968f837`.

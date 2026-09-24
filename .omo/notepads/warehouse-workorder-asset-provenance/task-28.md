@@ -1,5 +1,36 @@
 # Task28 — independent loss, scrap and compensation (in progress)
 
+## Task28 active-loan loss VERIFIED — existing-flow regression running
+
+asset-loss-guards against c09c6da9 passed15 tests /3 suites, zero failures/errors/
+skips,3m7s. Both primary LOAN/SALE paths and10 safety scenarios passed.147 applied
+22:49:14.237 JKT and is immutable: 5da98c83d788aa398a8b70e43e583b2fa1f694e25dd9bf334c27f8f25cccb31f.
+All143–147 migrations are immutable;148 next unused, reserve before creation.
+Owned QA stopped cleanly with volumes retained. Portable sanitized evidence:
+.omo/evidence/warehouse-workorder-asset-provenance/task28/active-loan-loss-verification.json.
+
+An accepted active ISP loan can now be independently declared lost without fake
+removal/return records. Exactly one approved LOSS closes its existing assignment
+and customer episode and queues provisioning atomically, retaining original loan,
+handover, installation and telemetry history. Actual recovery during pending
+approval becomes durable STALE; races produce one closure. Direct SQL pending
+effect/assignment closure, requester/delegation, unknown cost and revoked replay
+are denied. Scope filtering precedes pagination. Rebuild and pending replacement
+permit retirement both passed. Existing returned-disposition/compensation proof
+was already30 green; actual compensated-device reuse was6 green separately.
+
+Current .omo/runtime/asset-loss-regression.sh / .log checks CustomerAssetReplacementIT,
+CustomerAssetOwnershipIT,CustomerAssetEpisodeRevisionIT,WarehouseDisposition*IT,
+WarehouseCompensation*IT,WarehouseReturnITReuse and ModularityTests. Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/asset-loss-regression/xml;
+private DB log asset-loss-regression-database.log. Do not assume count/result yet.
+Product main remains c09c6da9. Wait for this affected existing-flow regression,
+then save evidence and assess task28 acceptance before marking complete.
+Task28 and whole-plan still OPEN;30–48/F1–F4 pending. Docs/warehouse-dispositions.md
+now describes actual return compensation and active loan loss contracts.
+All current checkpoints are pushed with explicit local SSH key; no main merge,
+deploy or reset. Goal remains active until the whole plan is actually finished.
+
 ## Task28 lost-loan outbox binding fix — 15-case validation running
 
 20bb5ce9 is published. asset-loss-evidence-fixed executed5 tests/1 failure,

@@ -1,8 +1,7 @@
-# Kehilangan dan scrap barang retur
+# Kehilangan, scrap, dan koreksi stok
 
-Implementasi task 28 sedang diverifikasi. Alur saat ini menerima satu potong
-material atau satu perangkat milik ISP dari dokumen retur yang berada dalam
-inspeksi. Dokumen kehilangan memakai tindakan `LOSS`; scrap memakai `SCRAP`
+Disposisi retur menerima satu potong material atau satu perangkat milik ISP
+dari dokumen retur yang berada dalam inspeksi. Dokumen kehilangan memakai tindakan `LOSS`; scrap memakai `SCRAP`
 dan harus didahului inspeksi `DAMAGED`.
 
 ## Pengajuan dan keputusan
@@ -52,8 +51,48 @@ residual itu sekali saja. Penutupan kewajiban tidak memindahkan stok lagi.
 Penolakan approval mempertahankan sumber dan meminta pengajuan baru dengan
 bukti yang diperbaiki.
 
-Pengajuan koreksi sedang diverifikasi pada `POST /api/v1/warehouse/dispositions/{id}/compensations`.
+## Koreksi disposisi retur
+
+Buat `POST /api/v1/warehouse/dispositions/{id}/compensations` dengan kunci baru.
 Input berisi `expectedRevision`, `expectedReturnRevision`, `destinationLocationId`,
-`reason`, dan `evidenceReference`. Pengajuan hanya menyimpan draft yang menunjuk
-posting asli; pelaksanaan reversal melalui approval masih dikerjakan. Kehilangan
-di luar retur inspeksi juga belum tersedia pada API ini.
+`reason`, dan `evidenceReference`. Sumber harus posting LOSS/SCRAP yang sudah
+berhasil, seluruh barang masih berada pada posisi hasil disposisi, dan belum
+pernah dikompensasi. Kewajiban material yang sudah ditutup memerlukan koreksi
+lifecycle terlebih dahulu.
+
+Draft baru menjalani kebijakan `ADJUSTMENT` dan persetujuan independen. Keputusan
+berhasil membuat satu `REVERSAL` yang menunjuk movement asli, lalu mengembalikan
+barang ke karantina dengan kondisi `QUARANTINE`. Posting lama tetap tersimpan.
+Kuantitas kembali menjadi kewajiban terbuka sampai inspeksi baru menerimanya.
+Perangkat harus diperiksa dan di-reset sebelum dikeluarkan lagi. Koreksi lama
+tidak dapat membatalkan pemasangan berikutnya untuk pelanggan lain.
+
+## Kehilangan perangkat pinjaman yang belum dipulihkan
+
+`POST /api/v1/warehouse/asset-losses` mengajukan kehilangan perangkat dengan
+penugasan aktif, serah-terima `LOAN`, dan kepemilikan ISP. Isi `assignmentId`,
+`sourceHandoverId`, `expectedRevision` penugasan, `expectedTitleRevision`,
+`expectedWorkOrderRevision`, `destinationLocationId`, `reason`, dan `evidenceId`.
+Bukti harus merupakan revisi tanda tangan yang tersimpan dan dapat diverifikasi
+pada WO pemasangan. Penggantian bukti mengikuti aturan koreksi bukti WO dan
+mempertahankan bukti serah-terima asal. Kuantitas ditetapkan dari perangkat asli:
+satu `EA`. Tujuannya lokasi `LOST` yang aktif.
+
+Pengajuan memerlukan `inventory.custody.manage`, `inventory.approval.request`,
+akses WO/bukti dan kedua lokasi. Gunakan ID draft dan revision 0 untuk meminta
+approval seperti disposisi retur. Kebijakan yang dipakai adalah `LOSS`, dengan
+biaya penerimaan asli dan pemeriksa independen. Penugasan, posisi perangkat,
+bukti, revisi WO, dan episode diperiksa lagi ketika keputusan dijalankan.
+Pemulihan fisik atau perubahan sumber membuat approval lama `STALE`.
+
+Persetujuan mencatat satu movement LOSS, mengakhiri penugasan dan episode ONU,
+dan mengantrekan perubahan provisioning dalam satu transaksi lokal. Kewajiban
+pinjaman asal tetap menjadi riwayat dan terhubung ke bukti kehilangan yang
+disetujui. Kegagalan pengiriman provisioning tetap terlihat terpisah dari fakta
+kehilangan. Riwayat instalasi dan telemetry lama mempertahankan pelanggan asal.
+Permintaan ini tidak membuat catatan pembongkaran atau retur fisik.
+
+`GET /api/v1/warehouse/asset-losses/{id}` membaca status terbaru; daftar mendukung
+`page` dan `size`, dengan scope lokasi sebelum paginasi. DTO publik tidak memuat
+biaya, nama/alamat pelanggan, atau object key bukti. Perangkat SALE milik pelanggan
+ditolak. API kompensasi disposisi retur tidak menerima dokumen ASSET_LOSS.
