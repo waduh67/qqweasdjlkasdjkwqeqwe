@@ -1,5 +1,33 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task28 compensation outbox checkpoint — 30-case regression pending
+
+Published6cca7fd1 compensation-effect ran5 tests/2 suites,2 failures,0 errors/skips,
+2m5s.141 applied22:16:00.258 JKT and is IMMUTABLE:
+636454e183295ddb3e433cb7a2e1e5056a4881f8dacafc450a12d7ab4e8baac0.
+
+Both real reversal requests and approval requests passed, and requester self-decision
+was denied. Checker posting rolled back at inventory_outbox_event_kind_check:
+the new DISPOSITION_REVERSED event needed a forward enum-constraint extension.
+142 reserved before creation and adds only that event, preserving the existing
+outbox check.141/140 and earlier SQL are untouched.
+
+Added8 WarehouseCompensationGuardsIT cases: closed settlement before request;
+closure after approval request -> durable STALE; concurrent corrections -> one
+reversal; rejected source immutable/fresh request; available-bin destination denied;
+revoked scope denies committed replay; raw SQL pending effect denied; rebuild
+preserves exactly one restored piece and original posting. These are authored,
+not yet verified. Specific installed/reused-asset compensation and broader loss
+scope remain outstanding, along with task28 completion evidence.
+
+Current .omo/runtime/compensation-guards.sh / .log selects WarehouseCompensation*IT,
+WarehouseDisposition*IT and ModularityTests (expected30 tests/6 suites). Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-guards/xml;
+DB log compensation-guards-database.log. Inspect execution before claiming142
+applied or any compensation committed. Initial20-green disposition evidence remains
+portable at adb4ca79; task28 remains OPEN. Next source change must preserve current
+validation identity; no DB reset or applied-migration edits.
+
 ## Task28 compensation effect checkpoint — 141 authored, validation pending
 
 Published base27ec2709 compensation-request actually executed5 tests/2 suites,

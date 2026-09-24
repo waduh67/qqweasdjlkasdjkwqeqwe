@@ -1,5 +1,7 @@
 # Migrasi dan lingkungan QA warehouse
 
+`V175_142__warehouse_disposition_compensation_event.sql` dicadangkan sebelum pembuatan untuk menambahkan event DISPOSITION_REVERSED pada constraint outbox.141 telah diterapkan22:16:00.258 JKT, immutable: `636454e183295ddb3e433cb7a2e1e5056a4881f8dacafc450a12d7ab4e8baac0`.
+
 `V175_141__warehouse_disposition_compensation_effect.sql` dicadangkan sebelum pembuatan untuk approval ADJUSTMENT pada sumber DISPOSITION_REVERSAL, posting REVERSAL yang terhubung, dan pemulihan retur ke karantina.140 telah diterapkan22:10:14.007 JKT, immutable: `ebbc1297ff12996825eac5601ec7367b282e8f564b25eacd9eaaa35343f0fd4e`.
 
 `V175_140__warehouse_disposition_compensation_request.sql` dicadangkan sebelum pembuatan untuk draft koreksi yang menunjuk posting loss/scrap asli, stok sink terkini, dan kewajiban material yang belum ditutup. Efek approval akan diperluas dengan migrasi berikutnya.
