@@ -1,5 +1,16 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Active task:26 —2026-09-24
+
+- Remote checkpoint base `af0471bb`; tasks25/27/29 backend acceptance now complete.
+  Both combined wave5 and replenishment real HTTP/restart runs passed.37 selected
+  regression tests and1 separate live seed passed with zero failures/errors/skips.
+- Continue task26 using `continuation.md` and `task-26.md`. Returns inspection test
+  is running against the absent endpoint.175.116 is declared but not yet created.
+  Remaining26/28/30–48 and F1–F4 stay open; no independent signoff is claimed.
+- Latest section overrides historical labels/status below. Normal explicit push
+  to `feat/warehouse-workorder`; never merge/deploy main or reset QA data.
+
 ## Current integration checkpoint: 2026-09-24
 
 - Transfer position correction passed37 tests in10 suites, zero failures/errors/

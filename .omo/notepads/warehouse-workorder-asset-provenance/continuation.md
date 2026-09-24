@@ -1,5 +1,18 @@
 # Whole-plan continuation
 
+## Active task —26 returns/inspection/repair
+
+- `af0471bb` is published. Combined transfer/count/replenishment verification is
+  complete; tasks25/27/29 are now checked. Remaining26/28/30–48 and F1–F4 stay open.
+- Replenishment rerun passed both packaged JVM phases plus1 live seed with zero
+  failures/errors/skips. Same JAR SHA as wave5 below. Eleven physical posting
+  counts matched `[4,7,4,1,0,4,6,3,3,0,0]`. Owned cleanup completed, volumes kept.
+- New task26 test and migration declaration are in progress. Read task-26.md.
+  Host command `.omo/runtime/return-red.sh`, log `.omo/runtime/return-red.log`
+  exercises the absent inspection endpoint using a real17.5m returned remnant.
+  Finish/preserve the failed result, then implement source-bound inspection.
+  No new SQL has been created or applied yet;175.116 is reserved before creation.
+
 ## Current step — transfer/count integration verified
 
 - Latest published base before this checkpoint is `d23bba73`. The permission

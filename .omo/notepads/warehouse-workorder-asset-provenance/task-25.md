@@ -1,5 +1,25 @@
 # Task 25: Warehouse Transfers
 
+## 2026-09-24 — combined verification complete
+
+Source `af0471bb` on local `work/warehouse-completion`, published to
+`feat/warehouse-workorder`. Imported task25/27/29 migrations are unchanged.
+The combined focused suite passed37 tests in10 suites, zero failures/errors/
+skips. Packaged `qa.sh wave5` passed actual public signup, transfer and count
+journeys and fresh-JVM replay (14 responses,16 stock/document/history snapshots).
+Shared `qa.sh replenishment` also passed both JVM phases, a separate live seed
+1/0/0/0, stale acceptance and unchanged11 physical posting counts:
+`[4,7,4,1,0,4,6,3,3,0,0]` before/after.
+JAR SHA256 `70c7ddb8f239cb553d71379c15d4a25742ae3e08859a9f8061695dc1f08f03da`.
+Both lifecycle runs cleaned owned containers/processes and retained data volumes.
+Task-specific backend acceptance is complete; UI and final full-plan gates remain
+separate. This is executor verification, not an independent reviewer signoff.
+Portable reproduction: `scripts/warehouse/qa.sh wave5` and `replenishment` within
+one owned up/stop/down lifecycle under the documented host lock. Raw evidence is
+ignored under `integration-20260924/positions-green` and its replenishment archive.
+Newest entry supersedes historical WIP descriptions below.
+
+
 ## Checkpoint 1: prerequisite inspection
 
 - Branch: `work/warehouse-task25`; local and live remote HEAD:
