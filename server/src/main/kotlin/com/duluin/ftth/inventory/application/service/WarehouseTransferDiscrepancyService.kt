@@ -29,7 +29,7 @@ class WarehouseTransferDiscrepancyService(private val cutovers: InventoryTenantC
         receiptPermission(current, "inventory.transfer.manage")
         receiptPermission(current, "inventory.approval.request")
         val preview = store.get(id)
-        access.authorize(preview.binding, current)
+        access.authorize(preview, current)
         val actor = current.fence.identity.userId
         if (actor != preview.binding.receiverId) masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
         val target = locations.authorizeLocation(request.destinationLocationId, current, scopes.currentUnderFence(current.fence))

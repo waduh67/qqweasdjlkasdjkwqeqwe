@@ -4,13 +4,34 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.service.WarehouseTransferService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.util.MultiValueMap
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/warehouse/transfers")
 class WarehouseTransferController(private val transfers: WarehouseTransferService,
-    private val discrepancies: com.duluin.ftth.inventory.application.service.WarehouseTransferDiscrepancyService) {
+    private val discrepancies: com.duluin.ftth.inventory.application.service.WarehouseTransferDiscrepancyService,
+    private val queries: InventoryTransferQueryApi) {
+    @GetMapping
+    fun list(@RequestParam parameters: MultiValueMap<String, String>): WarehousePage<WarehouseTransferDetails> {
+        fun invalid(): Nothing = throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Invalid transfer filter"))
+        if (parameters.any { (key, values) -> key !in setOf("page", "size", "state", "locationId", "query") || values.size != 1 || values.single().isBlank() }) invalid()
+        fun number(key: String, default: Int): Int = parameters[key]?.single()?.let {
+            if (!it.matches(Regex("[0-9]+"))) invalid()
+            it.toIntOrNull() ?: invalid()
+        } ?: default
+        val state = parameters["state"]?.single()?.let { value -> WarehouseTransferState.entries.singleOrNull { it.name == value } ?: invalid() }
+        val location = parameters["locationId"]?.single()?.let {
+            val id = try { UUID.fromString(it) } catch (_: IllegalArgumentException) { invalid() }
+            if (!id.toString().equals(it, ignoreCase = true)) invalid()
+            id
+        }
+        return queries.list(WarehouseTransferFilter(number("page", 0), number("size", 25), state, location, parameters["query"]?.single()))
+    }
+
+    @GetMapping("/{id}/details") fun details(@PathVariable id: UUID): WarehouseTransferDetails = queries.details(id)
+
     @PostMapping
     fun create(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(transfers.create(WarehouseReceiptJson.decode(body, WarehouseTransferDraft::class.java), WarehouseMutationMetadata(key)))

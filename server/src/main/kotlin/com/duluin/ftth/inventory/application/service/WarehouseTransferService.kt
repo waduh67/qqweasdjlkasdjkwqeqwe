@@ -32,7 +32,7 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         val prior = operations.lockKey("warehouse.transfer.create", metadata.idempotencyKey)
         if (prior != null) {
             authorizeReplay(prior, current, cutover, canonical, prior.resourceId)
-            access.authorize(store.get(prior.resourceId).binding, current)
+            access.authorize(store.get(prior.resourceId), current)
             return prior.receipt
         }
         val id = UUID.randomUUID()
@@ -70,7 +70,7 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.view")
         val record = store.get(id)
-        access.authorize(record.binding, current)
+        access.authorize(record, current)
         return record.view()
     }
 
@@ -87,7 +87,7 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.manage")
         val preview = store.get(id)
-        val locations = access.authorize(preview.binding, current)
+        val locations = access.authorize(preview, current)
         val actor = current.fence.identity.userId
         if (action == "receive" && actor != preview.binding.receiverId || action == "dispatch" && actor != preview.sender)
             masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)

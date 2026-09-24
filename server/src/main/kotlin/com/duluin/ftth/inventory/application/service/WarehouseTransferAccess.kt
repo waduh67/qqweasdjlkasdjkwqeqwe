@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.application.service
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.*
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferDiscrepancyStore
 import com.duluin.ftth.inventory.application.port.inbound.LocationSnapshot
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
@@ -13,7 +14,18 @@ data class TransferLocations(val source: LocationSnapshot, val transit: Location
 
 @Component
 class WarehouseTransferAccess(private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
-    private val locations: WarehouseReceiptService, private val users: IamApi) {
+    private val locations: WarehouseReceiptService, private val users: IamApi,
+    private val resolutions: WarehouseTransferDiscrepancyStore) {
+    fun authorize(record: TransferRecord, current: CurrentAuthority): TransferLocations {
+        val found = authorize(record.binding, current)
+        record.resolutionDocumentId?.let { id ->
+            val resolution = resolutions.find(id)?.takeIf { it.transferId == record.id }
+                ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            locations.authorizeLocation(resolution.request.destinationLocationId, current, scopes.currentUnderFence(current.fence))
+        }
+        return found
+    }
+
     fun authorize(binding: WarehouseTransferDraft, current: CurrentAuthority): TransferLocations {
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)

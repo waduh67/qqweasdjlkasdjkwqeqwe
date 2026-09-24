@@ -21,7 +21,7 @@ class WarehouseTransferApprovalOwner(private val store: WarehouseTransferDiscrep
     override fun lock(sourceDocumentId: UUID, current: CurrentAuthority) {
         val resolution = store.find(sourceDocumentId) ?: return
         val record = transfers.get(resolution.transferId)
-        access.authorize(record.binding, current)
+        access.authorize(record, current)
         transfers.get(record.id, true)
     }
 

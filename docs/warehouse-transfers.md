@@ -45,6 +45,26 @@ terikat pada ID dokumen, custodian, kondisi dan pemiliknya. Saldo pengiriman lai
 tidak digunakan sebagai pengganti. Potongan kabel tetap memakai identitas fisik
 hasil split; perangkat berserial mempertahankan assetId dan asal biayanya.
 
+## Daftar dan referensi tampilan
+
+`GET /api/v1/warehouse/transfers` menerima `page` (mulai0), `size` (1–100),
+`state`, `locationId` dan `query` (pencarian kode, maksimal200 karakter).
+Hasilnya halaman `{items,page,size,totalElements}`. Setiap item berisi
+`{transfer,references}`; bentuk `transfer` sama dengan respons operasi lama.
+`GET /transfers/{id}/details` mengembalikan bentuk yang sama untuk satu dokumen.
+
+`references` memuat nama lokasi, pengirim/penerima, SKU dan serial/lot dari data
+saat ini. Nama ini bukan snapshot historis. Respons mutasi, GET lama dan riwayat
+operasi tetap memakai kontrak aslinya; mengganti nama SKU tidak mengubah balasan
+tersimpan atau memengaruhi kecocokan stok pada dispatch.
+
+Daftar membatasi lokasi asal, transit, tujuan, dan tujuan penanganan selisih
+sebelum menghitung hasil atau mengambil halaman. Penerima harus masih aktif;
+tujuan teknisi/vehicle harus masih cocok dengan penerima. Detail dan riwayat
+juga memeriksa cakupan tujuan penanganan selisih. Izin `inventory.transfer.view`
+mencukupi untuk membaca referensi dokumen; hasil tidak menyertakan biaya atau
+profil IAM selain ID dan nama.
+
 ## Selisih penerimaan
 
 `POST /transfers/{id}/discrepancy` menerima `expectedRevision`, `action`

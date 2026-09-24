@@ -1,5 +1,22 @@
 # Whole-plan continuation
 
+## Task36 transfer discovery implementation — backend verification next
+
+Added InventoryTransferQueryApi list/details wrapper {transfer,references}; old
+GET/mutation/history responses untouched. Query scopes source/transit/destination,
+resolution target and movement locations before count/page. Active/technician
+receiver eligibility comes via public IamApi before pagination; names also via
+public IAM. Local SKU/serial/lot/location refs are current, no cost/email.
+Strict query keys/repetitions/blank/page/state/location validation. Existing
+get/history/replay/approval source access now includes resolution target.
+3 new HTTP integration cases cover actual draft/partial60/40, scope revocation,
+independent denial, inactive receiver, names/old snapshot compatibility and strict
+filters. NOT VERIFIED YET. Next run transfer-discovery server wrapper plus all
+WarehouseTransferIT* and contract regressions; no browser running.
+Task35 complete75ad8b43/source31b26399. No migrations. Remaining36–48/F1–F4 active.
+After backend: typed Transfer UI and actual100/60/40 browser, return source lookup,
+inspection/repair/replacement/RMA UI and role/conflict tests before36complete.
+
 ## Task35 COMPLETE — final source31b26399; task36 next
 
 Actual issue-release-value browser passed2/2 (desktop1280/mobile375),58.245s;
