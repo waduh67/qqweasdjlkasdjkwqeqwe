@@ -1,5 +1,27 @@
 # Task35 — demand and issue implementation
 
+## Task35 workbench UI wired — focused tests running; browser pending
+
+Mapping/backend sourcef7bbd0d5 passed7tests/4suites in3m59s. Old posting fixture
+now uses actual owner APIs; preserved60missued/40mused/20maccountable/40mbackorder.
+Portable demand-mapping-verification.json saved; cleanup complete, volumesretained.
+Plan editor5tests +9API tests and TS passed. Initial lint command used ESLint
+incorrectly (repo usesoxlint); actual oxlint rerun passed, no repo toolchanges.
+
+WarehouseRequestsPage now wired: paged namedWOselection, current summary/allocation
+reads, plan/NONE/template/substitution editor, submit, FIFO or exactpartial/manual
+identity reserve, release, named allocation pick, stored pagedissue list/actual
+accepted quantities, namedreceiver and partialack dispatch, issue-awareunpick,
+freshly authorized immutable slip printing, history and visible WO_TRANSIT setup.
+Staleallocations disable actions;409reload discards edits; uncertainretry captures
+samekey/body. No inferred received or physicaltransit from unaccepted amount.
+Work-in-progress UI TypeScript initially passed;8new pagecases +5draft+9API/TS/oxlint
+RUNNING request-workbench-web.log. No actual issue.spec browser yet. NEXT await/fix
+focusedtests, add meaningful actionhelper cases asneeded, actual issue.spec using
+existing real receiving/setup helpers desktop/mobile, visualreview, requiredchecks.
+Task35 remainsOPEN. Continue36–48/F1–F4 after35.148nextunused;177/178reserved43.
+
+
 ## Task35 editor and posting fixture checkpoint — verification running
 
 Demand mapping sourcea8a1cd41: 6/7 tests passed (new mapping,2demand,3supply);
