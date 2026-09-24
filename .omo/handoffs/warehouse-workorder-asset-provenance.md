@@ -1,5 +1,12 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 transfer discovery compilation correction
+
+Initial server run @7fa9af4c failed production compile: validatePage was private
+to return service, not shared. Replaced with explicit page>=0,size1..100 guard.
+No tests executed; copied stale XML is not evidence. Cleanup completed.
+NEXT rerun transfer-discovery-fixed with the same new3cases+transfer regressions.
+
 ## Task36 transfer discovery implementation — backend verification next
 
 Added InventoryTransferQueryApi list/details wrapper {transfer,references}; old

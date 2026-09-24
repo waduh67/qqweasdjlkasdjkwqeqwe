@@ -19,7 +19,7 @@ class WarehouseTransferQueryService(private val cutovers: InventoryTenantCutover
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore, private val sites: SiteReferenceApi,
     private val users: IamApi, private val query: WarehouseTransferQuery, private val transfers: InventoryTransferApi) : InventoryTransferQueryApi {
     override fun list(filter: WarehouseTransferFilter): WarehousePage<WarehouseTransferDetails> {
-        validatePage(WarehousePageRequest(filter.page, filter.size))
+        if (filter.page < 0 || filter.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         if (filter.query != null && (filter.query.isBlank() || filter.query.length > 200)) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
