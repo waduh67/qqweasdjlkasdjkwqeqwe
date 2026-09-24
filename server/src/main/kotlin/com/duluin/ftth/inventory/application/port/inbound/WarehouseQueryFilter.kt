@@ -25,7 +25,7 @@ data class WarehouseQueryFilter(
                 if (page < 0 || size !in 1..100 || sort !in setOf("name", "createdAt", "id") || direction !in setOf("asc", "desc")) invalid()
                 if (history && sort != "createdAt" && sort != "id") invalid()
                 val status = value("status")
-                if (status != null && status !in setOf("AVAILABLE", "RESERVED", "PICKED", "ISSUED", "IN_TRANSIT", "CONSUMED", "INSTALLED",
+                if (status != null && status !in setOf("AVAILABLE", "RESERVED", "PICKED", "ISSUED", "IN_TRANSIT", "CONSUMED", "INSTALLED", "CUSTOMER_INSTALLED",
                     "PROVISIONAL", "RETURNED", "QUARANTINE", "LOST", "DISPOSED", "RECEIPT_SOURCE", "ACTIVE", "SPLIT", "RETIRED")) invalid()
                 val condition = value("condition")?.also { WarehouseCondition.valueOf(it) }
                 val owner = value("owner")?.also { AssetLegalOwner.valueOf(it) }

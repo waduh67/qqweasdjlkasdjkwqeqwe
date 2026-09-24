@@ -1,5 +1,40 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task30 report foundation checkpoint — NOT yet verified
+
+Task28 existing-flow regression still runs against c09c6da9 in
+.omo/runtime/asset-loss-regression.sh / .log (173 PASSED, no failures at last
+observation; NOT a final result). Task28 remains unchecked. All migrations through
+147 applied/immutable;148 next unused. No new migrations in this checkpoint.
+
+Task30 now has WarehouseReportService/controller/persistence, shared scoped
+stock, ledger stock card with pre-range opening, movement/serial chain, continuous
+current-dimension custody age/transit, assignment loan/sold status, operational WO
+use costs, historical receipt/issue/return print DTOs and bounded CSV. Costs keep
+original receipt numerator/basis and exact integer HALF_UP per line; per-currency
+totals and unknown quantities remain separate. Handover/removal/loss does not charge
+the original installation again. Report.view is independent of item.view; cost.view
+is required for WO costs and gates print costs. All outputs omit canonical payloads,
+customer labels, evidence/object keys and authority/session data. Scoped locations
+precede counts; stock card opening is calculated before dates. CSV max1000, rejects
+page/size and oversize rather than silently truncating, neutralizes formulas.
+
+Four WarehouseReportIT tests authored: real82500 use/17500 inspected return with
+917500 available and historical print, unknown cost, current scopes/privacy and
+filter/export boundaries. NOT executed yet. .omo/runtime/reports-initial.sh / .log
+is queued behind the existing QA lock; selects WarehouseReportIT + ModularityTests,
+expected7. Archive task30/reports-initial/xml; private reports-initial-database.log.
+Do not trust any old XML copied by cleanup after a compile failure.
+
+Task30 still requires actual full1km+10 ONU fixture/1ONU installation, mixed
+currencies/rounding, hard oversized-export proof, nonempty loan/sold/aging/transit
+coverage, revocation/history review and fixes from initial run. Print names use
+actual captured SKU snapshots (receipt/issue/origin); missing old snapshots remain
+NOT_CAPTURED, never reconstructed from mutable master. Review bounded response
+summary growth and exact historical print scope. Full-plan goal stays active:
+30–48 and F1–F4 remain; no main merge/deploy/reset. Continue committing and pushing
+coherent tested fixes and portable sanitized evidence. Never commit private runtime.
+
 ## Task28 active-loan loss VERIFIED — existing-flow regression running
 
 asset-loss-guards against c09c6da9 passed15 tests /3 suites, zero failures/errors/

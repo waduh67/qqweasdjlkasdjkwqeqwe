@@ -28,12 +28,12 @@ internal class WarehouseQuerySql(private val sql: PostingSql, val filter: Wareho
         }
     }
 
-    fun page(rows: String, json: String, order: String, requireTarget: Boolean = false): String = """,
+    fun page(rows: String, json: String, order: String, requireTarget: Boolean = false, metadata: String = ""): String = """,
         matches AS MATERIALIZED ($rows), selected AS (SELECT *${if (json == "body") "" else ", $json AS body"} FROM matches
             ORDER BY $order ${filter.direction},id ASC LIMIT ${filter.size} OFFSET ${filter.page.toLong() * filter.size})
         SELECT ${if (requireTarget) "CASE WHEN EXISTS (SELECT FROM target) THEN " else ""}
             jsonb_build_object('items',coalesce((SELECT jsonb_agg(body ORDER BY $order ${filter.direction},id ASC) FROM selected),'[]'::jsonb),
-            'page',${filter.page},'size',${filter.size},'totalElements',(SELECT count(*) FROM matches))::text${if (requireTarget) " ELSE NULL END" else ""}"""
+            $metadata 'page',${filter.page},'size',${filter.size},'totalElements',(SELECT count(*) FROM matches))::text${if (requireTarget) " ELSE NULL END" else ""}"""
 
     val prefix = """WITH RECURSIVE request AS (SELECT ?::uuid tenant,?::uuid[] locations,?::uuid[] areas,?::jsonb sites,
         ?::uuid sku,?::text serial,?::uuid location,?::text status,?::text condition,?::text owner,?::timestamptz since,?::timestamptz until),
