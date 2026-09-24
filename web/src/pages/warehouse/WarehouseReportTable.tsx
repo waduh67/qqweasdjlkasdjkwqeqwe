@@ -13,11 +13,11 @@ import { reportLink } from './reportPresentation'
 
 const money = (value: string, currency: string) => `${new Intl.NumberFormat('id-ID').format(BigInt(value))} ${currency} (satuan minor)`
 const assignmentLabels = { APPROVED_LOSS: 'Kehilangan disetujui', RECOVERED: 'Sudah diambil kembali', CLOSED: 'Selesai', PENDING_HANDOVER: 'Menunggu serah terima', ACTIVE: 'Aktif' }
-export function WarehouseReportTable({ data, onPrint }: { data: WarehouseReport; onPrint: (row: ReportMovement) => void }) {
+export function WarehouseReportTable({ data, onPrint }: { data: WarehouseReport; onPrint?: (row: ReportMovement) => void }) {
   const { can } = useCan()
   const empty = <EmptyState title="Tidak ada data laporan dalam cakupan ini" hint="Ubah rentang tanggal atau filter untuk melihat catatan lain." />
   const item = (row: { name: string; skuId: string }) => can('inventory.item.view') ? <Link to={stockLink({ tab: 'positions', skuId: row.skuId })}>{row.name}</Link> : row.name
-  const document = (row: ReportMovement) => <><span>{row.documentCode} · Revisi {row.documentRevision}</span>{['RECEIVE', 'ISSUE', 'RETURN'].includes(row.movementKind) && <Button onClick={() => onPrint(row)}>Pratinjau dokumen</Button>}</>
+  const document = (row: ReportMovement) => <><span>{row.documentCode} · Revisi {row.documentRevision}</span>{onPrint && ['RECEIVE', 'ISSUE', 'RETURN'].includes(row.movementKind) && <Button onClick={() => onPrint(row)}>Pratinjau dokumen</Button>}</>
   if (data.kind === 'stock') return <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={empty} columns={[
     { key: 'name', header: 'Barang', cell: item },
     { key: 'physical', header: 'Tercatat', cell: row => <WarehouseQuantity value={row.physical.quantityBase} unit={row.physical.baseUnit} /> },

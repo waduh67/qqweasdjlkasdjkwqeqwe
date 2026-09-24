@@ -1,3 +1,23 @@
+## Task38 overview verified; settings history/delegation next
+
+Overview backend4dc77371:4tests/3suites PASS3m22s (Shortages2, Balances1, Privacy1).
+13web/3files PASS6.68s (OverviewAPI2, OverviewUI5, ReportsUI6); TypeScript/oxlint PASS.
+Proof task38/overview-verification.json. Owned cleanup complete; volumes retained.
+
+WarehouseOverviewPage replaces the old root component through the existing route
+facade. Permission-gated independently loaded/paged shortage, replenishment, approval,
+inspection/repair return and oldest transit panels; actual source links and scoped
+totals. No cross-unit sum or broad requests for unauthorized panels. Route mapping
+now exhaustive rather than nested conditional. Reports/replenishment already verified.
+
+Task38 remaining: bounded named policy version history and delegation workbench,
+then full web/build checks; actual dashboard/report browser can join task45 acceptance.
+Existing delegation.list is unbounded and fails entire list if any location unscoped;
+use a new scoped paged read projection before exposing it. Delegation create/revoke
+already enforce current policy/source membership, both principal location+area, no
+chains/cycles, max30days and actual revision. Do not introduce raw UUID entry.
+Then39–48/F1–F4; goal ACTIVE. No migrations;148 next free,177/178 reserved43.
+
 ## Task38 overview shortage query checkpoint — verification pending
 
 Added GET /stock/shortages for inventory.item.view: active SKU minimum compared with

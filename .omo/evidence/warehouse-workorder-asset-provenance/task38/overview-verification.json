@@ -1,0 +1,41 @@
+{
+  "backendSourceCommit": "4dc77371",
+  "tests": 4,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseQueryITBalances",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "44efd32d6f8e4432a02f5b9ac54173cf504a100ede966d19f444511b0f6f1928"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "789b123c83dd3fcab76a887570ca1bfa8363358346db6a83e6b9b2e3fa5d5d5d"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseShortagesIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "5790f174336caec89d3ccd051aac6e3f8dc22fd56edf531c266dd1e1a6b800bd"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in 3m 22s",
+  "web": {
+    "sourceCommit": "accompanying overview UI commit",
+    "tests": 13,
+    "files": 3,
+    "durationSeconds": 6.68,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "scope": "Zero-stock active SKUs, exact quantity shortage before count/page, current scope/privacy; permission-based dashboard queries, independent failed panels, original warehouse route facade, actual source deep links and pending/transit ordering.",
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}
