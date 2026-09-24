@@ -1,5 +1,25 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Applied124 verified; RMA installation baseline and custody guards running
+
+V175.124 is APPLIED AND IMMUTABLE, SHA256 `2c246b66a003534f27816277606f95447fb5d16de3f4efa0db5831bba246b2d2`.
+RMA handover, supplier LOAN/SALE and ModularityTests passed6 tests in3 suites,
+zero failures/errors/skips,2m23s. Archive task26/rma-handover-green/xml. Source
+8ccd89d2 was pushed to feat/warehouse-workorder.123 remains immutable/79 green.
+
+This checkpoint adds a shared real repair/REPAIR-WO RMA fixture, three custody
+guard cases (wrong serial/work type, revoked receive/read replay, app-role source
+rewrite/fabricated non-posting receipt) and an original-customer reinstall probe.
+The latter expects purpose RETURN_CUSTOMER_RMA with null issue, then one actual
+CUSTOMER installation/new ONU episode, old history retained and exact replay.
+All4 tests are unverified: `.omo/runtime/rma-deployment-red.sh`, matching log,
+archive `task26/rma-deployment-red/xml`. Check actual outcomes before production
+changes. No125 declared or created yet. Current production remains8ccd89d2.
+
+Next: bind RMA authorization/install to this acknowledged handover without a
+fabricated ISSUE, preserve original sale title and episodes; then actual vendor
+replacement, approved reacquisition and packaged proof.26/whole plan still OPEN.
+
 ## Applied123 verified; RMA handover implementation pending validation
 
 V175.123 is APPLIED AND IMMUTABLE, SHA256 `fb47bf2fd2c6bf6c13fb1bac13addccacf5ad20628c609f8bbd619dbad6f1dde`.
