@@ -1,5 +1,17 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task34 functional browser green; visual refinement pending recheck
+
+stock-explorer-compiled at3d377e6f: both actual desktop/mobile passed44.8s, zero
+failed/skipped/flaky. BootJar + web build passed; owned cleanup stopped processes
+and containers/network, kept volumes. All requested stock/serial/lineage/scoped
+quarantine assertions passed; no explorer mutations. Reviewed8 synthetic captures.
+Found inherited resource-table ellipsis clipping document revision and current
+location text. Warehouse cell values now wrap on both widths; stock detail paragraph
+spacing reduced; movement labels translated for operators. No business behavior
+changed. Task34 staysOPEN until new visual browser check. NEXT wrapper run
+stock-explorer-readable. Task35 actual contract preparation saved in task-35.md.
+
 ## Task34 compilation correction — real browser still pending
 
 stock-explorer-initial at e9e57a60 stopped BEFORE Playwright: bootJar passed but

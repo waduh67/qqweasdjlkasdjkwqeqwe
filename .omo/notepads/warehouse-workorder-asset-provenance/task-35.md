@@ -1,0 +1,95 @@
+# Task35 preparation — implementation not started
+
+Finish task34 real stock-explorer-compiled browser and visual review first.
+Task35 requires demand/picking/issue workbench: requested/reserved/picked/dispatched/
+received, partial reserve/backorder, named serial/lot selection, issue-aware unpick,
+dispatch, printable immutable slip, substitution review and named receiver.
+Browser issue.spec covers warehouse reserve/pick/dispatch and actual transit only;
+receiver acknowledgement UI comes40, extended E2E45. Do not fabricate acknowledgement.
+
+Read docs/warehouse-reservations.md, warehouse-issues.md, work-order-materials.md
+alongside actual source (some document statements about future tasks are stale).
+MaterialWorkflowController /api/work-orders/{id}/materials: GET summary/history;
+PUT plan; POST submit-request/reserve/release/pick/unpick/dispatch; GETissues/{id}/slip.
+WarehouseReservationController /api/v1/warehouse/material-requests/{demandId}/reserve
+supports exact per-line/partial/manual identity override; /allocations/{workOrderId}
+returns List<ReservationAllocation>, no page. No requests list endpoint exists yet.
+No issue list/workbench endpoint exists: only slip when issue UUID already known.
+Need durable discoverable issues after reload; do not use localStorage as authority.
+
+Existing WO GET /api/work-orders?query=...&status=...&page=0&size=20 returns legacy
+PageResponse.content, current workorder.order.view, backend scope. Use typed paged
+named selection, do not reuse searchOpenWorkOrders (first50 then slice20). Existing
+WorkOrderView has names/assignees but no revision; authoritative current revisions
+come MaterialSummary.revisions. GET /mine supports page/status, no search.
+Warehouse page may select WO then show demand; actual demand setup needs visible
+material plan editor (can implement shared now, integrate existing WO in39).
+
+MaterialPlanningContracts and InventoryMaterialApi public DTOs:
+MaterialSummary: workOrderId,materialMode,noMaterialReason,revisions{WO,plan,use,
+settlementRevision},demandState,installationState,qaState,provisioningState,
+settlementState,lines:MaterialLineTotals[],plan?:MaterialPlanSnapshot,
+demandDocumentId?,demandRevision?,template?. Plan maynull; do not infer NONE.
+Line totals: planLineId,skuId,baseUnit,requestedBase,reservedUnpickedBase,
+reservedPickedBase,issuedBase,physicallyUsedBase,returnedBase,transferredOutBase,
+disposedBase,stillAccountableBase,backorderBase; all exact decimal strings.
+No accepted/received totals in MaterialSummary; cannot infer from issued (transit).
+Need actual receipt totals query for received if display, not zero default.
+Plan immutable captures code,type,action,customer?,WOrevision,planRevision,mode,
+reason,template?,actor,time and lines{id,lineNumber,sku{id,revision,code,name,
+tracking,baseUnit},quantityBase,continuousCut,substitution?,originalSku?}.
+Plan PUT {expectedRevision:planRev,workOrderRevision,materialMode,reason,lines}:
+manual nonempty max100 no duplicateSKU; NONE reason, no lines; null means template.
+Substitution requires originalPlanLineId/originalSkuId/reason, override and compatible
+tracking/unit, old obligations must released/unpicked before replacing plan.
+Submit/reserve/release body {expectedRevision:planRev,workOrderRevision,reason?}.
+
+InventoryReservationApi: reserve body {expectedRevision:demandRev,workOrderRevision,
+planRevision,lines?:[{demandLineId,partialQuantityBase?,stockIdentityId?}],reason?}.
+Explicit identity needs request.override+reason, automatic uses FIFO. Partial
+continuous cut cannot splice remnants. Qty from user exactEA/MM. Allocation list
+includes reservationId/revision,documentId/revision,demandLineId,planLineId,planRev,
+WOid,stockIdentityId,lotId?,skuId,locationId,originLineId/rev,stockRevision,
+unpicked/picked,unit,state,expiry,actor/customer/category,demandSupply totals.
+Repeated demandSupply is per-demand-line snapshot, MUST NOT sum per allocation.
+Demand conservation requested=unpicked+picked+issued+backorder. No live issue-bound
+mutation through reservation pick/unpick/release/extend; use issue-aware methods.
+
+InventoryIssueApi WarehousePickRequest: {expectedRevision:planRev,workOrderRevision,
+demandRevision,lines:[{reservationId,expectedRevision:reservationRev,stockIdentityId,
+stockRevision,quantityBase,baseUnit,scan?}]} max100 exact distinctidentity/reservation.
+Pick returns actual IssueSnapshot (NOT receipt ack): issueId,code,revision1,statePICKED,
+WOid/code/revision,customerId/labelSnapshot,demandDocumentId/revision,planId/revision,
+sender{id,name},receiver{id,name},lines,recordedAt,destinations[].
+Line{id,demandLineId,planLineId,reservationId/reservationRevision,dimension,
+sourceIdentityId,quantityBase,baseUnit,sku,serial?,lotCode?,locationName,
+substitution?,originalSku?}. Dimension actual stock identity/lot/location/custodian/
+condition/legalowner. SourceIdentityId can be parent vs dimension cut child.
+Serial pick only encumbrance; cable pick maysplit100m from1000->CUT100+REMNANT900;
+unpick leaves physical cut unchanged. Pick advances demand revision via supply.
+Transition body {issueId,expectedRevision:issueRev,workOrderRevision,planRevision,
+demandRevision,partial:boolean,reason}; returns IssueSnapshotDISPATCHED/UNPICKED.
+Read slip gets latest immutable operation body; response same transition bytewise.
+Dispatch requires explicitpartial forshortage and active assigned receiver; receiver
+chosen server deterministic UUID order from persisted active WO assignees, no
+receiver in HTTP body. Review actual receiver snapshot before dispatch.
+WO_TRANSIT ACTIVE TRANSIT setup through existingLocationEditor preset as receipt
+sourcepattern; no auto-create backend fallback. ActualdispatchwarehouseOUT/transitIN
+custodywarehouse statusIN_TRANSIT; no technician receipt implied.
+
+Issue read/slip current issue.view + request.view + currentWOread; allsource and
+actual immutable dispatchdestination scope; substituted snapshot requires override.
+Mutation issue.manage +request.manage currentauthority +WOread, notWOedit forpick.
+Module fulfillment obtains WorkOrderMaterialContext and calls inventory publicAPI;
+no inventory dependency on workorder implementation. Reuse existing authorization
+for any new discovery/read APIs; paginate/filter under scope before returning IDs,
+never bypass destination scope or construct hidden issue details from local cache.
+WarehouseIssueStore snapshot/state/print/dispatchDestinations reads real stored data.
+MaterialReceiptStore actual receipts carry MaterialReceiptTotal perissueLine:
+dispatchedBase,acceptedBase,inTransitBase. Latest receipt has cumulative totals.
+Need inspect actual store/policy before implementing a scoped read query.
+
+Task34 changes are isolated; no backend source modifications for35 yet. Keep applied
+migrations immutable;148 next unused,177/178reserved43. Tests meaningful plus real
+UI desktop/mobile; save each coherent implementation/verification checkpoint and
+push feat/warehouse-workorder with handoff+ledger, continue whole plan.

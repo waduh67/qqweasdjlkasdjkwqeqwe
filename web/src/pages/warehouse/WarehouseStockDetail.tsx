@@ -34,7 +34,7 @@ export function WarehouseAssetDetail({ id }: { id: string }) {
   return <WarehouseState {...result}>{asset => <><AssetSummary asset={asset} /><WarehouseStockTimeline resource="assets" id={asset.id} /></>}</WarehouseState>
 }
 function AssetSummary({ asset }: { asset: StockAsset }) {
-  return <section className="card stack" aria-label="Detail perangkat"><h2>{asset.name ?? 'Perangkat belum terverifikasi'}</h2><p>{asset.skuCode} · <strong>{asset.serial}</strong>{asset.mac && ` · MAC ${asset.mac}`}</p>
+  return <section className="card stack warehouse-stock-detail" aria-label="Detail perangkat"><h2>{asset.name ?? 'Perangkat belum terverifikasi'}</h2><p>{asset.skuCode} · <strong>{asset.serial}</strong>{asset.mac && ` · MAC ${asset.mac}`}</p>
     <p><WarehouseStatus status={asset.status} /> · <WarehouseStatus status={asset.condition} /> · <WarehouseStatus status={asset.legalOwner} /></p>
     <p>Lokasi: {asset.locationName ?? 'Nama lokasi tidak tersedia'} · Pemegang: {custodianLabels[asset.custodianKind]}</p>
     <p>Jumlah: {asset.quantity ? <WarehouseQuantity value={asset.quantity.quantityBase} unit={asset.quantity.baseUnit} /> : 'Satuan belum diverifikasi'}</p>
@@ -52,7 +52,7 @@ export function WarehousePositionDetail({ id }: { id: string }) {
   return <WarehouseState {...result}>{row => <><PositionSummary row={row} /><WarehouseStockTimeline resource="stock/positions" id={row.id} /></>}</WarehouseState>
 }
 function PositionSummary({ row }: { row: StockPosition }) {
-  return <section className="card stack" aria-label="Detail posisi"><h2>{row.name}</h2><p>{row.skuCode}{row.serial && ` · ${row.serial}`}</p>
+  return <section className="card stack warehouse-stock-detail" aria-label="Detail posisi"><h2>{row.name}</h2><p>{row.skuCode}{row.serial && ` · ${row.serial}`}</p>
     <p>Lokasi: {row.locationName ?? 'Nama lokasi tidak tersedia'} · Pemegang: {custodianLabels[row.custodianKind]}</p>
     <p><WarehouseStatus status={row.status} /> · <WarehouseStatus status={row.condition} /> · <WarehouseStatus status={row.legalOwner} /></p>
     <p>Tercatat: <WarehouseQuantity value={row.physical.quantityBase} unit={row.physical.baseUnit} /> · Tersedia: <WarehouseQuantity value={row.available.quantityBase} unit={row.available.baseUnit} /></p>
@@ -66,7 +66,7 @@ export function WarehouseLotDetail({ id, segmentId }: { id: string; segmentId?: 
   const loader = useCallback(() => getLot(id), [id])
   const result = useWarehouseQuery(loader)
   return <WarehouseState {...result}>{lot => <>
-    <section className="card stack" aria-label="Detail lot"><h2>{lot.name} · {lot.code}</h2><p>Diterima: <WarehouseQuantity value={lot.received.quantityBase} unit={lot.received.baseUnit} /> · <WarehouseTime value={lot.receivedAt} /></p>
+    <section className="card stack warehouse-stock-detail" aria-label="Detail lot"><h2>{lot.name} · {lot.code}</h2><p>Diterima: <WarehouseQuantity value={lot.received.quantityBase} unit={lot.received.baseUnit} /> · <WarehouseTime value={lot.receivedAt} /></p>
       <p role={lot.conservation.consistent ? 'status' : 'alert'} className={lot.conservation.consistent ? '' : 'error'}>{lot.conservation.consistent ? 'Jumlah reel dan seluruh bagiannya konsisten.' : 'Jumlah reel dan bagiannya tidak konsisten. Periksa riwayat sebelum memproses barang.'}</p>
       <p>Bagian aktif: <WarehouseQuantity value={lot.conservation.activeQuantityBase} unit={lot.received.baseUnit} /> · Bagian selesai: <WarehouseQuantity value={lot.conservation.terminalQuantityBase} unit={lot.received.baseUnit} /></p>
       <p className="muted">{lot.conservation.rootCount} bagian asal · {lot.conservation.splitCount} bagian telah dipecah. Induk yang dipecah tidak dihitung kembali sebagai stok aktif.</p>
@@ -93,7 +93,7 @@ function WarehouseSegments({ lotId }: { lotId: string }) {
 function WarehouseSegmentDetail({ lotId, id }: { lotId: string; id: string }) {
   const loader = useCallback(() => getSegment(lotId, id), [lotId, id])
   const result = useWarehouseQuery(loader)
-  return <WarehouseState {...result}>{segment => <section className="card stack" aria-label="Detail bagian reel"><h2>{segmentLabels[segment.kind]} · {segment.id.slice(0, 8)}</h2>
+  return <WarehouseState {...result}>{segment => <section className="card stack warehouse-stock-detail" aria-label="Detail bagian reel"><h2>{segmentLabels[segment.kind]} · {segment.id.slice(0, 8)}</h2>
     <p><WarehouseQuantity value={segment.quantity.quantityBase} unit={segment.quantity.baseUnit} /> · {segmentStateLabels[segment.state]}</p>
     {!segment.conserved && <p className="error" role="alert">Jumlah pecahan tidak sama dengan induknya.</p>}
     {segment.parentSegmentId && <Link to={stockLink({ lot: lotId, segment: segment.parentSegmentId })}>Buka bagian induk</Link>}

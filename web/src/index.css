@@ -3722,6 +3722,16 @@ td.dg-actions {
 .warehouse-mobile-label {
   display: none;
 }
+.warehouse-data-table-card .data-table-grid .fui-DataGridCell > .warehouse-cell-value {
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+.warehouse-stock-detail p {
+  margin: 0;
+}
 @media (max-width: 720px) {
   .warehouse-data-table-card {
     border: 0;
