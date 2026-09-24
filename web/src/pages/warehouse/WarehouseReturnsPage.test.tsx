@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom'
 import { tokenStore } from '@/api/client'
 import type { WarehouseReturn } from '@/api/warehouse/returns'
-import { repairTransit, returnBin, returnDetailsFixture, returnFixture, returnIds as id, returnQuarantine, returnSourceFixture } from '@/test/warehouseReturnFixture'
+import { repairTransit, returnBin, returnDetailsFixture, returnFixture, returnIds as id, returnQuarantine, returnSourceFixture, rmaDetailsFixture } from '@/test/warehouseReturnFixture'
 import { WarehouseReturnsPage } from './WarehouseReturnsPage'
 
 const mocks = vi.hoisted(() => { const permissions = new Set<string>(); return { permissions, can: (value: string) => permissions.has(value) } })
@@ -195,6 +195,7 @@ it('does not inspect a handed-over customer device and pages immutable history',
   const details = returnDetailsFixture(inspected()); details.references.rmaHandoverId = id.line
   const fetch = vi.fn(async (path: string) => {
     if (path.includes('/history/page?')) { const second = path.includes('page=1'); return response(page([second ? returnFixture(true) : inspected()], second ? 1 : 0, 1, 2)) }
+    if (path.includes('/rma-handovers/')) return response(rmaDetailsFixture())
     return response(details)
   }); vi.stubGlobal('fetch', fetch); show()
   await screen.findByRole('heading', { name: 'RET-001' }); expect(screen.queryByRole('button', { name: 'Periksa retur' })).toBeNull()

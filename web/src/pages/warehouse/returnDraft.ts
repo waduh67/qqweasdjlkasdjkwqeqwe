@@ -18,6 +18,11 @@ export function needsPostRepairInspection(details: ReturnDetails) {
   const { repair, inspection } = details.returnCase
   return repair?.returnedRevision != null && (!inspection || inspection.expectedRevision < repair.returnedRevision)
 }
+export function completedCustomerRepairInspection(details: ReturnDetails) {
+  const view = details.returnCase
+  return view.legalOwner === 'CUSTOMER' && view.condition === 'SERVICEABLE' && view.inspection?.resetConfirmed === true &&
+    view.repair?.returnedRevision != null && !needsPostRepairInspection(details)
+}
 export function buildReturnIntake(source: ReturnSource | null, destination: WarehouseLocation | null, proof: string): ReturnIntake {
   if (!source) throw new Error('Pilih sumber retur yang masih memenuhi syarat.')
   const target = quarantine(destination)

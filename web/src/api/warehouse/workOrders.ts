@@ -9,7 +9,7 @@ function workOrder(value: unknown, path = 'workOrder') {
     assignees: array(row.assignees, (value, field = 'assignee') => { const person = record(value, field); return { id: uuid(person.id, field), name: nullable(person.name, text, field) } }, path) }
 }
 export type MaterialWorkOrder = ReturnType<typeof workOrder>
-export const listMaterialWorkOrders = (filter: { query?: string; status?: string; page?: number } = {}) => query(`/api/work-orders${parameters({ ...filter, size: 25 })}`, (value, path) => {
+export const listMaterialWorkOrders = (filter: { query?: string; status?: string; page?: number; customerId?: string; type?: MaterialWorkOrder['type'] } = {}) => query(`/api/work-orders${parameters({ ...filter, size: 25 })}`, (value, path) => {
   const row = record(value, path)
   return pageOf(workOrder)({ ...row, items: row.content }, path)
 })

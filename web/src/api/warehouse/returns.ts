@@ -106,6 +106,22 @@ export function rmaHandover(value: unknown, path = 'rma') {
     createdBy: uuid(row.createdBy, path), recordedAt: timestamp(row.recordedAt, path) }
 }
 export type CustomerRmaHandover = ReturnType<typeof rmaHandover>
+export function rmaWorkOrder(value: unknown, path = 'rmaWorkOrder') {
+  const row = record(value, path), technicians = array(row.technicians, (value, field = 'technician') => {
+    const person = record(value, field)
+    return { id: uuid(person.id, field), name: text(person.name, field) }
+  }, path, 1000)
+  if (new Set(technicians.map(row => row.id)).size !== technicians.length) throw new WarehouseDataError(path)
+  return { id: uuid(row.id, path), code: text(row.code, path), title: text(row.title, path), customerId: uuid(row.customerId, path), revision: integer(row.revision, path), technicians }
+}
+export type RmaWorkOrder = ReturnType<typeof rmaWorkOrder>
+export function rmaDetails(value: unknown, path = 'rmaDetails') {
+  const row = record(value, path), handover = rmaHandover(row.handover, path), locations = array(row.locations, namedRef, path, 3)
+  if (new Set(locations.map(row => row.id)).size !== 3 || [handover.sourceLocationId, handover.transitLocationId, handover.technicianLocationId].some(id => !locations.some(row => row.id === id))) throw new WarehouseDataError(path)
+  return { handover, workOrderCode: text(row.workOrderCode, path), workOrderTitle: text(row.workOrderTitle, path),
+    senderName: nullable(row.senderName, text, path), technicianName: nullable(row.technicianName, text, path), locations }
+}
+export type RmaDetails = ReturnType<typeof rmaDetails>
 
 const root = '/api/v1/warehouse/returns'
 export const listReturns = (filter: ReturnFilter = {}) => query(`${root}/workbench${parameters({ ...filter })}`, pageOf(returnDetails))
@@ -121,3 +137,5 @@ export const requestReplacement = (id: string, input: ReplacementInput) => comma
 export const requestReacquisition = (id: string, input: ReacquisitionInput) => command(`${root}/${uuid(id)}/reacquisition`, 'POST', input, reacquisition)
 export const dispatchRma = (id: string, input: RmaDispatch) => command(`${root}/${uuid(id)}/rma-handover`, 'POST', input, rmaHandover)
 export const getRmaHandover = (id: string) => query(`/api/v1/warehouse/rma-handovers/${uuid(id)}`, rmaHandover)
+export const getRmaDetails = (id: string) => query(`/api/v1/warehouse/rma-handovers/${uuid(id)}/details`, rmaDetails)
+export const getRmaWorkOrder = (returnId: string, workOrderId: string) => query(`${root}/${uuid(returnId)}/rma-work-orders/${uuid(workOrderId)}`, rmaWorkOrder)

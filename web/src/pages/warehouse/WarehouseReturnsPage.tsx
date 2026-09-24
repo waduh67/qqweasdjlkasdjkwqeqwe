@@ -16,7 +16,8 @@ import { WarehouseReturnActions, type ReturnAction } from './WarehouseReturnActi
 import { WarehouseReturnEditor } from './WarehouseReturnEditor'
 import { WarehouseReturnFilters } from './WarehouseReturnFilters'
 import { WarehouseSupplierReplacements } from './WarehouseSupplierReplacement'
-import { needsPostRepairInspection } from './returnDraft'
+import { WarehouseCustomerRma } from './WarehouseCustomerRma'
+import { completedCustomerRepairInspection, needsPostRepairInspection } from './returnDraft'
 import { returnItemLabel, returnLocationLabel, returnOriginLabels } from './returnPresentation'
 
 const detailPath = (id: string) => `/warehouse/returns?returnId=${encodeURIComponent(id)}`
@@ -70,7 +71,7 @@ function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () =>
     {view.repair && <p>Servis: {refs.vendor?.name ?? refs.vendor?.code} · {view.repair.vendorReference}{view.repair.returnedRevision !== null && ` · Kembali pada revisi ${view.repair.returnedRevision} (${view.repair.result === 'REPAIRED' ? 'diperbaiki' : 'belum diperbaiki'})`}</p>}
     {refs.rmaHandoverId && <p style={{ overflowWrap: 'anywhere' }}>Serah-terima RMA sudah dibuat: {refs.rmaHandoverId}. Lokasi dokumen retur adalah catatan sebelumnya; pergerakan berikutnya mengikuti dokumen serah-terima.</p>}
     <div className="row wrap"><Button onClick={reload}>Muat ulang retur</Button>
-      {manage && waiting && <Button variant="primary" disabled={!locations} onClick={() => setAction('inspect')}>Periksa retur</Button>}
+      {manage && waiting && !completedCustomerRepairInspection(details) && <Button variant="primary" disabled={!locations} onClick={() => setAction('inspect')}>Periksa retur</Button>}
       {manage && waiting && view.origin === 'ASSET_REMOVAL' && view.inspection && !view.repair && <Button disabled={!locations || !can('inventory.receipt.view')} onClick={() => setAction('repair-dispatch')}>Kirim ke servis</Button>}
       {manage && view.state === 'REPAIR' && <Button variant="primary" disabled={!locations} onClick={() => setAction('repair-receive')}>Terima dari servis</Button>}
     </div>
@@ -78,6 +79,7 @@ function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () =>
     {manage && !locations && <p className="muted">Izin lihat lokasi diperlukan untuk memilih tujuan pemeriksaan atau servis.</p>}
     {manage && waiting && view.origin === 'ASSET_REMOVAL' && view.inspection && !view.repair && !can('inventory.receipt.view') && <p className="muted">Pemilihan penyedia servis memerlukan izin lihat penerimaan/pemasok.</p>}
   </section>
+    {manage && <WarehouseCustomerRma details={details} reload={reload} />}
     {view.repair && can('inventory.receipt.view') && <WarehouseSupplierReplacements details={details} reload={reload} />}
     <ReturnHistory details={details} /></>
 }

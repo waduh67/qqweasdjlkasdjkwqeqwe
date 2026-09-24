@@ -1,5 +1,23 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task36 RMA UI saved; 24 web and 11 backend checks passed
+
+RMA read backend @c7612c9e passed11 tests/4 suites in3m45s; portable
+rma-reads-verification.json saved and owned cleanup completed, volumes retained.
+UI selects named original-customer REPAIR WO, reads actual current revision and
+active assigned receivers, binds technician custody/transit and scanned same serial,
+reviews one captured command, and reloads persisted named handover after success
+or409. Actual acknowledgement remains technician flow (task40), read UI can refresh
+DISPATCHED/RECEIVED. Completed CUSTOMER post-repair inspection hides repeat inspect
+that would invalidate the closed repair revision.24 affected web tests/5files passed
+5.72s; TS/oxlint exit0. Actual return/RMA browser remains deferred to task45 after40/41.
+
+NEXT signed original-WO evidence reacquisition form plus persisted request discovery,
+then transfer C8 filters and docs/final task36 checks. Backend Kotlin inferred Set type
+warning in RmaWorkOrderAdapter line50 and redundant test String.toString need small
+cleanup with next compile. No migrations. Task36 OPEN; whole36–48/F1–F4 continues.
+No QA processes running. Commit and remote checkpoint each coherent change.
+
 ## Task36 RMA read contracts implemented; backend verification next
 
 Added /returns/{id}/rma-work-orders/{workOrderId} to read actual current revision,

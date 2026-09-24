@@ -1,0 +1,48 @@
+{
+  "task": 36,
+  "sourceCommit": "c7612c9e",
+  "backend": {
+    "tests": 11,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "b7a92304adfa59baa0c911ef5f2d62a2259c9ff53ff01a7261283ed8499194c6"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "5c047c9ec0380472f15cd2c7dd85020c9abd994f5997ec2b61c3c3dba53b33f8"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "7996a7419f6337bfa599616ba9bec9171d3b46c9e7d8f1c30f8337b97ea6527a"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseRmaWorkOrderReadIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "babb6f7270f040198e3d53f97309603d68e80e85e05ea18b9502ae066ac825c4"
+      }
+    ],
+    "build": "BUILD SUCCESSFUL in 3m45s"
+  },
+  "acceptance": [
+    "Return manager reads current REPAIR work-order revision and active assigned technicians through return permission and current scopes",
+    "Named RMA details preserve raw dispatch and acknowledgement responses",
+    "Original customer, serial, current WO assignment/revision, location scopes and independent physical acknowledgement remain enforced"
+  ],
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}
