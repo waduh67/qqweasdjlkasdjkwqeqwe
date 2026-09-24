@@ -1,6 +1,6 @@
-# Task37 discovery notes (task36 verification still pending)
+# Task37 implementation notes
 
-## Task37 blind count reads implemented; backend verification next
+## Task37 blind count reads: HTTP error mapping fixed; rerun next
 
 Task36 COMPLETE a95c35a0 (product99b98b41/test2c82db3f), proof completion.json,
 178web/build/lint plus source-specific backend and actual transfer browser saved.
@@ -17,6 +17,11 @@ use review owner without count/stock permissions. Public IAM names/current count
 permissions+scopes filter counter choices. Raw mutation/views unchanged.
 New /{id}/history/page bounds latest facts and own-counter visibility before total;
 legacy history now default25/max100 ascending. Internal mutation facts stay complete.
+
+Initial 7b5f4687 run: existing 15 owner tests PASS; both new workflows reached
+expected access/input rejection but failed because the new controller was omitted
+from WarehouseHttpErrors advice. Added it so domain denials map to documented
+404/400 instead of unhandled ServletException/500. Fresh full 17-test rerun next.
 
 New WarehouseCountWorkbenchIT two HTTP workflows cover no stock permission/quantity
 leak, named assignments, scoped paging, reviewer-only submitted comparison, revoked
