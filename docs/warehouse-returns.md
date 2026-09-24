@@ -7,7 +7,7 @@ pemakaian, kepemilikan, pelanggan, atau episode ONU.
 
 ## API yang tersedia
 
-Semua mutasi di bawah membutuhkan `Idempotency-Key` dan izin
+Mutasi intake/inspeksi/servis di bawah membutuhkan `Idempotency-Key` dan izin
 `inventory.return.manage`. Pembacaan membutuhkan `inventory.return.view`.
 Area serta lokasi karantina awal dan lokasi saat ini diperiksa pada setiap
 permintaan, termasuk pengulangan permintaan lama. Token atau kunci lama tidak
@@ -82,11 +82,51 @@ Case servis ditutup ketika inspeksi menyatakan serviceable; barang milik pelangg
 tetap tidak tersedia bagi issue ISP. Satu dokumen retur saat ini mendukung satu
 case servis. Dokumen dan riwayat memuat detail case pada field `repair`.
 
+## Penutupan material
+
+Retur material yang telah diinspeksi dan diterima mengurangi outstanding WO.
+`returnedBase` tetap menyimpan quantity historis; `settledReturnBase` menunjukkan
+bagian yang sudah selesai diinspeksi. Field kedua tidak dikirim bila nilainya0.
+Retur rusak atau belum diinspeksi tetap menghalangi penutupan. Penutupan menyimpan
+seluruh baris sumber dan tidak menambah posting fisik.
+
+Perangkat yang benar-benar dipasang dihitung sekali sebagai pemakaian terhadap
+issue asal. Serah terima title tidak menambah pemakaian. Pemasangan ulang RMA
+menunjuk handover khusus dan tidak membebankan satu unit lagi pada issue lama.
+
+## RMA kembali ke pelanggan asal
+
+Sesudah case servis perangkat CUSTOMER ditutup oleh inspeksi serviceable, gudang
+menyiapkan serah terima untuk teknisi pada WO `REPAIR` pelanggan asal. Pengirim
+harus berbeda dari teknisi penerima. Semua langkah menggunakan `Idempotency-Key`.
+
+| Metode dan path | Izin dan hasil |
+| --- | --- |
+| `POST /api/v1/warehouse/returns/{id}/rma-handover` | `inventory.return.manage`; kirim ke transit |
+| `POST /api/v1/warehouse/rma-handovers/{id}/acknowledge` | `workorder.order.field`, teknisi yang ditunjuk; terima custody |
+| `GET /api/v1/warehouse/rma-handovers/{id}` | Pengelola retur atau teknisi yang ditunjuk, sesuai scope |
+| `POST /api/work-orders/{id}/assets/authorize` | Teknisi WO, izin field dan assign; terbitkan izin tujuan RMA |
+| `POST /api/customers/{id}/assets/install` | Konsumsi izin sekali pada pelanggan asal |
+
+Dispatch memuat `expectedRevision` retur, `workOrderId`, `workOrderRevision`,
+`technicianId`, `transitLocationId`, `technicianLocationId`, `observedSerial`,
+dan `evidenceReference`. Hasilnya memuat ID handover, pelanggan/assignment asal,
+case servis, lokasi dan revision1. Acknowledgement memuat `expectedRevision: 1`,
+serial yang sama dan referensi bukti; hasilnya revision2. Stok berpindah ke custody
+teknisi dengan status `ISSUED`, kondisi serviceable dan pemilik CUSTOMER.
+
+Authorization menggunakan `purpose: RETURN_CUSTOMER_RMA`, `ownershipMode: SALE`,
+`assetId`, `repairCaseId`, `previousAssignmentId` assignment asal,
+`issueLineId: null`, serta `expectedRevision` WO saat ini. Izin hanya terbit setelah
+handover diterima teknisi. Pemasangan memakai authorizationId yang dikembalikan;
+serial, pelanggan, asal fisik dan title ditentukan server. Barang CUSTOMER tidak
+menjadi stok ISP yang tersedia. Assignment dan episode ONU lama tetap utuh;
+pemasangan kembali membuat episode baru untuk pelanggan asal.
+
 ## Status pengembangan
 
-Dokumen ini mencatat intake/inspeksi, reuse dan servis vendor atas perangkat yang
-sama. Penggantian fisik oleh vendor, pengembalian RMA kepada pelanggan
-asal, reacquisition dengan approval independen, dan
-penutupan kewajiban material masih dikerjakan pada task26. Daftar serta paginasi
-riwayat sedang melalui verifikasi integrasi.
-Panduan UI dan bukti packaged HTTP menyusul sebelum task dinyatakan selesai.
+Intake, inspeksi, servis perangkat yang sama, pembacaan berpaginasi, penutupan
+material serta pemasangan kembali RMA telah memiliki bukti integrasi PostgreSQL.
+Serah terima bertanda tangan setelah pemasangan RMA sedang diselesaikan.
+Penggantian fisik oleh vendor, reacquisition dengan approval independen,
+panduan UI dan bukti packaged HTTP masih menjadi pekerjaan task26/lanjutan.

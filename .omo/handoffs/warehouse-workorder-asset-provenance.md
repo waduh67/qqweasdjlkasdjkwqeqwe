@@ -1,5 +1,25 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+##125 shared52 green — signed handover/key/history probes pending
+
+Source567dc234 passed52 tests in3 suites, zero failures/errors/skips,4m47s:
+real RMA reinstall, all48 CustomerAssetReplacementIT cases (including races and
+SQL integrity) and3 RMA custody guards. Archive task26/rma-deployment-green/xml.
+The unmatched CustomerDeploymentIT selector supplied no generic deployment cases;
+those actual named suites still need the later shared regression.
+
+Current checkpoint adds3 unverified WarehouseCustomerRmaAcceptanceIT probes:
+non-posting signed customer handover, normal-vs-RMA mint-key conflict, and the
+public inventory assignment history containing both execution source kinds.
+The shared fixture first completes a real RMA installation for each probe.
+Command `.omo/runtime/rma-acceptance-red.sh`, matching log, archive
+`task26/rma-acceptance-red/xml`, queued after52 green. Read results before editing
+production. No126 declared/created. Applied125 and earlier immutable.
+
+API guide docs/warehouse-returns.md now covers actual material settlement and RMA
+custody/authorize/install; signed acceptance and remaining vendor replacement/
+reacquisition/packaged proof stay explicitly unfinished.26 stays OPEN.
+
 ##125 applied — original-customer RMA installation passed, shared run pending
 
 V175.125 is APPLIED AND IMMUTABLE, SHA256 `61ce87ff20a7fcf0fc5eafc85c6618223a781074a853f6d0939b51d98eb5c00a`.

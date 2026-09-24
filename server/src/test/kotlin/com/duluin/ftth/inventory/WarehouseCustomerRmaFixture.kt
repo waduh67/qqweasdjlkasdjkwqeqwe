@@ -33,4 +33,19 @@ abstract class WarehouseCustomerRmaFixture : WarehouseRepairFixture() {
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
         return response.contentAsString
     }
+    protected data class RmaInstallation(val source: RmaCase, val authorization: String, val operation: String)
+    protected fun installRma(case: RmaCase = prepareRma()): RmaInstallation {
+        val outbound = dispatchRma(case)
+        receiveRma(case, outbound)
+        val permit = request("POST", "/api/work-orders/${case.work}/assets/authorize", case.receipt.receiver.first,
+            case.authorization, "rma-authorization")
+        assertThat(permit.status).withFailMessage(permit.contentAsString).isEqualTo(200)
+        val body = mapper.readTree(permit.contentAsString)
+        val authorization = body.path("authorizationId").asString()
+        val installed = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first,
+            """{"authorizationId":"$authorization","expectedRevision":0,"topology":null}""", "rma-install")
+        assertThat(installed.status).withFailMessage(installed.contentAsString).isEqualTo(201)
+        return RmaInstallation(case, authorization, body.path("operationId").asString())
+    }
+
 }
