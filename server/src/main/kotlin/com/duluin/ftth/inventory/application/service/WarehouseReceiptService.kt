@@ -22,7 +22,12 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
     private val store: WarehouseReceiptPersistence, private val operations: WarehouseOperationStore) {
     private val mapper = jacksonObjectMapper()
 
-    fun draft(id: UUID?, input: ReceiptDraftInput, key: String): WarehouseOperationReceipt {
+    fun draft(id: UUID?, input: ReceiptDraftInput, key: String): WarehouseOperationReceipt = draft(id, input, key, null)
+
+    internal fun replacementDraft(input: ReceiptDraftInput, key: String, source: ReceiptDraftContext): WarehouseOperationReceipt =
+        draft(null, input, key, source)
+
+    private fun draft(id: UUID?, input: ReceiptDraftInput, key: String, source: ReceiptDraftContext?): WarehouseOperationReceipt {
         receiptKey(key)
         if ((id == null) != (input.expectedRevision == null) || (input.expectedRevision ?: 0) !in 0 until Long.MAX_VALUE)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
@@ -52,7 +57,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         if (existing != null && existing.state != WarehouseReceiptState.DRAFT) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val intake = validation.prepare(input)
         val revision = if (existing == null) 0 else Math.addExact(existing.revision, 1)
-        store.saveDraft(target, intake, revision, current.fence.identity.userId, current.fence.epoch, cutover.snapshot.epoch, existing == null)
+        store.saveDraft(target, intake, revision, current.fence.identity.userId, current.fence.epoch, cutover.snapshot.epoch, existing == null, source)
         val body = mapper.writeValueAsString(view(store.get(target), false))
         val operation = PostingOperation(UUID.randomUUID(), namespace, key, current.fence.identity.userId, target,
             "receipt:$target", canonical.hash, action, if (existing == null) 201 else 200, body, current.fence.epoch)

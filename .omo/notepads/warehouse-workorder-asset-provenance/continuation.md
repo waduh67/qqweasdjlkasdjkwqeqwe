@@ -1,5 +1,43 @@
 # Whole-plan continuation
 
+##135 replacement admission/effect — first database validation pending
+
+134 is APPLIED AND IMMUTABLE. Corrected initial creation (internal
+ReceiptDraftContext/replacementDraft, normal HTTP input unchanged) now passes
+LOAN/SALE request201 and replay. That run finished6 tests/3 suites/2 failures/
+0 errors/skips,2m40s:3 modularity and normal WarehouseReceiptITReceive pass;
+both supplier cases reach receive and are blocked by134's intentional DRAFT-only
+REPLACEMENT_REQUEST_RECEIPT_BINDING. Archive return-replacement-draft-green/xml.
+
+135 was reserved before creation. Source now adds one immutable replacement receipt
+mapping per repair/receipt/asset/operation, capturing current old-asset/vendor/
+return/WO source and checking actual RECEIPT/APPLIED legs/owner/outbox at commit.
+Direct receipt and approval receipt use the same typed binding; owner defaults ISP
+only for ordinary receipts. The new asset has real vendor RECEIPT provenance;
+old physical asset/assignment are preserved. Receipt operation ID is generated
+before admission to bind the deferred mapping to its actual operation. Approval
+source includes replacement snapshot. SupplierReplacementAdmission locks original
+WO before warehouse locks; current source is checked with receipt/return/asset
+held before any admission or final approval decision. Authority/view replay still
+checks current WO/locations.
+
+First return-replacement-receipt-green attempt failed production compilation in14s
+because AssetHandoverWorkOrderPort import pointed at port/outbound instead of the
+public inventory package. Import fixed; no tests or135 application occurred in
+that attempt (copied XML is stale). Corrected current run:
+`.omo/runtime/return-replacement-admission-green.sh`, matching log/DB log,
+archive task26/return-replacement-admission-green/xml, session28075. It compiled
+both source sets and is running2 supplier,3 modularity,1 normal receipt and6
+ordinary approval tests. Read log for135 apply/result; after successful apply
+135 bytes are immutable. No136 reserved or created.
+
+Still needed: real replacement approval path, competing distinct drafts/receives,
+source mutation/scope/tenant/replay/SQL graph tests, controlled rejection/new-request
+flow (135 presently supports only DRAFT0 and received receipt; generic replacement
+rework is not implemented), replacement inspection/reset, CUSTOMER original-
+customer custody/reinstallation, and explicit old-vendor disposition/history.
+Then packaged HTTP proof and the rest of the plan. Task26 remains OPEN.
+
 ##134 supplier replacement request/source draft — first validation running
 
 The supplier baseline compiled and ran2 tests/1 suite,2 failures/0 errors/skips,

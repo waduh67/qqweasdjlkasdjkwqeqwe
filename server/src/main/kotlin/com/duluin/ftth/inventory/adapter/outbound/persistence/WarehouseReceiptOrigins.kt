@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
-class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc) {
+class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc, private val replacements: SupplierReplacementStore) {
     fun lockIdentityKeys(record: ReceiptRecord) = jdbc.execute { sql ->
         record.intake.lines.flatMap { line -> listOfNotNull(
             line.serial?.let { "SERIAL" to SerialIdentity.parse(it).canonical },
@@ -20,8 +20,10 @@ class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc) {
                 sql.value("SELECT pg_advisory_xact_lock(hashtextextended(?,0))", "${sql.tenant}|receipt-identity|$type|$value")
             }
     }
-    fun admit(record: ReceiptRecord): List<PostingLeg> = jdbc.execute { sql ->
+    fun admit(record: ReceiptRecord, operationId: UUID): List<PostingLeg> = jdbc.execute { sql ->
         lockIdentityKeys(record)
+        val replacement = replacements.forReceipt(record.id)
+        val owner = replacement?.view?.legalOwner ?: AssetLegalOwner.ISP
         record.intake.lines.flatMap { line ->
             val identity = UUID.randomUUID()
             val lot = if (line.serial == null) UUID.randomUUID() else null
@@ -40,8 +42,8 @@ class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc) {
                 }
                 sql.update("""INSERT INTO inventory_serialized_asset(id,tenant_id,sku_id,warehouse_sku_id,serial_number,mac_address,canonical_serial,canonical_mac,
                     status,location_id,custody_owner_id,custody_owner_kind,quantity_base,base_unit,condition,legal_owner,origin_document_line_id)
-                    VALUES (?,?,?,?,?,?,?,?,'QUARANTINE',?,?,'WAREHOUSE',1,'EA','QUARANTINE','ISP',?)""", identity, sql.tenant, line.sku.id,
-                    line.sku.id, line.serial, line.mac, serial, mac, record.intake.inspection.id, record.intake.inspection.id, line.id)
+                    VALUES (?,?,?,?,?,?,?,?,'QUARANTINE',?,?,'WAREHOUSE',1,'EA','QUARANTINE',?,?)""", identity, sql.tenant, line.sku.id,
+                    line.sku.id, line.serial, line.mac, serial, mac, record.intake.inspection.id, record.intake.inspection.id, owner, line.id)
                 sql.update("INSERT INTO inventory_segment(id,tenant_id,sku_id,asset_id,kind,base_unit,quantity_base) VALUES (?,?,?,?,'SERIAL','EA',1)",
                     identity, sql.tenant, line.sku.id, identity)
             } else {
@@ -54,8 +56,9 @@ class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc) {
             }
             sql.update("UPDATE inventory_document_line SET stock_identity_id=?,lot_id=?,revision=revision+1,document_revision=? WHERE tenant_id=? AND id=?",
                 identity, lot, record.revision, sql.tenant, line.id)
+            replacement?.let { replacements.register(it, identity, operationId) }
             val inspection = PostingDimension(line.sku.id, identity, lot, record.intake.inspection.id, record.intake.inspection.id,
-                OwnerKind.WAREHOUSE, WarehouseCondition.QUARANTINE, AssetLegalOwner.ISP)
+                OwnerKind.WAREHOUSE, WarehouseCondition.QUARANTINE, owner)
             listOf(PostingLeg(LegDirection.OUT, inspection.copy(locationId = record.intake.source.id, custodianId = record.intake.source.id,
                 custodianKind = OwnerKind.TRANSIT), quantity, line.id, InventoryStatus.IN_TRANSIT, PostingEndpoint.RECEIPT_SOURCE),
                 PostingLeg(LegDirection.IN, inspection, quantity, line.id, InventoryStatus.QUARANTINE))

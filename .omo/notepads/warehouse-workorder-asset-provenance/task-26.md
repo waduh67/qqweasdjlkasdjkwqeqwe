@@ -1,5 +1,82 @@
 # Task26 — returns, inspection and repair (in progress)
 
+##135 replacement admission/effect — first database validation pending
+
+134 is APPLIED AND IMMUTABLE. Corrected initial creation (internal
+ReceiptDraftContext/replacementDraft, normal HTTP input unchanged) now passes
+LOAN/SALE request201 and replay. That run finished6 tests/3 suites/2 failures/
+0 errors/skips,2m40s:3 modularity and normal WarehouseReceiptITReceive pass;
+both supplier cases reach receive and are blocked by134's intentional DRAFT-only
+REPLACEMENT_REQUEST_RECEIPT_BINDING. Archive return-replacement-draft-green/xml.
+
+135 was reserved before creation. Source now adds one immutable replacement receipt
+mapping per repair/receipt/asset/operation, capturing current old-asset/vendor/
+return/WO source and checking actual RECEIPT/APPLIED legs/owner/outbox at commit.
+Direct receipt and approval receipt use the same typed binding; owner defaults ISP
+only for ordinary receipts. The new asset has real vendor RECEIPT provenance;
+old physical asset/assignment are preserved. Receipt operation ID is generated
+before admission to bind the deferred mapping to its actual operation. Approval
+source includes replacement snapshot. SupplierReplacementAdmission locks original
+WO before warehouse locks; current source is checked with receipt/return/asset
+held before any admission or final approval decision. Authority/view replay still
+checks current WO/locations.
+
+First return-replacement-receipt-green attempt failed production compilation in14s
+because AssetHandoverWorkOrderPort import pointed at port/outbound instead of the
+public inventory package. Import fixed; no tests or135 application occurred in
+that attempt (copied XML is stale). Corrected current run:
+`.omo/runtime/return-replacement-admission-green.sh`, matching log/DB log,
+archive task26/return-replacement-admission-green/xml, session28075. It compiled
+both source sets and is running2 supplier,3 modularity,1 normal receipt and6
+ordinary approval tests. Read log for135 apply/result; after successful apply
+135 bytes are immutable. No136 reserved or created.
+
+Still needed: real replacement approval path, competing distinct drafts/receives,
+source mutation/scope/tenant/replay/SQL graph tests, controlled rejection/new-request
+flow (135 presently supports only DRAFT0 and received receipt; generic replacement
+rework is not implemented), replacement inspection/reset, CUSTOMER original-
+customer custody/reinstallation, and explicit old-vendor disposition/history.
+Then packaged HTTP proof and the rest of the plan. Task26 remains OPEN.
+
+##135 reserved before creation — exact physical vendor replacement receipt
+
+The corrected initial INSERT now passes both replacement request201/replay cases.
+Both tests advance to receive at line23 and fail with expected draft-only134
+REPLACEMENT_REQUEST_RECEIPT_BINDING (13:51:52.558/13:51:55.806 UTC). Three modularity
+cases passed. Current run24771 still finishing normal WarehouseReceiptITReceive;
+do not claim its result yet.134 is applied/immutable; no135 SQL exists yet.
+Reserve135 for verified admission owner and immutable exactly-once receipt effect.
+
+##134 applied; first draft field initialization corrected (run pending)
+
+134 applied successfully at20:48:32.541 JKT and is IMMUTABLE. First request run
+compiled both source sets, passed3 modularity cases, failed both supplier cases
+at POST creation:5 tests/2 suites/2 failures/0 errors/skips,1m53s. PostgreSQL logs
+13:49:19.038 and13:49:23.563 UTC identify warehouse_revision_guard rejecting the
+post-creation UPDATE inventory_document SET customer_id/work_order_id/revision.
+
+Working Kotlin correction initializes replacement customer/WO/owner at initial
+INSERT via internal WarehouseReceiptService.replacementDraft and a separate
+ReceiptDraftContext (normal HTTP ReceiptDraftInput remains unchanged). Removed
+header/line UPDATEs from SupplierReplacementStore.insert. Shared normal receipt
+payloads remain byte-shape compatible. No schema change required for this fix.
+Current .omo/runtime/return-replacement-draft-green.sh / matching log (session24771)
+runs2 supplier cases,3 modularity and WarehouseReceiptITReceive. Compile passed;
+no test outcome claimed yet. Read live log. Still no135 declared/created.
+
+Next physical admission design: add immutable effect/consumption row unique per
+repair and per new receipt/asset, with deferred FK to actual receive operation.
+Generate operationId before origins.admit in ReceiptTransitionService (approval
+already has it), pass it to admission, capture the new asset mapping before post,
+and validate full real RECEIPT/APPLIED legs/outbox at commit. Owner comes from
+verified replacement binding, default ISP for ordinary receipts, never from HTTP
+or an arbitrary draft line. Validate/lock original source before topology and
+receipt locks; approval prepare must record durable STALE before deciding if
+source changed. Include replacement context in frozen approval source.134 draft
+validator must be extended via135 only for complete verified received effect.
+Multiple drafts allowed, one physical replacement per repair. Rejection needs
+controlled new-request flow, no generic rewrite of immutable bound intake.
+
 ##134 supplier replacement request/source draft — first validation running
 
 The supplier baseline compiled and ran2 tests/1 suite,2 failures/0 errors/skips,

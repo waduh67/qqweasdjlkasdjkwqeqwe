@@ -19,7 +19,8 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
     private val receipts: WarehouseReceiptService, private val store: WarehouseReceiptPersistence,
     private val operations: WarehouseOperationStore, private val origins: WarehouseReceiptOrigins, private val posting: WarehousePosting,
     private val planning: ReceiptDispositionPlanning, private val inspections: ReceiptInspectionPersistence, private val completion: ReceiptCompletion,
-    private val policy: WarehousePolicyEvaluationApi, private val approvals: com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseApprovalStore) {
+    private val policy: WarehousePolicyEvaluationApi, private val approvals: com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseApprovalStore,
+    private val replacement: SupplierReplacementAdmission) {
     private val mapper = jacksonObjectMapper()
     fun execute(id: UUID, input: ReceiptInput, key: String): WarehouseOperationReceipt {
         receiptKey(key)
@@ -33,6 +34,7 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.receipt.manage")
+        replacement.lock(id, current)
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)
         val record = store.get(id, true)
@@ -52,19 +54,20 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
         if (record.state != if (input is ReceiptReceiveInput) WarehouseReceiptState.DRAFT else WarehouseReceiptState.RECEIVED_IN_INSPECTION)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (input is ReceiptReceiveInput) {
+            if (!replacement.current(id, current)) masterFailure(WarehouseErrorCode.STALE_REVISION)
             if (approvals.source(id).disposition != null) masterFailure(WarehouseErrorCode.APPROVAL_REQUIRED)
             val existing = approvals.findSource(id, record.revision)
             if (existing != null || policy.evaluate(WarehouseSourceInput(id, record.revision)).tiers.isNotEmpty())
                 masterFailure(WarehouseErrorCode.APPROVAL_REQUIRED)
         }
+        val operationId = UUID.randomUUID()
         val plan = when (input) {
-            is ReceiptReceiveInput -> ReceiptDispositionPlan(origins.admit(record), emptyList(), emptyList(), WarehouseReceiptState.RECEIVED_IN_INSPECTION)
+            is ReceiptReceiveInput -> ReceiptDispositionPlan(origins.admit(record, operationId), emptyList(), emptyList(), WarehouseReceiptState.RECEIVED_IN_INSPECTION)
             is ReceiptInspectInput -> planning.inspect(record, input)
             is ReceiptPutawayInput -> planning.putaway(record, input, requireNotNull(destination))
             is ReceiptDraftInput -> masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         }
         val revision = Math.addExact(record.revision, 1)
-        val operationId = UUID.randomUUID()
         val nextState = if (input is ReceiptReceiveInput) plan.state else completion.state(record, plan)
         val body = mapper.writeValueAsString(mapOf("id" to id, "revision" to revision, "state" to nextState, "operationId" to operationId))
         val operation = PostingOperation(operationId, namespace, key, current.fence.identity.userId, id, "receipt:$id",

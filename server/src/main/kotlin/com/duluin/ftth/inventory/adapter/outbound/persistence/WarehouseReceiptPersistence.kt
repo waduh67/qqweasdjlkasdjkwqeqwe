@@ -19,9 +19,13 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 
-    fun saveDraft(id: UUID, intake: ReceiptIntake, revision: Long, actor: UUID, epoch: Long, cutover: Long, creating: Boolean) = jdbc.execute { sql ->
-        if (creating) sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,supplier_id,source_reference,cutover_epoch,authority_epoch)
-            VALUES (?,?,?,'RECEIPT',?,?,?,?,?)""", id, sql.tenant, "RCV-$id", actor, intake.supplier.id, intake.externalReference, cutover, epoch)
+    fun saveDraft(id: UUID, intake: ReceiptIntake, revision: Long, actor: UUID, epoch: Long, cutover: Long, creating: Boolean,
+        source: ReceiptDraftContext? = null) = jdbc.execute { sql ->
+        require(source == null || creating)
+        if (creating) sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,supplier_id,source_reference,cutover_epoch,authority_epoch,
+            customer_id,work_order_id,work_order_revision)
+            VALUES (?,?,?,'RECEIPT',?,?,?,?,?,?,?,?)""", id, sql.tenant, "RCV-$id", actor, intake.supplier.id, intake.externalReference, cutover, epoch,
+            source?.customerId, source?.workOrderId, source?.workOrderRevision)
         else {
             sql.update("DELETE FROM inventory_document_line WHERE tenant_id=? AND document_id=?", sql.tenant, id)
             sql.update("""UPDATE inventory_document SET revision=revision+1,supplier_id=?,source_reference=?,updated_at=clock_timestamp()
@@ -35,9 +39,9 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
             sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,document_revision,line_number,sku_id,base_unit,tracking,quantity_base,
                 location_id,destination_location_id,custodian_id,custodian_kind,condition,legal_owner,inspection_required_snapshot,
                 cost_total_minor,cost_basis_quantity_base,currency,conversion_numerator,conversion_denominator,package_quantity)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE','QUARANTINE','ISP',?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE','QUARANTINE',?,?,?,?,?,?,?,?)""",
                 line.id, sql.tenant, id, revision, index + 1, line.sku.id, line.sku.baseUnit, line.sku.tracking, line.quantityBase.toLong(),
-                intake.inspection.id, intake.source.id, intake.inspection.id, line.sku.inspectionRequired,
+                intake.inspection.id, intake.source.id, intake.inspection.id, source?.legalOwner ?: AssetLegalOwner.ISP, line.sku.inspectionRequired,
                 line.cost?.totalMinor?.toLong(), line.cost?.costBasisQuantityBase?.toLong(), line.cost?.currency,
                 conversion?.numerator?.toLong(), conversion?.denominator?.toLong(), conversion?.packageQuantity?.toLong())
         }

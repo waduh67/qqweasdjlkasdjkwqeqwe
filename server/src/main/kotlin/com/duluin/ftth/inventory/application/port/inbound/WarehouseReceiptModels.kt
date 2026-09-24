@@ -32,6 +32,7 @@ data class ReceiptIntakeLine(val id: UUID, val inputLineNumber: Int, val sku: Sk
     val conversion: ReceiptPackageInput?, val cost: ReceiptCostSnapshot?)
 data class ReceiptRecord(val id: UUID, val revision: Long, val state: WarehouseReceiptState,
     val createdAt: Instant, val intake: ReceiptIntake)
+data class ReceiptDraftContext(val customerId: UUID, val workOrderId: UUID, val workOrderRevision: Long, val legalOwner: AssetLegalOwner)
 data class ReceiptPiece(val stockIdentityId: UUID, val lotId: UUID?, val quantityBase: String,
     val revision: Long, val disposition: String?, val locationId: UUID, val condition: WarehouseCondition,
     val legalOwner: AssetLegalOwner, val status: String, val custodianId: UUID, val custodianKind: String)

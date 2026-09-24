@@ -19,7 +19,8 @@ interface WarehouseApprovalOwner {
 @Component
 class ReceiptApprovalOwner(private val store: WarehouseReceiptPersistence, private val receipts: WarehouseReceiptService,
     private val scopes: InventoryWarehouseScopeApi, private val origins: WarehouseReceiptOrigins,
-    private val posting: WarehousePosting, private val operations: WarehouseOperationStore, private val guard: ReceiptApprovalPostingGuard) : WarehouseApprovalOwner {
+    private val posting: WarehousePosting, private val operations: WarehouseOperationStore, private val guard: ReceiptApprovalPostingGuard,
+    private val replacement: SupplierReplacementAdmission) : WarehouseApprovalOwner {
     override val kind = "RECEIPT"
     override fun validate(source: ApprovalSourceState, id: UUID) {
         if (source.state != "DRAFT" || source.disposition != null || store.get(id).revision != source.revision)
@@ -28,7 +29,9 @@ class ReceiptApprovalOwner(private val store: WarehouseReceiptPersistence, priva
     override fun prepare(record: WarehouseApprovalRecord, attempt: WarehouseApprovalAttempt, current: CurrentAuthority): ReceiptPostingApproval {
         val receipt = store.get(record.snapshot.evaluation.sourceDocumentId, true)
         receipts.authorize(receipt.intake, current, scopes.currentUnderFence(current.fence))
-        return guard.prepare(record, receipt, attempt)
+        val approval = guard.prepare(record, receipt, attempt)
+        if (!replacement.current(receipt.id, current)) throw ApprovalPostingStopped(approval, WarehouseApprovalStatus.STALE)
+        return approval
     }
     override fun apply(record: WarehouseApprovalRecord, operation: PostingOperation, current: CurrentAuthority, cutover: TenantCutoverFence, approval: ReceiptPostingApproval) {
         val source = record.snapshot.evaluation
@@ -37,7 +40,7 @@ class ReceiptApprovalOwner(private val store: WarehouseReceiptPersistence, priva
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         receipts.authorize(receipt.intake, current, scopes.currentUnderFence(current.fence))
         guard.beforeAdmission(approval)
-        val legs = origins.admit(receipt)
+        val legs = origins.admit(receipt, operation.id)
         posting.post(WarehousePost(receipt.id, receipt.revision, WarehouseReceiptState.RECEIVED_IN_INSPECTION.name,
             operation, MovementKind.RECEIVE, "Approved receipt ${receipt.intake.externalReference}", legs, approval = approval), cutover)
         operations.storeIdentity(operation.id, record.snapshot.source, current.fence.identity.sessionId)

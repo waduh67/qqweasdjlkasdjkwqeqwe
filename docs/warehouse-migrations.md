@@ -29,6 +29,12 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## Task26: retur dan inspeksi
 
+`V175_135__warehouse_supplier_replacement_receipt.sql` dicadangkan sebelum pembuatan.
+134 sudah diterapkan dan immutable. Request/replay LOAN dan SALE berhasil;
+penerimaan masih ditolak oleh guard draft-only134.135 akan mengikat satu aset
+baru, receipt vendor dan posting nyata per kasus servis, dengan pemilik yang
+diturunkan dari sumber terverifikasi, tanpa perubahan identitas aset lama.
+
 `V175_134__warehouse_supplier_replacement_request.sql` dicadangkan sebelum pembuatan
 untuk mengikat draft RECEIPT vendor ke kasus servis dan hak milik asal.133 tetap
 immutable. Penerimaan fisik wajib dibuktikan terpisah; draft pengganti tidak

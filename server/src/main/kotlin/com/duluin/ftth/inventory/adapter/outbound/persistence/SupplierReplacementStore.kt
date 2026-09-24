@@ -29,6 +29,22 @@ class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc) {
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
 
+    fun forReceipt(id: UUID): SupplierReplacementRecord? = jdbc.execute { sql ->
+        sql.value("SELECT snapshot FROM inventory_repair_replacement_request WHERE tenant_id=? AND receipt_id=?", sql.tenant, id)
+            ?.let { mapper.readValue(it, SupplierReplacementRecord::class.java) }
+    }
+
+    fun consumed(repairId: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("SELECT 1 FROM inventory_repair_replacement_receipt WHERE tenant_id=? AND repair_case_id=?", sql.tenant, repairId) != null
+    }
+
+    fun register(record: SupplierReplacementRecord, asset: UUID, operation: UUID) = jdbc.execute { sql ->
+        sql.update("""INSERT INTO inventory_repair_replacement_receipt(tenant_id,request_id,repair_case_id,receipt_id,
+            replacement_asset_id,operation_id) VALUES (?,?,?,?,?,?)""", sql.tenant, record.view.id,
+            record.view.repairCaseId, record.view.receiptId, asset, operation)
+        Unit
+    }
+
     fun replay(key: String, hash: String, actor: UUID): SupplierReplacementRecord? = jdbc.execute { sql ->
         sql.value("SELECT pg_advisory_xact_lock(hashtextextended(?,0))", "replacement-receipt:${sql.tenant}:$key")
         sql.query("SELECT snapshot,payload_hash,actor_id FROM inventory_repair_replacement_request WHERE tenant_id=? AND operation_key=?", sql.tenant, key) {
@@ -40,10 +56,6 @@ class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc) {
 
     fun insert(record: SupplierReplacementRecord, key: String, canonical: WarehouseCanonicalPayload) = jdbc.execute { sql ->
         val view = record.view
-        sql.update("UPDATE inventory_document SET customer_id=?,work_order_id=?,work_order_revision=? WHERE tenant_id=? AND id=?",
-            record.context.customerId, record.context.workOrderId, record.workOrderRevision, sql.tenant, view.receiptId)
-        sql.update("UPDATE inventory_document_line SET legal_owner=? WHERE tenant_id=? AND document_id=?",
-            view.legalOwner, sql.tenant, view.receiptId)
         sql.update("""INSERT INTO inventory_repair_replacement_request(id,tenant_id,return_id,repair_case_id,receipt_id,
             original_asset_id,assignment_id,customer_id,work_order_id,legal_owner,actor_id,source_return_revision,
             source_asset_revision,operation_key,payload_hash,canonical_payload,snapshot)
