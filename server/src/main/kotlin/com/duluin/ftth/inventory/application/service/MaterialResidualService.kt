@@ -55,7 +55,10 @@ class MaterialResidualService(
         val authorization = request.authorizationId?.let { handovers.get(it) }
         val purpose = if (authorization == null) ResidualPurpose.RETURN else ResidualPurpose.HANDOVER
         when (purpose) {
-            ResidualPurpose.RETURN -> if (target.first != "QUARANTINE") masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            ResidualPurpose.RETURN -> {
+                if (request.expectedSenderId != null || request.expectedReceiverId != null) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+                if (target.first != "QUARANTINE") masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            }
             ResidualPurpose.HANDOVER -> {
                 val grant = requireNotNull(authorization)
                 if (grant.workOrderId != context.workOrderId || grant.request != request.copy(authorizationId = null) ||

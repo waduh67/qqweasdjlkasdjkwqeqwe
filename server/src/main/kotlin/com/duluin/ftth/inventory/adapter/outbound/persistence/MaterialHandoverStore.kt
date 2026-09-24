@@ -10,13 +10,13 @@ import java.util.UUID
 class MaterialHandoverStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
 
-    fun sender(context: MaterialPlanningContext, request: MaterialResidualRequest): UUID = jdbc.execute { sql ->
-        val sender = sql.query("""SELECT custody_owner_id FROM inventory_balance_projection WHERE tenant_id=? AND stock_identity_id=?
+    fun sender(context: MaterialPlanningContext, request: MaterialResidualRequest): Pair<UUID, UUID> = jdbc.execute { sql ->
+        val sender = sql.query("""SELECT custody_owner_id,location_id FROM inventory_balance_projection WHERE tenant_id=? AND stock_identity_id=?
             AND status='ISSUED' AND condition='SERVICEABLE' AND custody_owner_kind='TECHNICIAN' AND quantity_base>=? FOR SHARE""",
-            sql.tenant, request.stockIdentityId, request.quantityBase.toLong()) { it.uuid("custody_owner_id") }.singleOrNull()
+            sql.tenant, request.stockIdentityId, request.quantityBase.toLong()) { it.uuid("custody_owner_id") to it.uuid("location_id") }.singleOrNull()
             ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         sql.value("SELECT warehouse_assert_residual_source(?,?,?,?,?,?,?)", sql.tenant, context.workOrderId, request.receiptId,
-            request.issueLineId, request.usageId, request.stockIdentityId, sender)
+            request.issueLineId, request.usageId, request.stockIdentityId, sender.first)
         sender
     }
 

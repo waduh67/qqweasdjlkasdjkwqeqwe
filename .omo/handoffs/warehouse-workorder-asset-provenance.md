@@ -1,3 +1,45 @@
+## Task40 handover recovery checkpoint — final backend verification PENDING
+
+Three-party handover UI implemented: current named scoped dispatcher sources/targets on
+WO Material, captured authorization with expected sender/receiver IDs, own sender pending
+grants with fresh grant/context/source checks and exact command replay. Recipient ACK
+uses existing own residual UI. Shared MaterialCustodyQuerySql preserves field-only own
+reads and adds authorized dispatcher candidates; no selector to impersonate another actor.
+Dispatcher authorization now checks current source/target warehouse scopes; new snapshots
+remember sourceLocationId for scope checks on exact replay. Older snapshots keep optional
+source location compatibility. Inventory still owns all posting and authorization.
+
+New migration V175_148 validates optional reviewed parties and recorded source location
+on authorization INSERT. New MaterialResidualRequest expectedSenderId/expectedReceiverId
+are NON_NULL-serialized, preserving prior canonical request hashes when absent. Authorize
+checks both expected people, rejects half-bound pairs; RETURN rejects these handover-only
+fields. Current target scope is checked before reading/revealing its custodian.
+
+Validation so far: handover web37tests/10files PASS14.52s; named-party final6/3 PASS6.04s,
+TypeScript and new-product oxlint PASS before last active-WO display gate. Earlier backend
+run8 had1 syntax error from reserved SQL alias authorization; fixed to handover. Next run
+8 had1 expectation error (hidden location is404, not403); fixed. Shared custody/read and
+existing handover regressions passed in those runs. Two subsequent queued runs stopped
+at compileTestKotlin because new PartiesIT imported WarehouseCanonicalPayload from the
+wrong package; now corrected to inventory.application.service. Do NOT use copied old XML
+as new proof: require fresh BUILD SUCCESSFUL and ten selected nonzero tests.
+
+CURRENT QA: .omo/runtime/material-handover-parties-final-server.sh running; log same base
+.log; archive task40/material-handover-parties-final/xml. Selected MaterialHandoverWorkbenchIT2,
+MaterialHandoverPartiesIT2, MaterialWorkbenchIT2, MyMaterialsIT3, existing LifecycleHandover1
+=10 tests. Wait/inspect failures, fix and rerun as needed. Final new PartiesIT covers target
+custodian change with unchanged WO revision, actual expected people, optional legacy hash/
+exact replay, changed same-key payload and DB forged party/source metadata.
+
+After backend: run full warehouse+WO web including src/pages/MyMaterialsPage.test.tsx,
+src/pages/myMaterialDraft.test.ts, src/pages/MyMaterialHandoverGrants.test.tsx, then build/lint,
+write safe verification evidence and commit/push. Task40/39 remain OPEN for final acceptance
+and task41 customer-asset navigation; actual mobile touch/keyboard browser is45. Then41–48
+and F1–F4 remain; goal ACTIVE.149 next free migration;177/178 reserved43. Original
+warehouse-task29 preserved; working branch work/warehouse-completion tracks
+origin/feat/warehouse-workorder. This checkpoint explicitly includes unverified final tests
+for VPS recovery, not a completion claim. No deployment.
+
 ## Task40 unused serialized return verified — three-party handover next
 
 Canonical residual return also handles acknowledged unused SERIAL stock; no backend

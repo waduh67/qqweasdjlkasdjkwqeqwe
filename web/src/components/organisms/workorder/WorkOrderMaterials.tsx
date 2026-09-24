@@ -16,6 +16,7 @@ import { WorkOrderMaterialUse } from './WorkOrderMaterialUse'
 import { WorkOrderMaterialHistory } from './WorkOrderMaterialHistory'
 import { WorkOrderMaterialObligations, WorkOrderMaterialReview } from './WorkOrderMaterialReview'
 import { WorkOrderMaterialRework } from './WorkOrderMaterialRework'
+import { WorkOrderMaterialHandover } from './WorkOrderMaterialHandover'
 
 const materialLabels = { OPEN: 'Belum ditutup', SETTLING: 'Penyelesaian sisa barang', CLOSED: 'Material ditutup', OVERDUE: 'Kewajiban melewati batas waktu' }
 const technicalLabels: Record<string, string> = { DRAFT: 'Draft', ASSIGNED: 'Ditugaskan', IN_PROGRESS: 'Dikerjakan', DONE: 'Teknis selesai', CANCELLED: 'Dibatalkan' }
@@ -40,6 +41,7 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
   const [using, setUsing] = useState(false), [history, setHistory] = useState(false), [closing, setClosing] = useState(false), [reason, setReason] = useState('')
   const [close, setClose] = useState<WarehouseCommand<unknown> | null>(null)
   const [reworking, setReworking] = useState(false)
+  const [handover, setHandover] = useState(false)
   const active = settlement.technicalState !== 'DONE' && settlement.technicalState !== 'CANCELLED'
   const mine = !!user && workOrder.assignees.some(row => row.id === user.id)
   const report = can('workorder.order.field') && mine && active && context.planState === 'SUBMITTED' && !!context.plan
@@ -66,6 +68,8 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
     <WorkOrderMaterialReview id={workOrder.id} />
     {canRework && <Button onClick={() => setReworking(true)}>Tambah kebutuhan pengerjaan ulang</Button>}
     {canRework && reworking && <WorkOrderMaterialRework context={context} onDone={reload} onClose={() => setReworking(false)} />}
+    {active && can('workorder.order.assign') && can('inventory.issue.manage') && <><Button onClick={() => setHandover(true)}>Atur serah-terima teknisi</Button>
+      {handover && <WorkOrderMaterialHandover context={context} onDone={reload} onClose={() => setHandover(false)} />}</>}
     <section className="stack" aria-label="Kewajiban material"><h3>Sisa kewajiban material</h3>{settlement.obligations.dueAt && <p>Batas penyelesaian: <WarehouseTime value={settlement.obligations.dueAt} /></p>}
       {clear ? <p>Tidak ada barang atau reservasi yang menunggu penyelesaian pada ringkasan ini.</p> : <><p>Masih ada barang di tangan pemegang, dalam perjalanan, menunggu pemeriksaan retur, atau terikat reservasi.</p>
         <WorkOrderMaterialObligations id={workOrder.id} /></>}

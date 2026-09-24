@@ -49,7 +49,7 @@ export interface MaterialReceiptInput {
 }
 export interface MaterialReturnInput {
   workOrderRevision: number; receiptId: string; issueLineId: string; stockIdentityId: string; quantityBase: string; baseUnit: 'MM' | 'EA';
-  targetLocationId: string; reason: string; evidenceReference: string; usageId?: string
+  targetLocationId: string; reason: string; evidenceReference: string; usageId?: string; expectedSenderId?: string; expectedReceiverId?: string
 }
 function bound<T>(value: T, valid: boolean): T { if (!valid) throw new WarehouseDataError('materialReference'); return value }
 const root = '/api/v1/warehouse/my-materials'

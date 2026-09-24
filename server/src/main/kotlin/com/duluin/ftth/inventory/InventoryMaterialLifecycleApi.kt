@@ -31,6 +31,10 @@ data class MaterialResidualRequest(
     val evidenceReference: String,
     val usageId: UUID? = null,
     val authorizationId: UUID? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val expectedSenderId: UUID? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val expectedReceiverId: UUID? = null,
 )
 data class MaterialResidualAcknowledgement(val documentId: UUID, val expectedRevision: Long, val evidenceReference: String)
 data class MaterialUsageDeltaRequest(val expectedRevision: Long, val workOrderRevision: Long, val previousUsageId: UUID,

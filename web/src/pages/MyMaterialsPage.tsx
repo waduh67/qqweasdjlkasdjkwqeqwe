@@ -20,6 +20,7 @@ import { useFieldConnection } from '@/hooks/useFieldConnection'
 import { MyMaterialReceipt } from './MyMaterialReceipt'
 import { MyMaterialReturn } from './MyMaterialReturn'
 import { MyMaterialResidualAcknowledgement } from './MyMaterialResidualAcknowledgement'
+import { MyMaterialHandoverGrants } from './MyMaterialHandoverGrants'
 
 const path = (id: string) => `/my-materials?workOrderId=${encodeURIComponent(id)}`
 export function MyMaterialsPage() {
@@ -76,6 +77,7 @@ function MaterialJobBody({ context, actor, online, readOnly, reload }: { context
         : action?.kind === 'use' && context.field ? <WorkOrderMaterialUse context={context.field} online={enabled} prepare={prepareUse} evidenceHref={can('workorder.order.view') ? `/my-work-orders/${context.id}#work-order-evidence` : null} onDone={reload} onClose={() => setAction(null)} />
           : <><MaterialIssues context={context} enabled={enabled} select={issue => setAction({ kind: 'receipt', issue })} />
             <MaterialCustodyList context={context} enabled={enabled} select={source => setAction({ kind: 'return', source })} />
+            <MyMaterialHandoverGrants context={context} actor={actor} enabled={enabled} onDone={reload} />
             <MaterialResiduals context={context} actor={actor} enabled={enabled} reload={reload} /></>}
   </>
 }
