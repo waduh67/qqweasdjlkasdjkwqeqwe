@@ -40,7 +40,7 @@ class WarehouseReturnTitleGuardsIT : WarehouseReturnTitleFixture() {
             start.countDown()
             futures.map { it.get(30, TimeUnit.SECONDS) }
         }
-        assertThat(responses.map { it.status }).withFailMessage(responses.joinToString("\n") { it.contentAsString }).containsOnly(200)
+        assertThat(responses.map { it.status }).withFailMessage(responses.joinToString("\n") { it.contentAsString }).containsExactlyInAnyOrder(200, 409)
         assertThat(responses.map { mapper.readTree(it.contentAsString).path("status").asString() }).containsExactlyInAnyOrder("APPROVED", "STALE")
         fixture(setup.token).transaction {
             assertThat(scalar("SELECT count(*) FROM inventory_return_title_effect WHERE return_id='${setup.returned.id}'")).isEqualTo("1")
@@ -65,6 +65,10 @@ class WarehouseReturnTitleGuardsIT : WarehouseReturnTitleFixture() {
         val setup = titleSetup()
         val rejected = pendingTitle(setup)
         titleStatus(decideTitle(setup, rejected, value = "REJECT"), "REWORK_REQUIRED")
+        val rework = request("POST", "/api/v1/warehouse/approvals/rework", setup.token,
+            """{"requestId":"${rejected.approval}","expectedRevision":1}""", "rejected-title-rework")
+        assertThat(rework.status).withFailMessage(rework.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(rework.contentAsString).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
         fixture(setup.token).transaction {
             assertThat(scalar("SELECT concat_ws('|',state,revision,approval_disposition) FROM inventory_document WHERE id='${rejected.document}'"))
                 .isEqualTo("DRAFT|1|REWORK_REQUIRED")
@@ -72,6 +76,25 @@ class WarehouseReturnTitleGuardsIT : WarehouseReturnTitleFixture() {
         }
         val revised = pendingTitle(setup, "revised-title")
         titleStatus(decideTitle(setup, revised, "revised-title-decision"), "APPROVED")
+    }
+
+    @Test fun `current quarantine scope gates both pending approval and replay after posting`() {
+        val setup = titleSetup()
+        val pending = pendingTitle(setup)
+        val scope = "/api/v1/warehouse/settings/scopes/${setup.checker.second}/${setup.returned.quarantine}"
+        assertThat(request("PUT", scope, setup.token, """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+        assertThat(decideTitle(setup, pending).status).isEqualTo(404)
+        fixture(setup.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_return_title_effect")).isEqualTo("0")
+        }
+        assertThat(request("PUT", scope, setup.token, """{"expectedRevision":2,"active":true}""").status).isEqualTo(200)
+        titleStatus(decideTitle(setup, pending), "APPROVED")
+        assertThat(request("PUT", scope, setup.token, """{"expectedRevision":3,"active":false}""").status).isEqualTo(200)
+        assertThat(decideTitle(setup, pending).status).isEqualTo(404)
+        fixture(setup.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_return_title_effect")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='TITLE_CORRECTION'")).isEqualTo("1")
+        }
     }
 
     @Test fun `approved quarantine title survives vendor repair and reset inspection with historical customer title intact`() {

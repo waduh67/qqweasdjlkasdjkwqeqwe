@@ -29,7 +29,7 @@ class WarehouseReturnReacquisitionIT : WarehouseReturnAssetFixture() {
         assertThat(approval.status).withFailMessage(approval.contentAsString).isEqualTo(201)
         val approvalId = mapper.readTree(approval.contentAsString).path("requestId").asString()
         val decision = """{"requestId":"$approvalId","expectedRevision":0,"decision":"APPROVE","reason":"Independent title proof verified"}"""
-        assertThat(request("POST", "/api/v1/warehouse/approvals/decide", admin, decision, "returned-self-approval").status).isIn(403, 409)
+        assertThat(request("POST", "/api/v1/warehouse/approvals/decide", admin, decision, "returned-self-approval").status).isEqualTo(403)
         fixture(admin).transaction {
             assertThat(scalar("SELECT concat_ws('|',legal_owner,status,condition) FROM inventory_serialized_asset WHERE id='$asset'"))
                 .isEqualTo("CUSTOMER|QUARANTINE|DAMAGED")
@@ -47,12 +47,26 @@ class WarehouseReturnReacquisitionIT : WarehouseReturnAssetFixture() {
             assertThat(scalar("SELECT legal_owner FROM inventory_asset_assignment WHERE id='${returned.old.installation.operation}' AND ended_at IS NOT NULL"))
                 .isEqualTo("CUSTOMER")
         }
+        val missingReset = request("POST", "$path/inspect", admin,
+            """{"expectedRevision":${current.path("revision").asLong()},"measuredQuantityBase":"1","condition":"SERVICEABLE","destinationLocationId":"${receipt.stock.bin}","evidenceReference":"reacquired-device-inspection","observedSerial":"${receipt.input.lines.single().serial}","resetConfirmed":false}""", "returned-title-no-reset")
+        assertThat(missingReset.status).withFailMessage(missingReset.contentAsString).isEqualTo(409)
         val inspected = request("POST", "$path/inspect", admin,
             """{"expectedRevision":${current.path("revision").asLong()},"measuredQuantityBase":"1","condition":"SERVICEABLE","destinationLocationId":"${receipt.stock.bin}","evidenceReference":"reacquired-device-inspection","observedSerial":"${receipt.input.lines.single().serial}","resetConfirmed":true,"resetEvidenceReference":"customer-data-erased"}""", "returned-title-inspection")
         assertThat(inspected.status).withFailMessage(inspected.contentAsString).isEqualTo(200)
         val beforeReplay = fixture(admin).transaction { scalar("SELECT count(*) FROM inventory_movement") }
         assertThat(request("POST", "/api/v1/warehouse/approvals/decide", checker.first, decision, "returned-title-decision").contentAsString)
             .isEqualTo(approved.contentAsString)
+        assertThat(request("POST", "$path/reacquisition", admin, body, "returned-title-request").contentAsString).isEqualTo(correction.contentAsString)
+        val conflicting = request("POST", "$path/reacquisition", admin, body.replace("signed-customer-reacquisition", "different-proof"), "returned-title-request")
+        assertThat(conflicting.status).withFailMessage(conflicting.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(conflicting.contentAsString).path("code").asString()).isEqualTo("IDEMPOTENCY_CONFLICT")
+        val history = request("GET", "$path/history", admin)
+        assertThat(history.status).withFailMessage(history.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(history.contentAsString).asSequence().map { it.path("legalOwner").asString() }.toList())
+            .containsExactly("CUSTOMER", "CUSTOMER", "CUSTOMER", "ISP", "ISP")
+        fixture(admin).transaction {
+            context.getBean(com.duluin.ftth.inventory.application.port.outbound.WarehousePosting::class.java).rebuild(0)
+        }
         fixture(admin).transaction {
             assertThat(scalar("SELECT count(*) FROM inventory_movement")).isEqualTo(beforeReplay)
             assertThat(scalar("SELECT concat_ws('|',legal_owner,status,condition) FROM inventory_serialized_asset WHERE id='$asset'"))

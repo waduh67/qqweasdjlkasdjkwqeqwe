@@ -173,6 +173,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val hash = hash(input)
         replay("rework", key, hash, current)?.let { return it }
         if (record.status != WarehouseApprovalStatus.REWORK_REQUIRED || source.disposition != "REWORK_REQUIRED") masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (source.kind == "RETURN_TITLE") throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
+            "Create a new return title request with current evidence"))
         if (source.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         store.reworkDisposition(record.snapshot.evaluation.sourceDocumentId, source.revision, false)
         val response = WarehouseApprovalResponse(200, mapper.writeValueAsString(mapOf("requestId" to record.id,

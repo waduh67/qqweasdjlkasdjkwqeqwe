@@ -1,5 +1,44 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Direct quarantine reacquisition verified —13 tests green
+
+return-title-final-green passed13 tests/3 suites/0 failures/errors/skips,3m41s:
+6 return title guards (changed source, competing approvals, SQL forgery/append-only,
+rejection/new request, vendor repair after reacquisition, current scope/replay),
+6 existing approval guards and the full direct quarantine -> ISP -> reset release
+case. The latter also proves request/decision replay, changed payload conflict,
+historical CUSTOMER/CUSTOMER/CUSTOMER/ISP/ISP views and projection rebuild without
+new movements. Archive `task26/return-title-final-green/xml`.
+
+133 is APPLIED AND IMMUTABLE, SHA256
+`c874e69adf2098a8caf956ebf5918f6154f1b2188979601e45c40d40c0700410`.
+132 is immutable (`e38b4f88081afc6c625ec60cb5e5da6fdc4e333f7bf2703e04c4541a19a57f47`).
+Previous shared run:15 tests/6 suites/2 failures/0 errors/skips,4m4s. Its2 failures
+were test expectations of200 for STALE; existing durable approval contract is409.
+Those expectations now pass. Shared supplier repair2, return integrity3,
+installed RMA reacquisition1 and modularity3 all passed that run.
+
+Rejected immutable RETURN_TITLE requests now return controlled409 on generic
+approval rework; callers create a new request with current evidence. Documented
+API and updated test include this behavior. No historical SQL was edited.
+
+Next: actual vendor replacement. New WarehouseSupplierReplacementIT specifies
+LOAN/SALE genuine recovered repair -> replacement receipt request -> receive new
+physical identity with normal RECEIPT provenance, same vendor/owner and quarantine.
+Endpoint POST/GET returns/{id}/replacement-receipts is NOT IMPLEMENTED yet.
+The baseline `.omo/runtime/return-replacement-red.sh` / matching log (session45699)
+is queued/running after the final green run under the fixed host QA lock.
+Read the log; no baseline outcome or new migration134 is claimed. It will use the
+retained owned test DB/volumes and expects the new route to expose missing support.
+
+Implement replacement through a real vendor RECEIPT plus immutable repair linkage;
+CUSTOMER replacement must not become ISP available stock or acquire a fabricated
+old issue/source ID. Preserve original asset/history/vendor custody explicitly.
+Then inspection/original-customer return or ISP issue, packaged HTTP proof and
+remaining plan. Task26 stays OPEN;28/30–48/F1–F4 remain. No134 declared/created.
+Canonical remote is `git@github.com:waduh67/qqweasdjlkasdjkwqeqwe.git`; push only
+`git push origin HEAD:refs/heads/feat/warehouse-workorder`.
+
 ##132 immutable;133 physical leg revision correction under validation
 
 Checkpoint includes RETURN_TITLE independent approval owner, policy exclusions,

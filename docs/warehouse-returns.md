@@ -21,6 +21,7 @@ dengan revision tebakan.
 | `POST /api/v1/warehouse/returns/{id}/inspect` | Mencatat ukuran, kondisi, bukti dan tujuan inspeksi |
 | `POST /api/v1/warehouse/returns/{id}/repair-dispatch` | Menyerahkan perangkat hasil inspeksi ke custody vendor |
 | `POST /api/v1/warehouse/returns/{id}/repair-receive` | Menerima perangkat yang sama kembali ke karantina |
+| `POST /api/v1/warehouse/returns/{id}/reacquisition` | Mengajukan alih kepemilikan barang pelanggan dalam karantina |
 | `GET /api/v1/warehouse/returns` | Daftar retur dan total dokumen dalam scope pengguna |
 | `GET /api/v1/warehouse/returns/{id}` | Membaca kondisi dokumen terkini |
 | `GET /api/v1/warehouse/returns/{id}/history` | Membaca revision dokumen secara berurutan dan berpaginasi |
@@ -149,8 +150,21 @@ tersedia dan melewati issue/penerimaan teknisi biasa untuk pemasangan baru.
 Penjualan, penarikan dan episode lama tetap tersimpan; replay approval tidak
 menambah posting.
 
-Pembelian kembali langsung ketika barang sudah berada di karantina sedang
-dikerjakan melalui alur retur tersendiri.
+Alih kepemilikan langsung dari karantina memakai
+`POST /api/v1/warehouse/returns/{id}/reacquisition`. Isinya `expectedRevision`,
+`reason`, `titleTransferReference`, dan `evidenceId` tanda tangan pelanggan yang
+terikat WO asal. Pengaju memerlukan izin retur serta `inventory.approval.request`
+dan `inventory.approval.view`. Respons201 memberikan `documentId`, `returnId`,
+dan revision0. Gunakan documentId itu pada endpoint approval/request biasa.
+
+Pengaju, penerima retur, pelaku serah terima awal dan pembongkaran tidak dapat
+menyetujui pengajuan ini, termasuk melalui delegasi. Approval memeriksa kembali
+revision retur, aset, WO dan stok. Perubahan sumber membuat approval STALE409.
+Approval yang sah memindahkan pemilik CUSTOMER ke ISP, dengan lokasi, custody,
+kondisi dan status karantina tetap sama. Retur mendapat satu revision baru;
+assignment pelanggan yang sudah ditutup dan revision retur sebelumnya tidak berubah.
+Inspeksi serviceable beserta bukti reset tetap diperlukan sebelum barang tersedia.
+Pengajuan yang ditolak dibuat ulang dengan bukti terkini dan kunci baru.
 
 ## Status pengembangan
 
@@ -158,5 +172,6 @@ Intake, inspeksi, servis perangkat yang sama, pembacaan berpaginasi, penutupan
 material serta pemasangan kembali RMA telah memiliki bukti integrasi PostgreSQL.
 Serah terima bertanda tangan RMA menjaga pemilik CUSTOMER dan titleRevision0.
 Regresi serah terima paralel dan alih kepemilikan RMA sampai reissue telah lolos.
-Penggantian fisik oleh vendor, reacquisition langsung dari karantina, panduan UI
+Reacquisition langsung dari karantina beserta balapan approval, scope terkini,
+replay, riwayat dan repair setelah alih kepemilikan telah lolos integrasi. Penggantian fisik oleh vendor, panduan UI
 dan bukti packaged HTTP masih menjadi pekerjaan task26/lanjutan.

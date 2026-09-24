@@ -25,7 +25,7 @@ abstract class WarehouseReturnTitleFixture : WarehouseRepairFixture() {
         val policy = request("PUT", "/api/v1/warehouse/settings/policy", token,
             """{"expectedRevision":0,"currency":"IDR","expiryHours":24,"warehouseIds":["${repair.returned.quarantine}"],"rules":[{"operation":"TITLE_REACQUISITION","tiers":[{"minimumMinor":"1","userIds":["${checker.second}"],"roleIds":[]}]}]}""")
         assertThat(policy.status).withFailMessage(policy.contentAsString).isEqualTo(200)
-        return TitleSetup(repair, checker.first to checker.second.toString())
+        return TitleSetup(repair, checker)
     }
 
     protected fun pendingTitle(setup: TitleSetup, key: String = "quarantine-title"): TitlePending {
@@ -43,7 +43,7 @@ abstract class WarehouseReturnTitleFixture : WarehouseRepairFixture() {
         setup.checker.first, pending.decision(value), key)
 
     protected fun titleStatus(result: MockHttpServletResponse, expected: String) {
-        assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(200)
+        assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(if (expected in setOf("APPROVED", "REWORK_REQUIRED")) 200 else 409)
         assertThat(mapper.readTree(result.contentAsString).path("status").asString()).isEqualTo(expected)
     }
 }
