@@ -10,7 +10,7 @@ internal object WarehouseReportCsv {
 
     fun render(page: JsonNode): String {
         if (page.path("totalElements").asLong() > MAX_ROWS) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val rows = page.path("items").map { flatten(it) }
+        val rows = page.path("items").asSequence().map { flatten(it) }.toList()
         val columns = rows.flatMap { it.keys }.distinct().sorted()
         return (listOf(columns) + rows.map { row -> columns.map { row[it].orEmpty() } })
             .joinToString("\r\n", postfix = "\r\n") { row -> row.joinToString(",", transform = ::cell) }

@@ -1,5 +1,23 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Report CSV compilation fixed; initial integration running
+
+reports-initial failed compileKotlin before any tests (14s): Jackson JsonNode.map
+selected its member overload instead of Kotlin collection mapping. CSV now converts
+to a sequence explicitly. reports-compile-fixed is compiled and running the same
+WarehouseReportIT4 + ModularityTests3; the3 modularity cases have passed so far.
+Do not label initial copied XML green; cleanup after compilation copied stale data.
+
+Added WarehouseReportJourneyIT2 full real1km+10ONU /100m+1ONU /82.5m use /17.5m
+accepted return /LOAN or SALE deployment journeys, with actual HTTP-created customer,
+mixed IDR/USD HALF_UP source costs and replay checks. Added WarehouseReportExportIT1
+real334-device receive/putaway ->1002 visible ledger legs (oversized CSV rejection),
+and WarehouseReportCsvTest1 formula/control/quoting cases. These4 new cases are NOT
+selected by the running initial suite and have NOT compiled/run yet. Next selector
+must include *WarehouseReport*IT and *WarehouseReportCsvTest (expected11 total with
+modularity). Still need task30 acceptance review, WO filter/summary bounds, report
+scope and any SQL/fixture failures from execution. All148+ migrations unused.
+
 ## Task28 COMPLETE —183 affected regression tests green
 
 asset-loss-regression against c09c6da9 completed183 tests/11 suites with zero
