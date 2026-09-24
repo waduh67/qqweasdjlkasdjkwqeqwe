@@ -3,14 +3,16 @@ package com.duluin.ftth.inventory.application.service
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseApprovalStore
-import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehousePolicyPersistence
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
 
 @Service
 class LegacyApprovalQuery(private val authority: CurrentAuthorityApi, private val approvals: DurableApprovalService,
-    private val store: WarehouseApprovalStore, private val eligibility: WarehouseApprovalAuthority, private val clock: WarehousePolicyPersistence) {
+    private val store: WarehouseApprovalStore, private val queries: InventoryApprovalQueryApi, transactions: PlatformTransactionManager) {
+    private val transaction = TransactionTemplate(transactions)
     @Transactional
     fun get(id: UUID): Map<String, Any?> {
         val view = approvals.get(id)
@@ -27,16 +29,12 @@ class LegacyApprovalQuery(private val authority: CurrentAuthorityApi, private va
             "decisions" to store.decisions(id).map { mapOf("tier" to it.tier, "approverId" to it.actorId,
                 "decision" to it.decision, "reason" to it.reason, "decidedAt" to it.decidedAt) })
     }
-    @Transactional
     fun pending(): List<Map<String, Any?>> {
-        val candidates = approvals.list(0, 100, WarehouseApprovalStatus.PENDING).items
-        val current = authority.lockCurrent()
+        val candidates = queries.list(WarehouseApprovalFilter(size = 100, status = WarehouseApprovalStatus.PENDING)).items
         return candidates.mapNotNull { candidate ->
-            val record = store.get(candidate.requestId)
-            val decisions = store.decisions(record.id)
             try {
-                eligibility.authorize(record, record.snapshot.evaluation.tiers[decisions.size].number, current, decisions, clock.now())
-                get(record.id).takeIf { it["status"] == WarehouseApprovalStatus.PENDING }
+                if (!queries.details(candidate.approval.requestId).actions.canDecide) null
+                else transaction.execute { get(candidate.approval.requestId) }?.takeIf { it["status"] == WarehouseApprovalStatus.PENDING }
             } catch (failure: WarehouseContractException) {
                 if (failure.error.code in setOf(WarehouseErrorCode.FORBIDDEN, WarehouseErrorCode.NOT_FOUND)) null else throw failure
             }

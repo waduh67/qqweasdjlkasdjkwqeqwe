@@ -16,6 +16,11 @@ never projected, comparison only sealed SUBMITTED+ observations. Current action
 eligibility reuses actual tier authority; own/excluded actor blocked. Final effect
 requires actual approval effect+operation+applied movement. Cost omitted unless allowed.
 
+Initial cbf972a2 compile failed: LegacyApprovalQuery.pending still called removed
+DurableApprovalService.list. Converted it to the same query API outside its own
+visibility transactions; preserves legacy bounded array and actual eligibility.
+No test proof claimed for failed compilation.
+
 NOT VERIFIED YET. Next private approval-workbench-server.sh runs new3 workbench+
 new1 original-WO revocation workflow, existing count15 with comparison assertions,
 existing approval2/source4/compatibility and transfer discrepancy2. Await real build,
