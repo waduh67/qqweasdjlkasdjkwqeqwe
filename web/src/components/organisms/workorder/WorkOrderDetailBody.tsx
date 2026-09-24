@@ -76,7 +76,7 @@ export function WorkOrderDetailBody({
   const awaitingApproval = wo.status === 'DONE' && wo.approvalStatus === 'PENDING'
 
   const showOptical = canRecordOptical || wo.rxBeforeDbm != null || wo.rxAfterDbm != null
-  const showEvidence = can('workorder.evidence.view')
+  const showEvidence = can('workorder.evidence.view') || canField
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>

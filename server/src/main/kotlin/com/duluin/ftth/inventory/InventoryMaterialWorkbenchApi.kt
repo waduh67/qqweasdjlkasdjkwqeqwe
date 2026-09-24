@@ -8,6 +8,8 @@ interface InventoryMaterialWorkbenchApi {
     fun context(context: MaterialPlanningContext): MaterialFieldContext
     fun custody(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialCustodyChoice>
     fun usage(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialUsageView>
+    fun usageDetails(context: MaterialPlanningContext, id: UUID): MaterialUsageView
+    fun obligations(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialObligationView>
 }
 data class MaterialFieldContext(val workOrderId: UUID, val workOrderRevision: Long, val plan: MaterialPlanSnapshot?,
     val planState: String?, val useRevision: Long, val latestUsageId: UUID?,
@@ -21,3 +23,5 @@ data class MaterialUsageView(val id: UUID, val workOrderId: UUID, val planId: UU
     val reason: String?, val recordedAt: Instant, val lines: List<MaterialUsageViewLine>)
 data class MaterialUsageViewLine(val id: UUID, val receiptId: UUID, val issueLineId: UUID, val sku: MaterialSkuSnapshot,
     val quantityBase: String, val baseUnit: WarehouseBaseUnit, val residualBase: String)
+data class MaterialObligationView(val id: UUID, val issueCode: String, val sku: MaterialSkuSnapshot,
+    val serial: String?, val lotCode: String?, val obligation: MaterialObligationLine)

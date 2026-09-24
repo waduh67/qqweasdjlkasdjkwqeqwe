@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class InventoryMaterialWorkbenchService(private val authority: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
     private val masters: WarehouseMasterStore, private val sites: SiteReferenceApi, private val plans: MaterialPlanningStore,
     private val physical: MaterialPhysicalTotalsStore, private val query: MaterialWorkbenchQuery,
-    private val reworks: MaterialReworkStore, private val users: IamApi) : InventoryMaterialWorkbenchApi {
+    private val reworks: MaterialReworkStore, private val users: IamApi, private val lifecycle: InventoryMaterialLifecycleApi) : InventoryMaterialWorkbenchApi {
     override fun context(context: MaterialPlanningContext): MaterialFieldContext {
         current(context)
         val history = plans.current(context.workOrderId)
@@ -37,6 +37,18 @@ class InventoryMaterialWorkbenchService(private val authority: CurrentAuthorityA
     override fun usage(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialUsageView> {
         val current = current(context, page)
         val rows = query.usage(context.workOrderId, if (current.platformAdmin || "workorder.order.view" in current.permissions) null else current.fence.identity.userId, page, access(current))
+        return named(rows)
+    }
+    override fun usageDetails(context: MaterialPlanningContext, id: java.util.UUID): MaterialUsageView {
+        val current = current(context)
+        return named(query.usage(context.workOrderId, if (current.platformAdmin || "workorder.order.view" in current.permissions) null else current.fence.identity.userId,
+            WarehousePageRequest(0, 1), access(current), id)).items.singleOrNull() ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+    }
+    override fun obligations(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialObligationView> {
+        val current = current(context, page)
+        return query.obligations(lifecycle.summary(context).lines, page, access(current))
+    }
+    private fun named(rows: WarehousePage<MaterialUsageView>): WarehousePage<MaterialUsageView> {
         val names = users.usersByIds(rows.items.mapNotNull { it.actor?.id }.toSet()).associateBy { it.id }
         return rows.copy(items = rows.items.map { row -> row.copy(actor = row.actor?.id?.let { id -> names[id]?.let { WarehousePolicyChoice(id, it.name) } }) })
     }

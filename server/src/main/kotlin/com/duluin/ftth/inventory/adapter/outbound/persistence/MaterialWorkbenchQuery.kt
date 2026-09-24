@@ -62,12 +62,13 @@ class MaterialWorkbenchQuery(private val jdbc: WarehouseCommandJdbc) {
                 'serial',serial_number,'lotCode',lot_code,'initialUseSource',initial_use_source)""", "issue_code"), workOrder, actor), MaterialCustodyChoice::class.java)
     }
 
-    fun usage(workOrder: UUID, actor: UUID?, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<MaterialUsageView> = jdbc.execute { sql ->
+    fun usage(workOrder: UUID, actor: UUID?, page: WarehousePageRequest, access: WarehouseQueryAccess, usageId: UUID? = null): WarehousePage<MaterialUsageView> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page = page.page, size = page.size, direction = "desc"), access)
-        decode(query.result(""", context AS (SELECT ?::uuid work_order,?::uuid actor)""" + query.page(
+        decode(query.result(""", context AS (SELECT ?::uuid work_order,?::uuid actor,?::uuid usage_id)""" + query.page(
             """SELECT snapshot.id,snapshot.use_revision,snapshot.frozen_snapshot::jsonb frozen
                 FROM inventory_usage_snapshot snapshot JOIN inventory_material_usage usage ON usage.tenant_id=snapshot.tenant_id AND usage.id=snapshot.id,request,context
                 WHERE snapshot.tenant_id=request.tenant AND snapshot.work_order_id=context.work_order
+                    AND (context.usage_id IS NULL OR snapshot.id=context.usage_id)
                     AND (context.actor IS NULL OR usage.actor_id=context.actor)
                     AND NOT EXISTS (SELECT FROM jsonb_array_elements(snapshot.frozen_snapshot::jsonb->'lines') line
                         WHERE (line->'source'->>'locationId')::uuid NOT IN (SELECT id FROM visible_locations))""",
@@ -80,7 +81,26 @@ class MaterialWorkbenchQuery(private val jdbc: WarehouseCommandJdbc) {
                     FROM jsonb_array_elements(frozen->'lines') line JOIN inventory_material_receipt receipt
                         ON receipt.tenant_id=(SELECT tenant FROM request) AND receipt.id=(line->'selection'->>'receiptId')::uuid
                     CROSS JOIN LATERAL jsonb_array_elements(receipt.snapshot::jsonb->'issue'->'lines') issued
-                    WHERE issued->>'id'=line->'selection'->>'issueLineId'),'[]'::jsonb))""", "use_revision"), workOrder, actor), MaterialUsageView::class.java)
+                    WHERE issued->>'id'=line->'selection'->>'issueLineId'),'[]'::jsonb))""", "use_revision"), workOrder, actor, usageId), MaterialUsageView::class.java)
+    }
+
+    fun obligations(lines: List<MaterialObligationLine>, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<MaterialObligationView> = jdbc.execute { sql ->
+        val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page = page.page, size = page.size), access)
+        decode(query.result(""", authorized AS (SELECT value obligation FROM jsonb_array_elements(?::jsonb))""" + query.page(
+            """SELECT issue.id,document.code issue_code,sku.id sku_id,sku.revision,sku.code,sku.name,sku.tracking,sku.base_unit,
+                asset.serial_number,lot.code lot_code,authorized.obligation
+                FROM authorized JOIN inventory_document_line issue ON issue.id=(authorized.obligation->>'issueLineId')::uuid
+                JOIN inventory_document document ON document.tenant_id=issue.tenant_id AND document.id=issue.document_id
+                JOIN inventory_sku sku ON sku.tenant_id=issue.tenant_id AND sku.id=issue.sku_id
+                LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=issue.tenant_id AND asset.id=issue.stock_identity_id
+                LEFT JOIN inventory_lot lot ON lot.tenant_id=issue.tenant_id AND lot.id=issue.lot_id,request
+                WHERE issue.tenant_id=request.tenant AND (issue.location_id IN (SELECT id FROM visible_locations) OR EXISTS (
+                    SELECT FROM inventory_material_receipt receipt CROSS JOIN LATERAL jsonb_array_elements(receipt.snapshot::jsonb->'lines') entry
+                    WHERE receipt.tenant_id=request.tenant AND entry->'selection'->>'issueLineId'=issue.id::text
+                        AND (entry->'accepted'->>'locationId')::uuid IN (SELECT id FROM visible_locations)))""",
+            """jsonb_build_object('id',id,'issueCode',issue_code,'sku',jsonb_build_object('id',sku_id,'revision',revision,'code',code,
+                'name',name,'tracking',tracking,'baseUnit',base_unit),'serial',serial_number,'lotCode',lot_code,'obligation',obligation)""", "issue_code"),
+            mapper.writeValueAsString(lines)), MaterialObligationView::class.java)
     }
 
     private fun <T : Any> decode(body: String, type: Class<T>): WarehousePage<T> {

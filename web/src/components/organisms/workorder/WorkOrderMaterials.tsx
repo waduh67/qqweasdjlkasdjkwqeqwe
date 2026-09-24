@@ -14,6 +14,8 @@ import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { WorkOrderMaterialPlanning } from './WorkOrderMaterialPlanning'
 import { WorkOrderMaterialUse } from './WorkOrderMaterialUse'
 import { WorkOrderMaterialHistory } from './WorkOrderMaterialHistory'
+import { WorkOrderMaterialObligations, WorkOrderMaterialReview } from './WorkOrderMaterialReview'
+import { WorkOrderMaterialRework } from './WorkOrderMaterialRework'
 
 const materialLabels = { OPEN: 'Belum ditutup', SETTLING: 'Penyelesaian sisa barang', CLOSED: 'Material ditutup', OVERDUE: 'Kewajiban melewati batas waktu' }
 const technicalLabels: Record<string, string> = { DRAFT: 'Draft', ASSIGNED: 'Ditugaskan', IN_PROGRESS: 'Dikerjakan', DONE: 'Teknis selesai', CANCELLED: 'Dibatalkan' }
@@ -37,11 +39,14 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
   const { can } = useCan(), { user } = useAuth()
   const [using, setUsing] = useState(false), [history, setHistory] = useState(false), [closing, setClosing] = useState(false), [reason, setReason] = useState('')
   const [close, setClose] = useState<WarehouseCommand<unknown> | null>(null)
+  const [reworking, setReworking] = useState(false)
   const active = settlement.technicalState !== 'DONE' && settlement.technicalState !== 'CANCELLED'
   const mine = !!user && workOrder.assignees.some(row => row.id === user.id)
   const report = can('workorder.order.field') && mine && active && context.planState === 'SUBMITTED' && !!context.plan
     && (context.useRevision === 0 || (context.plan.materialMode === 'MATERIAL_REQUIRED' && !!context.latestUsageId))
   const clear = settlement.outstandingBase === '0' && settlement.obligations.reservedUnpickedBase === '0' && settlement.obligations.pickedBase === '0'
+  const canRework = settlement.technicalState === 'IN_PROGRESS' && settlement.qaState === 'REJECTED' && context.useRevision > 0 && context.plan?.materialMode === 'MATERIAL_REQUIRED'
+    && can('inventory.request.view') && can('inventory.request.manage') && can('inventory.sku.view') && (can('workorder.order.update') || can('workorder.order.approve') || (can('workorder.order.field') && mine))
   return <>
     <dl className="wo-grid"><div><dt>Pekerjaan teknis</dt><dd>{technicalLabels[settlement.technicalState] ?? settlement.technicalState}</dd></div>
       <div><dt>Pemeriksaan QA</dt><dd>{settlement.qaState ? qaLabels[settlement.qaState] ?? settlement.qaState : 'Belum diajukan'}</dd></div>
@@ -58,9 +63,12 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
     {!active && <p>Pelaporan pemakaian baru ditutup pada status WO ini.</p>}
     {using && report && <WorkOrderMaterialUse context={context} onDone={reload} onClose={() => setUsing(false)} />}
     {history && <WorkOrderMaterialHistory id={workOrder.id} />}
+    <WorkOrderMaterialReview id={workOrder.id} />
+    {canRework && <Button onClick={() => setReworking(true)}>Tambah kebutuhan pengerjaan ulang</Button>}
+    {canRework && reworking && <WorkOrderMaterialRework context={context} onDone={reload} onClose={() => setReworking(false)} />}
     <section className="stack" aria-label="Kewajiban material"><h3>Sisa kewajiban material</h3>{settlement.obligations.dueAt && <p>Batas penyelesaian: <WarehouseTime value={settlement.obligations.dueAt} /></p>}
       {clear ? <p>Tidak ada barang atau reservasi yang menunggu penyelesaian pada ringkasan ini.</p> : <><p>Masih ada barang di tangan pemegang, dalam perjalanan, menunggu pemeriksaan retur, atau terikat reservasi.</p>
-        <ul>{settlement.obligations.lines.map(line => <li key={line.issueLineId}>Pengeluaran material: dipakai <WarehouseQuantity value={line.usedBase} unit={line.baseUnit} />, masih menjadi tanggung jawab <WarehouseQuantity value={line.stillAccountableBase} unit={line.baseUnit} />, dalam perjalanan <WarehouseQuantity value={line.transitBase} unit={line.baseUnit} />, retur selesai diperiksa <WarehouseQuantity value={line.settledReturnBase} unit={line.baseUnit} />.</li>)}</ul></>}
+        <WorkOrderMaterialObligations id={workOrder.id} /></>}
       {can('inventory.return.view') && <Link to="/warehouse/returns">Lihat retur dan pemeriksaan gudang</Link>}
       {can('workorder.order.close') && settlement.materialState !== 'CLOSED' && <Button disabled={!clear} onClick={() => setClosing(true)}>Tutup kewajiban material</Button>}
       {closing && <form className="stack" onSubmit={event => { event.preventDefault(); if (reason.trim()) setClose(closeMaterialSettlement(workOrder.id, { expectedRevision: settlement.revision, workOrderRevision: context.workOrderRevision, reason: reason.trim() })) }}>

@@ -1,3 +1,32 @@
+## Task39 review/rework verified — continue40, finish39 links with40/41
+
+WO Material now integrates planning/templates and request/stock links, exact measured
+use and immutable positive correction, explicit NONE declaration, scoped usage history,
+name-resolved paged obligations and independent technical/QA/provisioning/material states.
+The frozen QA review reads actual persisted fulfillment usage/version, gated by current
+WO + actor/location authority; no raw source payload/session/cost exposure. Positive
+rework form captures prior plan/use/evidence revisions, appends only extra quantities
+and preserves inherited history. Field-only technicians can see the existing evidence
+section using the controller's established field permission. Existing completion/QA
+commands remain canonical, no invented revision or serial-consumption fallback.
+
+Backend8/3suites PASS2m20s, targeted web29/6 PASS8.76s, full web269/50 PASS51.31s.
+Initial review decoder TypeScript errors fixed with default path parameters; final7
+review/API tests PASS, TypeScript/build PASS. Whole warehouse+WO oxlint exits0 with4
+pre-existing set-state-in-effect warnings in old WO components (new material files clean).
+Proof task39/material-review-verification.json; raw reports/logs local ignored runtime.
+All QA services cleaned, volumes retained. No migration.148 next free,177/178 reserved43.
+
+Task39 checkbox deliberately OPEN for final cross-navigation to Material Saya40 and
+serialized customer-asset workflow41. Next40: actual own pending handovers, acknowledged
+stock and returns even after reassignment, scanner/camera fallback and offline draft
+semantics. Current workbench custody is per active authorized WO; do not bypass its
+roster check to serve former-assignee returns. Add separate own-custody read service
+using inventory records/current fences + WorkOrderMaterialContextApi.lockForCustody.
+Canonical residual return/ack/handover commands already exist; reuse them. Current issue
+ACK requires current WO revision equals dispatch snapshot revision; present mismatch
+rather than inventing/replacing revisions. Tasks40–48/F1–F4 open; long-run goal ACTIVE.
+
 ## Task39 WO Material UI checkpoint — core flow verified; remaining review/rework ongoing
 
 22web tests/4files PASS3.92s, TypeScript and targeted oxlint PASS. Integrated existing

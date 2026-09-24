@@ -26,16 +26,17 @@ async function fillUse(amount: string) {
 }
 it('keeps technical completion, QA, provisioning and residual closure distinct for a read-only reviewer', async () => {
   mocks.permissions.clear(); mocks.permissions.add('workorder.order.view')
-  const fetch = vi.fn(async (path: string) => path.endsWith('/settlement') ? response({ ...settlementFixture('17500'), technicalState: 'DONE', qaState: 'APPROVED', provisioningState: 'PENDING' }) : response({ ...fieldContextFixture(), useRevision: 1, latestUsageId: id.evidence }))
+  const fetch = vi.fn(async (path: string) => path.includes('/obligations?') ? page([]) : path.endsWith('/settlement') ? response({ ...settlementFixture('17500'), technicalState: 'DONE', qaState: 'APPROVED', provisioningState: 'PENDING' }) : response({ ...fieldContextFixture(), useRevision: 1, latestUsageId: id.evidence }))
   vi.stubGlobal('fetch', fetch); show({ ...executionWorkOrder, status: 'DONE', approvalStatus: 'APPROVED' })
   await screen.findByText('Teknis selesai'); expect(screen.getByText('Disetujui QA')).toBeTruthy(); expect(screen.getByText('Menunggu')).toBeTruthy(); expect(screen.getByText('Belum ditutup')).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Catat.*pemakaian/ })).toBeNull(); expect(screen.queryByRole('button', { name: 'Tutup kewajiban material' })).toBeNull()
   expect(screen.queryByRole('link', { name: 'Lihat biaya material WO' })).toBeNull()
-  expect(fetch.mock.calls).toHaveLength(2)
+  expect(fetch.mock.calls).toHaveLength(3)
 })
 it('uses the acknowledged named source and exact measured metres after review, replaying response loss unchanged', async () => {
   let writes = 0
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path.includes('/obligations?')) return page([])
     if (init?.method === 'POST') { writes++; if (writes === 1) throw new TypeError('response lost'); return response({ usageId: id.evidence, workOrderId: id.source, useRevision: 1 }) }
     if (path.endsWith('/settlement')) return response(settlementFixture(writes === 2 ? '17500' : '100000'))
     if (path.includes('/custody?')) return page([custodyFixture()])
@@ -56,6 +57,7 @@ it('uses the acknowledged named source and exact measured metres after review, r
 it('sends a positive correction with the real previous usage then reloads stale409 without another write', async () => {
   let stale = false
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path.includes('/obligations?')) return page([])
     if (init?.method === 'POST') { stale = true; return response({ code: 'STALE_REVISION', message: 'STALE_REVISION' }, 409) }
     if (path.endsWith('/settlement')) return response(settlementFixture('17500'))
     if (path.includes('/custody?')) return page([{ ...custodyFixture(), quantityBase: '17500', sourceUsageId: id.evidence, initialUseSource: false }])
@@ -73,6 +75,7 @@ it('sends a positive correction with the real previous usage then reloads stale4
 it('requires an explicit no-material declaration and does not load custody or submit invented allocations', async () => {
   const context = fieldContextFixture(); context.plan = { ...context.plan!, materialMode: 'NONE', reason: 'Pemeriksaan saja', lines: [] }
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path.includes('/obligations?')) return page([])
     if (init?.method === 'POST') return response({ usageId: id.evidence, workOrderId: id.source, useRevision: 1 })
     return path.endsWith('/settlement') ? response(settlementFixture('0')) : response(context)
   }); vi.stubGlobal('fetch', fetch); show()
@@ -87,7 +90,7 @@ it('requires an explicit no-material declaration and does not load custody or su
 })
 it('hides use for a reassigned or cancelled job while retaining residual guidance and real paged history', async () => {
   mocks.userId = id.supplier; mocks.permissions.add('inventory.return.view')
-  const fetch = vi.fn(async (path: string) => path.includes('/usage?') ? page(path.includes('page=1') ? [] : [usageViewFixture()], 11, path.includes('page=1') ? 1 : 0) : path.endsWith('/settlement') ? response({ ...settlementFixture('17500'), technicalState: 'CANCELLED' }) : response({ ...fieldContextFixture(), useRevision: 1, latestUsageId: id.evidence }))
+  const fetch = vi.fn(async (path: string) => path.includes('/obligations?') ? page([]) : path.includes('/usage?') ? page(path.includes('page=1') ? [] : [usageViewFixture()], 11, path.includes('page=1') ? 1 : 0) : path.endsWith('/settlement') ? response({ ...settlementFixture('17500'), technicalState: 'CANCELLED' }) : response({ ...fieldContextFixture(), useRevision: 1, latestUsageId: id.evidence }))
   vi.stubGlobal('fetch', fetch); show({ ...executionWorkOrder, status: 'CANCELLED' })
   await screen.findByText('Dibatalkan'); expect(screen.queryByRole('button', { name: /Catat.*pemakaian/ })).toBeNull()
   expect(screen.getByRole('link', { name: 'Lihat retur dan pemeriksaan gudang' })).toBeTruthy()
@@ -100,6 +103,7 @@ it('closes only clear material obligations using actual settlement and WO revisi
   mocks.permissions.add('workorder.order.close')
   let closed = false
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path.includes('/obligations?')) return page([])
     if (init?.method === 'POST') { closed = true; return response({ ...settlementFixture('0').obligations, revision: 8, materialState: 'CLOSED' }) }
     return path.endsWith('/settlement') ? response({ ...settlementFixture('0'), materialState: closed ? 'CLOSED' : 'OPEN' }) : response(fieldContextFixture())
   }); vi.stubGlobal('fetch', fetch); show()

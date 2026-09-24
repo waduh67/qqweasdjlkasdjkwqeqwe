@@ -32,7 +32,7 @@ export function materialUsage(value: unknown, path = 'usage') {
     actor: nullable(r.actor, policyChoice, path), evidenceReference: text(r.evidenceReference, path), reason: nullable(r.reason, text, path), recordedAt: timestamp(r.recordedAt, path), lines: array(r.lines, usageLine, path, 100) }
 }
 const settlementStates = ['OPEN', 'SETTLING', 'CLOSED', 'OVERDUE'] as const
-function obligation(value: unknown, path = 'obligation') {
+export function obligation(value: unknown, path = 'obligation') {
   const r = record(value, path)
   return { issueLineId: uuid(r.issueLineId, path), stockIdentityId: uuid(r.stockIdentityId, path), baseUnit: baseUnit(r.baseUnit, path), issuedBase: decimal(r.issuedBase, path), usedBase: decimal(r.usedBase, path), returnedBase: decimal(r.returnedBase, path),
     transferredBase: decimal(r.transferredBase, path), disposedBase: decimal(r.disposedBase, path), stillAccountableBase: decimal(r.stillAccountableBase, path), transitBase: decimal(r.transitBase, path), acknowledgedBase: decimal(r.acknowledgedBase, path), settledReturnBase: r.settledReturnBase === undefined ? '0' : decimal(r.settledReturnBase, path) }

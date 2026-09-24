@@ -19,6 +19,11 @@ class MaterialWorkbenchController(private val workflow: MaterialWorkbenchService
     }
     @GetMapping("/custody") fun custody(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(workflow.custody(id, page(parameters)))
     @GetMapping("/usage") fun usage(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(workflow.usage(id, page(parameters)))
+    @GetMapping("/obligations") fun obligations(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(workflow.obligations(id, page(parameters)))
+    @GetMapping("/approval-review") fun review(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<MaterialApprovalReviewResponse> {
+        if (parameters.isNotEmpty()) invalid()
+        return response(workflow.review(id))
+    }
     private fun page(parameters: MultiValueMap<String, String>): WarehousePageRequest {
         if (parameters.any { (key, values) -> key !in setOf("page", "size") || values.size != 1 || !values.single().matches(Regex("[0-9]+")) }) invalid()
         fun number(key: String, default: Int) = parameters[key]?.single()?.let { it.toIntOrNull() ?: invalid() } ?: default
@@ -31,10 +36,19 @@ class MaterialWorkbenchController(private val workflow: MaterialWorkbenchService
 @Service
 @Transactional(timeout = 30, rollbackFor = [Exception::class])
 class MaterialWorkbenchService(private val authority: CurrentAuthorityApi, private val cutovers: InventoryTenantCutoverApi,
-    private val workOrders: WorkOrderMaterialContextApi, private val inventory: InventoryMaterialWorkbenchApi) {
+    private val workOrders: WorkOrderMaterialContextApi, private val inventory: InventoryMaterialWorkbenchApi, private val approvals: FulfillmentApprovalStore) {
     fun context(id: UUID) = inventory.context(locked(id))
     fun custody(id: UUID, page: WarehousePageRequest) = inventory.custody(locked(id), page)
     fun usage(id: UUID, page: WarehousePageRequest) = inventory.usage(locked(id), page)
+    fun obligations(id: UUID, page: WarehousePageRequest) = inventory.obligations(locked(id), page)
+    fun review(id: UUID): MaterialApprovalReviewResponse {
+        val context = locked(id)
+        val frozen = approvals.forWorkOrder(id)?.snapshot ?: return MaterialApprovalReviewResponse(null)
+        val usage = inventory.usageDetails(context, frozen.material.usageId)
+        if (usage.planId != frozen.material.planId || usage.planRevision != frozen.material.planRevision || usage.useRevision != frozen.material.useRevision)
+            throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Frozen usage binding changed"))
+        return MaterialApprovalReviewResponse(MaterialApprovalReview(frozen.id, frozen.workOrder.material.workOrderRevision, usage))
+    }
     private fun locked(id: UUID): MaterialPlanningContext {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
@@ -43,3 +57,6 @@ class MaterialWorkbenchService(private val authority: CurrentAuthorityApi, priva
             workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover)
     }
 }
+
+data class MaterialApprovalReviewResponse(val review: MaterialApprovalReview?)
+data class MaterialApprovalReview(val id: UUID, val workOrderRevision: Long, val usage: MaterialUsageView)

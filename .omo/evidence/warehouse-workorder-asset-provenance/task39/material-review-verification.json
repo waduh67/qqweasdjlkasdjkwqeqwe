@@ -1,0 +1,48 @@
+{
+  "sourceCommit": "accompanying material review/rework commit",
+  "backend": {
+    "tests": 8,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "706dc7ce3032b774c39a1b9bd669c02459ba8e673e37b12d2ec1a2b51a3aa70f"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchReviewIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "4647ef79d4114e62b81ea264b8a033087349399607fd1a52026f0a61b231f811"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "c4e48050f745f186dea1ba4e35de61e963cd1d655529a2feefb9f2c01aa3f8ea"
+      }
+    ],
+    "result": "BUILD SUCCESSFUL in 2m 20s"
+  },
+  "web": {
+    "targetedTests": 29,
+    "targetedFiles": 6,
+    "durationSeconds": 8.76,
+    "fullTests": 269,
+    "fullFiles": 50,
+    "fullDurationSeconds": 51.31,
+    "finalDecoderAndReviewTests": 7,
+    "typeScript": "PASS after default decoder path type correction",
+    "productionBuild": "PASS",
+    "oxlint": "exit0; four existing set-state-in-effect warnings in old WO components; new material components clean"
+  },
+  "coverage": "Frozen QA usage identity/version/current actor and source scope, no second debit, named obligation paging; existing NONE approval and legacy reconciliation; positive rework delta bound to prior plan/usage/evidence, stale reload and response-loss replay.",
+  "cleanup": "Owned processes, containers and network stopped; volumes retained",
+  "task39": "Core WO Material complete; keep checkbox OPEN for Material Saya and serialized customer-asset cross-navigation integration in40/41."
+}
