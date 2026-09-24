@@ -18,4 +18,3 @@ export function useWarehouseQuery<T>(loader: () => Promise<T>) {
   const state: WarehouseResult<T> = result?.loader === loader && result.attempt === attempt ? result.value : { status: 'loading' }
   return { state, reload: () => setAttempt(previous => previous + 1) }
 }
-

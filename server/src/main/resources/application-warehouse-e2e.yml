@@ -5,6 +5,10 @@ spring:
     host: ""
     username: ""
     password: ""
+management:
+  health:
+    mail:
+      enabled: false
 ftth:
   scheduling:
     enabled: false

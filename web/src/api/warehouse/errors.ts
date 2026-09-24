@@ -11,4 +11,3 @@ export function warehouseError(error: unknown): string {
   if (error instanceof WarehouseDataError) return error.message
   return 'Koneksi terputus. Periksa jaringan lalu coba lagi.'
 }
-

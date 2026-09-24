@@ -1,5 +1,20 @@
 # Whole-plan continuation
 
+## Task31 browser readiness correction (not yet verified)
+
+Published a030927f contains49 green unit tests and the new navigation/controls.
+setup-initial browser attempt built server/web and booted all339 migrations through
+V175_147 in warehouse_e2e, but readiness failed before any browser test: SMTP health
+was DOWN although email is intentionally disabled, and no warehouse health indicator
+actually existed (earlier handoff assumption was wrong). Added profile-only
+WarehouseQaHealthIndicator querying database/current app role/marker and requiring
+NOSUPERUSER/NOBYPASSRLS/no role/db creation; mismatches fail DOWN. Disabled only the
+unused mail health probe in warehouse-e2e. No production profile behavior changed.
+
+Next run .omo/runtime/warehouse-setup-browser.sh setup-health-fixed with private log.
+Check actual compilation, owned API/proxy readiness, then real signup/approver browser
+journey; no green browser evidence yet. Keep task31 OPEN until both projects pass.
+
 ## Task31 navigation and transaction controls — browser harness pending
 
 Warehouse routes now use independent permissions and a separate Gudang & Logistik
