@@ -95,6 +95,7 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
           <Button variant="primary" disabled={!can('inventory.location.view') || !receipt.lines.some(line => receiptCandidates(receipt, line, 'putaway').length)} onClick={() => setAction('putaway')}>Tempatkan ke bin</Button></>}
       </div>
       {manage && receipt.state === 'DRAFT' && (!can('inventory.cost.view') || !receipt.costVisible) && <p className="muted">Ubah draft memerlukan akses rincian biaya agar biaya tersimpan tidak terhapus. Terima barang dan unggah bukti tetap tersedia.</p>}
+      {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(receipt.id)}`}>Buka persetujuan penerimaan</Link>}
       {!manage && <p className="muted">Akses baca saja. Izin kelola penerimaan diperlukan untuk memproses dokumen.</p>}
       {manage && receipt.state === 'RECEIVED_IN_INSPECTION' && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih bin tujuan.</p>}
     </section>

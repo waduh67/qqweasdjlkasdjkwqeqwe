@@ -2,6 +2,43 @@
 
 
 
+
+## Task37 approval UI green; corrected backend test rerun next
+
+Approval backend 7b84c704 compiled and ran28tests/7suites in6m29s:27passed,1failed.
+Failure is new test expectation303 vs actual normalized101/1 for totalMinor101 and
+quantity/basis3/3; product policy calculation is correct. Test now checks101/1.
+25 unchanged tests in6suites passed (Count15,Approval2,Source4,Compatibility1,
+TransferDiscrepancy2,original-WO workbench1). CorrectedWorkbench3 rerun next and
+must reach actual final-effect/history assertions previously blocked by that check.
+Owned cleanup completed, volumes retained. Do NOT call initial whole batch green.
+
+UI implemented: strict typed approval reads, server-derived source/current action,
+policy evaluation before request, captured request/decide/rework, named sources and
+frozen count comparison, current-vs-sealed revisions, paged history/filters, actual
+operation-backed final effect, self/current-authority denial. Receipt detail now
+links to source approval. 28web/5files passed5.66s (approval10/count10/receipt8),
+TypeScript+targeted oxlint passed after unused test argument correction.
+
+Required remaining task37 concerns discovered during implementation:
+1. Evidence review: current document projection includes count sheet references,
+   but receipt attachments and signed title evidence still need an approval-safe
+   read/presentation path for approver-only users. Do not expose raw source/storage.
+2. Transfer discrepancy recovery: generic rework currently appears possible for
+   ADJUSTMENT but owner.validate insists source.revision0 and apply posts0. Existing
+   report only accepts DISPATCHED/PART_RECEIVED, so rejected/expired reports cannot
+   be corrected through owner UI. Implement an owner-bound new discrepancy report
+   after prior terminal/no-effect request, retain old references, prevent pending/
+   approved supersession and recheck old-source current binding; hide generic rework
+   for ADJUSTMENT. Need actual backend+UI stale/rejection tests. Do not ship a dead end.
+3. Source query supports only registered owners (rejects arbitrary inventory docs).
+   List scans fixed100 keyset batches, runs actual owner locks per transaction before
+   page/count. This is bounded memory; large queues may warrant later batch optimization.
+4. New read list adds selected result within transaction closure; consider append
+   only after successful commit. Action gates/commands still recheck actual authority.
+5. Disposition forms and actual separate-login discrepancy browser still open.
+Whole37–48/F1–F4 ACTIVE. No migrations. Read task37 implementation notes below.
+
 ## Task37 approval read projection implemented; backend verification next
 
 Count milestone feda5972/dcb8ce10 complete within task37: count-verification.json

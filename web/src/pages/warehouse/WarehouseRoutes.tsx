@@ -7,11 +7,9 @@ import { useCan } from '@/auth/useCan'
 import { EmptyState } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
-import { WarehouseTime } from '@/components/organisms/warehouse/WarehouseLines'
 import { WarehouseQuantity } from '@/components/organisms/warehouse/WarehouseQuantity'
 import { WarehousePagination } from '@/components/organisms/warehouse/WarehousePagination'
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
-import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatus'
 import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from './navigation'
 import { WarehouseCatalogPage } from './WarehouseCatalogPage'
 import { WarehouseReceiptsPage } from './WarehouseReceiptsPage'
@@ -20,6 +18,7 @@ import { WarehouseRequestsPage } from './WarehouseRequestsPage'
 import { WarehouseTransfersPage } from './WarehouseTransfersPage'
 import { WarehouseReturnsPage } from './WarehouseReturnsPage'
 import { WarehouseCountsPage } from './WarehouseCountsPage'
+import { WarehouseApprovalsPage } from './WarehouseApprovalsPage'
 
 function WarehouseGate({ permissions, children }: { permissions: readonly string[]; children: ReactNode }) {
   const { can } = useCan()
@@ -30,7 +29,7 @@ export function WarehouseRoutes() {
   return <Routes>
     <Route index element={<WarehouseGate permissions={WAREHOUSE_VIEW_PERMISSIONS}><WarehouseHome /></WarehouseGate>} />
     {WAREHOUSE_PAGES.map(page => <Route key={page.path} path={page.path} element={<WarehouseGate permissions={page.permissions}>
-      {page.path === 'catalog' ? <WarehouseCatalogPage /> : page.path === 'receipts' ? <WarehouseReceiptsPage /> : page.path === 'approvals' ? <ApprovalQueue /> : page.path === 'stock' ? <WarehouseStockPage /> : page.path === 'requests' ? <WarehouseRequestsPage /> : page.path === 'transfers' ? <WarehouseTransfersPage /> : page.path === 'returns' ? <WarehouseReturnsPage /> : page.path === 'counts' ? <WarehouseCountsPage /> : <WarehouseUnavailable />}
+      {page.path === 'catalog' ? <WarehouseCatalogPage /> : page.path === 'receipts' ? <WarehouseReceiptsPage /> : page.path === 'approvals' ? <WarehouseApprovalsPage /> : page.path === 'stock' ? <WarehouseStockPage /> : page.path === 'requests' ? <WarehouseRequestsPage /> : page.path === 'transfers' ? <WarehouseTransfersPage /> : page.path === 'returns' ? <WarehouseReturnsPage /> : page.path === 'counts' ? <WarehouseCountsPage /> : <WarehouseUnavailable />}
     </WarehouseGate>} />)}
     <Route path="*" element={<WarehouseUnavailable />} />
   </Routes>
@@ -57,22 +56,6 @@ function PendingApprovals() {
     <strong>{data.totalElements} persetujuan menunggu</strong><p className="muted">Permintaan yang dapat Anda lihat dalam cakupan gudang saat ini.</p>
     <Link to="/warehouse/approvals">Buka persetujuan gudang</Link>
   </section>}</WarehouseState>
-}
-
-function ApprovalQueue() {
-  const [page, setPage] = useState(0)
-  const loader = useCallback(() => listApprovals({ page }), [page])
-  const result = useWarehouseQuery(loader)
-  return <div className="stack"><PageHeader title="Persetujuan Gudang" subtitle="Keputusan membutuhkan pemeriksa yang berbeda dari pembuat permintaan." />
-    <WarehouseState {...result}>{data => <>
-      <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.requestId} empty={<EmptyState title="Tidak ada persetujuan dalam cakupan Anda" hint="Permintaan yang masuk akan terlihat setelah diajukan untuk pemeriksaan." />} columns={[
-        { key: 'document', header: 'Referensi', cell: row => <span style={{ overflowWrap: 'anywhere' }}>{row.code}<br /><span className="muted">Revisi sumber {row.sourceRevision}</span></span> },
-        { key: 'status', header: 'Status', cell: row => <WarehouseStatus status={row.status} /> },
-        { key: 'expires', header: 'Berlaku sampai', cell: row => <WarehouseTime value={row.expiresAt} /> },
-      ]} />
-      <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
-    </>}</WarehouseState>
-  </div>
 }
 
 function StockSummary({ embedded = false }: { embedded?: boolean }) {
