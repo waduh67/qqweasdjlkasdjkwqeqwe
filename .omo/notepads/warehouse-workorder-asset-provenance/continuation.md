@@ -1,5 +1,29 @@
 # Whole-plan continuation
 
+## Task28 approved physical effect checkpoint — validation running
+
+Supersedes the older draft-only status below. Published base7944bb50 includes
+138; disposition-request actually ran4 tests/2 suites,1 failure,0 errors/skips
+in1m46s. POST disposition201 and exact replay passed; the failure was missing
+approval source owner at test line43. Flyway138 applied21:34:36.248 JKT and is
+IMMUTABLE:34a2b183f2a4f1395981b5efdf5e14d3033ca9f7121b767c9d3f2ab52c74ea3b.
+
+This checkpoint adds independent LOSS/SCRAP owners, admission revalidation,
+approval-kind wiring, one paired physical posting and a linked nonphysical
+warehouse.return.dispose operation.139 was reserved before creation. Its new
+immutable effect captures the live source, binds both operations/approval/legs,
+validates EA and MM current positions against applied ledger, extends existing
+return histories/lifecycle forward, and counts approved disposal as settlement
+of the original returned residual without counting another issued disposition.
+
+The initial verification is .omo/runtime/disposition-effect.sh / .log; owned
+private archive task28/disposition-effect/xml and disposition-effect-database.log.
+It selects WarehouseDispositionIT + ModularityTests. No result or successful139
+application is claimed yet; check logs before changing this SQL. Earlier138 and
+older migrations must never change. Task28 stays OPEN; loss/compensation and
+adversarial/scoping/concurrency/rebuild checks remain. Task26 remains COMPLETE
+with its published53-test22-suite portable evidence at7c6eb6e5.
+
 ## Task28 draft request implementation checkpoint — validation pending
 
 Task26 completion checkpoint7c6eb6e5 is published with53 green tests/22 suites and

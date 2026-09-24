@@ -24,13 +24,13 @@ class WarehouseDispositionStore(private val jdbc: WarehouseCommandJdbc) {
             .singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 
-    fun lockPhysical(identity: UUID): Long? = jdbc.execute { sql ->
+    fun lockPhysical(identity: UUID, validate: Boolean = true): Long? = jdbc.execute { sql ->
         val asset = sql.value("SELECT revision FROM inventory_serialized_asset WHERE tenant_id=? AND id=? FOR UPDATE", sql.tenant, identity)?.toLong()
-        if (sql.value("SELECT id FROM inventory_asset_assignment WHERE tenant_id=? AND asset_id=? AND ended_at IS NULL LIMIT 1", sql.tenant, identity) != null)
+        if (validate && sql.value("SELECT id FROM inventory_asset_assignment WHERE tenant_id=? AND asset_id=? AND ended_at IS NULL LIMIT 1", sql.tenant, identity) != null)
             sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         sql.query("SELECT id FROM inventory_segment WHERE tenant_id=? AND id=? FOR UPDATE", sql.tenant, identity) { it.uuid("id") }
         sql.query("SELECT id FROM inventory_balance_projection WHERE tenant_id=? AND stock_identity_id=? ORDER BY id FOR UPDATE", sql.tenant, identity) { it.uuid("id") }
-        if (sql.value("SELECT id FROM inventory_reservation WHERE tenant_id=? AND stock_identity_id=? AND state='OPEN' AND (reserved_unpicked_base>0 OR reserved_picked_base>0) LIMIT 1",
+        if (validate && sql.value("SELECT id FROM inventory_reservation WHERE tenant_id=? AND stock_identity_id=? AND state='OPEN' AND (reserved_unpicked_base>0 OR reserved_picked_base>0) LIMIT 1",
                 sql.tenant, identity) != null) sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
         asset
     }

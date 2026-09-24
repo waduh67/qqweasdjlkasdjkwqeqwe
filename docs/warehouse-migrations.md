@@ -29,6 +29,12 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## Task28: kehilangan, scrap dan kompensasi
 
+`V175_139__warehouse_return_disposition_effect.sql` dicadangkan sebelum pembuatan.
+138 telah diterapkan dan immutable (SHA25634a2b183f2a4f1395981b5efdf5e14d3033ca9f7121b767c9d3f2ab52c74ea3b).
+Draft201 dan replay berhasil; tes berhenti pada handler approval yang belum ada.
+139 mengikat keputusan LOSS/SCRAP, posting sink, transisi retur tanpa debit kedua,
+dan penyelesaian kewajiban residual. Source dan title harus tetap diverifikasi.
+
 `V175_138__warehouse_disposition_request.sql` dicadangkan sebelum pembuatan.
 137 tetap immutable. Tes awal task28 telah mencapai retur dan inspeksi nyata,
 lalu gagal pada POST dispositions404 (1 tes,1 kegagalan,1m32s).138 mengikat draft
