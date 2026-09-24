@@ -1,5 +1,29 @@
 # Whole-plan continuation
 
+## Task28 asset compensation VERIFIED; active loan loss remains open
+
+The compensation-asset run against f87b1f21 passed 6 tests / 3 suites, zero
+failures/errors/skips, 2m49s. Both LOSS and SCRAP assets were actually recovered,
+compensated, reset/inspected, issued and installed to a different customer. An old
+correction using the CURRENT return revision was denied; committed replay stayed
+nonphysical and all old/new assignment and ONU histories remained intact.
+The existing plain asset reuse test and 3 modularity tests also passed.
+Portable evidence: .omo/evidence/warehouse-workorder-asset-provenance/task28/asset-compensation-verification.json.
+Owned QA stopped; volumes retained. Product main remains 567a3113. All work through
+f87b1f21 was pushed to origin/feat/warehouse-workorder.
+
+Scope assessment: task28 needs an approved LOSS path for an unrecovered ISP loan,
+not only inspected RETURN dispositions. Current active assignments remain recoverable
+and cannot be written off. Implement a separate document-bound ASSET_LOSS request
+and LOSS-policy approval, preserving original deployment/handover records and title,
+retiring the assignment and customer episode atomically with a single LOSS posting.
+Require actual asset/assignment/title/WO/source revisions and evidence; exclude SALE
+customer property, independent self/delegate approval, no fake physical removal or
+return intake. Recheck changed installation/title/recovery state at decision time.
+Expose recovery closure from approved loss without changing the original obligation.
+143 is next unused; reserve before creation. All migrations through142 immutable.
+Task28 and whole-plan goal remain OPEN; 30–48/F1–F4 still pending.
+
 ## Task28 return disposition and compensation VERIFIED — asset reuse test running
 
 The compensation-guards run against567a3113 product source passed30 tests/6 suites,
