@@ -1,5 +1,42 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task28 return disposition and compensation VERIFIED — asset reuse test running
+
+The compensation-guards run against567a3113 product source passed30 tests/6 suites,
+0 failures/errors/skips,4m54s. All20 earlier disposition/modularity cases plus2
+LOSS/SCRAP compensation/reinspection journeys and8 compensation guards passed.
+142 applied22:19:08.476 JKT and is IMMUTABLE:
+f792dc3f6d64f6190dac9b575e5c74e66022a6fc41ae4922f8a12aeeb4cff83a.
+Owned resources stopped with volumes retained. Portable sanitized evidence:
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-verification.json.
+It records all30 names/counts, XML digests, source main-tree and138–142 checksums.
+
+Compensation now restores exactly one whole piece to Q, reopens its outstanding
+return obligation, requires fresh accepted inspection before availability, preserves
+original posting/history, and produces one linked REVERSAL. Closed material
+settlement, closure while approval waits, competing/rejected corrections, direct
+SQL pending effects, available-bin restoration and revoked replay all behave as
+required; current projections rebuild correctly.
+
+New WarehouseCompensationAssetIT has2 actual LOAN LOSS/SCRAP recovery -> approved
+compensation -> reset/inspection -> normal issue -> different customer installation
+journeys. It then uses CURRENT return revision to attempt another correction of
+the old disposition, expects SOURCE_NOT_VERIFIED409, and checks the new installation
+and old episode remain intact. Original correction replay must stay nonphysical.
+These2 new tests were not in the30-case run and have not passed yet.
+Current .omo/runtime/compensation-asset.sh / .log selects those2, the existing
+WarehouseReturnITReuse (1), and ModularityTests (3): expected6. Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-asset/xml;
+DB log compensation-asset-database.log. Product main is unchanged since567a3113.
+
+Task28 stays OPEN until the remaining acceptance and source-scope assessment are
+finished. Assess the plan's loan-obligation approved-loss requirement before
+claiming complete: currently disposition accepts inspected RETURNs, and compensation
+accepts their exact loss/scrap movements. It cannot yet write off an unrecovered
+active customer loan or arbitrary issued/warehouse/vendor stock.143 is next unused
+SQL version; reserve before creation. All SQL through142 is applied immutable.
+Whole-plan goal remains active;30–48/F1–F4 remain. No main merge/deploy/reset.
+
 ## Task28 compensation outbox checkpoint — 30-case regression pending
 
 Published6cca7fd1 compensation-effect ran5 tests/2 suites,2 failures,0 errors/skips,
