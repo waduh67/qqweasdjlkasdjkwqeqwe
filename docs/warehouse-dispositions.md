@@ -52,5 +52,8 @@ residual itu sekali saja. Penutupan kewajiban tidak memindahkan stok lagi.
 Penolakan approval mempertahankan sumber dan meminta pengajuan baru dengan
 bukti yang diperbaiki.
 
-Koreksi melalui dokumen kompensasi dan cakupan kehilangan di luar retur
-inspeksi masih dikerjakan; keduanya belum tersedia pada API ini.
+Pengajuan koreksi sedang diverifikasi pada `POST /api/v1/warehouse/dispositions/{id}/compensations`.
+Input berisi `expectedRevision`, `expectedReturnRevision`, `destinationLocationId`,
+`reason`, dan `evidenceReference`. Pengajuan hanya menyimpan draft yang menunjuk
+posting asli; pelaksanaan reversal melalui approval masih dikerjakan. Kehilangan
+di luar retur inspeksi juga belum tersedia pada API ini.

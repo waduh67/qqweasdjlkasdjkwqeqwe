@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.*
+import com.duluin.ftth.inventory.domain.model.InventoryStatus
 import com.duluin.ftth.inventory.application.port.outbound.PostingDimension
 import com.duluin.ftth.inventory.application.port.outbound.PostingOperation
 import com.duluin.ftth.inventory.application.service.*
@@ -31,7 +32,7 @@ class WarehouseReturnStore(private val jdbc: WarehouseCommandJdbc) {
             ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED))
     }
 
-    fun position(dimension: PostingDimension): WarehouseReturnSource = jdbc.execute { sql ->
+    fun position(dimension: PostingDimension, status: InventoryStatus = InventoryStatus.QUARANTINE): WarehouseReturnSource = jdbc.execute { sql ->
         sql.query("""SELECT balance.*,segment.revision segment_revision,sku.tracking,asset.serial_number
             FROM inventory_balance_projection balance
             JOIN inventory_segment segment ON segment.tenant_id=balance.tenant_id AND segment.id=balance.stock_identity_id
@@ -39,10 +40,10 @@ class WarehouseReturnStore(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=segment.tenant_id AND asset.id=segment.id
             WHERE balance.tenant_id=? AND balance.stock_identity_id=? AND balance.location_id=?
             AND balance.custody_owner_id=? AND balance.custody_owner_kind=? AND balance.condition=? AND balance.legal_owner=?
-            AND balance.quantity_base>0 AND balance.status='QUARANTINE' AND balance.warehouse_admission='VERIFIED'
+            AND balance.quantity_base>0 AND balance.status=? AND balance.warehouse_admission='VERIFIED'
             AND segment.warehouse_admission='VERIFIED' AND segment.state='ACTIVE' AND sku.state='ACTIVE'""",
             sql.tenant, dimension.stockIdentityId, dimension.locationId, dimension.custodianId,
-            dimension.custodianKind, dimension.condition, dimension.legalOwner) {
+            dimension.custodianKind, dimension.condition, dimension.legalOwner, status) {
             WarehouseReturnSource(PostingProjection.dimension(it), it.getLong("quantity_base"),
                 WarehouseBaseUnit.valueOf(it.getString("base_unit")), WarehouseTracking.valueOf(it.getString("tracking")),
                 it.getLong("revision"), it.getLong("segment_revision"), it.getString("serial_number"))

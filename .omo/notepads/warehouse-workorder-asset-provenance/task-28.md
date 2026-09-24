@@ -1,5 +1,52 @@
 # Task28 — independent loss, scrap and compensation (in progress)
 
+## Task28 compensation draft implementation checkpoint — validation pending
+
+The published20-green initial return-disposition evidence is adb4ca79 (product
+18447663). Overall task28/whole-plan goal remain open. New work in this checkpoint:
+InventoryCompensationApi, typed input/view/context/record, WarehouseCompensationService,
+WarehouseCompensationStore and controller. POST/GET/list are under
+/api/v1/warehouse/dispositions/{dispositionId}/compensations; GET detail adds/{id}.
+
+Request requires original POSTED1 LOSS/SCRAP, its actual APPLIED movement and
+linked latest return revision, whole remaining ISP sink position, no prior linked
+compensation, no active assignment/reservation, and an open material lifecycle.
+WO is locked through the public port before topology/return/stock. The new
+source captures WO/asset/material revisions; destination is quarantine only.
+Immutable actor/key replay returns original draft after current access checks.
+List authorizes original locations before querying and filters new quarantine
+destination scope before pagination; DTOs expose no cost/customer fields.
+WarehouseReturnStore.position gains explicit status parameter default QUARANTINE,
+with compensation passing LOST/DISPOSED. Existing callers retain Q behavior.
+
+140 was reserved before creation. inventory_compensation_request has forced RLS,
+append-only snapshots, actual original effect/ledger/return/material source capture,
+and exact DRAFT0 header/line/no-posting seal. DISPOSITION_REVERSAL is admitted as
+new document kind. New SQL is not yet known applied: inspect current run before
+changing it;139 and older remain immutable. No compensation approval owner or
+physical effect is implemented yet; 141 or later must extend lifecycle forward.
+
+Current .omo/runtime/compensation-request.sh / .log selects WarehouseCompensationIT
+(2 real LOSS/SCRAP reversal journeys) + ModularityTests (3). Archive is
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-request/xml,
+database log compensation-request-database.log. Expect new request to progress
+to approval/request missing owner; do not call these5 tests green without logs.
+No changes to main/deploy; checkpoints push HEAD:refs/heads/feat/warehouse-workorder.
+
+Next effect: add ApprovalPostingKind.DISPOSITION_REVERSAL, map policy to ADJUSTMENT
+without taking existing ADJUSTMENT owner from transfer discrepancy. Seal approval
+source with compensation record; revalidate current sink and material revision
+before decision and posting. One new REVERSAL movement compensates original ID,
+restores QUARANTINE/QUARANTINE at target, preserves owner/quantity and original
+posting. Exactly one explicit matching outbox kind; update both PostingDocuments
+default kind and WarehouseApprovalStore.event selection. Add linked nonphysical
+warehouse.return.restore step, original return history validators, new effect
+capture/exact deferred guards and old/new table routing. Original139 effect already
+allows later return revision and uses generic current ledger reconciliation.
+Reject closed settlement, duplicate reversal, downstream reused/installed/consumed
+state. Reinspection after restoration must be required before availability and
+returned residual re-settlement. Task28 also needs broader loss scope assessment.
+
 ## Task28 initial return LOSS/SCRAP VERIFIED — compensation remains open
 
 The disposition-verified run against18447663 product source completed20 tests/4
