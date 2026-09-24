@@ -1,5 +1,34 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task30 COMPLETE —53 reports/receipt regression tests green;task31 started
+
+reports-replay-fixed against422cf536 passed53 tests with zero failures/errors/skips
+in5m35s. Portable sanitized evidence: task30/verification.json. Owned QA stopped
+cleanly and retained volumes. Both complete real1km+10ONU LOAN/SALE journeys,
+100m+1 issue,82.5m use+1 actual install,17.5m accepted return reached917.5m/9ONU,
+zero field cable and unchanged replay. Costs retain1000006/1000000 IDR and1999995/10
+USD source bases, yielding separate82500IDR/200000USD HALF_UP totals. Physical
+1002-leg export rejection and narrowed334-row export passed. All print snapshots,
+price-draft edits, current cost revocation, foreign scope, explicit unknown legacy
+units, stock-card pre-range opening and formula guards passed.
+
+Receipt replay fix also passed all40 receipt cases: current authority/assignee/
+warehouse scope still apply, old successful reply survives WO progress, changed
+payload or fresh stale command cannot post, and revoked scope still denies. No
+migrations were added; allthrough147 immutable,148unused. Plan tasks1–30 complete.
+Whole-plan goal ACTIVE:31–48 and F1–F4 remain. No main merge/deploy/reset.
+
+Task31 now has uncommitted web/DESIGN.md warehouse-control specs and
+web/src/api/warehouse/quantity.ts +quantity.test.ts.20 precision/input tests pass
+with `env NODE_OPTIONS=--no-experimental-webstorage npm test -- src/api/warehouse/quantity.test.ts --maxWorkers=2`.
+Plain npm test first failed20 cleanup hooks because Node26 native localStorage
+shadows jsdom (undefined without --localstorage-file). Do not fake browser storage;
+use the scoped Node flag, or make the test runner handle supported Node versions.
+Repo deploy uses Node22. Need commit this small31 checkpoint, then finish shared
+runtime DTO parsing, stable retry transport, warehouse routes/navigation/controls,
+real desktop/mobile browser harness and external-adapter isolation profile. Existing
+qa.sh browser deliberately refuses missing31 config/profile. See task-31 notes.
+
 ## Full numeric report passes; delivery replay lifecycle fix under validation
 
 reports-full against aae97d92 executed11 tests/5 suites,2 failures,0 errors/skips,
