@@ -1,5 +1,39 @@
 # Whole-plan continuation
 
+##136 declared cost/rejection and8 supplier guards — first validation running
+
+135 is APPLIED AND IMMUTABLE, SHA256: `ab998db9effece220beed9b979164b54aee915531ec81a3c9bc4f722ba1b2abd`.
+The corrected run passed12 tests/4 suites/0 failures/errors/skips,1m45s:
+LOAN/SALE vendor replacement2, ordinary receipt1, approval guards6, modularity3.
+New replacement asset is distinct, real same-vendor RECEIPT, owner ISP/CUSTOMER
+as captured, QUARANTINE; old asset remains vendor custody. Archive
+return-replacement-posting-green/xml. Published25ebf655 includes the pre-apply
+SQL delimiter correction; failed135 attempt fully rolled back, then correct apply.
+
+136 reserved BEFORE creation and now authored. Optional SupplierReplacementCost
+(totalMinor,currency) feeds normal receipt cost input. Null cost is omitted from
+new input serialization so old134 canonical replay is preserved; no zero invented.
+136 captures exact vendor-declared cost/denominator1 and freezes document-line
+cost against intake. It supports DRAFT1/REWORK_REQUIRED only with matching rejected
+approval; generic rework returns controlled409 directing a new immutable request.
+
+New WarehouseSupplierReplacementFixture/GuardsIT adds8 cases: actual customer
+replacement approval+cost+replay; unknown cost policy rejection; competing drafts
+one new asset; direct stale source; durable approval stale+replay; rejection then
+fresh request; current scope on receive replay; and SQL unposted CUSTOMER->ISP
+asset/balance rewrite. That last case deliberately tests possible missing current
+physical-ledger binding for a replacement with no installation history. If it
+exposes a gap, use existing warehouse_assert_recovered_position (120) and final
+asset/balance routing in a NEW forward version after136 applies; never weaken it.
+
+Current `.omo/runtime/return-replacement-guards-green.sh` / matching log and
+return-replacement-guards-database.log, archive return-replacement-guards-green/xml,
+session96350 runs the8 new cases + prior12. Read log for actual compile and136
+apply status; after successful apply136 is immutable. No137 declared/created.
+Then finish further tenant/source/immutability checks as justified, replacement
+inspection/reset and CUSTOMER original-customer handover/installation, old-vendor
+custody disposition, packaged HTTP and remaining plan. Task26 still OPEN.
+
 ##135 first SQL attempt rolled back; delimiter corrected before any successful apply
 
 return-replacement-admission-green compiled but failed Spring/Flyway startup:

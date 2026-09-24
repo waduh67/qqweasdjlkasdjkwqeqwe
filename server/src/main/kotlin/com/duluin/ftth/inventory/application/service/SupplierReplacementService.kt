@@ -53,7 +53,8 @@ class SupplierReplacementService(private val cutovers: InventoryTenantCutoverApi
         if (position.tracking != WarehouseTracking.SERIAL || position.quantity != 1L) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val requestId = UUID.randomUUID()
         val draft = receipts.replacementDraft(ReceiptDraftInput(repair.vendorId, input.externalReference, input.sourceLocationId,
-            input.inspectionLocationId, listOf(ReceiptLineInput(input.skuId, "1", listOf(ReceiptSerialInput(input.serial, input.mac))))),
+            input.inspectionLocationId, listOf(ReceiptLineInput(input.skuId, "1", listOf(ReceiptSerialInput(input.serial, input.mac)),
+                cost = input.cost?.let { ReceiptCostInput(it.totalMinor, it.currency) }))),
             "replacement-receipt:$requestId", ReceiptDraftContext(context.customerId, context.workOrderId, workRevision, view.legalOwner))
         val receipt = receiptStore.get(draft.documentId)
         val reference = SupplierReplacementView(requestId, id, repair.id, receipt.id, view.stockIdentityId, view.legalOwner)

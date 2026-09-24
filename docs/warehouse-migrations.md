@@ -29,6 +29,11 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 ## Task26: retur dan inspeksi
 
+`V175_136__warehouse_replacement_receipt_policy_context.sql` dicadangkan sebelum
+pembuatan.135 telah diterapkan dengan12 tes lulus.136 mengikat nilai vendor yang
+opsional pada snapshot receipt dan mengizinkan penolakan approval tanpa mengubah
+request asal. Nilai kosong tetap UNKNOWN; tidak diberi harga nol otomatis.
+
 `V175_135__warehouse_supplier_replacement_receipt.sql` dicadangkan sebelum pembuatan.
 134 sudah diterapkan dan immutable. Request/replay LOAN dan SALE berhasil;
 penerimaan masih ditolak oleh guard draft-only134.135 akan mengikat satu aset

@@ -51,6 +51,10 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
     fun findSource(id: UUID, revision: Long): UUID? = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_approval WHERE tenant_id=? AND source_document_id=? AND source_document_revision=?", sql.tenant, id, revision) { it.uuid("id") }.singleOrNull()
     }
+
+    fun isReplacement(id: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("SELECT 1 FROM inventory_repair_replacement_request WHERE tenant_id=? AND receipt_id=?", sql.tenant, id) != null
+    }
     fun insert(record: WarehouseApprovalRecord, key: String, hash: String) = jdbc.execute { sql ->
         val snapshot = record.snapshot
         val evaluation = snapshot.evaluation
