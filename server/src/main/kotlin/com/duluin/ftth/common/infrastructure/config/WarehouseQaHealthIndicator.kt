@@ -29,8 +29,8 @@ class WarehouseQaHealthIndicator(
                 row["marker"] != expectedMarker || row["restricted"] != true) {
                 Health.down().withDetail("reason", "Database, role or marker does not match the owned browser environment").build()
             } else {
-                Health.up().withDetail("database", row.getValue("database"))
-                    .withDetail("user", row.getValue("username")).withDetail("marker", expectedMarker).build()
+                Health.up().withDetail("database", requireNotNull(row["database"]))
+                    .withDetail("user", requireNotNull(row["username"])).withDetail("marker", expectedMarker).build()
             }
         } catch (_: Exception) {
             Health.down().withDetail("reason", "Owned database identity could not be read").build()

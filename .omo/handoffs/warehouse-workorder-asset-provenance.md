@@ -1,5 +1,21 @@
 # Warehouse Workorder Asset Provenance Checkpoint
 
+## Task31 browser reached real UI; required-field selectors corrected
+
+setup-health-fixed failed compilation only (Any? health detail); now requireNotNull
+uses previously validated values. setup-health-compile-fixed built successfully,
+API+Vite proxy health passed with the owned marker/database/app role, then BOTH real
+browser projects reached signup and failed the same test selector: Fluent adds a
+required asterisk to label text. Accessible textbox name is correct; exact getByLabel
+was too strict. Helpers now match the field label without requiring exact raw text.
+No application signup or permission failure has been observed yet. Both failed runs
+cleaned owned processes/containers successfully, volumes retained.
+
+Next .omo/runtime/warehouse-setup-browser.sh setup-label-fixed, verify complete
+signup/role/user/approver journey. Task31 remains OPEN;49 unit proof remains valid.
+Task32 preparation notes saved separately (contracts, explicit area grants, scopes,
+UI prerequisites), implementation not yet started. Whole goal ACTIVE.
+
 ## Task31 browser readiness correction (not yet verified)
 
 Published a030927f contains49 green unit tests and the new navigation/controls.
