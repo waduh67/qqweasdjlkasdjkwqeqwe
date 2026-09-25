@@ -151,3 +151,25 @@ Task45 remains IN PROGRESS. No full regression gate claimed yet.
 3. Run full server + ModularityTests, web lint/unit/build/E2E typecheck, KMP shared and
    actual macOS native compile gate. Preserve full reports before focused reruns.
    Native compilation is not hardware/runtime/release proof. No subagents authorized.
+
+## Full regression R3 running — fixture repairs prepared, NOT APPLIED
+Modern full suite currently reports27 failures:26 older network fixtures still
+create serial-only ONUs (alarm, GIS, incident, notification, topology, predictive,
+survey), plus one obsolete positive RMA SQL control that relabels an original issue
+instead of providing the inspected-return/acknowledged-RMA source now required.
+The full suite must finish and archive ALL XML before applying repairs or rerunning.
+Do not mistake strings such as FAILED inside a passing test name for failed cases;
+parse anchored PASSED/FAILED result suffixes or the final JUnit reports.
+
+Recovery drafts saved in task46 evidence (not claimed verified):
+- pending-network-fixtures.patch.gz: nine classes/11registration sites, new common
+  warehouse receipt ->issue ->technician ACK ->authorization ->customer API helper.
+  Reuses real catalog/technician per tenant, permits multiple devices per test, no
+  stock SQL seed. Original source hashes in pending-network-fixtures.json.
+- pending-predictive-history.patch.gz: seven-day historical metrics use explicit
+  LEGACY_UNRESOLVED ONU fixture; they must not be rebound to a new installation.
+- pending-rma-source-control.patch.gz: old fake RMA source becomes a negative guard;
+  positive decoder assertion moves into the actual full physical RMA scenario.
+All three patches pass git apply --check only. Apply AFTER full-serverR3 completes;
+then compile/focused affected suites, inspect and fix actual failures, preserve old
+full reports, and run the complete suite again. Sources are still unchanged.

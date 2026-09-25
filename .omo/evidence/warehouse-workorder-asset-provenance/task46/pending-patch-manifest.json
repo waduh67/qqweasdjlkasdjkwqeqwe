@@ -1,0 +1,17 @@
+{
+  "pending-network-fixtures.patch.gz": {
+    "patchSha256": "7d12eff9ca22374bb5d4c97fb5061d7913fe8205c7b47eaf70dcd396ce461d13",
+    "status": "prepared, not applied or tested",
+    "restore": "gzip -dc .omo/evidence/warehouse-workorder-asset-provenance/task46/pending-network-fixtures.patch.gz | git apply --check; repeat without --check only after active server suite finishes"
+  },
+  "pending-predictive-history.patch.gz": {
+    "patchSha256": "5aa9c5eeb2f9080553fa6d1a79b570abf9c87bcbdfb838493896280a8e0decc6",
+    "status": "prepared, not applied or tested",
+    "restore": "gzip -dc .omo/evidence/warehouse-workorder-asset-provenance/task46/pending-predictive-history.patch.gz | git apply --check; repeat without --check only after active server suite finishes"
+  },
+  "pending-rma-source-control.patch.gz": {
+    "patchSha256": "481e66e8f0e15f27db5491d171f579a848d7e0378f97da3ad2433baf8e57fd00",
+    "status": "prepared, not applied or tested",
+    "restore": "gzip -dc .omo/evidence/warehouse-workorder-asset-provenance/task46/pending-rma-source-control.patch.gz | git apply --check; repeat without --check only after active server suite finishes"
+  }
+}

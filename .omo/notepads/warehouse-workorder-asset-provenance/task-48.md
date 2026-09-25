@@ -58,3 +58,15 @@ LIVE full-serverR3 session11018: environment7PASS, historical projection phase P
 now complete modern server suite. It archives all XML before any focused rerun.
 PreflightR2 session47709 queued after full server. Do not edit their wrappers or
 backend/QA harness inputs while they execute. Product browser22 and legacy6 verified.
+
+## Actual image CI PASS at c622a85b
+CI36116539885 images job PASS. Real server/web Docker images verify3bundleassets,
+14 immutable command replays,16 stock/document/history snapshots,4 stock kinds,
+backend+gateway JSON role/DB marker, and identical container image IDs after restart.
+Exported image archives were downloaded and their SHA256/config hashes rechecked
+locally; safe proof docker-image-smoke-verification.json. Full archives retained
+privately under .omo/runtime/ci-remote-r2/tested-images. No registry push or deployment
+was executed. All eight CIbrowserjobs,legacy6,web576,shared44 andnative2 also PASS.
+Server job still running; overall release is NOT PASS until full regression green.
+Warehouse workflow now queues checkpoint pushes rather than cancelling the ongoing
+full regression, so complete reports survive frequent recovery commits.

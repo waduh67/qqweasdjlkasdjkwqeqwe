@@ -1,3 +1,28 @@
+## Current checkpoint: image smoke PASS; full server running; repair patches saved
+
+Goal ACTIVE. Tasks1–45DONE;46inprogress;47–48/F1–F4open. Continue afterpush.
+No subagents. Current source c622a85b + documentation/evidence changes only.
+CI36116539885: imagesPASS (14replays/16snapshots/4stockkinds before+restart); all8
+browsersPASS; legacy6PASS; web576PASS/shared44PASS/native2COMPILED. Serverrunning.
+Image tar/config hashes reverified locally; safe task48/docker-image-smoke-verification.json.
+Private imagearchives in.omo/runtime/ci-remote-r2/tested-images; raw reports encrypted.
+
+LIVE LOCAL full-serverR3 session11018, wrapper/log.omo/runtime/full-server-r3.sh/log.
+Env7PASS, historicalPASS; modernfull currently27failures mostlyoldserial-onlyfixtures.
+Do NOTedit runningbackend/QA/testsource oroverwritefullJUnit. Waitforcompletionand
+archive. PreflightR2 session47709 queued withread-onlypositive+3negativechecks.
+Prepared,NOTAPPLIED patches saved safely in task46 evidence: pending-network-fixtures.patch.gz
+(nineclasses+actualwarehouse-registrationhelper),pending-predictive-history.patch.gz
+(explicithistoricallegacydevice),pending-rma-source-control.patch.gz (genuineRMApositive
+andfakesource-negative). All apply--checkPASS; no compile/executionclaim. Afterfull
+reportarchive, applythenfocusedtest/fix, preserveoldreports, rerunfullsuite.
+
+Warehouse concurrency now cancel-in-progress:false, so checkpoint pushes preserve
+runningfullreport and queue thelatestfollowup. Uncommittedrunbookdocs47+preflight.sql
+need actualprobeverification. Finishregressions/docs/gates/audits; no prematurefinal.
+
+## Previous checkpoints (superseded)
+
 ## Current checkpoint: tasks1–45 done; full regression and Docker image CI active
 
 Goal ACTIVE. Continue until46–48 and final audits are handled; no checkpoint final.
