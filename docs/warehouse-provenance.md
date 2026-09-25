@@ -25,6 +25,8 @@ hanya mencakup sebagian sumber tidak mendapat laporan tenant yang menyesatkan.
 | `POST /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence` | Unggah bukti untuk snapshot kasus dalam batch |
 | `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence` | Daftar bukti dengan `page` dan `size` 1–100 |
 | `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence/{id}` | Unduh melalui pemeriksaan hak terkini dan verifikasi isi file |
+| `POST /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/resolutions` | Usulkan keputusan kasus dengan bukti dan revisi yang ditinjau |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/resolutions` | Riwayat keputusan, terbaru dahulu; `page` dan `size` 1–100 |
 
 Pembukaan batch memakai `Idempotency-Key` dan body
 `{"expectedEpoch":0,"expectedPreservationHash":"<hash laporan aktual>"}`.
@@ -53,14 +55,42 @@ metadata dalam transaksi baru. File yang sudah committed atau belum dapat
 dipastikan hasilnya tetap disimpan. Hanya key yang cocok dengan tenant, batch,
 kasus, dan ID bukti tersebut yang boleh dibersihkan.
 
-Pembukaan batch belum mengaktifkan stok. Rekonsiliasi berbukti, persetujuan
-independen, posting saldo awal, dan finalisasi ENFORCED masih tahap berikutnya
-di task43. Guard yang menutup operasi tersebut tetap berlaku. Tenant baru kosong
+Usulan keputusan memakai `Idempotency-Key`, `expectedEpoch`, `expectedCaseHash`,
+`expectedResolutionRevision` (nol sebelum usulan pertama), `kind`, `reason`, dan
+`evidenceIds` berisi 1–10 bukti dari kasus dan batch yang sama. File diperiksa
+kembali. Setiap perubahan membuat revisi baru; respons perintah lama tetap dapat
+diulang oleh aktor aslinya dengan hak terkini dan isi yang sama.
+
+| Keputusan | Makna |
+| --- | --- |
+| `BASELINE_STOCK` | Calon saldo awal dengan `stock: {skuId, sourceUnit, legalOwner}`; kepemilikan harus terbukti ISP |
+| `PROVENANCE_ONLY` | Simpan sebagai riwayat yang tidak masuk saldo tersedia |
+| `DUPLICATE` | Hubungkan lewat `duplicateCaseId` ke usulan aset fisik yang sama, tanpa menghapus baris lama |
+| `CANCEL_PENDING` | Ajukan pembatalan pergerakan lama yang belum APPLIED untuk tinjauan batch |
+
+Kuantitas calon saldo dihitung dari snapshot, bukan angka bebas dari klien.
+Aset serial memakai ID fisik lama dan satu EA. Saldo tanpa satuan memerlukan
+pernyataan EA, MM, atau M; M dikonversi tepat ×1000 ke MM dengan batas Long.
+Satuan yang sudah diketahui tidak boleh ditafsirkan ulang. Lokasi asal dan SKU
+harus aktif dalam tenant yang sama. Aset terpasang, milik pelanggan, atau saldo
+yang sudah mewakili aset serial tidak boleh dimasukkan lagi sebagai stok tersedia.
+Revisi SKU/lokasi serta revisi usulan duplikat ikut dicatat untuk tinjauan berikutnya.
+Usulan pembatalan belum mengubah status pergerakan lama.
+
+Platform operator dapat memeriksa referensi lokasi yang sudah tidak ada di tenant
+tersebut sebagai snapshot saja. Nama/data lokasi tenant lain tidak dikembalikan,
+dan referensi itu tidak dapat dipakai untuk calon saldo awal. Operator biasa tetap
+memerlukan cakupan seluruh sumber yang valid sebelum mendapat laporan.
+
+Usulan keputusan belum mengaktifkan stok. Persetujuan independen, posting saldo
+awal, dan finalisasi ENFORCED masih tahap berikutnya di task43. Guard yang menutup
+operasi tersebut tetap berlaku. Tenant baru kosong
 tetap memakai inisialisasi atomik ENFORCED yang sudah tersedia; tenant lama kosong
 memerlukan jalur validasi dan persetujuan tersendiri.
 
 Verifikasi dasar ada di `WarehouseMigrationITBoot`, `WarehouseMigrationITQuery`,
-`WarehouseMigrationEvidenceIT`, dan `WarehouseMigrationInventoryTest`. Tes bukti
+`WarehouseMigrationEvidenceIT`, `WarehouseMigrationResolutionIT`, dan
+`WarehouseMigrationInventoryTest`. Tes bukti
 menggunakan HTTP serta MinIO sungguhan, kehilangan respons, penghentian backend
 database setelah file ditulis, dan penguncian transaksi yang belum terselesaikan.
 Fixture upgrade dimulai sebelum V173 dengan

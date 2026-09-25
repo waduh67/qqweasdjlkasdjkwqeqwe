@@ -4,7 +4,9 @@ import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationBeginInput
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationEvidenceInput
+import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationResolutionInput
 import com.duluin.ftth.inventory.application.service.MigrationEvidenceService
+import com.duluin.ftth.inventory.application.service.MigrationResolutionService
 import com.duluin.ftth.inventory.application.service.WarehouseProvenanceMigrationService
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
@@ -17,7 +19,22 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/warehouse/provenance")
-class WarehouseProvenanceController(private val service: WarehouseProvenanceMigrationService, private val evidence: MigrationEvidenceService) {
+class WarehouseProvenanceController(private val service: WarehouseProvenanceMigrationService, private val evidence: MigrationEvidenceService,
+    private val resolutions: MigrationResolutionService) {
+    @PostMapping("/batches/{batch}/cases/{case}/resolutions")
+    fun resolve(@PathVariable batch: UUID, @PathVariable case: UUID, @RequestHeader("Idempotency-Key") key: String,
+        @RequestBody body: String, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        if (parameters.isNotEmpty()) invalid()
+        return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).cacheControl(CacheControl.noStore()).body(
+            resolutions.resolve(batch, case, WarehouseReceiptJson.decode(body, WarehouseMigrationResolutionInput::class.java), key))
+    }
+    @GetMapping("/batches/{batch}/cases/{case}/resolutions")
+    fun resolutions(@PathVariable batch: UUID, @PathVariable case: UUID,
+        @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<*> {
+        if (parameters.any { (key, values) -> key !in setOf("page", "size") || values.size != 1 || !values.single().matches(Regex("[0-9]+")) }) invalid()
+        fun number(key: String, fallback: Int) = parameters[key]?.single()?.toIntOrNull() ?: if (key in parameters) invalid() else fallback
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(resolutions.history(batch, case, number("page", 0), number("size", 25)))
+    }
     @PostMapping("/batches/{batch}/cases/{case}/evidence", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun upload(@PathVariable batch: UUID, @PathVariable case: UUID, @RequestHeader("Idempotency-Key") key: String,
         @RequestParam("request") body: String, @RequestParam file: MultipartFile, request: MultipartHttpServletRequest): ResponseEntity<String> {

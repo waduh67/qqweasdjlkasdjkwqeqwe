@@ -1,3 +1,43 @@
+## Task43 resolution proposals verified; current cutoff capture NEXT
+
+V177.3 APPLIED and IMMUTABLE; next free177.4,178reserved. Nine tests PASS1m59s
+(Modularity3/Query2/Resolution4), then Resolution4 PASS1m with added directSQL
+quantity-forgery/strictinput assertions; product unchanged. Safe proof task43/
+migration-resolution-verification.json distinguishes runs. Owned QA stopped;
+volumes retained. Goal ACTIVE:1–42DONE;43–48/F1–F4OPEN. Continue until full scope.
+
+POST/GET /provenance/batches/{batch}/cases/{case}/resolutions now stores immutable
+revision history: BASELINE_STOCK,PROVENANCE_ONLY,DUPLICATE,CANCEL_PENDING. Exact
+batch/case/source-hash,1–10 real existing file IDs/readback, expectedrevision,
+actor/key/body replay. Database independently derives stock from original data:
+serial1EA, balance explicitEA/MM/M exactintegerconversion; original active tenant
+location +activeSKU/revisions +ISP title required. Cannot inventquantity/price,
+reinterpret knownunits, admit installed/customer-owned or count serialbalance
+again. Duplicate binds actualsamephysicalasset's currentproposalrevision; old
+rawrows remain. CANCEL_PENDING is a proposal only; actualmovementstillpending.
+No verifiedstock/claims/docs/posting/finalization. Database derives/fences metadata;
+resolutionhistoryUPDATE/DELETErevoked+appendonly. Allordinarywritesstillclosed.
+
+Platform orphan report fix: currenttenant missinglocation reference is shown only
+as preserveddata withoutforeignname; ordinaryoperator stillneedsfullsourcecoverage.
+Orphan cannotbeBASELINE_STOCK. Realtests coverforeignlocation, competingrevisions,
+revokedoldJWT/replay, unchangedrawIDs/status anddirectSQLquantityforgery rejection.
+
+CRITICAL NEXT beforeapproval/admission:177 snapshots are currently captured at
+Flywaytime, butLEGACYwriters maychange/add/delete sources beforeBEGIN. Implement
+current source capture/versioning under exclusivecutover, retaining old snapshots,
+withoutadmitting staleboot quantities. Report should showactualcurrentrawsource;
+batchmustfreezeexactwatermarkmanifest afteroldwritersdrain. Customer snapshot work
+stayswithcustomerowner via inventoryrootport, no directinventoryprivatecustomerSQL.
+Capture pendinglegacyfulfillmentoutbox through ownerport aswell. Then independent
+batch approval through existingdurableowner, explicitunvalued/allconfiguredtiers,
+openingposting/claimpromotion/finalization (samepostingauthority), UIandHTTPmixed
+stages/restart. Duplicatewinner/master revisions needrevalidation atseal.
+/warehouse/provenance UI stillabsent; read web/DESIGN.md9 before work.
+
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Commit/push
+coherentchunks withhandoff. No merge/deploy; originalwarehouse-task29preserved.
+
 ## Task43 private evidence checkpoint verified; case resolution NEXT
 
 V177.2 is APPLIED and IMMUTABLE; next free177.3,178reserved. Real HTTP+MinIO

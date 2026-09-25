@@ -21,7 +21,11 @@ class WarehouseProvenanceAccess(private val authorities: CurrentAuthorityApi, pr
         current.fence.assertHeld()
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)
+        val existing = if (current.platformAdmin) store.existingLocationIds() else emptySet()
         store.locationIds().forEach { id ->
+            // Preserve orphan references for platform review without reading another tenant's location.
+            // Stock proposals still require an actual active location belonging to this tenant.
+            if (current.platformAdmin && id !in existing) return@forEach
             masterAccess.authorizeLocation(masters.get(MasterKind.LOCATION, id) as LocationSnapshot, current, scope)
         }
         return customers.authorize(store.customerIds(), current)

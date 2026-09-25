@@ -39,6 +39,12 @@ class WarehouseProvenanceStore(private val jdbc: WarehouseCommandJdbc) {
     fun locationIds(): Set<UUID> = referenceIds("locationId")
     fun customerIds(): Set<UUID> = referenceIds("customerId")
 
+    fun existingLocationIds(): Set<UUID> = jdbc.execute { sql ->
+        sql.query("""SELECT DISTINCT location.id FROM inventory_location location JOIN inventory_provenance_case source
+            ON source.tenant_id=location.tenant_id AND source.source_snapshot->>'locationId'=location.id::text
+            WHERE location.tenant_id=? ORDER BY location.id""", sql.tenant) { it.uuid("id") }.toSet()
+    }
+
     private fun referenceIds(field: String): Set<UUID> = jdbc.execute { sql ->
         sql.query("""SELECT DISTINCT (source_snapshot->>?)::uuid id FROM inventory_provenance_case
             WHERE tenant_id=? AND source_snapshot->>? IS NOT NULL ORDER BY id""", field, sql.tenant, field) { it.uuid("id") }.toSet()

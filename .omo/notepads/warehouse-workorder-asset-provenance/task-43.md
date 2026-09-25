@@ -1,3 +1,43 @@
+## Task43 resolution proposals verified; current cutoff capture NEXT
+
+V177.3 APPLIED and IMMUTABLE; next free177.4,178reserved. Nine tests PASS1m59s
+(Modularity3/Query2/Resolution4), then Resolution4 PASS1m with added directSQL
+quantity-forgery/strictinput assertions; product unchanged. Safe proof task43/
+migration-resolution-verification.json distinguishes runs. Owned QA stopped;
+volumes retained. Goal ACTIVE:1–42DONE;43–48/F1–F4OPEN. Continue until full scope.
+
+POST/GET /provenance/batches/{batch}/cases/{case}/resolutions now stores immutable
+revision history: BASELINE_STOCK,PROVENANCE_ONLY,DUPLICATE,CANCEL_PENDING. Exact
+batch/case/source-hash,1–10 real existing file IDs/readback, expectedrevision,
+actor/key/body replay. Database independently derives stock from original data:
+serial1EA, balance explicitEA/MM/M exactintegerconversion; original active tenant
+location +activeSKU/revisions +ISP title required. Cannot inventquantity/price,
+reinterpret knownunits, admit installed/customer-owned or count serialbalance
+again. Duplicate binds actualsamephysicalasset's currentproposalrevision; old
+rawrows remain. CANCEL_PENDING is a proposal only; actualmovementstillpending.
+No verifiedstock/claims/docs/posting/finalization. Database derives/fences metadata;
+resolutionhistoryUPDATE/DELETErevoked+appendonly. Allordinarywritesstillclosed.
+
+Platform orphan report fix: currenttenant missinglocation reference is shown only
+as preserveddata withoutforeignname; ordinaryoperator stillneedsfullsourcecoverage.
+Orphan cannotbeBASELINE_STOCK. Realtests coverforeignlocation, competingrevisions,
+revokedoldJWT/replay, unchangedrawIDs/status anddirectSQLquantityforgery rejection.
+
+CRITICAL NEXT beforeapproval/admission:177 snapshots are currently captured at
+Flywaytime, butLEGACYwriters maychange/add/delete sources beforeBEGIN. Implement
+current source capture/versioning under exclusivecutover, retaining old snapshots,
+withoutadmitting staleboot quantities. Report should showactualcurrentrawsource;
+batchmustfreezeexactwatermarkmanifest afteroldwritersdrain. Customer snapshot work
+stayswithcustomerowner via inventoryrootport, no directinventoryprivatecustomerSQL.
+Capture pendinglegacyfulfillmentoutbox through ownerport aswell. Then independent
+batch approval through existingdurableowner, explicitunvalued/allconfiguredtiers,
+openingposting/claimpromotion/finalization (samepostingauthority), UIandHTTPmixed
+stages/restart. Duplicatewinner/master revisions needrevalidation atseal.
+/warehouse/provenance UI stillabsent; read web/DESIGN.md9 before work.
+
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Commit/push
+coherentchunks withhandoff. No merge/deploy; originalwarehouse-task29preserved.
+
 ## Task43 private evidence checkpoint verified; case resolution NEXT
 
 V177.2 is APPLIED and IMMUTABLE; next free177.3,178reserved. Real HTTP+MinIO
@@ -203,3 +243,19 @@ PROVENANCE_ONLY (excluded availability), DUPLICATE (actualsameidentity/link, no 
 and explicit pending-effect cancellation/reconciliation. Keep snapshotimmutable and
 record separate decision history. Final seal/approval must exclude requesters/resolvers/
 custodians from decision; unknown value uses all-tier unvalued review, no fake0cost.
+
+## Current resolution implementation research after7bc939ec
+
+177.3 reserved: proposals BASELINE_STOCK/PROVENANCE_ONLY/DUPLICATE/CANCEL_PENDING,
+append-only revisions, actor/key/body replay, real existing evidence, quantity derived
+from immutable source. SERIAL keeps actual assetID and1EA; balances need explicitEA/MM/M
+and actualSKU. Customer/installed stock cannot become ISP availability. Duplicate points
+to a current baseline proposal and retains original rows; seal must revalidate winner
+revision. Pending legacy movement needs explicit cancellation proposal, never ignored.
+
+Critical remaining43 issue found:177 preservation occurs at Flyway time, while legacy
+writers may run before BEGIN. Batch capture currently uses those old snapshots. Before
+admission implement current exclusive-fence source capture/versioning or rigorously reject
+source drift and provide a real refresh path; do not admit stale boot quantities. Include
+new/changed/deleted legacy sources and pending fulfillment effects at watermark. Existing
+case raw snapshots stay immutable. Resolutions/evidence must remain tied to exact generation.

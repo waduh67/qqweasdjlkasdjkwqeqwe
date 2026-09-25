@@ -1,3 +1,17 @@
+## V177.3 applied: immutable resolution proposals
+
+Full packaged Spring Boot with legacy collisions/orphan references applied V177.3
+successfully; nine tests passed in 1m59s. The migration is now immutable.
+SHA-256: `aa08b50aae8356e9c7b4f56e37a23abdb430c9d7fa02f6da5785d12b2617a2b5`. Next free version177.4;178reserved.
+No admission, approval or finalization guard was opened by this migration.
+
+## V177.3 reservation: evidence-bound resolution history
+
+V177 through V177.2 are applied and immutable. V177.3 is reserved for append-only
+case resolution proposals, exact source-unit conversion, and duplicate-source
+validation. It does not promote claims/assets, post stock or enable finalization.
+V178 remains reserved for final constraints. No V177.3 application yet at this note.
+
 ## V177.2 applied: immutable migration evidence
 
 V177.2 applied successfully during the real MinIO evidence gate, including the
