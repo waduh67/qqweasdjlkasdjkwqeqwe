@@ -23,7 +23,9 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         receiveStock(stock, "1000000")
         assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
             """{"expectedRevision":0,"code":"ONU","name":"ONU","category":"ONU","tracking":"SERIAL","baseUnit":"EA","inspectionRequired":false,"allowedOwnershipModes":["LOAN","SALE"]}""").status).isEqualTo(200)
-        val serials = (1..10).map { mapOf("serial" to "NUMERIC-ONU-$it") }
+        // ACS is shared across tenants; independent fixtures must not claim the same physical serial.
+        val serialPrefix = "NUMERIC-ONU-${UUID.randomUUID()}"
+        val serials = (1..10).map { mapOf("serial" to "$serialPrefix-$it") }
         val document = draft(stock, mapper.writeValueAsString(mapOf("skuId" to stock.onu,
             "quantityBase" to "10", "serials" to serials))).path("id").asString()
         transition(stock, document, "receive", """{"expectedRevision":0}""")
@@ -85,23 +87,23 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         "/api/work-orders/${case.workOrder}/materials/report-use", case.technician.first,
         mapper.writeValueAsString(case.usageInput), key)
 
-    protected fun numericInstall(case: NumericCase): SavedCommand {
+    protected fun numericInstall(case: NumericCase, keyPrefix: String = "numeric"): SavedCommand {
         val serial = case.issue.path("lines").single { !it.path("serial").isNull && !it.path("serial").isMissingNode }
         val revision = summary(case.stock.token, case.workOrder).path("revisions").path("workOrderRevision").asLong()
         val authorization = saveCommand("/api/work-orders/${case.workOrder}/assets/authorize", case.technician.first,
             mapper.writeValueAsString(mapOf("expectedRevision" to revision, "assetId" to serial.path("dimension").path("stockIdentityId").asString(),
-                "issueLineId" to serial.path("id").asString(), "purpose" to "INSTALL")), "numeric-authorize")
+                "issueLineId" to serial.path("id").asString(), "purpose" to "INSTALL")), "$keyPrefix-authorize")
         return saveCommand("/api/customers/${case.customer}/assets/install", case.technician.first,
             mapper.writeValueAsString(mapOf("authorizationId" to mapper.readTree(authorization.original).path("authorizationId").asString(),
-                "expectedRevision" to 0, "topology" to null)), "numeric-install", 201)
+                "expectedRevision" to 0, "topology" to null)), "$keyPrefix-install", 201)
     }
 
-    protected fun numericHandover(case: NumericCase, installed: SavedCommand): UUID {
+    protected fun numericHandover(case: NumericCase, installed: SavedCommand, keyPrefix: String = "numeric"): UUID {
         val evidenceId = numericSignature(case)
         val assignment = mapper.readTree(installed.original).path("assignmentId").asString()
         saveCommand("/api/customers/${case.customer}/assets/handover", case.technician.first,
             mapper.writeValueAsString(mapOf("assignmentId" to assignment, "expectedRevision" to 0,
-                "expectedTitleRevision" to 0, "evidenceId" to evidenceId)), "numeric-loan-handover")
+                "expectedTitleRevision" to 0, "evidenceId" to evidenceId)), "$keyPrefix-loan-handover")
         return evidenceId
     }
 
@@ -113,7 +115,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         return UUID.fromString(mapper.readTree(signature.contentAsString).path("revisionId").asString())
     }
 
-    protected fun numericReturn(case: NumericCase, usage: SavedCommand): NumericReturn {
+    protected fun numericReturn(case: NumericCase, usage: SavedCommand, beforeInspection: (String, String) -> Unit = { _, _ -> }): NumericReturn {
         val use = mapper.readTree(usage.original)
         val source = case.usageInput.lines.single()
         val remnant = use.path("lines").single().path("remainder").path("stockIdentityId").asString()
@@ -132,6 +134,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
                 "quarantineLocationId" to case.stock.inspection, "evidenceReference" to "Intact jacket and measured17.500m")), "numeric-return-intake", 201)
         val id = mapper.readTree(intake.original).path("id").asString()
         assertThat(mapper.readTree(intake.original).path("stockIdentityId").asString()).isEqualTo(remnant)
+        beforeInspection(id, remnant)
         val inspected = saveCommand("/api/v1/warehouse/returns/$id/inspect", case.stock.token,
             mapper.writeValueAsString(mapOf("expectedRevision" to 0, "measuredQuantityBase" to "17500", "condition" to "SERVICEABLE",
                 "destinationLocationId" to case.stock.bin, "evidenceReference" to "Measured remnant released to stock", "resetConfirmed" to false)), "numeric-return-inspect")
@@ -139,7 +142,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         return NumericReturn(id, residual, remnant, inspected)
     }
 
-    protected fun numericComplete(case: NumericCase, signature: UUID) {
+    protected fun numericComplete(case: NumericCase, signature: UUID, keyPrefix: String = "numeric") {
         val kinds = listOf("FAT", "ODP", "DROPCORE", "ONT", "ONU", "OPTICAL_BEFORE", "OPTICAL_AFTER", "TECHNICIAN_SIGNATURE", "LOCATION")
         val artifacts = kinds.map { kind ->
             val response = mvc.perform(multipart("/api/work-orders/${case.workOrder}/evidence")
@@ -152,7 +155,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         assertThat(proof.status).isEqualTo(200)
         saveCommand("/api/work-orders/${case.workOrder}/complete", case.technician.first,
             mapper.writeValueAsString(mapOf("proofRevision" to mapper.readTree(proof.contentAsString).path("revision").asString(),
-                "artifacts" to artifacts, "resolutionNote" to "Completed planned warehouse installation")), "numeric-complete")
+                "artifacts" to artifacts, "resolutionNote" to "Completed planned warehouse installation")), "$keyPrefix-complete")
     }
 
     protected open fun saveCommand(path: String, token: String, body: String, key: String, status: Int = 200): SavedCommand {

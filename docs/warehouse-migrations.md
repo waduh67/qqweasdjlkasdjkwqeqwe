@@ -1,3 +1,22 @@
+## V178.6 applied: canonical serial matching on return, repair and RMA
+
+V178.6 is applied and immutable in both owned QA volume sets, SHA256
+`a1090f524423ed8623f561c6c26b18cade0aa440ec439634317754cf55659f7b`. Observed device serials use the existing trim and
+locale-independent uppercase identity rule. Raw receipt spelling, immutable source
+snapshots and original command/replay bytes are preserved. Five guarded SQL changes
+retain all physical-source, ownership, quantity, reset and authorization checks.
+A differently spelled request under the same idempotency key remains a conflict.
+
+Verification:58 tests/22 suites pass, including complete numeric ONU reuse, delayed
+metrics/ACS isolation, concurrent cuts/counts, HTTP response-loss/app restart,
+reassignment and LOAN/SALE repair/RMA. The populated upgrade passes4 more tests and
+preserves2138 existing tenants across18 physical/history/return/repair/RMA tables,
+with every prior Flyway checksum unchanged. Source proof is task44's
+`numeric-temporal-verification.json`; final release regression remains task46.
+All versions through178.6 are immutable. Next free version178.7.
+
+Earlier sections record historical checkpoints, including their then-free versions.
+
 ## V178.5 applied: historical material actors
 
 V178.5 is applied and immutable in both owned QA databases, SHA256

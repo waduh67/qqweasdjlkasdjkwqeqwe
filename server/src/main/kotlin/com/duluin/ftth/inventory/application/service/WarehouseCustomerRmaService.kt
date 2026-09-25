@@ -45,7 +45,7 @@ class WarehouseCustomerRmaService(private val cutovers: InventoryTenantCutoverAp
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val origin = store.origin(returned)
         val serial = origin.source.serial ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if (serial != request.observedSerial || origin.source.quantity != 1L || origin.source.tracking != WarehouseTracking.SERIAL)
+        if (!returnSerialMatches(serial, request.observedSerial) || origin.source.quantity != 1L || origin.source.tracking != WarehouseTracking.SERIAL)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (request.technicianId == current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
         workOrders.lock(request.workOrderId, request.workOrderRevision, origin.customerId, request.technicianId, current.fence)
@@ -80,7 +80,7 @@ class WarehouseCustomerRmaService(private val cutovers: InventoryTenantCutoverAp
         }
         if (record.view.revision != request.expectedRevision || record.view.state != CustomerRmaHandoverState.DISPATCHED)
             masterFailure(WarehouseErrorCode.STALE_REVISION)
-        if (request.observedSerial != record.view.serial) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (!returnSerialMatches(record.view.serial, request.observedSerial)) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         store.receive(id, current.fence.identity.userId, request)
         val view = record.view.copy(revision = 2, state = CustomerRmaHandoverState.RECEIVED,
             locationId = record.view.technicianLocationId, recordedAt = Instant.now())

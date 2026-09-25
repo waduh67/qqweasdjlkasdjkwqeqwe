@@ -62,6 +62,34 @@ class WarehouseConcurrentLifecycleIT : WarehouseNumericLifecycleFixture() {
         assertThat(numericAudit(case)).isEqualTo(before)
     }
 
+    @Test fun `different concurrent commands cannot cut and consume the acknowledged cable twice`() {
+        val case = numericCase()
+        val sequence = AtomicInteger()
+        val path = "/api/work-orders/${case.workOrder}/materials/report-use"
+        val body = mapper.writeValueAsString(case.usageInput)
+        val attempts = concurrently {
+            val key = "numeric-distinct-${sequence.incrementAndGet()}"
+            key to request("POST", path, case.technician.first, body, key)
+        }
+        assertThat(attempts.map { it.second.status }).containsExactlyInAnyOrder(200, 409)
+        val winner = attempts.single { it.second.status == 200 }
+        val usage = SavedCommand(path, case.technician.first, body, winner.first, 200, winner.second.contentAsString)
+        val afterUse = numericAudit(case)
+        assertThat(saveCommand(path, usage.token, body, usage.key)).isEqualTo(usage)
+        assertThat(numericAudit(case)).isEqualTo(afterUse)
+        val installed = numericInstall(case)
+        val signature = numericHandover(case, installed)
+        numericReturn(case, usage)
+        numericComplete(case, signature)
+        saveCommand("/api/work-orders/${case.workOrder}/approve", case.stock.token, "{}", "numeric-distinct-approve")
+        assertThat(numericTotals(case)).isEqualTo("917500|82500|0|9|1|1|10|1")
+        fixture(case.stock.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_usage_snapshot")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_document WHERE kind='USAGE'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_segment WHERE parent_segment_id='${case.usageInput.lines.single().stockIdentityId}'")).isEqualTo("2")
+        }
+    }
+
     @Test fun `failure after real usage owner returns rolls back its movement cut facts and operation before exact retry`() {
         val case = numericCase()
         val before = numericAudit(case)

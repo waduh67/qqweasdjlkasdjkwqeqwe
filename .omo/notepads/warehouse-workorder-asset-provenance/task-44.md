@@ -1,3 +1,55 @@
+## Current checkpoint: task44 complete; continue real browser journeys
+
+This checkpoint follows pushed5a2601ef; locate its containing commit with git log -1.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Goal ACTIVE.
+Tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN. CONTINUE after commit and push.
+No subagents authorized. No production deployment, main merge or native release.
+
+Task44 final matrix58 tests/22 suites PASS7m20s, no failures/errors/skips. Actual
+numeric fixture proves different-key concurrent cable use200+409, stale quarantine
+count with unchanged partial-bin count, real same-asset ONU removal/reset/reissue
+to customer B, unchanged frozen A QA review, delayed A metric isolation and concurrent
+staleA/freshB ACS privacy. Full socket-loss/app-close/fresh-context replay/outbox
+redelivery, reassignment,serial-only and count approval gates rerun successfully.
+Final917500MM available+82500MM consumed,0technicianMM,9availableONU+1installed,
+10physicalassets. Reuse keeps2historical handovers and one current installation.
+
+Mixed-case raw receipt serial revealed a real return inspection bug. All return,
+repair and RMA observed serial checks now use existing canonical identity semantics;
+5 guarded SQL function changes preserve exact raw source/history, payload hashes,
+original replies and every ownership/reset/quantity/authority/source guard. Wrong
+serial rejects; same key with changed spelling still conflicts as changed bytes.
+V178.6 APPLIED/IMMUTABLE in BOTH owned QA volume sets, SHA256 a1090f524423ed8623f561c6c26b18cade0aa440ec439634317754cf55659f7b.
+Next178.7. Never alter178.6 or earlier. Actual populated upgrade4tests PASS5m39s;
+only178.6 added;2138 existing tenants retain identical rows/digests in18 physical,
+return/repair/RMA/history tables and all prior Flyway checksums. NEW env restored,
+BOTH volume sets retained. Safe proof task44/numeric-temporal-verification.json.
+
+Failure history: invalid first full-location count fixture corrected to supported
+selected measured positions; ACS correctly rejected duplicate serials across old
+fixture tenants, so numeric receipts now use unique mixed-case serials. That exposed
+the raw-versus-canonical inspection defect, fixed forward-only. Focused4tests passed
+2m43s before the final58-case matrix and populated upgrade. Earlier task44 proof
+files cover previous defect/regression stages; full release regression is task46.
+
+NEXT45: local client drafts add real customer area selection, signature upload,
+proof refresh and the complete warehouse-empty-tenant.spec.ts numeric UI journey.
+See task-45.md for exact files and remaining browser coverage. They are NOT verified
+by this server checkpoint. Current session75763 runs numeric-browser-r1.sh: archives
+upgrade results privately, TypeScript/targeted lint/5web unit files, then builds real
+backend/web and runs the new spec desktop1280/mobile375. Inspect its actual log and
+report before continuing; do not start duplicate services. Prior98513 and82693 are
+finished0. Only owned processes may be stopped; never delete either volume set.
+
+After the full numeric browser journey, finish customer-assets.spec.ts actual
+sale/swap/remove/reset/reuse/original-customer sold RMA, exceptions.spec.ts count,
+approvals/cutover/tablet/themes, then46 full regressions including the known175.21
+historical projection fixture mismatch,47 runbooks/preflight,48 requiredCI gates,
+F1–F4 current-source audits. Do not stop/final at a checkpoint. Never commit raw env,
+authenticated traces, logs/XML or uploaded files. Feature pushes do not deploy.
+
+Earlier checkpoint notes below are historical.
+
 ## Current checkpoint: reassignment QA and real envelope recovery verified
 
 This checkpoint follows pushed0e530ae1; locate its containing commit with git log -1.

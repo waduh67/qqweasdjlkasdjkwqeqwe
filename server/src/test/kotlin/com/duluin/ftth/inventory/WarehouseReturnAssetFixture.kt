@@ -6,8 +6,8 @@ import org.assertj.core.api.Assertions.assertThat
 abstract class WarehouseReturnAssetFixture : CustomerAssetReplacementFixture() {
     protected data class RecoveredReturn(val old: OwnershipCase, val id: String, val quarantine: String, val revision: Long)
 
-    protected fun recoveredReturn(mode: String = "LOAN", release: Boolean = false): RecoveredReturn {
-        val old = ownershipCase(mode)
+    protected fun recoveredReturn(mode: String = "LOAN", release: Boolean = false, serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): RecoveredReturn {
+        val old = ownershipCase(mode, serials)
         assertThat(accept(old).status).isEqualTo(200)
         val receipt = old.installation.receipt
         val admin = receipt.stock.token

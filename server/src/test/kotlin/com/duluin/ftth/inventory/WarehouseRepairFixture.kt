@@ -13,8 +13,8 @@ abstract class WarehouseRepairFixture : WarehouseReturnAssetFixture() {
         fun receiptBody(revision: Long) = """{"expectedRevision":$revision,"observedSerial":"$serial","quarantineLocationId":"${returned.quarantine}","result":"REPAIRED","vendorReference":"REPAIR-RESULT","evidenceReference":"supplier-return"}"""
     }
 
-    protected fun repairSetup(mode: String = "SALE"): RepairSetup {
-        val returned = recoveredReturn(mode)
+    protected fun repairSetup(mode: String = "SALE", serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): RepairSetup {
+        val returned = recoveredReturn(mode, serials = serials)
         val admin = returned.old.installation.receipt.stock.token
         val vendor = create("suppliers", admin, """{"code":"REPAIR_VENDOR","name":"Repair vendor"}""").path("id").asString()
         val location = create("locations", admin, """{"code":"REPAIR_LOCATION","name":"Repair custody","kind":"TRANSIT"}""").path("id").asString()

@@ -11,8 +11,8 @@ abstract class WarehouseCustomerRmaFixture : WarehouseRepairFixture() {
         val ack get() = """{"expectedRevision":1,"observedSerial":"${repair.serial}","evidenceReference":"technician-received-rma"}"""
         val authorization get() = """{"expectedRevision":$workRevision,"assetId":"${repair.asset}","issueLineId":null,"purpose":"RETURN_CUSTOMER_RMA","ownershipMode":"SALE","previousAssignmentId":"${repair.returned.old.installation.operation}","repairCaseId":"${inspected.path("repair").path("id").asString()}"}"""
     }
-    protected fun prepareRma(): RmaCase {
-        val setup = repairSetup()
+    protected fun prepareRma(serials: List<String> = listOf("RECEIVE-1", "RECEIVE-2")): RmaCase {
+        val setup = repairSetup(serials = serials)
         val inspected = inspectRepair(setup, receiveRepair(setup, dispatchRepair(setup)))
         val receipt = setup.returned.old.installation.receipt
         val work = workOrder(setup.token, "REPAIR", setup.returned.old.installation.customer.toString())

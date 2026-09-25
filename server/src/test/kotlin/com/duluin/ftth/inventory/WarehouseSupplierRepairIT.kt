@@ -7,7 +7,7 @@ import org.junit.jupiter.params.provider.ValueSource
 class WarehouseSupplierRepairIT : WarehouseReturnAssetFixture() {
     @ParameterizedTest @ValueSource(strings = ["LOAN", "SALE"])
     fun `supplier repair preserves physical identity and title and requires inspection after receipt`(mode: String) {
-        val returned = recoveredReturn(mode)
+        val returned = recoveredReturn(mode, serials = listOf("Mixed-Repair-1", "Mixed-Repair-2"))
         val receipt = returned.old.installation.receipt
         val admin = receipt.stock.token
         val asset = receipt.input.lines.single().stockIdentityId

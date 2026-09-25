@@ -95,7 +95,7 @@ class WarehouseReturnService(private val cutovers: InventoryTenantCutoverApi, pr
         val source = store.position(expected)
         if (source.quantity.toString() != request.measuredQuantityBase || request.measuredQuantityBase != record.view.quantityBase)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if (source.tracking == WarehouseTracking.SERIAL && (request.observedSerial != source.serial ||
+        if (source.tracking == WarehouseTracking.SERIAL && (!returnSerialMatches(source.serial, request.observedSerial) ||
             request.condition == WarehouseCondition.SERVICEABLE && (!request.resetConfirmed || request.resetEvidenceReference.isNullOrBlank())))
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         request.resetEvidenceReference?.let(::evidence)

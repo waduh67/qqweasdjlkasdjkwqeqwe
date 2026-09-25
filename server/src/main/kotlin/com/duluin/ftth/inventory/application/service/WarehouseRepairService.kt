@@ -112,7 +112,7 @@ class WarehouseRepairService(private val cutovers: InventoryTenantCutoverApi, pr
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
     }
     private fun serial(source: WarehouseReturnSource, observed: String) {
-        if (source.tracking != WarehouseTracking.SERIAL || source.quantity != 1L || source.serial != observed)
+        if (source.tracking != WarehouseTracking.SERIAL || source.quantity != 1L || !returnSerialMatches(source.serial, observed))
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
     private fun payload(id: UUID, request: Any) = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("id" to id, "request" to request)))
