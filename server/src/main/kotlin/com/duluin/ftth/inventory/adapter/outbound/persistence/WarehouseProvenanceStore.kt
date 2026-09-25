@@ -26,6 +26,7 @@ class WarehouseProvenanceStore(private val jdbc: WarehouseCommandJdbc) {
     fun capture(cutover: TenantCutoverSnapshot, actorId: UUID, ownerSources: List<ProvenanceSourceSnapshot>) = jdbc.execute { sql ->
         if (sql.value("SELECT id FROM inventory_migration_batch WHERE tenant_id=? AND id=?", sql.tenant, cutover.migrationBatchId) != null)
             sql.fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+        sql.value("SELECT warehouse_reserve_current_identities(?)", cutover.migrationBatchId)
         sql.update("""INSERT INTO inventory_provenance_case(id,tenant_id,source_table,source_id,source_snapshot)
             SELECT warehouse_provenance_case_id(actual.tenant_id,actual.source_table,actual.source_id,actual.source_hash),
                 actual.tenant_id,actual.source_table,actual.source_id,actual.source_snapshot

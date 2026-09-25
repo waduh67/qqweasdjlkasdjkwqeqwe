@@ -1,3 +1,26 @@
+## V177.9 applied: current raw identity reservations verified
+
+V177.9 is applied and immutable: SHA256
+`b66ace6e025d257171a9a5ceff5aa5d7e5deceaa94f1c9871fc64d1e105e6c69`.
+Full gate13tests/4suites PASS2m13s; safe source proof
+`task43/current-identity-verification.json`. BEGIN reserves actual current raw
+serial/MAC while preserving all candidate versions and claims. Invalid MAC stays
+unclaimed; current tombstone claims become RETIRED. Approved original baseline
+checks current active peers while old reservations still block ordinary receipts.
+Raw asset/ONU identity is fixed at cutoff; existing ONU identity immutability and
+operational status updates remain. No stock is created by this reservation step.
+Next free M05 version177.10;178 reserved forM06. Legacy pending creation closure,
+tombstone write closure, post-admission resolution freeze and finalization remain.
+
+## V177.9 reservation: current identity reservations at the cutoff
+
+V177.9 is reserved for append-only versions of identity candidates, conservative
+reservation of current raw serial/MAC at BEGIN, and immutable legacy raw identity
+after the cutoff. Old candidates/claims remain. Approved baseline conflict checks
+will use current active source identities while ordinary receipts retain the
+unconditional claim fence. V177–177.8 stay immutable; V178 remains reserved forM06.
+This reservation precedes apply.
+
 ## V177.8 applied: reviewed legacy effects are permanently canceled
 
 V177.8 is applied and immutable: SHA256

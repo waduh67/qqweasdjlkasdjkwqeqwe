@@ -25,7 +25,7 @@ import javax.sql.DataSource
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseMigrationCaptureIT : WarehousePolicyHttpFixture() {
     companion object {
-        private val legacy = List(2) { WarehouseMigrationLegacyFixture() }
+        private val legacy = List(3) { WarehouseMigrationLegacyFixture() }
         private val database = WarehouseSchemaDatabase("172").also { db -> db.ownerFixture { connection -> legacy.forEach { it.seed(connection) } } }
         @JvmStatic @DynamicPropertySource fun database(registry: DynamicPropertyRegistry) {
             registry.add("spring.datasource.url") { database.url }
@@ -149,4 +149,57 @@ class WarehouseMigrationCaptureIT : WarehousePolicyHttpFixture() {
             assertThat(scalar("SELECT count(*) FROM inventory_document")).isEqualTo("0")
         }
     }
+    @Test fun `cutoff reserves changed and new raw identities without rewriting old candidates or installed episodes`() {
+        val admin = setup(2)
+        val old = legacy[2]
+        val asset = UUID.randomUUID()
+        val episode = UUID.randomUUID()
+        val tombstone = UUID.randomUUID()
+        val anotherEpisode = UUID.randomUUID()
+        database.ownerFixture { connection -> connection.createStatement().use { sql ->
+            sql.execute("SET app.tenant_id='${old.tenant}'")
+            sql.execute("UPDATE inventory_serialized_asset SET serial_number='NEW-ID',mac_address='bad-mac',revision=revision+1 WHERE id='${old.first}'")
+            sql.execute("""INSERT INTO inventory_serialized_asset(id,tenant_id,sku_id,serial_number,mac_address,status,location_id,
+                custody_owner_id,custody_owner_kind,warehouse_admission) VALUES ('$asset','${old.tenant}','${old.sku}','NEW-ONLY',
+                '77:88:99:AA:BB:CC','AVAILABLE','${old.location}','${old.location}','WAREHOUSE','LEGACY_UNRESOLVED')""")
+            sql.execute("""INSERT INTO onu(id,tenant_id,customer_id,serial_number,model,status,installed_at,warehouse_admission)
+                VALUES ('$episode','${old.tenant}','${old.customer}',' new-id ','Original installation','ONLINE',now(),'LEGACY_UNRESOLVED'),
+                    ('$anotherEpisode','${old.tenant}','${old.customer}','NEW-ONU','Another old installation','ONLINE',now(),'LEGACY_UNRESOLVED')""")
+            sql.execute("INSERT INTO inventory_serial_tombstone(id,tenant_id,serial_number) VALUES ('$tombstone','${old.tenant}','NEW-RETIRED')")
+        } }
+        fixture(admin).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_identity_claim WHERE canonical_value IN ('NEW-ID','NEW-ONLY','NEW-ONU','NEW-RETIRED','778899AABBCC')")).isEqualTo("0")
+        }
+        val preview = report(admin)
+        val command = beginRequest(admin, preview.path("preservationHash").asString())
+        val response = client.send(command, HttpResponse.BodyHandlers.ofString())
+        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(201)
+        assertThat(client.send(command, HttpResponse.BodyHandlers.ofString()).body()).isEqualTo(response.body())
+        fixture(admin).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_identity_claim WHERE canonical_value IN ('NEW-ID','NEW-ONLY','NEW-ONU','NEW-RETIRED','778899AABBCC')")).isEqualTo("5")
+            assertThat(scalar("SELECT state FROM inventory_identity_claim WHERE canonical_value='NEW-ID'")).isEqualTo("CONFLICT")
+            assertThat(scalar("SELECT state FROM inventory_identity_claim WHERE canonical_value='NEW-RETIRED'")).isEqualTo("RETIRED")
+            assertThat(scalar("SELECT count(*) FROM inventory_identity_claim WHERE canonical_value IN ('SERIAL-A','UNMATCHED-ONU','AABBCCDDEEFF')")).isEqualTo("3")
+            assertThat(scalar("SELECT count(*) FROM inventory_identity_candidate WHERE source_id='${old.first}' AND identity_type='SERIAL' AND raw_value IN (' Serial-A ','NEW-ID')")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM inventory_identity_candidate WHERE source_id='${old.first}' AND raw_value='bad-mac' AND canonical_value IS NULL AND claim_id IS NULL")).isEqualTo("1")
+            assertThat(scalar("SELECT serial_number||':'||status FROM onu WHERE id='${old.unmatchedEpisode}'")).isEqualTo("UNMATCHED-ONU:ONLINE")
+            assertThat(scalar("SELECT count(*) FROM inventory_document")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
+        }
+        for ((command, state) in listOf(
+            "UPDATE inventory_identity_claim SET state='ADMITTED',admitted_asset_id='$asset',revision=revision+1 WHERE canonical_value='NEW-ID'" to "42501",
+            "UPDATE inventory_serialized_asset SET serial_number='SLIPPED',revision=revision+1 WHERE id='${old.first}'" to "23514",
+            "UPDATE onu SET serial_number='SLIPPED' WHERE id='$episode'" to "23514",
+            "SELECT warehouse_reserve_current_identities('${mapper.readTree(response.body()).path("batch").path("id").asString()}')" to "42501",
+        )) {
+            val failure = runCatching { fixture(admin).transaction { sql(command) } }.exceptionOrNull()
+            assertThat(failure).isNotNull()
+            assertThat(generateSequence(requireNotNull(failure)) { it.cause }.filterIsInstance<java.sql.SQLException>().first().sqlState).isEqualTo(state)
+        }
+        fixture(admin).transaction {
+            sql("UPDATE onu SET status='OFFLINE' WHERE id='$episode'")
+            assertThat(scalar("SELECT serial_number||':'||status FROM onu WHERE id='$episode'")).isEqualTo(" new-id :OFFLINE")
+        }
+    }
+
 }

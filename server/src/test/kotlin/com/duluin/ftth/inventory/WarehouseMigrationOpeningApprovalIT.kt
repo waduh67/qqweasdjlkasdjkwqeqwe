@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     companion object {
-        private val legacy = List(4) { WarehouseMigrationLegacyFixture() }
+        private val legacy = List(5) { WarehouseMigrationLegacyFixture() }
         private val checkpoints = List(2) { UUID.randomUUID() }
         private val messages = List(2) { UUID.randomUUID() }
         private val orders = List(2) { UUID.randomUUID() }
@@ -84,6 +84,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
         database.ownerFixture { connection -> connection.createStatement().use { sql ->
             sql.execute("SET app.tenant_id='${old.tenant}'")
             sql.execute("UPDATE inventory_location SET name='Gudang lama',area_id='${area(token)}',revision=revision+1 WHERE id='${old.location}'")
+            if (index == 4) sql.execute("UPDATE inventory_serialized_asset SET serial_number='MOVED-AWAY',mac_address='55:66:77:88:99:AA',revision=revision+1 WHERE id='${old.second}'")
             if (index < 2) sql.execute("UPDATE work_order SET area_id='${area(token)}' WHERE id='${orders[index]}'")
             sql.execute("UPDATE customer SET area_id='${area(token)}' WHERE id='${old.customer}'")
         } }
@@ -150,7 +151,8 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     }
     private fun ready(batch: Batch): String {
         resolve(batch, batch.old.first, "BASELINE_STOCK", stock(batch.serial, "EA"))
-        resolve(batch, batch.old.second, "DUPLICATE", duplicate = batch.case(batch.old.first).path("id").asString())
+        if (batch.old === legacy[4]) resolve(batch, batch.old.second, "PROVENANCE_ONLY")
+        else resolve(batch, batch.old.second, "DUPLICATE", duplicate = batch.case(batch.old.first).path("id").asString())
         val balanceFile = resolve(batch, batch.old.balance, "BASELINE_STOCK", stock(batch.cable, "MM"))
         resolve(batch, batch.old.pending, "CANCEL_PENDING")
         val index = legacy.indexOf(batch.old)
@@ -424,4 +426,24 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             inbox.consume(event, "ordinary.effect") { error("Ordinary consumers remain gated during migration") }
         } }.isInstanceOf(WarehouseContractException::class.java)
     }
+    @Test fun `approved original asset admission retains obsolete candidate history while changed peer remains reserved`() {
+        val batch = setup(4)
+        try {
+            ready(batch)
+            val document = seal(batch)
+            val actor = tiers(batch.token, batch.old.location.toString(), 1).single()
+            val approval = pending(batch.token, document)
+            val response = decide(actor.first, approval)
+            assertThat(response.statusCode()).withFailMessage(diagnostic(response)).isEqualTo(200)
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_identity_candidate WHERE source_id='${batch.old.second}' AND identity_type='SERIAL' AND raw_value IN ('serial-a','MOVED-AWAY')")).isEqualTo("2")
+                assertThat(scalar("SELECT state||':'||admitted_asset_id FROM inventory_identity_claim WHERE identity_type='SERIAL' AND canonical_value='SERIAL-A'")).isEqualTo("ADMITTED:${batch.old.first}")
+                assertThat(scalar("SELECT state FROM inventory_identity_claim WHERE identity_type='SERIAL' AND canonical_value='MOVED-AWAY'")).isEqualTo("LEGACY_RESERVED")
+                assertThat(scalar("SELECT warehouse_admission||':'||serial_number FROM inventory_serialized_asset WHERE id='${batch.old.second}'")).isEqualTo("LEGACY_UNRESOLVED:MOVED-AWAY")
+                assertThat(scalar("SELECT warehouse_admission||':'||serial_number FROM inventory_serialized_asset WHERE id='${batch.old.first}'")).isEqualTo("VERIFIED: Serial-A ")
+                assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED' AND status='AVAILABLE'")).isEqualTo("2")
+            }
+        } finally { cleanup(batch) }
+    }
+
 }

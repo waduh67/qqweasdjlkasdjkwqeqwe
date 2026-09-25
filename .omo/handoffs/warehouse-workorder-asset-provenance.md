@@ -1,3 +1,42 @@
+## Task43 current identity reservations verified; finalization/legacy closure NEXT
+
+Branch work/warehouse-completion, remote origin/feat/warehouse-workorder. This
+checkpoint follows pushedb2d19dbb (permanent approved cancellation); use git log -1
+for its commit. Tasks1–42 done;43 in progress;44–48/F1–F4 remain. Goal ACTIVE.
+Continue full scope, preserving coherent committed/pushed progress and safe proofs.
+
+V177.9 APPLIED and IMMUTABLE, SHA256
+b66ace6e025d257171a9a5ceff5aa5d7e5deceaa94f1c9871fc64d1e105e6c69.
+Next free M05 version177.10;178 remains reserved forM06. Candidate rows now retain
+raw versions; BEGIN's exclusive owner function reserves current raw serial/MAC
+from actual owner projections, retaining every old candidate/claim. Invalid MAC
+stays explicit unclaimed/null. Current tombstone claims are retired. Raw asset/ONU
+identity cannot change after cutoff, but ONU status continues. Existing ONU original
+identity was already immutable; that guard stays unchanged.
+
+13tests/4suites PASS2m13s, zero failures/skips. Proof task43/
+current-identity-verification.json records source hashes and suites. Real HTTP+PG+
+MinIO proves new/changed sources after boot, five new current claims, exact replay,
+no stock minted by capture, direct SQL denial, status continuity and independent
+baseline admission retaining obsolete candidate history of a currently changed
+peer. Opening still preserves the original physical UUID/raw serial; changed peer
+remains staged/reserved. Existing cutoff/query/cancellation/approval/rollback cases
+pass. First run failed only an invalid test attempt to rename an existing ONU;
+the corrected test preserves old ONU identity and adds actual new legacy sources.
+
+NEXT read cancellation-followup.md in this notepad directory (contains source audit
+and finalization design details). Close obsolete new legacy WO checkpoint/outbox/
+progress paths after BEGIN, retain terminal replays and harmless ACK/retry metadata;
+close old tombstone writes. Freeze new resolutions after an admission so the sealed
+review cannot become permanently stale. Then implement finalization/M06 under
+exclusive cutover, mixed-tenant restart, full /warehouse/provenance management UI.
+No finalization or ENFORCED transition is implemented yet; do not mark43 done.
+
+Owned QA stopped, volumes retained. Private wrapper migration-identities.sh and
+log migration-identities-retry.log. Continue established JDK21/host-lock/owned-env
+runner; never commit private env/raw logs/XML/uploaded evidence. Older sections
+below are historical; this leading status takes precedence.
+
 ## Task43 approved legacy cancellation verified; all-current reservation/finalization NEXT
 
 Branch work/warehouse-completion, remote origin/feat/warehouse-workorder. This
