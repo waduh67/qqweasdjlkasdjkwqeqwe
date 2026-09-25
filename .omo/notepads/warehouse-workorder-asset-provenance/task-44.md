@@ -1,3 +1,54 @@
+## Current checkpoint: reassignment QA and real envelope recovery verified
+
+This checkpoint follows pushed0e530ae1; locate its containing commit with git log -1.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Goal ACTIVE.
+Tasks1–43 DONE,44 IN PROGRESS,45–48/F1–4 OPEN. CONTINUE after this checkpoint.
+
+Both real mixed and serial-only jobs now complete and pass QA after reassignment.
+The old technician is denied new use, then loses roles/areas; the new assigned tech
+uploads completion proof while preserving the real customer handover signature.
+Original physical source actors remain immutable and fully validated. Only today's
+roster membership is removed from historical QA-source checks. No new consumption,
+deployment, fake NONE or material review command. Mixed final917500MM available,
+82500MM consumed,0techMM,9availableONU,1installed; serial-only cable stays1000000MM.
+Forged original actor/asset, omitted deployment or bulk usage still fail real SQL.
+
+Final current coverage108 tests/12 suites through broad+focused gates. Broadr1
+ran108/7m5s,104passed4failed:1 test expected403 after role+area revoke but actual404;
+3 old envelope fixtures attempted forbidden synthetic legacy checkpoints. Current
+reassign suite2/2 PASS, and complete binding suite24/24 PASS1m48s replace those
+results. Broad raw XML/counts preserved before reruns. Existing full numeric HTTP
+loss/app restart/outbox redelivery gate also reran successfully on these changes.
+Envelope tests now use real usage/completion/approval, actual persistent claim and
+reconciliation; only delivery-copy bytes/type are corrupted. Original persisted
+payload survives, no effects before reconciliation, valid retry applies1 settlement
+and2 owner effects with no physical mutation. Test-only public port decorator.
+
+V178.5 APPLIED/IMMUTABLE in BOTH owned QA environments, SHA256
+85ae2a27ec50781cadc01871682aed0b26a17078fb64a2a0777df968d444ef81. Next178.6.
+Actual populated upgrade2 tests PASS2m7s, only178.5 added;2136 existing tenants
+retain identical rows/digests in13 physical/history tables and all earlier Flyway
+checksums. All services stopped, NEW default restored, BOTH volume sets retained.
+Safe proof: .omo/evidence/warehouse-workorder-asset-provenance/task44/reassignment-settlement-verification.json.
+All runner sessions95084/96289/21790/91891 are finished; no active QA processes.
+
+NEXT44: draft .omo/runtime/WarehouseNumericCountIT.kt (NOT compiled/executed) uses
+full numeric fixture, full-bin count of900000MM+9ONUs before actual17500MM remnant
+return; new position must invalidate submission withCOUNT_STALE and no adjustment,
+then original917500MM/9ONU/1installed QA result. Copy into fulfillment tests and run.
+Add different-key concurrent use/cut on full numeric fixture (one200,one409, one
+usage/split, complete return+QA). Actual time-aware reuse still required: existing
+WarehouseReturnITReuse/WarehouseReturnAssetFixture implement real loan remove,
+inspection+reset, reissue and same-asset install for a second customer. Extend actual
+history with delayed metric/staleACS checks; WarehouseDiscoveryITTemporal SQL-seeded
+episodes remain supporting only. Decide whether full numeric case can force select
+returned ONU among9others via actual reservation choices; do not seed stock/episodes.
+Then45 full real browser,46 full regression incl known historical175.21 projection
+fixture/schema mismatch,47 runbooks,48 requiredCI,F1–F4. No subagents authorized.
+No production deploy/main merge/native release claimed. Keep immutable migrations.
+
+Earlier checkpoints below are historical.
+
 ## Current checkpoint: full numeric restart/outbox recovery verified
 
 This checkpoint follows pushed636209cf; locate its containing commit with git log -1.

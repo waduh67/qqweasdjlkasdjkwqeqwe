@@ -1,3 +1,17 @@
+## V178.5 applied: historical material actors
+
+V178.5 is applied and immutable in both owned QA databases, SHA256
+`85ae2a27ec50781cadc01871682aed0b26a17078fb64a2a0777df968d444ef81`.
+QA verifies original material actors through their immutable receipts, commands,
+postings and deployment results. Reassigning the WO does not require those actors
+to remain in the current team or consume the goods again. Current assignment and
+authority still govern new use/install commands; current QA and completion proof
+remain fenced. Actor substitution and missing/foreign source witnesses reject.
+The populated upgrade preserves existing physical/history rows and prior Flyway
+checksums. Task44 has108-case current coverage through broad and focused gates,
+plus2 actual populated-upgrade cases; final release regression remains task46.
+Versions through178.5 are immutable. Next free version178.6.
+
 ## V178.4 applied: deployment-only material verification
 
 V178.4 is APPLIED and immutable: `b00cf665eaebae1959e5d75113674e98efba3f6c6838fda57604c1cda0545003`. A verified serialized deployment is an

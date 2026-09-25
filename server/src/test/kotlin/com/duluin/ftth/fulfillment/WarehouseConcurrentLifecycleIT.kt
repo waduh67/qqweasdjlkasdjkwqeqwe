@@ -30,7 +30,7 @@ class WarehouseConcurrentLifecycleIT : WarehouseNumericLifecycleFixture() {
         concurrently { saveCommand(returned.inspection.path, returned.inspection.token, returned.inspection.body,
             returned.inspection.key) }.forEach { assertThat(it).isEqualTo(returned.inspection) }
         numericComplete(case, signature)
-        for (fault in listOf("OMITTED", "FOREIGN_ASSET", "OMIT_USAGE")) {
+        for (fault in listOf("OMITTED", "FOREIGN_ASSET", "FOREIGN_ACTOR", "OMIT_USAGE")) {
             val guard = if (fault == "OMIT_USAGE") "deployment-only settlement requires nonempty serialized material sources"
                 else "fulfillment deployment witnesses do not match posted installations"
             failure.tamperDeployment.set(fault)

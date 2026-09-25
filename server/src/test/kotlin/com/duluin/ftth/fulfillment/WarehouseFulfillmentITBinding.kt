@@ -6,9 +6,13 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
 import java.util.UUID
 
+@Import(FulfillmentEnvelopeFailureConfiguration::class)
 class WarehouseFulfillmentITBinding : WarehouseFulfillmentFixture() {
+    @Autowired private lateinit var envelope: FulfillmentEnvelopeFailurePort
     @Test fun `after commit delivery closes its lease in a live transaction`() {
         val case = approvedCable()
 
@@ -38,27 +42,36 @@ class WarehouseFulfillmentITBinding : WarehouseFulfillmentFixture() {
 
     @ParameterizedTest @ValueSource(strings = ["malformed", "unsupported-event", "foreign-tenant"])
     fun `untrusted outbox envelope enters durable reconciliation`(kind: String) {
-        val token = tenant()
-        val tenant = fixture(token).tenant
-        val input = FulfillmentRequest(tenant, "workorder.fulfillment.approve", UUID.randomUUID().toString(), "e".repeat(64),
-            FulfillmentSource.WORK_ORDER, UUID.randomUUID(), null, null, "PREVENTIVE", true)
-        TenantContext.runAs(tenant) { context.getBean(FulfillmentCoordinator::class.java).accept(input) }
-        fixture(token).transaction {
-            when (kind) {
-                "malformed" -> sql("UPDATE fulfillment_outbox SET payload='not-a-fulfillment-payload'")
-                "unsupported-event" -> sql("UPDATE fulfillment_outbox SET event_type='UNSUPPORTED'")
-                "foreign-tenant" -> sql("UPDATE fulfillment_outbox SET payload=replace(payload,'$tenant','${UUID.randomUUID()}')")
-                else -> error("Unknown envelope")
-            }
-        }
-
-        val outcome = TenantContext.runAs(tenant) { context.getBean(FulfillmentOutboxWorker::class.java).processNext(tenant, "test-envelope") }
-
-        assertThat(outcome?.state).isEqualTo(FulfillmentState.REQUIRES_RECONCILIATION)
-        fixture(token).transaction {
+        val case = usageCase()
+        used(case)
+        completeJob(case.receipt.workOrder, case.receipt.receiver.first)
+        val before = physicalState(case.receipt.stock.token)
+        envelope.outcome.set(null)
+        envelope.original.set(null)
+        envelope.fault.set(kind)
+        try {
+            val approved = request("POST", "/api/work-orders/${case.receipt.workOrder}/approve", case.receipt.stock.token, "{}")
+            assertThat(approved.status).withFailMessage(approved.contentAsString).isEqualTo(200)
+        } finally { envelope.fault.set(null) }
+        assertThat(envelope.outcome.get()?.state).isEqualTo(FulfillmentState.REQUIRES_RECONCILIATION)
+        val original = requireNotNull(envelope.original.get())
+        val probe = fixture(case.receipt.stock.token)
+        probe.transaction {
             assertThat(scalar("SELECT state FROM fulfillment_checkpoint")).isEqualTo("REQUIRES_RECONCILIATION")
             assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_material_settlement")).isEqualTo("0")
+            assertThat(scalar("SELECT payload FROM fulfillment_outbox WHERE id='${original.id}'")).isEqualTo(original.payload)
+            sql("UPDATE fulfillment_outbox SET lease_until=clock_timestamp()-interval '1 microsecond' WHERE id='${original.id}'")
         }
+        assertThat(physicalState(case.receipt.stock.token)).isEqualTo(before)
+        val retry = TenantContext.runAs(probe.tenant) { context.getBean(FulfillmentOutboxWorker::class.java).processNext(probe.tenant, "valid-envelope-retry") }
+        assertThat(retry?.state).isEqualTo(FulfillmentState.APPLIED)
+        probe.transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_material_settlement")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress WHERE status='COMPLETED'")).isEqualTo("2")
+            assertThat(scalar("SELECT published_at IS NOT NULL FROM fulfillment_outbox WHERE id='${original.id}'")).isEqualTo("t")
+        }
+        assertThat(physicalState(case.receipt.stock.token)).isEqualTo(before)
     }
 
     @Test fun `changed approved WO cannot mint another settlement on approval replay`() {

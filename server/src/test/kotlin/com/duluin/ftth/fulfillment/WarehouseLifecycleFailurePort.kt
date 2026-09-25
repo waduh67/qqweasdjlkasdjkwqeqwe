@@ -48,6 +48,7 @@ class WarehouseLifecycleFailureConfiguration {
             return actual.copy(deployments = when (mode) {
                 "OMITTED" -> emptyList()
                 "FOREIGN_ASSET" -> actual.deployments.map { it.copy(assetId = UUID.randomUUID()) }
+                "FOREIGN_ACTOR" -> actual.deployments.map { it.copy(actorId = UUID.randomUUID()) }
                 else -> error("Unknown witness fault")
             })
         }

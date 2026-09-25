@@ -33,11 +33,10 @@ class InventorySettlementService(private val plans: MaterialPlanningStore, priva
         val body = id?.let(usage::body)
         val planIds = reworks.planIds(plan.id)
         val deployments = store.deployments(context.workOrderId, planIds)
-        if (deployments.any { it.actorId !in context.activeAssigneeIds })
-            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        // Owner reads validate the original posting and actor. Reassignment does not erase that physical history.
         if (snapshot != null && (snapshot.workOrderId != context.workOrderId || snapshot.customerId != context.customerId ||
             snapshot.planId != plan.id || snapshot.planRevision != plan.planRevision || snapshot.materialMode != plan.materialMode ||
-            snapshot.actorId !in context.activeAssigneeIds || snapshot.workOrderRevision > context.workOrderRevision))
+            snapshot.workOrderRevision > context.workOrderRevision))
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         when (plan.materialMode) {
             MaterialMode.NONE -> if (snapshot == null || plan.reason.isNullOrBlank() || snapshot.reason.isNullOrBlank() || snapshot.lines.isNotEmpty() || deployments.isNotEmpty())
