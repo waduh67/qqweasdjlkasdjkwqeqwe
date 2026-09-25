@@ -102,8 +102,12 @@ export function acceptCustomerAsset(row: AssetHistory, job: AssetJob) {
 }
 export function removeCustomerAsset(row: AssetHistory, job: AssetJob) {
   if (row.asset.endedAt || job.workType !== 'DISMANTLE' || job.status === 'DONE' || job.customerId !== row.asset.customerId || !job.signature) throw new Error('Pelepasan memerlukan WO bongkar aktif dan bukti tanda tangan.')
+  const asset = structuredClone(row.asset)
   return command(`${root(job.customerId)}/remove`, 'POST', { assignmentId: row.asset.id, workOrderId: job.id, expectedRevision: row.asset.revision, expectedTitleRevision: row.asset.titleRevision, evidenceId: job.signature.id }, value => {
-    const r = record(value); return bound({ operationId: uuid(r.operationId) }, r.assignmentId === row.asset.id && r.customerId === job.customerId)
+    const r = record(value), retired = record(r.retired)
+    const episode = episodeOutcome(asset.customerId, asset.assetId)(retired)
+    timestamp(retired.retiredAt)
+    return bound({ operationId: uuid(r.operationId) }, episode.assignmentId === asset.id && r.replacement === null)
   })
 }
 export function relocateCustomerAsset(row: AssetHistory, job: AssetJob, topology: AssetTopology) {

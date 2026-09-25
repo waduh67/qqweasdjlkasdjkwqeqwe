@@ -5,6 +5,33 @@ import { acceptCustomerAsset, assetSource, deployCustomerAsset, getAssetAssignme
 
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 const response = (value: unknown) => new Response(JSON.stringify(value))
+const removalResult = () => ({ operationId: id.document, retired: { episodeId: id.assignment, onuId: id.assignment,
+  assignmentId: id.assignment, customerId: id.customer, assetId: id.piece, assignmentRevision: 1, episodeRevision: 1,
+  startedAt: '2026-09-24T10:00:00Z', retiredAt: '2026-09-25T10:00:00Z', provenance: 'RECEIPT', ownershipMode: 'LOAN', legalOwner: 'ISP' }, replacement: null })
+
+it('decodes the real removal envelope and retries the same committed command after a lost response', async () => {
+  let attempts = 0
+  const fetch = vi.fn(async (_path: string, _init?: RequestInit) => { if (++attempts === 1) throw new TypeError('response lost'); return response(removalResult()) })
+  vi.stubGlobal('fetch', fetch)
+  const row = assetHistoryFixture(), job = { ...assetJobFixture(), workType: 'DISMANTLE' as const }
+  const action = removeCustomerAsset(row, job)
+  row.asset.id = id.supplier; row.asset.customerId = id.supplier; job.customerId = id.supplier
+  await expect(action.execute()).rejects.toThrow('response lost')
+  await expect(action.execute()).resolves.toEqual({ operationId: id.document })
+  expect(fetch.mock.calls[0]).toEqual(fetch.mock.calls[1])
+  expect(JSON.parse(action.body)).toMatchObject({ assignmentId: id.assignment, workOrderId: id.source })
+})
+
+it.each(['assignment', 'customer', 'asset', 'active', 'replacement'])('rejects a removal reply with invalid %s binding', async (kind) => {
+  const result: { operationId: string; retired: Record<string, unknown>; replacement: unknown } = removalResult()
+  if (kind === 'assignment') result.retired.assignmentId = id.supplier
+  if (kind === 'customer') result.retired.customerId = id.supplier
+  if (kind === 'asset') result.retired.assetId = id.supplier
+  if (kind === 'active') result.retired.retiredAt = null
+  if (kind === 'replacement') result.replacement = { ...result.retired }
+  vi.stubGlobal('fetch', vi.fn(async () => response(result)))
+  await expect(removeCustomerAsset(assetHistoryFixture(), { ...assetJobFixture(), workType: 'DISMANTLE' }).execute()).rejects.toThrow()
+})
 it('rejects unacknowledged or unknown-origin serials and foreign customer history', async () => {
   const source = assetSourceFixture()
   expect(assetSource(source).id).toBe(id.piece)

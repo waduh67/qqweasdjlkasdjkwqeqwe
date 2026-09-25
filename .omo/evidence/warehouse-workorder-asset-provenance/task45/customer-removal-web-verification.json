@@ -1,0 +1,32 @@
+{
+  "scope": "Decode committed customer asset removal response and preserve frozen retry binding",
+  "baseline": "7a5a9ac5",
+  "red": {
+    "tests": 13,
+    "failures": 1
+  },
+  "green": {
+    "files": 2,
+    "tests": 20,
+    "durationSeconds": 3.98
+  },
+  "checks": [
+    "application TypeScript",
+    "targeted lint",
+    "git diff --check"
+  ],
+  "realBrowser": {
+    "attempt": "customer-assets-browser-r5",
+    "tests": 4,
+    "passed": 2,
+    "failed": 2,
+    "loanSwapReuse": "PASS desktop and mobile",
+    "soldRemoval": "PASS both projects; later RMA authorization fails SOURCE_NOT_VERIFIED with null SKU category",
+    "fullAssetGate": "INCOMPLETE"
+  },
+  "sha256": {
+    "web/src/api/warehouse/customerAssets.ts": "49fdea08459716d9d296a46b19a6613b509f1d9f5ada576efcfc00fa66b17199",
+    "web/src/api/warehouse/customerAssets.test.ts": "852ceb80c1dde08f5bca839139bcd46e985d96d41f29ea4d9f545bd6326c1a88",
+    "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx": "5f1864b1f526af1a7e228ef645a5aa0d37e36d366f35bc19844876f7a95923ce"
+  }
+}

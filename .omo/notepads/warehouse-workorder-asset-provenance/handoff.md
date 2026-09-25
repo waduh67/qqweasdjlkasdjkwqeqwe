@@ -1,73 +1,44 @@
-Current resume status is at the top of `continuation.md`: tasks1–44 complete;45 in progress;46–48/F1–F4 remain. Numeric browser desktop/mobile checkpoint green; continue the active full-scope goal. Historical notes below are superseded.
+## Current checkpoint: completed removal response; task45 still in progress
 
-# Warehouse Workorder Asset Provenance Handoff
+Follows 7a5a9ac5; locate containing commit with git log -1. Goal ACTIVE.
+Tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN. CONTINUE after commit/push.
+No subagents authorized. Branch work/warehouse-completion -> origin/feat/warehouse-workorder.
 
-## Resume point
+Product fix: removeCustomerAsset now reads {operationId,retired,replacement:null},
+validates retired assignment/customer/asset/time against cloned original binding.
+Lost-response retry keeps original bytes/key even after caller mutation. Red1/13,
+green20tests/2files PASS3.98s; TypeScript+targeted lint+diff check PASS. Safe proof:
+.omo/evidence/warehouse-workorder-asset-provenance/task45/customer-removal-web-verification.json.
 
-- Plan: `.omo/plans/warehouse-workorder-asset-provenance.md`
-- Tasks 1-20 independently confirmed and checked in the plan.
-- Next task: Task 21, loan/sale handover and title. Task 21 remains unchecked; do not start it in this checkpoint.
-- Task 20 product head: `6c3701e4a6b8e76f2753dc3c464f704a227b5553`.
-- Task 20 migrations: `V175.59` through `V175.66`.
-- Task 20 executor: `ses_f5fb981d9ffeaRTXaIe71novG2`; verifier: `ses_f5eb68d44ffeifB4XAh374xCWn`.
-- Task 20 verdict: confirmed/high; final JAR SHA256 `3be595c434a76fce4e1ccadc5efc2fa7da5a9b712aedc7c51eb7f3f5caa80bf9`.
+Real browser customer-assets r5: 4tests,2PASS/2FAIL,385.6s. Loan swap/reset/same-unit
+reuse A->B passed desktop+mobile. Sale removal/recovery/vendor repair/reset/RMA ACK
+passed both; final authorization409 SOURCE_NOT_VERIFIED. Read-only DB confirms real
+source is valid; SKU category is NULL. RmaDeploymentStore derives createsOnu=false,
+but V175_125 warehouse_assert_rma_execution compares false IS DISTINCT FROM NULL
+for optional category. Need regression and forward-only V178.7 correction (not yet
+written/run). ONU browser fixture must explicitly set category ONU through UI and
+assert actual ONU episode creation; existing numeric UI proof establishes assignment
+but its fixture omitted category. Do not hide generic-category bug by only fixing fixture.
 
-## Recovery command
+Active runners: legacy-ui-build-r1 session16469 now building V172 historical app
+in private detached checkout .omo/runtime/warehouse-legacy-ui-base at abaecd9e;
+exceptions-browser-r2 session74347 queued under host fd8 lock, fixes rejection label
+Kembalikan untuk perbaikan. customer-assets r5 session25236 finished browser phase;
+its stdout was accidentally redirected away; authoritative private JSON report valid.
+Exceptions r2 archives r5 report/artifacts on acquiring lock. Never print auth traces.
+All runners retain volumes and stop only owned processes. No schema edits made yet.
 
-```text
-/start-work warehouse-workorder-asset-provenance
-```
+Uncommitted compiling browser drafts cover asset/loan/exception workflows and extended
+issue/returns; latest extended issue/returns NOT RUN. Legacy new files in
+web/e2e/warehouse-legacy plus config are only initial old-UI fixture scaffolding;
+cutover/restart test and runner NOT YET implemented. Keep these drafts and finish.
+Need create old tenant/customer/manual ONU through actual V172 application, then
+forward upgrade same isolated schema and approve/finalize in new UI. No SQLstock seeds.
 
-## Delivery rules
-
-- Push each approved checkpoint immediately with a normal fast-forward push.
-- No merge, rebase, amend, reset, force-push, or product/task13 edits during checkpoint sync.
-- Keep runtime, evidence, logs, archive, environment, Boulder, and secrets paths excluded.
-- Future commits use the effective global identity `fajarxfce <fajaralamsyah000@gmail.com>` without conflicting per-command overrides.
-
-## 2026-09-14 - Task20 confirmed checkpoint
-
-- Task20 is checked in the plan at product head `6c3701e4a6b8e76f2753dc3c464f704a227b5553`.
-- Final verifier: `ses_f5eb68d44ffeifB4XAh374xCWn`, confirmed/high; migration range `V175.59` through `V175.66`; 249 distinct tests.
-- Executor: `ses_f5fb981d9ffeaRTXaIe71novG2`; task21 remains unchecked and is the next action.
-
-## 2026-09-15 - Task21 confirmed checkpoint
-
-- Tasks 1-21 are checked in the tracked plan at product head
-  `729f245998117b646feb56577273f6a75da4a152`; task22 remains unchecked.
-- Task21 executor: `ses_f5d380e4fffeKBNKRFZ5C8Ubp1`; final verifier:
-  `ses_f5c054b5dffevN0uLx6c1tzeD3`, confirmed/high, 570 executions.
-- Migrations V175.67-.79 and task21 receipts remain immutable; next action is
-  task22 asset swap/removal/topology relocation. Do not start it in this checkpoint.
-
-## 2026-09-15 - Task22 confirmed checkpoint
-
-- Tasks 1-22 are checked in the tracked plan at product head
-  `dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb`; task23 remains unchecked.
-- Task22 executor: `ses_f5b0136f1ffeJmjJSpMn6LnyGT`; final verifier:
-  `ses_f59e67eacffeVf28hlgEdebi2F`, confirmed/high.
-- Migrations V175.80-.89 and task22 receipts remain immutable; next action is
-  task23 discovery/auto-provision/CPE integration. Do not start it in this checkpoint.
-
-## 2026-09-14 - Task19 confirmed checkpoint
-
-- Task19 is checked in the plan at product head `b219e9e87cda6d5f85df3eac8f40c022a79b7c58`.
-- Final verifier: `ses_f6106f2ddffeO2YMQRB9OAUq0x`, confirmed/high; migration range `V175.48` through `V175.58`; 497 distinct tests.
-- Task20 remains unchecked and is the next action. No task20 behavior was started.
-
-## 2026-09-11 - Task15 confirmed checkpoint
-
-- Tasks 1-15 are checked in the plan; task16 is the exact next action and remains unchecked.
-- Executor `ses_f6e4cc107ffeee5YCvm3LNHQjo` completed product head `b3294ba3c5f7cafdf3508294ce88266ef9ab8964`.
-- Verifier `ses_f6d70ecd9ffeZ8bbAtuczW5Nk4` returned `confirmed`/`high`, safe to mark task15, with 483 distinct tests.
-- V175.14 SHA256 `391da11be6b5704402b02d1d47d2f02ffe3027c2b07ea49251d797e318595e5c`; next action is task16 physical use.
-
-## 2026-09-11 - User-requested pause checkpoint
-
-- Pause recorded for compaction at the task14 re-verification boundary; do not continue implementation or verification in this checkpoint.
-- Tasks 1-13 remain checked in the plan; task14 remains unchecked and task15 must not start.
-- Implementation SHA: `3a4f2f1ffbb0343066b503a305ef540800e508b0`.
-- Executor: `ses_f70d4a1fcffe1ahZ1RGUJIhQxo`.
-- Verifier: `ses_f6fd0321cffeCyHsPe5gpV05FO`; partial evidence only: prior failures reject correctly, first exact run 35/35, extra immutable snapshot/destination probes pass, but no final verdict.
-- Next action: resume that verifier for the final verdict; if confirmed, mark task14, otherwise return findings to the executor.
-- Resume command: `/start-work warehouse-workorder-asset-provenance --make-pr`.
+Remaining45: explicit ONU category and current numeric+asset reruns, exceptions stale
+recount, issue/returns, actual legacy cutover browser. Then46 full server/web/KMP
+regressions including unresolved WorkOrderMaterialUsageITProjectionUpgrade175.21
+fixture incompatibility;47 source-matched docs/preflight;48 requiredCI;F1–F4 current
+artifact audits. No native/hardware claim. V178.6 immutable in both QA environments;
+next178.7. New/default marker remains98b38fbf54518f766065f31955d52574; retained OLD
+abc63ab0045a7096566cf763c8f477fc remains available. Env/logs/traces private only.

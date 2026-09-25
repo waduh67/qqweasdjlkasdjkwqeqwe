@@ -16,8 +16,8 @@ beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }; HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); tokenStore.clear() })
-function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]; stale?: boolean; legacy?: number; lost?: boolean; serial?: string } = {}) {
-  let installed = false, lost = options.lost
+function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]; stale?: boolean; legacy?: number; lost?: boolean; serial?: string; dismantle?: boolean } = {}) {
+  let installed = false, removed = false, lost = options.lost
   const source = assetSourceFixture()
   if (options.serial) source.source.serial = options.serial
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
@@ -25,16 +25,21 @@ function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]
       if (path.endsWith('/authorize')) return response({ authorizationId: id.plan, operationId: id.assignment, revision: 0 })
       if (path.endsWith('/install')) { if (lost) { lost = false; throw new TypeError('response lost') }; installed = true; return response({ assignmentId: id.assignment, episodeId: id.assignment, customerId: id.customer, assetId: id.piece }) }
       if (path.endsWith('/handover')) return response({ assignmentId: id.assignment, customerId: id.customer, revision: 1, handoverState: 'ACCEPTED' })
+      if (path.endsWith('/remove')) {
+        removed = true
+        return response({ operationId: id.document, retired: { assignmentId: id.assignment, episodeId: id.assignment,
+          customerId: id.customer, assetId: id.piece, retiredAt: '2026-09-25T10:00:00Z' }, replacement: null })
+      }
       throw new Error(`unexpected write ${path}`)
     }
     if (path.startsWith('/api/odps?')) return response({ content: [], totalElements: 0 })
     if (path.endsWith('/workbench')) return response({ ...assetWorkspaceFixture(), unresolvedDevices: options.legacy ?? 0 })
-    if (path.includes('/history?')) return page(installed ? [assetHistoryFixture()] : options.history ?? [], 10)
+    if (path.includes('/history?')) return page(removed ? [{ ...assetHistoryFixture(), asset: { ...assetHistoryFixture().asset, endedAt: '2026-09-25T10:00:00Z' } }] : installed ? [assetHistoryFixture()] : options.history ?? [], 10)
     if (path.includes('/history/')) return response((options.history ?? [assetHistoryFixture()])[0])
-    if (path.includes('/jobs?')) return page([assetJobFixture()])
+    if (path.includes('/jobs?')) return page([{ ...assetJobFixture(), ...(options.dismantle ? { workType: 'DISMANTLE' } : {}) }])
     if (path.includes('/sources?')) return page([source])
     if (path.includes('/sources/')) return options.stale ? new Response(JSON.stringify({ code: 'NOT_FOUND', message: 'Source moved' }), { status: 404 }) : response(source)
-    if (path.includes('/jobs/')) return response(assetJobFixture())
+    if (path.includes('/jobs/')) return response({ ...assetJobFixture(), ...(options.dismantle ? { workType: 'DISMANTLE' } : {}) })
     throw new Error(`unexpected read ${path}`)
   }); vi.stubGlobal('fetch', fetch); return fetch
 }
@@ -82,6 +87,20 @@ it('accepts customer handover with the displayed signature and actual assignment
   fireEvent.click(within(dialog).getByRole('button', { name: 'Terima serah-terima pelanggan' }))
   await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.endsWith('/handover'))).toBe(true))
   const call = fetch.mock.calls.find(([path]) => path.endsWith('/handover'))!; expect(JSON.parse(String(call[1]?.body))).toEqual({ assignmentId: id.assignment, expectedRevision: 6, expectedTitleRevision: 2, evidenceId: id.evidence })
+})
+
+it('closes a completed removal dialog and reloads retired history from the real response envelope', async () => {
+  const fetch = transport({ history: [assetHistoryFixture()], dismantle: true }); mount()
+  fireEvent.click(await screen.findByRole('button', { name: 'Lepas perangkat fisik' }))
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO tindakan perangkat' })).not.toHaveProperty('disabled', true))
+  fireEvent.change(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan' }))
+  const dialog = await screen.findByRole('dialog')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Lepas perangkat fisik' }))
+  await screen.findByText('Sudah dilepas')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Lepas perangkat fisik' })).toBeNull()
+  expect(fetch.mock.calls.filter(([path]) => path.endsWith('/remove'))).toHaveLength(1)
 })
 
 it('retains offline draft edits and prevents account read-only state from submitting stock mutations', async () => {
