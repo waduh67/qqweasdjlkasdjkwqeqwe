@@ -1,3 +1,26 @@
+## Focused CI result:139/149 passed; monitoring fixture correction pending
+
+CI36125103447 at53e9 compiled all current tests and executed all16selected suites:
+149tests/10failures/0errors/0skips. Raw encrypted server artifact10859408443 was
+ZIP-hash checked, decrypted privately, and its XML preserved. Safe per-suite report
+and source inventory: task46/ci-r4-monitoring-fixture-correction.json.
+
+The remaining failures are Incident5, Notification2, NetworkEndToEnd2, Predictive1.
+Nine cases report OLT-X against a generated attached OLT, so PATH_MISMATCH correctly
+excludes their metrics. Fix uses actual per-tenant OLT code. Predictive's samples
+predate the staged ONU and exceed collector72hour admission; explicit legacycreatedAt
+now predates all samples, and7samples at6hourintervals preserve the original-1dB/day
+trend plus7flatcontrol samples. All4fixtures additionally assert every metric accepted
+and no unknownserials. Every original test method and behavioral expectation remains.
+No product guard or migration changes. Corrected runtime/compile are stillPENDING.
+
+Checkpoint6853f15a is pushed; its CI36126213391 was pending and may be superseded
+by this newer fixture push. The 53e9run's nonserver jobs have mostly passed; preserve
+its completed result. OriginalR3/session11018 remains frozen at0a14; preflight47709
+stillqueued. Continue in validation checkout, archive originalR3 afterexit, allow
+preflight to finish, FAST-FORWARD original, then16focused+5historical/fullserver.
+Do not reapply pending patches. GoalACTIVE; continue after eachcommit/push.
+
 ## Interrupted Gradle diagnostics retained in encrypted CI artifacts
 
 Checkpoint b17474d0 is pushed with the label correction and safe returns/legacy

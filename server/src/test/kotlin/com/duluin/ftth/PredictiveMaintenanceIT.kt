@@ -65,12 +65,11 @@ class PredictiveMaintenanceIT {
         ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString
 
-    private fun postAsCollector(url: String, apiKey: String, body: String) {
+    private fun postAsCollector(url: String, apiKey: String, body: String): String =
         mockMvc.perform(
             post(url).header(CollectorProtocol.API_KEY_HEADER, apiKey)
                 .contentType(MediaType.APPLICATION_JSON).content(body),
-        ).andExpect(status().isOk)
-    }
+        ).andExpect(status().isOk).andReturn().response.contentAsString
 
     /** Membuat collector, mengembalikan (apiKey, tenantId). */
     private fun newCollector(token: String): Pair<String, UUID> {
@@ -91,10 +90,10 @@ class PredictiveMaintenanceIT {
             ),
             "$.id",
         )
-        // This device already existed during the seven days of historical readings.
+        // This legacy device already existed before the historical readings.
         // Preserve it as explicit legacy provenance; do not attach pre-install metrics
         // to a newly installed warehouse episode.
-        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customerId, "SN-$suffix")
+        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customerId, "SN-$suffix", Instant.now().minus(Duration.ofDays(3)))
         return customerId to "SN-$suffix"
     }
 
@@ -105,12 +104,14 @@ class PredictiveMaintenanceIT {
          "observedAt":"$observedAt"}
         """.trimIndent()
 
-    /** Mengirim deret redaman satu ONU sepanjang beberapa hari terakhir. */
-    private fun ingestSeries(apiKey: String, serial: String, rxByDaysAgo: List<Pair<Long, Double>>) {
+    /** Tujuh sampel tetap berada dalam jendela penerimaan collector 72 jam. */
+    private fun ingestSeries(apiKey: String, serial: String, rxByHoursAgo: List<Pair<Long, Double>>) {
         val now = Instant.now()
-        val readings = rxByDaysAgo.map { (daysAgo, rx) -> reading(serial, rx, now.minus(Duration.ofDays(daysAgo))) }
+        val readings = rxByHoursAgo.map { (hoursAgo, rx) -> reading(serial, rx, now.minus(Duration.ofHours(hoursAgo))) }
         val body = """{"batchId":"batch-${uniq()}","collectedAt":"$now","readings":[${readings.joinToString(",")}]}"""
-        postAsCollector("/api/collector/metrics", apiKey, body)
+        val result = postAsCollector("/api/collector/metrics", apiKey, body)
+        assertThat(JsonPath.read<Int>(result, "$.accepted")).isEqualTo(readings.size)
+        assertThat(JsonPath.read<List<String>>(result, "$.unknownSerialNumbers")).isEmpty()
     }
 
     private fun preventiveWorkOrders(token: String): String =
@@ -126,18 +127,18 @@ class PredictiveMaintenanceIT {
         val token = login(slug, admin)
         val (apiKey, tenantId) = newCollector(token)
 
-        // ONU yang memburuk: -18 dBm tujuh hari lalu meluncur ke -24 dBm kemarin (~ -1 dB/hari).
+        // Tujuh sampel menurun 0,25 dB tiap enam jam: tren tetap -1 dB/hari.
         val (degradingCustomer, degradingSerial) = registerOnu(token)
         ingestSeries(
             apiKey, degradingSerial,
-            listOf(7L to -18.0, 6L to -19.0, 5L to -20.0, 4L to -21.0, 3L to -22.0, 2L to -23.0, 1L to -24.0),
+            listOf(42L to -18.0, 36L to -18.25, 30L to -18.5, 24L to -18.75, 18L to -19.0, 12L to -19.25, 6L to -19.5),
         )
 
         // ONU sehat sebagai kontrol: redaman datar -20 dBm tidak boleh memicu WO.
         val (_, healthySerial) = registerOnu(token)
         ingestSeries(
             apiKey, healthySerial,
-            listOf(7L to -20.0, 6L to -20.0, 5L to -20.0, 4L to -20.0, 3L to -20.0, 2L to -20.0, 1L to -20.0),
+            listOf(42L to -20.0, 36L to -20.0, 30L to -20.0, 24L to -20.0, 18L to -20.0, 12L to -20.0, 6L to -20.0),
         )
 
         TenantContext.runAs(tenantId) { scanner.scan(tenantId) }

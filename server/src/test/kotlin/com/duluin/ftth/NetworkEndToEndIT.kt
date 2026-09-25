@@ -34,6 +34,7 @@ class NetworkEndToEndIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
     private fun newTenantAdmin(prefix: String): String = tenant("$prefix${uniq()}")
+    private val oltCodes = mutableMapOf<String, String>()
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -54,6 +55,7 @@ class NetworkEndToEndIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture
     /** Membangun rantai lengkap POP → OLT → PON → ODC → ODP dan mengembalikan id ODP. */
     private fun buildChain(token: String, capacity: Int = 8): String {
         val suffix = uniq().uppercase()
+        oltCodes[token] = "OLT-$suffix"
         val site = idOf(
             post(
                 "/api/sites", token,
@@ -137,15 +139,17 @@ class NetworkEndToEndIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture
     private fun newCollector(token: String): String =
         JsonPath.read(post("/api/monitoring/collectors", token, """{"name":"C-${uniq()}","pollIntervalSeconds":60}"""), "$.apiKey")
 
-    private fun reading(serial: String, status: String, rx: Double?) =
-        """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
+    private fun reading(token: String, serial: String, status: String, rx: Double?) =
+        """{"serialNumber":"$serial","oltCode":"${oltCodes.getValue(token)}","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
 
     private fun sendMetrics(apiKey: String, vararg readings: String) {
-        mockMvc.perform(
+        val result = mockMvc.perform(
             post("/api/collector/metrics").header(CollectorProtocol.API_KEY_HEADER, apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"batchId":"b-${uniq()}","collectedAt":"${Instant.now()}","readings":[${readings.joinToString(",")}]}"""),
-        ).andExpect(status().isOk)
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(JsonPath.read<Int>(result, "$.accepted")).isEqualTo(readings.size)
+        assertThat(JsonPath.read<List<String>>(result, "$.unknownSerialNumbers")).isEmpty()
     }
 
     private fun getJson(url: String, token: String): String =
@@ -385,7 +389,7 @@ class NetworkEndToEndIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture
 
         // BRAS melapor sesi hidup, OLT melapor Rx optik — dua sumber berbeda dipertemukan.
         reportBngSession(apiKey, nasId, username)
-        sendMetrics(apiKey, reading(sub.serial, "ONLINE", -21.5))
+        sendMetrics(apiKey, reading(token, sub.serial, "ONLINE", -21.5))
 
         val json = getJson("/api/gis/trace/customers/${sub.customerId}", token)
 
@@ -421,7 +425,7 @@ class NetworkEndToEndIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture
         // Bacaan hidup: yang ditelusur (A) online, tetangga se-ODP (B) sedang LOS,
         // tetangga se-PON di ODP lain (C) online.
         val apiKey = newCollector(token)
-        sendMetrics(apiKey, reading(a.serial, "ONLINE", -21.0), reading(b.serial, "LOS", null), reading(c.serial, "ONLINE", -20.0))
+        sendMetrics(apiKey, reading(token, a.serial, "ONLINE", -21.0), reading(token, b.serial, "LOS", null), reading(token, c.serial, "ONLINE", -20.0))
 
         val json = mockMvc.perform(
             get("/api/gis/trace/customers/${a.customerId}/neighbors").header("Authorization", "Bearer $token"),

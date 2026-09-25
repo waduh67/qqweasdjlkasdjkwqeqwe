@@ -1,10 +1,12 @@
 package com.duluin.ftth.customer
 
 import java.sql.DriverManager
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 object LegacyOnuTestFixture {
-    fun stage(customerId: String, serial: String): String {
+    fun stage(customerId: String, serial: String, createdAt: Instant = Instant.now()): String {
         check(System.getenv("WAREHOUSE_QA") == "true")
         val url = requireNotNull(System.getenv("SPRING_DATASOURCE_URL"))
         check(url == "jdbc:postgresql://127.0.0.1:25432/warehouse_test")
@@ -19,10 +21,10 @@ object LegacyOnuTestFixture {
             connection.prepareStatement("SELECT set_config('app.tenant_id',?,true)").use {
                 it.setString(1, tenant.toString()); it.execute()
             }
-            connection.prepareStatement("""INSERT INTO onu(id,tenant_id,customer_id,serial_number,canonical_serial_candidate,warehouse_admission)
-                VALUES (?,?,?,?,warehouse_canonical_serial(?),'LEGACY_UNRESOLVED')""").use {
+            connection.prepareStatement("""INSERT INTO onu(id,tenant_id,customer_id,serial_number,canonical_serial_candidate,warehouse_admission,created_at)
+                VALUES (?,?,?,?,warehouse_canonical_serial(?),'LEGACY_UNRESOLVED',?)""").use {
                 it.setObject(1, id); it.setObject(2, tenant); it.setObject(3, UUID.fromString(customerId))
-                it.setString(4, serial); it.setString(5, serial); it.executeUpdate()
+                it.setString(4, serial); it.setString(5, serial); it.setTimestamp(6, Timestamp.from(createdAt)); it.executeUpdate()
             }
             connection.prepareStatement("""INSERT INTO inventory_identity_claim(id,tenant_id,identity_type,canonical_value,state)
                 VALUES (?,?,'SERIAL',warehouse_canonical_serial(?),'LEGACY_RESERVED')""").use {
