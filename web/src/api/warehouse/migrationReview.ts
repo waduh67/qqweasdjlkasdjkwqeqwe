@@ -57,3 +57,5 @@ export async function approvalMigrationEvidence(id: string, reference: { id: str
   if (hash !== digest(reference.sha256)) throw new WarehouseDataError('migration.evidence.sha256')
   return blob
 }
+
+export { resolution as migrationResolution, rawText as migrationRawText }

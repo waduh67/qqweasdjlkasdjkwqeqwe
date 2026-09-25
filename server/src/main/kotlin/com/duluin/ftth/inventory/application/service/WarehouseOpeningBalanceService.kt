@@ -1,6 +1,9 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.iam.CurrentAuthorityApi
+import com.duluin.ftth.common.security.AuthorityScope
+import com.duluin.ftth.network.SiteReferenceApi
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAccess
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.port.inbound.OpeningBalanceInput
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
@@ -23,8 +26,20 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 class WarehouseOpeningBalanceService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehouseProvenanceAccess, private val batches: MigrationEvidenceStore, private val files: MigrationEvidenceService,
     private val store: MigrationOpeningStore, private val masters: WarehouseMasterStore, private val masterAccess: WarehouseMasterService,
-    private val scopes: InventoryWarehouseScopeApi, private val clock: WarehousePolicyPersistence) {
+    private val scopes: InventoryWarehouseScopeApi, private val clock: WarehousePolicyPersistence, private val sites: SiteReferenceApi) {
     private val mapper = jacksonObjectMapper()
+
+    fun list(batch: UUID, page: Int, size: Int): String {
+        if (page < 0 || size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
+        val current = access.current()
+        store.lockHistory(batch)
+        access.sources(current)
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        return store.list(batch, page, size, WarehouseQueryAccess(
+            if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence),
+            areas, sites.visibleAreas(areas), false, true))
+    }
 
     fun review(batch: UUID): WarehouseMigrationReview {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)

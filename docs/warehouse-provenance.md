@@ -44,6 +44,7 @@ hanya mencakup sebagian sumber tidak mendapat laporan tenant yang menyesatkan.
 | `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/resolutions` | Riwayat keputusan, terbaru dahulu; `page` dan `size` 1–100 |
 | `GET /api/v1/warehouse/provenance/batches/{batch}/review` | Manifest pemeriksaan, hash, dan masalah yang perlu diselesaikan |
 | `POST /api/v1/warehouse/provenance/batches/{batch}/opening` | Segel usulan saldo awal untuk persetujuan independen |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/opening` | Temukan kembali usulan yang tersimpan; `page`, `size` 1–100, lokasi pemeriksa dibatasi cakupan terkini |
 | `GET /api/v1/warehouse/provenance/batches/{batch}/opening/{id}` | Usulan saldo awal yang disegel |
 | `GET /api/v1/warehouse/provenance/batches/{batch}/finalization` | Kesiapan finalisasi, jumlah sumber/saldo/pembatalan, dan bukti finalisasi bila sudah selesai |
 | `POST /api/v1/warehouse/provenance/batches/{batch}/finalization` | Finalisasi saldo awal yang sudah disetujui dan aktifkan ENFORCED secara atomik |

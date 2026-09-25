@@ -54,6 +54,12 @@ class WarehouseProvenanceController(private val service: WarehouseProvenanceMigr
         if (parameters.isNotEmpty()) invalid()
         return response(opening.get(batch, id))
     }
+    @GetMapping("/batches/{batch}/opening")
+    fun openings(@PathVariable batch: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        if (parameters.any { (key, values) -> key !in setOf("page", "size") || values.size != 1 || !values.single().matches(Regex("[0-9]+")) }) invalid()
+        fun number(key: String, fallback: Int) = parameters[key]?.single()?.toIntOrNull() ?: if (key in parameters) invalid() else fallback
+        return response(opening.list(batch, number("page", 0), number("size", 25)))
+    }
     @PostMapping("/batches/{batch}/cases/{case}/resolutions")
     fun resolve(@PathVariable batch: UUID, @PathVariable case: UUID, @RequestHeader("Idempotency-Key") key: String,
         @RequestBody body: String, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {

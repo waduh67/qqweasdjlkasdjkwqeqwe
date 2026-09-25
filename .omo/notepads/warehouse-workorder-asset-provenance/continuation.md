@@ -1,3 +1,39 @@
+## Task43 scoped opening directory and browser clients verified; actual page NEXT
+
+Checkpoint follows pushed e5f70e52 (M06 finalization45PASS). Locate containingcommit
+with git log -1. Branch work/warehouse-completion -> origin/feat/warehouse-workorder.
+Goal ACTIVE:1–42done,43inprogress,44–48/F1–F4open. Continue full scope; save/push
+coherent source, proof and handoff checkpoints. Do not stop at this checkpoint.
+
+GET /api/v1/warehouse/provenance/batches/{batch}/opening now returns paged summaries:
+id,batchId,code,state(DRAFT/POSTED),reviewHash,requestedBy,createdAt,migrationReference,
+reviewLocation{id,code,name}. WarehouseQuerySql applies current location/area/ancestor/
+site visibility BEFORE count/page. Service checks current provenance +all source scope,
+history lock. Private runner migration-opening-directory.sh/log9tests PASS1m47s:
+OpeningApproval6,Modularity3. Scope denial/zero count/current grants, pagination and
+unknownquery checks, fresh restart history retain original opening.
+
+Web clients now tested: provenanceModels.ts,provenance.ts, reusable exports from
+migrationReview.ts; fixture warehouseProvenanceFixture.ts +provenance.test.ts.
+Strict summary/source/evidence/resolution/review/opening/finalization decoders.
+Rawblankserial/invalidMAC/nullclaims retained, rawqty not silently assignedunit.
+Captured multipart bytes/key/request through retry; private downloadchecksum.
+9tests/2files PASS936ms; full TypeScript PASS; targeted lint PASS. Source proof:
+task43/opening-directory-verification.json. No SQL changes; V178 immutable SHA
+f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d; next178.1.
+
+NEXT actual /warehouse/provenance UI, route/navigation, case/evidence/resolution
+forms, baseline review and named review-location picker, savedopening directory,
+approval links (sourceDocumentId), finalization readiness/confirmed counts, original
+file downloads. NewemptyENFORCED withno batch is alreadyactive state; oldempty needs
+explicit reviewedzero+independent approval. Do not fake origin/cost/unit.
+Use existing WarehouseState,WarehousePagination,WarehousePicker,WarehouseCommandDialog,
+WarehouseQuantity,WarehouseTime,saveReceiptFile; read web/DESIGN.md section9 (already
+read this session). Actual page not started; client infrastructure is not UI proof.
+Need UI unit tests/current permission loss, then realbrowser task43/45. Plan43 still
+unchecked. Then complete44–48/F1–F4. All ownedQA containers stopped, volumes retained.
+Never commit env/rawlogs/XML/uploads. Older sections below are history.
+
 ## Task43 M06 finalization and full application restart verified; management UI NEXT
 
 Branch work/warehouse-completion; remote origin/feat/warehouse-workorder. This

@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.service.WarehouseCanonicalPayload
+import com.duluin.ftth.inventory.application.port.inbound.WarehouseQueryFilter
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
@@ -11,6 +12,19 @@ data class StoredMigrationOpening(val view: WarehouseMigrationOpening, val paylo
 @Repository
 class MigrationOpeningStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
+
+    fun list(batch: UUID, page: Int, size: Int, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
+        val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page = page, size = size), access)
+        query.result(query.page("""SELECT opening.id,opening.created_at,jsonb_build_object(
+            'id',opening.id,'batchId',opening.batch_id,'code',document.code,'state',document.state,
+            'reviewHash',opening.review_hash,'requestedBy',opening.actor_id,'createdAt',${queryTime("opening.created_at")},
+            'migrationReference',opening.original_body::jsonb->>'migrationReference',
+            'reviewLocation',jsonb_build_object('id',location.id,'code',location.code,'name',location.name)) body
+            FROM inventory_migration_opening_request opening JOIN inventory_document document
+                ON document.tenant_id=opening.tenant_id AND document.id=opening.id
+            JOIN visible_locations location ON location.tenant_id=opening.tenant_id AND location.id=opening.review_location_id,request
+            WHERE opening.tenant_id=request.tenant AND opening.batch_id=?""", "body", "created_at"), batch)
+    }
 
     fun review(batch: UUID): WarehouseMigrationReview = jdbc.execute { sql ->
         val manifest = sql.value("SELECT warehouse_migration_review_manifest(?)::text", batch) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)

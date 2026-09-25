@@ -1,0 +1,50 @@
+{
+  "phase": "Scoped opening directory and provenance browser API contracts",
+  "baseCommit": "e5f70e52ee2d7fcf34a03f795928e1682d1da098",
+  "serverBuild": "BUILD SUCCESSFUL in 1m 47s",
+  "serverTests": 9,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "webTests": 9,
+  "webFiles": 2,
+  "webDuration": "936ms",
+  "typescript": "PASS: tsc -b",
+  "lint": "PASS: targeted oxlint",
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseProvenanceController.kt": "2b384cde9280118527d1baffbd29a867292815f47bb0d2093202f4137afbcbc9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "e7c6b4e44431c641ee1162a97cd4fa129d9999e734e63cecea0a74b6a41524ee",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "d50dc1ed3d424c5fbbd0d07de8ce44c263a17bcc3eea72537cd08072a7eaccea",
+    "web/src/api/warehouse/migrationReview.ts": "1ff4ed00ccb4558bba3cd599f886499c6f9d2856cd4cd5228eea9cca784dd54b",
+    "web/src/api/warehouse/provenance.test.ts": "d1bb0a3998bd4119b8f5279fbf2256de2dedc424026926b04c0a639408924470",
+    "web/src/api/warehouse/provenance.ts": "d05483ede955c5dff4614e40c2c8aa29b39214fcd23f5c9ec2a80ac6031be6b4",
+    "web/src/api/warehouse/provenanceModels.ts": "ad6c4a8872978984b357b061752070f12f0c8f3ca54ca7c57d41df712317c6b7",
+    "web/src/test/warehouseProvenanceFixture.ts": "98a73ad1d7669f067fbe1ef937f1d4a12fbaf744bfaff142c4f6ce58316a46eb"
+  },
+  "checks": [
+    "GET batch opening directory uses stable bounded pages and the same current warehouse/area/ancestor/site visibility as ordinary reads. Source authority is checked before directory count.",
+    "Real HTTP validates pagination, unknown/repeated parameters, approval-only denial and zero count for an empty-tenant provenance viewer lacking review-location scope; granting area/location exposes the existing document.",
+    "The original full application shutdown/restart test can rediscover the posted opening in fresh HTTP history. All independent baseline, zero, cancellation, finalization and replay scenarios remain passing.",
+    "Browser decoders bind counts/hashes/batches/cases, preserve blank legacy serial and invalid MAC with null claim, and distinguish approved zero baseline from missing approval.",
+    "Multipart retry retains exact original file bytes, JSON and key; private download SHA256 is checked. Frozen begin/finalization commands reject mismatched server document or hash.",
+    "Full provenance management page remains to be implemented; these clients are tested infrastructure, not browser acceptance."
+  ],
+  "remaining": [
+    "Task43 management UI and real browser acceptance",
+    "Tasks44-48/F1-F4"
+  ]
+}

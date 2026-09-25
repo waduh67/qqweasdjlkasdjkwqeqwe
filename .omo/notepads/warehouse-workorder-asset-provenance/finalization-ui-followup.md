@@ -1,3 +1,8 @@
+Latest checkpoint: opening directory and browser clients are VERIFIED. See leading
+continuation.md and task43/opening-directory-verification.json. Page/forms/routes
+still missing; all prototype client files mentioned below now have tests/TS/lint.
+GET paged opening directory has been added with actual current review-location scope.
+
 # Task43 finalization and UI continuation
 
 Current uncommitted M06/API work: V178, MigrationFinalizationStore,
