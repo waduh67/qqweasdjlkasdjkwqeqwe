@@ -1,8 +1,9 @@
 {
   "pending-network-fixtures.patch.gz": {
-    "patchSha256": "7d12eff9ca22374bb5d4c97fb5061d7913fe8205c7b47eaf70dcd396ce461d13",
+    "patchSha256": "b946ec453a1df8a47b6d6705b8cfb9ec4163280d9ed4cf56553787dd97c132f8",
     "status": "prepared, not applied or tested",
-    "restore": "gzip -dc .omo/evidence/warehouse-workorder-asset-provenance/task46/pending-network-fixtures.patch.gz | git apply --check; repeat without --check only after active server suite finishes"
+    "restore": "gzip -dc .omo/evidence/warehouse-workorder-asset-provenance/task46/pending-network-fixtures.patch.gz | git apply --check; repeat without --check only after active server suite finishes",
+    "customerAreaScope": "Every customer creation now explicitly uses the same MAIN area as its work order and restricted installer; no authorization rules changed."
   },
   "pending-predictive-history.patch.gz": {
     "patchSha256": "5aa9c5eeb2f9080553fa6d1a79b570abf9c87bcbdfb838493896280a8e0decc6",

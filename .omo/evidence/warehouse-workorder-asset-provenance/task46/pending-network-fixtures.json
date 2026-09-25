@@ -2,46 +2,55 @@
   "server/src/test/kotlin/com/duluin/ftth/AlarmRuleIT.kt": {
     "originalSha256": "164e6d069bc19baf24736d16241c974aed993aeb4d634fec85dc863c7712d3f5",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 1,
     "testMethodsPreserved": 4
   },
   "server/src/test/kotlin/com/duluin/ftth/GisCutBlastRadiusIT.kt": {
     "originalSha256": "0ebcd7249f849a2a580ba70d429ae404c33718d4d6309b915634fa9c5c014bd3",
     "registrationsConverted": 2,
+    "customerAreasAssigned": 2,
     "testMethodsPreserved": 2
   },
   "server/src/test/kotlin/com/duluin/ftth/GisImpactedIT.kt": {
     "originalSha256": "4f7ffdc6322e634cb732f3e045a5eb9047f43b3e8bf62733b3d1d545574a28ab",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 1,
     "testMethodsPreserved": 2
   },
   "server/src/test/kotlin/com/duluin/ftth/GisUtilizationIT.kt": {
     "originalSha256": "b3022f211b1b08b7f9dbdea6074589cd354b411498a130e7fc7bf41328b81805",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 1,
     "testMethodsPreserved": 1
   },
   "server/src/test/kotlin/com/duluin/ftth/IncidentIT.kt": {
     "originalSha256": "ba30b214c11fc6f8e01eee43cccd33f96252be10fb112e7b447263173880f4dd",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 2,
     "testMethodsPreserved": 6
   },
   "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt": {
     "originalSha256": "09fae89f252581b8fb952f276c1ef744e42ef064317ba75a4eac30a07ed57318",
     "registrationsConverted": 2,
+    "customerAreasAssigned": 2,
     "testMethodsPreserved": 15
   },
   "server/src/test/kotlin/com/duluin/ftth/NotificationIT.kt": {
     "originalSha256": "270d050bf2859f62cde391ee6d1325a7a1264c8459d525076ed9a8701c856509",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 1,
     "testMethodsPreserved": 3
   },
   "server/src/test/kotlin/com/duluin/ftth/OdpPortBoardIT.kt": {
     "originalSha256": "8246f4474f08a6385ad9595c86d09d8f3f08f6a0f354eb94a64416d7f0309ac9",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 1,
     "testMethodsPreserved": 1
   },
   "server/src/test/kotlin/com/duluin/ftth/SurveyCapacityIT.kt": {
     "originalSha256": "896ec6ffbb57afff4fcae663de4affcef06e16b3763bc85cb1267b9cc3ff5845",
     "registrationsConverted": 1,
+    "customerAreasAssigned": 1,
     "testMethodsPreserved": 3
   }
 }

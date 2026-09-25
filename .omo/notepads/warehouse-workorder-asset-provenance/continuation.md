@@ -1,3 +1,19 @@
+## Pending network fixture corrected before execution
+
+Latest source/evidence checkpoint1201b6c2 is pushed. LocalR3/session11018 still
+RUNNING (>1666passed/39failed observed); preflight47709 stillqueued; CI36116539885
+serverstillrunning. Queued docs-only CI36122060200 was cancelled before execution.
+
+The prepared network patch now explicitly assigns MAIN area on every customer
+creation request (13sites across9classes). The previous draft only created area and
+admin scope; CustomerService preserves a null request area, so a restricted installer
+would not be able to use those customers. Existing AutoProvisioningIT confirms the
+required explicit-area setup. Corrected pending-network-fixtures.patch.gz, its JSON
+inventory and pending-patch-manifest.json are authoritative. This is still NOT applied,
+compiled or runtime-tested. All37original methods and assertions remain unchanged.
+
+Continue after checkpoint; archive R3 then apply fixes/focused/historical/full runs.
+
 ## Runtime resilience checkpoint: temporary Btrfs swap added
 
 Full R3/session11018 and CI36116539885 are still running; no final PASS. Local
