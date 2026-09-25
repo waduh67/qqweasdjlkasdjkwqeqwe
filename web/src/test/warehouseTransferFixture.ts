@@ -12,10 +12,10 @@ export const transferLocations: WarehouseLocation[] = [
 export function transferFixture(): WarehouseTransfer {
   return { id: id.document, code: 'TR-001', revision: 0, state: 'DRAFT', sourceLocationId: id.source, destinationLocationId: id.inspection, transitLocationId: id.supplier,
     senderId: id.issue, receiverId: id.plan, reason: 'Pengisian gudang B', recordedAt: '2026-09-24T19:00:00Z', resolutionDocumentId: null,
-    lines: [{ id: id.line, skuId: id.sku, stockIdentityId: id.piece, quantityBase: '100000', baseUnit: 'MM', receivedBase: '0', inTransitBase: '0', resolvedBase: '0', remainingIdentityId: id.piece, condition: 'SERVICEABLE', legalOwner: 'ISP' }] }
+    lines: [{ id: id.line, skuId: id.sku, stockIdentityId: id.piece, quantityBase: '100000', baseUnit: 'MM', receivedBase: '0', inTransitBase: '0', resolvedBase: '0', remainingIdentityId: id.piece, condition: 'SERVICEABLE', legalOwner: 'ISP', sourceBalanceId: id.allocation }] }
 }
 export function transferDetailsFixture(transfer = transferFixture()): TransferDetails {
-  return { transfer, references: { locations: transferLocations.map(({ id, code, name }) => ({ id, code, name })), people: [{ id: id.issue, name: 'Petugas asal' }, { id: id.plan, name: 'Petugas tujuan' }],
+  return { transfer, references: { locations: transferLocations.map(({ id, code, name }) => ({ id, code, name })), people: [{ id: id.issue, name: 'Petugas asal', active: true }, { id: id.plan, name: 'Petugas tujuan', active: true }],
     lines: [{ lineId: id.line, skuCode: 'CABLE', skuName: 'Kabel drop', serial: null, lotCode: 'REEL-TRANSFER' }] } }
 }
 export function transferPositionFixture(): StockPosition {

@@ -72,7 +72,7 @@ it('pages discoverable transfers and applies SKU serial location status and pair
 })
 it('creates a reviewed draft with a real position and own recipient without reading the IAM directory', async () => {
   const created = { ...transferFixture(), receiverId: id.sender }, details = transferDetailsFixture(created)
-  details.references.people = [{ id: id.sender, name: 'Petugas asal' }]
+  details.references.people = [{ id: id.sender, name: 'Petugas asal', active: true }]
   const position = transferPositionFixture()
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (init?.method === 'POST') return response(created, 201)
@@ -254,4 +254,92 @@ it('does not offer replacement while approval is active or recovery refers to an
   first.unmount(); stale = true; show()
   await screen.findByText('Transfer berubah. Muat ulang sebelum memperbaiki laporan.')
   expect(screen.queryByRole('button', { name: 'Perbaiki laporan selisih' })).toBeNull()
+})
+
+function editRead(path: string, transfer: WarehouseTransfer) {
+  const location = transferLocations.find(row => path === `/api/v1/warehouse/locations/${row.id}`)
+  if (location) return response(location)
+  if (path.includes('/locations?')) return response(page(transferLocations))
+  const position = { ...transferPositionFixture(), lotId: null }
+  if (path === `/api/v1/warehouse/stock/positions/${id.position}`) return response(position)
+  if (path.includes('/stock/positions?')) return response(page([position]))
+  return read(path, transfer)
+}
+it('keeps an inactive recipient draft repairable and requires an active replacement before saving', async () => {
+  let current = transferFixture()
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') {
+      const input = JSON.parse(String(init.body))
+      current = { ...current, revision: 1, receiverId: input.draft.receiverId }
+      return response(current)
+    }
+    if (path.endsWith('/details')) {
+      const details = transferDetailsFixture(current)
+      details.references.people = details.references.people.map(person => ({ ...person, active: person.id !== id.receiver }))
+      return response(details)
+    }
+    return editRead(path, current)
+  }); vi.stubGlobal('fetch', fetch); show()
+  expect(await screen.findByRole('button', { name: 'Kirim ke transit' })).toHaveProperty('disabled', true)
+  fireEvent.click(screen.getByRole('button', { name: 'Ubah draft transfer' }))
+  await screen.findByRole('textbox', { name: 'Jumlah transfer 1 (m)' })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau transfer' }))
+  expect(screen.getByRole('alert').textContent).toContain('Pilih penerima yang aktif')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Penerima transfer' }), { target: { value: id.sender } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau transfer' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Simpan transfer' }))
+  await screen.findByRole('heading', { name: 'TR-001' })
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
+  expect(writes).toHaveLength(1)
+  expect(JSON.parse(String(writes[0][1]?.body))).toMatchObject({ expectedRevision: 0, draft: { receiverId: id.sender } })
+  expect(fetch.mock.calls.some(([path, init]) => path.startsWith('/api/users') || init?.method === 'POST')).toBe(false)
+})
+it('edits a saved draft with its persisted receiver and exact revision after reviewing quantities without dispatching', async () => {
+  let current = transferFixture()
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') {
+      const input = JSON.parse(String(init.body))
+      current = { ...current, revision: 1, reason: input.draft.reason, lines: [{ ...current.lines[0], quantityBase: input.draft.lines[0].quantityBase }] }
+      return response(current)
+    }
+    return editRead(path, current)
+  }); vi.stubGlobal('fetch', fetch); show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft transfer' }))
+  expect(await screen.findByRole('textbox', { name: 'Jumlah transfer 1 (m)' })).toHaveProperty('value', '100,000')
+  expect(screen.getByRole('combobox', { name: 'Penerima transfer' })).toHaveProperty('value', id.receiver)
+  fireEvent.change(screen.getByRole('textbox', { name: 'Alasan transfer' }), { target: { value: 'Perubahan kebutuhan gudang tujuan' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Jumlah transfer 1 (m)' }), { target: { value: '60.125' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau transfer' }))
+  expect((await screen.findByRole('dialog', { name: 'Simpan draft transfer' })).textContent).toContain('Petugas tujuan')
+  expect(fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan transfer' }))
+  await screen.findByRole('heading', { name: 'TR-001' })
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
+  expect(writes).toHaveLength(1); expect(writes[0][0]).toBe(`${root}/${id.document}`)
+  expect(JSON.parse(String(writes[0][1]?.body))).toMatchObject({ expectedRevision: 0, draft: { receiverId: id.receiver,
+    reason: 'Perubahan kebutuhan gudang tujuan', lines: [{ sourceBalanceId: id.position, stockIdentityId: id.piece, quantityBase: '60125', baseUnit: 'MM' }] } })
+  expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  expect(screen.getByRole('region', { name: 'Detail transfer' }).textContent).toContain('Revisi 1')
+})
+it('reloads a stale saved draft before another edit and never invents a retry revision', async () => {
+  let current = transferFixture()
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') {
+      current = { ...current, revision: 2, reason: 'Rencana sudah diperbaiki', lines: [{ ...current.lines[0], quantityBase: '40000' }] }
+      return response({ code: 'STALE_REVISION', message: 'STALE_REVISION' }, 409)
+    }
+    return editRead(path, current)
+  }); vi.stubGlobal('fetch', fetch); show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft transfer' }))
+  await screen.findByRole('textbox', { name: 'Jumlah transfer 1 (m)' })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau transfer' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Simpan transfer' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Muat ulang dokumen' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft transfer' }))
+  expect(await screen.findByRole('textbox', { name: 'Jumlah transfer 1 (m)' })).toHaveProperty('value', '40,000')
+  expect(screen.getByRole('textbox', { name: 'Alasan transfer' })).toHaveProperty('value', 'Rencana sudah diperbaiki')
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
+  expect(writes).toHaveLength(1)
+  expect(JSON.parse(String(writes[0][1]?.body)).expectedRevision).toBe(0)
 })

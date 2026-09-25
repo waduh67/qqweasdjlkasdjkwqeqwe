@@ -109,6 +109,12 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   quantities and destinations. Accepted stock remains quarantined until placement.
   Private evidence has named type/date labels, pagination, download and a visible
   stale-intake state. Success reloads the durable document and revision.
+- A saved transfer draft has an explicit edit action for its sender. Prefill the
+  persisted route, receiver, reason and exact quantities; resolve saved positions
+  through the scoped stock API. Missing historical positions require reselection.
+  Show an inactive receiver and require an active replacement. Review uses the
+  saved revision; conflicts reload the actual draft before another attempt. Editing
+  does not dispatch or reserve stock, and posted transfers have no edit action.
 - Stock exploration separates SKU totals, physical positions, serialized devices,
   and lot/reel lineage. Reservation and custody views filter durable data before
   pagination. Label totals that include consumed material; show available separately.

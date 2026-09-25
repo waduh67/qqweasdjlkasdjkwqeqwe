@@ -1,7 +1,7 @@
 # Warehouse migration and cutover manifest
 
-The current highest packaged version is **178.9**; the next available version is
-**178.10**. Applied migrations are immutable. Historical sections below record the
+The current highest packaged version is **178.10**; the next available version is
+**178.11**. Applied migrations are immutable. Historical sections below record the
 version reservations at their original checkpoints, not the current next version.
 Operational steps are in [the warehouse runbook](warehouse.md), with an application
 role read-only preflight in [the review guide](warehouse-review.md).
@@ -18,6 +18,23 @@ Take and test a consistent database/object-storage backup before an authorized r
 After cutover, remediation is forward-only, or a coordinated restore during maintenance.
 Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
 the new records, or disable guards to make an old fixture boot.
+
+## V178.10: revise an unposted transfer draft
+
+`V178_10__warehouse_transfer_draft_revision.sql` permits DRAFT-to-DRAFT transfer
+replacement only at the next revision with a complete location/receiver binding.
+Every revision requires its matching immutable create/update command, and the
+latest command must match the current reason, lines and binding. A draft update
+cannot post stock; a posted transfer retains its immutable binding. Old operation
+snapshots keep their original locations and receiver. All prior migrations remain
+byte-for-byte unchanged.
+
+The corresponding HTTP/UI edit checks current sender authority, old and proposed
+scopes, receiver eligibility and physical positions. Old disabled receivers can be
+replaced without hiding the unposted draft. Tests cover replay, SQL bypasses,
+competing edits/dispatch, scope changes, concurrent details and a separate 178.9
+upgrade database with pre-existing draft/dispatched commands. Runtime validation
+for this migration is pending; source checks do not constitute a migration pass.
 
 ## V178.9: remove control rows only with their deleted empty tenant
 
@@ -36,7 +53,9 @@ also passed its focused stage and all nonserver jobs, including V172→178.9 bro
 upgrade/restart with2positive/6negative preflight probes. All seven isolated historical
 application replay tests passed through the complete178.9 migration chain, with the
 pinned migration bytes and current runner inputs verified. The complete unfiltered
-server gate remains pending. Safe proofs: `task46/local-focused-r4-verification.json`,
+server gate at commit 2c1d8e08 passed 3,783 tests in 609 suites with zero failures,
+errors or skips; later source changes require their own validation. Safe proofs:
+`task46/ci-2c1d8e08-complete-server-verification.json`, `task46/local-focused-r4-verification.json`,
 `ci-2c1d8e08-nonserver-verification.json` and `local-historical-r5-verification.json`.
 
 ## V178.8: check return-title tenant scope before reading a request

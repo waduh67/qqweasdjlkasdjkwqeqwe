@@ -19,7 +19,8 @@ function transferLine(value: unknown, path = 'line') {
   const row = record(value, path)
   return { id: uuid(row.id, path), skuId: uuid(row.skuId, path), stockIdentityId: uuid(row.stockIdentityId, path), baseUnit: baseUnit(row.baseUnit, path),
     quantityBase: decimal(row.quantityBase, path), receivedBase: decimal(row.receivedBase, path), inTransitBase: decimal(row.inTransitBase, path), resolvedBase: decimal(row.resolvedBase ?? '0', path),
-    remainingIdentityId: nullable(row.remainingIdentityId, uuid, path), condition: oneOf(row.condition, CONDITIONS, path), legalOwner: oneOf(row.legalOwner, LEGAL_OWNERS, path) }
+    remainingIdentityId: nullable(row.remainingIdentityId, uuid, path), condition: oneOf(row.condition, CONDITIONS, path), legalOwner: oneOf(row.legalOwner, LEGAL_OWNERS, path),
+    sourceBalanceId: nullable(row.sourceBalanceId, uuid, path) }
 }
 export type TransferLine = ReturnType<typeof transferLine>
 export function transferView(value: unknown, path = 'transfer') {
@@ -43,7 +44,7 @@ function locationRef(value: unknown, path = 'location') {
 }
 function personRef(value: unknown, path = 'person') {
   const row = record(value, path)
-  return { id: uuid(row.id, path), name: nullable(row.name, text, path) }
+  return { id: uuid(row.id, path), name: nullable(row.name, text, path), active: boolean(row.active ?? false, path) }
 }
 function lineRef(value: unknown, path = 'line') {
   const row = record(value, path)
@@ -72,6 +73,8 @@ export const getTransfer = (id: string) => query(`${root}/${uuid(id)}/details`, 
 export const getTransferRecovery = (id: string) => query(`${root}/${uuid(id)}/discrepancy/recovery`, transferRecovery)
 export const transferHistory = (id: string, page = 0) => query(`${root}/${uuid(id)}/history/page${parameters({ page, size: 25 })}`, pageOf(transferView))
 export const createTransfer = (input: TransferDraft) => command(root, 'POST', input, transferView)
+export const updateTransfer = (id: string, expectedRevision: number, draft: TransferDraft) =>
+  command(`${root}/${uuid(id)}`, 'PUT', { expectedRevision, draft }, transferView)
 export const dispatchTransfer = (id: string, expectedRevision: number) => command(`${root}/${uuid(id)}/dispatch`, 'POST', { expectedRevision }, transferView)
 export const receiveTransfer = (id: string, input: TransferReceipt) => command(`${root}/${uuid(id)}/receive`, 'POST', input, transferView)
 export const reportTransferDiscrepancy = (id: string, input: TransferDiscrepancy) => command(`${root}/${uuid(id)}/discrepancy`, 'POST', input, transferView)

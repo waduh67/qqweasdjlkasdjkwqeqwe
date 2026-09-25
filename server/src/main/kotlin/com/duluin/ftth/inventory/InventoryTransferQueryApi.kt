@@ -17,6 +17,6 @@ data class WarehouseTransferDetails(val transfer: WarehouseTransferView, val ref
 data class WarehouseTransferReferences(val locations: List<WarehouseTransferLocationRef>,
     val people: List<WarehouseTransferPersonRef>, val lines: List<WarehouseTransferLineRef>)
 data class WarehouseTransferLocationRef(val id: UUID, val code: String, val name: String?)
-data class WarehouseTransferPersonRef(val id: UUID, val name: String?)
+data class WarehouseTransferPersonRef(val id: UUID, val name: String?, val active: Boolean = false)
 data class WarehouseTransferLineRef(val lineId: UUID, val skuCode: String?, val skuName: String?,
     val serial: String?, val lotCode: String?)

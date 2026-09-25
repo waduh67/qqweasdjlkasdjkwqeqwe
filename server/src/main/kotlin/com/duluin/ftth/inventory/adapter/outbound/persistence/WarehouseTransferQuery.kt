@@ -23,9 +23,9 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
             locationId = filter.locationId, status = filter.state?.name, skuId = filter.skuId, serial = filter.serial,
             from = filter.from, until = filter.until), access)
         val rows = """SELECT candidate.* FROM transfer_candidates candidate,request,(SELECT ?::jsonb people) receiver
-            WHERE jsonb_exists(receiver.people,candidate.transfer_receiver_id::text)
+            WHERE (candidate.state='DRAFT' OR (jsonb_exists(receiver.people,candidate.transfer_receiver_id::text)
                 AND (candidate.destination_kind NOT IN ('TECHNICIAN','VEHICLE') OR candidate.destination_custodian=candidate.transfer_receiver_id)
-                AND (candidate.destination_kind<>'TECHNICIAN' OR (receiver.people->>candidate.transfer_receiver_id::text)::boolean)
+                AND (candidate.destination_kind<>'TECHNICIAN' OR (receiver.people->>candidate.transfer_receiver_id::text)::boolean)))
                 AND (request.status IS NULL OR candidate.body->>'state'=request.status)
                 AND (request.location IS NULL OR request.location IN (candidate.transfer_source_location_id,
                     candidate.transfer_transit_location_id,candidate.transfer_destination_location_id,candidate.resolution_location_id))
@@ -34,7 +34,7 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
                 AND ((request.sku IS NULL AND request.serial IS NULL) OR EXISTS (
                     SELECT FROM inventory_document_line line
                     LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=line.tenant_id AND asset.id=line.stock_identity_id
-                    WHERE line.tenant_id=request.tenant AND line.document_id=candidate.id AND line.document_revision=0
+                    WHERE line.tenant_id=request.tenant AND line.document_id=candidate.id
                         AND (request.sku IS NULL OR line.sku_id=request.sku)
                         AND (request.serial IS NULL OR asset.canonical_serial=request.serial)))
                 AND (?::text IS NULL OR position(lower(?::text) IN lower(candidate.code))>0)"""
@@ -51,14 +51,18 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
         }
     }
 
-    fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseTransferView> = jdbc.execute { sql ->
-        val result = mapper.readTree(sql.value("""WITH matches AS MATERIALIZED (
-                SELECT document_revision,original_body::jsonb body FROM inventory_operation
-                WHERE tenant_id=? AND document_id=? AND namespace LIKE 'warehouse.transfer.%'),
-            selected AS (SELECT * FROM matches ORDER BY document_revision DESC LIMIT ? OFFSET ?)
-            SELECT jsonb_build_object('items',coalesce((SELECT jsonb_agg(body ORDER BY document_revision DESC) FROM selected),'[]'::jsonb),
-                'totalElements',(SELECT count(*) FROM matches))::text""", sql.tenant, id, page.size, page.page.toLong() * page.size)
-            ?: sql.fail(WarehouseErrorCode.NOT_FOUND))
+    fun history(id: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess, latestFirst: Boolean = true): WarehousePage<WarehouseTransferView> = jdbc.execute { sql ->
+        val query = WarehouseQuerySql(sql, WarehouseQueryFilter(), access)
+        val direction = if (latestFirst) "DESC" else "ASC"
+        val result = mapper.readTree(query.result(""", matches AS MATERIALIZED (
+                SELECT document_revision,original_body::jsonb body FROM inventory_operation operation,request
+                WHERE operation.tenant_id=request.tenant AND document_id=? AND namespace LIKE 'warehouse.transfer.%'
+                    AND (original_body::jsonb->>'sourceLocationId')::uuid IN (SELECT id FROM visible_locations)
+                    AND (original_body::jsonb->>'destinationLocationId')::uuid IN (SELECT id FROM visible_locations)
+                    AND (original_body::jsonb->>'transitLocationId')::uuid IN (SELECT id FROM visible_locations)),
+            selected AS (SELECT * FROM matches ORDER BY document_revision $direction LIMIT ? OFFSET ?)
+            SELECT jsonb_build_object('items',coalesce((SELECT jsonb_agg(body ORDER BY document_revision $direction) FROM selected),'[]'::jsonb),
+                'totalElements',(SELECT count(*) FROM matches))::text""", id, page.size, page.page.toLong() * page.size))
         WarehousePage(result.path("items").asSequence().map { mapper.treeToValue(it, WarehouseTransferView::class.java) }.toList(),
             page.page, page.size, result.path("totalElements").asLong())
     }
@@ -69,7 +73,8 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN inventory_sku sku ON sku.tenant_id=line.tenant_id AND sku.id=line.sku_id
             LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=line.tenant_id AND asset.id=line.stock_identity_id
             LEFT JOIN inventory_lot lot ON lot.tenant_id=line.tenant_id AND lot.id=line.lot_id
-            WHERE line.tenant_id=? AND line.document_id=? AND line.document_revision=0 ORDER BY line.line_number""", sql.tenant, view.id) {
+            WHERE line.tenant_id=? AND line.document_id=? AND line.id=ANY(?) ORDER BY line.line_number""", sql.tenant, view.id,
+            sql.connection.createArrayOf("uuid", view.lines.map { it.id }.toTypedArray())) {
             WarehouseTransferLineRef(it.uuid("id"), it.getString("sku_code"), it.getString("sku_name"),
                 it.getString("serial_number"), it.getString("lot_code"))
         }

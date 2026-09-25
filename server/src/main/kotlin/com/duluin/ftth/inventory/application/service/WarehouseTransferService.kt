@@ -5,6 +5,7 @@ import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferQuery
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.MovementKind
@@ -19,7 +20,7 @@ import java.util.UUID
 class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehouseTransferAccess, private val planning: WarehouseTransferPlanning,
     private val store: WarehouseTransferStore, private val operations: WarehouseOperationStore,
-    private val posting: WarehousePosting) : InventoryTransferApi {
+    private val posting: WarehousePosting, private val historyQueries: WarehouseTransferQuery) : InventoryTransferApi {
     private val mapper = jacksonObjectMapper()
 
     override fun create(request: WarehouseTransferDraft, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
@@ -27,14 +28,15 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.manage")
-        access.authorize(request, current)
+        access.authorize(request, current, requireReceiver = false)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(request))
         val prior = operations.lockKey("warehouse.transfer.create", metadata.idempotencyKey)
         if (prior != null) {
             authorizeReplay(prior, current, cutover, canonical, prior.resourceId)
-            access.authorize(store.get(prior.resourceId), current)
+            access.authorize(store.get(prior.resourceId), current, requireReceiver = false)
             return prior.receipt
         }
+        access.authorize(request, current)
         val id = UUID.randomUUID()
         val record = TransferRecord(id, "TR-$id", 0, WarehouseTransferState.DRAFT, request,
             current.fence.identity.userId, Instant.now(), planning.draft(request, current.fence.identity.userId))
@@ -50,6 +52,35 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
             if (record.state != WarehouseTransferState.DRAFT) masterFailure(WarehouseErrorCode.STALE_REVISION)
             planning.dispatch(record)
         }
+
+    override fun update(id: UUID, request: WarehouseTransferUpdate, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
+        receiptKey(metadata.idempotencyKey)
+        if (request.expectedRevision !in 0 until Long.MAX_VALUE) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+        val current = authority.lockCurrent()
+        receiptPermission(current, "inventory.transfer.manage")
+        access.authorize(store.get(id), current, requireReceiver = false)
+        access.authorize(request.draft, current, requireReceiver = false)
+        val record = store.get(id, true)
+        access.authorize(record, current, requireReceiver = false)
+        if (record.sender != current.fence.identity.userId) masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
+        val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("id" to id, "request" to request)))
+        operations.lockKey("warehouse.transfer.update", metadata.idempotencyKey)?.let { prior ->
+            authorizeReplay(prior, current, cutover, canonical, id)
+            return prior.receipt
+        }
+        if (record.revision != request.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        if (record.state != WarehouseTransferState.DRAFT) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
+            "Only an unposted transfer draft can be edited")
+        access.authorize(request.draft, current)
+        val updated = record.copy(revision = record.revision + 1, binding = request.draft, recordedAt = Instant.now(),
+            lines = planning.draft(request.draft, record.sender))
+        store.replaceDraft(updated)
+        val operation = operation("update", metadata, canonical, updated, current, 200)
+        store.draftOperation(operation, cutover.snapshot.epoch, updated.revision)
+        store.seal(updated, operation, current.fence.identity.sessionId)
+        return receipt(updated, operation)
+    }
 
     override fun receive(id: UUID, request: WarehouseTransferReceipt, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt =
         execute(id, request.expectedRevision, request, metadata, "receive") { record, locations ->
@@ -69,15 +100,16 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.view")
+        access.lockTopology()
         val record = store.get(id)
-        access.authorize(record, current)
+        access.authorize(record, current, requireReceiver = record.state != WarehouseTransferState.DRAFT)
         return record.view()
     }
 
     override fun history(id: UUID, page: WarehousePageRequest): List<WarehouseTransferView> {
         if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         get(id)
-        return store.history(id, page)
+        return historyQueries.history(id, page, access.queryAccess(authority.lockCurrent()), latestFirst = false).items
     }
 
     private fun execute(id: UUID, revision: Long, input: Any, metadata: WarehouseMutationMetadata, action: String,
@@ -88,11 +120,12 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.manage")
         val preview = store.get(id)
-        val locations = access.authorize(preview, current)
-        val actor = current.fence.identity.userId
-        if (action == "receive" && actor != preview.binding.receiverId || action == "dispatch" && actor != preview.sender)
-            masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
+        access.authorize(preview, current)
         val record = store.get(id, true)
+        val locations = access.authorize(record, current)
+        val actor = current.fence.identity.userId
+        if (action == "receive" && actor != record.binding.receiverId || action == "dispatch" && actor != record.sender)
+            masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("id" to id, "request" to input)))
         val prior = operations.lockKey("warehouse.transfer.$action", metadata.idempotencyKey)
         if (prior != null) {

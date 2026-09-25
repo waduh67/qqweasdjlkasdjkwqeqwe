@@ -25,6 +25,28 @@ tunggal. Field yang tidak diberikan tidak ditambahkan sebagai null ke payload
 kanonis, sehingga hash replay lama tetap sama. ID posisi tidak memberi izin:
 scope dan hak akses terkini tetap diperiksa sebelum mengambil stok atau replay.
 
+## Mengubah draft tersimpan
+
+`PUT /api/v1/warehouse/transfers/{id}` menerima `{expectedRevision,draft}`;
+`draft` memakai bentuk lengkap request create. Hanya pengirim dengan izin dan
+cakupan terkini yang boleh mengubah draft sebelum dispatch. Lokasi asal, tujuan,
+transit, penerima, alasan dan seluruh daftar barang diganti secara atomik pada
+revisi berikutnya. Server memeriksa kembali posisi dan ketersediaan barang.
+Perubahan draft tidak membuat pergerakan, reservasi atau penyesuaian saldo.
+
+Layar detail menyediakan **Ubah draft transfer**. Draft dengan penerima nonaktif
+tetap terlihat dalam cakupan pemiliknya agar penerima dapat diganti; dispatch dan
+penyimpanan tetap membutuhkan penerima aktif yang cocok dengan tujuan. Form
+memuat posisi tersimpan secara eksplisit. Draft lama tanpa ID posisi meminta
+pemilihan kembali, bukan menebak posisi yang mungkin sudah berubah.
+
+Kunci edit yang sama mengembalikan respons awalnya, termasuk setelah dispatch.
+Kunci berbeda dengan revisi lama menghasilkan409 dan layar meminta muat ulang.
+Riwayat create/edit lama tetap utuh dan setiap snapshot disaring berdasarkan
+lokasinya sendiri sebelum paginasi. Detail dibaca di bawah fence topologi yang
+sama dengan edit sehingga referensi barang tidak tercampur dengan revisi lain.
+Transfer yang sudah dikirim tidak dapat diedit.
+
 ## Dispatch dan penerimaan
 
 - `POST /transfers/{id}/dispatch` menerima `expectedRevision`.
@@ -72,11 +94,12 @@ operasi tetap memakai kontrak aslinya; mengganti nama SKU tidak mengubah balasan
 tersimpan atau memengaruhi kecocokan stok pada dispatch.
 
 Daftar membatasi lokasi asal, transit, tujuan, dan tujuan penanganan selisih
-sebelum menghitung hasil atau mengambil halaman. Penerima harus masih aktif;
-tujuan teknisi/vehicle harus masih cocok dengan penerima. Detail dan riwayat
+sebelum menghitung hasil atau mengambil halaman. Untuk transfer yang sudah
+dikirim, penerima harus masih aktif dan tujuan teknisi/vehicle harus masih cocok
+dengan penerima. Draft tetap dapat dibaca untuk memperbaiki penerima. Detail dan riwayat
 juga memeriksa cakupan tujuan penanganan selisih. Izin `inventory.transfer.view`
 mencukupi untuk membaca referensi dokumen; hasil tidak menyertakan biaya atau
-profil IAM selain ID dan nama.
+profil IAM selain ID, nama dan status aktif yang diperlukan untuk memilih penerima.
 
 ## Selisih penerimaan
 

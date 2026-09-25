@@ -70,6 +70,17 @@ jobs:
             com.duluin.ftth.inventory.WarehouseQueryITPrivacy
             com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT
             com.duluin.ftth.inventory.WarehouseLegacyReservationIT
+            com.duluin.ftth.inventory.WarehouseTransferDraftIT
+            com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT
+            com.duluin.ftth.inventory.WarehouseTransferContractTest
+            com.duluin.ftth.inventory.WarehouseTransferIT
+            com.duluin.ftth.inventory.WarehouseTransferITGuards
+            com.duluin.ftth.inventory.WarehouseTransferITSerial
+            com.duluin.ftth.inventory.WarehouseTransferITPositions
+            com.duluin.ftth.inventory.WarehouseTransferITDurability
+            com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy
+            com.duluin.ftth.inventory.WarehouseTransferListIT
+            com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT
             com.duluin.ftth.ModularityTests
           )
           args=()

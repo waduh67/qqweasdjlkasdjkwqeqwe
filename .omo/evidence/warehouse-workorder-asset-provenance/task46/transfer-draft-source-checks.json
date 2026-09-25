@@ -1,0 +1,53 @@
+{
+  "status": "SOURCE_CHECKS_PASSED_RUNTIME_PENDING",
+  "baseCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+  "newMigration": "178.10",
+  "unchangedPriorMigrationFiles": 364,
+  "executedChecks": {
+    "test-ci-results.py": 11,
+    "test-ci-artifacts.py": 4,
+    "test-ci-workflow.py": 5,
+    "test-publish-images.py": 5,
+    "test-historical-overlays.py": 3,
+    "actionlint": "PASS",
+    "git diff --check": "PASS"
+  },
+  "notYetExecuted": [
+    "Kotlin compilation",
+    "new transfer HTTP and upgrade tests",
+    "web unit/lint/build",
+    "updated real browser transfer path",
+    "current complete regression"
+  ],
+  "sourceFiles": {
+    ".github/workflows/warehouse.yml": "a50addca111a11eb6df79b1e98d8aed4ad5701fbe2cd24aad40fce3e15179021",
+    "deploy/DEPLOY.md": "3e675ff920936cc86ef7595c79478c610491c8d43fda61d6c04a97171a99965a",
+    "docs/warehouse-migrations.md": "f8a5a921efe0fe27ba0641c59441223c1750c31ad2da3593c8f0712d8c3eb7d9",
+    "docs/warehouse-review.md": "299ccc27272a1d2d2d8a1663ec44cc21a3602d616826034441f6a1daba365b2a",
+    "docs/warehouse-transfers.md": "22976262cdabaed8cc75bb5e72011670e8cc2d046d7ba17245c4262af71934bf",
+    "docs/warehouse.md": "fed281f36ef2cce2620534c13638191b078f2e548455f5a7a6b4b645526f6a6b",
+    "scripts/warehouse/legacy-browser.sh": "003f334fe1b905a46fb366c2ebd36b2db6efbba80452e0bcee31274b235cae71",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferApi.kt": "554047d31c0c136d41da0c3217f414089a52d6aa9ea32389333b679eaa41de06",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferQueryApi.kt": "8d7248c6fa8ed650b37556410b2d854c4f378fb525000319023327462533beea",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseTransferController.kt": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferQuery.kt": "b3e41ad13c6c10e27bd2653cb095380bfe2e38beb59be80348efba7065d8622b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferStore.kt": "ceef5cc30ec3257b97590593d86d82dc28d8035f625bfd67a34e36d5c52504e9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferAccess.kt": "d2507a5d1f1da22694bbe6ad2bbcc819dd3c7f5169912eb8bc40142276a0f14c",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferModels.kt": "df76390f02fed661df26e72005b01a463057411ef7449dddadf7398432015dcf",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferQueryService.kt": "2e2e0026b7d5bf5e9087e6dcb7fd1006bd170b0bead838f15b6fd1a8f19a8276",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt": "626a12c9312e3b113ebca7e1e1c47ea4e46cfeaf1cfbd1ef39afffbfd8f6995a",
+    "server/src/main/resources/db/migration/V178_10__warehouse_transfer_draft_revision.sql": "d82891a8941a294bab114069297e931cf8ad6cd0cc7d8a8a7e2f06e736bd4ce2",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftIT.kt": "53924ab4e151b1150c24029ec215205939440eabde8433126c33c52ef8612e83",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt": "94587b91709ddad6a9e601d94171042a4f179004194c1bbef418c7e8fcfd7230",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferListIT.kt": "c24ace761e7fef8b5a7f1b4d190e216e8f870804a5b89391d9dc81aaebec6586",
+    "web/DESIGN.md": "7aa0db269724ece3cb4f3d966c342040b8856d9ee23a5082a91901bb2d3def78",
+    "web/e2e/warehouse/returns.spec.ts": "e3e8ed5d57764db2c9a4123eaffa8eb51c82acc3e89807af727cead0a6221142",
+    "web/src/api/warehouse/transfers.ts": "fc9c17860624c3d425da3a6c74d24d859d2885f627f0cef89969736bf6cd1174",
+    "web/src/pages/warehouse/WarehouseTransferEdit.tsx": "7d3071e6b8acc15142009483c440c3157e354f935e30b8feae747098393ef584",
+    "web/src/pages/warehouse/WarehouseTransferEditor.tsx": "d5a41333e3ce66c4f945f5fdfb3a01dbc93422a579e22043f8cffe874debbe78",
+    "web/src/pages/warehouse/WarehouseTransfersPage.test.tsx": "f3b10195fe473eb80066abd57a3d5cf95f6c9c9fa88aa5069764ad3c410626e2",
+    "web/src/pages/warehouse/WarehouseTransfersPage.tsx": "8ce1991eb8709260346fab59eabd9569b7151edfc559b08be9b94e918aba67d7",
+    "web/src/test/warehouseTransferFixture.ts": "c151fa51027e0fcc272cbd499a84ebd62fc29617bdeed09d636336c6982cd97a"
+  }
+}

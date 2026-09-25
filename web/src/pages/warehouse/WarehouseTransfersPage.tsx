@@ -16,6 +16,7 @@ import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehous
 import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatus'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { WarehouseTransferEditor } from './WarehouseTransferEditor'
+import { WarehouseTransferEdit } from './WarehouseTransferEdit'
 import { WarehouseTransferActions } from './WarehouseTransferActions'
 import { WarehouseTransferFilters } from './WarehouseTransferFilters'
 import { transferLineLabel, transferLocationLabel, transferPersonLabel } from './transferPresentation'
@@ -56,19 +57,25 @@ function TransferDetail({ id }: { id: string }) {
 function TransferBody({ details, reload }: { details: TransferDetails; reload: () => void }) {
   const { can } = useCan(), { user } = useAuth(), { transfer } = details
   const [action, setAction] = useState<'receive' | 'discrepancy' | null>(null)
+  const [editing, setEditing] = useState(false)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseTransfer> | null>(null)
   const manage = can('inventory.transfer.manage'), sender = user?.id === transfer.senderId, receiver = user?.id === transfer.receiverId
+  const receiverActive = details.references.people.some(person => person.id === transfer.receiverId && person.active)
   const waiting = ['DISPATCHED', 'PART_RECEIVED'].includes(transfer.state)
+  if (editing && transfer.state === 'DRAFT' && manage && sender && can('inventory.item.view') && can('inventory.location.view'))
+    return <WarehouseTransferEdit details={details} onSaved={() => { setEditing(false); reload() }} onClose={() => setEditing(false)} onReload={() => { setEditing(false); reload() }} />
   if (action) return <WarehouseTransferActions details={details} action={action} onDone={reload} onClose={() => setAction(null)} />
   return <><section className="card stack" aria-label="Detail transfer"><h2 style={{ overflowWrap: 'anywhere' }}>{transfer.code}</h2><p><WarehouseStatus status={transfer.state} /> · Revisi {transfer.revision} · <WarehouseTime value={transfer.recordedAt} /></p>
     <p>{transferLocationLabel(details, transfer.sourceLocationId)} → {transferLocationLabel(details, transfer.transitLocationId)} → {transferLocationLabel(details, transfer.destinationLocationId)}</p>
     <p>Pengirim: <strong>{transferPersonLabel(details, transfer.senderId)}</strong> · Penerima: <strong>{transferPersonLabel(details, transfer.receiverId)}</strong></p><p>{transfer.reason}</p>
     <p>{transfer.state === 'DRAFT' ? 'Draft belum memindahkan atau mencadangkan stok. Pengirim harus memeriksa dan mengirim barang.' : 'Jumlah diterima berasal dari konfirmasi penerima. Sisa dalam perjalanan tetap tercatat sampai diterima atau diselesaikan dengan persetujuan independen.'}</p>
     <div className="row wrap"><Button onClick={reload}>Muat ulang transfer</Button>
-      {manage && transfer.state === 'DRAFT' && <Button variant="primary" disabled={!sender} onClick={() => setOperation(dispatchTransfer(transfer.id, transfer.revision))}>Kirim ke transit</Button>}
+      {manage && transfer.state === 'DRAFT' && <Button variant="primary" disabled={!sender || !receiverActive} onClick={() => setOperation(dispatchTransfer(transfer.id, transfer.revision))}>Kirim ke transit</Button>}
+      {manage && transfer.state === 'DRAFT' && <Button disabled={!sender || !can('inventory.item.view') || !can('inventory.location.view')} onClick={() => setEditing(true)}>Ubah draft transfer</Button>}
       {manage && waiting && <><Button variant="primary" disabled={!receiver} onClick={() => setAction('receive')}>Terima transfer</Button><Button disabled={!receiver || !can('inventory.approval.request') || !can('inventory.location.view')} onClick={() => setAction('discrepancy')}>Laporkan selisih</Button></>}
     </div>
     {!manage && <p className="muted">Akses baca saja. Transaksi memerlukan izin kelola transfer.</p>}
+    {transfer.state === 'DRAFT' && !receiverActive && <p role="status">Penerima tersimpan sudah tidak aktif. Pengirim perlu mengubah draft dan memilih penerima aktif.</p>}
     {manage && transfer.state === 'DRAFT' && !sender && <p className="muted">Pengiriman hanya dapat dilakukan pengirim yang tercatat.</p>}
     {manage && waiting && !receiver && <p className="muted">Penerimaan dan pelaporan selisih hanya dapat dilakukan penerima yang tercatat.</p>}
     {manage && waiting && receiver && (!can('inventory.approval.request') || !can('inventory.location.view')) && <p className="muted">Pelaporan selisih memerlukan izin ajukan persetujuan dan lihat lokasi.</p>}

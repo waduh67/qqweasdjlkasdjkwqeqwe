@@ -5,6 +5,7 @@ import java.util.UUID
 
 interface InventoryTransferApi {
     fun create(request: WarehouseTransferDraft, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
+    fun update(id: UUID, request: WarehouseTransferUpdate, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun dispatch(id: UUID, request: WarehouseTransferRevision, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun receive(id: UUID, request: WarehouseTransferReceipt, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt
     fun get(id: UUID): WarehouseTransferView
@@ -13,6 +14,7 @@ interface InventoryTransferApi {
 
 data class WarehouseTransferDraft(val sourceLocationId: UUID, val destinationLocationId: UUID,
     val transitLocationId: UUID, val receiverId: UUID, val reason: String, val lines: List<WarehouseTransferSelection>)
+data class WarehouseTransferUpdate(val expectedRevision: Long, val draft: WarehouseTransferDraft)
 data class WarehouseTransferSelection(val stockIdentityId: UUID, val quantityBase: String, val baseUnit: WarehouseBaseUnit,
     @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     val sourceBalanceId: UUID? = null)
@@ -33,4 +35,6 @@ data class WarehouseTransferView(val id: UUID, val code: String, val revision: L
 data class WarehouseTransferLineView(val id: UUID, val skuId: UUID, val stockIdentityId: UUID,
     val baseUnit: WarehouseBaseUnit, val quantityBase: String, val receivedBase: String, val inTransitBase: String,
     val remainingIdentityId: UUID?, val condition: WarehouseCondition, val legalOwner: AssetLegalOwner,
-    val resolvedBase: String = "0")
+    val resolvedBase: String = "0",
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val sourceBalanceId: UUID? = null)

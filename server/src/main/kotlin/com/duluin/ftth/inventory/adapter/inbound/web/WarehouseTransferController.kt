@@ -23,6 +23,10 @@ class WarehouseTransferController(private val transfers: WarehouseTransferServic
     fun create(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(transfers.create(WarehouseReceiptJson.decode(body, WarehouseTransferDraft::class.java), WarehouseMutationMetadata(key)))
 
+    @PutMapping("/{id}")
+    fun update(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
+        response(transfers.update(id, WarehouseReceiptJson.decode(body, WarehouseTransferUpdate::class.java), WarehouseMutationMetadata(key)))
+
     @PostMapping("/{id}/dispatch")
     fun dispatch(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String): ResponseEntity<String> =
         response(transfers.dispatch(id, WarehouseReceiptJson.decode(body, WarehouseTransferRevision::class.java), WarehouseMutationMetadata(key)))

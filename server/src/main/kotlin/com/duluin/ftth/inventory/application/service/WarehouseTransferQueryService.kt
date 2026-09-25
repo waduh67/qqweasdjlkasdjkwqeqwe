@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.application.service
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAccess
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferQuery
@@ -32,24 +33,29 @@ class WarehouseTransferQueryService(private val cutovers: InventoryTenantCutover
         val access = WarehouseQueryAccess(scopes.currentUnderFence(current.fence), areas, sites.visibleAreas(areas), false, false)
         val receivers = users.usersByIds(query.receiverIds(access)).filter { it.active }.associate { it.id to it.technician }
         val page = query.list(filter, access, receivers)
-        val names = users.usersByIds(page.items.flatMap { listOf(it.senderId,it.receiverId) }.toSet()).associate { it.id to it.name }
+        val names = users.usersByIds(page.items.flatMap { listOf(it.senderId,it.receiverId) }.toSet()).associateBy { it.id }
         return WarehousePage(page.items.map { details(it, names) }, page.page, page.size, page.totalElements)
     }
 
     override fun details(id: UUID): WarehouseTransferDetails {
         val view = transfers.get(id)
-        val names = users.usersByIds(setOf(view.senderId, view.receiverId)).associate { it.id to it.name }
+        val names = users.usersByIds(setOf(view.senderId, view.receiverId)).associateBy { it.id }
         return details(view, names)
     }
 
     override fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseTransferView> {
         if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         transfers.get(id)
-        return query.history(id, page)
+        val current = authority.lockCurrent()
+        masters.lockTopology()
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        val access = WarehouseQueryAccess(if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence),
+            areas, sites.visibleAreas(areas), false, false)
+        return query.history(id, page, access)
     }
 
-    private fun details(view: WarehouseTransferView, names: Map<UUID, String>) = WarehouseTransferDetails(view,
+    private fun details(view: WarehouseTransferView, names: Map<UUID, UserRef>) = WarehouseTransferDetails(view,
         WarehouseTransferReferences(query.locationReferences(view), listOf(view.senderId,view.receiverId).distinct().map {
-            WarehouseTransferPersonRef(it, names[it])
+            WarehouseTransferPersonRef(it, names[it]?.name, names[it]?.active == true)
         }, query.lineReferences(view)))
 }

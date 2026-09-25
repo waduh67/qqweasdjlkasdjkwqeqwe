@@ -1,9 +1,12 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.iam.CurrentAuthority
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferDiscrepancyStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseQueryAccess
+import com.duluin.ftth.network.SiteReferenceApi
 import com.duluin.ftth.inventory.application.port.inbound.LocationSnapshot
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
@@ -15,9 +18,17 @@ data class TransferLocations(val source: LocationSnapshot, val transit: Location
 @Component
 class WarehouseTransferAccess(private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val locations: WarehouseReceiptService, private val users: IamApi,
-    private val resolutions: WarehouseTransferDiscrepancyStore) {
-    fun authorize(record: TransferRecord, current: CurrentAuthority): TransferLocations {
-        val found = authorize(record.binding, current)
+    private val resolutions: WarehouseTransferDiscrepancyStore, private val sites: SiteReferenceApi) {
+    fun queryAccess(current: CurrentAuthority): WarehouseQueryAccess {
+        val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
+        return WarehouseQueryAccess(if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence),
+            areas, sites.visibleAreas(areas), false, false)
+    }
+
+    fun lockTopology() = masters.lockTopology()
+
+    fun authorize(record: TransferRecord, current: CurrentAuthority, requireReceiver: Boolean = true): TransferLocations {
+        val found = authorize(record.binding, current, requireReceiver)
         record.resolutionDocumentId?.let { id ->
             val resolution = resolutions.find(id)?.takeIf { it.transferId == record.id }
                 ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
@@ -26,7 +37,7 @@ class WarehouseTransferAccess(private val scopes: InventoryWarehouseScopeApi, pr
         return found
     }
 
-    fun authorize(binding: WarehouseTransferDraft, current: CurrentAuthority): TransferLocations {
+    fun authorize(binding: WarehouseTransferDraft, current: CurrentAuthority, requireReceiver: Boolean = true): TransferLocations {
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)
         val ids = listOf(binding.sourceLocationId, binding.transitLocationId, binding.destinationLocationId)
@@ -38,11 +49,13 @@ class WarehouseTransferAccess(private val scopes: InventoryWarehouseScopeApi, pr
         val supported = setOf(LocationKind.WAREHOUSE, LocationKind.BIN, LocationKind.VEHICLE, LocationKind.TECHNICIAN, LocationKind.QUARANTINE)
         if (source.kind !in supported || destination.kind !in supported || transit.kind != LocationKind.TRANSIT ||
             transit.issueEligible || transit.code == "RECEIPT_SOURCE") masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        val receiver = users.findUser(binding.receiverId)?.takeIf { it.active }
-            ?: masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
-        if (destination.kind in setOf(LocationKind.TECHNICIAN, LocationKind.VEHICLE) && destination.custodianId != receiver.id)
-            masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
-        if (destination.kind == LocationKind.TECHNICIAN && !receiver.technician) masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
+        if (requireReceiver) {
+            val receiver = users.findUser(binding.receiverId)?.takeIf { it.active }
+                ?: masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
+            if (destination.kind in setOf(LocationKind.TECHNICIAN, LocationKind.VEHICLE) && destination.custodianId != receiver.id)
+                masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
+            if (destination.kind == LocationKind.TECHNICIAN && !receiver.technician) masterFailure(WarehouseErrorCode.WRONG_CUSTODIAN)
+        }
         return TransferLocations(source, transit, destination)
     }
 }

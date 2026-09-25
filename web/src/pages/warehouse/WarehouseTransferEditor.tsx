@@ -4,7 +4,7 @@ import { getLot, listPositions, type StockPosition } from '@/api/warehouse/stock
 import type { WarehouseLocation } from '@/api/warehouse/models'
 import { formatBaseQuantity } from '@/api/warehouse/quantity'
 import { listSetupUsers } from '@/api/warehouse/setup'
-import { createTransfer, type WarehouseTransfer } from '@/api/warehouse/transfers'
+import { createTransfer, updateTransfer, type WarehouseTransfer } from '@/api/warehouse/transfers'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
@@ -20,36 +20,46 @@ import { buildTransferDraft, eligibleTransferPosition, transferLocationKinds, ty
 
 const emptyLine = (): TransferDraftLine => ({ key: crypto.randomUUID(), position: null, quantity: '' })
 type Recipient = { id: string; name: string; status: string }
-export function WarehouseTransferEditor({ onSaved, onClose, onReload }: { onSaved: (row: WarehouseTransfer) => void; onClose: () => void; onReload: () => void }) {
+export interface TransferEditorInitial { transfer: WarehouseTransfer; source: WarehouseLocation; destination: WarehouseLocation;
+  transit: WarehouseLocation; receiver: Recipient; rows: TransferDraftLine[] }
+export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }: { initial?: TransferEditorInitial; onSaved: (row: WarehouseTransfer) => void; onClose: () => void; onReload: () => void }) {
   const { can } = useCan(), { user } = useAuth()
-  const [source, setSource] = useState<WarehouseLocation | null>(null)
-  const [destination, setDestination] = useState<WarehouseLocation | null>(null)
-  const [transit, setTransit] = useState<WarehouseLocation | null>(null)
-  const [receiver, setReceiver] = useState<Recipient | null>(null)
-  const [reason, setReason] = useState('')
-  const [rows, setRows] = useState<TransferDraftLine[]>(() => [emptyLine()])
+  const [source, setSource] = useState<WarehouseLocation | null>(initial?.source ?? null)
+  const [destination, setDestination] = useState<WarehouseLocation | null>(initial?.destination ?? null)
+  const [transit, setTransit] = useState<WarehouseLocation | null>(initial?.transit ?? null)
+  const [receiver, setReceiver] = useState<Recipient | null>(initial?.receiver ?? null)
+  const [reason, setReason] = useState(initial?.transfer.reason ?? '')
+  const [rows, setRows] = useState<TransferDraftLine[]>(() => initial?.rows ?? [emptyLine()])
   const [error, setError] = useState<string | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseTransfer> | null>(null)
   if (!can('inventory.transfer.manage') || !user) return <WarehouseDenied />
   if (!can('inventory.item.view') || !can('inventory.location.view')) return <div className="card stack" role="alert"><p>Izin lihat stok dan lokasi diperlukan untuk memilih sumber transfer.</p><Button onClick={onClose}>Kembali</Button></div>
+  if (initial && (initial.transfer.state !== 'DRAFT' || initial.transfer.senderId !== user.id)) return <WarehouseDenied />
   const actor = user
   function update(key: string, patch: Partial<TransferDraftLine>) { setRows(current => current.map(row => row.key === key ? { ...row, ...patch } : row)) }
   function prepare(event: FormEvent) {
     event.preventDefault()
     try {
       if (receiver?.status !== 'ACTIVE') throw new Error('Pilih penerima yang aktif.')
-      setOperation(createTransfer(buildTransferDraft(source, destination, transit, receiver.id, actor.id, reason, rows))); setError(null)
+      if (initial && !can('iam.user.view') && receiver.id !== actor.id && receiver.id !== initial.receiver.id) throw new Error('Pilih penerima yang diizinkan.')
+      const draft = buildTransferDraft(source, destination, transit, receiver.id, actor.id, reason, rows)
+      setOperation(initial ? updateTransfer(initial.transfer.id, initial.transfer.revision, draft) : createTransfer(draft)); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian transfer.') }
   }
   return <><form className="stack" aria-label="Draft transfer" onSubmit={prepare}>
-    <h2>Transfer baru</h2><p>Draft belum memindahkan atau mencadangkan stok. Setelah disimpan, pengirim perlu mengirim barang dan penerima mengonfirmasi jumlah fisik yang diterima.</p>
+    <h2>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</h2><p>Draft belum memindahkan atau mencadangkan stok. Setelah disimpan, pengirim perlu mengirim barang dan penerima mengonfirmasi jumlah fisik yang diterima.</p>
+    {initial && <p>Revisi {initial.transfer.revision}. Perubahan sebelumnya tetap tersimpan di riwayat. Barang yang tidak lagi tersedia perlu dipilih kembali.</p>}
+    {receiver?.status !== 'ACTIVE' && initial && <p role="status">Penerima tersimpan sudah tidak aktif. Pilih penerima aktif sebelum menyimpan.</p>}
     <WarehousePicker label="Lokasi asal transfer" load={receiptLocations} value={source} name={locationLabel} eligible={row => transferLocationKinds.includes(row.kind)}
       onChange={value => { setSource(value); setRows([emptyLine()]) }} />
     <WarehousePicker label="Lokasi tujuan transfer" load={receiptLocations} value={destination} name={locationLabel} eligible={row => transferLocationKinds.includes(row.kind) && row.id !== source?.id} onChange={setDestination} />
     <WarehousePicker label="Lokasi transit transfer" load={receiptLocations} value={transit} name={locationLabel} eligible={row => row.kind === 'TRANSIT' && !row.issueEligible && row.code !== 'RECEIPT_SOURCE' && row.id !== source?.id && row.id !== destination?.id} onChange={setTransit} />
     {can('iam.user.view') ? <WarehousePicker<Recipient> label="Penerima transfer" load={listSetupUsers} value={receiver} name={row => row.name} eligible={row => row.status === 'ACTIVE'} onChange={setReceiver} />
-      : <><SelectField label="Penerima transfer" value={receiver?.id ?? ''} required onChange={(_, data) => setReceiver(data.value ? { id: actor.id, name: actor.name, status: 'ACTIVE' } : null)}>
-        <option value="">Pilih…</option><option value={actor.id}>{actor.name} (saya)</option></SelectField><p className="muted">Izin lihat pengguna diperlukan untuk memilih penerima lain.</p></>}
+      : <><SelectField label="Penerima transfer" value={receiver?.id ?? ''} required onChange={(_, data) => setReceiver(!data.value ? null
+        : data.value === initial?.receiver.id ? initial.receiver : { id: actor.id, name: actor.name, status: 'ACTIVE' })}>
+        <option value="">Pilih…</option><option value={actor.id}>{actor.name} (saya)</option>
+        {initial && initial.receiver.id !== actor.id && <option value={initial.receiver.id}>{initial.receiver.name} (tersimpan)</option>}
+      </SelectField><p className="muted">Izin lihat pengguna diperlukan untuk memilih penerima lain.</p></>}
     <TextareaField label="Alasan transfer" value={reason} required maxLength={1000} onChange={(_, data) => setReason(data.value)} />
     <p><Link to="/warehouse/catalog">Kelola lokasi gudang dan transit</Link></p>
     {source ? rows.map((row, index) => <TransferLineEditor key={row.key} row={row} number={index + 1} sourceId={source.id} actorId={actor.id} onChange={patch => update(row.key, patch)}

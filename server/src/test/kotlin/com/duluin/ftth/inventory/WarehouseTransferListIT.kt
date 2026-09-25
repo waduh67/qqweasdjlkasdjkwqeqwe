@@ -72,10 +72,12 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
         assertThat(list(admin, "size=1").path("totalElements").asLong()).isEqualTo(2)
         assertThat(request("POST", "/api/users/${receiver.second}/disable", admin).status).isEqualTo(200)
         val visible = list(admin, "size=1")
-        assertThat(visible.path("totalElements").asLong()).isEqualTo(1)
-        assertThat(visible.path("items").single().path("transfer").path("id")).isEqualTo(second.path("id"))
-        assertThat(list(admin, "size=1&page=1").path("items").size()).isZero()
-        assertThat(request("GET", "/api/v1/warehouse/transfers/$firstId/details", admin).status).isEqualTo(409)
+        assertThat(visible.path("totalElements").asLong()).isEqualTo(2)
+        assertThat(list(admin, "size=1&page=1").path("items").size()).isEqualTo(1)
+        val repairable = details(admin, firstId)
+        assertThat(repairable.path("transfer")).isEqualTo(first)
+        assertThat(repairable.path("references").path("people").single { it.path("id").asString() == receiver.second }
+            .path("active").asBoolean()).isFalse()
         assertThat(request("POST", "/api/users/${receiver.second}/enable", admin).status).isEqualTo(200)
         assertThat(list(admin).path("totalElements").asLong()).isEqualTo(2)
         assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.setup.cable}", admin,
@@ -88,6 +90,10 @@ class WarehouseTransferListIT : WarehouseTransferFixture() {
         // Cosmetic changes do not participate in the captured stock equality used for dispatch.
         transferAction(stock, firstId, "dispatch", """{"expectedRevision":0}""")
         balances(stock, "0", "100000", "0")
+        assertThat(request("POST", "/api/users/${receiver.second}/disable", admin).status).isEqualTo(200)
+        assertThat(list(admin).path("totalElements").asLong()).isEqualTo(1)
+        assertThat(list(admin).path("items").single().path("transfer").path("id")).isEqualTo(second.path("id"))
+        assertThat(request("GET", "/api/v1/warehouse/transfers/$firstId/details", admin).status).isEqualTo(409)
         for (invalid in listOf("page=-1", "size=0", "size=101", "page=1.5", "page=2147483648", "state=BOGUS",
             "state=", "state=DRAFT&state=RECEIVED", "page=0&page=1", "query=", "query=" + "a".repeat(201), "locationId=1-1-1-1-1", "extra=true",
             "skuId=1-1-1-1-1", "serial=", "serial=" + "A".repeat(201), "serial=A&serial=B", "from=2026-01-01", "until=2026-01-02T00:00:00Z",

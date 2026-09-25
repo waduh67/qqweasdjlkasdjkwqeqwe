@@ -15,11 +15,12 @@ import org.springframework.transaction.support.TransactionTemplate
 import java.sql.Connection
 import java.util.UUID
 
-internal fun postingContext(database: WarehouseSchemaDatabase): ConfigurableApplicationContext =
+internal fun postingContext(database: WarehouseSchemaDatabase, migrationTarget: String = "latest"): ConfigurableApplicationContext =
     SpringApplicationBuilder(FtthApplication::class.java).profiles("test").run(
         "--server.address=127.0.0.1", "--server.port=0", "--spring.datasource.url=${database.url}",
         "--spring.flyway.url=${database.url}", "--spring.flyway.schemas=${database.schema}",
         "--spring.flyway.default-schema=${database.schema}", "--ftth.bootstrap.seed-demo-tenant=false",
+        "--spring.flyway.target=$migrationTarget",
     )
 
 internal class WarehousePostingFixture(val context: ConfigurableApplicationContext, val tenant: UUID =
