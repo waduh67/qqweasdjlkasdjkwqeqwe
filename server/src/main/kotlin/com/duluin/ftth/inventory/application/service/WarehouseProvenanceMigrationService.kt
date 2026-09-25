@@ -1,14 +1,9 @@
 package com.duluin.ftth.inventory.application.service
 
-import com.duluin.ftth.iam.CurrentAuthority
-import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseProvenanceStore
-import com.duluin.ftth.inventory.application.port.inbound.LocationSnapshot
-import com.duluin.ftth.inventory.application.port.inbound.MasterKind
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationBeginInput
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
-import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.module.kotlin.jacksonObjectMapper
@@ -19,9 +14,7 @@ import java.util.UUID
 @Transactional(timeout = 30, rollbackFor = [Exception::class])
 class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantCutoverApi,
     private val policy: InventoryTenantPolicyService,
-    private val authorities: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
-    private val masters: WarehouseMasterStore, private val masterAccess: WarehouseMasterService,
-    private val customers: InventoryProvenanceCustomerPort, private val store: WarehouseProvenanceStore) {
+    private val access: WarehouseProvenanceAccess, private val store: WarehouseProvenanceStore) {
 
     private val mapper = jacksonObjectMapper()
 
@@ -30,7 +23,8 @@ class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantC
         if (input.expectedEpoch !in 0 until Long.MAX_VALUE || !input.expectedPreservationHash.matches(Regex("[0-9a-f]{64}"))) malformed()
         // Read the current fence first so a response-loss replay can cross its own LEGACY -> VALIDATING transition.
         val fence = cutovers.lockForTransition(cutovers.read().epoch)
-        val (current) = authorize()
+        val current = access.current()
+        access.sources(current)
         val payload = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
         store.replay(key)?.let { prior ->
             if (prior.actorId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
@@ -54,26 +48,15 @@ class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantC
 
     fun summary(): String {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
-        authorize()
+        access.sources(access.current())
         return store.summary(cutover.snapshot)
     }
 
     fun cases(page: Int, size: Int, sourceTable: String?, id: UUID? = null): String {
         if (page < 0 || size !in 1..100 || (sourceTable != null && sourceTable !in sourceTables)) malformed()
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
-        val (_, references) = authorize()
+        val references = access.sources(access.current())
         return store.cases(page, size, sourceTable, id, references)
-    }
-
-    private fun authorize(): Pair<CurrentAuthority, Map<UUID, ProvenanceCustomerReference>> {
-        val current = authorities.lockCurrent()
-        receiptPermission(current, "inventory.provenance.manage")
-        masters.lockTopology()
-        val scope = scopes.currentUnderFence(current.fence)
-        store.locationIds().forEach { id ->
-            masterAccess.authorizeLocation(masters.get(MasterKind.LOCATION, id) as LocationSnapshot, current, scope)
-        }
-        return current to customers.authorize(store.customerIds(), current)
     }
 
     private fun malformed(): Nothing = masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)

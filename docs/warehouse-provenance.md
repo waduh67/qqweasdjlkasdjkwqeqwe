@@ -22,6 +22,9 @@ hanya mencakup sebagian sumber tidak mendapat laporan tenant yang menyesatkan.
 | `GET /api/v1/warehouse/provenance/cases` | Kasus dengan bukti asli, klaim identitas, nama lokasi/pelanggan; `page`, `size` 1–100, dan `sourceTable` opsional |
 | `GET /api/v1/warehouse/provenance/cases/{id}` | Satu kasus dari tenant yang sama |
 | `POST /api/v1/warehouse/provenance/batches` | Mulai VALIDATING atau rekam manifest untuk tenant yang sudah VALIDATING |
+| `POST /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence` | Unggah bukti untuk snapshot kasus dalam batch |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence` | Daftar bukti dengan `page` dan `size` 1–100 |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence/{id}` | Unduh melalui pemeriksaan hak terkini dan verifikasi isi file |
 
 Pembukaan batch memakai `Idempotency-Key` dan body
 `{"expectedEpoch":0,"expectedPreservationHash":"<hash laporan aktual>"}`.
@@ -36,6 +39,20 @@ watermark yang sudah tercatat. Pengulangan kunci dan body oleh aktor yang sama
 mengembalikan respons tersimpan setelah memeriksa hak terkini. Kunci dengan body
 berbeda, aktor berbeda, epoch kedaluwarsa, atau batch kedua ditolak.
 
+Unggahan bukti memakai multipart `request` berisi `expectedEpoch`,
+`expectedCaseHash`, dan `label`, serta tepat satu `file`. PDF, PNG, dan JPEG
+divalidasi isinya dengan batas 15 MiB. Label tidak boleh mengandung karakter
+kontrol. Bukti hanya dapat ditambah selama VALIDATING dan harus cocok dengan
+kasus yang tercakup manifest. Metadata tidak dapat diubah; unggahan baru mendapat
+ID sendiri. Kunci idempotensi yang diulang tetap terikat aktor dan isi semula.
+
+File disimpan di ObjectStorage privat. Ukuran, tipe, dan SHA-256 diperiksa setelah
+unggahan dan saat unduhan/replay. Respons tidak memuat key atau URL penyimpanan.
+Jika transaksi gagal, pembersihan menunggu transaksi batch selesai lalu memeriksa
+metadata dalam transaksi baru. File yang sudah committed atau belum dapat
+dipastikan hasilnya tetap disimpan. Hanya key yang cocok dengan tenant, batch,
+kasus, dan ID bukti tersebut yang boleh dibersihkan.
+
 Pembukaan batch belum mengaktifkan stok. Rekonsiliasi berbukti, persetujuan
 independen, posting saldo awal, dan finalisasi ENFORCED masih tahap berikutnya
 di task43. Guard yang menutup operasi tersebut tetap berlaku. Tenant baru kosong
@@ -43,7 +60,10 @@ tetap memakai inisialisasi atomik ENFORCED yang sudah tersedia; tenant lama koso
 memerlukan jalur validasi dan persetujuan tersendiri.
 
 Verifikasi dasar ada di `WarehouseMigrationITBoot`, `WarehouseMigrationITQuery`,
-dan `WarehouseMigrationInventoryTest`. Fixture upgrade dimulai sebelum V173 dengan
+`WarehouseMigrationEvidenceIT`, dan `WarehouseMigrationInventoryTest`. Tes bukti
+menggunakan HTTP serta MinIO sungguhan, kehilangan respons, penghentian backend
+database setelah file ditulis, dan penguncian transaksi yang belum terselesaikan.
+Fixture upgrade dimulai sebelum V173 dengan
 serial/MAC bentrok dan ONU lama, lalu memuat semua migrasi paket. Setup metadata
 area pada fixture bukan bukti UI rekonsiliasi; perjalanan UI dan restart sesudah
 admission tetap menjadi pemeriksaan task43/45.

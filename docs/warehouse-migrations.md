@@ -1,3 +1,23 @@
+## V177.2 applied: immutable migration evidence
+
+V177.2 applied successfully during the real MinIO evidence gate, including the
+post-write database-backend termination test. It is immutable from this point.
+SHA-256: `075be14ca62a9e159ce3bcf15c5eaa3b8f4b8c9b39d7cea712688c33729dca6a`.
+Next free version is V177.3; V178 remains reserved for final constraints. Metadata
+cannot be updated/deleted by the app; object cleanup waits for the batch lock to
+settle and confirmed metadata absence. PROVENANCE_RESOLUTION now admits preparatory
+case evidence in VALIDATING; migration approval/baseline/finalization remain closed.
+
+## V177.2 reservation: case-bound migration evidence
+
+V177 and V177.1 are applied and immutable. V177.2 is reserved for append-only
+migration evidence metadata, bound to a captured batch/case hash and VALIDATING
+epoch. Uploads will reuse the existing PDF/image validation and ObjectStorage,
+with transaction-settlement-aware cleanup. This records evidence only; it does
+not admit stock, approve a baseline or enable ENFORCED. Batch serialization uses
+an advisory transaction lock because immutable batch rows intentionally have no
+application UPDATE privilege (row-lock queries would require that privilege).
+
 ## V177.1 applied: begin-validation receipt
 
 V177.1 applied successfully in the full packaged Spring Boot upgrade at

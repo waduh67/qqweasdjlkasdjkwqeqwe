@@ -1,3 +1,38 @@
+## Task43 private evidence checkpoint verified; case resolution NEXT
+
+V177.2 is APPLIED and IMMUTABLE; next free177.3,178reserved. Real HTTP+MinIO
+EvidenceIT3 PASS / BUILD SUCCESSFUL1m3s after final object-key/label/epoch guards.
+Supporting Modularity3/Query2/Policy11 PASS in preceding19-test green run2m12s.
+Safe proof task43/migration-evidence-verification.json distinguishes both runs.
+Owned QA containers/network stopped; volumes retained. Goal ACTIVE,1–42DONE;
+43–48/F1–F4 OPEN. Branch work/warehouse-completion -> origin/feat/warehouse-workorder.
+
+POST/list/GET /provenance/batches/{batch}/cases/{case}/evidence now uses real private
+ObjectStorage, exact multipart request+file, PDF/PNG/JPEG<=15MiB, SHA/readback checks,
+immutable batch/case/source-hash metadata and actor/key/body-bound original replay.
+Download/replay fail closed when object is missing/corrupt. Fresh-transaction cleanup
+waits the same batch advisory lock, retains committed/unsettled objects, and rejects
+keys outside the exact supplied tenant/batch/case/evidence ID. Tests lose actualHTTP
+response, terminate only owned app DB backend after write, and verify rollback cleanup.
+No receipt/intake/stock is fabricated. PROVENANCE_RESOLUTION enabled only VALIDATING;
+MIGRATION_APPROVAL/BASELINE/FINALIZATION still hardclosed pending their actual owners.
+
+Shared WarehouseProvenanceAccess factors current provenance.manage plus current full
+source warehouse/customer-area scope. Batch command lock order: cutover -> current
+authority -> batch advisory -> topology/customer -> case/document. Immutable batch/case/
+evidence tables have UPDATE revoked: use warehouse_lock_migration_batch/advisory locks,
+not SELECT FOR UPDATE on them. V177.2 function validates actual batch and epoch.
+
+NEXT: append-only evidence-bound case resolutions with exact source-unit conversion,
+no guessed price/title, preserved loser raw IDs, duplicate balance/asset checks; then
+reuse actual durable approval/posting owner for independently approved batch-bound
+OPENING_BALANCE. Explicit unvalued all-tier review must keep actual costs null, not0.
+Audit pending legacy fulfillment effects through owner port, reconcile under exclusive
+cutover fence, and implement finalization/mixedtenant HTTP+restart proof. Orphan source
+locations currently block reports even for platform: add safe preserved-only handling.
+/warehouse/provenance UI still absent; read web/DESIGN.md9 before implementing it.
+No full43 acceptance yet. Continue; commit/push coherent phases, no merge/deploy.
+
 ## Task43 report + begin-batch checkpoint verified; resolution/approval NEXT
 
 V177.1 is APPLIED and IMMUTABLE (see docs/warehouse-migrations.md for hash).

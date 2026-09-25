@@ -29,7 +29,8 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
     override fun lockForCommand(expectedEpoch: Long, operation: WarehouseOperationClass): TenantCutoverFence {
         val snapshot = locked(expectedEpoch, false)
         if (!allows(snapshot.state, operation)) fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Operasi memerlukan cutover gudang yang sesuai")
-        if (operation in approvalOperations) fail(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED, "Persetujuan migrasi belum tersedia")
+        if (operation in approvalOperations && operation != WarehouseOperationClass.PROVENANCE_RESOLUTION)
+            fail(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED, "Persetujuan migrasi belum tersedia")
         return Fence(snapshot)
     }
 

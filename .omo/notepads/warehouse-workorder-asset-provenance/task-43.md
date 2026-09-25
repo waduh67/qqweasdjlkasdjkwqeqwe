@@ -1,3 +1,38 @@
+## Task43 private evidence checkpoint verified; case resolution NEXT
+
+V177.2 is APPLIED and IMMUTABLE; next free177.3,178reserved. Real HTTP+MinIO
+EvidenceIT3 PASS / BUILD SUCCESSFUL1m3s after final object-key/label/epoch guards.
+Supporting Modularity3/Query2/Policy11 PASS in preceding19-test green run2m12s.
+Safe proof task43/migration-evidence-verification.json distinguishes both runs.
+Owned QA containers/network stopped; volumes retained. Goal ACTIVE,1–42DONE;
+43–48/F1–F4 OPEN. Branch work/warehouse-completion -> origin/feat/warehouse-workorder.
+
+POST/list/GET /provenance/batches/{batch}/cases/{case}/evidence now uses real private
+ObjectStorage, exact multipart request+file, PDF/PNG/JPEG<=15MiB, SHA/readback checks,
+immutable batch/case/source-hash metadata and actor/key/body-bound original replay.
+Download/replay fail closed when object is missing/corrupt. Fresh-transaction cleanup
+waits the same batch advisory lock, retains committed/unsettled objects, and rejects
+keys outside the exact supplied tenant/batch/case/evidence ID. Tests lose actualHTTP
+response, terminate only owned app DB backend after write, and verify rollback cleanup.
+No receipt/intake/stock is fabricated. PROVENANCE_RESOLUTION enabled only VALIDATING;
+MIGRATION_APPROVAL/BASELINE/FINALIZATION still hardclosed pending their actual owners.
+
+Shared WarehouseProvenanceAccess factors current provenance.manage plus current full
+source warehouse/customer-area scope. Batch command lock order: cutover -> current
+authority -> batch advisory -> topology/customer -> case/document. Immutable batch/case/
+evidence tables have UPDATE revoked: use warehouse_lock_migration_batch/advisory locks,
+not SELECT FOR UPDATE on them. V177.2 function validates actual batch and epoch.
+
+NEXT: append-only evidence-bound case resolutions with exact source-unit conversion,
+no guessed price/title, preserved loser raw IDs, duplicate balance/asset checks; then
+reuse actual durable approval/posting owner for independently approved batch-bound
+OPENING_BALANCE. Explicit unvalued all-tier review must keep actual costs null, not0.
+Audit pending legacy fulfillment effects through owner port, reconcile under exclusive
+cutover fence, and implement finalization/mixedtenant HTTP+restart proof. Orphan source
+locations currently block reports even for platform: add safe preserved-only handling.
+/warehouse/provenance UI still absent; read web/DESIGN.md9 before implementing it.
+No full43 acceptance yet. Continue; commit/push coherent phases, no merge/deploy.
+
 ## Task43 report + begin-batch checkpoint verified; resolution/approval NEXT
 
 V177.1 is APPLIED and IMMUTABLE (see docs/warehouse-migrations.md for hash).
@@ -136,3 +171,35 @@ For orphan source locations platform migration reports will need a safe preserve
 view (current reader still calls master lookup for every location). Nonplatform access
 must not reveal missing/foreign references. Current-area authorization uses new
 InventoryProvenanceCustomerPort implemented in customer, not boot-frozen area.
+
+## Next implementation after31b8f4df (pushed): evidence foundation177.2
+
+177.2 reserved in docs; NO177.2 SQL/code yet at this note. Reuse validateReceiptEvidence
+(PDF/PNG/JPEG<=15MiB), ObjectStorage, readback/hash verification. Existing receipt
+evidence requires inventory_receipt_intake binding by DB trigger; do not fabricate
+receipt/supplier/intake for migration. Use migration-specific append-only metadata
+bound to actual batch+case hash and currentVALIDATINGepoch. Upload/list/download
+under same provenance coverage authority, original-response replay actor/hashbound.
+Use shared canonical filevalidation, not a second approval/posting authority.
+
+Important:177 batch/case/evidence SELECT/INSERT-only tables have UPDATE revoked.
+SELECT FOR UPDATE/SHARE would require UPDATE privilege. Serialize batch draft/evidence/
+resolution commands with a consistent pg_advisory_xact_lock under shared cutover
+fence, reused by DB insert guard and rollback reconciliation, not weakened privileges.
+Order future drafts: cutover -> current authority -> batch advisory -> topology/customer
+-> case/document. Approval source-owner lock must use same batch ordering. BEGIN has
+exclusivecutover beforeeverything, so it can use existing path.
+
+Allow PROVENANCE_RESOLUTION operation in VALIDATING when actual evidence/resolution
+service installed; retain MIGRATION_APPROVAL/BASELINE/FINALIZATION hardclosure until
+those real owners are installed. Update WarehouseSchemaITPolicy test currently expects
+both baseline andresolution tofailINDEPENDENT_APPROVER_REQUIRED. Allordinarywrites
+remainclosed. Rootcustomerportcurrentlookup+mastercoverage canbefactored reusable
+access helper for query/evidence/resolutions; preserve scope tests.
+
+Follow evidence with evidence-bound append-only case resolutions: BASELINE_STOCK
+(known serialized1EA or explicit legacyunitconversion, preserved source raw quantities),
+PROVENANCE_ONLY (excluded availability), DUPLICATE (actualsameidentity/link, no counttwice),
+and explicit pending-effect cancellation/reconciliation. Keep snapshotimmutable and
+record separate decision history. Final seal/approval must exclude requesters/resolvers/
+custodians from decision; unknown value uses all-tier unvalued review, no fake0cost.

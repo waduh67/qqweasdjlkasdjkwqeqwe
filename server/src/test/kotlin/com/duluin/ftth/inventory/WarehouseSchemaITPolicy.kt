@@ -176,7 +176,8 @@ class WarehouseSchemaITPolicy {
         val stale = assertThrows<WarehouseContractException> { transaction(existing) { policy.lockForCommand(0, WarehouseOperationClass.CONTROL_PLANE) } }
         assertThat(stale.error.code).isEqualTo(WarehouseErrorCode.STALE_CUTOVER)
         assertThat(transaction(existing) { policy.finalizeValidation(1) }).isEqualTo(CutoverTransitionUnavailable.INDEPENDENT_APPROVAL_NOT_INSTALLED)
-        for (operation in listOf(WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.PROVENANCE_RESOLUTION)) {
+        transaction(existing) { policy.lockForCommand(1, WarehouseOperationClass.PROVENANCE_RESOLUTION).assertHeld() }
+        for (operation in listOf(WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.MIGRATION_APPROVAL, WarehouseOperationClass.CUTOVER_FINALIZATION)) {
             val failure = assertThrows<WarehouseContractException> { transaction(existing) { policy.lockForCommand(1, operation) } }
             assertThat(failure.error.code).isEqualTo(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
         }
