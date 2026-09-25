@@ -4,10 +4,10 @@ set -euo pipefail
 source "$(dirname -- "${BASH_SOURCE[0]}")/test-environment.sh"
 umask 077
 
-[[ $# -ge 1 ]] || refuse 'usage: qa.sh server|replenishment|wave5|web-test|web-check|kmp|browser|stop'
+[[ $# -ge 1 ]] || refuse 'usage: qa.sh server|projection-upgrade|replenishment|wave5|web-test|web-check|kmp|browser|stop'
 MODE=$1
 shift
-case "$MODE" in server|replenishment|wave5|web-test|web-check|kmp|browser|stop) ;; *) refuse 'unknown QA mode' ;; esac
+case "$MODE" in server|projection-upgrade|replenishment|wave5|web-test|web-check|kmp|browser|stop) ;; *) refuse 'unknown QA mode' ;; esac
 reject_overrides
 load_environment
 OWNED_PIDS=' '
@@ -21,6 +21,7 @@ export_database() {
     export FTTH_S3_BUCKET="${1//_/-}" FTTH_SCHEDULING_ENABLED=false FTTH_MONITORING_SERVER_POLL_ENABLED=false
     export FTTH_RADIUS_ENABLED=false FTTH_PROVISIONING_AUTO_APPLY_ENABLED=false FTTH_BILLING_PLATFORM_ENABLED=false
     export WAREHOUSE_QA=true WAREHOUSE_ENVIRONMENT_MARKER="$WH_MARKER"
+    export WAREHOUSE_DATABASE_FIXTURE_SCRIPT="$ROOT/scripts/warehouse/database-fixture.sh"
 }
 
 
@@ -36,6 +37,11 @@ web() { (cd "$ROOT/web" && timeout --kill-after=15s 900s "$@"); }
 
 
 case "$MODE" in
+    projection-upgrade)
+        [[ $# == 0 ]] || refuse 'projection-upgrade takes no arguments'
+        source "$ROOT/scripts/warehouse/projection-upgrade.sh"
+        projection_upgrade
+        ;;
     wave5)
         [[ $# == 0 ]] || refuse 'wave5 takes no arguments'
         source "$ROOT/scripts/warehouse/wave5-smoke.sh"
@@ -54,6 +60,10 @@ case "$MODE" in
             esac
         done
         [[ " ${args[*]} " == *' --no-parallel '* ]] || args+=(--no-parallel)
+        if [[ " ${args[*]} " != *' --tests '* ]]; then
+            source "$ROOT/scripts/warehouse/projection-upgrade.sh"
+            projection_upgrade
+        fi
         gradle :server:test "${args[@]}"
         ;;
     web-test)

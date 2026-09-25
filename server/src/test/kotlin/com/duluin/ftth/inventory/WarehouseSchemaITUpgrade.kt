@@ -140,23 +140,8 @@ class WarehouseSchemaITUpgrade {
         .schemas(schema).defaultSchema(schema).target(target).locations("classpath:db/migration").load()
 
     private fun isolated(block: (String, String, Connection) -> Unit) {
-        assertThat(env("WAREHOUSE_QA")).isEqualTo("true")
-        val baseUrl = env("SPRING_DATASOURCE_URL")
-        assertThat(baseUrl).isEqualTo("jdbc:postgresql://127.0.0.1:25432/warehouse_test")
-        val schema = "warehouse_schema_" + UUID.randomUUID().toString().replace("-", "")
-        val url = "$baseUrl?currentSchema=$schema,public"
-        DriverManager.getConnection(baseUrl, env("SPRING_FLYWAY_USER"), env("SPRING_FLYWAY_PASSWORD")).use { owner ->
-            owner.createStatement().use {
-                it.execute("CREATE SCHEMA $schema AUTHORIZATION warehouse_owner")
-                it.execute("GRANT USAGE ON SCHEMA $schema TO warehouse_app")
-                it.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA $schema GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO warehouse_app")
-                it.execute("SET search_path TO $schema,public")
-            }
-            try {
-                block(schema, url, owner)
-            } finally {
-                owner.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") }
-            }
+        WarehouseSchemaDatabase(null).use { database ->
+            database.ownerFixture { owner -> block(database.schema, database.url, owner) }
         }
     }
 

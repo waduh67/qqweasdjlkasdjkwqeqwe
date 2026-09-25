@@ -1,3 +1,85 @@
+## Current checkpoint: dedicated database isolation gate passes 10/10
+
+Follows pushed1f4ebece; locate containing commit with git log -1. Goal ACTIVE.
+Tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN. Continue after commit/push.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. No subagents,
+production deployment, main merge, or native release. Both QA volume sets retained.
+
+R4 database-isolation gate PASS10tests/4suites/5m44s, zero failures/errors/skips:
+SchemaUpgrade3, ProvisioningMigrationCompatibility4, DatabaseIsolation1, ReceiptRestart2.
+New marker-verified database fixtures prevent historical public-qualified migrations
+from replacing shared QA functions. App remains non-owner/NOSUPERUSER/NOBYPASSRLS/
+NOCREATEDB; migration owner NOCREATEDB. Exact129/127 provisioning guards downgrade
+invalid old provenance; clean expansion/collisions/units preserved. Real receipt
+socket-loss/SIGKILL and transaction-termination recovery pass. Safe proof task46/
+database-isolation-verification.json; raw R1–R4 failures/results remain private.
+
+Known QA corruption: prior legacy sibling-schema runs replaced four shared public
+functions from V175.132 although Flyway remains178.7. Asset browserR3 failed4cases
+as a result. No business rows were manually changed; no production migration needed.
+V178.6 andV178.7 immutable in BOTH retained environments. Next version178.8.
+
+ACTIVE followup: .omo/runtime/isolation-followup-r2.sh/log (session61520). It checked
+10/10 then runs repair-qa-functions-r1.sh: migrate fresh reference, restore only known
+four drifting functions, compare ALL public rows/counts/digests and Flyway history.
+Then projection-upgrade-r2.sh (new database adapter; historical application pinned),
+then portal-contact-green.sh. Inspect actual results; failure stops later phases.
+Do not launch duplicate QA or wait for old canceled wrappers. Current default QA is
+new marker98b38fbf54518f766065f31955d52574; no environment override or volume deletion.
+
+Historical projection regression moved unchanged to server/src/historicalTest.
+Full qa.sh server now makes its version-correct pinned application gate mandatory,
+then runs all modern tests. R1 historicaltest1PASS, but wrapper cleanup failed;
+R2 helper verification still pending at this checkpoint. No skipped historical gate.
+
+UNCOMMITTED drafts: legacy browser now uses a dedicated DB plus shared function
+fingerprints and expected database readiness; still needs6 UI phases. Customer area
+bootstrap fix already pushed71d5; legacy rerun remains. Portal REQUIRES_NEW committed
+contact entrypoint has real red regression; green pending. Asset history screenshots,
+runbooks/preflight, Docker build/privacy fixes are still drafts, not release proof.
+
+NEXT: inspect repair/historical/portal; commit each verified checkpoint. Finish legacy
+cutover6 and all real browser gates after repair; fullserver/web/KMP regression;
+runbook preflight; mandatoryCI/image smoke; F1–F4 and concrete user review. Never
+print/commit raw auth traces, env, logs/XML. Do not final at checkpoint. Older notes
+below include superseded targets, failed runs and canceled queues.
+
+## Active checkpoint: QA database isolation repair
+
+Follows pushed1f4ebece. Goal ACTIVE; tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Continue after
+checkpoints. No subagents authorized; no production deployment/main merge.
+
+V175.132 explicitly replaces four public.* functions. Legacy sibling-schema browser
+migration overwrote shared warehouse_e2e functions despite shared Flyway178.7. That
+caused matrixR3 customer-assets4 failures (RETURN_ASSET_INSPECTION_BINDING). Earlier
+asset4PASS predates corruption; issue/returns/exceptions8PASS remains recorded. No
+product migration needed. V178.6/V178.7 immutable BOTH environments; next178.8.
+
+Uncommitted database-fixture.sh creates marker-verified generated databases; owner
+stays NOCREATEDB and app non-owner/NOSUPERUSER/NOBYPASSRLS/NOCREATEDB. Migration,
+provisioning, restart and legacy browser fixtures use separate databases/public.
+Shared function fingerprints must remain identical. IsolationR1 failed8setup cases:
+TimescaleDB requires CREATE EXTENSION first. Corrected. R3 passed5/10; schema target0 and two stale provisioning targets failed.
+Those fixtures are corrected; R4 is running with10-case gate. See task-46.md.
+isolation-followup-r2.sh runs repair/historical/portal only after R4 is fully green.
+Shutdown grace is60s, volumes retained. ShellCheck new/changed harnesses PASS;
+test-environment.sh bash syntax PASS, four preexisting ShellCheck warnings remain.
+
+Historical projection test moved to server/src/historicalTest. qa.sh full server
+runs pinned version-correct application gate first. R1 test1PASS/two corruptions,
+but wrapper cleanup failed; new database adapter must rerun via projection-upgrade.
+Old queued legacyR4/portalgreen/preflight/fullserver are CANCELED. Portal contact
+AFTER_COMMIT fix has real red test; green pending. Legacy6browser cases pending.
+
+Prepared private repair-qa-functions-r1.sh creates a fresh migrated reference,
+restores only the four known drifting shared QA functions and verifies ALL public
+row counts/digests and Flyway history unchanged. Run after isolation gate passes.
+Then historical gate, portalgreen, legacy6/assets4, fullserver/web/KMP, preflight,
+CI/imagechecks, F1–F4 and concrete user review. Docs/preflight/Docker drafts untested.
+Archive raw reports privately before reruns; never commit env/auth logs/XML/traces.
+Do not final at checkpoint. Notes below are historical, including stale queues.
+
 ## Current checkpoint: real customer asset journeys pass; task45 continues
 
 Follows e3e9708b; locate containing commit with git log -1. Goal ACTIVE.

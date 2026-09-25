@@ -135,8 +135,8 @@ SQL
     local database
     for database in warehouse_test warehouse_e2e; do
         compose exec -T postgres psql -X -U warehouse_admin -d "$database" -v ON_ERROR_STOP=1 >/dev/null <<SQL
-CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS timescaledb;
+CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE SCHEMA IF NOT EXISTS warehouse_environment AUTHORIZATION warehouse_admin;
 CREATE TABLE IF NOT EXISTS warehouse_environment.identity (marker text PRIMARY KEY);
 INSERT INTO warehouse_environment.identity SELECT '$WH_MARKER' WHERE NOT EXISTS (SELECT FROM warehouse_environment.identity);
@@ -164,7 +164,7 @@ environment_main() {
     owned_resources
     case "$1" in
         up)
-            trap 'status=$?; trap - EXIT INT TERM; if (( status != 0 )); then owned_resources && compose down --timeout 10; fi; exit "$status"' EXIT
+            trap 'status=$?; trap - EXIT INT TERM; if (( status != 0 )); then owned_resources && compose down --timeout 60; fi; exit "$status"' EXIT
             trap 'exit 130' INT
             trap 'exit 143' TERM
             compose up -d --wait --wait-timeout 150
@@ -177,7 +177,7 @@ environment_main() {
             check_environment
             ;;
         check) check_environment ;;
-        down) compose down --timeout 10; printf 'PASS: removed only owned containers/network; volumes retained\n' ;;
+        down) compose down --timeout 60; printf 'PASS: removed only owned containers/network; volumes retained\n' ;;
     esac
 }
 

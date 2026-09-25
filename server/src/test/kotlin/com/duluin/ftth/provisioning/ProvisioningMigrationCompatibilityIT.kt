@@ -3,8 +3,6 @@ package com.duluin.ftth.provisioning
 import com.duluin.ftth.common.domain.UuidV7
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.flywaydb.core.Flyway
-import org.flywaydb.core.api.MigrationVersion
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -18,20 +16,18 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import com.duluin.ftth.provisioning.adapter.outbound.persistence.NormalizedStateJsonCodec
-import javax.sql.DataSource
+import com.duluin.ftth.inventory.WarehouseSchemaDatabase
 
 @SpringBootTest
 @ActiveProfiles("test")
 class ProvisioningMigrationCompatibilityIT {
-    @Autowired private lateinit var dataSource: DataSource
     @Autowired private lateinit var normalizedStateCodec: NormalizedStateJsonCodec
 
     @Test
-    fun `v127 downgrades legacy management evidence bound to another device`() {
-        val schema = "task4_source_upgrade_${UuidV7.generate().toString().replace("-", "")}"
-        dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
-        try {
-            flyway(schema, "126").migrate()
+    fun `v129 downgrades legacy management evidence bound to another device`() {
+        WarehouseSchemaDatabase("128").use { database ->
+            val schema = database.schema
+            val dataSource = database.dataSource
             val tenantId = UuidV7.generate()
             val evidenceId = UuidV7.generate()
             val evidenceDeviceId = UuidV7.generate()
@@ -59,7 +55,7 @@ class ProvisioningMigrationCompatibilityIT {
                 }
             }
 
-            flyway(schema).migrate()
+            assertThat(database.migrate("129").migrationsExecuted).isEqualTo(1)
 
             dataSource.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -84,17 +80,15 @@ class ProvisioningMigrationCompatibilityIT {
                     }
                 }
             }
-        } finally {
-            dataSource.connection.use { connection -> connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") } }
+            database.migrate()
         }
     }
 
     @Test
-    fun `v125 downgrades unbound legacy certification to fail closed provisional evidence`() {
-        val schema = "task4_upgrade_${UuidV7.generate().toString().replace("-", "")}"
-        dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
-        try {
-            flyway(schema, "124").migrate()
+    fun `v127 downgrades unbound legacy certification to fail closed provisional evidence`() {
+        WarehouseSchemaDatabase("126").use { database ->
+            val schema = database.schema
+            val dataSource = database.dataSource
             val tenantId = UuidV7.generate()
             val certificationId = UuidV7.generate()
             val certifiedAt = java.time.Instant.parse("2026-09-02T12:00:00Z")
@@ -114,7 +108,7 @@ class ProvisioningMigrationCompatibilityIT {
                 }
             }
 
-            flyway(schema).migrate()
+            assertThat(database.migrate("127").migrationsExecuted).isEqualTo(1)
 
             dataSource.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -130,17 +124,15 @@ class ProvisioningMigrationCompatibilityIT {
                     }
                 }
             }
-        } finally {
-            dataSource.connection.use { connection -> connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") } }
+            database.migrate()
         }
     }
 
     @Test
     fun `v120 upgrades legacy plan hashes and preserves valid legacy normalized rows`() {
-        val schema = "task1_upgrade_${UuidV7.generate().toString().replace("-", "")}"
-        dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
-        try {
-            flyway(schema, "119").migrate()
+        WarehouseSchemaDatabase("119").use { database ->
+            val schema = database.schema
+            val dataSource = database.dataSource
             val tenantId = UuidV7.generate()
             val poolId = UuidV7.generate()
             val profileId = UuidV7.generate()
@@ -176,7 +168,7 @@ class ProvisioningMigrationCompatibilityIT {
                 }
             }
 
-            flyway(schema).migrate()
+            database.migrate()
 
             dataSource.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -237,17 +229,14 @@ class ProvisioningMigrationCompatibilityIT {
                     }.isInstanceOf(java.sql.SQLException::class.java)
                 }
             }
-        } finally {
-            dataSource.connection.use { connection -> connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") } }
         }
     }
 
     @Test
     fun `v120 fails closed when a legacy normalized value contains device instructions`() {
-        val schema = "task1_unsafe_${UuidV7.generate().toString().replace("-", "")}"
-        dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
-        try {
-            flyway(schema, "119").migrate()
+        WarehouseSchemaDatabase("119").use { database ->
+            val schema = database.schema
+            val dataSource = database.dataSource
             val tenantId = UuidV7.generate()
             val observationId = UuidV7.generate()
             val deviceId = UuidV7.generate()
@@ -262,17 +251,9 @@ class ProvisioningMigrationCompatibilityIT {
                 }
             }
 
-            assertThatThrownBy { flyway(schema).migrate() }
+            assertThatThrownBy { database.migrate() }
                 .hasMessageContaining("LEGACY_NORMALIZED_STATE_UNSAFE")
-        } finally {
-            dataSource.connection.use { connection -> connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") } }
         }
-    }
-
-    private fun flyway(schema: String, target: String? = null): Flyway {
-        val configuration = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
-        if (target != null) configuration.target(MigrationVersion.fromVersion(target))
-        return configuration.load()
     }
 
     private fun legacyHash(deviceId: java.util.UUID, attributes: Map<String, String>): String {
