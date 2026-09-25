@@ -1,3 +1,36 @@
+## Historical resume preflight corrected; rerun only the unexecuted historical stage
+
+IMPORTANT: originalfocusedR4/session91758 has ENDED exit1. Its241modern cases/23suites
+PASSED and were archived. Historical stage did NOT execute any test: retained Git
+worktree status collapsed the known untracked helper file into a directory entry,
+which the strict file allowlist rejected. No database lock/hung JVM: owned cleanup
+completed and no Java/PG remains. Do not keep treating91758 as running.
+
+Fix in this validation checkout: historical-upgrades uses --untracked-files=all;
+exact file allowlist and byte comparison against pinned migrations stay intact.
+Historical input proof now includes runner SHA. The actual overlay code was executed
+against disposable Git repositories: rerun failed before the fix; all3 regressions
+now pass (repeat accepted, extra file rejected/preserved, changed pinned migration
+rejected/preserved). Added required CI setup check. Workflow5/actionlint/syntax PASS.
+Safe proof task46/historical-overlay-reuse-verification.json. Application/migration/
+modern-test source unchanged, so the existing241-case proof remains applicable.
+
+NEXT: commit/push this fix, fast-forward clean original, run a NEWstandalone historical
+wrapper with the outer host lock; preserve all existing focused/historical evidence.
+Do not repeat241modern merely for this script-only correction. After7historicalPASS,
+prepare full-server-r7.sh: bind modern inputs to2c1d8e08 allowing only evidence/docs,
+historical-only test/runner andCI setup changes; bind historical inputs to the exact
+new runner via its recorded hash. Then run mandatory unfiltered qa.sh server.
+Old full-server-r6.sh rejects any scripts change and is superseded by that new runner.
+Never delete/reset existing historical worktrees to make preflight pass.
+
+CI36131581036 at2c1d8e08 still runs its full/historical stage on fresh checkouts;
+allnonserverjobs/modernfocused passed. Preserve finalresult. Verified evidence-only
+8beaca04 is pushed; its duplicateCI36133599587 was cancelled BEFORE anyjob started.
+Original remains2c1d8e08 until fast-forward. Validation is the current EDIT checkout.
+GoalACTIVE;46–48/F1–F4 remainopen; no revieweragents or finalapproval authorized.
+Continue aftercommit/push, no checkpointfinal.
+
 ## Verified checkpoint:241focused cases pass; current historical and full gates pending
 
 2c1d8e08171a1914e99987f5b930c572630b0d4f is pushed on validation branch and integrated

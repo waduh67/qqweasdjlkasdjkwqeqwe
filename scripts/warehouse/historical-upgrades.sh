@@ -29,13 +29,14 @@ overlays = tests | {name: name for name in helpers}
 migrations = 'server/src/main/resources/db/migration'
 current_migrations = {str(path.relative_to(current)): path for path in (current / migrations).glob('*.sql')}
 allowed = set(overlays) | set(current_migrations)
-status = subprocess.check_output(['git', '-C', str(old), 'status', '--porcelain'], text=True)
+status = subprocess.check_output(['git', '-C', str(old), 'status', '--porcelain', '--untracked-files=all'], text=True)
 assert all(line[3:] in allowed and line[:2] in (' M', '??') for line in status.splitlines()), 'Unexpected historical worktree modifications'
 pinned = subprocess.check_output(['git', '-C', str(old), 'ls-tree', '-r', '--name-only', 'HEAD', migrations], text=True).splitlines()
 for name in pinned:
     original = subprocess.check_output(['git', '-C', str(old), 'show', 'HEAD:' + name])
     assert original == (old / name).read_bytes() == (current / name).read_bytes(), f'Historical migration changed: {name}'
-inputs = {}
+runner = 'scripts/warehouse/historical-upgrades.sh'
+inputs = {runner: hashlib.sha256((current / runner).read_bytes()).hexdigest()}
 for name, source in current_migrations.items():
     target = old / name
     if target.exists():
