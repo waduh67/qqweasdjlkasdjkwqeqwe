@@ -296,3 +296,11 @@ Recovery drafts saved in task46 evidence (not claimed verified):
 All three patches pass git apply --check only. Apply AFTER full-serverR3 completes;
 then compile/focused affected suites, inspect and fix actual failures, preserve old
 full reports, and run the complete suite again. Sources are still unchanged.
+
+## 2026-09-25 temporary development swap
+
+Added4GiB `/swap/warehouse-development.swap` after availableRAM dropped to~400MiB
+and original512MiB swap was full. Btrfs filesystem mkswapfile; swapon; nofstabchange.
+Preserved all existing processes/resources. Reactivateafterreboot withsudo swapon;
+only deactivate/remove afterworkstops and sufficientRAM is available. LocalR3still
+RUNNING1513pass39failobserved; no finalreport/claim.

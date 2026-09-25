@@ -1,3 +1,24 @@
+## Runtime resilience checkpoint: temporary Btrfs swap added
+
+Full R3/session11018 and CI36116539885 are still running; no final PASS. Local
+observation is1513passed/39failed, with existing fixes still unapplied. Preflight
+R2/session47709 remains queued. Do not edit active or queued QA/source inputs.
+
+At10:04UTC the15GiB host had only~400MiB available and its512MiB swap was full.
+Created and activated a4GiB Btrfs-compatible swap file at
+`/swap/warehouse-development.swap` using `btrfs filesystem mkswapfile` and `swapon`.
+No process was killed, no existing swap changed, and no fstab/persistent boot change.
+If the VPS reboots, the file persists but needs `sudo swapon /swap/warehouse-development.swap`
+to reactivate. Do not `swapoff` while RAM is constrained. Once development stops
+and sufficient free RAM exists, the task-owned file can be deactivated and removed.
+Root Codex itself uses~9.6GiB RSS; continue serial QA and avoid additional JVMs.
+
+Read-only source review confirms all pinned migrations match byte-for-byte at the
+three proposed historical app heads (222/265/275files). Preliminary posting/unit/
+CI/publication observations are saved privately in release-source-review-preliminary.json;
+they are NOT final independent F1–F4 approval. Core next step remains complete R3,
+preserve all available results, fix fixtures, focused/historical/full retest.
+
 ## Historical regression supplement: five version-correct application fixtures prepared
 
 Follows pushed0ee64efd. Full R3/session11018 STILL RUNNING, now over1386passed and
