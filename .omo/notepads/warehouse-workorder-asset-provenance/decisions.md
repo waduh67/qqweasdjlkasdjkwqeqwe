@@ -1,3 +1,9 @@
+## 2026-09-25: confirmed tenant retention and independent final review
+
+The user explicitly selected: reject deletion of tenants with protected history and use Suspend; empty tenants remain deletable. The implemented TenantEraser policy and additive V178.9 already pass all three HTTP deletion cases plus the historical control-cascade upgrade. No destructive purge path is requested.
+
+The user also explicitly authorized separate reviewer agents after fixes and primary tests are ready. Run independent F1–F4 review at that point; authorization is not a review verdict or merge/deploy approval.
+
 # Decisions — warehouse-workorder-asset-provenance
 
 Architectural choices and rationales discovered during work on this plan.

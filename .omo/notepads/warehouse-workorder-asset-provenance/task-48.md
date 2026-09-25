@@ -1,3 +1,9 @@
+## Current gate checkpoint: 28 guards and actual V178.9 image smoke pass
+
+All five documented Python guard commands passed: result parser11, private artifact4, actual workflow5, exact-image publication5, historical overlay3; actionlint passed. Source-bound proof: task48/current-release-guard-verification.json. This supersedes the earlier17/24-test counts without changing those historical receipts.
+
+CI36131581036 at2c1d8e08 has passed all nonserver jobs, including the actual server/web image smoke, restart with unchanged image IDs, real command/read snapshots, all22 browser and6 legacy upgrade cases,576web,44shared and2iOS compilation tasks. Decrypted actual reports were revalidated privately; source-bound proof: task46/ci-2c1d8e08-nonserver-verification.json. Publication and deploy have not run. The full unfiltered server and aggregate CI remain pending, so task48 is still IN PROGRESS.
+
 # Task48 — CI/release gates (IN PROGRESS)
 
 Foundation: warehouse workflow requires full server + historical upgrade, web checks,

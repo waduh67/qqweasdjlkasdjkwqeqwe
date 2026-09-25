@@ -119,7 +119,7 @@ Kasus riwayat saja dan saldo awal nol tidak boleh membuat unit atau biaya fiktif
 ID pelanggan/ONU, serial mentah, dan sejarah lama tetap dipertahankan.
 
 Versi migrasi dan aturan checksum ada pada [manifest migrasi](warehouse-migrations.md).
-Versi tertinggi saat panduan ini ditulis adalah **178.8**. File yang sudah diterapkan
+Versi tertinggi saat panduan ini ditulis adalah **178.9**. File yang sudah diterapkan
 tidak boleh diedit. Ambil cadangan database dan object storage yang konsisten,
 verifikasi latihan restore pada lingkungan terisolasi, lalu catat identitas image
 dan hasil preflight sebelum rilis. Migrasi membutuhkan role pemilik; aplikasi

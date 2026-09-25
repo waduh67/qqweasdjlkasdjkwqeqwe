@@ -33,9 +33,11 @@ focused gate (23suites, zero failures/errors/skips). Direct deletion of live con
 wrong-scope parent deletion and deletion with protected history all reject; empty
 parent deletion removes both controls and preserves the other tenant. CI36131581036
 also passed its focused stage and all nonserver jobs, including V172→178.9 browser
-upgrade/restart with2positive/6negative preflight probes. Historical application
-replays and the complete unfiltered server gate are still pending. Safe proofs:
-`task46/local-focused-r4-verification.json` and `ci-2c1d8e08-nonserver-verification.json`.
+upgrade/restart with2positive/6negative preflight probes. All seven isolated historical
+application replay tests passed through the complete178.9 migration chain, with the
+pinned migration bytes and current runner inputs verified. The complete unfiltered
+server gate remains pending. Safe proofs: `task46/local-focused-r4-verification.json`,
+`ci-2c1d8e08-nonserver-verification.json` and `local-historical-r5-verification.json`.
 
 ## V178.8: check return-title tenant scope before reading a request
 

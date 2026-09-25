@@ -1,0 +1,76 @@
+{
+  "status": "PASSED_DOCUMENTATION_AND_RUNBOOK_CHECKS",
+  "verificationSource": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-2c1d8e08-nonserver-verification.json",
+  "verificationSourceSha256": "60561fddaa38ebb803aa55ed299b7c146e79a75ca447fa8b0e147ed2e49e04b0",
+  "ciRun": 36131581036,
+  "testedProductCommit": "2c1d8e08171a1914e99987f5b930c572630b0d4f",
+  "productAndRelevantRunnerInputsUnchangedAt": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
+  "documentInputs": {
+    "docs/warehouse.md": "d515cd3cb3d38955c03ccea64630bc46bf93c9bf9f32907d66fbe7fa55cc09dc",
+    "docs/warehouse-review.md": "070aa20fa40417ee5f2d5c10317e5e7a768b6130f1ae425a02afbb2a608c66c9",
+    "docs/warehouse-migrations.md": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94",
+    "docs/work-order.md": "ce742ca72f391fb6fecacf3493185b1eabe2ab467d9c7384924cfab44705bb34",
+    "docs/mobile.md": "fc1872cebc4a7842183ba38b8bffb1eafccbdf02e3d4bf91a0c5916eca5ff807",
+    "docs/warehouse-ci.md": "8c676d849fb49aaddf2cce730da284642db90729dc5da52194d55afdeaec0da8",
+    "deploy/DEPLOY.md": "465d96303300c1c003483b0513b1e5bd5780bb688d26a02624d0d970be3e10d9"
+  },
+  "relativeLinks": "PASSED",
+  "highestPackagedMigration": "178.9",
+  "nextMigration": "178.10",
+  "browserTests": 22,
+  "legacyBrowserTests": 6,
+  "readOnlyPreflight": {
+    "status": "PASSED",
+    "schemaBefore": "172",
+    "schemaAfter": "178.9",
+    "readOnly": true,
+    "positiveProbes": 2,
+    "negativeProbes": 6,
+    "negativeReasons": [
+      "migration mismatch",
+      "SKU unit mismatch",
+      "cutover mismatch"
+    ],
+    "rows": [
+      {
+        "database": "warehouse_fixture_af3c6565792905346dbb4dda6985c317",
+        "schema": "public",
+        "applicationRole": "warehouse_app",
+        "version": "178.9",
+        "cutover": "ENFORCED",
+        "customers": 1,
+        "onus": 1,
+        "positions": 0,
+        "movements": 1,
+        "verifiedQuantityByUnit": {}
+      },
+      {
+        "database": "warehouse_fixture_af3c6565792905346dbb4dda6985c317",
+        "schema": "public",
+        "applicationRole": "warehouse_app",
+        "version": "178.9",
+        "cutover": "ENFORCED",
+        "customers": 1,
+        "onus": 1,
+        "positions": 0,
+        "movements": 1,
+        "verifiedQuantityByUnit": {}
+      }
+    ],
+    "preflightSqlSha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+    "reports": {
+      "preflight-1-migration.txt": "5a160589e0562f9880d4fb5ee5644694dc144e01c023e095b5b65d5bbe8140ec",
+      "preflight-0-unit.txt": "b9285356ccbb9d22b4b331bc8d843b0c72ddc8b5e7ce650d857c742b85ebb4c9",
+      "preflight-0-migration.txt": "c6b15f7fd2a2b6d6ff90bf030b460b85bc83872034d934bb2addd33048d94ae2",
+      "preflight-0-positive.txt": "552f40c061b0e7c251e0f89d8790f2230335c0b5cf6f53ad9a81e55e8c48e715",
+      "preflight-1-positive.txt": "2744c1cceb49b14f51091a6a5418e372a2c829f482f29f3fc4811a7932a59a6e",
+      "preflight-0-cutover.txt": "c7e1827394bdab21c922bd04647fbd6fd883074d4229a3754c51b4002ed756bc",
+      "preflight-1-cutover.txt": "d7389c544d50c7d27bc0019c4d3f43923678c7296a818fd9162e67be95338b37",
+      "preflight-1-unit.txt": "0b178c6de30ab79af4560aa36023c73175c3b4dd19e4fe32717e88e326266385"
+    }
+  },
+  "preservedLegacyCustomers": 2,
+  "preservedLegacyOnus": 2,
+  "upgradedUiCatalogSkus": 2,
+  "limitation": "This is implementing-agent runbook verification. Full server regression, aggregate release acceptance and independent final review remain separate gates."
+}

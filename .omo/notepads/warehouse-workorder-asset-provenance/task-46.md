@@ -1,3 +1,24 @@
+## Seven historical upgrades now PASS; full current regression is next
+
+Historical-only R5/session65866 ended0 after all7tests passed across4pinned applications,
+app-role isolated databases and the complete178.9 migration chain. Title pool eviction,
+episode review and discovery receipt forward-hash replay all passed without weakening
+their original assertions. Actual XML and every current migration/test/runner input
+were revalidated; safe proof task46/local-historical-r5-verification.json. The runtime
+report root remains in historical-upgrades-latest.txt. This supersedes all earlier
+pending/failure status for the historical stage, but not the full current regression.
+
+241focused modern tests/23suites at2c1d8e08 remain PASS with matching modern inputs.
+Prepared full-server-r7.sh requires both proofs and then executes unfiltered qa.sh
+server (projection +7historical +complete modern suite), archives results and requires
+>3700modern tests including ModularityTests and WarehouseCompatibilityIT. Launch after
+this checkpoint is committed and original is clean/fast-forwarded. Freeze original
+while it runs; edits belong in validation. Do not reuse older R4/R5/R6 wrappers.
+
+The user explicitly authorized independent reviewers after fixes/primary tests are
+ready and confirmed history-bearing tenants must reject deletion/use Suspend. Keep
+working after commit/push; task46 remains IN PROGRESS until full regression passes.
+
 ## Primary checkout resumed after the old full regression was archived
 
 Continue in the ORIGINAL checkout on `work/warehouse-completion`. It was safely

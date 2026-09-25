@@ -92,11 +92,13 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-results.py
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-artifacts.py
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-workflow.py
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-publish-images.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-historical-overlays.py
 actionlint
 ```
 
 These checks exercise the result parsers, actual encryption/decryption, and the
-workflow's acceptance script with failing prerequisites. Real application gates
+workflow's acceptance script with failing prerequisites, and safe reuse of historical
+worktrees without accepting unknown files or changed pinned migrations. Real application gates
 remain necessary; a successful parser test does not prove the application passed.
 
 Image publication additionally rejects missing readiness, restart, real HTTP,

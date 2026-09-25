@@ -1167,7 +1167,7 @@ head, guard salah, dan race replace-versus-delete.
 Untuk rilis gudang, baca [panduan operasi](../docs/warehouse.md),
 [review dan probe read-only](../docs/warehouse-review.md), serta
 [manifest migrasi](../docs/warehouse-migrations.md). Versi paket gudang saat ini
-adalah **178.7**. Validasi seluruh checksum lama; bagian V166–V170 di bawah
+adalah **178.9**. Validasi seluruh checksum lama; bagian V166–V170 di bawah
 mendokumentasikan riwayat retensi bukti dan bukan lagi target versi akhir.
 Hasil gate server, clean/upgrade, browser desktop/mobile, web, dan KMP harus berasal
 dari sumber/image rilis yang sama. Perintah deploy manual juga memerlukan hasil
@@ -1199,7 +1199,7 @@ docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgre
 docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
 ```
 
-Expected upgraded version is `178.7`; a clean database must reach the same version. Take
+Expected upgraded version is `178.9`; a clean database must reach the same version. Take
 and verify a restore-capable backup first. Assert non-zero source and destination counts
 for every backfill expected to copy existing rows. Flyway migrations are forward-only:
 never edit an applied version; roll forward with a new version or restore the verified
