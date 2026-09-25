@@ -1,3 +1,32 @@
+## Running the corrected21-suite gate; mobile label visually inspected
+
+64e5057378df0b370c42dbe8d0d53b589a535126 is committed and pushed to the validation
+branch. Original was safely fast-forwarded to64e50573; compatibility-focused-r3.sh
+is RUNNING there/session6617 with21selected classes followed by7historical upgrades.
+Compilation passed and actual tests have begun. Original sources/wrapper are FROZEN;
+make necessary fixes only in this validation checkout until that runner exits.
+Previous149focused XML was hash checked and preserved before clearing active XML.
+Prepared full-server-r5.sh is NOT launched and requires21focused+7historical PASS,
+unchanged source inputs, no tracked edits, then unfiltered fullserver with14400s limit.
+Olderfull-server-r4.sh is obsolete and must not be used.
+
+CI36129278994 validates64e50573 on the validation branch. Feature36127543781/b360
+continues its complete full attempt, with allotherjobsPASS; preserve its final outcome.
+Do not cancel active CI. Migration178.8 and new tenant-deletion behavior still await
+actual focused/full results; do not describe this checkpoint as verified runtime.
+
+Downloaded/hash-checked/decrypted CI36126213391 returns artifact10860537665 and
+revalidated actual4Playwright cases (desktop2/mobile2, no skipped/flaky/failures).
+Visually inspected the mobile screenshot: Status teknis:Dikerjakan, no inherited
+shipment/custody on the reassigned technician. Complete web Git tree matches64e50573.
+Safe proof and reviewed synthetic screenshot are in task45/localized-status-browser-
+verification.json and reassigned-technician-localized-mobile.png. This does not
+certify the new server178.8; CI above exercises those current inputs separately.
+
+Continue core work after commit/push. GoalACTIVE;46–48/F1–F4 pending. User preference
+about immutable-history deletion and reviewer-agent authorization remain unanswered;
+no approval inferred, no subagents spawned. Do not final at a checkpoint.
+
 ## Active checkpoint: seven late regressions and a historical JDBC fixture correction
 
 Goal ACTIVE. Tasks1–45 DONE;46 IN PROGRESS;47–48/F1–F4 OPEN. Continue after commits.
