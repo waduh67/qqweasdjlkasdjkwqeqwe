@@ -1,0 +1,53 @@
+{
+  "phase": "M05 sealed opening review and draft request; independent approval and admission still pending",
+  "finalBuild": "SUCCESSFUL in 1m 2s",
+  "finalSuite": {
+    "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningIT",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "existing empty tenant produces an explicit zero baseline control without fake physical lines or receipt()",
+      "full batch review excludes unresolved history and seals exact stock without valuation or admission()",
+      "changed winners masters and actual evidence prevent sealing stale or incomplete proposals()"
+    ]
+  },
+  "supportingBuild": {
+    "result": "SUCCESSFUL in 2m 1s",
+    "tests": 10,
+    "failures": 0,
+    "skipped": 0,
+    "suites": {
+      "WarehouseMigrationOpeningIT": 3,
+      "WarehouseMigrationResolutionIT": 4,
+      "ModularityTests": 3
+    },
+    "note": "Same product source; final run adds SQL quantity forgery and missing original evidence replay checks to the three opening scenarios."
+  },
+  "files": {
+    "server/src/main/resources/db/migration/V177_6__warehouse_migration_opening_review.sql": "702c8a58dfdbecba78faa274bf1a7422ae9193e8fa97b58790714816a242f566",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpening.kt": "fec68c097aa684a384d5ded3eb38825adf99c71bb6403f4f442dfe631acbdf5a",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseMigrationInput.kt": "26d788011c8cf8bcd230b2b2068b8596d4c80b0a7ec82529a04cd4d6da8b4aeb",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": "cf8ef5cbe16c5b107fa6a8d26d39544c9ef3498e0ddde4eda56f6569dea524d5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "6626475425753806fa920a8b3d800c9a8b2e0200fee77edb02bd0c129ecb5bba",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseProvenanceController.kt": "717a60b3d8c109ddea191254d87e620142b58cb349ef215d49e677861919cbcb",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt": "5189fb2619309a2b0f2be1ad0cb71fce9ce657fba903d5e4a9d3dbcee2149675"
+  },
+  "checks": [
+    "Packaged V172 upgrade with colliding legacy serials, unknown-unit quantity and historical installed ONU cases boots before authenticated API review.",
+    "Full batch source manifest and latest immutable resolutions; unreviewed active sources and pending effects block a request.",
+    "Duplicate identity review binds the exact selected winner revision; changed winner and SKU revision prevent sealing.",
+    "All referenced original evidence read from actual MinIO and byte/hash validation repeated on request and replay.",
+    "Concurrent same actor/key/body returns byte-identical201 and exactly one sealed opening draft.",
+    "Only exact1EA plus82500MM proposed; physical stock, claims and pending legacy movement remain unchanged.",
+    "Unknown valuation remains NULL; no supplier or fabricated purchase is introduced.",
+    "Unresolved historical and installed sources remain null-resolution staged cases without stock.",
+    "Sealed header, lines and request cannot be rewritten or deleted by the application database role.",
+    "Forged999-unit lines rejected by the database seal guard; entire attempted draft transaction rolls back.",
+    "New resolution creates a new review hash while original response stays immutable; stale requests reject.",
+    "Wrong actor, foreign tenant and current area revocation cannot replay/read the request.",
+    "Existing empty tenant creates a zero-baseline control draft with real review location and no SKU, physical line, evidence upload, movement or stock.",
+    "Normal stock operations and final cutover remain closed until independent opening approval/admission is implemented."
+  ]
+}

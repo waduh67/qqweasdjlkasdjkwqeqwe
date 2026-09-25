@@ -1,3 +1,37 @@
+## V177.6 applied: sealed opening review
+
+V177.6 applied in the real HTTP + PostgreSQL + MinIO gate: opening review3,
+resolution4 and module graph3 passed (10tests, 0failures/skips, 2m1s).
+It is immutable. SHA-256: `702c8a58dfdbecba78faa274bf1a7422ae9193e8fa97b58790714816a242f566`.
+Next free version: V177.7; V178 remains reserved for M06.
+
+Authenticated `GET /api/v1/warehouse/provenance/batches/{batch}/review` derives the
+complete frozen source manifest plus latest resolutions. Unreviewed available
+stock and pending effects block a request. A selected physical asset additionally
+requires agreeing duplicate resolutions, including the exact current winner
+revision. Historical/installed unresolved cases stay explicit null resolutions.
+
+`POST /api/v1/warehouse/provenance/batches/{batch}/opening` requires the review hash,
+current epoch, active review warehouse/bin revision, migration reference and reason.
+It verifies the original private evidence bytes again, then atomically creates an
+OPENING_BALANCE draft with only the derived physical quantities. Unknown cost stays
+NULL. An empty tenant gets an explicit control draft without any SKU, physical line,
+evidence upload, stock or fabricated receipt. Approval/admission/finalization remain
+closed in this phase. `GET .../opening/{id}` exposes the immutable proposal.
+
+The DB re-derives the manifest and stock lines and seals the draft against later
+generic edits. Repeated actor/key/body returns the exact original response, checks
+current scope and original files, and never follows a later resolution into a
+changed response. Another resolution produces a different review for a new request;
+final posting still needs one independently approved business identity per batch.
+
+## V177.6 reservation: immutable opening review
+
+V177 through V177.5 are applied and immutable. V177.6 is reserved for complete
+batch review, exact resolution/evidence binding and sealed OPENING_BALANCE drafts.
+No physical admission, approval or posting authority is enabled by this phase.
+V178 remains reserved for M06. This reservation precedes the first apply.
+
 ## V177.5 applied: legacy fulfillment source cases
 
 V177.5 applied during the real HTTP legacy fulfillment gate and is now immutable.

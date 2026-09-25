@@ -14,3 +14,6 @@ data class MigrationStockInput(val skuId: UUID, val sourceUnit: MigrationSourceU
 data class WarehouseMigrationResolutionInput(val expectedEpoch: Long, val expectedCaseHash: String,
     val expectedResolutionRevision: Long, val kind: MigrationResolutionKind, val reason: String,
     val evidenceIds: List<UUID>, val stock: MigrationStockInput? = null, val duplicateCaseId: UUID? = null)
+
+data class WarehouseMigrationOpeningInput(val expectedEpoch: Long, val expectedReviewHash: String,
+    val reviewLocationId: UUID, val expectedReviewLocationRevision: Long, val migrationReference: String, val reason: String)

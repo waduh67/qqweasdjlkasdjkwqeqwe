@@ -5,9 +5,11 @@ import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationBeginInput
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationEvidenceInput
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationResolutionInput
+import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationOpeningInput
 import com.duluin.ftth.inventory.application.service.MigrationEvidenceService
 import com.duluin.ftth.inventory.application.service.MigrationResolutionService
 import com.duluin.ftth.inventory.application.service.WarehouseProvenanceMigrationService
+import com.duluin.ftth.inventory.application.service.WarehouseOpeningBalanceService
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -20,7 +22,24 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/warehouse/provenance")
 class WarehouseProvenanceController(private val service: WarehouseProvenanceMigrationService, private val evidence: MigrationEvidenceService,
-    private val resolutions: MigrationResolutionService) {
+    private val resolutions: MigrationResolutionService, private val opening: WarehouseOpeningBalanceService) {
+    @GetMapping("/batches/{batch}/review")
+    fun review(@PathVariable batch: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<*> {
+        if (parameters.isNotEmpty()) invalid()
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(opening.review(batch))
+    }
+    @PostMapping("/batches/{batch}/opening")
+    fun opening(@PathVariable batch: UUID, @RequestHeader("Idempotency-Key") key: String,
+        @RequestBody body: String, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        if (parameters.isNotEmpty()) invalid()
+        return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).cacheControl(CacheControl.noStore()).body(
+            opening.request(batch, WarehouseReceiptJson.decode(body, WarehouseMigrationOpeningInput::class.java), key))
+    }
+    @GetMapping("/batches/{batch}/opening/{id}")
+    fun opening(@PathVariable batch: UUID, @PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        if (parameters.isNotEmpty()) invalid()
+        return response(opening.get(batch, id))
+    }
     @PostMapping("/batches/{batch}/cases/{case}/resolutions")
     fun resolve(@PathVariable batch: UUID, @PathVariable case: UUID, @RequestHeader("Idempotency-Key") key: String,
         @RequestBody body: String, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {

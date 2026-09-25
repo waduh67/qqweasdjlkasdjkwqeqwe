@@ -1,3 +1,84 @@
+## Task43 opening review sealed and verified; independent approval/admission NEXT
+
+V177.6 is APPLIED and IMMUTABLE, SHA-256
+702c8a58dfdbecba78faa274bf1a7422ae9193e8fa97b58790714816a242f566.
+Next free V177.7; V178 remains reserved for M06. Product gate10PASS2m1s
+(Opening3,Resolution4,Modularity3); final strengthened Opening3PASS1m2s.
+Safe proof task43/opening-review-verification.json. Runtime wrappers/logs
+migration-opening-gate and migration-opening-final. Owned QA down, volumes retained.
+Goal ACTIVE:1–42 DONE;43–48/F1–F4 OPEN. Continue to completion and push checkpoints.
+
+Actual endpoints on WarehouseProvenanceController:
+GET /batches/{batch}/review, POST /batches/{batch}/opening,
+GET /batches/{batch}/opening/{id}. Prefix /api/v1/warehouse/provenance.
+WarehouseOpeningBalanceService now implements the real batch-bound overload; the
+old freeform multipart endpoint remains closed until its UI is replaced.
+Request fields expectedEpoch,expectedReviewHash,reviewLocationId,
+expectedReviewLocationRevision,migrationReference,reason plus Idempotency-Key.
+
+warehouse_migration_review_manifest derives full captured sources + latest resolution
+original JSON, ordered table/sourceId. Hash is DB jsonb text SHA256. Active AVAILABLE
+asset/balance and pending movement/checkpoint/outbox require review; history may keep
+null resolution, never auto-approved provenance. warehouse_migration_review_issues
+rederives exact baseline/master snapshot and current source hash; requires matching
+duplicate winner revision/identity. Selected asset/balance double counting is blocked.
+Current implementation loops selected asset peers; optimize with set-based identity
+groups if large-tenant profiling shows a bottleneck. Do not edit applied177.6.
+
+Store creates an actual OPENING_BALANCE DRAFT + only selected BASELINE_STOCK lines,
+stock identities still null until approved admission. No supplier, cost, purchase,
+claim promotion or stock posting. Empty tenant has zero physical lines; real active
+review warehouse/bin identifies policy scope without a fictitious SKU/quantity.
+Opening response freezes manifest, review location, current owner-source refs,
+requester/auth/cutover epochs and request metadata. Immutable DB request binds exact
+command/response, manifest, original document and expected derived physical lines.
+All sealed draft/line mutations currently fail closed; forward approval migration
+must allow only its real approved admission/terminal transitions. Same actor/key/body
+returns exact original even after later resolution, with current source scopes and
+original files rechecked. Missing actual object fails replay. SQL999-unit forgery
+fails seal and rolls back the cloned draft; direct edit/delete fails.
+
+NEXT actual independent opening approval using existing DurableApprovalService,
+WarehousePolicyEvaluationService and single WarehousePostingService. Do not introduce
+a second approval or posting owner. All configured tiers must review unknown value;
+valueNumerator/valueDenominator/currency remain NULL, never zero valuation. Existing
+DB approval columns already allow null pairs; Kotlin store currently requireNotNull.
+Include request actor + batch requester + every resolver/evidence uploader in excluded
+participants. Require candidates/delegators/delegates to cover all current source
+WO/customer areas, not only stock/review warehouse. Existing policy source rejects
+empty lines; explicitly represent review metadata separately without fake line.
+
+Current integration restrictions to change narrowly with real opening proof:
+DurableApprovalService.request takes ORDINARY_STOCK, decision invalidates non-ENFORCED;
+WarehousePostingService and assertReceiptApproval likewise requireENFORCED.
+ApprovalPostingKind needs OPENING_BALANCE and an actual owner. Approval source content
+must include sealed manifest AND current review/current source scope validation so
+later resolutions make it stale. WarehouseApprovalSourceLock should take batch advisory
+before owner WO/topology/customer locks; get/replay afterENFORCED must support frozen
+batch reads without warehouse_lock_migration_batch's VALIDATING-only restriction.
+Opening SQL seal currently blocks ALL document/line mutations, including rejection
+approval_disposition. Request drafts may repeat review hash under new keys; actual
+posting must enforce unique business identity per batch across all proposals.
+The old freeform opening form needs replaced by provenance workbench.
+
+Physical admission: reuse original selected asset IDs, preserve raw serial/MAC/legacy
+SKU fields; set warehouse SKU/unit/verified fields only through narrowly checked
+owner function. Existing warehouse_admission_guard and warehouse_claim_guard allow
+migration owner, not application promotion; use approved batch-bound guard/function,
+fixed search_path and tenant assertions, never a general bypass. Bulk/lot baseline
+may create provenance OPENING origin lot with no supplier/cost. Historical duplicate
+rows stay staged. Same transaction must admit, create single conserved posting and
+approval effect, then future finalization validates and advances epoch ENFORCED.
+Zero baseline uses approved control posting with zero legs, never fake physical leg.
+
+Still required: approved pending legacy cancellation receipt and sealed terminal
+checkpoint behavior; current MANUAL/APPLIED guards are preserved. Reserve every
+current unresolved canonical identity before finalization, including postboot/new
+or changed legacy rows; do not allow missing boot claims to be stolen by new receipt.
+Keep old claims/candidates/history. C10 active selected conflict and units validation,
+mixed tenant full packaged boot+HTTP reconciliation+restart, actual provenance UI,
+M06 then remaining44–48/F1–F4 all still outstanding.
+
 ## Task43 legacy fulfillment cutoff verified; opening approval NEXT
 
 V177.5 is APPLIED and IMMUTABLE. Next free version:177.6;178reserved. Final gate:
