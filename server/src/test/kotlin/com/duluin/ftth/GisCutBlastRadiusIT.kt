@@ -1,7 +1,5 @@
 package com.duluin.ftth
 
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -29,23 +27,11 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class GisCutBlastRadiusIT {
+class GisCutBlastRadiusIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
 
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
-
-    private val pass = "secret12345"
-
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
-
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -63,9 +49,7 @@ class GisCutBlastRadiusIT {
     @Test
     fun `putus feeder, distribusi, dan drop masing-masing menjatuhkan cakupan yang benar`() {
         val slug = "cut${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Cut Co", admin, "Admin", pass))
-        val token = login(slug, admin)
+        val token = tenant(slug)
         val s = uniq().uppercase()
 
         // Rantai POP → OLT → PON → ODC → ODP
@@ -99,10 +83,10 @@ class GisCutBlastRadiusIT {
         val customer = id(
             post(
                 "/api/customers", token,
-                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.996,"latitude":-6.246}}""",
+                """{"areaId":"${area(token)}","code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.996,"latitude":-6.246}}""",
             ),
         )
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$s"}"""))
+        val onu = registerWarehouseOnu(token, customer, "SN-$s")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odp","portNumber":1}""", 200)
 
         // Feeder POP→ODC, distribusi ODC→ODP, drop ODP→pelanggan.
@@ -179,9 +163,7 @@ class GisCutBlastRadiusIT {
     @Test
     fun `putus satu selubung menjatuhkan semua ODP yang dikupas di tengah bentang`() {
         val slug = "tap${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tap Co", admin, "Admin", pass))
-        val token = login(slug, admin)
+        val token = tenant(slug)
         val s = uniq().uppercase()
         val lat = -6.24
 
@@ -305,11 +287,11 @@ class GisCutBlastRadiusIT {
         val customer = id(
             post(
                 "/api/customers", token,
-                """{"code":"$kode","name":"Pelanggan $kode","address":"Jl. Uji",
+                """{"areaId":"${area(token)}","code":"$kode","name":"Pelanggan $kode","address":"Jl. Uji",
                     "location":{"longitude":107.01,"latitude":-6.241}}""",
             ),
         )
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$kode"}"""))
+        val onu = registerWarehouseOnu(token, customer, "SN-$kode")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":1}""", 200)
         return customer
     }

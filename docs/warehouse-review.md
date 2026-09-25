@@ -41,6 +41,9 @@ akhir. Jalur SALE mempunyai handover kepemilikan yang berbeda dengan LOAN.
 - Buat pelanggan/ONU memakai versi historis, upgrade database yang sama, lakukan
   cutover dengan saldo awal nol melalui dua petugas, kemudian restart aplikasi.
   Pelanggan dan ONU lama tetap ada; asal yang belum terbukti tidak menjadi stok baru.
+  Tenant hasil upgrade membuat katalog kabel melalui UI dan membacanya setelah
+  restart; stok tetap nol. Runner juga menjalankan preflight baca saja pada kedua
+  tenant hasil upgrade, termasuk penolakan versi, satuan, dan status yang salah.
 
 Periksa layar 1280 px, 375 px, dan tampilan tablet 768 px; tema terang/gelap;
 loading, kosong, gagal, konflik, dan hak akses ditolak. Riwayat di panel pelanggan
@@ -50,8 +53,8 @@ perlu digulir agar episode yang diperiksa benar-benar terlihat pada screenshot.
 
 Prasyarat: JDK 21, Docker Compose pada daemon lokal, Node/npm, Python 3,
 `jq`, `curl`, `flock`, dan Chromium Playwright beserta dependensi sistemnya.
-Checkout harus memuat histori Git untuk aplikasi V172 dan V175.21 yang dipatok
-runner. Jangan menjalankan beberapa checkout QA pada port yang sama sekaligus.
+Checkout harus memuat histori Git untuk aplikasi V172 dan seluruh versi V175 yang
+dipatok runner. Jangan menjalankan beberapa checkout QA pada port yang sama sekaligus.
 
 ```bash
 set -euo pipefail
@@ -83,14 +86,18 @@ dapat memasangnya. Pada Arch, gunakan paket distro untuk library yang dilaporkan
 hilang; VPS pengembangan ini memerlukan `alsa-lib`. Jangan menjalankan pemasang
 dependensi Ubuntu pada Arch.
 
-`qa.sh server` menjalankan tes historis proyeksi V175.21 → V175.22 terlebih dahulu,
-lalu seluruh tes server terbaru. Fixture historis menggunakan aplikasi yang sesuai
-schema; semua migrasi historis dibandingkan byte demi byte dengan checkout kini.
+`qa.sh server` menjalankan tes historis proyeksi V175.21 → V175.22, kemudian lima
+tes upgrade fulfillment/deployment/title/revisi episode dari schema V175 yang sesuai,
+lalu seluruh tes server terbaru. Kelima tes memakai aplikasi historis yang dipatok
+dan menerapkan seluruh rantai migrasi terbaru. Semua migrasi yang sudah ada pada
+versi historis dibandingkan byte demi byte dengan checkout kini.
 Setiap fixture migrasi memakai database terpisah dengan schema `public`; schema
 tambahan dalam database QA bersama tidak cukup karena migrasi lama menyebut nama
 `public` secara eksplisit. Runner memeriksa bahwa fungsi database QA utama tetap sama.
 Tesnya ada di `server/src/historicalTest`; tidak diabaikan atau ditandai skipped.
-Untuk mengulang gate historis saja, pakai `qa.sh projection-upgrade`.
+Untuk mengulangnya, pakai `qa.sh projection-upgrade` dan `qa.sh historical-upgrades`.
+Kedua gate wajib berhasil; focused `qa.sh server --tests ...` hanya menjalankan kelas
+pada source set server terbaru.
 
 Setiap browser spec wajib mempunyai tes berhasil di `warehouse-desktop` dan
 `warehouse-mobile`, tanpa skipped, flaky, retry otomatis, atau tes kosong.

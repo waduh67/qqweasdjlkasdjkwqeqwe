@@ -1,8 +1,6 @@
 package com.duluin.ftth
 
 import com.duluin.ftth.contract.CollectorProtocol
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -25,28 +23,13 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class IncidentIT {
+class IncidentIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
-
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
-
-    private fun newTenantAdmin(prefix: String): String {
-        val slug = "$prefix${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        return login(slug, admin)
-    }
+    private fun newTenantAdmin(prefix: String): String = tenant("$prefix${uniq()}")
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -82,9 +65,9 @@ class IncidentIT {
     /** Seperti [attachOnu] tetapi juga mengembalikan id pelanggan pemilik ONU. */
     private fun attachOnuReturningCustomer(token: String, odpId: String, port: Int): Pair<String, String> {
         val s = uniq().uppercase()
-        val customer = id(post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
+        val customer = id(post("/api/customers", token, """{"areaId":"${area(token)}","code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
         val serial = "SN-$s"
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
+        val onu = registerWarehouseOnu(token, customer, "$serial")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
         return customer to serial
     }
@@ -92,7 +75,7 @@ class IncidentIT {
     /** Pelanggan polos tanpa ONU/pasangan jaringan — tak akan pernah terdampak insiden topologi. */
     private fun bareCustomer(token: String): String {
         val s = uniq().uppercase()
-        return id(post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
+        return id(post("/api/customers", token, """{"areaId":"${area(token)}","code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
     }
 
     private fun newCollector(token: String): String =

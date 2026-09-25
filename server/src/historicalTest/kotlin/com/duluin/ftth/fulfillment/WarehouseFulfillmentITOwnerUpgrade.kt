@@ -14,8 +14,6 @@ import java.util.UUID
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseFulfillmentITOwnerUpgrade : WarehouseFulfillmentFixture() {
-    @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private lateinit var preLifecycleWriter: com.duluin.ftth.fulfillment.application.service.MaterialSettlementService
     companion object {
         private val database by lazy { WarehouseSchemaDatabase("175.29") }
         @JvmStatic @DynamicPropertySource fun properties(registry: DynamicPropertyRegistry) {

@@ -158,6 +158,72 @@ preview_web "$ROOT"
 await_json "$WAREHOUSE_E2E_WEB_URL/actuator/health"
 browser_phase restart
 snapshot restart
+# Verify the documented operator probe against the same upgraded database and
+# catalog identities created by the browser; no SQL business-data writes.
+mapfile -t preflight_fixtures < <(python3 - "$WAREHOUSE_LEGACY_RUN_DIR" <<'PY'
+from pathlib import Path
+import json, re, sys
+root = Path(sys.argv[1])
+for project in ('warehouse-desktop', 'warehouse-mobile'):
+    fixture = json.loads((root / f'{project}-fixture.json').read_text())
+    customer, sku = fixture['customer']['id'], fixture['catalogSku']['id']
+    assert all(re.fullmatch(r'[a-f0-9-]{36}', value) for value in (customer, sku))
+    assert fixture['catalogSku']['code'] == 'POST_UPGRADE_CABLE' and fixture['catalogSku']['unit'] == 'MM'
+    print(customer + '|' + sku)
+PY
+)
+[[ ${#preflight_fixtures[@]} == 2 ]] || refuse 'Both upgraded browser catalog fixtures are required'
+legacy_preflight_probe() {
+    compose exec -T postgres sh -c 'review_database=$1; shift; PGPASSWORD="$WH_APP_PASSWORD" exec psql -X -At -h 127.0.0.1 -U warehouse_app -d "$review_database" -v ON_ERROR_STOP=1 "$@"' sh \
+        "$WAREHOUSE_E2E_DATABASE" -v "tenant_id=$preflight_tenant" -v "sku_id=$preflight_sku" \
+        -v "expected_version=$1" -v "expected_unit=$2" -v "expected_cutover=$3" < "$ROOT/scripts/warehouse/preflight.sql"
+}
+preflight_index=0
+for pair in "${preflight_fixtures[@]}"; do
+    IFS='|' read -r preflight_customer preflight_sku <<< "$pair"
+    preflight_tenant=$(compose exec -T postgres sh -c 'review_database=$1; shift; PGPASSWORD="$WH_OWNER_PASSWORD" exec psql -X -At -h 127.0.0.1 -U warehouse_owner -d "$review_database" -v ON_ERROR_STOP=1 "$@"' sh \
+        "$WAREHOUSE_E2E_DATABASE" -v "customer_id=$preflight_customer" -v "sku_id=$preflight_sku" <<'SQL'
+SELECT sku.tenant_id FROM inventory_sku sku JOIN customer customer ON customer.tenant_id=sku.tenant_id
+WHERE sku.id=:'sku_id'::uuid AND customer.id=:'customer_id'::uuid AND sku.code='POST_UPGRADE_CABLE' AND sku.base_unit='MM';
+SQL
+)
+    [[ "$preflight_tenant" =~ ^[a-f0-9-]{36}$ ]] || refuse 'Upgraded browser SKU/customer tenant identity mismatch'
+    legacy_preflight_probe 178.7 MM ENFORCED > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-positive.txt"
+    for gate in migration unit cutover; do
+        case "$gate" in
+            migration) version=170; unit=MM; cutover=ENFORCED; message='migration mismatch' ;;
+            unit) version=178.7; unit=EA; cutover=ENFORCED; message='SKU unit mismatch' ;;
+            cutover) version=178.7; unit=MM; cutover=LEGACY; message='cutover mismatch' ;;
+        esac
+        if legacy_preflight_probe "$version" "$unit" "$cutover" > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-$gate.txt" 2>&1; then
+            refuse "Wrong $gate passed upgraded-database preflight"
+        fi
+        grep -q "$message" "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-$gate.txt" || refuse 'Preflight rejected for an unexpected reason'
+    done
+    preflight_index=$((preflight_index + 1))
+done
+python3 - "$WAREHOUSE_LEGACY_RUN_DIR" "$ROOT/scripts/warehouse/preflight.sql" <<'PY'
+from pathlib import Path
+import hashlib, json, sys
+root = Path(sys.argv[1])
+probes = []
+for index in range(2):
+    report = root / f'preflight-{index}-positive.txt'
+    rows = [json.loads(line) for line in report.read_text().splitlines() if line.startswith('{')]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row['applicationRole'] == 'warehouse_app' and row['schema'] == 'public'
+    assert row['version'] == '178.7' and row['cutover'] == 'ENFORCED'
+    assert row['customers'] == row['onus'] == 1 and row['positions'] == 0 and row['verifiedQuantityByUnit'] == {}
+    probes.append(row)
+(root / 'preflight-verification.json').write_text(json.dumps({'status': 'PASSED', 'schemaBefore': '172',
+    'schemaAfter': '178.7', 'readOnly': True, 'positiveProbes': 2, 'negativeProbes': 6,
+    'negativeReasons': ['migration mismatch', 'SKU unit mismatch', 'cutover mismatch'], 'rows': probes,
+    'preflightSqlSha256': hashlib.sha256(Path(sys.argv[2]).read_bytes()).hexdigest(),
+    'reports': {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in root.glob('preflight-*.txt')}}, indent=2) + '\n')
+print('PASS: upgraded database preflight, two positive and six negative probes, zero invented stock')
+PY
+
 [[ $(shared_function_fingerprint) == "$SHARED_FUNCTIONS_BEFORE" ]] || refuse 'legacy fixture changed shared QA function definitions'
 python3 - "$WAREHOUSE_LEGACY_RUN_DIR" "$LEGACY_HEAD" "$CURRENT_JAR" "${LEGACY_JARS[0]}" <<'PY'
 from pathlib import Path
@@ -172,6 +238,7 @@ assert len(before['customers'])==2 and len(before['onus'])==2
 (run/'verification.json').write_text(json.dumps({'legacyHead':sys.argv[2], 'currentHead':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
     'jars':{kind:hashlib.sha256(Path(p).read_bytes()).hexdigest() for kind,p in zip(['current','legacy'],sys.argv[3:])},
     'projects':['warehouse-desktop','warehouse-mobile'],'phases':['before','after','restart'],'tests':6,
+    'upgradedCatalogSkus':2,'readOnlyPreflight':json.loads((run/'preflight-verification.json').read_text()),
     'preservedCustomers':2,'preservedOnus':2,'historicalChecksumsUnchanged':True,'databaseRetained':True,'separateDatabase':True,'sharedFunctionDefinitionsUnchanged':True},indent=2)+'\n')
 print('PASS: historical UI, independent cutover, restart, preserved identities and applied migration checksums (6 real browser tests)')
 PY

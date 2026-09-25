@@ -4,10 +4,10 @@ set -euo pipefail
 source "$(dirname -- "${BASH_SOURCE[0]}")/test-environment.sh"
 umask 077
 
-[[ $# -ge 1 ]] || refuse 'usage: qa.sh server|projection-upgrade|replenishment|wave5|web-test|web-check|kmp|browser|stop'
+[[ $# -ge 1 ]] || refuse 'usage: qa.sh server|projection-upgrade|historical-upgrades|replenishment|wave5|web-test|web-check|kmp|browser|stop'
 MODE=$1
 shift
-case "$MODE" in server|projection-upgrade|replenishment|wave5|web-test|web-check|kmp|browser|stop) ;; *) refuse 'unknown QA mode' ;; esac
+case "$MODE" in server|projection-upgrade|historical-upgrades|replenishment|wave5|web-test|web-check|kmp|browser|stop) ;; *) refuse 'unknown QA mode' ;; esac
 reject_overrides
 load_environment
 OWNED_PIDS=' '
@@ -43,6 +43,11 @@ case "$MODE" in
         source "$ROOT/scripts/warehouse/projection-upgrade.sh"
         projection_upgrade
         ;;
+    historical-upgrades)
+        [[ $# == 0 ]] || refuse 'historical-upgrades takes no arguments'
+        source "$ROOT/scripts/warehouse/historical-upgrades.sh"
+        historical_upgrades
+        ;;
     wave5)
         [[ $# == 0 ]] || refuse 'wave5 takes no arguments'
         source "$ROOT/scripts/warehouse/wave5-smoke.sh"
@@ -64,9 +69,11 @@ case "$MODE" in
         if [[ " ${args[*]} " != *' --tests '* ]]; then
             source "$ROOT/scripts/warehouse/projection-upgrade.sh"
             projection_upgrade
+            source "$ROOT/scripts/warehouse/historical-upgrades.sh"
+            historical_upgrades
             # The unfiltered release gate includes thousands of tests and real
             # process restarts; give it a separate deadline from focused checks.
-            GRADLE_TIMEOUT_SECONDS=7200
+            GRADLE_TIMEOUT_SECONDS=14400
         fi
         gradle :server:test "${args[@]}"
         ;;

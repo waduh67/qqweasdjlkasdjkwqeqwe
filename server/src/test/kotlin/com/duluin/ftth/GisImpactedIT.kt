@@ -1,8 +1,6 @@
 package com.duluin.ftth
 
 import com.duluin.ftth.contract.CollectorProtocol
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -26,23 +24,11 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class GisImpactedIT {
+class GisImpactedIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
 
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
-
-    private val pass = "secret12345"
-
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
-
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -69,9 +55,7 @@ class GisImpactedIT {
     @Test
     fun `OLT tak terjangkau menyorot merah feeder dan distribusi di hilirnya, lalu pulih`() {
         val slug = "blast${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Blast Co", admin, "Admin", pass))
-        val token = login(slug, admin)
+        val token = tenant(slug)
         val s = uniq().uppercase()
 
         // Rantai POP → OLT → PON → ODC → ODP
@@ -177,9 +161,7 @@ class GisImpactedIT {
     @Test
     fun `alarm satu pelanggan tak memerahkan ODP-nya, dua penghuni yang mengeluh baru memerahkan`() {
         val slug = "share${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Share Co", admin, "Admin", pass))
-        val token = login(slug, admin)
+        val token = tenant(slug)
         val s = uniq().uppercase()
 
         val site = id(
@@ -219,11 +201,11 @@ class GisImpactedIT {
             val customer = id(
                 post(
                     "/api/customers", token,
-                    """{"code":"C$port-$s","name":"Pelanggan $port $s","address":"Jl. Uji",
+                    """{"areaId":"${area(token)}","code":"C$port-$s","name":"Pelanggan $port $s","address":"Jl. Uji",
                         "location":{"longitude":106.996,"latitude":-6.246}}""",
                 ),
             )
-            val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN$port-$s"}"""))
+            val onu = registerWarehouseOnu(token, customer, "SN$port-$s")
             post(
                 "/api/customers/onus/$onu/attach", token,
                 """{"odpId":"$odp","portNumber":$port,"installRxPowerDbm":-22.0}""", expected = 200,

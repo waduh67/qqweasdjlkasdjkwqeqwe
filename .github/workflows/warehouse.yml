@@ -2,7 +2,7 @@ name: warehouse
 
 on:
   push:
-    branches: [feat/warehouse-workorder]
+    branches: [feat/warehouse-workorder, 'work/warehouse-*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,12 +24,14 @@ env:
 jobs:
   server:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: ./.github/actions/warehouse-setup
+      - name: Compile current server tests before running historical applications
+        run: ./gradlew :server:compileTestKotlin --no-daemon --no-parallel --max-workers=2
       - name: Full server, fresh migrations and historical upgrade
         run: |
           set -euo pipefail
@@ -41,8 +43,10 @@ jobs:
           set -euo pipefail
           python3 scripts/warehouse/ci-results.py junit --source server/build/test-results/test \
             --output .omo/runtime/ci/server.json --commit "$GITHUB_SHA"
-          read -r historical < .omo/runtime/projection-upgrade-latest.txt
-          cp "$historical/verification.json" .omo/runtime/ci/projection-upgrade.json
+          for gate in projection-upgrade historical-upgrades; do
+            read -r historical < ".omo/runtime/$gate-latest.txt"
+            cp "$historical/verification.json" ".omo/runtime/ci/$gate.json"
+          done
       - name: Stop owned QA resources
         if: always()
         run: |
@@ -56,10 +60,12 @@ jobs:
         run: |
           set -euo pipefail
           raw=(server/build/test-results/test .omo/runtime/ci/server.log)
-          if [[ -f .omo/runtime/projection-upgrade-latest.txt ]]; then
-            read -r historical < .omo/runtime/projection-upgrade-latest.txt
-            raw+=("$historical")
-          fi
+          for gate in projection-upgrade historical-upgrades; do
+            if [[ -f ".omo/runtime/$gate-latest.txt" ]]; then
+              read -r historical < ".omo/runtime/$gate-latest.txt"
+              raw+=("$historical")
+            fi
+          done
           python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" \
             --output .omo/runtime/ci/server-evidence.age "${raw[@]}"
       - uses: actions/upload-artifact@v4

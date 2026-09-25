@@ -315,10 +315,10 @@
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngExactSet.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineage.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageRace.kt",
-          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt",
+          "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITConcurrency.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITFirstSnapshot.kt",
-          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt",
+          "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwners.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITScope.kt",
           "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITUpgrade.kt"
@@ -774,5 +774,10 @@
       "title": "CI/release gates: make backend, migration and real browser checks mandatory to prevent unverified warehouse deployments \u2014 expect build/deploy cannot bypass acceptance.",
       "declaredQaSources": {}
     }
-  ]
+  ],
+  "historicalCommands": {
+    "WorkOrderMaterialUsageITProjectionUpgrade": "scripts/warehouse/qa.sh projection-upgrade",
+    "otherHistoricalTests": "scripts/warehouse/qa.sh historical-upgrades",
+    "completeGate": "scripts/warehouse/qa.sh server runs both historical modes before the unfiltered modern suite"
+  }
 }

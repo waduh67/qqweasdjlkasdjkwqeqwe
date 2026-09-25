@@ -1,10 +1,13 @@
 # Warehouse CI and private evidence
 
-The `warehouse` workflow runs on feature pushes, pull requests to `main`, and
-manual requests. The deployment workflow calls it as a required dependency before
-publishing application images. Server tests include both the historical projection
-upgrade and the complete current suite; browser jobs execute every warehouse spec
-on desktop and mobile with real PostgreSQL and object storage. Web checks, shared
+The `warehouse` workflow runs on `feat/warehouse-workorder` and `work/warehouse-*`
+pushes, pull requests to `main`, and manual requests. The deployment workflow calls it as a required dependency before
+publishing application images. Server tests include the historical projection
+upgrade, five additional historical upgrades through the complete current migration
+chain, and the complete current suite. Historical application versions are pinned.
+Browser jobs execute every warehouse spec on desktop and mobile with real PostgreSQL
+and object storage. The legacy browser lane also runs read-only SQL preflight after
+its real V172 upgrade, with two positive and six wrong-version/unit/cutover probes. Web checks, shared
 KMP tests, native iOS compilation, and smoke tests of the actual Docker images
 also have to succeed.
 

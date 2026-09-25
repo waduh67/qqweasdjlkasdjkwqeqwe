@@ -91,7 +91,10 @@ class PredictiveMaintenanceIT {
             ),
             "$.id",
         )
-        post("/api/customers/$customerId/onus", token, """{"serialNumber":"SN-$suffix"}""")
+        // This device already existed during the seven days of historical readings.
+        // Preserve it as explicit legacy provenance; do not attach pre-install metrics
+        // to a newly installed warehouse episode.
+        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customerId, "SN-$suffix")
         return customerId to "SN-$suffix"
     }
 

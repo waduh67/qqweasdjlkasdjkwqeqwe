@@ -1,3 +1,36 @@
+## Isolated regression validation checkout: fixes applied, runtime results pending
+
+This branch is `work/warehouse-regression-fixtures`, created from0a14cc2f in
+`.omo/runtime/warehouse-regression-validation`. The original checkout remains at
+0a14cc2f with FULLR3/session11018 running against its unchanged compiled inputs.
+PreflightR2/session47709 still waits on its hostlock. DO NOTedit the original
+executing sources/wrappers or overwrite its results. No subagents were started.
+
+All nine current pending patches are now applied HERE: explicit-area network/real
+receipt-issue-install fixture, predictive legacy history, genuine RMA source controls,
+handover source denial, orphan vs duplicate revision probes, five version-correct
+historical upgrades, return/reassign/cancel browser supplement, template malformed
+return negative, and actual upgraded-DB preflight. Old episode-only patch was NOTused.
+Runbook/CI docs match these final source changes. Source-set moves retain every
+historical assertion and remove only mocks of components absent in the historicalapp.
+
+Static validation HERE: full warehouse browser TypeScript passes,24guardtests pass
+(11results+3encryptedartifacts+5workflow+5publication), bashsyntax andactionlint pass.
+Kotlin compilation and runtime tests have NOTyet passed. No completed-task claim.
+CI now runs on work/warehouse-* branches as well as feat/warehouse-workorder; this
+allows isolated validation while the original red full run finishes. Current test
+sources compile first, then all historical/server/browser/legacy/web/shared/native/
+image gates remain mandatory. This does not publish images or deploy production.
+
+Next: push this branch for CI; inspect early Kotlin/historical/browser failures and
+fix HERE. Keep originalR3 running to discover remaining failures. Once R3 exits,
+archive its log/XML/binary with an honest complete/incomplete status, inspect queued
+preflight, and fast-forward the original checkout to the verified fixes (no reset,
+rebase, stash, or discarded edits). Then run15focusedmodernclasses plus5historical,
+newbrowser/legacy supplements, full local regression and final featureCI. Update
+remote feat/warehouse-workorder with normal fast-forward checkpoints. All46–48/F1–F4
+remainopen; goalACTIVE, continue after commit/push, no final response at checkpoints.
+
 ## Further full-regression finding and upgraded-preflight supplement prepared
 
 Pushed checkpoint21c832bf follows1201b6c2. FullR3/session11018 STILLRUNNING:

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import { login } from '../warehouse/helpers'
-import { addLocation } from '../warehouse/catalog'
+import { addLocation, addSku } from '../warehouse/catalog'
 import { setupDiscrepancyApprover } from '../warehouse/approvals'
 import { confirmOperation, selectNamed } from '../warehouse/fulfillment'
 import { switchUser } from '../warehouse/numeric-journey'
@@ -119,8 +119,18 @@ test('historical customer identity survives independent zero-opening cutover and
     expect(finalized).toMatchObject({ openingDocumentId: opening.id, baselineCount: 0, baselineTotals: {},
       retainedIdentityCount: 1, cancellationCount: 0, sourceCounts: { onu: 1 }, cutover: { state: 'ENFORCED', epoch: 2 } })
     fixture.finalized = { batchId: batch, openingDocumentId: opening.id, reviewHash: finalized.reviewHash, epoch: 2 }
+    // A tenant activated from V172 can begin normal catalog setup without
+    // converting its unverified old ONU into available warehouse stock.
+    const catalogSku = await addSku(page, { code: 'POST_UPGRADE_CABLE', name: 'Kabel baru setelah aktivasi gudang', tracking: 'LOT', unit: 'MM' })
+    fixture.catalogSku = { id: catalogSku.id, code: catalogSku.code, unit: 'MM' }
     saveLegacyFixture(testInfo.project.name, fixture)
   }
+  expect(fixture.catalogSku).toBeTruthy()
+  const catalogRead = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/skus')
+  await page.goto('/warehouse/catalog?tab=skus')
+  const catalog = await (await catalogRead).json()
+  expect(catalog.items).toEqual(expect.arrayContaining([expect.objectContaining({ id: fixture.catalogSku!.id,
+    code: fixture.catalogSku!.code, baseUnit: 'MM', revision: 0, state: 'ACTIVE' })]))
   expect(fixture.finalized).toBeTruthy()
   const finalRead = page.waitForResponse(res => new URL(res.url()).pathname === `/api/v1/warehouse/provenance/batches/${fixture.finalized!.batchId}/finalization`)
   await page.goto('/warehouse/provenance?view=opening')

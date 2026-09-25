@@ -21,6 +21,7 @@ export interface LegacyFixture {
   admin: { name: string; email: string; password: string }
   customer: { id: string; name: string }
   onu: { id: string; serialNumber: string }
+  catalogSku?: { id: string; code: string; unit: 'MM' }
   finalized?: { batchId: string; openingDocumentId: string; reviewHash: string; epoch: number }
 }
 

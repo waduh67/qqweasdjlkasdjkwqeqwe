@@ -13,9 +13,12 @@ abstract class CustomerDeploymentGraphFixture : CustomerDeploymentFixture() {
             ON result.tenant_id=operation.tenant_id AND result.operation_id=operation.id WHERE operation.id='${install.operation}'
     """.trimIndent()
 
-    protected fun clonedDocument(install: Installation, document: UUID): List<String> = listOf(
+    // A lineage probe needs its own revision so the immediate physical-sequence
+    // uniqueness guard does not mask the deferred source/tenant checks.
+    protected fun clonedDocument(install: Installation, document: UUID, duplicatePhysicalRevision: Boolean = false): List<String> = listOf(
         """INSERT INTO inventory_document SELECT (jsonb_populate_record(NULL::inventory_document,
-            to_jsonb(original)||jsonb_build_object('id','$document','code','ORPHAN-$document','state','DRAFT','revision',0))).*
+            to_jsonb(original)||jsonb_build_object('id','$document','code','ORPHAN-$document','state','DRAFT','revision',0,
+                'use_revision',original.use_revision+${if (duplicatePhysicalRevision) 0 else 1}))).*
             FROM inventory_document original WHERE id='${install.operation}'""",
         """INSERT INTO inventory_document_line SELECT (jsonb_populate_record(NULL::inventory_document_line,
             to_jsonb(original)||jsonb_build_object('id','${UUID.randomUUID()}','document_id','$document','document_revision',0,'revision',0))).*

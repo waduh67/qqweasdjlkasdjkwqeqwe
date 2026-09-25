@@ -89,6 +89,27 @@ class CustomerDeploymentFinalStateIT : CustomerDeploymentGraphFixture() {
     }
 
     @Test
+    fun `duplicate posted physical revision rejects immediately without an orphan or changed replay`() {
+        val install = installation()
+        val original = consume(install)
+        assertThat(original.status).withFailMessage(original.contentAsString).isEqualTo(201)
+        val orphan = UUID.randomUUID()
+        val failure = assertThrows<Exception> { fixture(install.receipt.stock.token).transaction {
+            clonedDocument(install, orphan, duplicatePhysicalRevision = true).forEach(::sql)
+            sql("UPDATE inventory_document SET state='POSTED',revision=1 WHERE id='$orphan'")
+        } }
+        val sqlFailure = generateSequence<Throwable>(failure) { it.cause }.filterIsInstance<SQLException>().first()
+        assertThat(sqlFailure.sqlState).isEqualTo("23505")
+        assertThat(sqlFailure.message).contains("inventory_material_physical_revision_key")
+        assertThat(consume(install).contentAsString).isEqualTo(original.contentAsString)
+        fixture(install.receipt.stock.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_document WHERE id='$orphan'")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_document_line WHERE document_id='$orphan'")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_document WHERE kind='DEPLOYMENT' AND state='POSTED'")).isEqualTo("1")
+        }
+    }
+
+    @Test
     fun `draft preparation and zero material facts remain valid without pretending to install`() {
         val install = installation(generic = true)
         assertThat(consume(install).status).isEqualTo(201)

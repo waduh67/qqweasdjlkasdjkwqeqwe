@@ -38,6 +38,12 @@ class WarehouseCustomerRmaDeploymentIT : WarehouseCustomerRmaFixture() {
         assertThat(permit.status).withFailMessage(permit.contentAsString).isEqualTo(200)
         val permitBody = mapper.readTree(permit.contentAsString)
         val authorization = permitBody.path("authorizationId").asString()
+        fixture(case.repair.token).transaction {
+            // Positive RMA authorization uses the actual inspected return and
+            // acknowledged handover, rather than relabelling an original sale issue.
+            assertThat(scalar("SELECT (warehouse_read_deployment_authorization('$tenant','$authorization')).purpose"))
+                .isEqualTo("RETURN_CUSTOMER_RMA")
+        }
         val operation = permitBody.path("operationId").asString()
         val command = """{"authorizationId":"$authorization","expectedRevision":0,"topology":null}"""
         val installed = request("POST", "/api/customers/${case.customer}/assets/install", case.receipt.receiver.first, command, "rma-install")

@@ -16,7 +16,9 @@ import java.util.UUID
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class CustomerAssetHandoverEndpointIT : CustomerAssetOwnershipFixture() {
     enum class Denial(val code: String) {
-        CLOSED("STALE_REVISION"), INACTIVE("STALE_REVISION"), UNRESOLVED_ORIGIN("SOURCE_NOT_VERIFIED"),
+        // These historical edits break the source graph; validated custody rejects
+        // before the ordinary pending-state revision check.
+        CLOSED("SOURCE_NOT_VERIFIED"), INACTIVE("SOURCE_NOT_VERIFIED"), UNRESOLVED_ORIGIN("SOURCE_NOT_VERIFIED"),
         QUARANTINED("SOURCE_NOT_VERIFIED"), NON_INSTALLED("SOURCE_NOT_VERIFIED"),
         WRONG_CUSTOMER("SOURCE_NOT_VERIFIED"), WRONG_WORK_ORDER("SOURCE_NOT_VERIFIED"),
         WRONG_ASSET("SOURCE_NOT_VERIFIED"), FROZEN_MODE("SOURCE_NOT_VERIFIED"),

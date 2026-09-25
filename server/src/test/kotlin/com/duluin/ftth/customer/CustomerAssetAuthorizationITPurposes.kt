@@ -10,7 +10,7 @@ import java.util.UUID
 
 class CustomerAssetAuthorizationITPurposes : CustomerAssetAuthorizationFixture() {
     @ParameterizedTest
-    @ValueSource(strings=["REMOVE", "REPLACE", "RETURN_CUSTOMER_RMA"])
+    @ValueSource(strings=["REMOVE", "REPLACE"])
     fun `purpose-specific verified source bindings have valid controls`(purpose: String) {
         val fixture = episodeCase()
         val prior = UUID.randomUUID()
@@ -22,20 +22,32 @@ class CustomerAssetAuthorizationITPurposes : CustomerAssetAuthorizationFixture()
                     val line = scalar("SELECT id FROM inventory_issue_line WHERE stock_identity_id='$other'")
                     fixture.assignment(prior).replace(fixture.asset.toString(), other).replace(fixture.issueLine.toString(), line)
                 }
-                "RETURN_CUSTOMER_RMA" -> {
-                    sql("UPDATE inventory_serialized_asset SET legal_owner='CUSTOMER',revision=revision+1 WHERE id='${fixture.asset}'")
-                    fixture.assignment(prior).replace("'LOAN','ISP'", "'SALE','CUSTOMER'")
-                }
                 "REMOVE" -> fixture.assignment(prior)
                 else -> error("Unknown purpose")
             }
             sql(priorSql)
         }
         val command = fixture.authorization(permit, purpose).replace(",NULL,NULL\n", ",'$prior',0\n")
-            .let { if (purpose == "RETURN_CUSTOMER_RMA") it.replace("'LOAN'", "'SALE'") else it }
         fixture.stock.transaction { sql(command) }
         fixture.stock.transaction {
             assertThat(scalar("SELECT (warehouse_read_deployment_authorization('$tenant','$permit')).purpose")).isEqualTo(purpose)
+        }
+    }
+
+    @Test
+    fun `changing title alone cannot turn an original issue into an inspected customer RMA source`() {
+        val fixture = episodeCase()
+        val prior = UUID.randomUUID()
+        val permit = UUID.randomUUID()
+        fixture.stock.transaction {
+            sql("UPDATE inventory_serialized_asset SET legal_owner='CUSTOMER',revision=revision+1 WHERE id='${fixture.asset}'")
+            sql(fixture.assignment(prior).replace("'LOAN','ISP'", "'SALE','CUSTOMER'"))
+        }
+        val command = fixture.authorization(permit, "RETURN_CUSTOMER_RMA")
+            .replace(",NULL,NULL\n", ",'$prior',0\n").replace("'LOAN'", "'SALE'")
+        rejection { fixture.stock.transaction { sql(command) } }
+        fixture.stock.transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_deployment_authorization WHERE id='$permit'")).isEqualTo("0")
         }
     }
 

@@ -6,6 +6,7 @@ import { setupDiscrepancyApprover } from './approvals'
 import { randomUUID } from 'node:crypto'
 import { acknowledgeNumericJourney, prepareNumericJourney, switchUser } from './numeric-journey'
 import { inspectAsset } from './asset-journey'
+import { reassignAndCancelWithCustody } from './reassignment-journey'
 
 // Transfer discrepancy and technician returns use separate tenants and documents.
 test('warehouse receives sixty metres and independently resolves forty metres after partial transfer', async ({ page }, testInfo) => {
@@ -170,10 +171,11 @@ test('warehouse receives sixty metres and independently resolves forty metres af
   }
 })
 
-test('technician returns an unused mixed-case serial and warehouse inspection releases that same unit', async ({ page }, testInfo) => {
+test('original technician returns an unused mixed-case serial after reassignment and cancellation and inspection releases that same unit', async ({ page }, testInfo) => {
   test.setTimeout(360_000)
   const fixture = await prepareNumericJourney(page, { serialPrefix: `Unused-${randomUUID().slice(0, 8)}-` })
   await acknowledgeNumericJourney(page, fixture)
+  await reassignAndCancelWithCustody(page, fixture, testInfo)
   await page.goto(`/my-materials?workOrderId=${fixture.workOrder.id}`)
   await page.getByRole('button', { name: 'Kembalikan perangkat', exact: true }).click()
   const scanner = page.getByRole('textbox', { name: 'Serial perangkat', exact: true })

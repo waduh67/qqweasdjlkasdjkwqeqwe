@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class WorkOrderMaterialsITTemplateActions : MaterialWorkflowFixture() {
-    @Test fun `explicit customer RMA template persists without changing repair action or enabling physical routes`() {
+    @Test fun `explicit customer RMA template persists without selecting it for ordinary repair or minting stock`() {
         val setup = setupReceipt()
         val path = "/api/v1/warehouse/material-templates/REPAIR/RETURN_CUSTOMER_RMA"
         val body = """{"expectedRevision":0,"lines":[${line(setup.cable, "11000")}]}"""
@@ -17,6 +17,13 @@ class WorkOrderMaterialsITTemplateActions : MaterialWorkflowFixture() {
         val id = workOrder(setup.token, "REPAIR")
         assertThat(summary(setup.token, id).path("template").isNull).isTrue()
         assertThat(request("PUT", "/api/work-orders/$id/materials/plan", setup.token, plan(setup.token, id, null)).status).isEqualTo(409)
-        assertThat(request("POST", "/api/work-orders/$id/materials/return", setup.token, "{}").status).isEqualTo(409)
+        // The actual return route now exists. An empty command fails decoding
+        // before domain checks; storing a template still creates no physical goods.
+        assertThat(request("POST", "/api/work-orders/$id/materials/return", setup.token, "{}").status).isEqualTo(400)
+        fixture(setup.token).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_movement")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_balance_projection")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment")).isEqualTo("0")
+        }
     }
 }
