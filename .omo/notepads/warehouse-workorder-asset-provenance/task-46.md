@@ -1,3 +1,43 @@
+## Primary checkout resumed after the old full regression was archived
+
+Continue in the ORIGINAL checkout on `work/warehouse-completion`. It was safely
+fast-forwarded from0a14cc2f to d8a3660e after the old runner exited and preflight
+finished; d8a3660e is now pushed to feat/warehouse-workorder as well. All fixture,
+browser, label and CI fixes are already applied. Do not reapply pending patches.
+The validation worktree remains at d8a3660e as a reference; do not make competing
+changes there now.
+
+Local full R3/session11018 exited124 at its original7200-second deadline. All
+available log/XML/binary are preserved in full-server-r3-complete-archive. Status
+INCOMPLETE: observed2319 passed/41 failed includes7initial environment checks and1
+historical projection check. Modern XML was never finalized; the only XML is the
+old7-case environment report. Safe archive hashes/counts/case names are in
+ task46/full-server-r3-incomplete-verification.json. Product server sources match
+between initial environment commit38e068e3 and0a14, but Docker/environment-test
+files differ; do not claim all earlier test inputs identical. No successful full
+regression is established. No new failure beyond the known41 was observed.
+
+The old preflight waiter47709 terminated143 before any output or SQL report; cause
+unknown. Fresh runbook-preflight-r3.sh/session70814 completed0: app-role read-only
+SQL passed with2customers/3ONUs/39positions/31movements; wrong migration/unit/cutover
+each failed for the intended reason. Owned containers/network stopped; volumes
+retained. Task47/local-preflight-r3-verification.json records this positive-stock
+probe; the separate CI upgraded-fixture proof remains valid.
+
+NEXT: commit/push recovery notes, then launch compatibility-focused-r2.sh with a
+private log. It validates the R3 archive before replacing active XML, executes16
+modern suites, archives reports and runs5historical upgrades. Do not edit executing
+inputs. Fix failures and rerun affected checks. When that passes, prepared
+full-server-r4.sh runs unfiltered regression with the updated14400-second deadline.
+Both wrappers hold the outer host lock and retain volumes. If runtime wrappers
+are lost, reproduce these steps using documented qa.sh commands, archiving first.
+
+CI36126213391 at6853 is active (label/encrypted-binary changes, old monitoring
+fixtures). CI36126725025 atd8a3660e is pending with the monitoring correction. Older
+CI36116539885 still runs its original full attempt. No active run was cancelled.
+Tasks46-48/F1-F4 remain open; independent reviewers have not been authorized.
+GoalACTIVE. Continue after commits; no final response at a checkpoint.
+
 ## Verified reassignment/return and upgraded-database preflight supplement
 
 CI36124045412 at c227f6bc completed: all nonserver jobs PASS. Server compile failed
