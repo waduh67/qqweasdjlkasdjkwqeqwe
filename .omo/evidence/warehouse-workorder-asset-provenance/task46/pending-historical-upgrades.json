@@ -1,0 +1,17 @@
+{
+  "status": "prepared, not applied or executed",
+  "supersedes": "pending-episode-upgrade.patch.gz; apply only this expanded historical patch, not both",
+  "classes": [
+    "CustomerAssetTitleUpgradeIT",
+    "CustomerDeploymentUpgradeIT",
+    "CustomerAssetEpisodeRevisionUpgradeIT"
+  ],
+  "historicalApplications": {
+    "customer-title": "fd2cf7c58f02022525e655a8b0884ac2f5df49b0",
+    "customer-episode": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb"
+  },
+  "preserved": "Every original test assertion; full current migration chain; separate databases with unchanged shared QA functions",
+  "dependency": "Apply pending-deployment-orphan.patch.gz first so both modern and historical lineage probes use an unused physical revision; leave the separate duplicate-sequence probe intact",
+  "next": "Inspect final R3 XML; validate any additional upgrade failures; apply only after full run/archive/cleanup. Compile and execute historical-upgrades mode before full rerun.",
+  "patchSha256": "ac087ff7a5d0384ff1ee0c9934e6fcb1c7c1ac51d1fe14c5c8a759b12a133671"
+}

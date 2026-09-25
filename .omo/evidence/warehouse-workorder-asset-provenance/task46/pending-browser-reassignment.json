@@ -1,0 +1,7 @@
+{
+  "status": "Draft, not applied or executed in a browser",
+  "purpose": "Final review supplement: real UI reassignment and cancellation retain original custody; current assignee inherits no goods; old technician can return the same serial after cancellation",
+  "sourceSha256": "59cd125acca494aef7d0b2d5b693f07e323705ac9537b901cb1eed46faf26aca",
+  "patchSha256": "c354cfd2e6e9ed1f59ed5d875958e05294df04eaa9f7eb1fe9656308f22f9a76",
+  "next": "Apply after full R3 ends, then typecheck/lint and execute returns.spec.ts desktop/mobile with real backend; do not claim old returns proof covers these extra assertions."
+}

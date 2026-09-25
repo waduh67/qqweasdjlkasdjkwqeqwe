@@ -1,3 +1,52 @@
+## Latest recovery checkpoint: expanded regression fixture corrections prepared
+
+Goal ACTIVE. Tasks 1–45 DONE;46 IN PROGRESS;47–48/F1–F4 OPEN. Continue after push.
+Remote prior checkpoint362f321c; local work/warehouse-completion targets
+origin/feat/warehouse-workorder. No main merge, image publication or deployment.
+
+Full server R3/session11018 is STILL RUNNING; at least1208 passed/37failed observed,
+not final counts. Exact safe observation: task46/full-server-r3-progress.json.
+Preflight R2/session47709 remains queued on the host lock. Sources/wrappers are
+FROZEN. Archive complete R3 XML/counts before applying any patch or focused rerun.
+CI36116539885/c622a85b full server also continues. All other jobs passed. Duplicate
+queued CI36119073644 for docs checkpoint was cancelled before it began; bb0a's
+older pending run was replaced by concurrency. Do not cancel the active full run.
+
+Prepared patches in task46 (all gzip source-only, never runtime credentials):
+1. pending-network-fixtures.patch.gz —9legacy network classes, real receipt/issue/ACK/install.
+2. pending-predictive-history.patch.gz —existing historical LEGACY_UNRESOLVED fixture.
+3. pending-rma-source-control.patch.gz —fake positive becomes negative; actual RMA positive strengthened.
+4. pending-handover-source-denial.patch.gz —CLOSED/INACTIVE historical corruption returns
+   SOURCE_NOT_VERIFIED before ordinary state checks; all no-effect assertions stay.
+5. pending-deployment-orphan.patch.gz —deferred orphan probes use next unused physical
+   revision; a separate test retains immediate duplicate revision23505/no-effects proof.
+6. pending-historical-upgrades.patch.gz —SUPERSEDES pending-episode-upgrade.patch.gz.
+   Move three unchanged historical tests into mandatory qa.sh historical-upgrades;
+   pinned fd2cf7c5 for title175.69/deployment175.63 and dfa25e79 for episode175.86,
+   each applying the entire current migration chain in a separate database. Overlays
+   the updated orphan helper after patch5. No product sources or old migrations altered.
+7. pending-browser-reassignment.patch.gz —additional real UI review of reassignment,
+   no inherited custody, cancellation and same-unit return in returns.spec.ts. Draft
+   TypeScript compiles in private browser-draft; NOT APPLIED or executed in browser.
+Apply check passes for every patch; backend compilation/runtime has NOT run yet.
+Do not apply obsolete episode-only patch alongside expanded historical patch.
+Actual result binary confirms missing inventory_repair_replacement_request in old
+schemas, RMA_HANDOVER_EXECUTION_REQUIRED, SOURCE_NOT_VERIFIED vs STALE_REVISION,
+and23505 masking the five deferred orphan checks. Final XML remains authoritative.
+
+Two other historical HTTP fixtures may need the same treatment if full R3 proves
+failures: WarehouseFulfillmentITOwnerUpgrade at175.29 and BngLineageUpgrade at175.34.
+They currently mock the later MaterialSettlementService. Inspect actual failures;
+prefer the correct historical application without disabling current guards. Do not
+weaken expected tenant-scope, authorization or immutable-history assertions.
+
+All declared G/W/B QA sources for48planrows exist; safe inventory is source mapping
+only, not evidence that all tests passed. Runbooks are committed but SQL preflight
+still must execute. Next: complete R3 -> inspect every failure -> apply/fix focused
+fixtures and historical gates -> returns browser supplement -> full server/final CI
+-> preflight/runbook proof -> final audits and concrete review. No subagents or
+independent reviewer approval claimed; no native release from compile evidence.
+
 ## Current checkpoint: CI evidence retained; full server regression still running
 
 Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Tasks 1–45

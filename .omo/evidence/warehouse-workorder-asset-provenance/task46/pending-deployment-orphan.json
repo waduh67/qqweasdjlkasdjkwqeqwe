@@ -1,0 +1,7 @@
+{
+  "status": "prepared, not applied or executed",
+  "observed": "Five ORPHAN_DOCUMENT timing cases receive SQLSTATE23505 before their intended deferred guard; V178.3 introduced an immediate unique physical-revision index",
+  "change": "Lineage clone uses the next unused physical revision; all original tenant timing/error/no-effects assertions stay. A separate real SQL test retains exact duplicate-revision rejection23505 and unchanged replay/no orphan records.",
+  "historical": "The same fixture must overlay into the historical deployment-upgrade application so its orphan targets lineage rather than a duplicate physical sequence. No old migration changes.",
+  "patchSha256": "34f0fcb9e72c260f9d5d627080c1c294520be8648035b66f73e4ea56d08883eb"
+}

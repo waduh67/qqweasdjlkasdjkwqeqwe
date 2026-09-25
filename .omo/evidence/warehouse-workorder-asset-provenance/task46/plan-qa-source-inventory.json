@@ -1,0 +1,778 @@
+{
+  "status": "source inventory only; complete executed results and manual invariant audit still pending",
+  "tasks": [
+    {
+      "task": 1,
+      "checked": true,
+      "title": "`scripts/warehouse/` and test deployment: establish isolated baseline and test environment to prevent production mutation \u2014 expect reproducible local warehouse QA.",
+      "declaredQaSources": {
+        "G(WarehouseEnvironmentIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseEnvironmentIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 2,
+      "checked": true,
+      "title": "`docs/warehouse-contracts.md` and public module APIs: codify ownership/state contracts to prevent competing stock authorities \u2014 expect one executable contract across modules.",
+      "declaredQaSources": {
+        "G(WarehouseContractTest)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/MaterialWarehouseContractTest.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt"
+        ],
+        "G(ModularityTests)": [
+          "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt"
+        ]
+      }
+    },
+    {
+      "task": 3,
+      "checked": true,
+      "title": "Inventory quantity and identity value objects: implement exact units and canonical device identity to prevent rounding and duplicate serials \u2014 expect integer-base arithmetic throughout.",
+      "declaredQaSources": {
+        "G(WarehouseQuantityTest)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTest.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestBoundary.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestConversion.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestIdentity.kt"
+        ]
+      }
+    },
+    {
+      "task": 4,
+      "checked": true,
+      "title": "Warehouse schema M01/M02 and persistence: expand master/document/projection tables to make durable invariants enforceable \u2014 expect restart-safe tenant-owned state.",
+      "declaredQaSources": {
+        "G(WarehouseSchemaIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITConstraints.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITDeferredScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITLotCapacity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITPolicy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITProvenance.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITReceiptEvidence.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITSelectiveTiming.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITUpgrade.kt"
+        ]
+      }
+    },
+    {
+      "task": 5,
+      "checked": true,
+      "title": "`WarehousePostingService`: replace disconnected writes with one atomic posting pipeline to conserve physical stock \u2014 expect balances, custody and history agree.",
+      "declaredQaSources": {
+        "G(WarehousePostingIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITActualLineBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITAdversarial.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITDelivery.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITEligibility.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITExactFacts.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITFactBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITLegacy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITPickedTransitions.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITReservations.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITRetainedFacts.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITStatus.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingITTerminal.kt"
+        ]
+      }
+    },
+    {
+      "task": 6,
+      "checked": true,
+      "title": "Warehouse operation outcomes/outbox: persist canonical command receipts and consumer inbox to survive retries \u2014 expect exactly one business posting.",
+      "declaredQaSources": {
+        "G(WarehouseConcurrencyIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITArea.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITAuthority.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITCatalog.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITDelivery.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITDispatcher.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITLegacy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITReferences.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITRevocations.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITVerifierDispatcher.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITVerifierLockOrder.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITVerifierRefresh.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseConcurrencyITVerifierWorkOrder.kt"
+        ]
+      }
+    },
+    {
+      "task": 7,
+      "checked": true,
+      "title": "Master SKU/location/supplier APIs: expose actual setup commands to allow a tenant to operate without SQL \u2014 expect complete permission-aware CRUD/archive.",
+      "declaredQaSources": {
+        "G(WarehouseMasterIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITCutover.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITDecoding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITIdentityAmbiguity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITInheritance.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITInheritanceHistory.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITInheritanceRaces.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITInheritanceTransactions.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITReferences.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITSecurity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITSite.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITSiteRaces.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITSiteSchema.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMasterITSiteUpgrade.kt"
+        ]
+      }
+    },
+    {
+      "task": 8,
+      "checked": true,
+      "title": "Receiving/inspection/putaway: turn source documents into usable stock to establish provenance \u2014 expect serial/lot/reel intake with no phantom receipts.",
+      "declaredQaSources": {
+        "G(WarehouseReceiptIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITAttachments.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITCompletion.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITDisposition.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITFileValidation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITFormState.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITInspectionGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITIntakeEvidence.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITMultipart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITOpening.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITPdfSyntax.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITProvenance.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITReceive.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITUploadFailures.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITMetadata.kt"
+        ]
+      }
+    },
+    {
+      "task": 9,
+      "checked": true,
+      "title": "Stock/asset/lot projections and ledger queries: derive warehouse screens from durable stock to include cable and devices \u2014 expect useful bounded reporting APIs.",
+      "declaredQaSources": {
+        "G(WarehouseQueryIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITBalances.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITCompatibility.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITIdentity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITLotFilters.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITPrivacy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITSerialFilters.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQueryITStaged.kt"
+        ]
+      }
+    },
+    {
+      "task": 10,
+      "checked": true,
+      "title": "Reservation allocation service: reserve demand against eligible stock to prevent double allocation \u2014 expect release/expiry/partial supply without physical movement.",
+      "declaredQaSources": {
+        "G(WarehouseReservationIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITAuthority.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCandidatePlanning.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCompatibility.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLargeSupply.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLifecycle.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITPlanBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITSupplyProjection.kt"
+        ]
+      }
+    },
+    {
+      "task": 11,
+      "checked": true,
+      "title": "Warehouse scopes/approval settings: make policy server-owned and accessible to correct roles \u2014 expect least privilege without blank-tenant deadlock.",
+      "declaredQaSources": {
+        "G(WarehousePolicyIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITAuthority.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITAuthorityRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITEvaluation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITRoleAuthority.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITSchema.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITViewContract.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITVisibility.kt"
+        ]
+      }
+    },
+    {
+      "task": 12,
+      "checked": true,
+      "title": "Durable approval and document effects: persist maker-checker decisions to make approvals survive restart \u2014 expect one immutable decision effect per document revision.",
+      "declaredQaSources": {
+        "G(WarehouseApprovalIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITCompatibility.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITDecisionBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITDelegation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITExpiry.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITLegacyBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITLockDeadline.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITNoDecisionReplay.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITRoleAuthority.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITRollback.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITSchema.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITSource.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseApprovalITHttpErrors.kt"
+        ]
+      }
+    },
+    {
+      "task": 13,
+      "checked": true,
+      "title": "WO Material plan/template orchestration: attach versioned demand to existing work orders to make stock needs actionable \u2014 expect per-line requested/reserved/issued/used/returned totals.",
+      "declaredQaSources": {
+        "G(WorkOrderMaterialsIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITAction.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITAuthority.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITDemand.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITInvalidation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITPersistence.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITPostedFacts.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITReplayScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITTemplateActions.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialsITDemandMapping.kt"
+        ]
+      }
+    },
+    {
+      "task": 14,
+      "checked": true,
+      "title": "Picking and issue dispatch: select real serials/cable segments for WO handover \u2014 expect picked stock unavailable and traceable issue slips.",
+      "declaredQaSources": {
+        "G(WarehouseIssueIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITReplayGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITReplayRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITRestart.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITRevocationRaces.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITSerial.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseIssueITListing.kt"
+        ]
+      }
+    },
+    {
+      "task": 15,
+      "checked": true,
+      "title": "Technician custody acknowledgement: receive issued goods into accountable field stock \u2014 expect partial acceptance/discrepancy handled without inventory fabrication.",
+      "declaredQaSources": {
+        "G(WorkOrderMaterialReceiptIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITIsolation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITReplayLifecycle.kt"
+        ]
+      }
+    },
+    {
+      "task": 16,
+      "checked": true,
+      "title": "Physical use and material facts: post measured usage once before QA to reflect reality \u2014 expect durable use revisions and residual obligations.",
+      "declaredQaSources": {
+        "G(WorkOrderMaterialUsageIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITIsolation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITLifecycle.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITPostingClosure.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjection.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionRace.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITSources.kt",
+          "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt"
+        ]
+      }
+    },
+    {
+      "task": 17,
+      "checked": true,
+      "title": "Fulfillment material settlement: replace consume-on-approval with verified usage snapshot effects to avoid double debit \u2014 expect only applicable owner effects.",
+      "declaredQaSources": {
+        "G(WarehouseFulfillmentIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBinding.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngExactSet.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineage.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageRace.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITConcurrency.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITFirstSnapshot.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwners.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITUpgrade.kt"
+        ]
+      }
+    },
+    {
+      "task": 18,
+      "checked": true,
+      "title": "WO cancel/rework/reassign and residual closure: preserve physical custody across workflow changes \u2014 expect explicit return/handover obligations.",
+      "declaredQaSources": {
+        "G(WorkOrderMaterialLifecycleIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITClosure.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITDelta.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITHandover.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITIntegrity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITRaces.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITReturns.kt",
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialLifecycleITTiming.kt"
+        ]
+      }
+    },
+    {
+      "task": 19,
+      "checked": true,
+      "title": "Customer installation episode schema M04: separate physical identity from deployment history to permit legitimate reuse \u2014 expect one active assignment without history loss.",
+      "declaredQaSources": {
+        "G(CustomerAssetSchemaIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaITIntegrity.kt"
+        ]
+      }
+    },
+    {
+      "task": 20,
+      "checked": true,
+      "title": "Warehouse deployment authorization and customer install: require real issued assets for new devices \u2014 expect no serial-only bypass.",
+      "declaredQaSources": {
+        "G(CustomerWarehouseProvenanceIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/customer/CustomerWarehouseProvenanceIT.kt"
+        ],
+        "G(ModularityTests)": [
+          "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt"
+        ]
+      }
+    },
+    {
+      "task": 21,
+      "checked": true,
+      "title": "Loan/sale handover and title: record explicit customer ownership transfer to handle return obligations correctly \u2014 expect sale does not masquerade as BYOD.",
+      "declaredQaSources": {
+        "G(CustomerAssetOwnershipIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 22,
+      "checked": true,
+      "title": "Asset swap/removal/topology relocation: preserve physical and service history through recovery \u2014 expect old equipment cannot reappear as stock automatically.",
+      "declaredQaSources": {
+        "G(CustomerAssetReplacementIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetReplacementIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 23,
+      "checked": true,
+      "title": "Discovery/auto-provision/CPE integration: enforce the same source gate across non-UI callers \u2014 expect observation never invents stock.",
+      "declaredQaSources": {
+        "G(WarehouseDiscoveryIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITAssignmentRevision.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITAuto.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITBatchScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITClock.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITDeferredConflict.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITIntegrity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITParameterTime.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITPrivacy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITProvisioning.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Edges.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Generation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Interval.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Isolation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Legacy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Preparation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Receipt.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2ReceiptTiming.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITRediscovery.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewCurrentOwner.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewDiagnostics.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewEvidence.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewFuture.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewLegacyBounds.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewLockOrder.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewMetrics.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewOperation.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewParameter.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewPollWindow.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewRace.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewReceipt.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewReceiptTime.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewReceiptTruth.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewRetention.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewTopology.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITTemporal.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITUpgrade.kt",
+          "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITV3Ingestion.kt"
+        ]
+      }
+    },
+    {
+      "task": 24,
+      "checked": true,
+      "title": "Onboarding/import/read compatibility: maintain old services without exposing a provenance escape hatch \u2014 expect additive reads and strict new writes.",
+      "declaredQaSources": {
+        "G(WarehouseCompatibilityIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITAreaScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITCsv.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITMaterials.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITProjection.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITSourceGate.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITSubscriber.kt"
+        ]
+      }
+    },
+    {
+      "task": 25,
+      "checked": true,
+      "title": "Warehouse transfer and discrepancy service: implement two-step partial transit to track goods in flight \u2014 expect quantity conserved at every hop.",
+      "declaredQaSources": {
+        "G(WarehouseTransferIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferITDiscrepancy.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferITGuards.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferITDurability.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferITSerial.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferITPositions.kt"
+        ]
+      }
+    },
+    {
+      "task": 26,
+      "checked": true,
+      "title": "Returns/inspection/repair/RMA: control re-entry to available stock to prevent reuse of damaged or customer-owned devices \u2014 expect verified condition and title.",
+      "declaredQaSources": {
+        "G(WarehouseReturnIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITAssets.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITReuse.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITAccess.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITIntegrity.kt"
+        ]
+      }
+    },
+    {
+      "task": 27,
+      "checked": true,
+      "title": "Blind stock counts with revision checks: reconcile measured physical stock without overwriting concurrent movements \u2014 expect stale counts require recount.",
+      "declaredQaSources": {
+        "G(WarehouseCountIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 28,
+      "checked": true,
+      "title": "Loss/scrap/adjustment compensation: post exceptions only after independent authorization \u2014 expect no silent writeoff or editable ledger history.",
+      "declaredQaSources": {
+        "G(WarehouseDispositionIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDispositionIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 29,
+      "checked": true,
+      "title": "Min/max replenishment suggestions: derive shortages and open supply without auto-purchasing \u2014 expect one actionable request per shortage window.",
+      "declaredQaSources": {
+        "G(WarehouseReplenishmentIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITFormula.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITAtomicity.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITCommands.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITInbound.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITUpgrade.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITTimeout.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReplenishmentITLiveSeed.kt"
+        ]
+      }
+    },
+    {
+      "task": 30,
+      "checked": true,
+      "title": "Ledger/provenance/WO cost reports and documents: expose understandable audit trails without inventing financial values \u2014 expect scoped exports and printable slips.",
+      "declaredQaSources": {
+        "G(WarehouseReportIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReportIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 31,
+      "checked": true,
+      "title": "Shared warehouse web API/navigation/E2E harness: establish reusable actionable UI foundation to avoid another read-only shell \u2014 expect routes and real backend acceptance harness.",
+      "declaredQaSources": {
+        "W(src/api/warehouse)": [
+          "web/src/api/warehouse/approvalReads.test.ts",
+          "web/src/api/warehouse/codec.test.ts",
+          "web/src/api/warehouse/counts.test.ts",
+          "web/src/api/warehouse/customerAssets.test.ts",
+          "web/src/api/warehouse/materialExecution.test.ts",
+          "web/src/api/warehouse/materialHandover.test.ts",
+          "web/src/api/warehouse/materialModels.test.ts",
+          "web/src/api/warehouse/materialReview.test.ts",
+          "web/src/api/warehouse/migrationReview.test.ts",
+          "web/src/api/warehouse/myMaterialRma.test.ts",
+          "web/src/api/warehouse/myMaterials.test.ts",
+          "web/src/api/warehouse/overview.test.ts",
+          "web/src/api/warehouse/policy.test.ts",
+          "web/src/api/warehouse/provenance.test.ts",
+          "web/src/api/warehouse/quantity.test.ts",
+          "web/src/api/warehouse/receipts.test.ts",
+          "web/src/api/warehouse/replenishment.test.ts",
+          "web/src/api/warehouse/reports.test.ts",
+          "web/src/api/warehouse/returns.test.ts",
+          "web/src/api/warehouse/settings.test.ts",
+          "web/src/api/warehouse/setup.test.ts",
+          "web/src/api/warehouse/stock.test.ts",
+          "web/src/api/warehouse/transfers.test.ts",
+          "web/src/api/warehouse/transport.test.ts"
+        ],
+        "B(setup.spec.ts)": [
+          "web/e2e/warehouse/setup.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 32,
+      "checked": true,
+      "title": "Warehouse setup/master screens: make an empty tenant usable to bootstrap real operations \u2014 expect visible create/edit/archive paths.",
+      "declaredQaSources": {
+        "W(WarehouseCatalogPage)": [
+          "web/src/pages/warehouse/WarehouseCatalogPage.test.tsx"
+        ],
+        "B(setup.spec.ts)": [
+          "web/e2e/warehouse/setup.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 33,
+      "checked": true,
+      "title": "Receipt/putaway screens: receive and inspect real material via UI to establish warehouse source \u2014 expect documents post once and populate stock.",
+      "declaredQaSources": {
+        "W(WarehouseReceiptsPage)": [
+          "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx"
+        ],
+        "B(receiving.spec.ts)": [
+          "web/e2e/warehouse/receiving.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 34,
+      "checked": true,
+      "title": "Stock/device/lot explorer: render the durable stock model for operators to find eligible goods \u2014 expect filterable names, quantities, lineage and actionable status.",
+      "declaredQaSources": {
+        "W(WarehouseStockPage)": [
+          "web/src/pages/warehouse/WarehouseStockPage.test.tsx"
+        ],
+        "B(receiving.spec.ts)": [
+          "web/e2e/warehouse/receiving.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 35,
+      "checked": true,
+      "title": "Demand/picking/issue workbench: enable warehouse staff to fulfil WO requests to replace missing operations \u2014 expect explicit shortages and handover documents.",
+      "declaredQaSources": {
+        "W(WarehouseRequestsPage)": [
+          "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx"
+        ],
+        "B(issue.spec.ts)": [
+          "web/e2e/warehouse/issue.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 36,
+      "checked": true,
+      "title": "Transfer/returns/repair screens: track goods between locations and inspections to make reverse logistics usable \u2014 expect partial-state actions with accountable remainder.",
+      "declaredQaSources": {
+        "W(WarehouseTransfersPage)": [
+          "web/src/pages/warehouse/WarehouseTransfersPage.test.tsx"
+        ],
+        "W(WarehouseReturnsPage)": [
+          "web/src/pages/warehouse/WarehouseReturnsPage.test.tsx"
+        ],
+        "B(returns.spec.ts)": [
+          "web/e2e/warehouse/returns.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 37,
+      "checked": true,
+      "title": "Count/approval/adjustment screens: expose independent exception decisions to control stock discrepancies \u2014 expect approver-only users can act safely.",
+      "declaredQaSources": {
+        "W(WarehouseCountsPage)": [
+          "web/src/pages/warehouse/WarehouseCountsPage.test.tsx"
+        ],
+        "W(WarehouseApprovalsPage)": [
+          "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx"
+        ],
+        "B(returns.spec.ts)": [
+          "web/e2e/warehouse/returns.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 38,
+      "checked": true,
+      "title": "Overview/replenishment/report/settings screens: make the logistics group operationally complete \u2014 expect drilldowns, useful reports and policy management.",
+      "declaredQaSources": {
+        "W(WarehouseOverviewPage)": [
+          "web/src/pages/warehouse/WarehouseOverviewPage.test.tsx"
+        ],
+        "W(WarehouseReportsPage)": [
+          "web/src/pages/warehouse/WarehouseReportsPage.test.tsx"
+        ],
+        "W(WarehouseSettingsPage)": [
+          "web/src/pages/warehouse/WarehouseSettingsPage.test.tsx"
+        ]
+      }
+    },
+    {
+      "task": 39,
+      "checked": true,
+      "title": "Existing WO Material section: integrate planning/use/settlement into field execution to eliminate disconnected modules \u2014 expect complete WO-to-warehouse navigation.",
+      "declaredQaSources": {
+        "W(WorkOrderMaterials)": [
+          "web/src/components/organisms/workorder/WorkOrderMaterials.test.tsx"
+        ]
+      }
+    },
+    {
+      "task": 40,
+      "checked": true,
+      "title": "Technician Material Saya responsive page: support acknowledged custody and field reporting to make mobile-width web usable \u2014 expect own stock/obligations only.",
+      "declaredQaSources": {
+        "W(MyMaterialsPage)": [
+          "web/src/pages/MyMaterialsPage.test.tsx"
+        ]
+      }
+    },
+    {
+      "task": 41,
+      "checked": true,
+      "title": "Customer device provenance and monitoring UI: replace free serial creation with eligible-asset workflow to make source visible \u2014 expect loan/sale/history and no bypass.",
+      "declaredQaSources": {
+        "W(CustomerAssetPanel)": [
+          "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx"
+        ],
+        "B(customer-assets.spec.ts)": [
+          "web/e2e/warehouse/customer-assets.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 42,
+      "checked": true,
+      "title": "Shared KMP material feature contracts/actions: align existing mobile architecture without false offline success \u2014 expect typed ViewModel/Koin field flows testable on JVM.",
+      "declaredQaSources": {}
+    },
+    {
+      "task": 43,
+      "checked": true,
+      "title": "Preservation/collision migration and cutover UI: reconcile real legacy data before enabling new authority \u2014 expect no reset or invented origin.",
+      "declaredQaSources": {
+        "G(WarehouseMigrationIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITBoot.kt",
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITQuery.kt"
+        ],
+        "W(WarehouseProvenancePage)": [
+          "web/src/pages/warehouse/WarehouseProvenancePage.test.tsx"
+        ]
+      }
+    },
+    {
+      "task": 44,
+      "checked": true,
+      "title": "Cross-module crash/concurrency verification: exercise real persistent failures to prove stock and asset consistency \u2014 expect failure cannot mint or lose goods.",
+      "declaredQaSources": {
+        "G(WarehouseRecoveryIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt"
+        ],
+        "G(WarehouseConcurrentLifecycleIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt"
+        ]
+      }
+    },
+    {
+      "task": 45,
+      "checked": true,
+      "title": "Real empty-tenant browser journeys: prove every main action is usable to prevent another view-only delivery \u2014 expect end-to-end inventory and customer numbers match.",
+      "declaredQaSources": {
+        "B(warehouse-empty-tenant.spec.ts)": [
+          "web/e2e/warehouse/warehouse-empty-tenant.spec.ts"
+        ],
+        "B(customer-assets.spec.ts)": [
+          "web/e2e/warehouse/customer-assets.spec.ts"
+        ],
+        "B(exceptions.spec.ts)": [
+          "web/e2e/warehouse/exceptions.spec.ts"
+        ]
+      }
+    },
+    {
+      "task": 46,
+      "checked": false,
+      "title": "Regression and contract compatibility gate: run all affected modules against the final implementation to prevent collateral breakage \u2014 expect current feature and legacy tests green.",
+      "declaredQaSources": {
+        "G(WarehouseCompatibilityIT)": [
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityIT.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITAreaScope.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITCsv.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITMaterials.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITProjection.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITSourceGate.kt",
+          "server/src/test/kotlin/com/duluin/ftth/customer/WarehouseCompatibilityITSubscriber.kt"
+        ]
+      }
+    },
+    {
+      "task": 47,
+      "checked": false,
+      "title": "Operational runbook and user review guide: document the actual workflows to make rollout and manual review reproducible \u2014 expect source-matched instructions and rollback boundaries.",
+      "declaredQaSources": {}
+    },
+    {
+      "task": 48,
+      "checked": false,
+      "title": "CI/release gates: make backend, migration and real browser checks mandatory to prevent unverified warehouse deployments \u2014 expect build/deploy cannot bypass acceptance.",
+      "declaredQaSources": {}
+    }
+  ]
+}
