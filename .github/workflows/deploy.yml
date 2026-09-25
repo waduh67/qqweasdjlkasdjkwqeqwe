@@ -12,77 +12,13 @@ env:
     IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-    # -------------------------------------------------------------------------
-    # 1) Test integrasi di atas Postgres asli (role non-superuser -> RLS teruji).
-    # -------------------------------------------------------------------------
-    # test:
-    #   runs-on: ubuntu-latest
-    #   services:
-    #     postgres:
-    #       image: timescale/timescaledb-ha:pg17
-    #       env:
-    #         POSTGRES_USER: postgres
-    #         POSTGRES_PASSWORD: postgres
-    #       ports:
-    #         - 5432:5432
-    #       options: >-
-    #         --health-cmd "pg_isready -U postgres"
-    #         --health-interval 10s
-    #         --health-timeout 5s
-    #         --health-retries 12
-    #   steps:
-    #     - uses: actions/checkout@v4
+    warehouse-verification:
+        uses: ./.github/workflows/warehouse.yml
+        permissions:
+            contents: read
 
-    #     - name: Siapkan role & database test
-    #       env:
-    #         PGPASSWORD: postgres
-    #       run: |
-    #         psql -h localhost -U postgres -c "CREATE ROLE ftth LOGIN PASSWORD 'ftth' NOSUPERUSER NOCREATEROLE NOBYPASSRLS;"
-    #         psql -h localhost -U postgres -c "CREATE DATABASE ftth_test OWNER ftth;"
-    #         psql -h localhost -U postgres -d ftth_test -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS timescaledb;"
-
-    #     - uses: actions/setup-java@v4
-    #       with:
-    #         distribution: temurin
-    #         java-version: "21"
-
-    #     - uses: gradle/actions/setup-gradle@v4
-
-    #     - name: Jalankan test server
-    #       run: ./gradlew :server:test --no-daemon
-
-    # -------------------------------------------------------------------------
-    # 2) Uji web (vitest). Beda dari test server di atas, job ini tak butuh service
-    #    apa pun dan selesai dalam hitungan detik — jadi ia LAYAK jadi gerbang deploy.
-    # -------------------------------------------------------------------------
-    web-test:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: "22"
-                  cache: npm
-                  cache-dependency-path: web/package-lock.json
-
-            - run: npm ci
-              working-directory: web
-
-            - run: npm run lint
-              working-directory: web
-
-            - run: npm test
-              working-directory: web
-
-    # -------------------------------------------------------------------------
-    # 3) Build kedua image lalu dorong ke GitHub Container Registry.
-    # -------------------------------------------------------------------------
     build-and-push:
-        # `test` server sementara dinonaktifkan (dikomentari di atas) — jangan
-        # `needs: test`, kalau tidak GitHub menolak workflow-nya. Uji web ikut jadi
-        # gerbang: image tak dibangun kalau konsolnya sendiri sudah gagal diuji.
-        needs: web-test
+        needs: warehouse-verification
         runs-on: ubuntu-latest
         permissions:
             contents: read

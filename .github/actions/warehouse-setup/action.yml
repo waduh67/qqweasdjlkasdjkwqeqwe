@@ -1,0 +1,44 @@
+name: Warehouse QA tools
+description: Prepare isolated QA tools and encrypted evidence readiness
+inputs:
+  web:
+    description: Install Node dependencies for browser or web checks
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '21'
+    - uses: actions/setup-node@v4
+      if: inputs.web == 'true'
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: web/package-lock.json
+    - uses: gradle/actions/setup-gradle@v4
+    - name: Prepare tools and private evidence directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        umask 077
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends age jq shellcheck python3-yaml
+        mkdir -p .omo/runtime/ci "$GRADLE_USER_HOME"
+        cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPERTIES'
+        org.gradle.daemon=false
+        org.gradle.workers.max=2
+        org.gradle.jvmargs=-Xmx2g -XX:+UseParallelGC
+        kotlin.compiler.execution.strategy=in-process
+        PROPERTIES
+        test -n "$WAREHOUSE_EVIDENCE_RECIPIENT" || { echo 'Missing encrypted evidence public recipient'; exit 1; }
+        age --encrypt --recipient "$WAREHOUSE_EVIDENCE_RECIPIENT" </dev/null >/dev/null
+        docker info >/dev/null
+        python3 scripts/warehouse/test-ci-results.py
+        python3 scripts/warehouse/test-ci-artifacts.py
+        python3 scripts/warehouse/test-ci-workflow.py
+    - name: Install web dependencies
+      if: inputs.web == 'true'
+      shell: bash
+      run: npm --prefix web ci

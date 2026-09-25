@@ -35,6 +35,10 @@ node_modules/
 dist/
 web/.env.local
 
+# Python QA tooling
+__pycache__/
+*.pyc
+
 # Env & secrets
 .env
 *.local.yml

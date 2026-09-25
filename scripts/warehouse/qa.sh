@@ -32,7 +32,8 @@ docker_local
 check_environment
 export_database warehouse_test
 
-gradle() { (cd "$ROOT" && timeout --kill-after=30s 1800s ./gradlew "$@"); }
+GRADLE_TIMEOUT_SECONDS=1800
+gradle() { (cd "$ROOT" && timeout --kill-after=30s "${GRADLE_TIMEOUT_SECONDS}s" ./gradlew "$@"); }
 web() { (cd "$ROOT/web" && timeout --kill-after=15s 900s "$@"); }
 
 
@@ -63,6 +64,9 @@ case "$MODE" in
         if [[ " ${args[*]} " != *' --tests '* ]]; then
             source "$ROOT/scripts/warehouse/projection-upgrade.sh"
             projection_upgrade
+            # The unfiltered release gate includes thousands of tests and real
+            # process restarts; give it a separate deadline from focused checks.
+            GRADLE_TIMEOUT_SECONDS=7200
         fi
         gradle :server:test "${args[@]}"
         ;;
