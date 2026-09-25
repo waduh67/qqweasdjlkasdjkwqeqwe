@@ -1,0 +1,38 @@
+{
+  "status": "PASSED_VISUAL_AND_EXECUTED_BROWSER",
+  "testedCommit": "2c1d8e08171a1914e99987f5b930c572630b0d4f",
+  "ciRun": 36131581036,
+  "browser": {
+    "kind": "playwright",
+    "status": "PASSED",
+    "commit": "2c1d8e08171a1914e99987f5b930c572630b0d4f",
+    "tests": 2,
+    "projects": {
+      "warehouse-desktop": 1,
+      "warehouse-mobile": 1
+    },
+    "reportSha256": [
+      "b3637338ddbc935e27a2c5fdcf7f77456f0fc5922e0417038d4787e71035d6fb"
+    ],
+    "artifactSha256": "4b16c370996ae32105ddf4025d5f86ceb470d4814c12b4bdb5c85ab0be35c1ab"
+  },
+  "download": {
+    "run": 36131581036,
+    "artifactId": 10862021723,
+    "name": "warehouse-browser-warehouse-empty-tenant-2c1d8e08171a1914e99987f5b930c572630b0d4f",
+    "artifactDigest": "sha256:a76f91b6fdaa689ddfd2ab3249bdc2b3d06cdc665f85ac4ec9aac4d2a519e530",
+    "encryptedArchiveSha256": "f958a33c4290b06edf820b04a0b29329a7d24d06c9b704255c3f25d8de97df2f",
+    "downloadedAndDecrypted": true
+  },
+  "screenshot": "numeric-1789-accepted-loan-mobile.png",
+  "sha256": "ada1546a93b9ffeb05ac4a592f4291193beb82b696e658f2bce6d832f149232f",
+  "observations": [
+    "Installed ONU episode is visible in the mobile customer drawer.",
+    "Pinjam pakai, Milik ISP and Terpasang are readable.",
+    "Actual receiving and issue references plus installation time are visible.",
+    "Serah-terima: Diterima pelanggan and the obligation to return the ISP unit are visible.",
+    "Transient upload notifications expired normally; the helper did not hide or dismiss UI."
+  ],
+  "safeToShare": "Reviewed synthetic QA records only; no credentials or real customer data visible.",
+  "limitation": "Implementing-agent visual review, not independent F1-F4 approval."
+}

@@ -27,9 +27,15 @@ requires the row tenant scope and an already absent parent tenant. Direct deleti
 while the tenant exists still rejects, so this cannot reset a live tenant's epochs.
 No business-history guard, RLS policy, role grant or security-definer path is relaxed.
 The eraser locks the parent before checking history and leaves these controls to the
-final FK cascade. Existing control bytes survive migration unchanged. Runtime proof
-for178.9 is pending;178.8 scope/provenance/catalog tests passed in the229-case focused
-run, whose sole remaining failure was empty-tenant deletion before this correction.
+final FK cascade. Existing control bytes survive migration unchanged. The old/new
+upgrade probe and all three tenant-deletion HTTP cases passed in the241-test local
+focused gate (23suites, zero failures/errors/skips). Direct deletion of live controls,
+wrong-scope parent deletion and deletion with protected history all reject; empty
+parent deletion removes both controls and preserves the other tenant. CI36131581036
+also passed its focused stage and all nonserver jobs, including V172→178.9 browser
+upgrade/restart with2positive/6negative preflight probes. Historical application
+replays and the complete unfiltered server gate are still pending. Safe proofs:
+`task46/local-focused-r4-verification.json` and `ci-2c1d8e08-nonserver-verification.json`.
 
 ## V178.8: check return-title tenant scope before reading a request
 

@@ -1,3 +1,44 @@
+## Verified checkpoint:241focused cases pass; current historical and full gates pending
+
+2c1d8e08171a1914e99987f5b930c572630b0d4f is pushed on validation branch and integrated
+in original. Originalsession91758/compatibility-focused-r4.sh is STILL RUNNING its
+seven historical tests. Its modern phase FINISHED PASS:241tests/23suites, zero failures,
+errors or skipped,17m40s. All3DeleteTenantHTTP cases pass, including empty204 with a
+protected bystander and protected-history409/no effects; the178.8→178.9 control-cascade
+upgrade test,178.8scope test,58-guardcatalog and provenance controls all pass. Reports
+are preserved, hashes checked, safe proof task46/local-focused-r4-verification.json.
+Original source remains FROZEN until historical wrapper exits. Edit only validation
+checkout as needed; then fast-forward original after archive. No oldpatch reapplication.
+
+CI36131581036 at2c1d8e08 passed focused stage and is in fullserver/historical stage.
+All nonserver jobs PASS:22browser+6legacybrowser+576web+44shared,2actual iOS compilations,
+real image smoke/restart. All12encrypted archives downloaded/hash-verified/decrypted
+privately and actual reports revalidated; native task log checked separately. Legacy
+V172→178.9 preserves2customers/2ONUs/2UI-createdcatalog SKUs after restart, with no
+available stock;2positive and6negative preflight output hashes all match. Safe proof:
+ task46/ci-2c1d8e08-nonserver-verification.json. This is NOT aggregate/fullserverPASS.
+
+New handover screenshot was visually reviewed: installed loan ONU, ISP ownership,
+actual receiving/issue references and accepted customer handover are visible; no
+upload toasts obscure it. Task45/numeric-1789-handover-verification.json and reviewed
+numeric-1789-accepted-loan-mobile.png save this. No product behavior changed for capture.
+Oldb360 featureCI completed with149focusedPASS/projection1PASS/historical3PASS1FAIL;
+its same cached-plan title failure is fixed by the pool eviction, currenthistorical
+runtime pending. Safe classification task46/ci-b360-historical-failure.json.
+
+NEXT: preserve currenthistorical outcome; fix any actual failure in validation; once
+all7pass, fast-forward original and run PREPAREDfull-server-r6.sh (not launched).
+It requires23focused+7historical PASS and unchanged source, then unfiltered server
+with14400s modern deadline, and requires>3700cases plus Modularity/Compatibility.
+Olderfull-server-r4/r5 are obsolete. Runtime helpers are local only; if lost, recreate
+from documented qa.sh commands and these proof requirements. Use umask077 BEFORE
+outer-shell log redirects. Original runtime directory is0700, focused rawlogs0600.
+
+No complete corrected unfiltered modern regression yet. GoalACTIVE;1–45DONE;
+46IN PROGRESS,47–48/F1–F4OPEN. No independentreviewer agents authorized or spawned;
+optional user questions unanswered, no approval inferred. No mainmerge/publish/deploy.
+Commit/push this evidence checkpoint and KEEP WORKING; neverfinal at a checkpoint.
+
 ## Empty-tenant control correction prepared after229-case focused verification
 
 GoalACTIVE;1–45DONE,46IN PROGRESS,47–48/F1–F4OPEN. Continue aftercommit/push.
