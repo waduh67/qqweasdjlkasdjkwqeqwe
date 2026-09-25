@@ -1,3 +1,85 @@
+## Task44 checkpoint: install/use ordering verified; serial-only and recovery NEXT
+
+This checkpoint follows pushed c92151f5. Locate its containing commit with git log -1.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Goal ACTIVE.
+Tasks1–43 DONE;44 IN PROGRESS;45–48/F1-F4 OPEN. Keep working after this checkpoint.
+
+First measured use after ONU install now advances the shared physical revision and
+remains a first usage. A positive delta after installation binds the actual latest
+usage predecessor across deployment revisions. DB unique document revision and
+owner sequence validation preserve historical reads; physical fact/snapshot/posting
+revisions match. Web/KMP choose first/corrective use from latestUsageId, retaining
+current revision/source/authority preflight and exact attempted-command replay.
+
+Verification:51 server tests/6 suites PASS3m52s;14 web/3 files PASS3.87s; TypeScript
+and targeted lint pass; KMP42 reported tests/14 suites green27s, module graph passes
+(only core:mvi test task cached; changed modules executed). No native runtime claim.
+Actual new numeric cases: install then82500MM use;80000MM use,install,2500MM delta.
+Both complete return/QA with917500MM/9 available ONU/1 installed and1,000,000MM/10EA
+conservation. Original3 numeric concurrency/rollback cases and old usage guards pass.
+
+V178.3 APPLIED/IMMUTABLE in fresh AND retained populated QA databases. Next178.4.
+Populated upgrade2 more numeric tests PASS2m11s. All previous tenant physical rows
+in13 tables retain exact counts/digests; all previous migration checksums unchanged;
+only178.3 added. Safe proof:task44/usage-order-verification.json. Prior178.1–.2 intact.
+
+CURRENT default QA marker:warehouse-f7c0d53b912f-98b38fbf54518f766065f31955d52574.
+OLD retained marker:warehouse-f7c0d53b912f-abc63ab0045a7096566cf763c8f477fc.
+Private env archives under .omo/runtime/environment-archives/<marker>/warehouse-test.env;
+never print/commit them. Both volume sets retained, all owned services stopped, new
+default restored after upgrade. Host lock/ports/roles/JDK21 unchanged; no reset/kill.
+
+NEXT: serial-only QA source model, then actual HTTP loss/full app restart/outbox
+redelivery and remaining combined races. Avoid fake NONE/cable/stock or a second
+DEPLOY. An optional bulk source alongside real deployment witnesses may be simpler
+than adding a separate operator review command; investigate current nullable/FK and
+snapshot/settlement guards first. task44-serial-review-design.md is an unimplemented
+alternative, not a requirement. Also inspect QA after reassignment of fully used
+material: original actor must not post NEW use after revoke, but historic physical
+facts should not require fictitious extra usage. Add real regressions before changes.
+Then45 full real browser,46 final regressions/historical175.21 fixture repair,47 docs,
+48 CI gates,F1–F4. No subagents authorized. Preserve reports before reruns. Earlier
+sections below are history; detailed task44.md has phase notes and remaining work.
+
+## Current dirty phase after pushed c92151f5
+
+V178.3 APPLIED/IMMUTABLE, SHA256 5fe75939a012d8e7e039c05269813c52847dbe9a6bf4b9d023f8eb2d3e0390e6.
+Do not edit it even if tests expose a bug. Next free178.4. This phase fixes first
+bulk use after deployment and positive delta after deployment. Usage now advances
+the shared physical revision, and binds its actual latest usage predecessor. The
+initial immutable-use guard queries actual usage, not all deployment activity.
+SQL validates historical preceding revisions, new current revision, exact predecessor
+and unique posted USAGE/DEPLOYMENT document revision. Fact/snapshot/posting revisions
+agree. Web/KMP choose report vs correction using latestUsageId, preserving all
+current revision preflight and exact attempted-command replay.
+
+New WarehouseUsageOrderIT has2 actual complete numeric flows: install then82500MM
+use;80000MM use, install, then2500MM delta, returning17500MM. Both require exact
+917500MM/9ONU/1installed outcome and unchanged historical usage after newer activity.
+Targeted server gate51 tests/6 suites PASS3m52s, including both complete ordering
+regressions and the original3 numeric cases. Archived r1 reports before reruns.
+Client gate PASS:14 web tests/3 files3.87s, full TypeScript, targeted lint; KMP42
+tests/14 suites reported green, Gradle27s, module graph passes. Some unaffected
+KMP tasks are UP-TO-DATE; changed module tests execute. No native runtime claim.
+Populated old-volume upgrade is now running via usage-order-populated-upgrade.sh.
+It TEMPORARILY selects the old default environment, fingerprints13 physical tables
+for all pre-existing tenants, upgrades only178.3, runs2 real ordering tests, then
+compares every old row count/digest and all prior migration checksums. The trap
+restores the new default env from its private environment-archives/<new marker>
+copy. If the VPS dies mid-run, inspect ONLY WH_MARKER (never whole env), preserve
+both volumes and restore that new archive after owned old services are stopped.
+Do not call the populated upgrade green until its final fingerprint check passes.
+
+A fresh separately owned QA environment was created, retaining ALL previous volumes.
+CURRENT marker: warehouse-f7c0d53b912f-98b38fbf54518f766065f31955d52574.
+Old marker: warehouse-f7c0d53b912f-abc63ab0045a7096566cf763c8f477fc.
+Old private env is .omo/runtime/environment-archives/<old marker>/warehouse-test.env;
+never print or commit it. Default .omo/runtime/warehouse-test.env is the new one.
+Ports/roles/host QA lock are unchanged. V178.1–.2 were also clean-applied in the new
+DB; earlier applied migrations remain immutable in BOTH environments. Old data and
+proofs remain recoverable from the retained old volumes. Only task-owned services
+were stopped; unrelated processes untouched. c92151f5 is pushed to feature remote.
+
 ## Task44: mixed material QA correction and numeric fixture
 
 Goal ACTIVE. Tasks1–43 done;44 in progress;45–48/F1–F4 open.

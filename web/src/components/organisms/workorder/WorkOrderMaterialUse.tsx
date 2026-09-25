@@ -15,7 +15,7 @@ export function WorkOrderMaterialUse({ context, onDone, onClose, online = true, 
   const [busy, setBusy] = useState(false), active = useRef(false)
   const [error, setError] = useState<string | null>(null), [review, setReview] = useState<WarehouseCommand<unknown> | null>(null)
   const load = useCallback((_: string, page: number) => getMaterialCustody(context.workOrderId, page), [context.workOrderId])
-  const none = context.plan?.materialMode === 'NONE', correction = context.useRevision > 0
+  const none = context.plan?.materialMode === 'NONE', correction = !!context.latestUsageId
   function update(key: string, patch: Partial<MaterialUseDraft>) { setRows(previous => previous.map(row => row.key === key ? { ...row, ...patch } : row)) }
   async function submit(event: FormEvent) {
     event.preventDefault()

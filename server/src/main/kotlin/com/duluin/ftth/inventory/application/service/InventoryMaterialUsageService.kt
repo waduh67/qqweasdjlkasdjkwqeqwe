@@ -64,7 +64,9 @@ class InventoryMaterialUsageService(
         if (request.workOrderRevision != context.workOrderRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         val existing = totals.useRevision(context.workOrderId)
         if (request.expectedRevision != existing) masterFailure(WarehouseErrorCode.STALE_REVISION)
-        if (existing != 0L) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Usage is immutable; an explicit corrective command is required")
+        if (store.latestId(context.workOrderId) != null)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Usage is immutable; an explicit corrective command is required")
+        val nextRevision = Math.addExact(existing, 1)
         val plan = plans.current(context.workOrderId)?.takeIf { it.state == "SUBMITTED" }?.plan
             ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (plan.planRevision != request.planRevision || plan.workOrderRevision > context.workOrderRevision ||
@@ -91,13 +93,13 @@ class InventoryMaterialUsageService(
                     MaterialUsageSource(receipt, input, planLine)
                 }
                 authorizeLocations(sources.flatMap { source -> source.receipt.lines.mapNotNull { it.accepted?.locationId } }, current)
-                val destination = MaterialUsageDestination(store.consumedLocation(), context.customerId, id)
+                val destination = MaterialUsageDestination(store.consumedLocation(), context.customerId, id, nextRevision)
                 sources.map { preparation.prepare(it, destination) }
             }
         }
         val recordedAt = plans.now()
         val postingId = if (prepared.isEmpty()) null else UUID.nameUUIDFromBytes("warehouse:$id".toByteArray(Charsets.UTF_8))
-        val snapshot = MaterialUsageSnapshot(id, context.workOrderId, context.workOrderRevision, plan.id, plan.planRevision, 1,
+        val snapshot = MaterialUsageSnapshot(id, context.workOrderId, context.workOrderRevision, plan.id, plan.planRevision, nextRevision,
             request.materialMode, actor, context.customerId, request.evidenceReference, request.reason, request.networkReferenceLabel,
             recordedAt, postingId, prepared.map { it.line })
         val body = mapper.writeValueAsString(snapshot)
@@ -108,7 +110,7 @@ class InventoryMaterialUsageService(
             MaterialMode.NONE -> store.recordNone(snapshot, operation, context)
             MaterialMode.MATERIAL_REQUIRED -> posting.post(WarehousePost(id, 0, "POSTED", operation, MovementKind.CONSUME,
                 "Measured acknowledged material use", prepared.flatMap { it.legs }, splits = prepared.mapNotNull { it.split },
-                facts = prepared.map { it.fact }, usage = PostingUsage(id, context.workOrderId, context.workOrderRevision, plan.id, 1, body)), context.cutover)
+                facts = prepared.map { it.fact }, usage = PostingUsage(id, context.workOrderId, context.workOrderRevision, plan.id, nextRevision, body)), context.cutover)
         }
         operations.storeIdentity(id, canonical.json, current.fence.identity.sessionId)
         return WarehouseOperationReceipt(id, id, 1, 200, body, recordedAt)

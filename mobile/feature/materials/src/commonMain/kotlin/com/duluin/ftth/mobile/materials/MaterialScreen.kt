@@ -98,7 +98,7 @@ private fun Use(state: MaterialUiState, workspace: MaterialWorkspace, form: Mate
     else {
         FluentMessage("Pilih sumber pemakaian yang sudah diterima")
         workspace.custody.items.filter { materialCanUse(workspace.context, it) }.forEach { source ->
-            FluentAction("Tambahkan ${source.sku.name} · ${source.lotCode ?: source.sku.code}", { edit(form.copy(rows = form.rows + MaterialUseRow(source))) }, enabled && form.rows.none { it.source.id == source.id } && (field?.useRevision == 0L || form.rows.isEmpty()))
+            FluentAction("Tambahkan ${source.sku.name} · ${source.lotCode ?: source.sku.code}", { edit(form.copy(rows = form.rows + MaterialUseRow(source))) }, enabled && form.rows.none { it.source.id == source.id } && (field?.latestUsageId == null || form.rows.isEmpty()))
         }
         form.rows.forEachIndexed { index, row ->
             FluentMessage("${row.source.sku.name} · ${row.source.issueCode} · tersedia ${row.source.quantityBase.display(row.source.baseUnit)} ${unit(row.source.baseUnit)}")

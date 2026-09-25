@@ -18,6 +18,13 @@ it('requires the latest immutable usage source for positive correction, or actua
   expect(() => materialUseInput(context, [{ key: 'a', source, quantity: '0' }], 'Bukti', 'Koreksi')).toThrow()
   expect(materialUseInput({ ...context, reworkId: id.plan, evidenceRevision: 'proof-revision-2' }, [{ key: 'a', source: { ...source, sourceUsageId: null }, quantity: '5' }], 'Bukti', 'Pengerjaan ulang')).toMatchObject({ reworkId: id.plan, evidenceRevision: 'proof-revision-2', quantityBase: '5000' })
 })
+it('reports first measured sources after deployment using the current physical revision', () => {
+  const context = { ...fieldContextFixture(), useRevision: 2 }, source = custodyFixture()
+  const input = materialUseInput(context, [{ key: 'a', source, quantity: '82,500' },
+    { key: 'b', source: { ...source, id: id.supplier, issueLineId: id.evidence }, quantity: '1' }], 'Pengukuran setelah pemasangan', '')
+  expect(input).toMatchObject({ expectedRevision: 2, materialMode: 'MATERIAL_REQUIRED', lines: [{ quantityBase: '82500' }, { quantityBase: '1000' }] })
+  expect(input).not.toHaveProperty('previousUsageId')
+})
 it('records a declared no-material plan once with an explicit reason and no invented allocations', () => {
   const context = fieldContextFixture(); context.plan = { ...context.plan!, materialMode: 'NONE', reason: 'Pemeriksaan saja', lines: [] }
   expect(materialUseInput(context, [], 'Foto pemeriksaan', 'Tidak ada barang dipakai')).toMatchObject({ expectedRevision: 0, materialMode: 'NONE', lines: [], reason: 'Tidak ada barang dipakai' })

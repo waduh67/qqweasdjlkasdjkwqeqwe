@@ -50,7 +50,8 @@ class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, priv
         if (input.workOrderRevision != context.workOrderRevision || input.expectedRevision != totals.useRevision(context.workOrderId))
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         val previous = usage.get(input.previousUsageId)
-        if (previous.workOrderId != context.workOrderId || previous.useRevision != input.expectedRevision || previous.materialMode != MaterialMode.MATERIAL_REQUIRED)
+        if (previous.workOrderId != context.workOrderId || usage.latestId(context.workOrderId) != previous.usageId ||
+            previous.useRevision > input.expectedRevision || previous.materialMode != MaterialMode.MATERIAL_REQUIRED)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val binding = source(context, input, previous)
         val position = residuals.source(context, ResidualStockSource(input.receiptId, input.issueLineId, binding.sourceUsageId, input.stockIdentityId, input.baseUnit))
@@ -69,7 +70,7 @@ class MaterialUsageDeltaService(private val authority: CurrentAuthorityApi, priv
             remainderAmount.toString(), position.dimension, position.revision, consumed, remainder, UUID.randomUUID())
         val time = lifecycle.now()
         val snapshot = MaterialUsageSnapshot(id, context.workOrderId, context.workOrderRevision, binding.plan.id, binding.plan.planRevision,
-            Math.addExact(previous.useRevision, 1), MaterialMode.MATERIAL_REQUIRED, current.fence.identity.userId, context.customerId,
+            Math.addExact(input.expectedRevision, 1), MaterialMode.MATERIAL_REQUIRED, current.fence.identity.userId, context.customerId,
             input.evidenceReference, input.reason, null, time, UUID.nameUUIDFromBytes("warehouse:$id".toByteArray(Charsets.UTF_8)), listOf(line))
         val body = mapper.writeValueAsString(snapshot)
         val operation = PostingOperation(id, "warehouse.material.use", metadata.idempotencyKey, snapshot.actorId, context.workOrderId,

@@ -59,6 +59,21 @@ private class MaterialHttp : MaterialHttpPort {
     }
 }
 class MaterialRepositoryTest {
+    @Test fun firstMeasuredUseAfterDeploymentRemainsReportUseWithCurrentPhysicalRevision() = runTest {
+        val http = MaterialHttp().apply {
+            context = contextJson(use = 1)
+            reply = { MaterialHttpResponse(200, """{"usageId":"$ISSUE","workOrderId":"$WORK","useRevision":2}""") }
+        }
+        val repository = MaterialRepository(http, EncryptedOutbox(MaterialRecords(), MaterialCipher, USER), MaterialTestSession()) { "after-install" }
+        val draft = reportDraft().copy(context = MaterialJson.context(http.context, WORK))
+        assertIs<MaterialDelivery.Accepted>(repository.submit(draft))
+        val write = http.writes.single()
+        assertEquals("/api/work-orders/$WORK/materials/report-use", write.first)
+        val body = MaterialJson.parse(write.second)
+        assertEquals("1", body.getValue("expectedRevision").toString())
+        assertEquals("3", body.getValue("planRevision").toString())
+        assertFalse(body.containsKey("previousUsageId"))
+    }
     @Test fun offlineIsPendingAndChangedSourceConflictsBeforePostingAfterRestart() = runTest {
         val records = MaterialRecords(); val session = MaterialTestSession(); val http = MaterialHttp()
         val outbox = EncryptedOutbox(records, MaterialCipher, USER)

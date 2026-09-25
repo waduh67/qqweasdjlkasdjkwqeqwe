@@ -88,6 +88,6 @@ interface MaterialPort {
 fun materialCanUse(context: MaterialContext, source: MaterialCustody): Boolean {
     val field = context.field ?: return false
     if (!context.currentAssignee || !context.active || field.planState != "SUBMITTED" || source.sku.tracking == MaterialTracking.SERIAL) return false
-    return if (field.useRevision == 0L) source.initialUseSource && source.planId == field.planId
-    else field.latestUsageId != null && (field.reworkId != null || source.sourceUsageId == field.latestUsageId)
+    return if (field.latestUsageId == null) source.initialUseSource && source.planId == field.planId
+    else field.reworkId != null || source.sourceUsageId == field.latestUsageId
 }

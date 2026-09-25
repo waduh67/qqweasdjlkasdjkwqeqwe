@@ -39,14 +39,14 @@ internal fun prepareMaterial(draft: MaterialDraft, session: MaterialSession): Pr
             val reason = draft.reason?.trim()?.takeIf(String::isNotEmpty)
             require(reason.orEmpty().length <= 1000)
             if (field.mode == MaterialMode.NONE) require(field.useRevision == 0L && draft.lines.isEmpty() && reason != null) { "Deklarasi tanpa material hanya dicatat sekali dan memerlukan alasan." }
-            else require(draft.lines.size in 1..100 && (field.useRevision == 0L || draft.lines.size == 1))
+            else require(draft.lines.size in 1..100 && (field.latestUsageId == null || draft.lines.size == 1))
             require(draft.lines.map { it.source.id }.toSet().size == draft.lines.size)
             val lines = draft.lines.map { measured ->
                 val s = measured.source
                 require(materialCanUse(context, s) && measured.quantityBase.value in 1..s.quantityBase.value) { "Pilih sisa barang yang sudah diterima; perangkat berserial memakai alur pemasangan aset." }
                 buildJsonObject { put("receiptId", s.receiptId); put("issueLineId", s.issueLineId); put("stockIdentityId", s.id); put("quantityBase", measured.quantityBase.base); put("baseUnit", s.baseUnit.name) }
             }
-            val kind = if (field.useRevision == 0L) MaterialCommandKind.REPORT_USE else MaterialCommandKind.CORRECT_USE
+            val kind = if (field.latestUsageId == null) MaterialCommandKind.REPORT_USE else MaterialCommandKind.CORRECT_USE
             PreparedMaterial(kind, buildJsonObject {
                 put("expectedRevision", field.useRevision); put("workOrderRevision", context.workOrderRevision); put("evidenceReference", evidence)
                 reason?.let { put("reason", it) }

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 import java.util.UUID
 
 data class MaterialUsageSource(val receipt: MaterialReceiptSnapshot, val input: MaterialUsageSelection, val planLine: MaterialPlanSnapshotLine)
-data class MaterialUsageDestination(val location: UUID, val customer: UUID?, val usage: UUID)
+data class MaterialUsageDestination(val location: UUID, val customer: UUID?, val usage: UUID, val useRevision: Long)
 
 @Component
 class MaterialUsagePreparation(private val issues: WarehouseIssueStore) {
@@ -52,7 +52,7 @@ class MaterialUsagePreparation(private val issues: WarehouseIssueStore) {
         val line = MaterialUsageLineSnapshot(lineId, input, source.receipt.revision, source.receipt.issueId, issued.planLineId,
             source.planLine.quantityBase, acknowledged.toString(), rest.toString(), custody, piece.revision, consumed, remainder, factId)
         val fact = PostingMaterialFact(factId, consumedId, destination.customer, source.receipt.issue.workOrderId,
-            issued.sku.code, StockQuantity.of(used, unit), 1, installed = true, returned = false, usageId = destination.usage)
+            issued.sku.code, StockQuantity.of(used, unit), destination.useRevision, installed = true, returned = false, usageId = destination.usage)
         return PreparedMaterialUsage(line, legs, split, fact)
     }
 }

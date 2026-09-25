@@ -33,14 +33,14 @@ it('keeps technical completion, QA, provisioning and residual closure distinct f
   expect(screen.queryByRole('link', { name: 'Lihat biaya material WO' })).toBeNull()
   await waitFor(() => expect(fetch.mock.calls).toHaveLength(3))
 })
-it('uses the acknowledged named source and exact measured metres after review, replaying response loss unchanged', async () => {
+it.each([0, 1])('reports first measured use at physical revision%s and replays response loss unchanged', async (physicalRevision) => {
   let writes = 0
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (path.includes('/obligations?')) return page([])
-    if (init?.method === 'POST') { writes++; if (writes === 1) throw new TypeError('response lost'); return response({ usageId: id.evidence, workOrderId: id.source, useRevision: 1 }) }
+    if (init?.method === 'POST') { writes++; if (writes === 1) throw new TypeError('response lost'); return response({ usageId: id.evidence, workOrderId: id.source, useRevision: physicalRevision + 1 }) }
     if (path.endsWith('/settlement')) return response(settlementFixture(writes === 2 ? '17500' : '100000'))
     if (path.includes('/custody?')) return page([custodyFixture()])
-    return response(writes === 2 ? { ...fieldContextFixture(), useRevision: 1, latestUsageId: id.evidence } : fieldContextFixture())
+    return response(writes === 2 ? { ...fieldContextFixture(), useRevision: physicalRevision + 1, latestUsageId: id.evidence } : { ...fieldContextFixture(), useRevision: physicalRevision })
   }); vi.stubGlobal('fetch', fetch); show()
   fireEvent.click(await screen.findByRole('button', { name: 'Catat pemakaian material' })); await fillUse('82,500')
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemakaian' }))
@@ -51,7 +51,7 @@ it('uses the acknowledged named source and exact measured metres after review, r
   const mutations = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(mutations).toHaveLength(2); expect(mutations[0][0]).toBe(`/api/work-orders/${id.source}/materials/report-use`)
   expect(mutations[0][1]?.body).toBe(mutations[1][1]?.body)
-  expect(JSON.parse(String(mutations[0][1]?.body))).toMatchObject({ expectedRevision: 0, workOrderRevision: 5, planRevision: 1, lines: [{ receiptId: id.document, issueLineId: id.line, stockIdentityId: id.piece, quantityBase: '82500' }] })
+  expect(JSON.parse(String(mutations[0][1]?.body))).toMatchObject({ expectedRevision: physicalRevision, workOrderRevision: 5, planRevision: 1, lines: [{ receiptId: id.document, issueLineId: id.line, stockIdentityId: id.piece, quantityBase: '82500' }] })
   expect((mutations[0][1]!.headers as Headers).get('Idempotency-Key')).toBe((mutations[1][1]!.headers as Headers).get('Idempotency-Key'))
 })
 it('sends a positive correction with the real previous usage then reloads stale409 without another write', async () => {

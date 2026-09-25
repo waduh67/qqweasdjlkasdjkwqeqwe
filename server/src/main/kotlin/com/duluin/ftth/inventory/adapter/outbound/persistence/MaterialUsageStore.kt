@@ -13,6 +13,11 @@ import java.util.UUID
 class MaterialUsageStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
 
+    fun latestId(workOrder: UUID): UUID? = jdbc.execute { sql ->
+        sql.query("SELECT id FROM inventory_usage_snapshot WHERE tenant_id=? AND work_order_id=? ORDER BY use_revision DESC LIMIT 1",
+            sql.tenant, workOrder) { it.uuid("id") }.singleOrNull()
+    }
+
     fun consumedLocation(): UUID = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_location WHERE tenant_id=? AND code='CONSUMED' AND state='ACTIVE' FOR SHARE", sql.tenant) {
             it.uuid("id")

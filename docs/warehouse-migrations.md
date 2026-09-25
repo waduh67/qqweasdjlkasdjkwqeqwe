@@ -1,3 +1,16 @@
+## V178.3 applied: one physical revision sequence
+
+V178.3 is APPLIED and immutable: `5fe75939a012d8e7e039c05269813c52847dbe9a6bf4b9d023f8eb2d3e0390e6`. Measured usage
+and deployment documents share a unique physical revision; each new usage binds
+the next revision and its actual latest usage predecessor. Existing historical
+reads use the preceding revisions, not the current maximum. All old usage,
+receipt, stock and immutable-command checks remain. Verification:51 server tests,
+14 web tests and42 reported KMP JVM tests pass. Populated upgrade adds only178.3,
+keeps every prior checksum and every old physical row/count/digest, and passes2
+additional complete numeric tests. Source proof:task44/usage-order-verification.json.
+The next free version is V178.4.
+V178.1 and178.2 are already applied and must not be edited.
+
 ## Task44 V178.1–178.2: serialized deployment witnesses
 
 Both migrations are APPLIED and immutable in the owned QA database:
