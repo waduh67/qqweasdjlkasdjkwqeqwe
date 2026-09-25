@@ -20,11 +20,14 @@ class WorkOrderMaterialUsageITIsolation : MaterialUsageFixture() {
         val before = usageAccounting(case)
 
         PostingJdbcProbe(context, phase, omitWrite = true) {}.use { probe ->
-            assertThatThrownBy { use(case) }.isInstanceOf(Exception::class.java)
+            val response = use(case)
+            assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(409)
+            assertThat(mapper.readTree(response.contentAsString).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
             assertThat(probe.observations).isEqualTo(1)
         }
 
         assertThat(usageAccounting(case)).isEqualTo(before)
+        assertThat(use(case).status).isEqualTo(200)
     }
 
     @Test fun `composite receipt reference rejects foreign tenant acceptance`() {

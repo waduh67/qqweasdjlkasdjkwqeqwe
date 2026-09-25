@@ -29,23 +29,28 @@ class InventorySettlementService(private val plans: MaterialPlanningStore, priva
         store.lockUsage(id)
         val snapshot = usage.get(id)
         val body = usage.body(id)
+        val planIds = reworks.planIds(plan.id)
+        val deployments = store.deployments(context.workOrderId, planIds)
+        if (deployments.any { it.actorId !in context.activeAssigneeIds })
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (snapshot.workOrderId != context.workOrderId || snapshot.customerId != context.customerId ||
             snapshot.planId != plan.id || snapshot.planRevision != plan.planRevision || snapshot.materialMode != plan.materialMode ||
             snapshot.actorId !in context.activeAssigneeIds || snapshot.workOrderRevision > context.workOrderRevision)
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         when (plan.materialMode) {
-            MaterialMode.NONE -> if (plan.reason.isNullOrBlank() || snapshot.reason.isNullOrBlank() || snapshot.lines.isNotEmpty())
+            MaterialMode.NONE -> if (plan.reason.isNullOrBlank() || snapshot.reason.isNullOrBlank() || snapshot.lines.isNotEmpty() || deployments.isNotEmpty())
                 masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             MaterialMode.MATERIAL_REQUIRED -> {
                 val rework = reworks.get(plan.id)
                 val expected = (plan.lines + rework?.inheritedLines.orEmpty()).map { it.id }.toSet()
-                val reported = if (rework == null) snapshot.lines.map { it.planLineId }.toSet()
-                    else reworks.usageIds(context.workOrderId, reworks.planIds(plan.id)).flatMap { usage.get(it).lines }.map { it.planLineId }.toSet()
-                if (snapshot.lines.isEmpty() || reported != expected) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                val consumed = if (rework == null) snapshot.lines.map { it.planLineId }.toSet()
+                    else reworks.usageIds(context.workOrderId, planIds).flatMap { usage.get(it).lines }.map { it.planLineId }.toSet()
+                val reported = consumed + deployments.map { it.planLineId }
+                if (reported.isEmpty() || reported != expected) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             }
         }
         val hash = MessageDigest.getInstance("SHA-256").digest(body.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        return MaterialSettlementSource(plan.id, plan.planRevision, plan.materialMode, plan.reason, id, snapshot.useRevision, hash, body, documents)
+        return MaterialSettlementSource(plan.id, plan.planRevision, plan.materialMode, plan.reason, id, snapshot.useRevision, hash, body, documents, deployments)
     }
 
     override fun verify(context: MaterialPlanningContext, approval: MaterialSettlementApproval): MaterialVerificationReceipt {

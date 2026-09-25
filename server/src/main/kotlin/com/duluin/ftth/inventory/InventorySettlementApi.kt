@@ -17,7 +17,11 @@ data class MaterialSettlementSource(
     val usageHash: String,
     val usageBody: String,
     val documents: List<MaterialSourceRevision>,
+    val deployments: List<MaterialDeploymentSource> = emptyList(),
 )
+
+data class MaterialDeploymentSource(val authorizationId: UUID, val assignmentId: UUID, val assetId: UUID,
+    val issueLineId: UUID, val planLineId: UUID, val postingId: UUID, val useRevision: Long, val actorId: UUID)
 
 data class MaterialSourceRevision(val id: UUID, val revision: Long)
 data class MaterialSettlementApproval(val id: UUID, val hash: String, val source: MaterialSettlementSource)

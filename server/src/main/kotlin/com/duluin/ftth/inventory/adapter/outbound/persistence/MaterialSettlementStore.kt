@@ -9,6 +9,12 @@ import java.util.UUID
 class MaterialSettlementStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
 
+    fun deployments(workOrder: UUID, plans: List<UUID>): List<MaterialDeploymentSource> = jdbc.execute { sql ->
+        val value = requireNotNull(sql.value("SELECT warehouse_material_deployment_sources(?,?,?)::text", sql.tenant,
+            workOrder, sql.connection.createArrayOf("uuid", plans.toTypedArray())))
+        mapper.readValue(value, Array<MaterialDeploymentSource>::class.java).toList()
+    }
+
     fun usageId(workOrder: UUID): UUID = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_usage_snapshot WHERE tenant_id=? AND work_order_id=? ORDER BY use_revision DESC LIMIT 1",
             sql.tenant, workOrder) { it.uuid("id") }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)

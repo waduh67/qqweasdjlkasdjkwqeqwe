@@ -1,3 +1,37 @@
+## Task44 checkpoint: mixed material QA fixed; continue remaining acceptance
+
+This checkpoint follows pushed ee60908b. Locate containing commit with git log -1.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Goal ACTIVE.
+Tasks1–43 DONE;44 IN PROGRESS;45–48/F1–F4 OPEN. Do not stop at this checkpoint.
+
+Full real controller+PostgreSQL numeric fixture now completes with917500MM available,
+82500MM consumed,0 technician MM,9 available ONUs,1 installed assignment/ONU and
+10 original physical assets. QA binds actual serialized deployment witnesses beside
+bulk usage; no second debit or fabricated material line. Exact same-key concurrency,
+precommit rollback/retry, shared assignment lock and omitted/forged witness rejection
+are tested. Internal owner corruption is tested as SQL exception, not an ordinary409.
+
+V178.1 and178.2 APPLIED/IMMUTABLE. Next free178.3. All earlier migrations unchanged.
+Final focused31 tests PASS:3 numeric2m21s and28 isolation2m54s. Broad181 tests had5
+failures:4 fixed and rerun;1 remains the historical175.21 fixture running a newer
+application that requires transfer_receiver_id. Full broad XML archived privately.
+Safe source-matched proof:task44/mixed-material-verification.json. Task44 remains open.
+
+NEXT: fix first cable use after ONU install and delta after install, preserving the
+shared use revision, actual latest usage predecessor and all physical checks. Web/KMP
+must distinguish first bulk use by latestUsageId, not by nonzero physical revision.
+Then serial-only explicit source-backed review without fake NONE/cable/stock; actual
+network response loss +whole app restart +outbox redelivery; remaining combined races.
+Continue45 browser,46 full compatibility/historical fixture,47 runbooks,48 CI,F1–F4.
+Detailed task44.md records known gaps, SQL research, tests and safe recovery patterns.
+
+QA wrappers finished and owned containers stopped, volumes retained. Old environment
+has many test tenants and slow app startup; a fresh separately owned environment can
+be created after archiving its private env, retaining every old volume for recovery.
+Never reset/delete old volumes or kill unrelated processes. Archive reports before
+reruns. Never commit env/raw logs/XML/uploads/authenticated traces. No subagents are
+authorized. Feature pushes do not deploy. Earlier sections below are history.
+
 ## Task43 complete: provenance management UI verified; task44 NEXT
 
 Checkpoint follows pushed38d40e9c; locate this containing commit with git log -1.

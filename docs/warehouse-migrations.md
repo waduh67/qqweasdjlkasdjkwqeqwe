@@ -1,3 +1,20 @@
+## Task44 V178.1–178.2: serialized deployment witnesses
+
+Both migrations are APPLIED and immutable in the owned QA database:
+
+- V178.1: `c4b6b169403296df9943ee7f981ef21f215f3e43712f92a02524f57088c832e3`.
+- V178.2: `ff2b6f79215053a7dd6f26ca54796887268e2b5926e5300e3027d270b36f893b`.
+
+WO material verification binds the actual receipt-backed installation, assignment,
+posting, technician and plan line into its frozen snapshot alongside measured bulk
+usage. The database checks exact witness equality and planned-line coverage. Shared
+assignment locks hold installations stable until the local QA transaction commits.
+These witnesses create no movement, usage line or physical asset.
+
+V178 and all earlier migrations stay unchanged. The next free version is V178.3.
+Task44 acceptance remains open until restart and remaining concurrency gates pass.
+Older sections below record the migration history, not the current task status.
+
 ## M06 V178 applied: finalization and full restart verified
 
 V178 is applied and immutable: SHA256
