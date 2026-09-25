@@ -1,3 +1,44 @@
+## Current checkpoint: legacy customer area selector repaired; keep running
+
+Follows a3c83602. Goal ACTIVE; tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN.
+Product CustomerAreaField now matches existing customer-admin empty-area-unrestricted
+semantics. Scoped operators still see only their own descendants, absent permission
+loads no areas, stored inaccessible assignment is preserved. Warehouse CurrentAuthority
+and source/install guards unchanged. Red3tests1fail; green4tests2files PASS3.07s.
+Targeted lint exit0 (existing effect-state warning), safe task45/customer-area-verification.json.
+
+LegacyR3 oldUI2PASS, after-upgrade2FAIL at first area choice. Real bootstrap deadlock:
+assigning admin area first hides unassigned legacy customer; assigning customer first
+had no choices despite existing raw customer-admin unrestricted permission. R3 fixture
+now creates area -> edits customer -> grants admin area -> login -> warehouse review.
+Product fix above resolves picker. R4 queued, no cutover-after/restart PASS yet.
+
+LIVE host fd8 queue (inspect actual logs):
+- session39842 task45-browser-matrix-r3.sh/log RUNNING returns -> exceptions -> assets.
+  Freeze all E2E source while matrix runs. R2 issue2PASS76.1s, returns2PASS2FAIL only
+  wrong quantity location in response. R3 assertions now request.quantityBase and
+  transit.stockIdentityId; actual return command was committed correctly.
+- session24817 projection-upgrade-r1.sh/log queued. New test-only design moves
+  ProjectionUpgrade to server/src/historicalTest and runs it over pinned historical
+  app/fixturesc164c4eb4224fb51ebffd669c87caf4fde2af1df. All existing migration bytes
+  compared with current before running. No mocks/SQL stock seeds/disabled checks.
+  qa.sh full server gate now runs historical1test before current full suite;
+  new qa.sh projection-upgrade mode for focused run. Scripts and move uncommitted,
+  ShellCheck/bash PASS but execution PENDING. Newworktree warehouse-v175-fixture.
+- session74710 portal-contact-green.sh/log queued. Real red1FAIL: new committedemail
+  login401expected200. XML privately archived. Added syncCommittedContact with
+  REQUIRES_NEW; ordinary sync keeps REQUIRED so sees uncommitted credentials.
+  Green allportalpackage + PortalCustomerAssetsIT PENDING. No server fix committed yet.
+- session35108 legacy-browser-r4.sh/log queued after those checks.
+
+New docs warehouse.md/warehouse-review.md and links in work-order/mobile are draft47,
+not complete: still need executed preflight/negative gates and deploy instructions.
+R3 retained legacy artifacts .omo/runtime/warehouse-legacy-987d7d3a3fa372f68b3d2fdeb5dc048e.
+All raw traces/env/XML private (public repo). Do not edit running scripts, delete
+volumes, or kill unrelatedJava. Nextmigration178.8. Continue through all gates.
+
+## Previous checkpoint (superseded)
+
 ## Current checkpoint: RMA migration verified in both retained environments
 
 Follows aa22c32e; locate containing commit with git log -1. Goal ACTIVE.

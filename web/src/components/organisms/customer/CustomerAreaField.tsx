@@ -25,7 +25,10 @@ export function CustomerAreaField({ value, onChange }: { value: string | null; o
     for (const area of areas) if (area.parentId && ids.has(area.parentId)) ids.add(area.id)
     if (size === ids.size) break
   }
-  const choices = user?.platformAdmin ? areas : areas.filter(area => ids.has(area.id))
+  // Customer administration preserves its existing empty = unrestricted area
+  // contract. Warehouse commands independently require explicit current scopes.
+  const unrestricted = user != null && (user.platformAdmin || user.areaIds.length === 0)
+  const choices = unrestricted ? areas : areas.filter(area => ids.has(area.id))
   return <div className="stack">
     <SelectField label="Area pelanggan" value={value ?? ''} disabled={!allowed || loading || failed}
       hint="Pilih area layanan agar petugas yang memiliki cakupan area dapat menangani pelanggan ini."

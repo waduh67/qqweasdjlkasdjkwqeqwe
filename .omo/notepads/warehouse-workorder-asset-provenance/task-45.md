@@ -116,3 +116,10 @@ actual ONU record917500MM/9available/1installed. MatrixR2 issue2/2 passed; retur
 exceptions and visual asset rerun still executing. HistoricalV172 UI2/2 passed;
 post-upgrade cutover failed fixture area-access ordering, requires correction.
 No task45 completion claimed.
+
+## Legacy area bootstrap fix
+
+R3 proved historical UI2/2, then exposed first-area picker deadlock after upgrade.
+CustomerAreaField now honors existing customer administration unrestricted-area
+contract, without changing warehouse authority. Red3/1; green4/4 in2files.
+R4 real legacy rerun queued; no cutover completion claimed.
