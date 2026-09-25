@@ -1,0 +1,70 @@
+{
+  "problem": "AFTER_COMMIT contact listener joined completed transaction resources, leaving the portal login directory stale",
+  "red": {
+    "tests": 1,
+    "failures": 1,
+    "observed": "The committed new email returned401 instead of200"
+  },
+  "green": [
+    {
+      "suite": "com.duluin.ftth.customer.PortalCustomerAssetsIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 38.257
+    },
+    {
+      "suite": "com.duluin.ftth.portal.PortalAuthenticationServiceTest",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.129
+    },
+    {
+      "suite": "com.duluin.ftth.portal.PortalContactIdentityIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 31.632
+    },
+    {
+      "suite": "com.duluin.ftth.portal.PortalCredentialServiceTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.01
+    },
+    {
+      "suite": "com.duluin.ftth.portal.PortalPasswordRecoveryServiceTest",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.031
+    },
+    {
+      "suite": "com.duluin.ftth.portal.PortalSelfServiceTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.043
+    }
+  ],
+  "sourceHashes": {
+    "server/src/main/kotlin/com/duluin/ftth/portal/application/service/PortalCustomerContactListener.kt": "ecbd8d9dbea8fb0b791e99c7d2aab45de4563e5bbc5fc2a241b91da2ec74cf86",
+    "server/src/main/kotlin/com/duluin/ftth/portal/application/service/PortalIdentitySyncService.kt": "f8b1e18de2aca920b752faacf7c979bbe14d83a0073ac37b3d387844def95950",
+    "server/src/test/kotlin/com/duluin/ftth/portal/PortalContactIdentityIT.kt": "fdb3bbebc408071a656977d5087ee726afbf7ea9280ef30907127c90d67a34c1"
+  },
+  "assertions": [
+    "Committed new email and phone authenticate; previous values stop authenticating",
+    "Username and unrelated tenant account continue authenticating",
+    "Rolled-back customer contact changes are not indexed",
+    "Ordinary credential synchronization remains in its caller transaction; only committed-contact handling starts a new transaction",
+    "Existing authentication, credential, recovery, self-service and customer asset privacy tests all pass"
+  ]
+}

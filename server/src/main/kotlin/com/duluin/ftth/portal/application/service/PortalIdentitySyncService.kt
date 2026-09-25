@@ -8,6 +8,7 @@ import com.duluin.ftth.portal.application.port.outbound.PortalIdentityValue
 import com.duluin.ftth.portal.domain.model.PortalIdentifier
 import com.duluin.ftth.portal.domain.model.PortalIdentityKind
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
@@ -33,7 +34,15 @@ class PortalIdentitySyncService(
     private val customerApi: CustomerApi,
 ) {
     @Transactional
-    fun sync(customerId: UUID) {
+    fun sync(customerId: UUID) = synchronize(customerId)
+
+    // AFTER_COMMIT can still expose the completed transaction's resources. Start
+    // a new transaction here; ordinary credential writes must keep their caller's
+    // transaction so synchronization can see the credential before it commits.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun syncCommittedContact(customerId: UUID) = synchronize(customerId)
+
+    private fun synchronize(customerId: UUID) {
         val tenantId = TenantContext.tenantId()
         val credential = credentials.findByCustomerId(customerId)
         if (credential == null) {

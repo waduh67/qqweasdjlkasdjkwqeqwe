@@ -1,3 +1,58 @@
+## Current checkpoint: portal regression60 PASS; historical upgrade1 PASS
+
+Follows pushedddf494b3; locate containing commit with git log -1. Goal ACTIVE;
+tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN. Continue after commit and push.
+
+Portal contact fix has real red1FAIL (new committed email401), green60PASS/6suites,
+no failures/errors/skips. AFTER_COMMIT calls a dedicated REQUIRES_NEW entrypoint;
+ordinary credential creation retains REQUIRED sync. Email/phone replacement, old
+identity revocation, rollback, unrelated tenant, auth/recovery/self-service and
+customer asset privacy all verified. Safe proof task46/portal-contact-verification.json.
+
+Historical projection R2 PASS1test with two genuine historical corruption cases,
+version-correct pinned175.21 application and separate database; exact175.22 migration
+turns both replay/read paths into409 without new accounting. Cleanup succeeded.
+Safe proof historical-projection-upgrade-verification.json. The full qa.sh server
+gate runs this regression before modern tests. Isolation10PASS remains valid.
+
+QA restoration PASS: only3 e2e functions replaced from unchanged clean migrations;
+322tables/database preserved with identical counts/digests (146219 test/31173 e2e
+rows), original activation cutoff and all Flyway history preserved. Safe proof
+qa-function-recovery-verification.json. No production or stock SQL repair. Both
+QA volumes retained; V178.6/V178.7 immutable, next178.8. FollowupR3/session19087 done0.
+
+ACTIVE legacy UI runner .omo/runtime/legacy-browser-r5.sh/log (session50850), using
+new dedicated database, expected database readiness and shared-function fingerprint.
+Do not edit ANY E2E source while this runner or the subsequent browser matrix runs.
+Legacy6 UI cases not yet passed. Existing CustomerAreaField bootstrap fix already
+pushed71d5; source/history screenshots and legacy harness still uncommitted pending
+this verification. Prepared all8-spec task45-browser-matrix-r4.sh NOT launched yet.
+
+Other uncommitted drafts: operational docs/preflight; Docker context/build cleanup;
+ci-results.py allowlisted report helper, currently only tried against real JUnit
+and Playwright reports (negative validator checks/CI workflow remain to implement).
+No Docker image build, publish, deployment, main merge, native runtime or independent
+review claimed. No subagents authorized. Next: finish legacy/allbrowser; fullserver/
+web/KMP; runbook preflight; requiredCI/image smoke; F1–F4 and concrete user review.
+Raw env, logs/XML and authenticated browser traces stay private. Do not final here.
+
+## QA restoration completed after isolation checkpoint ddf494b3
+
+Default QA functions restored from fresh unchanged migrations362/version178.7.
+warehouse_test required0 replacements; warehouse_e2e required3 (approval guard,
+returned asset, repair step). Each322 public tables has identical before/after rows
+and digests:146219 server-test rows,31173 browser rows. All deterministic warehouse
+functions match the clean reference; original per-database activation function and
+all Flyway history preserved. R1 stopped before DDL on expected activation timestamp
+difference; R2 passed. Safe proof task46/qa-function-recovery-verification.json.
+
+Current runner is isolation-followup-r3.sh/log (session19087), now historical
+projection R2 then portalgreen. Earlier followupR2/session61520 has finishedfailed;
+no partial function repair from it. Prepared legacy-browser-r5.sh and all8-spec
+browser matrixR4 are NOT launched. Freeze E2E source while either browser runs.
+Historical V172 base is on origin/main, projection base is feature ancestry; both
+available with full fetch-depth0. No main merge needed. Continue goal work.
+
 ## Current checkpoint: dedicated database isolation gate passes 10/10
 
 Follows pushed1f4ebece; locate containing commit with git log -1. Goal ACTIVE.
