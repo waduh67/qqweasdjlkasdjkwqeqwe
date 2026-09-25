@@ -44,10 +44,11 @@ class MaterialWorkbenchService(private val authority: CurrentAuthorityApi, priva
     fun review(id: UUID): MaterialApprovalReviewResponse {
         val context = locked(id)
         val frozen = approvals.forWorkOrder(id)?.snapshot ?: return MaterialApprovalReviewResponse(null)
-        val usage = inventory.usageDetails(context, frozen.material.usageId)
-        if (usage.planId != frozen.material.planId || usage.planRevision != frozen.material.planRevision || usage.useRevision != frozen.material.useRevision)
+        val usage = frozen.material.usageId?.let { inventory.usageDetails(context, it) }
+        if (usage != null && (usage.planId != frozen.material.planId || usage.planRevision != frozen.material.planRevision || usage.useRevision != frozen.material.useRevision))
             throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Frozen usage binding changed"))
-        return MaterialApprovalReviewResponse(MaterialApprovalReview(frozen.id, frozen.workOrder.material.workOrderRevision, usage))
+        val deployments = inventory.deploymentDetails(context, frozen.material.deployments)
+        return MaterialApprovalReviewResponse(MaterialApprovalReview(frozen.id, frozen.workOrder.material.workOrderRevision, usage, deployments))
     }
     private fun locked(id: UUID): MaterialPlanningContext {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
@@ -59,4 +60,4 @@ class MaterialWorkbenchService(private val authority: CurrentAuthorityApi, priva
 }
 
 data class MaterialApprovalReviewResponse(val review: MaterialApprovalReview?)
-data class MaterialApprovalReview(val id: UUID, val workOrderRevision: Long, val usage: MaterialUsageView)
+data class MaterialApprovalReview(val id: UUID, val workOrderRevision: Long, val usage: MaterialUsageView?, val deployments: List<MaterialDeploymentView>)

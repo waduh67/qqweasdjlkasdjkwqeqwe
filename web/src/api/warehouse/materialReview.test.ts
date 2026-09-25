@@ -16,8 +16,18 @@ it('reads the frozen approval version and rejects usage from another WO', async 
   const fetch = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ review: { id: id.document, workOrderRevision: 11, usage: usageViewFixture() } })))
     .mockResolvedValueOnce(new Response(JSON.stringify({ review: { id: id.document, workOrderRevision: 11, usage: { ...usageViewFixture(), workOrderId: id.supplier } } })))
   vi.stubGlobal('fetch', fetch)
-  expect((await getMaterialApprovalReview(id.source))?.usage.useRevision).toBe(1)
+  expect((await getMaterialApprovalReview(id.source))?.usage?.useRevision).toBe(1)
   await expect(getMaterialApprovalReview(id.source)).rejects.toThrow(WarehouseDataError)
+})
+it('requires an actual named serialized source when a frozen review has no measured usage', async () => {
+  const deployment = { authorizationId: id.evidence, workOrderId: id.source, assignmentId: id.line, assetId: id.piece, useRevision: 1,
+    sku: { ...materialSku, name: 'ONU', tracking: 'SERIAL', baseUnit: 'EA' }, serial: 'ONU-REVIEW', actor: null, recordedAt: materialPlanFixture.recordedAt }
+  const result = (deployments: unknown[]) => new Response(JSON.stringify({ review: { id: id.document, workOrderRevision: 11, usage: null, deployments } }))
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(result([deployment])).mockResolvedValueOnce(result([]))
+    .mockResolvedValueOnce(result([{ ...deployment, workOrderId: id.supplier }])).mockResolvedValueOnce(result([deployment, deployment])))
+  const review = await getMaterialApprovalReview(id.source)
+  expect(review?.usage).toBeNull(); expect(review?.deployments[0].serial).toBe('ONU-REVIEW')
+  for (let index = 0; index < 3; index++) await expect(getMaterialApprovalReview(id.source)).rejects.toThrow(WarehouseDataError)
 })
 it('captures old plan, usage and evidence tokens through rework retry', async () => {
   const input = { expectedRevision: 1, workOrderRevision: 8, previousPlanId: id.plan, previousUsageId: id.evidence, expectedUsageRevision: 1, previousEvidenceRevision: 'old-proof', evidenceRevision: 'new-proof', reason: 'Tarikan tambahan', deltas: [{ skuId: id.sku, quantityBase: '10000', baseUnit: 'MM' as const, continuousCut: true }] }

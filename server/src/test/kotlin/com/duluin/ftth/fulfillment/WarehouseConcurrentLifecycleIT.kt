@@ -30,15 +30,17 @@ class WarehouseConcurrentLifecycleIT : WarehouseNumericLifecycleFixture() {
         concurrently { saveCommand(returned.inspection.path, returned.inspection.token, returned.inspection.body,
             returned.inspection.key) }.forEach { assertThat(it).isEqualTo(returned.inspection) }
         numericComplete(case, signature)
-        for (fault in listOf("OMITTED", "FOREIGN_ASSET")) {
+        for (fault in listOf("OMITTED", "FOREIGN_ASSET", "OMIT_USAGE")) {
+            val guard = if (fault == "OMIT_USAGE") "deployment-only settlement requires nonempty serialized material sources"
+                else "fulfillment deployment witnesses do not match posted installations"
             failure.tamperDeployment.set(fault)
             failure.lastFailure.set(null)
             try {
                 assertThatThrownBy {
                     request("POST", "/api/work-orders/${case.workOrder}/approve", case.stock.token, "{}", "numeric-invalid-witness")
                 }.hasRootCauseInstanceOf(java.sql.SQLException::class.java)
-                    .hasStackTraceContaining("fulfillment deployment witnesses do not match posted installations")
-                assertThat(failure.lastFailure.get()).contains("fulfillment deployment witnesses do not match posted installations")
+                    .hasStackTraceContaining(guard)
+                assertThat(failure.lastFailure.get()).contains(guard)
             } finally { failure.tamperDeployment.set(null) }
             assertThat(numericAudit(case)).isEqualTo(before)
             fixture(case.stock.token).transaction {

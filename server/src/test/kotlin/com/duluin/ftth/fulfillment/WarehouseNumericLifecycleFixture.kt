@@ -18,7 +18,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
     protected data class NumericReturn(val caseId: String, val residualId: String, val remnant: String,
         val inspection: SavedCommand)
 
-    protected fun numericCase(): NumericCase {
+    protected fun numericCase(includeCable: Boolean = true): NumericCase {
         val stock = setupReceipt()
         receiveStock(stock, "1000000")
         assertThat(request("PUT", "/api/v1/warehouse/skus/${stock.onu}", stock.token,
@@ -42,7 +42,8 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         val customer = mapper.readTree(customerResponse.contentAsString).path("id").asString()
         val workOrder = workOrder(stock.token, "PSB", customer)
         assign(stock.token, workOrder, technician.second)
-        putPlan(stock.token, workOrder, plan(stock.token, workOrder, "[${line(stock.cable)},${line(stock.onu, "1", "EA")}]"))
+        val planned = listOfNotNull(if (includeCable) line(stock.cable) else null, line(stock.onu, "1", "EA"))
+        putPlan(stock.token, workOrder, plan(stock.token, workOrder, planned.joinToString(",", "[", "]")))
         action(stock.token, workOrder, "submit-request", command(stock.token, workOrder, 1))
         action(stock.token, workOrder, "reserve", command(stock.token, workOrder, 1))
         val transit = create("locations", stock.token, """{"code":"WO_TRANSIT","name":"Delivery","kind":"TRANSIT"}""").path("id").asString()
@@ -57,7 +58,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         val setup = IssueSetup(stock, workOrder, technician.second)
         val picked = action(stock.token, workOrder, "pick", pickBody(setup))
         val issue = action(stock.token, workOrder, "dispatch", transitionBody(setup, picked))
-        assertThat(issue.path("lines").size()).isEqualTo(2)
+        assertThat(issue.path("lines").size()).isEqualTo(if (includeCable) 2 else 1)
         val input = MaterialReceiptRequest(UUID.fromString(issue.path("issueId").asString()), issue.path("revision").asLong(),
             issue.path("workOrderRevision").asLong(), "Both parties counted one ONU and measured100m", issue.path("lines").asSequence().map { row ->
                 val unit = WarehouseBaseUnit.valueOf(row.path("baseUnit").asString())
@@ -70,13 +71,14 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         assertThat(ack.status).withFailMessage(ack.contentAsString).isEqualTo(200)
         val receipt = mapper.readTree(ack.contentAsString)
         assertThat(request("POST", "/api/work-orders/$workOrder/start", technician.first).status).isEqualTo(200)
-        val cable = input.lines.single { it.baseUnit == WarehouseBaseUnit.MM }
-        val accepted = receipt.path("lines").single { it.path("selection").path("issueLineId").asString() == cable.issueLineId.toString() }
+        val usageLines = input.lines.filter { it.baseUnit == WarehouseBaseUnit.MM }.map { cable ->
+            val accepted = receipt.path("lines").single { it.path("selection").path("issueLineId").asString() == cable.issueLineId.toString() }
+            MaterialUsageSelection(UUID.fromString(receipt.path("receiptId").asString()), cable.issueLineId,
+                UUID.fromString(accepted.path("accepted").path("stockIdentityId").asString()), "82500", WarehouseBaseUnit.MM)
+        }
         val currentRevision = summary(stock.token, workOrder).path("revisions").path("workOrderRevision").asLong()
         return NumericCase(stock, technician, customer, workOrder, issue, receipt,
-            MaterialUsageRequest(0, 1, currentRevision, MaterialMode.MATERIAL_REQUIRED, "Measured82.500m",
-                listOf(MaterialUsageSelection(UUID.fromString(receipt.path("receiptId").asString()), cable.issueLineId,
-                    UUID.fromString(accepted.path("accepted").path("stockIdentityId").asString()), "82500", WarehouseBaseUnit.MM))))
+            MaterialUsageRequest(0, 1, currentRevision, MaterialMode.MATERIAL_REQUIRED, "Measured82.500m", usageLines))
     }
 
     protected fun numericUse(case: NumericCase, key: String = "numeric-use"): SavedCommand = saveCommand(
@@ -150,7 +152,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
         assertThat(proof.status).isEqualTo(200)
         saveCommand("/api/work-orders/${case.workOrder}/complete", case.technician.first,
             mapper.writeValueAsString(mapOf("proofRevision" to mapper.readTree(proof.contentAsString).path("revision").asString(),
-                "artifacts" to artifacts, "resolutionNote" to "Measured cable and installed warehouse ONU")), "numeric-complete")
+                "artifacts" to artifacts, "resolutionNote" to "Completed planned warehouse installation")), "numeric-complete")
     }
 
     protected fun saveCommand(path: String, token: String, body: String, key: String, status: Int = 200): SavedCommand {

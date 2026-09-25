@@ -59,6 +59,19 @@ private class MaterialHttp : MaterialHttpPort {
     }
 }
 class MaterialRepositoryTest {
+    @Test fun serialOnlyMetadataPreventsMeasuredUseAndPreservesLegacyGuardBytes() = runTest {
+        val legacy = MaterialJson.context(contextJson(), WORK)
+        val explicit = MaterialJson.context(contextJson().replace("\"latestUsageId\":null", "\"latestUsageId\":null,\"hasMeasuredMaterials\":true"), WORK)
+        assertEquals(MaterialJson.fieldGuard(legacy), MaterialJson.fieldGuard(explicit))
+        val http = MaterialHttp().apply { context = contextJson(use = 1).replace("\"latestUsageId\":null", "\"latestUsageId\":null,\"hasMeasuredMaterials\":false") }
+        val records = MaterialRecords()
+        val repository = MaterialRepository(http, EncryptedOutbox(records, MaterialCipher, USER), MaterialTestSession()) { "serial-only" }
+        val draft = reportDraft().copy(context = MaterialJson.context(http.context, WORK))
+        assertFalse(draft.context.field!!.hasMeasuredMaterials)
+        assertFalse(materialCanUse(draft.context, draft.lines.single().source))
+        assertIs<MaterialDelivery.Rejected>(repository.submit(draft))
+        assertTrue(http.writes.isEmpty()); assertTrue(records.rows.isEmpty())
+    }
     @Test fun firstMeasuredUseAfterDeploymentRemainsReportUseWithCurrentPhysicalRevision() = runTest {
         val http = MaterialHttp().apply {
             context = contextJson(use = 1)

@@ -9,11 +9,12 @@ interface InventoryMaterialWorkbenchApi {
     fun custody(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialCustodyChoice>
     fun usage(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialUsageView>
     fun usageDetails(context: MaterialPlanningContext, id: UUID): MaterialUsageView
+    fun deploymentDetails(context: MaterialPlanningContext, sources: List<MaterialDeploymentSource>): List<MaterialDeploymentView>
     fun obligations(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialObligationView>
 }
 data class MaterialFieldContext(val workOrderId: UUID, val workOrderRevision: Long, val plan: MaterialPlanSnapshot?,
     val planState: String?, val useRevision: Long, val latestUsageId: UUID?,
-    val reworkId: UUID?, val evidenceRevision: String?)
+    val reworkId: UUID?, val evidenceRevision: String?, val hasMeasuredMaterials: Boolean = true)
 data class MaterialCustodyChoice(val id: UUID, val receiptId: UUID, val issueId: UUID, val issueCode: String,
     val issueLineId: UUID, val planId: UUID, val planLineId: UUID, val sku: MaterialSkuSnapshot,
     val sourceUsageId: UUID?, val quantityBase: String, val baseUnit: WarehouseBaseUnit, val stockRevision: Long,
@@ -23,5 +24,7 @@ data class MaterialUsageView(val id: UUID, val workOrderId: UUID, val planId: UU
     val reason: String?, val recordedAt: Instant, val lines: List<MaterialUsageViewLine>)
 data class MaterialUsageViewLine(val id: UUID, val receiptId: UUID, val issueLineId: UUID, val sku: MaterialSkuSnapshot,
     val quantityBase: String, val baseUnit: WarehouseBaseUnit, val residualBase: String)
+data class MaterialDeploymentView(val authorizationId: UUID, val workOrderId: UUID, val assignmentId: UUID, val assetId: UUID,
+    val useRevision: Long, val sku: MaterialSkuSnapshot, val serial: String, val actor: WarehousePolicyChoice?, val recordedAt: Instant)
 data class MaterialObligationView(val id: UUID, val issueCode: String, val sku: MaterialSkuSnapshot,
     val serial: String?, val lotCode: String?, val obligation: MaterialObligationLine)

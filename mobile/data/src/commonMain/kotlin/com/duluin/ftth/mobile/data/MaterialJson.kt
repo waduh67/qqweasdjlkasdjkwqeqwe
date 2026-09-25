@@ -31,7 +31,8 @@ internal object MaterialJson {
             require(r.flag("currentAssignee") && f.id("workOrderId") == id && f.number("workOrderRevision") == r.number("workOrderRevision"))
             val plan = f["plan"]?.takeUnless { it is JsonNull }?.jsonObject
             MaterialField(plan?.id("id"), plan?.number("planRevision"), plan?.text("materialMode")?.let(MaterialMode::valueOf), f.optional("planState"),
-                f.number("useRevision"), f.optional("latestUsageId")?.let(::uuid), f.optional("reworkId")?.let(::uuid), f.optional("evidenceRevision"))
+                f.number("useRevision"), f.optional("latestUsageId")?.let(::uuid), f.optional("reworkId")?.let(::uuid), f.optional("evidenceRevision"),
+                if (f.containsKey("hasMeasuredMaterials")) f.flag("hasMeasuredMaterials") else true)
         }
         return MaterialContext(id, r.text("code"), r.number("workOrderRevision"), r.flag("currentAssignee"), r.flag("active"), r.text("technicalState"), r.optional("qaState"), field)
     }
@@ -60,6 +61,7 @@ internal object MaterialJson {
         context.field?.let { f ->
             put("planId", f.planId); put("planRevision", f.planRevision); put("materialMode", f.mode?.name); put("planState", f.planState)
             put("useRevision", f.useRevision); put("latestUsageId", f.latestUsageId); put("reworkId", f.reworkId); put("evidenceRevision", f.evidenceRevision)
+            if (!f.hasMeasuredMaterials) put("hasMeasuredMaterials", false)
         }
     }
     fun sourceGuard(s: MaterialCustody) = buildJsonObject {

@@ -4,7 +4,7 @@ import { quantityFromInput } from '@/api/warehouse/quantity'
 export interface MaterialUseDraft { key: string; source: MaterialCustody | null; quantity: string }
 export const emptyUseDraft = (): MaterialUseDraft => ({ key: crypto.randomUUID(), source: null, quantity: '' })
 export function eligibleUseSource(context: MaterialFieldContext, source: MaterialCustody) {
-  if (source.sku.tracking === 'SERIAL') return false
+  if (!context.hasMeasuredMaterials || source.sku.tracking === 'SERIAL') return false
   if (!context.latestUsageId) return source.initialUseSource && source.planId === context.plan?.id
   return !!context.latestUsageId && (!!context.reworkId || source.sourceUsageId === context.latestUsageId)
 }
@@ -16,6 +16,7 @@ export function materialUseInput(context: MaterialFieldContext, rows: MaterialUs
     if (context.useRevision !== 0 || !reason.trim()) throw new Error('Deklarasi tanpa material memerlukan alasan dan hanya dicatat sekali.')
     return { expectedRevision: context.useRevision, workOrderRevision: context.workOrderRevision, planRevision: context.plan.planRevision, materialMode: 'NONE', evidenceReference: evidence.trim(), reason: reason.trim(), lines: [] }
   }
+  if (!context.hasMeasuredMaterials) throw new Error('Pemasangan perangkat sudah dicatat melalui aset pelanggan. Rencana ini tidak memerlukan pemakaian material terukur.')
   if (!rows.length || rows.length > 100 || (context.latestUsageId && rows.length !== 1)) throw new Error('Pilih 1–100 sumber; tambahan pemakaian dicatat satu sumber per transaksi.')
   const seen = new Set<string>()
   const lines = rows.map(row => {

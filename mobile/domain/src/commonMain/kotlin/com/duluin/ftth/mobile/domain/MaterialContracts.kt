@@ -43,7 +43,7 @@ data class MaterialPerson(val id: String, val name: String)
 data class MaterialSku(val id: String, val code: String, val name: String, val tracking: MaterialTracking, val baseUnit: MaterialUnit)
 data class MaterialLocation(val id: String, val code: String, val name: String?)
 data class MaterialField(val planId: String?, val planRevision: Long?, val mode: MaterialMode?, val planState: String?, val useRevision: Long,
-    val latestUsageId: String?, val reworkId: String?, val evidenceRevision: String?)
+    val latestUsageId: String?, val reworkId: String?, val evidenceRevision: String?, val hasMeasuredMaterials: Boolean = true)
 data class MaterialContext(val id: String, val code: String, val workOrderRevision: Long, val currentAssignee: Boolean, val active: Boolean,
     val technicalState: String, val qaState: String?, val field: MaterialField?)
 data class MaterialIssueLine(val id: String, val stockIdentityId: String, val sku: MaterialSku, val baseUnit: MaterialUnit,
@@ -87,7 +87,7 @@ interface MaterialPort {
 
 fun materialCanUse(context: MaterialContext, source: MaterialCustody): Boolean {
     val field = context.field ?: return false
-    if (!context.currentAssignee || !context.active || field.planState != "SUBMITTED" || source.sku.tracking == MaterialTracking.SERIAL) return false
+    if (!context.currentAssignee || !context.active || field.planState != "SUBMITTED" || !field.hasMeasuredMaterials || source.sku.tracking == MaterialTracking.SERIAL) return false
     return if (field.latestUsageId == null) source.initialUseSource && source.planId == field.planId
     else field.reworkId != null || source.sourceUsageId == field.latestUsageId
 }

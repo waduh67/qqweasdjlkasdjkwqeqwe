@@ -18,6 +18,18 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
+it('directs a serial-only plan to customer assets without offering fictitious measured use', async () => {
+  mocks.permissions.add('customer.customer.view'); mocks.permissions.add('customer.onu.view')
+  const context = fieldContextFixture(); context.hasMeasuredMaterials = false; context.useRevision = 1
+  context.plan = { ...context.plan!, lines: context.plan!.lines.map(line => ({ ...line, quantityBase: '1', continuousCut: false,
+    sku: { ...line.sku, name: 'ONU', tracking: 'SERIAL', baseUnit: 'EA' } })) }
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => path.includes('/obligations?') ? page([])
+    : path.endsWith('/settlement') ? response(settlementFixture('0')) : response(context)))
+  show({ ...executionWorkOrder, customerId: id.supplier })
+  await screen.findByText(/Pemasangan perangkat dicatat melalui aset pelanggan dan diperiksa pada QA/)
+  expect(screen.queryByRole('button', { name: /Catat.*pemakaian/ })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Lihat perangkat pelanggan' }).getAttribute('href')).toBe('/customers')
+})
 async function fillUse(amount: string) {
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang diterima 1' })).not.toHaveProperty('disabled', true))
   fireEvent.change(screen.getByRole('combobox', { name: 'Barang diterima 1' }), { target: { value: id.piece } })

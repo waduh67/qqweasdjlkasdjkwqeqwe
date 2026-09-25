@@ -1,3 +1,16 @@
+## V178.4 applied: deployment-only material verification
+
+V178.4 is APPLIED and immutable: `b00cf665eaebae1959e5d75113674e98efba3f6c6838fda57604c1cda0545003`. A verified serialized deployment is an
+actual material source even when the WO has no measured bulk usage. Only that
+explicit source shape may omit usage ID/body/hash; NONE and missing bulk sources
+must still reject. The forward migration must preserve every existing physical,
+owner, frozen snapshot, current authority and original outcome constraint, and
+bind the exact real deployment witnesses. No fake usage or posting is permitted.
+Serial-only positive/negative, historical review after actual removal and mixed regressions pass.
+The populated upgrade preserves all existing physical/history rows and earlier checksums.
+See the task44 serial-settlement verification artifact for the exact source and results.
+All versions through178.4 are immutable. Next free version178.5.
+
 ## V178.3 applied: one physical revision sequence
 
 V178.3 is APPLIED and immutable: `5fe75939a012d8e7e039c05269813c52847dbe9a6bf4b9d023f8eb2d3e0390e6`. Measured usage

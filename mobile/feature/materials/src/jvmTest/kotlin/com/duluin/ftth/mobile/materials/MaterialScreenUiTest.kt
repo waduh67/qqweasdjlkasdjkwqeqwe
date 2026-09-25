@@ -12,6 +12,14 @@ import kotlin.test.*
 
 @OptIn(ExperimentalTestApi::class)
 class MaterialScreenUiTest {
+    @Test fun serialOnlyJobExplainsInstallationWithoutOfferingMeasuredConsumption() = runComposeUiTest {
+        val original = sampleWorkspace()
+        val workspace = original.copy(context = original.context.copy(field = original.context.field!!.copy(hasMeasuredMaterials = false)),
+            custody = original.custody.copy(items = emptyList(), totalElements = 0), issues = original.issues.copy(items = emptyList(), totalElements = 0))
+        setContent { FieldOperationsTheme { MaterialScreen(MaterialUiState(MaterialEnvironment("scope", true, false, true), workspace = workspace)) {} } }
+        onNodeWithContentDescription("Pemasangan perangkat dicatat melalui aset pelanggan dan diperiksa pada QA.").assertExists()
+        onNodeWithContentDescription("Catat pemakaian").assertDoesNotExist()
+    }
     @Test fun measuredInputRetainsDraftAndOfflineConfirmationDispatchesOnlyOneTypedAction() = runComposeUiTest {
         val workspace = sampleWorkspace(); val reducer = MaterialReducer()
         var state by mutableStateOf(MaterialUiState(MaterialEnvironment("scope", true, false, false), workspace = workspace, form = MaterialForm.Use(listOf(MaterialUseRow(workspace.custody.items.single())))))

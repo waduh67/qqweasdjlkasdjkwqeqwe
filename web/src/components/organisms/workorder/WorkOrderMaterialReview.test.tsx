@@ -14,6 +14,20 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
+it('shows the actual device for a serial-only QA review and clears it on scope loss', async () => {
+  let denied = false
+  const deployment = { authorizationId: id.evidence, workOrderId: id.source, assignmentId: id.line, assetId: id.piece, useRevision: 1,
+    sku: { ...materialSku, name: 'ONU', tracking: 'SERIAL', baseUnit: 'EA' }, serial: 'ONU-REVIEW', actor: { id: id.inspection, name: 'Budi Teknisi' }, recordedAt: materialPlanFixture.recordedAt }
+  vi.stubGlobal('fetch', vi.fn(async () => denied ? response({ code: 'NOT_FOUND', message: 'NOT_FOUND' }, 404)
+    : response({ review: { id: id.document, workOrderRevision: 11, usage: null, deployments: [deployment] } })))
+  render(<WorkOrderMaterialReview id={id.source} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Lihat material persetujuan QA' }))
+  await screen.findByText('ONU · ONU-REVIEW'); expect(screen.queryByText(/Tanpa material:/)).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Tutup material persetujuan QA' })); denied = true
+  fireEvent.click(screen.getByRole('button', { name: 'Lihat material persetujuan QA' }))
+  await screen.findByText('Data tidak ditemukan dalam cakupan gudang Anda.')
+  expect(screen.queryByText('ONU · ONU-REVIEW')).toBeNull()
+})
 it('loads the real frozen QA usage only on demand, then discards it when authority changes', async () => {
   let denied = false
   const fetch = vi.fn(async () => denied ? response({ code: 'NOT_FOUND', message: 'NOT_FOUND' }, 404) : response({ review: { id: id.document, workOrderRevision: 11, usage: usageViewFixture() } }))

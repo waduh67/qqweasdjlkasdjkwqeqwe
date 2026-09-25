@@ -15,9 +15,9 @@ class MaterialSettlementStore(private val jdbc: WarehouseCommandJdbc) {
         mapper.readValue(value, Array<MaterialDeploymentSource>::class.java).toList()
     }
 
-    fun usageId(workOrder: UUID): UUID = jdbc.execute { sql ->
+    fun usageId(workOrder: UUID): UUID? = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_usage_snapshot WHERE tenant_id=? AND work_order_id=? ORDER BY use_revision DESC LIMIT 1",
-            sql.tenant, workOrder) { it.uuid("id") }.singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            sql.tenant, workOrder) { it.uuid("id") }.singleOrNull()
     }
 
     fun lockDocuments(workOrder: UUID): List<MaterialSourceRevision> = jdbc.execute { sql ->

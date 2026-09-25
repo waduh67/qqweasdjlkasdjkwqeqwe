@@ -1,3 +1,47 @@
+## Current checkpoint: serial-only QA verified; recovery next
+
+This checkpoint follows pushed aebe3912. Locate its containing commit with git log -1.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Goal ACTIVE.
+Tasks1–43 DONE;44 IN PROGRESS;45–48/F1–F4 OPEN. Continue after this checkpoint.
+
+QA now accepts a fully installed all-SERIAL plan without fabricating measured usage.
+Bulk source is nullable only with complete actual receipt-backed deployment witnesses;
+NONE still needs its explicit snapshot. No extra material review command or movement.
+Named frozen device review remains byte-identical after real signed removal; foreign
+and revoked original receipt-location access return404. Mixed bulk-source omission and
+missing/foreign deployment witnesses are rejected by real SQL with atomic rollback.
+Web/KMP hide measured-use actions for serial-only plans and retain default-compatible
+metadata and exact prior/defaulttrue KMP guard bytes. Source actor guards remain intact.
+
+PASS:16 server tests/6 suites2m44s;31 web tests/6 files5.98s; full TypeScript and
+targeted lint;44 KMP JVM reported tests/14 suites28s and module graph. Only core:mvi
+JVM test cached; changed modules ran. No native runtime claim. Actual old populated
+upgrade adds only178.4;2133 existing tenants retain identical physical/history rows
+across13 tables and every prior Flyway checksum.2 more serial tests PASS2m12s.
+Proof: .omo/evidence/warehouse-workorder-asset-provenance/task44/serial-settlement-verification.json.
+V178.4 APPLIED/IMMUTABLE in BOTH QA environments, SHA256
+b00cf665eaebae1959e5d75113674e98efba3f6c6838fda57604c1cda0545003. Next free178.5.
+
+NEXT: copy prepared private drafts .omo/runtime/WarehouseRecoveryIT.kt and
+WarehouseResponseLossProbe.kt into server test inventory package; make numeric
+saveCommand protected open. They use actual HTTP, response held after commit,
+socket reset, @DirtiesContext full shutdown/fresh app, exact original inspection replay,
+real outbox claim/reader/delivery, lost ACK, expired lease metadata and one owner effect.
+Drafts have NOT compiled or run. Also prepared WarehouseReassignmentSettlementIT.kt
+for the suspected stranded-QA path after fully used materials then reassignment.
+Run it red before changing current actor guards. Fix only observed contract violations.
+Remaining combined races, task45 real browser,46 full regression/historical175.21
+fixture repair,47 docs,48 CI and F1–F4 still required. No subagents authorized.
+
+QA currently STOPPED; new default restored. Current marker
+warehouse-f7c0d53b912f-98b38fbf54518f766065f31955d52574; retained old marker
+warehouse-f7c0d53b912f-abc63ab0045a7096566cf763c8f477fc. ALL volumes retained.
+Private env archives must never be printed/committed. Host fd8 QA lock unchanged.
+R3 server and populated-upgrade reports archived privately before any next rerun.
+All serial runner sessions29728/92986/20829 finished0. No unrelated processes killed.
+
+Earlier phases below are historical.
+
 ## Task44 checkpoint: install/use ordering verified; serial-only and recovery NEXT
 
 This checkpoint follows pushed c92151f5. Locate its containing commit with git log -1.

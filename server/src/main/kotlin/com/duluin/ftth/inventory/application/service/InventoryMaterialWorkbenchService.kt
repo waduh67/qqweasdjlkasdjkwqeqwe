@@ -17,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional
 class InventoryMaterialWorkbenchService(private val authority: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
     private val masters: WarehouseMasterStore, private val sites: SiteReferenceApi, private val plans: MaterialPlanningStore,
     private val physical: MaterialPhysicalTotalsStore, private val query: MaterialWorkbenchQuery,
-    private val reworks: MaterialReworkStore, private val users: IamApi, private val lifecycle: InventoryMaterialLifecycleApi) : InventoryMaterialWorkbenchApi {
+    private val reworks: MaterialReworkStore, private val users: IamApi, private val lifecycle: InventoryMaterialLifecycleApi,
+    private val deployments: MaterialDeploymentReadStore) : InventoryMaterialWorkbenchApi {
     override fun context(context: MaterialPlanningContext): MaterialFieldContext {
         current(context)
         val history = plans.current(context.workOrderId)
@@ -25,7 +26,8 @@ class InventoryMaterialWorkbenchService(private val authority: CurrentAuthorityA
         val rework = history?.plan?.id?.let(reworks::get)
         return MaterialFieldContext(context.workOrderId, context.workOrderRevision, history?.plan, history?.state,
             physical.useRevision(context.workOrderId), latest,
-            rework?.reworkId, rework?.evidenceRevision)
+            rework?.reworkId, rework?.evidenceRevision,
+            (history?.plan?.lines.orEmpty() + rework?.inheritedLines.orEmpty()).any { it.sku.tracking != WarehouseTracking.SERIAL })
     }
 
     override fun custody(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialCustodyChoice> {
@@ -43,6 +45,13 @@ class InventoryMaterialWorkbenchService(private val authority: CurrentAuthorityA
         val current = current(context)
         return named(query.usage(context.workOrderId, if (current.platformAdmin || "workorder.order.view" in current.permissions) null else current.fence.identity.userId,
             WarehousePageRequest(0, 1), access(current), id)).items.singleOrNull() ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+    }
+    override fun deploymentDetails(context: MaterialPlanningContext, sources: List<MaterialDeploymentSource>): List<MaterialDeploymentView> {
+        val current = current(context)
+        val actor = if (current.platformAdmin || "workorder.order.view" in current.permissions) null else current.fence.identity.userId
+        val rows = sources.map { deployments.get(context.workOrderId, it, actor, access(current)) }
+        val names = users.usersByIds(rows.mapNotNull { it.actor?.id }.toSet()).associateBy { it.id }
+        return rows.map { row -> row.copy(actor = row.actor?.id?.let { id -> names[id]?.let { WarehousePolicyChoice(id, it.name) } }) }
     }
     override fun obligations(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialObligationView> {
         val current = current(context, page)

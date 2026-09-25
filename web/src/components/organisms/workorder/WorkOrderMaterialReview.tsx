@@ -14,10 +14,14 @@ export function WorkOrderMaterialReview({ id }: { id: string }) {
 function FrozenReview({ id }: { id: string }) {
   const loader = useCallback(() => getMaterialApprovalReview(id), [id]), result = useWarehouseQuery(loader)
   return <WarehouseState {...result}>{review => review ? <div className="card stack"><h3>Material yang dikunci saat persetujuan</h3>
-    <p>WO revisi {review.workOrderRevision} · Rencana {review.usage.planRevision} · Pemakaian {review.usage.useRevision}</p>
-    <p>{review.usage.actor?.name ?? 'Nama tidak tersedia'} · <WarehouseTime value={review.usage.recordedAt} /></p>
-    {review.usage.materialMode === 'NONE' ? <p>Tanpa material: {review.usage.reason}</p> : <ul>{review.usage.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /></li>)}</ul>}
-    <p>Bukti: {review.usage.evidenceReference}</p><p>Persetujuan memakai versi tersimpan ini. Lihat riwayat pemakaian untuk revisi tambahan sebelumnya dan sisa kewajiban untuk keadaan sekarang.</p>
+    <p>WO revisi {review.workOrderRevision}{review.usage && <> · Rencana {review.usage.planRevision} · Pemakaian {review.usage.useRevision}</>}</p>
+    {review.usage && <><p>{review.usage.actor?.name ?? 'Nama tidak tersedia'} · <WarehouseTime value={review.usage.recordedAt} /></p>
+      {review.usage.materialMode === 'NONE' ? <p>Tanpa material: {review.usage.reason}</p> : <ul>{review.usage.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /></li>)}</ul>}
+      <p>Bukti: {review.usage.evidenceReference}</p></>}
+    {!!review.deployments.length && <section aria-label="Perangkat dalam persetujuan"><h4>Pemasangan perangkat</h4><ul>{review.deployments.map(row => <li key={row.authorizationId}>
+      <strong>{row.sku.name} · {row.serial}</strong><p>{row.actor?.name ?? 'Nama tidak tersedia'} · <WarehouseTime value={row.recordedAt} /></p>
+    </li>)}</ul></section>}
+    <p>Persetujuan memakai sumber tersimpan ini. Lihat riwayat pemakaian untuk revisi tambahan sebelumnya dan sisa kewajiban untuk keadaan sekarang.</p>
   </div> : <p>Belum ada catatan material persetujuan QA yang berlaku. Catatan pemakaian tetap tersimpan pada riwayat.</p>}</WarehouseState>
 }
 export function WorkOrderMaterialObligations({ id }: { id: string }) {

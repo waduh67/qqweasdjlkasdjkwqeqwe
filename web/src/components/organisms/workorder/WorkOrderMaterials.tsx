@@ -45,9 +45,9 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
   const active = settlement.technicalState !== 'DONE' && settlement.technicalState !== 'CANCELLED'
   const mine = !!user && workOrder.assignees.some(row => row.id === user.id)
   const report = can('workorder.order.field') && mine && active && context.planState === 'SUBMITTED' && !!context.plan
-    && (context.useRevision === 0 || context.plan.materialMode === 'MATERIAL_REQUIRED')
+    && (context.plan.materialMode === 'NONE' ? context.useRevision === 0 : context.hasMeasuredMaterials)
   const clear = settlement.outstandingBase === '0' && settlement.obligations.reservedUnpickedBase === '0' && settlement.obligations.pickedBase === '0'
-  const canRework = settlement.technicalState === 'IN_PROGRESS' && settlement.qaState === 'REJECTED' && context.useRevision > 0 && context.plan?.materialMode === 'MATERIAL_REQUIRED'
+  const canRework = settlement.technicalState === 'IN_PROGRESS' && settlement.qaState === 'REJECTED' && !!context.latestUsageId && context.plan?.materialMode === 'MATERIAL_REQUIRED'
     && can('inventory.request.view') && can('inventory.request.manage') && can('inventory.sku.view') && (can('workorder.order.update') || can('workorder.order.approve') || (can('workorder.order.field') && mine))
   return <>
     <dl className="wo-grid"><div><dt>Pekerjaan teknis</dt><dd>{technicalLabels[settlement.technicalState] ?? settlement.technicalState}</dd></div>
@@ -57,6 +57,8 @@ function Materials({ workOrder, context, settlement, reload }: { workOrder: Work
     <p>Selesai teknis, persetujuan QA, aktivasi layanan, dan penutupan material dicatat terpisah. Sisa barang tetap harus diselesaikan setelah WO dibatalkan atau teknisi diganti.</p>
     {context.plan ? <><p>Rencana {context.plan.planRevision} · Pemakaian revisi {context.useRevision}</p>{context.plan.materialMode === 'NONE' ? <p>Rencana tanpa material: {context.plan.reason}</p> : <ul>{context.plan.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.sku.baseUnit} />{line.continuousCut && ' · satu potongan utuh'}</li>)}</ul>}</> : <p>Belum ada rencana material. Susun kebutuhan atau nyatakan alasan tanpa material sebelum mengajukan pekerjaan.</p>}
     {can('inventory.request.view') && <WorkOrderMaterialPlanning id={workOrder.id} active={active} onChanged={reload} />}
+    {context.plan?.materialMode === 'MATERIAL_REQUIRED' && !context.hasMeasuredMaterials && <p>Pemasangan perangkat dicatat melalui aset pelanggan dan diperiksa pada QA.
+      {workOrder.customerId && can('customer.customer.view') && can('customer.onu.view') && <> <Link to="/customers" state={{ openCustomerId: workOrder.customerId }}>Lihat perangkat pelanggan</Link></>}</p>}
     <div className="row wrap"><Button onClick={reload}>Muat ulang material WO</Button>{report && <Button variant="primary" onClick={() => setUsing(true)}>{context.plan?.materialMode === 'NONE' ? 'Nyatakan tanpa pemakaian material' : context.latestUsageId ? 'Catat tambahan pemakaian' : 'Catat pemakaian material'}</Button>}
       <Button onClick={() => setHistory(value => !value)}>{history ? 'Tutup riwayat pemakaian' : 'Lihat riwayat pemakaian'}</Button>
       {can('inventory.report.view') && can('inventory.cost.view') && <Link to={`/warehouse/reports?kind=work-order-costs&workOrderId=${workOrder.id}`}>Lihat biaya material WO</Link>}

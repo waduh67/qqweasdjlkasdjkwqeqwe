@@ -21,6 +21,13 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
+it('keeps device-only work actionable without a measured-use form', async () => {
+  const context = myContext(); context.field = { ...context.field!, hasMeasuredMaterials: false, useRevision: 1 }
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => path === root ? response(context) : page([])))
+  render(tree())
+  await screen.findByText('Pemasangan perangkat dicatat melalui aset pelanggan dan diperiksa pada QA.')
+  expect(screen.queryByRole('button', { name: 'Catat pemakaian' })).toBeNull()
+})
 async function fillReceipt() {
   fireEvent.click(await screen.findByRole('button', { name: 'Terima barang' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'Barang yang diterima' }), { target: { value: id.line } })

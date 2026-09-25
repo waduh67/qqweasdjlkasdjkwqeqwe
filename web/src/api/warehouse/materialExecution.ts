@@ -8,7 +8,8 @@ export function materialFieldContext(value: unknown, path = 'fieldContext') {
   const r = record(value, path)
   return { workOrderId: uuid(r.workOrderId, path), workOrderRevision: integer(r.workOrderRevision, path), plan: nullable(r.plan, materialPlan, path),
     planState: nullable(r.planState, (value, path) => oneOf(value, ['DRAFT', 'SUBMITTED'], path), path), useRevision: integer(r.useRevision, path),
-    latestUsageId: nullable(r.latestUsageId, uuid, path), reworkId: nullable(r.reworkId, uuid, path), evidenceRevision: nullable(r.evidenceRevision, text, path) }
+    latestUsageId: nullable(r.latestUsageId, uuid, path), reworkId: nullable(r.reworkId, uuid, path), evidenceRevision: nullable(r.evidenceRevision, text, path),
+    hasMeasuredMaterials: r.hasMeasuredMaterials === undefined ? true : boolean(r.hasMeasuredMaterials, path) }
 }
 export type MaterialFieldContext = ReturnType<typeof materialFieldContext>
 export function materialCustody(value: unknown, path = 'custody') {

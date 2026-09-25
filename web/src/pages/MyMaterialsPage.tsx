@@ -72,7 +72,8 @@ function MaterialJobBody({ context, actor, online, readOnly, reload }: { context
     <div className="row wrap"><Button disabled={!online || !!action} onClick={reload}>Segarkan material WO</Button>
       {context.currentAssignee && can('workorder.order.view') && <Link to={`/my-work-orders/${context.id}`}>Detail tugas dan bukti</Link>}
       {context.field?.plan?.customerId && can('customer.onu.view') && can('customer.customer.view') && <Link to="/customers" state={{ openCustomerId: context.field.plan.customerId }}>Pasang perangkat pada aset pelanggan</Link>}
-      {!readOnly && context.currentAssignee && context.active && context.field?.planState === 'SUBMITTED' && (context.field.plan?.materialMode !== 'NONE' || context.field.useRevision === 0) && <Button disabled={!online || !!action} onClick={() => setAction({ kind: 'use' })}>Catat pemakaian</Button>}</div>
+      {!readOnly && context.currentAssignee && context.active && context.field?.planState === 'SUBMITTED' && (context.field.plan?.materialMode === 'NONE' ? context.field.useRevision === 0 : context.field.hasMeasuredMaterials) && <Button disabled={!online || !!action} onClick={() => setAction({ kind: 'use' })}>Catat pemakaian</Button>}</div>
+    {context.field?.plan?.materialMode === 'MATERIAL_REQUIRED' && !context.field.hasMeasuredMaterials && <p>Pemasangan perangkat dicatat melalui aset pelanggan dan diperiksa pada QA.</p>}
   </section>
     {action?.kind === 'receipt' ? <MyMaterialReceipt context={context} issue={action.issue} actor={actor} online={enabled} onDone={reload} onClose={() => setAction(null)} />
       : action?.kind === 'return' ? <MyMaterialReturn context={context} source={action.source} online={enabled} onDone={reload} onClose={() => setAction(null)} />

@@ -39,7 +39,7 @@ internal fun prepareMaterial(draft: MaterialDraft, session: MaterialSession): Pr
             val reason = draft.reason?.trim()?.takeIf(String::isNotEmpty)
             require(reason.orEmpty().length <= 1000)
             if (field.mode == MaterialMode.NONE) require(field.useRevision == 0L && draft.lines.isEmpty() && reason != null) { "Deklarasi tanpa material hanya dicatat sekali dan memerlukan alasan." }
-            else require(draft.lines.size in 1..100 && (field.latestUsageId == null || draft.lines.size == 1))
+            else require(field.hasMeasuredMaterials && draft.lines.size in 1..100 && (field.latestUsageId == null || draft.lines.size == 1))
             require(draft.lines.map { it.source.id }.toSet().size == draft.lines.size)
             val lines = draft.lines.map { measured ->
                 val s = measured.source

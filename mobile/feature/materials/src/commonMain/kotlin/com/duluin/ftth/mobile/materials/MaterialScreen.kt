@@ -57,7 +57,8 @@ private fun Workspace(state: MaterialUiState, workspace: MaterialWorkspace, disp
             if (source.sku.tracking == MaterialTracking.SERIAL) FluentMessage("Pemasangan perangkat dicatat melalui aset pelanggan.")
         }
         Pages(workspace.custody.page, workspace.custody.size, workspace.custody.totalElements, state.environment.online && state.phase == MaterialPhase.READY) { dispatch(MaterialIntent.Open(context.id, workspace.issues.page, it)) }
-        if (field?.planState == "SUBMITTED" && assigned) FluentAction(if (field.mode == MaterialMode.NONE) "Deklarasikan tanpa material" else "Catat pemakaian", { dispatch(MaterialIntent.Edit(MaterialForm.Use())) }, state.canEdit && (field.mode != MaterialMode.NONE || field.useRevision == 0L))
+        if (field?.mode == MaterialMode.MATERIAL_REQUIRED && !field.hasMeasuredMaterials) FluentMessage("Pemasangan perangkat dicatat melalui aset pelanggan dan diperiksa pada QA.")
+        if (field?.planState == "SUBMITTED" && assigned && (field.mode == MaterialMode.NONE || field.hasMeasuredMaterials)) FluentAction(if (field.mode == MaterialMode.NONE) "Deklarasikan tanpa material" else "Catat pemakaian", { dispatch(MaterialIntent.Edit(MaterialForm.Use())) }, state.canEdit && (field.mode != MaterialMode.NONE || field.useRevision == 0L))
     } else when (val form = requireNotNull(state.form)) {
         is MaterialForm.Receipt -> Receipt(state, form) { dispatch(MaterialIntent.Edit(it)) }
         is MaterialForm.Use -> {

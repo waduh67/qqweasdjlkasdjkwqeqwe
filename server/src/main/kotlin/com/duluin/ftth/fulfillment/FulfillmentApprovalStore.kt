@@ -48,7 +48,7 @@ class FulfillmentApprovalStore(private val entityManager: EntityManager) {
             workOrder.workType, true, snapshot.effects, workOrder.orderId, snapshot.workOrder.approvedBy)
         entityManager.createNativeQuery("""INSERT INTO fulfillment_approval_snapshot(id,tenant_id,namespace,operation_key,payload_hash,
             work_order_id,work_order_revision,approved_by,usage_id,use_revision,plan_id,material_mode,required_effects,snapshot,request_payload)
-            VALUES (:id,:tenant,:namespace,:key,:hash,:wo,:revision,:actor,:usage,:useRevision,:plan,:mode,string_to_array(:effects,','),:snapshot,:request)""")
+            VALUES (:id,:tenant,:namespace,:key,:hash,:wo,:revision,:actor,CAST(:usage AS uuid),:useRevision,:plan,:mode,string_to_array(:effects,','),:snapshot,:request)""")
             .setParameter("id", snapshot.id).setParameter("tenant", snapshot.identity.tenantId)
             .setParameter("namespace", request.namespace).setParameter("key", key).setParameter("hash", hash)
             .setParameter("wo", workOrder.workOrderId).setParameter("revision", workOrder.workOrderRevision)

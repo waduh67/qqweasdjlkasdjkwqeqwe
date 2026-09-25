@@ -44,6 +44,7 @@ class WarehouseLifecycleFailureConfiguration {
             val mode = probe.tamperDeployment.get() ?: return actual
             // Run the actual DB witness constraint at the first snapshot insert, before delivery.
             entityManager.createNativeQuery("SET CONSTRAINTS warehouse_fulfillment_deployments IMMEDIATE").executeUpdate()
+            if (mode == "OMIT_USAGE") return actual.copy(usageId = null, usageBody = null, usageHash = null)
             return actual.copy(deployments = when (mode) {
                 "OMITTED" -> emptyList()
                 "FOREIGN_ASSET" -> actual.deployments.map { it.copy(assetId = UUID.randomUUID()) }

@@ -25,32 +25,38 @@ class InventorySettlementService(private val plans: MaterialPlanningStore, priva
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         val documents = store.lockDocuments(context.workOrderId)
         val id = store.usageId(context.workOrderId)
-        usage.lockSources(store.receipts(id))
-        store.lockUsage(id)
-        val snapshot = usage.get(id)
-        val body = usage.body(id)
+        val snapshot = id?.let {
+            usage.lockSources(store.receipts(it))
+            store.lockUsage(it)
+            usage.get(it)
+        }
+        val body = id?.let(usage::body)
         val planIds = reworks.planIds(plan.id)
         val deployments = store.deployments(context.workOrderId, planIds)
         if (deployments.any { it.actorId !in context.activeAssigneeIds })
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if (snapshot.workOrderId != context.workOrderId || snapshot.customerId != context.customerId ||
+        if (snapshot != null && (snapshot.workOrderId != context.workOrderId || snapshot.customerId != context.customerId ||
             snapshot.planId != plan.id || snapshot.planRevision != plan.planRevision || snapshot.materialMode != plan.materialMode ||
-            snapshot.actorId !in context.activeAssigneeIds || snapshot.workOrderRevision > context.workOrderRevision)
+            snapshot.actorId !in context.activeAssigneeIds || snapshot.workOrderRevision > context.workOrderRevision))
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         when (plan.materialMode) {
-            MaterialMode.NONE -> if (plan.reason.isNullOrBlank() || snapshot.reason.isNullOrBlank() || snapshot.lines.isNotEmpty() || deployments.isNotEmpty())
+            MaterialMode.NONE -> if (snapshot == null || plan.reason.isNullOrBlank() || snapshot.reason.isNullOrBlank() || snapshot.lines.isNotEmpty() || deployments.isNotEmpty())
                 masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             MaterialMode.MATERIAL_REQUIRED -> {
                 val rework = reworks.get(plan.id)
-                val expected = (plan.lines + rework?.inheritedLines.orEmpty()).map { it.id }.toSet()
-                val consumed = if (rework == null) snapshot.lines.map { it.planLineId }.toSet()
+                val lines = plan.lines + rework?.inheritedLines.orEmpty()
+                if (snapshot == null && lines.any { it.sku.tracking != WarehouseTracking.SERIAL })
+                    masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                val expected = lines.map { it.id }.toSet()
+                val consumed = if (rework == null) snapshot?.lines.orEmpty().map { it.planLineId }.toSet()
                     else reworks.usageIds(context.workOrderId, planIds).flatMap { usage.get(it).lines }.map { it.planLineId }.toSet()
                 val reported = consumed + deployments.map { it.planLineId }
                 if (reported.isEmpty() || reported != expected) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             }
         }
-        val hash = MessageDigest.getInstance("SHA-256").digest(body.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        return MaterialSettlementSource(plan.id, plan.planRevision, plan.materialMode, plan.reason, id, snapshot.useRevision, hash, body, documents, deployments)
+        val hash = body?.let { MessageDigest.getInstance("SHA-256").digest(it.toByteArray(Charsets.UTF_8)).joinToString("") { byte -> "%02x".format(byte) } }
+        val revision = snapshot?.useRevision ?: deployments.maxOf { it.useRevision }
+        return MaterialSettlementSource(plan.id, plan.planRevision, plan.materialMode, plan.reason, id, revision, hash, body, documents, deployments)
     }
 
     override fun verify(context: MaterialPlanningContext, approval: MaterialSettlementApproval): MaterialVerificationReceipt {
