@@ -1,3 +1,63 @@
+## Task43 legacy fulfillment cutoff verified; opening approval NEXT
+
+V177.5 is APPLIED and IMMUTABLE. Next free version:177.6;178reserved. Final gate:
+16tests PASS, BUILD SUCCESSFUL2m8s (FulfillmentMigration2,Coordinator5,Capture2,
+Resolution4,Modularity3). Safe proof task43/legacy-fulfillment-verification.json.
+Owned QA containers/network stopped; volumes retained. Goal ACTIVE:1–42 DONE;
+43–48/F1–F4 OPEN. Continue the whole scope with commit/push recovery checkpoints.
+
+Legacy WORK_ORDER checkpoints without fulfillment_approval_snapshot and their outbox
+records now join current/frozen provenance source views (ten kinds). Fulfillment owns
+capture through InventoryMigrationEffectsPort; no raw payload, error/outcome message
+or worker identity is exposed. Source snapshots contain actual IDs/hashes/state/effect
+progress. Pending checkpoint and outbox counts are separate. Pending sources require
+CANCEL_PENDING proposals; APPLIED/manual history stays provenance-only. No cancellation
+is executed yet: independently approved permanent cancellation receipts remain required.
+
+InventoryProvenanceWorkOrderPort is implemented in workorder, checks current area and
+returns safe code/customer references. Source access order is cutover/current authority,
+optional batch advisory, WO shared locks, topology/location, customer shared locks.
+Customer coverage includes the WO's current customer. Tenant-wide summary/cases take an
+exclusive read fence: READ_COMMITTED live sources cannot appear between scope checks
+and counts. GET still does not persist cases or mutate stock. Evidence/resolution reads
+use the already frozen batch membership.
+
+FulfillmentCoordinator now treats MANUAL_RESOLVED as terminal in accept/process and
+preserves terminal outcomes during failed retries. Worker reconciliation cannot reopen
+APPLIED/FAILED_PERMANENT/MANUAL_RESOLVED. Added explicit cutover fences to save, enqueue,
+ACK and effect-progress persistence methods (claim methods already had them). Tests
+prove real HTTP report waits on a writer changing WO area, then denies old-area access;
+worker ACK waits on exclusive cutover; exact manual/APPLIED replay from fresh transactions;
+old pending payload twice returns FULFILLMENT_SNAPSHOT_REQUIRED reconciliation with zero
+new physical effects.17 current sources captured, including6 fulfillment sources.
+
+NEXT: actual independent OPENING_BALANCE workflow using existing durable approval and
+single posting owner, not a parallel approval/ledger. Seal actual resolution/file/master
+manifest under batch lock; require proposals for active stock and pending effects, keep
+historical/unknown-installed sources staged and excluded. Derive quantities from source;
+no invented price, receipt or zero valuation. Explicit unvalued review must use every
+configured tier; keep real costs null. Empty validated tenant needs independent control
+approval without fake physical lines. Exclude batch/request/resolution/evidence actors.
+Approvers need all current source areas, including WO/customer areas, not only baseline
+warehouse areas; evaluate candidate eligibility accordingly. Opening evidence must be
+available via existing approval source/evidence reads under current scope.
+
+Existing integration points: WarehouseOpeningBalanceService is still a fail-closed stub;
+DurableApprovalService.request currently requires ORDINARY_STOCK, decide marks non-ENFORCED
+stale, and rework needs opening-specific new-request handling. WarehousePolicySource maps
+OPENING but requires lines; Evaluation rejects unknown cost except title correction, and
+WarehouseApprovalStore.insert requires nonnull value numerator/denominator. Add explicit
+unvalued all-tier semantics, never reuse title's internal0/1 as an opening cost. Approval-
+PostingKind lacks OPENING; SQL permit validation and posting stage guards need forward
+changes. WarehousePostingService is ENFORCED-only. Empty baseline requires a narrow typed
+control posting, not a fake stock leg. Finalization remains closed in app and DB.
+
+After approval: atomic original-asset admission/claim promotion/opening posting and
+approved permanent legacy-effect cancellation; exclusive count/unit/collision/effect
+checks -> epoch+ENFORCED. Unknown installed history remains staged with IDs intact.
+Then /warehouse/provenance UI (still absent), mixed-tenant realHTTP+restart and browser QA.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. No merge/deploy.
+
 ## Task43 current cutoff snapshots verified; legacy fulfillment effects NEXT
 
 V177.4 APPLIED and IMMUTABLE; next free177.5,178reserved.13testsPASS/BUILD SUCCESSFUL

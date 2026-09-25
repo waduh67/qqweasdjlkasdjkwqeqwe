@@ -43,11 +43,7 @@ class MigrationResolutionService(private val cutovers: InventoryTenantCutoverApi
         }
         if ((store.latest(batch, case)?.view?.revision ?: 0) != input.expectedResolutionRevision)
             masterFailure(WarehouseErrorCode.STALE_REVISION)
-        val source = store.source(case)
-        if (source.table == "inventory_movement" && source.snapshot.path("state").asString() != "APPLIED" &&
-            input.kind != MigrationResolutionKind.CANCEL_PENDING) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if (input.kind == MigrationResolutionKind.CANCEL_PENDING &&
-            (source.table != "inventory_movement" || source.snapshot.path("state").asString() == "APPLIED"))
+        if ((input.kind == MigrationResolutionKind.CANCEL_PENDING) != store.pending(case))
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val stock = input.stock?.let { store.stock(case, it) }
         val winner = input.duplicateCaseId?.let { target ->

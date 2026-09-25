@@ -28,6 +28,11 @@ class MigrationResolutionStore(private val jdbc: WarehouseCommandJdbc) {
             ORDER BY revision DESC LIMIT 1""", sql.tenant, batch, case, map = ::stored).singleOrNull()
     }
 
+    fun pending(case: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("SELECT warehouse_migration_pending(source_table,source_snapshot) FROM inventory_provenance_case WHERE tenant_id=? AND id=?",
+            sql.tenant, case) == "t"
+    }
+
     fun stock(case: UUID, input: MigrationStockInput): MigrationBaselineStock = jdbc.execute { sql ->
         mapper.readValue(requireNotNull(sql.value("SELECT warehouse_migration_stock(?,?,?,?)::text", case, input.skuId,
             input.sourceUnit.name, input.legalOwner.name)), MigrationBaselineStock::class.java)

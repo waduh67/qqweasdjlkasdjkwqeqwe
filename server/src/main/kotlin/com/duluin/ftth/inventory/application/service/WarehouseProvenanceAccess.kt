@@ -10,15 +10,20 @@ import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
 import org.springframework.stereotype.Component
 import java.util.UUID
 
+data class ProvenanceSourceAccess(val customers: Map<UUID, ProvenanceCustomerReference>,
+    val workOrders: Map<UUID, ProvenanceWorkOrderReference>)
+
 @Component
 class WarehouseProvenanceAccess(private val authorities: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
     private val masters: WarehouseMasterStore, private val masterAccess: WarehouseMasterService,
-    private val customers: InventoryProvenanceCustomerPort, private val store: WarehouseProvenanceStore) {
+    private val customers: InventoryProvenanceCustomerPort, private val workOrders: InventoryProvenanceWorkOrderPort,
+    private val store: WarehouseProvenanceStore) {
     fun current(): CurrentAuthority = authorities.lockCurrent().also { receiptPermission(it, "inventory.provenance.manage") }
 
     /** Caller takes any batch lock before this topology/customer lock phase. */
-    fun sources(current: CurrentAuthority): Map<UUID, ProvenanceCustomerReference> {
+    fun sources(current: CurrentAuthority): ProvenanceSourceAccess {
         current.fence.assertHeld()
+        val orders = workOrders.authorize(store.workOrderIds(), current)
         masters.lockTopology()
         val scope = scopes.currentUnderFence(current.fence)
         val existing = if (current.platformAdmin) store.existingLocationIds() else emptySet()
@@ -28,6 +33,6 @@ class WarehouseProvenanceAccess(private val authorities: CurrentAuthorityApi, pr
             if (current.platformAdmin && id !in existing) return@forEach
             masterAccess.authorizeLocation(masters.get(MasterKind.LOCATION, id) as LocationSnapshot, current, scope)
         }
-        return customers.authorize(store.customerIds(), current)
+        return ProvenanceSourceAccess(customers.authorize(store.customerIds() + orders.values.mapNotNull { it.customerId }, current), orders)
     }
 }

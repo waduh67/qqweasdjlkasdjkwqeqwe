@@ -51,6 +51,8 @@ class FulfillmentCoordinatorTest {
         assertThat(reconciliation.process(reconciliationRequest).state).isEqualTo(FulfillmentState.REQUIRES_RECONCILIATION)
         assertThat(reconciliation.manualResolve(reconciliationRequest, "verified externally").state)
             .isEqualTo(FulfillmentState.MANUAL_RESOLVED)
+        assertThat(reconciliation.process(reconciliationRequest))
+            .isEqualTo(FulfillmentOutcome(FulfillmentState.MANUAL_RESOLVED, true, "verified externally"))
     }
 
     @Test

@@ -20,18 +20,20 @@ milik pelanggan dan tetap memerlukan cakupan area terkini.
 
 `inventory_provenance_case` memuat snapshot terpisah untuk aset, saldo, ONU,
 tombstone, pergerakan, kaki pergerakan, efek fulfillment, dan fakta material lama.
+V177.5 menambah checkpoint dan outbox fulfillment lama yang belum memakai snapshot
+persetujuan material. Payload, pesan error, dan identitas worker tidak disalin.
 Hash SHA-256 dihitung database. Akun aplikasi hanya dapat membacanya. Kontak,
 alamat, kredensial pelanggan, dan telemetry tidak disalin ke snapshot kasus.
 
 API laporan membutuhkan `inventory.provenance.manage` serta akses ke seluruh
-lokasi dan area pelanggan yang dirujuk snapshot tenant tersebut. Pemeriksaan
+lokasi, area WO, dan area pelanggan yang dirujuk snapshot tenant tersebut. Pemeriksaan
 berlaku sebelum jumlah atau baris dikembalikan, termasuk setelah hak dicabut.
 Area pelanggan diperiksa modul pelanggan terhadap data saat ini. Operator yang
 hanya mencakup sebagian sumber tidak mendapat laporan tenant yang menyesatkan.
 
 | API | Hasil |
 | --- | --- |
-| `GET /api/v1/warehouse/provenance` | Status cutover, hash snapshot, delapan jumlah sumber termasuk nol, konflik identitas, saldo tanpa satuan, pergerakan tertunda, batch |
+| `GET /api/v1/warehouse/provenance` | Status cutover, hash snapshot, sepuluh jumlah sumber termasuk nol, konflik identitas, saldo tanpa satuan, pergerakan/checkpoint/outbox tertunda, batch |
 | `GET /api/v1/warehouse/provenance/cases` | Kasus dengan bukti asli, klaim identitas, nama lokasi/pelanggan; `page`, `size` 1–100, dan `sourceTable` opsional |
 | `GET /api/v1/warehouse/provenance/cases/{id}` | Satu kasus dari tenant yang sama |
 | `POST /api/v1/warehouse/provenance/batches` | Mulai VALIDATING atau rekam manifest untuk tenant yang sudah VALIDATING |
@@ -79,7 +81,7 @@ diulang oleh aktor aslinya dengan hak terkini dan isi yang sama.
 | `BASELINE_STOCK` | Calon saldo awal dengan `stock: {skuId, sourceUnit, legalOwner}`; kepemilikan harus terbukti ISP |
 | `PROVENANCE_ONLY` | Simpan sebagai riwayat yang tidak masuk saldo tersedia |
 | `DUPLICATE` | Hubungkan lewat `duplicateCaseId` ke usulan aset fisik yang sama, tanpa menghapus baris lama |
-| `CANCEL_PENDING` | Ajukan pembatalan pergerakan lama yang belum APPLIED untuk tinjauan batch |
+| `CANCEL_PENDING` | Ajukan rekonsiliasi pergerakan, checkpoint, atau outbox lama yang belum selesai untuk tinjauan batch |
 
 Kuantitas calon saldo dihitung dari snapshot, bukan angka bebas dari klien.
 Aset serial memakai ID fisik lama dan satu EA. Saldo tanpa satuan memerlukan
@@ -89,6 +91,15 @@ harus aktif dalam tenant yang sama. Aset terpasang, milik pelanggan, atau saldo
 yang sudah mewakili aset serial tidak boleh dimasukkan lagi sebagai stok tersedia.
 Revisi SKU/lokasi serta revisi usulan duplikat ikut dicatat untuk tinjauan berikutnya.
 Usulan pembatalan belum mengubah status pergerakan lama.
+
+Checkpoint APPLIED dan hasil rekonsiliasi manual tetap merupakan riwayat; replay
+tidak mengulang efeknya. Checkpoint atau outbox yang belum selesai wajib memakai
+usulan `CANCEL_PENDING`, dengan bukti masing-masing kasus. Pengiriman ulang efek
+lama tanpa snapshot persetujuan yang sah berakhir di rekonsiliasi, tanpa posting.
+Hasil `MANUAL_RESOLVED` tetap terminal walaupun worker mengirim pesan lagi.
+Penulisan checkpoint, status efek, antrean, dan pengakuan worker mengambil fence
+cutover pada transaksi masing-masing. Laporan tenant memakai fence eksklusif agar
+sumber baru tidak muncul di antara pemeriksaan cakupan dan penghitungan jumlah.
 
 Platform operator dapat memeriksa referensi lokasi yang sudah tidak ada di tenant
 tersebut sebagai snapshot saja. Nama/data lokasi tenant lain tidak dikembalikan,

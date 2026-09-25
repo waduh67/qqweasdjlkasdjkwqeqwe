@@ -15,6 +15,7 @@ import java.util.UUID
 class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantCutoverApi,
     private val policy: InventoryTenantPolicyService,
     private val customers: InventoryProvenanceCustomerPort,
+    private val effects: InventoryMigrationEffectsPort,
     private val access: WarehouseProvenanceAccess, private val store: WarehouseProvenanceStore) {
 
     private val mapper = jacksonObjectMapper()
@@ -41,28 +42,31 @@ class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantC
             WarehouseCutoverState.VALIDATING -> fence.snapshot
             WarehouseCutoverState.ENFORCED -> masterFailure(WarehouseErrorCode.CUTOVER_REQUIRED)
         }
-        store.capture(validating, current.fence.identity.userId, customers.captureSources(fence, current))
+        store.capture(validating, current.fence.identity.userId, customers.captureSources(fence, current) + effects.captureSources(fence, current))
         val body = store.summary(validating)
         store.record(key, payload, input.expectedEpoch, validating, current.fence.identity.userId, current.fence.epoch, body)
         return body
     }
 
     fun summary(): String {
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
+        // Live sources can appear between scope checks and counts under READ_COMMITTED.
+        // An exclusive read fence keeps this tenant-wide report consistent without a GET mutation.
+        val cutover = cutovers.lockForTransition(cutovers.read().epoch)
         access.sources(access.current())
         return store.summary(cutover.snapshot)
     }
 
     fun cases(page: Int, size: Int, sourceTable: String?, id: UUID? = null): String {
         if (page < 0 || size !in 1..100 || (sourceTable != null && sourceTable !in sourceTables)) malformed()
-        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
+        cutovers.lockForTransition(cutovers.read().epoch)
         val references = access.sources(access.current())
-        return store.cases(page, size, sourceTable, id, references)
+        return store.cases(page, size, sourceTable, id, references.customers, references.workOrders)
     }
 
     private fun malformed(): Nothing = masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
     companion object {
         val sourceTables = setOf("inventory_serialized_asset", "inventory_balance_projection", "onu", "inventory_serial_tombstone",
-            "inventory_movement", "inventory_movement_leg", "inventory_fulfillment_effect", "inventory_customer_material_fact")
+            "inventory_movement", "inventory_movement_leg", "inventory_fulfillment_effect", "inventory_customer_material_fact",
+            "fulfillment_checkpoint", "fulfillment_outbox")
     }
 }

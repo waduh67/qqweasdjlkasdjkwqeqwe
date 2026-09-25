@@ -78,6 +78,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun save(checkpoint: FulfillmentCheckpoint): FulfillmentCheckpoint {
+        cutoverFence()
         val current = find(checkpoint.tenantId, checkpoint.namespace, checkpoint.operationKey)
         val entity = if (current == null) FulfillmentCheckpointJpaEntity(
             UUID.randomUUID(), checkpoint.namespace, checkpoint.operationKey, checkpoint.canonicalHash,
@@ -100,6 +101,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun enqueueOutbox(checkpoint: FulfillmentCheckpoint) {
+        cutoverFence()
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_outbox (id, tenant_id, fulfillment_id, sequence, event_type, payload_hash, payload)
                SELECT :id, :tenant, id, 1, :eventType, :hash, :payload
@@ -114,6 +116,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markOutboxConsumed(checkpoint: FulfillmentCheckpoint) {
+        cutoverFence()
         entityManager.createNativeQuery(
             "UPDATE fulfillment_outbox SET published_at = now() WHERE tenant_id = :tenant AND payload_hash = :hash AND published_at IS NULL",
         ).setParameter("tenant", checkpoint.tenantId).setParameter("hash", checkpoint.canonicalHash).executeUpdate()
@@ -148,7 +151,8 @@ class FulfillmentCheckpointPersistenceAdapter(
         entityManager.createNativeQuery("""UPDATE fulfillment_checkpoint checkpoint SET state='REQUIRES_RECONCILIATION',
             outcome=:reason,checkpoint_updated_at=clock_timestamp() FROM fulfillment_outbox outbox
             WHERE outbox.tenant_id=:tenant AND outbox.id=:id AND outbox.claimed_by=:worker
-                AND checkpoint.tenant_id=outbox.tenant_id AND checkpoint.id=outbox.fulfillment_id AND checkpoint.state<>'APPLIED'""")
+                AND checkpoint.tenant_id=outbox.tenant_id AND checkpoint.id=outbox.fulfillment_id
+                AND checkpoint.state NOT IN ('APPLIED','FAILED_PERMANENT','MANUAL_RESOLVED')""")
             .setParameter("tenant", delivery.tenantId).setParameter("id", delivery.id).setParameter("worker", delivery.claimedBy)
             .setParameter("reason", reason).executeUpdate()
         return FulfillmentOutcome(FulfillmentState.REQUIRES_RECONCILIATION, false, reason)
@@ -156,6 +160,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     override fun markOutboxConsumed(id: UUID, workerId: String) {
+        cutoverFence()
         entityManager.createNativeQuery(
             "UPDATE fulfillment_outbox SET published_at = now(), claimed_by = NULL, lease_until = NULL WHERE id = :id AND claimed_by = :worker",
         ).setParameter("id", id).setParameter("worker", workerId).executeUpdate()
@@ -174,6 +179,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markEffectStarted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
+        cutoverFence()
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_effect_progress (id, tenant_id, fulfillment_id, effect_type, status, attempts, started_at, updated_at)
                SELECT :id, :tenant, id, :effect, 'STARTED', 1, :at, :at FROM fulfillment_checkpoint
@@ -185,6 +191,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markEffectCompleted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
+        cutoverFence()
         entityManager.createNativeQuery(
             "UPDATE fulfillment_effect_progress p SET status = 'COMPLETED', completed_at = :at, updated_at = :at FROM fulfillment_checkpoint c WHERE p.fulfillment_id = c.id AND p.tenant_id = :tenant AND c.namespace = :namespace AND c.operation_key = :operation AND p.effect_type = :effect",
         ).setParameter("tenant", tenantId).setParameter("namespace", namespace).setParameter("operation", operationKey)

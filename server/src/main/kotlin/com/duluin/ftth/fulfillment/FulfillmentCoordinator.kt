@@ -23,7 +23,7 @@ class FulfillmentCoordinator(private val checkpoints: FulfillmentCheckpointRepos
         effects.lock(request)
         val existing = checkpoints.claimOrCreate(request)
         require(existing.canonicalHash == request.canonicalHash) { "FULFILLMENT_OPERATION_HASH_CONFLICT" }
-        if (existing.state == FulfillmentState.APPLIED || existing.state == FulfillmentState.FAILED_PERMANENT)
+        if (existing.state in terminalStates)
             return FulfillmentOutcome(existing.state, true, existing.outcome)
         if (existing.state == FulfillmentState.READY) {
             val dispatched = checkpoints.save(existing.copy(state = FulfillmentState.DISPATCHED, updatedAt = now()))
@@ -45,7 +45,7 @@ class FulfillmentCoordinator(private val checkpoints: FulfillmentCheckpointRepos
             }
             val message = if (failure is com.duluin.ftth.inventory.WarehouseContractException) failure.error.code.name
                 else failure.message?.take(1000) ?: "FULFILLMENT_OWNER_REJECTED"
-            if (checkpoint.state == FulfillmentState.APPLIED) throw failure
+            if (checkpoint.state in terminalStates) throw failure
             checkpoints.save(checkpoint.copy(state = state, outcome = message, updatedAt = now()))
             FulfillmentOutcome(state, false, message)
         }
@@ -56,7 +56,7 @@ class FulfillmentCoordinator(private val checkpoints: FulfillmentCheckpointRepos
         var checkpoint = checkpoints.claim(request.tenantId, request.namespace, request.operationKey)
             ?: throw IllegalArgumentException("FULFILLMENT_HANDOFF_NOT_FOUND")
         require(checkpoint.canonicalHash == request.canonicalHash) { "FULFILLMENT_OPERATION_HASH_CONFLICT" }
-        if (checkpoint.state == FulfillmentState.APPLIED || checkpoint.state == FulfillmentState.FAILED_PERMANENT)
+        if (checkpoint.state in terminalStates)
             return FulfillmentOutcome(checkpoint.state, true, checkpoint.outcome)
         val completed = checkpoints.completedEffects(request.tenantId, request.namespace, request.operationKey)
         effects.preflight(request)
@@ -86,6 +86,7 @@ class FulfillmentCoordinator(private val checkpoints: FulfillmentCheckpointRepos
         transaction?.let { requireNotNull(it.execute { action() }) } ?: action()
 
     companion object {
+        private val terminalStates = setOf(FulfillmentState.APPLIED, FulfillmentState.FAILED_PERMANENT, FulfillmentState.MANUAL_RESOLVED)
         fun forWorkOrder(event: FulfillmentApproved): FulfillmentRequest {
             val namespace = "workorder.fulfillment.approve"
             val key = "${event.workOrderId}:${event.proofOfWorkHash}"

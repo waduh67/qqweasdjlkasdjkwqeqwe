@@ -1,3 +1,15 @@
+## V177.5 applied: legacy fulfillment source cases
+
+V177.5 applied during the real HTTP legacy fulfillment gate and is now immutable.
+SHA-256: `4b560d0aab1f34aea4ecf3649e936373f330b19140f888854c1ffa97e65ec15d`.
+Next free version177.6;178reserved. Final fence/replay gate:16tests PASS, BUILD SUCCESSFUL2m8s.
+
+## V177.5 reservation: legacy fulfillment cutoff evidence
+
+V177–V177.4 are applied and immutable. V177.5 is reserved for fulfillment-owned
+legacy checkpoint/outbox source capture and batch-bound reconciliation evidence.
+V178 remains reserved. No V177.5 SQL has been applied at this note.
+
 ## V177.4 applied: current cutoff snapshots
 
 Full packaged migrations and13tests passed in2m54s, including actual HTTP and a
