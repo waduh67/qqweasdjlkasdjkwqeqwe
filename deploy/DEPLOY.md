@@ -1164,18 +1164,42 @@ head, guard salah, dan race replace-versus-delete.
 
 ### O.3 Migration preflight dan rollback
 
-Jalankan dari `/opt/ftth` sebelum setiap image server dinaikkan:
+Untuk rilis gudang, baca [panduan operasi](../docs/warehouse.md),
+[review dan probe read-only](../docs/warehouse-review.md), serta
+[manifest migrasi](../docs/warehouse-migrations.md). Versi paket gudang saat ini
+adalah **178.7**. Validasi seluruh checksum lama; bagian V166–V170 di bawah
+mendokumentasikan riwayat retensi bukti dan bukan lagi target versi akhir.
+Hasil gate server, clean/upgrade, browser desktop/mobile, web, dan KMP harus berasal
+dari sumber/image rilis yang sama. Perintah deploy manual juga memerlukan hasil
+gate tersebut; keterbatasan CI tidak membolehkan melewati pemeriksaan gudang.
+Workflow `warehouse` juga mewajibkan kompilasi target iOS dan smoke image nyata.
+Lihat [gate CI dan pemulihan bukti terenkripsi](../docs/warehouse-ci.md).
+
+Pipeline mengunggah Compose yang ditinjau ke
+`/opt/ftth/releases/<commit>/docker-compose.prod.yml`, memeriksa SHA256-nya, lalu
+memakai `FTTH_SERVER_IMAGE` dan `FTTH_WEB_IMAGE` berupa referensi registry `@sha256`.
+Referensi tersebut berasal dari artifact `warehouse-published-images-<commit>`.
+`IMAGE_TAG` memilih commit yang sama untuk GenieACS. Untuk operasi manual yang
+menarik atau mengganti image, gunakan file rilis dan referensi yang sudah diverifikasi;
+perintah dengan `latest` pada bagian setup awal bukan pintasan gate gudang.
+Tetap gunakan `/opt/ftth` sebagai project directory dan `/opt/ftth/.env` sebagai
+sumber konfigurasi agar mount relatif dan nama project `ftth` tetap benar.
+
+Sebelum rollout, jalankan probe read-only dari panduan review dengan kredensial
+role aplikasi dan tenant/SKU yang benar. Pada salinan database yang terisolasi,
+boot image yang akan dirilis untuk menjalankan Flyway, cek readiness JSON dan versi
+migrasi, lalu jalankan probe yang sama. Jangan memakai boot server foreground
+sebagai perintah pemeriksaan baca saja pada database produksi.
+
+Pemeriksaan versi berikut tidak mengubah data; jalankan dari `/opt/ftth` pada
+stack yang sudah aktif:
 
 ```bash
-docker compose -f docker-compose.prod.yml config >/dev/null
-docker compose -f docker-compose.prod.yml up -d postgres
 docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres -d "$FTTH_DB_NAME"
 docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
-docker compose -f docker-compose.prod.yml run --rm server
-docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1;"
 ```
 
-Expected upgraded version is `170`; a clean database must reach the same version. Take
+Expected upgraded version is `178.7`; a clean database must reach the same version. Take
 and verify a restore-capable backup first. Assert non-zero source and destination counts
 for every backfill expected to copy existing rows. Flyway migrations are forward-only:
 never edit an applied version; roll forward with a new version or restore the verified

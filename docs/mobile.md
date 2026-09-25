@@ -6,6 +6,12 @@ use cases, and ports. `data` and `core/*` contain adapter boundaries. The
 `feature:workorders` module composes those contracts; `app` owns the shared
 Compose Fluent UI entry point and the iOS `ComposeUIViewController` bridge.
 
+The material flow shares the warehouse custody, revision, source and exact-unit
+contracts. See the [operator guide](warehouse.md) and [release review](warehouse-review.md)
+for the server-backed journey and verification commands. JVM/shared tests and actual
+iOS target compilation are separate required checks; neither is a native runtime,
+store release, hardware-permission or secure-platform-storage certification.
+
 ## Module Graph
 
 ```text

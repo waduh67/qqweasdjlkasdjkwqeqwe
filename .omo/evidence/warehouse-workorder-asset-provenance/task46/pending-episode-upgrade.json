@@ -1,0 +1,14 @@
+{
+  "status": "prepared, not applied or executed; source is frozen until full server R3 finishes",
+  "historicalApplication": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb",
+  "patchSha256": "17dce4f0436a557f6f30219cdda9a718020b37ef65f127cb7241bc9735fb93f8",
+  "testAssertions": "unchanged; mandatory historical HTTP fixture plus complete current migration chain and shared QA database isolation",
+  "paths": [
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt",
+    "scripts/warehouse/episode-upgrade.sh",
+    "scripts/warehouse/qa.sh",
+    ".github/workflows/warehouse.yml"
+  ],
+  "next": "Read actual R3 XML error, then apply only after R3 archives all reports and completes cleanup; execute episode-upgrade and current focused fixtures."
+}

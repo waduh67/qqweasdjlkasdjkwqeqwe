@@ -1,3 +1,24 @@
+# Warehouse migration and cutover manifest
+
+The current highest packaged version is **178.7**; the next available version is
+**178.8**. Applied migrations are immutable. Historical sections below record the
+version reservations at their original checkpoints, not the current next version.
+Operational steps are in [the warehouse runbook](warehouse.md), with an application
+role read-only preflight in [the review guide](warehouse-review.md).
+
+Upgrade fixtures must use separate databases with `public` schemas. Some historical
+migrations explicitly qualify function names with `public`; a sibling schema in
+the shared QA database does not isolate those statements. The historical projection
+gate uses its pinned V175.21 application and replays V175.22. The legacy browser gate
+creates customer/ONU records through the V172 UI, upgrades that same database, performs
+independent cutover approval, and restarts. IDs, raw serials and old Flyway checksums
+must survive. A provenance-only resolution or a zero opening balance creates no stock.
+
+Take and test a consistent database/object-storage backup before an authorized rollout.
+After cutover, remediation is forward-only, or a coordinated restore during maintenance.
+Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
+the new records, or disable guards to make an old fixture boot.
+
 ## V178.7 applied: optional RMA category
 
 V178.7 (`V178_7__warehouse_rma_optional_category.sql`) is applied and immutable in

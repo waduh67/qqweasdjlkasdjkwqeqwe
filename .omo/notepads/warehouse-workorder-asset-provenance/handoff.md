@@ -1,3 +1,38 @@
+## Current checkpoint: CI evidence retained; full server regression still running
+
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Tasks 1–45
+DONE; 46 IN PROGRESS; 47–48/F1–F4 OPEN. Goal stays ACTIVE. Continue after push.
+The previous remote checkpoint is bb0a4603. No merge, publish or deployment.
+
+CI run 36116539885 at c622a85b has passed all eight browser jobs (22 tests), legacy
+upgrade/restart (6), web (576), shared (44), both iOS compile targets and actual
+Docker smoke. All 11 encrypted archives were downloaded, hash-checked, decrypted
+privately and matched against successful executed cases. Safe aggregate proofs:
+task46/ci-browser-web-shared-r2.json and ci-native-legacy-r2.json. Full server and
+aggregate acceptance are still pending; do not call the workflow green.
+
+Local full-server-r3.sh/log remains ACTIVE (session 11018), over 990 passed and 30
+failed cases observed so far, not final counts. Preflight R2 (session 47709) waits
+for the same host lock. Preserve complete R3 XML/counts before any focused rerun.
+Do not edit executing/queued wrappers, server/test/QA sources or applied migrations.
+Network, predictive-history and RMA source patches remain unapplied in task46
+pending-*.patch.gz. A fourth pending-episode-upgrade.patch.gz moves the unchanged
+V175.86 test into a mandatory historical-application gate, applies all current
+migrations, and preserves every original assertion. Syntax/actionlint/apply-check
+pass only; no compile or runtime PASS. Confirm the actual XML cause before applying.
+Handover CLOSED/INACTIVE also fail an expected-code assertion; inspect final XML
+and current source validation order before changing expectations.
+
+Runbook and review drafts are now saved with this checkpoint. UI labels/relative
+links match source; existing browser runs execute the documented flows. SQL preflight
+is NOT yet verified: queued runbook-preflight-r2.sh must pass the actual app-role
+probe plus wrong migration/unit/cutover negatives before task47 can close. The Arch
+Chromium install note and cleanup preserve real failures. Draft historical runner
+is not enabled until the full suite finishes. Next: full report -> fixture fixes ->
+focused verification -> full regression/CI -> runbook proof -> final audits/review.
+No subagents authorized; no independent-review approval or native release claimed.
+Raw reports, decrypted archives, private env and traces remain in ignored runtime.
+
 ## Current checkpoint: image smoke PASS; full server running; repair patches saved
 
 Goal ACTIVE. Tasks1–45DONE;46inprogress;47–48/F1–F4open. Continue afterpush.

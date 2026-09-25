@@ -1,0 +1,389 @@
+{
+  "workflowRun": 36116539885,
+  "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+  "workflowStatus": "server still running; no aggregate PASS claimed",
+  "rawEvidence": "All 11 encrypted archives downloaded, SHA256 verified, decrypted privately and matched to successful executed cases",
+  "reports": [
+    {
+      "artifact": "warehouse-browser-customer-assets-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "a97744c1263aee1835989df1241ca2e076a4a45cc711f1b370963fa558bac154"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-exceptions-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "3ee05ad88e5fad3a9a65fcdaad62d738351cd40c3f06e13589eb7f0eb782e0fe"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-issue-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "beba2e883a6eda294fef93d155d12c5b9477dcc9374eaff8721d39ca0d837655"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-provenance-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "b9837be6629a3f567f38ecf080b46c07a909bda680c9cbc470bcca74af75ea68"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-receiving-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "47445e04f4d6bf4847399686e5fe0653ce3ff27f8516c65deda4b1608080d985"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-returns-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "4d3a3812d57f14d1ebc0c4480545753ce6bbbbd12c8a2feab47534cb30d8fbbd"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-setup-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "3002441838570d3a44091e175f32ca3095d346705c70687f7df62abe72af5adc"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-browser-warehouse-empty-tenant-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "browser.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "e3ebb590e4b9e53412d13182c4829a3217a0a6cfd49fc174664977316c88d0fe"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    {
+      "artifact": "warehouse-legacy-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "legacy-after.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "4582a55f2f8ba10cb298f61d78416f39562927fecac9486635e52447fbd48d52"
+      ]
+    },
+    {
+      "artifact": "warehouse-legacy-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "legacy-before.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "de2531b5eb9d508f6fe4ea290a5f64f832479988212fb197cabf6e325dac152a"
+      ]
+    },
+    {
+      "artifact": "warehouse-legacy-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "legacy-restart.json",
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "70950679714a249d872468a50faa9628c22fa543420220ea1f40274d1e039438"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-app.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 1,
+      "suites": [
+        {
+          "suite": "DiTest[jvm]",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "3bbeb6a843d7b7f8698b913e203b61ec4abe76986a50825d88592caebb9c26b4"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-core-mvi.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 6,
+      "suites": [
+        {
+          "suite": "MviStoreTest[jvm]",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "MviViewModelTest[jvm]",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "1e6212d5399260e011b17e5ab9ee0dce8d72abcf394405a9d65d9ae9f444a874",
+        "4c4316ad82c85237c10ce9eccd5038e1203f764463881a77b1e05ac5b3e22f3d"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-core-storage.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 7,
+      "suites": [
+        {
+          "suite": "EncryptedOutboxTest[jvm]",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "b483400eb3e69b97707572b2613f05c62b04ae5705fad9efa30acbe218e8a555"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-data.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 10,
+      "suites": [
+        {
+          "suite": "MaterialRepositoryTest[jvm]",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "WorkOrderRepositoryTest[jvm]",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "746640bba8a0dad7b88a7b3229a6e3312f851c62ac7ef81e8153d18be4303a63",
+        "661e13db86da752bcd0b8ecedd208340520b7ae8bd175aceb582ba091e38d060"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-domain.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 5,
+      "suites": [
+        {
+          "suite": "MaterialQuantityTest[jvm]",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "NavigationTest[jvm]",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "OutboxTest[jvm]",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "WorkOrderReducerTest[jvm]",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "d4924b1cadeeeec7f3708df5c1eec8b293b3bb35fef50477a6db02f08649b4e8",
+        "96bd13e7e4d13de175e2d36999748eebb54de36c97de5c8680585621413f512c",
+        "dce151355a239db0fc22402cf596e0345b5877bcaae3a75ceec22ae27d3d02a3",
+        "53490cd3e64b41a26e0c6d779c92d66544fe5f5701bed419cad072cdbf9af087"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-feature-materials.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 8,
+      "suites": [
+        {
+          "suite": "MaterialFeatureTest[jvm]",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "MaterialScreenUiTest[jvm]",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "80a99d4dfacc02a836471a64fde0ec39c68be09142bcce0ee35986642b8b2a40",
+        "e65f3f4d206ed0ddc8ef357b42048ef8534ca1d256bb30cc4181460374351ef5"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "shared-feature-workorders.json",
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 7,
+      "suites": [
+        {
+          "suite": "WorkOrderReducerTest[jvm]",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "WorkOrderScreenUiTest[jvm]",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "00794812d9585cf7712bc1df3344d00f662c455d7bd4c61ee5e5af2de0475ada",
+        "c655741cb263ee19ed035c4fc8765847451117761b6fec11c991ce0b3499240a"
+      ]
+    },
+    {
+      "artifact": "warehouse-web-c622a85bde9582fd66351957c7b451cc91c8df29",
+      "verification": "web.json",
+      "kind": "vitest",
+      "status": "PASSED",
+      "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+      "tests": 576,
+      "testFiles": 115,
+      "reportSha256": [
+        "1aa5184c1a258280a6b0a721a61ea4645fb936c1af658ab68f6066d13f3834a2"
+      ]
+    }
+  ]
+}
