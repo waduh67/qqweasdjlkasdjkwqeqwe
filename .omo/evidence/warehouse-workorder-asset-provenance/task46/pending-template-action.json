@@ -1,0 +1,7 @@
+{
+  "status": "prepared, not applied or executed",
+  "failure": "WorkOrderMaterialsITTemplateActions line20 expected409, actual400; the implemented MaterialSettlementController parses a required MaterialResidualRequest.",
+  "preserved": "RMA template persistence, immutable replay, exact readback, no automatic template on ordinary repair, and denied plan without demand.",
+  "additional": "Actual zero movement, balance and assignment rows after malformed return. No production validation changed.",
+  "patchSha256": "518420e81054adc433d1faa0195de6aec88fc0695fecd6ec8d82d8abd998e7f7"
+}

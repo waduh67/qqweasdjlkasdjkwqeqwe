@@ -1,3 +1,41 @@
+## Further full-regression finding and upgraded-preflight supplement prepared
+
+Pushed checkpoint21c832bf follows1201b6c2. FullR3/session11018 STILLRUNNING:
+latest observed1868passed/40failed, notfinalcounts. Preflight47709 stillqueued.
+CI36116539885 stillactive; queued docs-only36122515683 was cancelled beforeexecution.
+Keep source/QA freeze until R3 exits; archivebeforeanyfocusedrerun.
+
+New pending-template-action.patch.gz fixes the40th observedfailure:
+WorkOrderMaterialsITTemplateActions line20 expected409 for empty returnbody, actual400.
+The real MaterialSettlementController now decodes MaterialResidualRequest. Template
+persistence/replay, non-selection on ordinary REPAIR and missing-demand denial remain;
+additional real DB assertions require zero movements/balances/assignments. No product
+validation changed. Patch is NOTapplied/compiled/executed.
+
+New pending-legacy-preflight.patch.gz extends the same6legacybrowsertests: after
+independent V172zero-openingcutover, create an actual MM catalog SKU viaUI; read it
+afterrestart; stillrequirezeroavailable stock andunchangedoldcustomer/ONUidentity.
+Run read-only preflight.sql in that same upgradedDB forboth tenants:2positive+6
+wrongversion/unit/cutovernegatives. BrowsercapturedSKU IDs bind the SQLprobe; no
+businessSQLwrites. This covers the final review's upgraded-fixture preflight requirement.
+DraftTypeScriptcompile,bashsyntaxandapplycheckPASS; noactualbrowser/SQLPASSyet.
+
+Private recovery scripts prepared, NOTlaunched:
+- archive-full-server-r3.py: run ONLYafter originalsessionexits; preserveslog,all
+  XML/in-progressbinary andwrappercounts in full-server-r3-complete-archive;
+  classifiesFAILED_COMPLETEorINCOMPLETE, nevercountsoldfocusedXMLasfullPASS.
+- compatibility-focused-r2.sh supersedesR1: validates that archive and its hashes,
+  requiresall5historicaltests moved, then15modernclasses (old14plusTemplateActions),
+  preservesfocusedreports beforethefivehistoricalupgradegroups. Handles honest
+  incompleteR3 iftheoriginal7200sdeadlinecutsitshort. Do noteditoncequeued/running.
+The archive script and source review observations are runtime-only; source fixes are
+saved in pending patches. Ifthese runtimefilesareunavailable, reconstruct thesame
+archive-before-rerunprocedure from thisnote; neverinferanoldPASS.
+
+Corrected the prior note:12customercreation sites receive explicitMAINarea across
+9networkclasses, with37originaltestmethods retained (JSONinventory authoritative).
+GoalACTIVE; tasks46–48/F1–F4remainopen. Continueaftercommit/push; nofinalcheckpoint.
+
 ## Pending network fixture corrected before execution
 
 Latest source/evidence checkpoint1201b6c2 is pushed. LocalR3/session11018 still
@@ -5,7 +43,7 @@ RUNNING (>1666passed/39failed observed); preflight47709 stillqueued; CI361165398
 serverstillrunning. Queued docs-only CI36122060200 was cancelled before execution.
 
 The prepared network patch now explicitly assigns MAIN area on every customer
-creation request (13sites across9classes). The previous draft only created area and
+creation request (12sites across9classes). The previous draft only created area and
 admin scope; CustomerService preserves a null request area, so a restricted installer
 would not be able to use those customers. Existing AutoProvisioningIT confirms the
 required explicit-area setup. Corrected pending-network-fixtures.patch.gz, its JSON
