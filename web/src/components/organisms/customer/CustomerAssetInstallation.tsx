@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { deployCustomerAsset, getAssetAssignment, getAssetJob, getAssetJobs, getAssetSource, getAssetSources, type AssetHistory, type AssetJob, type AssetObservation, type AssetSource } from '@/api/warehouse/customerAssets'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
 import { Button, SelectField } from '@/components/atoms'
@@ -30,7 +31,7 @@ function Installation({ customerId, previous, observation, onDone, onClose, read
     event.preventDefault()
     if (active.current || !online || disabled) return
     try {
-      if (!job || !source || observed.trim().toUpperCase() !== source.source.serial || (observation && observation.serial !== source.source.serial)) throw new Error('Pilih perangkat yang sudah diterima dan cocokkan serial fisiknya.')
+      if (!job || !source || !sameSerialIdentity(observed, source.source.serial) || (observation && !sameSerialIdentity(observation.serial, source.source.serial))) throw new Error('Pilih perangkat yang sudah diterima dan cocokkan serial fisiknya.')
       const inputTopology = assetTopologyInput(topology)
       active.current = true; setBusy(true); setError(null)
       const [currentJob, currentSource, currentPrevious] = await Promise.all([getAssetJob(customerId, job.id), getAssetSource(customerId, job.id, source.id), previous ? getAssetAssignment(customerId, previous.asset.id) : Promise.resolve(undefined)])
@@ -46,11 +47,11 @@ function Installation({ customerId, previous, observation, onDone, onClose, read
     <WarehousePicker label="WO pemasangan" searchable={false} load={jobs} value={job} onChange={value => { setJob(value); setSource(null); setObserved('') }} name={row => `${row.code} · ${row.workType} · ${row.status}`} eligible={row => row.status !== 'DONE' && row.workType === (previous ? 'MIGRATION' : 'PSB')} disabled={disabled || !online} />
     {job && <><Link to={`/my-materials?workOrderId=${job.id}`}>Periksa penerimaan di Material Saya</Link>
       {previous && !job.signature && <p role="status">Lengkapi bukti tanda tangan di WO sebelum mengganti perangkat.</p>}
-      <WarehousePicker key={job.id} label="Perangkat yang sudah diterima" searchable={false} load={sources} value={source} onChange={value => { setSource(value); setMode(value?.ownershipModes[0] ?? 'LOAN'); setObserved('') }} name={row => `${row.source.serial} · ${row.source.sku.name} · ${row.source.issueCode}`} eligible={row => !observation || row.source.serial === observation.serial} disabled={disabled || !online} />
+      <WarehousePicker key={job.id} label="Perangkat yang sudah diterima" searchable={false} load={sources} value={source} onChange={value => { setSource(value); setMode(value?.ownershipModes[0] ?? 'LOAN'); setObserved('') }} name={row => `${row.source.serial} · ${row.source.sku.name} · ${row.source.issueCode}`} eligible={row => !observation || sameSerialIdentity(row.source.serial, observation.serial)} disabled={disabled || !online} />
     </>}
     {source && <><p>Sumber {source.source.issueCode} · {source.source.location.name} · {source.provenance === 'RECEIPT' ? 'Penerimaan gudang' : 'Saldo awal terverifikasi'}.</p>
       <MaterialScanner disabled={disabled} onScan={value => { setObserved(value.trim().toUpperCase()); setError(null) }} />
-      {observed && <p role="status">Serial diperiksa: {observed}{observed !== source.source.serial ? ' — tidak cocok' : ''}</p>}
+      {observed && <p role="status">Serial diperiksa: {observed}{!sameSerialIdentity(observed, source.source.serial) ? ' — tidak cocok' : ''}</p>}
       <SelectField label="Kepemilikan perangkat" value={mode} disabled={disabled} onChange={(_, data) => setMode(data.value as 'LOAN' | 'SALE')}>
         {source.ownershipModes.map(value => <option key={value} value={value}>{value === 'LOAN' ? 'Pinjam pakai — milik ISP' : 'Jual — hak milik beralih saat serah-terima diterima'}</option>)}
       </SelectField></>}

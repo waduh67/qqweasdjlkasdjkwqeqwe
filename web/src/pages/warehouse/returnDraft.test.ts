@@ -1,6 +1,24 @@
 import { expect, it } from 'vitest'
-import { repairTransit, returnBin, returnDetailsFixture, returnFixture, returnIds as id, returnQuarantine, returnSourceFixture } from '@/test/warehouseReturnFixture'
+import { readyRmaReturn, repairTransit, returnBin, returnDetailsFixture, returnFixture, returnIds as id, returnQuarantine, returnSourceFixture } from '@/test/warehouseReturnFixture'
 import { buildRepairDispatch, buildRepairReceipt, buildReturnInspection, buildReturnIntake, needsPostRepairInspection } from './returnDraft'
+
+it('matches mixed-case receipt identity without rewriting the observed command or historical serial', () => {
+  const details = readyRmaReturn()
+  details.references.item.serial = 'Onu-001'
+  const before = JSON.stringify(details), observed = ' onu-001 '
+  expect(buildReturnInspection(details, returnQuarantine, '1', 'SERVICEABLE', 'cek', observed, true, 'reset').observedSerial).toBe(observed)
+  const vendor = { id: id.vendor, revision: 0, state: 'ACTIVE' as const, code: 'SERVICE', name: 'Servis', contactReference: null }
+  const dispatch = { ...details, returnCase: { ...details.returnCase, repair: null } }
+  expect(buildRepairDispatch(dispatch, vendor, repairTransit, observed, 'SERV-001', 'bukti').observedSerial).toBe(observed)
+  const receipt = { ...details, returnCase: { ...details.returnCase, state: 'REPAIR' as const, repair: { ...details.returnCase.repair!, returnedRevision: null } } }
+  expect(buildRepairReceipt(receipt, returnQuarantine, observed, 'REPAIRED', 'KEMBALI', 'bukti').observedSerial).toBe(observed)
+  for (const wrong of ['', ' ', 'ONU-002']) {
+    expect(() => buildReturnInspection(details, returnQuarantine, '1', 'SERVICEABLE', 'cek', wrong, true, 'reset')).toThrow('serial fisik yang sama')
+    expect(() => buildRepairDispatch(dispatch, vendor, repairTransit, wrong, 'SERV-001', 'bukti')).toThrow('serial fisik yang sama')
+    expect(() => buildRepairReceipt(receipt, returnQuarantine, wrong, 'REPAIRED', 'KEMBALI', 'bukti')).toThrow('serial fisik yang sama')
+  }
+  expect(JSON.stringify(details)).toBe(before)
+})
 
 it('binds intake to the selected actual source and its acknowledged quarantine', () => {
   expect(buildReturnIntake(returnSourceFixture(), returnQuarantine, ' bukti ')).toEqual({ origin: 'MATERIAL_RESIDUAL', sourceDocumentId: id.returnSource, quarantineLocationId: id.inspection, evidenceReference: 'bukti' })

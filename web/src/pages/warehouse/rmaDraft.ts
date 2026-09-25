@@ -1,4 +1,5 @@
 import type { WarehouseLocation } from '@/api/warehouse/models'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import type { ReturnDetails, RmaDispatch, RmaWorkOrder } from '@/api/warehouse/returns'
 import { completedCustomerRepairInspection } from './returnDraft'
 
@@ -14,7 +15,7 @@ export function buildRmaDispatch(details: ReturnDetails, order: RmaWorkOrder, te
   if (!transit || transit.state !== 'ACTIVE' || transit.kind !== 'TRANSIT' || transit.issueEligible || transit.code === 'RECEIPT_SOURCE' ||
     !field || field.state !== 'ACTIVE' || field.kind !== 'TECHNICIAN' || field.custodianId !== technicianId ||
     new Set([details.returnCase.locationId, transit.id, field.id]).size !== 3) throw new Error('Pilih lokasi transit dan lokasi teknisi penerima yang sesuai.')
-  if (!observedSerial || observedSerial !== details.references.item.serial) throw new Error('Pindai serial perangkat pelanggan yang sama.')
+  if (!sameSerialIdentity(observedSerial, details.references.item.serial)) throw new Error('Pindai serial perangkat pelanggan yang sama.')
   if (!evidence.trim() || evidence.trim().length > 500) throw new Error('Isi referensi bukti serah-terima RMA, maksimal 500 karakter.')
   return { expectedRevision: details.returnCase.revision, workOrderId: order.id, workOrderRevision: order.revision, technicianId,
     transitLocationId: transit.id, technicianLocationId: field.id, observedSerial, evidenceReference: evidence.trim() }

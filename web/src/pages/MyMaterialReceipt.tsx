@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import { acknowledgeMyMaterial, getMyMaterialContext, getMyMaterialIssue, type MyMaterialContext, type MyMaterialIssue } from '@/api/warehouse/myMaterials'
 import { warehouseError } from '@/api/warehouse/errors'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -16,7 +17,7 @@ export function MyMaterialReceipt({ context, issue, actor, online, onDone, onClo
   const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false), [review, setReview] = useState<WarehouseCommand<unknown> | null>(null), active = useRef(false)
   const source = issue.lines.find(line => line.id === lineId), pending = issue.lines.filter(line => line.remainingBase !== '0')
   function scan(raw: string) {
-    const matches = pending.filter(line => line.serial === raw.trim().toUpperCase())
+    const matches = pending.filter(line => sameSerialIdentity(line.serial, raw))
     if (matches.length !== 1) { setSerial(null); setError('Serial tidak cocok dengan barang yang menunggu penerimaan pada dokumen ini.'); return }
     setLineId(matches[0].id); setSerial(matches[0].serial); setAccepted(''); setError(null)
   }

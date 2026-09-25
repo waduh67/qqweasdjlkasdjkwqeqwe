@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { MaterialCustody } from '@/api/warehouse/materialExecution'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import { getMyMaterialContext, getMyMaterialSource, getMyReturnLocation, getMyReturnLocations, returnMyMaterial, type MyMaterialContext, type myMaterialLocation } from '@/api/warehouse/myMaterials'
 import { warehouseError } from '@/api/warehouse/errors'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -35,7 +36,7 @@ export function MyMaterialReturn({ context, source, online, onDone, onClose }: {
     <h3>Kembalikan {source.sku.name}</h3><p>{source.serial ?? source.lotCode ?? source.issueCode} · <WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> · {source.location.name ?? source.location.code}</p>
     <p>Draf di tab ini. Sisa tetap dapat dikembalikan setelah penugasan berubah. Barang yang dikirim belum menjadi stok gudang tersedia.</p>
     {source.serial && <><MaterialScanner disabled={busy || !!review} onScan={value => {
-      if (value.trim().toUpperCase() !== source.serial) { setSerial(null); setError('Serial tidak cocok dengan perangkat yang akan dikembalikan.'); return }
+      if (!sameSerialIdentity(value, source.serial)) { setSerial(null); setError('Serial tidak cocok dengan perangkat yang akan dikembalikan.'); return }
       setSerial(source.serial); setError(null)
     }} />{serial && <p role="status">Serial cocok: {serial}</p>}<p>Pengembalian ini untuk perangkat yang masih di tangan Anda. Perangkat yang terpasang dilepas melalui alur aset pelanggan.</p></>}
     <WarehouseQuantityField label="Jumlah dikembalikan" value={quantity} unit={source.baseUnit} onChange={setQuantity} disabled={busy || !!review} />

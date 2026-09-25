@@ -69,6 +69,14 @@ it('validates named RMA references and captures the actual current work-order re
   expect(() => build(rmaOrderFixture, id.rmaTechnician)).toThrow('berbeda dari pengirim')
   expect(() => build(rmaOrderFixture, id.plan, { ...rmaField, custodianId: id.plan })).toThrow('lokasi teknisi')
 })
+it('accepts matching mixed-case RMA serial while preserving raw history and rejecting another device', () => {
+  const details = readyRmaReturn(); details.references.item.serial = 'Onu-001'
+  const before = JSON.stringify(details)
+  const build = (observed: string) => buildRmaDispatch(details, rmaOrderFixture, id.rmaTechnician, id.plan, repairTransit, rmaField, observed, 'BA')
+  expect(build(' onu-001 ').observedSerial).toBe(' onu-001 ')
+  for (const wrong of ['', ' ', 'ONU-002']) expect(() => build(wrong)).toThrow('serial perangkat pelanggan yang sama')
+  expect(JSON.stringify(details)).toBe(before)
+})
 it('dispatches only after current named WO review then reads actual handover receipt separately', async () => {
   const server = mockServer(); show()
   await screen.findByRole('button', { name: 'Siapkan serah-terima RMA' })

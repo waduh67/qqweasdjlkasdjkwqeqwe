@@ -11,7 +11,7 @@ vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can: (permission: string) => 
 vi.mock('@/auth/useAuth', () => ({ useAuth: () => ({ user: { id: mocks.actor, tenantId: 'test-tenant' }, readOnly: mocks.readOnly }) }))
 const root = `/api/v1/warehouse/my-materials/${id.rmaOrder}`
 const context = () => ({ ...myContext(), id: id.rmaOrder, code: 'WO-RMA-001', workOrderRevision: 17, field: null })
-const received = () => rmaDetailsFixture({ ...rmaFixture(), state: 'RECEIVED', revision: 2, locationId: id.field })
+const received = (serial = 'ONU-001') => rmaDetailsFixture({ ...rmaFixture(), serial, state: 'RECEIVED', revision: 2, locationId: id.field })
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status })
 const page = (items: unknown[]) => response({ items, page: 0, size: 10, totalElements: items.length })
 const tree = () => <MemoryRouter initialEntries={[`/my-materials?workOrderId=${id.rmaOrder}`]}><MyMaterialsPage /></MemoryRouter>
@@ -30,11 +30,11 @@ async function open(action = 'Terima perangkat servis') {
   fireEvent.click(await screen.findByRole('button', { name: 'Lihat perangkat servis' }))
   fireEvent.click(await screen.findByRole('button', { name: action }))
 }
-it('receives and reinstalls the original customer device with fresh references and identical lost-response retries', async () => {
-  let row = rmaDetailsFixture(), acknowledgements = 0, installs = 0, installed = false
+it.each(['ONU-001', 'Onu-001'])('receives and reinstalls original customer serial %s with fresh references and identical lost-response retries', async (serial) => {
+  let row = rmaDetailsFixture({ ...rmaFixture(), serial }), acknowledgements = 0, installs = 0, installed = false
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (init?.method === 'POST') {
-      if (path.endsWith('/acknowledge')) { row = received(); if (++acknowledgements === 1) throw new TypeError('lost'); return response(row.handover) }
+      if (path.endsWith('/acknowledge')) { row = received(serial); if (++acknowledgements === 1) throw new TypeError('lost'); return response(row.handover) }
       if (path.endsWith('/authorize')) return response({ authorizationId: id.plan, revision: 3, operationId: id.issue })
       installed = true; if (++installs === 1) throw new TypeError('lost')
       return response({ assignmentId: id.demandLine, episodeId: id.document, customerId: id.evidence, assetId: id.piece })
@@ -59,7 +59,7 @@ it('receives and reinstalls the original customer device with fresh references a
   expect(screen.queryByRole('button', { name: 'Pasang kembali perangkat' })).toBeNull()
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(writes).toHaveLength(5); expect(writes[0]).toEqual(writes[1]); expect(writes[3]).toEqual(writes[4])
-  expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ expectedRevision: 1, observedSerial: 'ONU-001', evidenceReference: 'Bukti terima servis' })
+  expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ expectedRevision: 1, observedSerial: serial, evidenceReference: 'Bukti terima servis' })
   expect(JSON.parse(String(writes[2][1]?.body))).toMatchObject({ expectedRevision: 17, purpose: 'RETURN_CUSTOMER_RMA', previousAssignmentId: id.demandLine, repairCaseId: id.repair })
   expect(JSON.parse(String(writes[3][1]?.body))).toEqual({ authorizationId: id.plan, expectedRevision: 3, topology: null })
   expect(fetch.mock.calls.filter(([path]) => path === `${root}/rmas/${id.rma}`)).toHaveLength(2)

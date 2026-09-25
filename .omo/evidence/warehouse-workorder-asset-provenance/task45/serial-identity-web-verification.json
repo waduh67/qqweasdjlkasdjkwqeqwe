@@ -1,0 +1,56 @@
+{
+  "phase": "Task45 partial: browser serial identity fixes; full asset journeys still running",
+  "baseCommit": "cf8bc93c2832bf04b7f9bbc1efa9021e2b747c24",
+  "sourceSha256": {
+    "web/src/api/warehouse/customerAssets.test.ts": "c76c781d77811a6913dec8cb7536281fd23302b0f67bbe80b4f8473aaae1a2b2",
+    "web/src/api/warehouse/customerAssets.ts": "11a4f1ef7b7dd1f49f93c33c2117995330420b8134bb396dd4fb65617914a0cd",
+    "web/src/api/warehouse/myMaterialRma.ts": "3bfc038edacb1b287626dda75ae5fabdaa6628bd11fc0a3a9d2d990566c77616",
+    "web/src/api/warehouse/serialIdentity.ts": "6dd3292c323280289ccc3b8563d543edec88f8caa9eea3e3533224d6df8ba3d8",
+    "web/src/components/organisms/customer/CustomerAssetInstallation.tsx": "98cbaea1159d982e6c022bd83f3edb0d6b2c8c796790d221c948d51da8c6b897",
+    "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx": "47750469282f4597adca327ff9482b89fb9b7379d57785c3e30fb536c32576c9",
+    "web/src/pages/MyMaterialHandoverGrants.tsx": "b281b31b1d4b305b51156af627c68e77f2f0c3abef58fee5d525dc01b577523c",
+    "web/src/pages/MyMaterialReceipt.tsx": "f1e24ac0b7b1843ded316cc4ae43f638af3ea32b60040d0cbba04ad69500d2ab",
+    "web/src/pages/MyMaterialReturn.tsx": "ebd8b76aa1274a8e4126e85909868d3cb818957f59c4a5cdf0c7de7cc666029c",
+    "web/src/pages/MyMaterialRma.test.tsx": "e685888eb6aa534b7271c3cc733645463a45bf21375d47173afe633fea081c04",
+    "web/src/pages/MyMaterialRma.tsx": "c56226a447afd098247965174e4e2f967bc78e0052c2ff573635884bc47bc1e5",
+    "web/src/pages/myMaterialDraft.test.ts": "835e388010cfc5099f52214fc4a83bb3994632d7e1a8a68e505dc352d0ab4ad3",
+    "web/src/pages/myMaterialDraft.ts": "50a0091842ccf71bbfdcc1224d95ed7cc3629a191c25760a7824c671a60570f8",
+    "web/src/pages/warehouse/WarehouseCustomerRma.test.tsx": "27877d5849e67dd5a4dcc388c6197a2e0c2a82cb31ee675a3b98c67e0b061f47",
+    "web/src/pages/warehouse/returnDraft.test.ts": "44c2a4995f60b570d9c4679c46c3bc1bfe70a915b0c3d3f43078b961e4ce7390",
+    "web/src/pages/warehouse/returnDraft.ts": "9d6f32a9cecdaa5975780de333b310b75b3e503c46a5eedd316c765db479c02a",
+    "web/src/pages/warehouse/rmaDraft.ts": "496bf0757661d8cd3f0f7d440f7bfd9c3ddd550ca90d17ef3a3984dbba1aa0b2"
+  },
+  "changes": [
+    "Compare observed and historical device serials using trim and uppercase identity in install/discovery, Material Saya receipt/return/handover, return inspection/repair and RMA",
+    "Keep raw historical data, revision comparisons, captured request bytes, idempotency keys and response-loss retry behavior unchanged",
+    "Reject blank and different serials; retain source/assignment/title/reset/quantity/role checks"
+  ],
+  "verification": {
+    "focusedRedRma": {
+      "tests": 17,
+      "passed": 14,
+      "failed": 3
+    },
+    "focusedRedInstall": {
+      "tests": 6,
+      "passed": 5,
+      "failed": 1
+    },
+    "combinedGreen": {
+      "files": 9,
+      "tests": 45,
+      "failed": 0,
+      "skipped": 0,
+      "duration": "8.40s"
+    },
+    "appTypeScriptAndProductionBuild": "PASS during browser r2/r3",
+    "targetedOxlint": "PASS",
+    "browserObserved": "r3 actual mixed-case receipt -> receive -> usage -> SALE installation -> customer handover -> measured return -> approved QA completed; test then failed because it expected raw spelling in the frozen QA view, which correctly retains canonical source spelling",
+    "browserGate": "NOT yet passed for new customer-assets.spec.ts"
+  },
+  "limits": [
+    "Full task45 still open; sale/RMA and loan swap/reuse tests need completion in both projects",
+    "New e2e helper drafts are excluded from this product checkpoint and will be verified and committed next",
+    "Full server/web/KMP release gate remains task46"
+  ]
+}

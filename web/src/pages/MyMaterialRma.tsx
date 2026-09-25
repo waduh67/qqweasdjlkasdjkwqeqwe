@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { acknowledgeMyRma, getMyMaterialRma, getMyMaterialRmas, reinstallMyRma } from '@/api/warehouse/myMaterialRma'
 import { getMyMaterialContext, type MyMaterialContext } from '@/api/warehouse/myMaterials'
 import type { RmaDetails } from '@/api/warehouse/returns'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useCan } from '@/auth/useCan'
 import { Button, TextField } from '@/components/atoms'
@@ -50,7 +51,7 @@ function RmaAction({ context, row, actor, enabled, onClose, onDone, onReload }: 
     event.preventDefault()
     if (!enabled || disabled || active.current) return
     try {
-      if (observed !== row.handover.serial) throw new Error('Cocokkan serial fisik dengan perangkat servis ini.')
+      if (!sameSerialIdentity(observed, row.handover.serial)) throw new Error('Cocokkan serial fisik dengan perangkat servis ini.')
       const nextTopology = receiving ? null : assetTopologyInput(topology)
       active.current = true; setBusy(true); setError(null)
       const [freshContext, freshRow] = await Promise.all([getMyMaterialContext(context.id), getMyMaterialRma(context.id, row.handover.id)])
@@ -63,7 +64,7 @@ function RmaAction({ context, row, actor, enabled, onClose, onDone, onReload }: 
     <h4>{receiving ? 'Terima' : 'Pasang kembali'} {row.handover.serial}</h4><p>{row.workOrderCode} · {row.workOrderTitle}</p>
     <p>Perangkat tetap milik pelanggan asal. Cocokkan serial fisik sebelum melanjutkan.</p>
     <MaterialScanner disabled={disabled} onScan={value => { setObserved(value.trim().toUpperCase()); setError(null) }} />
-    {observed && <p role="status">Serial diperiksa: {observed}{observed !== row.handover.serial ? ' — tidak cocok' : ''}</p>}
+    {observed && <p role="status">Serial diperiksa: {observed}{!sameSerialIdentity(observed, row.handover.serial) ? ' — tidak cocok' : ''}</p>}
     {receiving ? <TextField label="Referensi bukti penerimaan servis" value={reference} required maxLength={500} disabled={disabled} onChange={(_, data) => setReference(data.value)} />
       : <CustomerAssetTopology value={topology} onChange={setTopology} disabled={disabled || !enabled} />}
     {error && <p role="alert">{error}</p>}<div className="row wrap"><Button onClick={onClose} disabled={disabled}>Batal</Button><Button type="submit" disabled={disabled || !enabled}>{busy ? 'Memeriksa perangkat…' : receiving ? 'Tinjau penerimaan servis' : 'Tinjau pemasangan kembali'}</Button></div>

@@ -2,6 +2,7 @@ import { timestamp } from './approvals'
 import { array, boolean, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { materialCustody } from './materialExecution'
 import { materialSku } from './materialModels'
+import { sameSerialIdentity } from './serialIdentity'
 import { captureCommandSession, command, parameters, query, type WarehouseCommand } from './transport'
 
 export const ASSET_PROVENANCE = ['RECEIPT', 'OPENING_BALANCE', 'UNKNOWN'] as const
@@ -67,7 +68,7 @@ export function deployCustomerAsset(job: AssetJob, source: AssetSource, mode: 'L
   previous = structuredClone(previous); observation = structuredClone(observation)
   if (job.status === 'DONE' || job.workType !== (previous ? 'MIGRATION' : 'PSB') || !source.ownershipModes.includes(mode) ||
     (previous && (previous.asset.customerId !== job.customerId || previous.asset.endedAt !== null || !job.signature)) ||
-    (observation && (previous || observation.serial !== source.source.serial))) throw new Error('Sumber perangkat atau WO tidak cocok dengan pemasangan.')
+    (observation && (previous || !sameSerialIdentity(observation.serial, source.source.serial)))) throw new Error('Sumber perangkat atau WO tidak cocok dengan pemasangan.')
   const authorize = command(`/api/work-orders/${uuid(job.id)}/assets/authorize`, 'POST', {
     expectedRevision: job.revision, assetId: source.id, issueLineId: source.source.issueLineId, purpose: previous ? 'REPLACE' : 'INSTALL', ownershipMode: mode,
     ...(previous ? { previousAssignmentId: previous.asset.id } : {}),
@@ -84,7 +85,7 @@ export function deployCustomerAsset(job: AssetJob, source: AssetSource, mode: 'L
       const input = { authorizationId: permit.authorizationId, expectedRevision: permit.revision, topology }
       consume = observation ? command(`/api/monitoring/discovered-onus/${uuid(observation.id)}/provision`, 'POST', { customerId: job.customerId,
         authorizationId: permit.authorizationId, expectedRevision: permit.revision, odpId: topology?.odpId ?? null, portNumber: topology?.portNumber ?? null, installRxPowerDbm: topology?.installRxPowerDbm ?? null }, value => {
-        const row = record(value); return bound({ id: uuid(row.id) }, row.id === observation.id && row.state === 'PROVISIONED' && row.serialNumber === observation.serial)
+        const row = record(value); return bound({ id: uuid(row.id) }, row.id === observation.id && row.state === 'PROVISIONED' && sameSerialIdentity(text(row.serialNumber), observation.serial))
       }, consumeKey) : previous ? command(`${root(job.customerId)}/replace`, 'POST', { ...input, expectedAssignmentRevision: previous.asset.revision,
         expectedTitleRevision: previous.asset.titleRevision, evidenceId: job.signature!.id }, value => {
         const row = record(value), replaced = record(row.replacement); episodeOutcome(job.customerId, source.id)(replaced); return { operationId: uuid(row.operationId) }

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import { dispatchMaterialHandover, getMaterialHandoverGrant, getMaterialHandoverGrants, type MaterialHandoverGrant } from '@/api/warehouse/materialHandover'
 import { getMyMaterialContext, getMyMaterialSource, type MyMaterialContext } from '@/api/warehouse/myMaterials'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -30,7 +31,7 @@ function Grant({ grant, context, actor, enabled, onDone }: { grant: MaterialHand
     if (!enabled || active.current || review) return
     try {
       if (stale || grant.workOrderId !== context.id || grant.sender.id !== actor) throw new Error('Persetujuan ini tidak lagi cocok dengan sumber atau WO. Minta dispatcher memeriksanya.')
-      if (grant.serial && serial !== grant.serial) throw new Error('Pindai atau ketik serial perangkat yang akan diserahkan.')
+      if (grant.serial && !sameSerialIdentity(serial, grant.serial)) throw new Error('Pindai atau ketik serial perangkat yang akan diserahkan.')
       active.current = true; setBusy(true); setError(null)
       const [fresh, current, source] = await Promise.all([getMaterialHandoverGrant(context.id, grant.id), getMyMaterialContext(context.id), getMyMaterialSource(context.id, grant.request.stockIdentityId)])
       if (fresh.sender.id !== actor || current.workOrderRevision !== fresh.request.workOrderRevision || JSON.stringify(fresh.request) !== JSON.stringify(grant.request) ||
@@ -47,7 +48,7 @@ function Grant({ grant, context, actor, enabled, onDone }: { grant: MaterialHand
     <p>{grant.request.reason} · Bukti persetujuan: {grant.request.evidenceReference}</p>
     {stale && <p role="status">Sumber atau revisi WO berubah sejak persetujuan. Minta dispatcher memeriksa serah-terima ini.</p>}
     {grant.serial && <MaterialScanner disabled={busy || !!review} onScan={value => {
-      if (value.trim().toUpperCase() !== grant.serial) { setSerial(null); setError('Serial tidak cocok dengan persetujuan.'); return }
+      if (!sameSerialIdentity(value, grant.serial)) { setSerial(null); setError('Serial tidak cocok dengan persetujuan.'); return }
       setSerial(grant.serial); setError(null)
     }} />}
     {error && <p role="alert">{error}</p>}<div className="row wrap"><Button disabled={!enabled || busy || !!review} onClick={onDone}>Muat ulang persetujuan</Button>

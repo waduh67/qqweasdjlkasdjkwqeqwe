@@ -1,5 +1,6 @@
 import type { WarehouseLocation, WarehouseSupplier } from '@/api/warehouse/models'
 import { quantityFromInput } from '@/api/warehouse/quantity'
+import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import type { RepairDispatch, RepairReceipt, ReturnDetails, ReturnInspection, ReturnIntake, ReturnSource } from '@/api/warehouse/returns'
 
 function evidence(value: string) {
@@ -11,7 +12,7 @@ function quarantine(location: WarehouseLocation | null): WarehouseLocation {
   return location
 }
 function serial(details: ReturnDetails, observed: string) {
-  if (details.references.item.tracking !== 'SERIAL' || !details.references.item.serial || observed !== details.references.item.serial) throw new Error('Pindai serial fisik yang sama dengan dokumen retur.')
+  if (details.references.item.tracking !== 'SERIAL' || !sameSerialIdentity(observed, details.references.item.serial)) throw new Error('Pindai serial fisik yang sama dengan dokumen retur.')
   return observed
 }
 export function needsPostRepairInspection(details: ReturnDetails) {

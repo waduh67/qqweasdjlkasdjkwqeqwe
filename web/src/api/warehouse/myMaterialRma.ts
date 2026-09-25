@@ -2,6 +2,7 @@ import { integer, pageOf, record, uuid, WarehouseDataError } from './codec'
 import type { AssetTopology } from './customerAssets'
 import type { MyMaterialContext } from './myMaterials'
 import { rmaDetails, rmaHandover, type RmaDetails } from './returns'
+import { sameSerialIdentity } from './serialIdentity'
 import { captureCommandSession, command, parameters, query, type WarehouseCommand } from './transport'
 
 const root = (work: string) => `/api/v1/warehouse/my-materials/${uuid(work)}/rmas`
@@ -17,7 +18,7 @@ export const getMyMaterialRma = (work: string, handover: string) => query(`${roo
 function eligible(context: MyMaterialContext, row: RmaDetails, actor: string, observed: string) {
   if (!context.currentAssignee || !context.active || context.id !== row.handover.workOrderId || actor !== row.handover.technicianId)
     throw new Error('Perangkat servis hanya dapat diterima dan dipasang oleh teknisi yang ditugaskan pada WO aktif.')
-  if (observed.trim().toUpperCase() !== row.handover.serial) throw new Error('Cocokkan serial fisik dengan perangkat servis ini.')
+  if (!sameSerialIdentity(observed, row.handover.serial)) throw new Error('Cocokkan serial fisik dengan perangkat servis ini.')
 }
 export function acknowledgeMyRma(context: MyMaterialContext, row: RmaDetails, actor: string, observed: string, reference: string) {
   eligible(context, row, actor, observed)

@@ -16,8 +16,10 @@ beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }; HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); tokenStore.clear() })
-function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]; stale?: boolean; legacy?: number; lost?: boolean } = {}) {
+function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]; stale?: boolean; legacy?: number; lost?: boolean; serial?: string } = {}) {
   let installed = false, lost = options.lost
+  const source = assetSourceFixture()
+  if (options.serial) source.source.serial = options.serial
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (init?.method === 'POST') {
       if (path.endsWith('/authorize')) return response({ authorizationId: id.plan, operationId: id.assignment, revision: 0 })
@@ -30,8 +32,8 @@ function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]
     if (path.includes('/history?')) return page(installed ? [assetHistoryFixture()] : options.history ?? [], 10)
     if (path.includes('/history/')) return response((options.history ?? [assetHistoryFixture()])[0])
     if (path.includes('/jobs?')) return page([assetJobFixture()])
-    if (path.includes('/sources?')) return page([assetSourceFixture()])
-    if (path.includes('/sources/')) return options.stale ? new Response(JSON.stringify({ code: 'NOT_FOUND', message: 'Source moved' }), { status: 404 }) : response(assetSourceFixture())
+    if (path.includes('/sources?')) return page([source])
+    if (path.includes('/sources/')) return options.stale ? new Response(JSON.stringify({ code: 'NOT_FOUND', message: 'Source moved' }), { status: 404 }) : response(source)
     if (path.includes('/jobs/')) return response(assetJobFixture())
     throw new Error(`unexpected read ${path}`)
   }); vi.stubGlobal('fetch', fetch); return fetch
@@ -46,11 +48,11 @@ async function selectSource(serial = 'ONU-A1') {
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial perangkat' }), { target: { value: serial } })
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Serial perangkat' }), { key: 'Enter' })
 }
-it('installs a reviewed acknowledged serial and retries a lost reply using the exact same command', async () => {
-  const fetch = transport({ lost: true }); mount(); await selectSource()
+it.each(['ONU-A1', 'Onu-A1'])('installs reviewed serial %s and retries a lost reply using the exact same command', async (serial) => {
+  const fetch = transport({ lost: true, serial }); mount(); await selectSource()
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemasangan' }))
-  const dialog = await screen.findByRole('dialog'); expect(dialog.textContent).toContain('ONU-A1')
+  const dialog = await screen.findByRole('dialog'); expect(dialog.textContent).toContain(serial)
   fireEvent.click(within(dialog).getByRole('button', { name: 'Pasang perangkat' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))
   await screen.findByText(/Asal: RCV-01/)

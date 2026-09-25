@@ -52,10 +52,12 @@ it('authorizes a replacement of the reviewed prior assignment and preserves cust
   expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({ expectedAssignmentRevision: 2, expectedTitleRevision: 1, evidenceId: id.evidence })
 })
 
-it('provisions an observed serial only after eligible source authorization and binds the returned discovery', async () => {
+it.each(['ONU-A1', 'Onu-A1'])('provisions observed serial from receipt %s after source authorization and binds discovery', async (serial) => {
   const fetch = vi.fn(async (path: string, _input?: RequestInit) => path.endsWith('/authorize') ? response({ authorizationId: id.plan, operationId: id.assignment, revision: 3 }) : response({ id: id.document, state: 'PROVISIONED', serialNumber: 'ONU-A1' }))
   vi.stubGlobal('fetch', fetch)
-  await deployCustomerAsset(assetJobFixture(), assetSourceFixture(), 'LOAN', null, undefined, { id: id.document, serial: 'ONU-A1' }).execute()
+  const source = assetSourceFixture(); source.source.serial = serial
+  expect(() => deployCustomerAsset(assetJobFixture(), source, 'LOAN', null, undefined, { id: id.document, serial: 'OTHER' })).toThrow('Sumber perangkat')
+  await deployCustomerAsset(assetJobFixture(), source, 'LOAN', null, undefined, { id: id.document, serial: 'ONU-A1' }).execute()
   expect(fetch.mock.calls.map(([path]) => path)).toEqual([`/api/work-orders/${id.source}/assets/authorize`, `/api/monitoring/discovered-onus/${id.document}/provision`])
   expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({ customerId: id.customer, authorizationId: id.plan, expectedRevision: 3 })
 })
