@@ -7,7 +7,8 @@ import java.util.UUID
 
 @Repository
 class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
-    fun report(kind: WarehouseReportKind, filter: WarehouseQueryFilter, access: WarehouseQueryAccess, workOrder: UUID? = null): String = jdbc.execute { sql ->
+    fun report(kind: WarehouseReportKind, filter: WarehouseQueryFilter, access: WarehouseQueryAccess,
+        readableWorkOrders: Set<UUID>, workOrder: UUID? = null): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, filter, access)
         val statement = when (kind) {
             WarehouseReportKind.STOCK_CARD -> ledger + card(query)
@@ -19,7 +20,9 @@ class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
             WarehouseReportKind.WORK_ORDER_COSTS -> ledger + warehouseReportCosts(query)
             WarehouseReportKind.STOCK, WarehouseReportKind.UNKNOWN_STOCK -> error("Stock uses the shared physical stock projection")
         }
-        if (kind == WarehouseReportKind.WORK_ORDER_COSTS) query.result(statement, workOrder, workOrder) else query.result(statement)
+        val workOrders = sql.connection.createArrayOf("uuid", readableWorkOrders.toTypedArray())
+        if (kind == WarehouseReportKind.WORK_ORDER_COSTS) query.result(reportWorkOrders + statement, workOrders, workOrder, workOrder)
+        else query.result(reportWorkOrders + statement, workOrders)
     }
 
     fun serialChain(id: UUID, filter: WarehouseQueryFilter, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
@@ -74,12 +77,12 @@ class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
                 WHEN assignment.ended_at IS NOT NULL THEN 'CLOSED' WHEN acceptance.id IS NULL THEN 'PENDING_HANDOVER' ELSE 'ACTIVE' END assignment_state
             FROM inventory_asset_assignment assignment JOIN inventory_serialized_asset asset ON asset.tenant_id=assignment.tenant_id AND asset.id=assignment.asset_id
             JOIN inventory_sku sku ON sku.tenant_id=asset.tenant_id AND sku.id=asset.warehouse_sku_id
-            JOIN work_order work ON work.tenant_id=assignment.tenant_id AND work.id=assignment.work_order_id
+            JOIN report_work_orders work ON work.id=assignment.work_order_id
             LEFT JOIN inventory_asset_handover acceptance ON acceptance.tenant_id=assignment.tenant_id AND acceptance.assignment_id=assignment.id
             LEFT JOIN inventory_asset_removal removal ON removal.tenant_id=assignment.tenant_id AND removal.assignment_id=assignment.id
             LEFT JOIN inventory_asset_loss_effect loss ON loss.tenant_id=assignment.tenant_id AND loss.assignment_id=assignment.id,request
             WHERE assignment.tenant_id=request.tenant AND assignment.warehouse_admission='VERIFIED' AND assignment.ownership_mode='$mode'
-            AND asset.location_id IN (SELECT id FROM visible_locations) AND (request.areas IS NULL OR work.area_id=ANY(request.areas))
+            AND asset.location_id IN (SELECT id FROM visible_locations)
             AND (request.sku IS NULL OR asset.warehouse_sku_id=request.sku) AND (request.serial IS NULL OR asset.id IN (SELECT id FROM resolved_serial_asset))
             AND (request.location IS NULL OR asset.location_id=request.location) AND (request.status IS NULL OR asset.status=request.status)
             AND (request.condition IS NULL OR asset.condition=request.condition) AND (request.owner IS NULL OR assignment.legal_owner=request.owner)
@@ -93,6 +96,7 @@ class WarehouseReportPersistence(private val jdbc: WarehouseCommandJdbc) {
     private fun order(query: WarehouseQuerySql) = if (query.filter.sort == "id") "id" else "created_at"
 
     companion object {
+        internal const val reportWorkOrders = ", report_work_orders AS (SELECT unnest(?::uuid[]) id)"
         internal val serialFilter = "(request.serial IS NULL OR event.stock_identity_id IN (SELECT id FROM resolved_serial_asset))"
         internal val ledger = """, report_ledger AS MATERIALIZED (
             SELECT leg.id,leg.tenant_id,leg.movement_id,leg.document_line_id,leg.sku_id,leg.stock_identity_id,leg.lot_id,

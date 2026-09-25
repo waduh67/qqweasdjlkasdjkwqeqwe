@@ -6,9 +6,10 @@ import java.util.UUID
 
 @Repository
 class WarehouseReportDocuments(private val jdbc: WarehouseCommandJdbc) {
-    fun print(id: UUID, revision: Long, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
+    fun print(id: UUID, revision: Long, access: WarehouseQueryAccess, readableWorkOrders: Set<UUID>): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(), access)
-        query.result(""", target AS (SELECT document.*,operation.id operation_id,operation.original_body::jsonb response,
+        val workOrders = sql.connection.createArrayOf("uuid", readableWorkOrders.toTypedArray())
+        query.result(WarehouseReportPersistence.reportWorkOrders + """, target AS (SELECT document.*,operation.id operation_id,operation.original_body::jsonb response,
                 operation.created_at recorded_at,identity.canonical_payload::jsonb receipt_snapshot,issue.snapshot::jsonb issue_snapshot
             FROM inventory_document document JOIN inventory_operation operation
                 ON operation.tenant_id=document.tenant_id AND operation.document_id=document.id AND operation.document_revision=?
@@ -24,8 +25,7 @@ class WarehouseReportDocuments(private val jdbc: WarehouseCommandJdbc) {
                 ON leg.tenant_id=movement.tenant_id AND leg.movement_id=movement.id WHERE movement.tenant_id=request.tenant
                 AND movement.document_id=document.id AND movement.document_revision<=operation.document_revision
                 AND leg.location_id NOT IN (SELECT id FROM visible_locations))
-            AND (document.work_order_id IS NULL OR EXISTS (SELECT FROM work_order work WHERE work.tenant_id=request.tenant
-                AND work.id=document.work_order_id AND (request.areas IS NULL OR work.area_id=ANY(request.areas))))),
+            AND (document.work_order_id IS NULL OR document.work_order_id IN (SELECT id FROM report_work_orders))),
         print_lines AS (SELECT line.id,line.line_number,line.sku_id,line.base_unit,line.quantity_base,line.stock_identity_id,line.location_id,
                 coalesce(receipt_line->'sku',issue_line->'sku',origin_receipt_line->'sku') sku_snapshot,
                 coalesce(receipt_line->>'serial',issue_line->>'serial',asset.serial_number) serial_number,
@@ -57,6 +57,6 @@ class WarehouseReportDocuments(private val jdbc: WarehouseCommandJdbc) {
                 'nameState',CASE WHEN sku_snapshot IS NULL THEN 'NOT_CAPTURED' ELSE 'SNAPSHOT' END,
                 'stockIdentityId',stock_identity_id,'serial',serial_number,'locationId',location_id,
                 'quantity',${queryQuantity("quantity_base", "base_unit")}) || ${queryCost("print_lines", access.cost)} ORDER BY line_number) FROM print_lines))::text
-        FROM target""", revision, id, revision)
+        FROM target""", workOrders, revision, id, revision)
     }
 }

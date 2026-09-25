@@ -1,0 +1,24 @@
+{
+  "status": "PASSED_DOWNLOADED_TESTED_IMAGE_ARCHIVES",
+  "ciRun": 36131581036,
+  "commit": "2c1d8e08171a1914e99987f5b930c572630b0d4f",
+  "artifactId": 10862201582,
+  "artifactDigest": "sha256:0ac36d10bd43af1a9eb4db03fd72d878bb29a84155433c7a13bb95f1ef4afa89",
+  "artifactBytes": 250802974,
+  "images": {
+    "server": "sha256:2e6f3065e6a2a011f3540a867314a5c4fbba7daf9dcb93af662155696e189c1f",
+    "web": "sha256:c0a1e6f064ede633f84497b09e70fe5a915dd45ab1e8c8b748f9177242f3aad0"
+  },
+  "archiveDigests": {
+    "server": "sha256:48b0d1ef0293efaee6a2d28ed2320a976088563b0bc2d9eb85036a7588c00e1a",
+    "web": "sha256:5bdaa0e09b952f47a2cc2eac4c9937d7df33b1341f62e7a21b6fd42879628a9f"
+  },
+  "configDigests": {
+    "server": "sha256:2e6f3065e6a2a011f3540a867314a5c4fbba7daf9dcb93af662155696e189c1f",
+    "web": "sha256:c0a1e6f064ede633f84497b09e70fe5a915dd45ab1e8c8b748f9177242f3aad0"
+  },
+  "sameSmokeProofAsRevalidatedRawReport": true,
+  "bothActualArchiveConfigsMatchTestedImageIds": true,
+  "registryWritePerformed": false,
+  "deploymentPerformed": false
+}

@@ -1,3 +1,37 @@
+## Current follow-up: report owner boundary fix prepared; original R7 is still running
+
+Original is FROZEN at40cbd34f; unfiltered R7/session39048 has passed projection1 and
+all7historical tests and is now in modern regression. Edit only validation. CI2c1
+36131581036 remains active; feature40 CI36135632377 is also active; source3624 CI
+36134311367 remains queued. Preserve their complete results, but do not attribute
+those old product results to the new report change below.
+
+Validation now adds InventoryWorkOrderReadPort, implemented inside workorder, and
+removes all3 direct inventory report SQL reads of the work_order table. Scope comes
+from the existing current-authority fence; the owner uses tenant-scoped ordered FOR
+SHARE reads so area changes wait until the report transaction ends. Inventory only
+joins the returned IDs; empty scope admits no WO, while receipt prints without a WO
+remain valid. Existing ledger, quantities, cost math and snapshots are unchanged.
+
+New WarehouseReportWorkOrderScopeIT has4 expected cases: real LOAN/SALE HTTP journeys
+with work-area changes, denied/restored costs/assignments/print while warehouse access
+remains; owner scope empty/unrestricted/foreign tenant and area; and a real concurrent
+area update blocked by the owner's read lock. Compilation/runtime are PENDING.
+CI focused selection now also includes all report tests and ModularityTests (30classes,
+expected258cases; derive actual count from XML). Workflow5 and actionlint PASS.
+
+Commit and push this validation checkpoint to NEW refs/heads/work/warehouse-report-scope
+(confirmed absent), so CI can verify the new product without cancelling existing runs.
+The local branch stays work/warehouse-regression-fixtures. Do not push this report fix
+into executing original or assume old241proof remains a final proof for changed source.
+After current R7 finishes, archive it, integrate verified fixes, run focused report tests
+and a complete current regression. Final F1–F4 reviewers are explicitly authorized,
+but must review the fixed and tested current source. No approval or deploy performed.
+
+Downloaded actual2c1 tested Docker archives and verified GitHub ZIP SHA, both tar SHA,
+config SHA/image ID/commit labels and equality with revalidated smoke evidence. Safe
+proof task48/ci-2c1d8e08-tested-images-verification.json. No docker load/push/deploy.
+
 # Warehouse continuation — current checkpoint, 2026-09-25
 
 This page supersedes runtime instructions in older notes. Historical receipts remain

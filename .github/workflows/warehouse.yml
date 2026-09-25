@@ -60,6 +60,13 @@ jobs:
             com.duluin.ftth.inventory.WarehouseSchemaITPolicy
             com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT
             com.duluin.ftth.tenancy.DeleteTenantIT
+            com.duluin.ftth.inventory.WarehouseReportIT
+            com.duluin.ftth.inventory.WarehouseReportPrivacyIT
+            com.duluin.ftth.inventory.WarehouseReportJourneyIT
+            com.duluin.ftth.inventory.WarehouseReportExportIT
+            com.duluin.ftth.inventory.WarehouseReportCsvTest
+            com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT
+            com.duluin.ftth.ModularityTests
           )
           args=()
           for name in "${classes[@]}"; do args+=(--tests "$name"); done

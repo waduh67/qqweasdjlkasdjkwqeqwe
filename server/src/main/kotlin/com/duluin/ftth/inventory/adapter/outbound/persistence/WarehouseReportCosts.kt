@@ -27,11 +27,11 @@ internal fun warehouseReportCosts(query: WarehouseQuerySql): String {
             CASE WHEN source_visible THEN ledger.cost_total_minor END cost_total_minor,
             CASE WHEN source_visible THEN ledger.cost_basis_quantity_base END cost_basis_quantity_base,
             CASE WHEN source_visible THEN ledger.currency END currency
-        FROM report_ledger ledger JOIN work_order work ON work.tenant_id=ledger.tenant_id AND work.id=ledger.work_order_id
+        FROM report_ledger ledger JOIN report_work_orders work ON work.id=ledger.work_order_id
         CROSS JOIN LATERAL (SELECT (ledger.origin_location_id IS NULL OR ledger.origin_location_id IN (SELECT id FROM visible_locations))
             AND (ledger.origin_destination_id IS NULL OR ledger.origin_destination_id IN (SELECT id FROM visible_locations)) source_visible) visibility,request
         WHERE (ledger.movement_kind IN ('CONSUME','DEPLOY') OR EXISTS (SELECT FROM inventory_movement original
             WHERE original.tenant_id=request.tenant AND original.id=ledger.compensates_movement_id AND original.kind IN ('CONSUME','DEPLOY')))
-        AND (?::uuid IS NULL OR work.id=?::uuid) AND ledger.status IN ('CONSUMED','CUSTOMER_INSTALLED') AND (request.areas IS NULL OR work.area_id=ANY(request.areas)))""" +
+        AND (?::uuid IS NULL OR work.id=?::uuid) AND ledger.status IN ('CONSUMED','CUSTOMER_INSTALLED'))""" +
         query.page(rows, json, if (query.filter.sort == "id") "id" else "created_at", metadata = metadata)
 }

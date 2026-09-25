@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.application.service
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.InventoryWarehouseScopeApi
+import com.duluin.ftth.inventory.InventoryWorkOrderReadPort
 import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.adapter.outbound.persistence.*
 import com.duluin.ftth.inventory.application.port.inbound.*
@@ -15,7 +16,7 @@ import java.util.UUID
 @Service
 class WarehouseReportService(private val authority: CurrentAuthorityApi, private val scopes: InventoryWarehouseScopeApi,
     private val sites: SiteReferenceApi, private val reports: WarehouseReportPersistence, private val queries: WarehouseQueryPersistence,
-    private val documents: WarehouseReportDocuments) {
+    private val documents: WarehouseReportDocuments, private val workOrders: InventoryWorkOrderReadPort) {
     private val mapper = jacksonObjectMapper()
 
     @Transactional(timeout = 20)
@@ -34,10 +35,15 @@ class WarehouseReportService(private val authority: CurrentAuthorityApi, private
         }
         val access = access()
         if (kind == WarehouseReportKind.WORK_ORDER_COSTS && !access.cost) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        val readableWorkOrders = when (kind) {
+            WarehouseReportKind.LOAN_ASSETS, WarehouseReportKind.SOLD_ASSETS, WarehouseReportKind.WORK_ORDER_COSTS ->
+                workOrders.visibleWorkOrderIds(access.areas)
+            else -> emptySet()
+        }
         val body = when (kind) {
             WarehouseReportKind.STOCK -> queries.stock(filter, access)
             WarehouseReportKind.UNKNOWN_STOCK -> queries.unknown(filter, access)
-            else -> reports.report(kind, filter, access, workOrder)
+            else -> reports.report(kind, filter, access, readableWorkOrders, workOrder)
         }
         return if (csv) WarehouseReportCsv.render(mapper.readTree(body)) else body
     }
@@ -49,7 +55,8 @@ class WarehouseReportService(private val authority: CurrentAuthorityApi, private
     @Transactional(timeout = 20)
     fun print(id: UUID, revision: Long): String {
         if (revision < 0) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        return documents.print(id, revision, access())
+        val access = access()
+        return documents.print(id, revision, access, workOrders.visibleWorkOrderIds(access.areas))
     }
 
     private fun access(): WarehouseQueryAccess {
