@@ -311,3 +311,15 @@ Current UI lists approvals at /approvals/workbench?page=0 and displays the scope
 empty state. Updated the assertion/allowed request path to this existing API.
 R5 setup: 4/4 real desktop/mobile tests passed; stock denial remains HTTP403.
 The complete R5 matrix is still running and is not yet a final task45 PASS.
+
+## Task45 COMPLETE — browser matrix R5
+All eight specifications passed: setup4, receiving2, provenance2, issue2, returns4,
+exceptions2, numeric2, customer-assets4 =22 real tests. Both projects, no skipped,
+flaky, retries or API mocks; UI creates every stock source. Numeric917500MM/9ONU/
+1installed; separate loan reuse917500MM/8ONU/2installed. All relevant browser/UI/
+QA harness sources match the per-run source manifests. JAR hash and safe result
+hashes in browser-matrix-r5-verification.json. Asset history is scrolled into view;
+four screenshots manually inspected (synthetic data only), copied as safe evidence.
+Legacy R6 adds6 real V172->current->restart cases, preserved2customers/2ONUs/checksums.
+Task45 checked; task46 full server, task47 preflight/runbooks, task48 CI/image smoke
+and final audits remain. Environment dependency change requires new CI execution.

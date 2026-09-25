@@ -1,0 +1,152 @@
+{
+  "status": "PASS",
+  "tests": 22,
+  "failures": 0,
+  "skipped": 0,
+  "flaky": 0,
+  "jarSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2",
+  "specs": [
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "f49250b092a4158625e72d093ce5333d28b60c39",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "9906910528e958225a3fa58639df148d6ad51ca48d44ef4817296beb52ecfa2f"
+      ],
+      "spec": "setup",
+      "sourceManifestSha256": "5efc1415f7154cec0e0c2786335dcd6105f70c76b833eb2456ff7ca6877cd0b0",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "f49250b092a4158625e72d093ce5333d28b60c39",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "31fae3ae968670ccf28956b0564699ddf32b2633a73461beb8346f83824f1de4"
+      ],
+      "spec": "receiving",
+      "sourceManifestSha256": "5efc1415f7154cec0e0c2786335dcd6105f70c76b833eb2456ff7ca6877cd0b0",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "f49250b092a4158625e72d093ce5333d28b60c39",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "ece6d1544d37cc935b9e0cf73415f7167daa5a58e2acb050bf1bc91d7cab11b8"
+      ],
+      "spec": "provenance",
+      "sourceManifestSha256": "5efc1415f7154cec0e0c2786335dcd6105f70c76b833eb2456ff7ca6877cd0b0",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "f49250b092a4158625e72d093ce5333d28b60c39",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "7c44d76c7d532342408a68bbb6dc04be4704bf51c2fa965c00afdd2a00bca384"
+      ],
+      "spec": "issue",
+      "sourceManifestSha256": "5efc1415f7154cec0e0c2786335dcd6105f70c76b833eb2456ff7ca6877cd0b0",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "f49250b092a4158625e72d093ce5333d28b60c39",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "f3a73c3287b0304337ceaef61a20b39d7195ee0697324ecae0c5353d6d5cbbd5"
+      ],
+      "spec": "returns",
+      "sourceManifestSha256": "5efc1415f7154cec0e0c2786335dcd6105f70c76b833eb2456ff7ca6877cd0b0",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "f49250b092a4158625e72d093ce5333d28b60c39",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "e2fd3d2eab8145db7226d6abd0f33fbc9b1d09ec7d6c186155de429823cb958d"
+      ],
+      "spec": "exceptions",
+      "sourceManifestSha256": "5efc1415f7154cec0e0c2786335dcd6105f70c76b833eb2456ff7ca6877cd0b0",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "fcfffc5d605bbd6b0a6345527c81a257c0089b852ea10b5b3c883bfe8919396e"
+      ],
+      "spec": "warehouse-empty-tenant",
+      "sourceManifestSha256": "2563f88ffe737c75deb0a679fe7b4f5147a7b228469d2c8455bb4376a3dcc7b5",
+      "relevantSourcesUnchanged": true
+    },
+    {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "603c84c16145cda0900740132200f21e2673d0d80aa5b1da56ac06b77ae1565b"
+      ],
+      "spec": "customer-assets",
+      "sourceManifestSha256": "d07fbba6804e66ccd09a08782bf3878213c45fc5a1a84854ef42d3f5415c21ba",
+      "relevantSourcesUnchanged": true
+    }
+  ],
+  "numericTotals": {
+    "cableAvailableBase": "917500",
+    "cableUnit": "MM",
+    "onuAvailable": 9,
+    "activeInstalledOnu": 1
+  },
+  "separateLoanReuseTotals": {
+    "onuAvailable": 8,
+    "activeInstalledOnu": 2
+  },
+  "legacyCutover": "6 real UI cases separately verified in legacy-browser-verification.json",
+  "sqlBusinessSeeding": false,
+  "apiRouteMocks": false,
+  "screenshotsManuallyInspected": true
+}

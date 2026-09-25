@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { dismantleAsset, repairSoldAsset, returnSoldRma } from './asset-journey'
 import { loanReuseScenario } from './loan-reuse-scenario'
+import { captureAssetHistory } from './asset-screenshots'
 import { acceptNumericHandover, acknowledgeNumericJourney, assertNumericStock, completeNumericJourney, consumeAndInstallNumericJourney, prepareNumericJourney, returnNumericRemnant, uploadNumericProof } from './numeric-journey'
 
 test('sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA', async ({ page }, testInfo) => {
@@ -26,6 +27,7 @@ test('sold mixed-case receipt asset keeps customer title through physical remova
   await expect(page.getByRole('region', { name: 'Aset perangkat pelanggan', exact: true })).toContainText('Milik pelanggan')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.screenshot({ path: testInfo.outputPath('original-customer-rma-history.png'), fullPage: true })
+  await captureAssetHistory(page, testInfo, 'original-customer-rma')
   await assertNumericStock(page, fixture)
 })
 

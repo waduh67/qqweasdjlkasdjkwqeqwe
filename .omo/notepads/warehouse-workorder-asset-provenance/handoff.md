@@ -1,3 +1,23 @@
+## Current checkpoint: task45 complete; continue final regression and release gates
+
+Tasks1–45 DONE;46 IN PROGRESS;47–48/F1–F4 OPEN. Goal ACTIVE. No subagents authorized.
+Browser R5 finished exit0:22 real tests/eight specs/both projects, no skipped/flaky.
+Safe proof task45/browser-matrix-r5-verification.json and four inspected history PNGs.
+LegacyR6 separately6PASS. Current product/source identity recorded in both proofs.
+Remote CI36114803368 FAILED as expected: old pinned MinIO registry denies access.
+Web576/115PASS; native2targetsCOMPILED; shared44/7modulesPASS, parser[jvm]bug now
+fixed in2907bc7f and tested11PASS plus revalidated identical encrypted CI reports.
+Full-serverR2 was safely cancelled WHILE QUEUED, zero tests, to use final dependency.
+LIVE session91077: .omo/runtime/minio-source-build-r1.sh/log under hostfd8, building
+QA-only MinIO from upstreamrelease source with pinned tar/base digests. No byte
+equivalence claim to oldvendorimage. Do not edit executing Dockerfile/wrapper.
+Next: wire verified source image + pinned Timescale in QA Compose, run environment
+S3 tests and full server, run preflightpositive/3negative, finish exact Docker smoke
+and CI. Uncommitted image/workflow/publish drafts have not run real containers yet.
+Keep preserving private traces/env, retaining volumes, committing and pushing.
+
+## Previous checkpoints (superseded)
+
 ## Current checkpoint: isolated fixtures, portal and legacy cutover verified; final matrix running
 
 Goal ACTIVE; tasks 1–44 DONE, 45 IN PROGRESS, 46–48/F1–F4 OPEN. Keep working after push.
