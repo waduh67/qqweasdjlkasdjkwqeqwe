@@ -36,3 +36,18 @@ continues the approved checkpoint workflow, not a permission to expose runtime d
 Next push this product checkpoint to NEW work/warehouse-legacy-read-scope for current
 CI while existing full runs finish. Preserve active jobs and archives. F1 operational
 draft update/expiry gaps remain next; do not mark tasks46–48 or final F1–F4 complete.
+
+## CI compile correction
+
+CI36148238334 at d8a4ae29 failed compileTestKotlin before any focused/full test.
+Jackson3 JsonNode.map resolves to a JSON-node mapping API, not Kotlin List.map;
+AssertJ therefore selected an object assertion with no containsExactly methods.
+Use asSequence().map(...).toList() explicitly at the five collection assertions
+and the role-ID request construction. Assertions/expected scope behavior are
+unchanged. Raw private compile log original .omo/runtime/ci-36148238334-server-job.log.
+No runtime or full pass is claimed for d8a4. Nonserver jobs may still be completing;
+preserve them. Subsequent compile/runtime verification is required.
+
+Separate UNCOMMITTED F1 transfer draft update work exists in validation (including
+new unapplied V178.10), not part of this compile-only correction. Do not stage it
+without completing its UI/tests/migration manifest. Original R7 stays frozen at40.

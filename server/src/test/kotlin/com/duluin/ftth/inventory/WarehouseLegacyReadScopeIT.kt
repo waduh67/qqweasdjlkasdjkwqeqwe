@@ -44,7 +44,7 @@ class WarehouseLegacyReadScopeIT : WarehouseIssueFixture() {
         scope(admin, viewer.second, stock.bin, 0, true)
         assertVisibleOnly(viewer.first, stock.bin, visibleAsset, hiddenAsset)
         scope(admin, viewer.second, hiddenLocation, 0, true)
-        assertThat(read(viewer.first, "items").map { it.path("id").asString() }).containsExactlyInAnyOrder(visibleAsset, hiddenAsset)
+        assertThat(read(viewer.first, "items").asSequence().map { it.path("id").asString() }.toList()).containsExactlyInAnyOrder(visibleAsset, hiddenAsset)
         assertThat(request("GET", "/api/inventory/serialized/$hiddenAsset", viewer.first).status).isEqualTo(200)
 
         // Keep both warehouse grants; removing area B must hide B immediately.
@@ -88,11 +88,11 @@ class WarehouseLegacyReadScopeIT : WarehouseIssueFixture() {
     }
 
     private fun assertVisibleOnly(token: String, location: String, asset: String, hidden: String) {
-        assertThat(read(token, "warehouses").map { it.path("id").asString() }).containsExactly(location)
-        assertThat(read(token, "items").map { it.path("id").asString() }).containsExactly(asset)
-        assertThat(read(token, "stock").map { it.path("locationId").asString() }).containsExactly(location)
+        assertThat(read(token, "warehouses").asSequence().map { it.path("id").asString() }.toList()).containsExactly(location)
+        assertThat(read(token, "items").asSequence().map { it.path("id").asString() }.toList()).containsExactly(asset)
+        assertThat(read(token, "stock").asSequence().map { it.path("locationId").asString() }.toList()).containsExactly(location)
         for (path in listOf("custody", "reservations"))
-            assertThat(read(token, path).map { it.path("assetId").asString() }).containsExactly(asset)
+            assertThat(read(token, path).asSequence().map { it.path("assetId").asString() }.toList()).containsExactly(asset)
         val serialized = read(token, "serialized/$asset")
         assertThat(serialized.propertyNames()).containsExactlyInAnyOrder("assetId", "tenantId", "skuId", "serialNumber",
             "macAddress", "status", "locationId", "custodyOwnerId", "installedOnuId")
@@ -119,7 +119,7 @@ class WarehouseLegacyReadScopeIT : WarehouseIssueFixture() {
     private fun setAreas(admin: String, user: String, areas: List<String>) {
         val current = mapper.readTree(request("GET", "/api/users/$user", admin).contentAsString)
         val response = request("PUT", "/api/users/$user/access", admin,
-            mapper.writeValueAsString(mapOf("roleIds" to current.path("roleIds").map { it.asString() }, "areaIds" to areas)))
+            mapper.writeValueAsString(mapOf("roleIds" to current.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to areas)))
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
     }
 
