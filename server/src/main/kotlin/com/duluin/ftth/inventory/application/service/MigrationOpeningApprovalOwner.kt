@@ -23,7 +23,7 @@ class MigrationOpeningApprovalSourceLock(private val openings: MigrationOpeningS
 
 @Component
 class MigrationOpeningApprovalOwner(private val openings: MigrationOpeningStore, private val admission: MigrationOpeningPostingStore,
-    private val evidence: WarehouseOpeningBalanceService, private val masters: WarehouseMasterStore,
+    private val evidence: WarehouseOpeningBalanceService, private val effects: InventoryMigrationEffectsPort, private val masters: WarehouseMasterStore,
     private val guard: ReceiptApprovalPostingGuard, private val posting: WarehousePosting, private val operations: WarehouseOperationStore) : WarehouseApprovalOwner {
     override val kind = "OPENING_BALANCE"
 
@@ -53,6 +53,7 @@ class MigrationOpeningApprovalOwner(private val openings: MigrationOpeningStore,
         val source = record.snapshot.evaluation
         guard.beforeAdmission(approval)
         val legs = admission.admit(source.sourceDocumentId, record.id, operation.id)
+        effects.cancelPending(source.sourceDocumentId, operation.id, cutover, current)
         posting.post(WarehousePost(source.sourceDocumentId, source.sourceRevision, "POSTED", operation,
             MovementKind.OPENING_BALANCE, "Independently approved migration opening", legs, approval = approval), cutover)
         operations.storeIdentity(operation.id, record.snapshot.source, current.fence.identity.sessionId)

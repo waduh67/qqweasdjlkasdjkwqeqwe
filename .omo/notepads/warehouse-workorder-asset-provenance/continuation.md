@@ -1,3 +1,46 @@
+## Task43 approved legacy cancellation verified; all-current reservation/finalization NEXT
+
+Branch work/warehouse-completion, remote origin/feat/warehouse-workorder. This
+checkpoint follows pushed6d620e98 (opening admission + web review). Use git log -1
+for the containing commit. Tasks1–42 complete;43 in progress;44–48/F1–F4 remain.
+Continue full scope and push coherent verified phases; goal stays ACTIVE.
+
+V177.8 APPLIED and IMMUTABLE, SHA256
+3bd70b2ff029705331a4c453296ad6604524cd18b4c3aa08aea12ab8dc43b180.
+Next free M05 version177.9;178 reserved forM06. Never edit applied migrations.
+Owner-only append-only inventory/fulfillment cancellation receipts are bound to
+current-XID independently approved opening admission. Original movement/checkpoint/
+outbox/progress remain unchanged. Late ACK/reconciliation cannot reopen canceled
+work; process/accept replay MANUAL_RESOLVED with CANCELED_BY_APPROVED_MIGRATION.
+Raw reopen, identity rename, new progress, receipt deletion and owner-function replay
+outside the original admission transaction are denied. Required cancellation set
+is deferred-checked with the same atomic baseline posting and effect receipt.
+
+Broad regression37tests/8suites PASS3m51s. Then final7tests/2suites PASS1m34s after
+adding @Repository exception translation and business-drift HTTP409 verification.
+Both gates have zero failures/skips. Safe source hashes/proofs are task43/
+cancellation-regression-verification.json and cancellation-final-verification.json.
+Real HTTP+PG+MinIO validates1 pending movement +2 fulfillment sources, actual lease
+before final approval, late delivery, one competing baseline, exact replay, zero
+baseline, current area change and three rollback stages. A changed current legacy
+requiredEffects rejects409 without SQL leakage or partial decision/stock/receipts.
+Normal WO material verification, service owner effects, concurrency and durable
+unit replay passed the broad gate. Web is unchanged since6d620e98.
+
+NEXT read .omo/notepads/warehouse-workorder-asset-provenance/cancellation-followup.md.
+All-current serial/MAC reservation must retain history while checking current active
+conflicts. Close obsolete legacy pending creation after BEGIN or safely account
+same-checkpoint delivery churn before enabling finalization. Current cancellation
+fails closed on changed checkpoint outboxIds; this is not an implemented recapture
+flow. Then implement finalization/M06, mixed-tenant restart and full provenance UI.
+Do not mark43 done yet. Existing cancellation receipts do not flip tenant ENFORCED.
+
+Owned QA is stopped, retained volumes. Private runtime wrappers/logs:
+migration-cancellation-final and migration-cancellation-conflict. JDK21, host fd8
+QA lock, task-local Gradle cache, workers2,1536MiB test heap/context cache1.
+Never commit private env, raw logs, XML or uploaded evidence files. Older sections are history;
+this leading section takes precedence.
+
 ## Task43 opening approval, admission and web review verified
 
 Branch `work/warehouse-completion`, remote `origin/feat/warehouse-workorder`.

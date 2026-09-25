@@ -1,0 +1,86 @@
+{
+  "phase": "V177.8 approved permanent legacy cancellation: broad regression before final conflict-response test",
+  "baseCommit": "6d620e9869463c1f4ba93291412bb65436f03b20",
+  "build": "BUILD SUCCESSFUL in 3m 51s",
+  "tests": 37,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.FulfillmentCoordinatorTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.FulfillmentDurabilityTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITConcurrency",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseMigrationFulfillmentIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentMigrationAdapter.kt": "0979452405a38c61fa7b5fa489c37fc58ecb1f8acb0753667471057823712f8d",
+    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentPersistence.kt": "e88a2b71a69623799fe7c1106935ec316ee312936f8d7752771a5269f2b1e7b1",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMigrationEffectsPort.kt": "d37746d502c14e1c5aa37a720aab3f7ab94d17622d0167936297d57f1a029aab",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningPostingStore.kt": "5d98b51ef48c2ab78adc40d9d008d83e1b38bbd39d96dffb592828f9af549e35",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationOpeningApprovalOwner.kt": "58b39a618fd37afe53456a064dd4436ce439debcdab86b816f233b2d44234366",
+    "server/src/main/resources/db/migration/V177_8__warehouse_legacy_effect_cancellation.sql": "3bd70b2ff029705331a4c453296ad6604524cd18b4c3aa08aea12ab8dc43b180",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "a56d22c8c1be6d5e349470cb2bc39dd21b387caacaf0ade4a565bbb299755bcb"
+  },
+  "checks": [
+    "Real opening HTTP + PostgreSQL + MinIO cancels one preserved inventory movement and two legacy fulfillment sources atomically with baseline admission.",
+    "Original movement, checkpoint state, raw outbox payload and claimed delivery remain unchanged; terminal cancellation is a separate permanent owner receipt.",
+    "Late ACK/reconciliation is a no-op; coordinator process/accept replay terminal cancellation and cannot add effects; new claims exclude canceled sources after lease expiry.",
+    "Raw reopening, identity renaming, progress insertion, receipt deletion and owner-function replay outside original admission transaction reject.",
+    "Three rollback stages remove every cancellation receipt, decision, physical stock admission and delivery effect; same-key retry succeeds once.",
+    "Normal approved WO material verification, service owner effects, concurrency, rollback, durable unit replay and module graph regressions pass."
+  ],
+  "remaining": [
+    "Conflict-response mapping for changed current legacy business/effect data is being strengthened in a focused follow-up.",
+    "All-current identity reservation, legacy creation fallback closure, finalization/M06 and management UI.",
+    "Tasks44\u201348/F1-F4."
+  ]
+}

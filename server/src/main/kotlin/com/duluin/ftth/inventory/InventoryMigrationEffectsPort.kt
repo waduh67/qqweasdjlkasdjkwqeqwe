@@ -4,6 +4,7 @@ import com.duluin.ftth.iam.CurrentAuthority
 import java.util.UUID
 
 interface InventoryMigrationEffectsPort {
+    fun cancelPending(requestId: UUID, operationId: UUID, cutover: TenantCutoverFence, current: CurrentAuthority)
     fun captureSources(cutover: TenantCutoverChangeFence, current: CurrentAuthority): List<ProvenanceSourceSnapshot>
 }
 

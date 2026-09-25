@@ -1,3 +1,28 @@
+## V177.8 applied: reviewed legacy effects are permanently canceled
+
+V177.8 is applied and immutable: SHA256
+`3bd70b2ff029705331a4c453296ad6604524cd18b4c3aa08aea12ab8dc43b180`.
+The focused gate passes14 tests in2m, including real HTTP + PostgreSQL + MinIO.
+Cancellation receipts for reviewed pending movements/checkpoints/outbox are written
+only by checked owner functions in the same transaction as approved opening.
+Original movement/checkpoint/outbox rows and prior completed effects stay unchanged.
+Canceled fulfillment reads terminal MANUAL_RESOLVED with the explicit outcome
+CANCELED_BY_APPROVED_MIGRATION; stale workers cannot consume/reconcile/reopen it.
+Broader normal fulfillment gate37tests/8suites PASS3m51s, followed by7tests/2suites
+PASS1m34s for final sources and redacted HTTP409 on changed business/effect binding.
+Safe proofs: task43/cancellation-regression-verification.json and
+cancellation-final-verification.json. Next free M05 version177.9;178 reserved for
+M06. Finalization, all-current identity reservations and closure of obsolete legacy
+pending creation remain pending; cancellation does not flip tenant ENFORCED.
+
+## V177.8 reservation: permanent cancellation of reviewed legacy effects
+
+V177.8 is reserved for owner-only, append-only cancellation receipts bound to the
+same independently approved opening transaction. Original movement/checkpoint and
+outbox rows remain unchanged. Late workers must observe terminal cancellation;
+raw mutation and new progress against canceled work must be rejected. V177–177.7.3
+remain immutable. V178 remains reserved for M06. This reservation precedes apply.
+
 ## Approved opening admission: V177.7 through V177.7.3 applied
 
 All four files are applied and immutable. The real PostgreSQL + HTTP + MinIO

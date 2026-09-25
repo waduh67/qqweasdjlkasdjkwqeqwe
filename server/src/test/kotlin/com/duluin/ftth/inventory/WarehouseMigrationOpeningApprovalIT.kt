@@ -1,6 +1,9 @@
 package com.duluin.ftth.inventory
 
 import com.duluin.ftth.common.storage.ObjectStorage
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.fulfillment.*
+import java.time.Instant
 import com.duluin.ftth.inventory.application.service.WarehouseCanonicalPayload
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -28,8 +31,32 @@ import java.util.concurrent.TimeUnit
 class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     companion object {
         private val legacy = List(4) { WarehouseMigrationLegacyFixture() }
+        private val checkpoints = List(2) { UUID.randomUUID() }
+        private val messages = List(2) { UUID.randomUUID() }
+        private val orders = List(2) { UUID.randomUUID() }
+        private fun legacyRequest(index: Int) = FulfillmentRequest(legacy[index].tenant, "legacy.opening", checkpoints[index].toString(),
+            "a".repeat(64), FulfillmentSource.WORK_ORDER, orders[index], null, orders[index], "REPAIR", true,
+            setOf(FulfillmentEffectType.INVENTORY, FulfillmentEffectType.WORK_ORDER))
         private val database = WarehouseSchemaDatabase("172").also { db -> db.ownerFixture { connection ->
             legacy.forEach { it.seed(connection) }
+            repeat(2) { index ->
+                val old = legacy[index]
+                val actor = UUID.randomUUID()
+                connection.createStatement().use { sql ->
+                    sql.execute("INSERT INTO app_user(id,tenant_id,email,name,password_hash) VALUES ('$actor','${old.tenant}','$actor@example.test','Legacy actor','unused')")
+                    sql.execute("""INSERT INTO work_order(id,tenant_id,code,type,title,status,customer_id,created_by)
+                        VALUES ('${orders[index]}','${old.tenant}','LEGACY-EFFECT','REPAIR','Pending legacy work','IN_PROGRESS','${old.customer}','$actor')""")
+                    sql.execute("""INSERT INTO fulfillment_checkpoint(id,tenant_id,namespace,operation_key,canonical_hash,source,target_id,state,
+                        checkpoint_updated_at,work_order_id,work_order_kind,required_effects) VALUES ('${checkpoints[index]}','${old.tenant}',
+                        'legacy.opening','${checkpoints[index]}','${"a".repeat(64)}','WORK_ORDER','${orders[index]}','DISPATCHED',now(),
+                        '${orders[index]}','REPAIR','INVENTORY,WORK_ORDER')""")
+                }
+                connection.prepareStatement("""INSERT INTO fulfillment_outbox(id,tenant_id,fulfillment_id,sequence,event_type,payload_hash,payload)
+                    VALUES (?,?,?,1,'FULFILLMENT_APPLY',?,?)""").use { sql ->
+                    sql.setObject(1,messages[index]); sql.setObject(2,old.tenant); sql.setObject(3,checkpoints[index])
+                    sql.setString(4,"a".repeat(64)); sql.setString(5,legacyRequest(index).encode()); sql.executeUpdate()
+                }
+            }
         } }
         @JvmStatic @DynamicPropertySource fun database(registry: DynamicPropertyRegistry) {
             registry.add("spring.datasource.url") { database.url }
@@ -57,6 +84,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
         database.ownerFixture { connection -> connection.createStatement().use { sql ->
             sql.execute("SET app.tenant_id='${old.tenant}'")
             sql.execute("UPDATE inventory_location SET name='Gudang lama',area_id='${area(token)}',revision=revision+1 WHERE id='${old.location}'")
+            if (index < 2) sql.execute("UPDATE work_order SET area_id='${area(token)}' WHERE id='${orders[index]}'")
             sql.execute("UPDATE customer SET area_id='${area(token)}' WHERE id='${old.customer}'")
         } }
         grant(token, actor, listOf(old.location.toString()))
@@ -125,6 +153,11 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
         resolve(batch, batch.old.second, "DUPLICATE", duplicate = batch.case(batch.old.first).path("id").asString())
         val balanceFile = resolve(batch, batch.old.balance, "BASELINE_STOCK", stock(batch.cable, "MM"))
         resolve(batch, batch.old.pending, "CANCEL_PENDING")
+        val index = legacy.indexOf(batch.old)
+        if (index < 2) {
+            resolve(batch, checkpoints[index], "CANCEL_PENDING")
+            resolve(batch, messages[index], "CANCEL_PENDING")
+        }
         assertThat(review(batch).path("issues").size()).isZero()
         return balanceFile
     }
@@ -202,13 +235,13 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             assertThat(view.path("cost").isMissingNode).isTrue()
             val cases = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/migration-cases?size=2", actors[0].first)
             assertThat(cases.status).isEqualTo(200)
-            assertThat(mapper.readTree(cases.contentAsString).path("totalElements").asInt()).isEqualTo(11)
+            assertThat(mapper.readTree(cases.contentAsString).path("totalElements").asInt()).isEqualTo(13)
             assertThat(mapper.readTree(cases.contentAsString).path("items").size()).isEqualTo(2)
             val attachments = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/attachments", actors[0].first)
             assertThat(attachments.status).isEqualTo(200)
             assertThat(attachments.contentAsString).doesNotContain("objectKey", "storageKey", "/warehouse/migrations/")
             val files = mapper.readTree(attachments.contentAsString).path("items").asSequence().toList()
-            assertThat(files).hasSize(4)
+            assertThat(files).hasSize(6)
             for (file in files) {
                 val download = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/attachments/${file.path("id").asString()}", actors[0].first)
                 assertThat(download.status).isEqualTo(200)
@@ -224,6 +257,21 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
                 assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE value_numerator IS NULL AND value_denominator IS NULL AND currency IS NULL")).isEqualTo("2")
             }
+            fixture(batch.token).transaction {
+                sql("UPDATE fulfillment_checkpoint SET required_effects='WORK_ORDER' WHERE id='${checkpoints[0]}'")
+            }
+            val changed = decide(actors[2].first, approvals[0], 2)
+            assertThat(changed.statusCode()).withFailMessage(diagnostic(changed)).isEqualTo(409)
+            assertThat(mapper.readTree(changed.body()).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
+            assertThat(changed.body()).doesNotContain("fulfillment_checkpoint", "SELECT", "SQL")
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_migration_admission")).isEqualTo("0")
+                assertThat(scalar("SELECT count(*) FROM warehouse_migration_cancellation_receipt")).isEqualTo("0")
+                assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE status='PENDING' AND revision=2")).isEqualTo("2")
+                sql("UPDATE fulfillment_checkpoint SET required_effects='INVENTORY,WORK_ORDER' WHERE id='${checkpoints[0]}'")
+            }
+            val outbox = context.getBean(FulfillmentOutboxRepository::class.java)
+            val delivery = TenantContext.runAs(batch.old.tenant) { requireNotNull(outbox.claimPending(batch.old.tenant, "legacy-worker", Instant.now(), Instant.now().plusSeconds(300))) }
             val keys = List(2) { UUID.randomUUID().toString() }
             val outcomes = approvals.mapIndexed { index, approval -> client.sendAsync(command(actors[2].first,
                 "/api/v1/warehouse/approvals/decide", decision(approval, 2), keys[index]), HttpResponse.BodyHandlers.ofString()) }.map { it.get(25, TimeUnit.SECONDS) }
@@ -241,6 +289,37 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT quantity FROM inventory_balance_projection WHERE id='${batch.old.balance}'")).isEqualTo("82500")
                 assertThat(scalar("SELECT count(*) FROM inventory_lot WHERE supplier_id IS NULL AND cost_total_minor IS NULL")).isEqualTo("1")
                 assertThat(scalar("SELECT state FROM inventory_tenant_cutover")).isEqualTo("VALIDATING")
+                assertThat(scalar("SELECT count(*) FROM inventory_migration_cancellation")).isEqualTo("1")
+                assertThat(scalar("SELECT count(*) FROM fulfillment_migration_cancellation")).isEqualTo("2")
+                assertThat(scalar("SELECT state FROM fulfillment_checkpoint WHERE id='${checkpoints[0]}'")).isEqualTo("DISPATCHED")
+                assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress")).isEqualTo("0")
+            }
+            TenantContext.runAs(batch.old.tenant) {
+                val coordinator = context.getBean(FulfillmentCoordinator::class.java)
+                repeat(2) {
+                    val replay = coordinator.process(legacyRequest(0))
+                    assertThat(replay.state).isEqualTo(FulfillmentState.MANUAL_RESOLVED)
+                    assertThat(replay.replayed).isTrue()
+                    assertThat(replay.outcome).isEqualTo("CANCELED_BY_APPROVED_MIGRATION")
+                    assertThat(coordinator.accept(legacyRequest(0))).isEqualTo(replay)
+                    outbox.markOutboxConsumed(delivery.id, delivery.claimedBy)
+                    assertThat(outbox.reconcile(delivery, "Delayed failure").state).isEqualTo(FulfillmentState.MANUAL_RESOLVED)
+                }
+                assertThat(outbox.claimPending(batch.old.tenant, "new-worker", Instant.now().plusSeconds(600), Instant.now().plusSeconds(900))).isNull()
+            }
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM fulfillment_outbox WHERE published_at IS NULL AND claimed_by='legacy-worker'")).isEqualTo("1")
+                assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='OPENING_BALANCE'")).isEqualTo("1")
+            }
+            for (command in listOf("UPDATE fulfillment_checkpoint SET state='READY' WHERE id='${checkpoints[0]}'",
+                "UPDATE fulfillment_outbox SET claimed_by=NULL,lease_until=NULL WHERE id='${messages[0]}'",
+                "UPDATE fulfillment_checkpoint SET id='${UUID.randomUUID()}' WHERE id='${checkpoints[0]}'",
+                "INSERT INTO fulfillment_effect_progress(id,tenant_id,fulfillment_id,effect_type,status) VALUES ('${UUID.randomUUID()}','${batch.old.tenant}','${checkpoints[0]}','INVENTORY','STARTED')",
+                "SELECT fulfillment_cancel_migration_effects('${listOf(first, second)[winner]}','${UUID.randomUUID()}')",
+                "DELETE FROM fulfillment_migration_cancellation")) {
+                val denied = runCatching { fixture(batch.token).transaction { sql(command) } }.exceptionOrNull()
+                assertThat(denied).isNotNull()
+                assertThat(generateSequence(requireNotNull(denied)) { it.cause }.filterIsInstance<java.sql.SQLException>().first().sqlState).isIn("23514", "42501")
             }
         } finally { cleanup(batch) }
     }
@@ -259,7 +338,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                     val result = decide(actor.first, approval, key = key)
                     assertThat(result.statusCode()).withFailMessage(result.body()).isEqualTo(409)
                     fixture(batch.token).transaction {
-                        for (table in listOf("inventory_migration_admission", "inventory_migration_admission_line", "inventory_lot", "inventory_segment", "inventory_approval_decision", "inventory_approval_effect", "inventory_outbox", "inventory_inbox"))
+                        for (table in listOf("inventory_migration_admission", "inventory_migration_admission_line", "inventory_migration_cancellation", "fulfillment_migration_cancellation", "inventory_lot", "inventory_segment", "inventory_approval_decision", "inventory_approval_effect", "inventory_outbox", "inventory_inbox"))
                             assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
                         assertThat(scalar("SELECT count(*) FROM inventory_identity_claim WHERE state='ADMITTED'")).isEqualTo("0")
                         assertThat(scalar("SELECT count(*) FROM inventory_serialized_asset WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")

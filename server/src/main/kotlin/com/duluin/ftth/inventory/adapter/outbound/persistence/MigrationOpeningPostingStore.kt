@@ -22,6 +22,7 @@ class MigrationOpeningPostingStore(private val jdbc: WarehouseCommandJdbc) {
 
     fun admit(document: UUID, approval: UUID, operation: UUID): List<PostingLeg> = jdbc.execute { sql ->
         sql.value("SELECT warehouse_admit_migration_opening(?,?,?)", document, approval, operation)
+        sql.value("SELECT warehouse_cancel_migration_effects(?,?)", document, operation)
         sql.query("""SELECT line.* FROM inventory_document_line line JOIN inventory_migration_admission_line binding
             ON binding.tenant_id=line.tenant_id AND binding.line_id=line.id
             WHERE line.tenant_id=? AND line.document_id=? AND binding.request_id=? ORDER BY line.line_number""", sql.tenant, document, document) { row ->
