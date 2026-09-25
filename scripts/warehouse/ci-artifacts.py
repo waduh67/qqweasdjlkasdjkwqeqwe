@@ -53,7 +53,9 @@ def main():
                 parser.error("Evidence must stay inside the checkout and cannot use symlinks")
             if path.suffix.lower() == ".env" or path.name.startswith(".env"):
                 parser.error("Environment files must never enter the evidence archive")
-            if path.suffix.lower() not in (".xml", ".json", ".zip", ".png", ".log", ".txt", ".webm"):
+            # Gradle may not write XML until the full test process finishes.
+            # Preserve encrypted partial diagnostics after a timeout or crash.
+            if path.suffix.lower() not in (".xml", ".json", ".zip", ".png", ".log", ".txt", ".webm", ".bin"):
                 continue
             files.add(path)
     if not files:

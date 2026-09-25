@@ -55,6 +55,26 @@ class EvidenceArchiveTest(unittest.TestCase):
         self.assertIn("Environment files", result.stderr)
         self.assertFalse(self.archive.exists())
 
+    def test_interrupted_gradle_binary_survives_without_a_final_xml_report(self):
+        binary = self.raw / "binary" / "in-progress-results-generic.bin"
+        binary.parent.mkdir()
+        binary.write_bytes(b"\x00\xffprivate partial Gradle result\x00")
+        result = self.run_archive(self.raw)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("private partial Gradle result", result.stdout + result.stderr)
+        decoded = self.root / "decoded.tar.gz"
+        subprocess.run(["age", "--decrypt", "--identity", str(self.identity), "--output", str(decoded), str(self.archive)], check=True)
+        with tarfile.open(decoded) as bundle:
+            self.assertEqual(bundle.getnames(), [str(binary.relative_to(ROOT))])
+            self.assertEqual(bundle.extractfile(bundle.getmembers()[0]).read(), binary.read_bytes())
+        # Archiving partial diagnostics must not produce a successful test result.
+        verified = self.root / "results.json"
+        validation = subprocess.run([sys.executable, str(SCRIPT.with_name("ci-results.py")),
+                                     "junit", "--source", str(self.raw), "--output", str(verified),
+                                     "--commit", "a" * 40], capture_output=True, text=True)
+        self.assertNotEqual(validation.returncode, 0)
+        self.assertEqual(json.loads(verified.read_text())["status"], "FAILED")
+
     def test_symlink_attachment_and_missing_recipient_are_rejected(self):
         (self.raw / "report.json").symlink_to(self.identity)
         result = self.run_archive(self.raw)

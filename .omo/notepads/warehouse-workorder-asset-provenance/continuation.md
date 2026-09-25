@@ -1,3 +1,22 @@
+## Interrupted Gradle diagnostics retained in encrypted CI artifacts
+
+Checkpoint b17474d0 is pushed with the label correction and safe returns/legacy
+proof. CI36125103447 at53e9 is still running16focused fixtures after successful
+compilation; b174's CI36125963923 is pending and may be replaced by the next push.
+OriginalR3/session11018 and queuedpreflight47709 remain active; original0a14frozen.
+
+Source review found ci-artifacts.py omitted Gradle .bin files. A real age roundtrip
+regression first reproduced binary-only evidence being rejected; adding .bin to the
+encrypted attachment allowlist preserves partial diagnostics when XML has not been
+written. All4artifact tests pass, including exact binary recovery, no public payload
+output, env/symlink rejection, and the result parser still emitting FAILED without
+final JUnit. This change does not accept partial results or weaken release gates.
+Safe proof: task48/interrupted-gradle-evidence-verification.json. CI runtime pending.
+
+Keep working in validation checkout; preserve/archive originalR3 after its exit,
+allow preflight to finish, then fast-forward original and run focused/historical/full
+checks. Do not reapply old patches. GoalACTIVE; no final checkpoint response.
+
 ## Verified reassignment/return and upgraded-database preflight supplement
 
 CI36124045412 at c227f6bc completed: all nonserver jobs PASS. Server compile failed

@@ -63,7 +63,9 @@ Public artifacts contain only result counts, suite/project identities, commit an
 artifact hashes, and encrypted archives. Raw JUnit, authenticated Playwright
 traces, fixture reports, and application logs are encrypted with `age` on the
 runner before upload. Environment files are excluded. Artifact retention is
-14 days; download encrypted evidence needed for a longer review before it expires.
+14 days. Gradle binary results are retained even when an interrupted run has not
+written its final XML; partial diagnostics do not count as a passing test gate.
+Download encrypted evidence needed for a longer review before it expires.
 Archive metadata contains its SHA256 and the recipient fingerprint.
 
 After downloading an artifact, verify its SHA256 against the adjacent `.age.json`
