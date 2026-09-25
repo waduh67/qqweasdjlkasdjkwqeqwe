@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { createUser, signup } from './helpers'
+import { createRole, createUser, signup } from './helpers'
 import { addLocation, addSku, addSupplier, setupOwnArea } from './catalog'
 
 export async function selectNamed(page: Page, name: string, label: string) {
@@ -8,17 +8,19 @@ export async function selectNamed(page: Page, name: string, label: string) {
   await expect(control.getByRole('option', { name: label, exact: true })).toBeAttached()
   await control.selectOption({ label })
 }
-export async function confirmOperation(page: Page, path: string, button: string, method = 'POST') {
-  const pending = page.waitForResponse(res => new URL(res.url()).pathname === path && res.request().method() === method)
-  await page.getByRole('button', { name: button, exact: true }).click()
-  const response = await pending
+export async function confirmOperation(page: Page, path: string, button: string, method = 'POST', dialogTitle?: string) {
+  const scope = dialogTitle ? page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: dialogTitle, exact: true }) }) : page
+  const [response] = await Promise.all([
+    page.waitForResponse(res => new URL(res.url()).pathname === path && res.request().method() === method),
+    scope.getByRole('button', { name: button, exact: true }).click(),
+  ])
   expect(response.status(), path).toBeGreaterThanOrEqual(200)
   expect(response.status(), path).toBeLessThan(300)
   return response.json()
 }
 
 /** All business fixtures are created through visible UI, with real server responses. */
-export async function prepareMaterialWorkOrder(page: Page) {
+export async function prepareMaterialWorkOrder(page: Page, options: { customerName?: string } = {}) {
   const admin = await signup(page)
   const area = await setupOwnArea(page, admin)
   const warehouse = await addLocation(page, { code: 'MAIN', name: 'Gudang utama', area: area.optionLabel })
@@ -52,12 +54,32 @@ export async function prepareMaterialWorkOrder(page: Page) {
   await page.getByRole('button', { name: 'Tinjau penempatan', exact: true }).click()
   await confirmOperation(page, `/api/v1/warehouse/receipts/${receipt.id}/putaway`, 'Tempatkan barang')
   await expect(page.getByText('Selesai ditempatkan', { exact: true })).toBeVisible()
-  const technician = await createUser(page, 'Teknisi', { areas: [area.checkboxLabel], prefix: 'Teknisi' })
+  let customer: { id: string; name: string } | null = null
+  const additionalRoles = []
+  if (options.customerName) {
+    await createRole(page, 'Teknisi perangkat pelanggan', ['customer.customer.view', 'customer.onu.view', 'customer.onu.assign', 'workorder.order.view', 'workorder.evidence.view'])
+    additionalRoles.push('Teknisi perangkat pelanggan')
+    await page.goto('/customers')
+    await page.getByRole('button', { name: 'Tambah pelanggan', exact: true }).click()
+    await page.getByRole('textbox', { name: 'Nama', exact: true }).fill(options.customerName)
+    await page.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Alamat perjalanan gudang nyata')
+    await selectNamed(page, 'Area pelanggan', area.optionLabel)
+    await page.getByRole('textbox', { name: 'Longitude', exact: true }).fill('106.82')
+    await page.getByRole('textbox', { name: 'Latitude', exact: true }).fill('-6.18')
+    customer = await confirmOperation(page, '/api/customers', 'Simpan')
+    expect(customer).toMatchObject({ name: options.customerName, areaId: warehouse.areaId })
+  }
+  const technician = await createUser(page, 'Teknisi', { areas: [area.checkboxLabel], prefix: 'Teknisi', additionalRoles })
   await page.goto('/work-orders')
   await page.getByRole('button', { name: 'Buat work order', exact: true }).click()
   await page.getByRole('textbox', { name: 'Judul', exact: true }).fill('Pemasangan material gudang')
   await selectNamed(page, 'Area pekerjaan', area.optionLabel)
-  await page.getByRole('combobox', { name: 'Tipe', exact: true }).selectOption('PREVENTIVE')
+  await page.getByRole('combobox', { name: 'Tipe', exact: true }).selectOption(customer ? 'PSB' : 'PREVENTIVE')
+  if (customer) {
+    const search = page.getByPlaceholder('Cari nama, kode, telepon, atau alamat pelanggan…', { exact: true })
+    await search.fill(customer.name)
+    await page.getByRole('option').filter({ has: page.getByText(customer.name, { exact: true }) }).click()
+  }
   await page.getByRole('combobox', { name: 'Cari teknisi…', exact: true }).click()
   await page.getByRole('menuitemcheckbox', { name: technician.name, exact: true }).click()
   await expect(page.getByRole('menuitemcheckbox', { name: technician.name, exact: true })).toHaveAttribute('aria-checked', 'true')
@@ -68,5 +90,5 @@ export async function prepareMaterialWorkOrder(page: Page) {
   await page.goto('/warehouse/requests')
   await page.getByRole('link', { name: `${workOrder.code} · Pemasangan material gudang`, exact: true }).click()
   await expect(page.getByText('Rencana material belum disusun.', { exact: true })).toBeVisible()
-  return { admin, area, warehouse, bin, cable, onu, technician, workOrder, receipt }
+  return { admin, area, warehouse, bin, quarantine, cable, onu, technician, workOrder, receipt, customer }
 }

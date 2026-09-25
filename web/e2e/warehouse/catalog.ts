@@ -26,7 +26,7 @@ export async function setupOwnArea(page: Page, admin: { email: string; password:
   return { code, name, checkboxLabel, optionLabel: `${name} · ${code}` }
 }
 
-export async function addLocation(page: Page, input: { code: string; name: string; area: string; kind?: string; parent?: string }) {
+export async function addLocation(page: Page, input: { code: string; name: string; area: string; kind?: string; parent?: string; custodian?: string }) {
   await page.goto('/warehouse/catalog?tab=locations')
   await page.getByRole('button', { name: 'Tambah lokasi', exact: true }).click()
   await page.getByRole('textbox', { name: 'Kode lokasi', exact: true }).fill(input.code)
@@ -37,6 +37,11 @@ export async function addLocation(page: Page, input: { code: string; name: strin
     await page.getByRole('combobox', { name: 'Lokasi induk', exact: true }).selectOption({ label: input.parent })
   } else {
     await page.getByRole('combobox', { name: 'Area lokasi', exact: true }).selectOption({ label: input.area })
+  }
+  if (input.custodian) {
+    const control = page.getByRole('combobox', { name: 'Penanggung jawab', exact: true })
+    await expect(control.getByRole('option', { name: input.custodian, exact: true })).toBeAttached()
+    await control.selectOption({ label: input.custodian })
   }
   await page.getByRole('button', { name: 'Tinjau perubahan', exact: true }).click()
   const response = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/locations' && res.request().method() === 'POST')

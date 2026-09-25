@@ -1,0 +1,126 @@
+{
+  "phase": "Task45 partial: complete numeric UI journey; customer assets and exceptions remain",
+  "baseCommit": "7a3e62e3bc46d1405c20f44f55294234b5e87ae5",
+  "sourceSha256": {
+    "scripts/warehouse/qa.sh": "b24b2791f44660a72fc78ae3d0c2881d693b94c39b7d21669b0c9da1324ae64d",
+    "web/e2e/warehouse/catalog.ts": "deaa85e605e06ebb113dc174bf909f6458e4b715d25384cef6311f8a61d22b7d",
+    "web/e2e/warehouse/fulfillment.ts": "6513d4b93ce6355c55306289e9ef052351b53b4764da32ee5e34747b82c8f5f7",
+    "web/e2e/warehouse/helpers.ts": "92fe62539d8b8a20de1cf0231ee3b423d72256ad8eb5fe9ecab2a9b52f65240e",
+    "web/e2e/warehouse/numeric-journey.ts": "b8a0fab1dbd08d7848a181aa67402ec4e8131189afe83a84c3b5f71ea92a66ad",
+    "web/e2e/warehouse/warehouse-empty-tenant.spec.ts": "59d7eaf5a519139bd130b93a95f7f76b4f9b0fad679194a2242b2621390cb59d",
+    "web/playwright.warehouse.config.ts": "1a0af0400df8c916fd7a28a87777254b7f8851005af0a44bc350b7a4d30b90ce",
+    "web/src/components/organisms/customer/CustomerAreaField.tsx": "7925bcf89f5ff2b8ab8e517661c2431523573d494c6a5c1c9b47425c0cfcb667",
+    "web/src/components/organisms/workorder/WorkOrderDetailBody.tsx": "506af625a186b4d4010c47ca65e395ef00cb39ac22da3c8b58bfba9e6185ec07",
+    "web/src/components/organisms/workorder/WorkOrderSignatureUpload.tsx": "ece8e19cc51b28a1bbddb01436f23b642e5e7c5f309527c001cf86087b647241",
+    "web/src/pages/CustomersPage.tsx": "ddd4f5be15b64e8253b73e9ecaacfe7ffbbd97c493251fd12cf68d3be3a0ad7a"
+  },
+  "browser": {
+    "stats": {
+      "startTime": "2026-09-25T06:13:10.037Z",
+      "duration": 123418.84000000001,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "project": "warehouse-desktop",
+        "title": "empty tenant completes the measured cable and loan ONU journey through warehouse, technician and independent QA screens",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "durationMs": 56570
+          }
+        ]
+      },
+      {
+        "project": "warehouse-mobile",
+        "title": "empty tenant completes the measured cable and loan ONU journey through warehouse, technician and independent QA screens",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "durationMs": 60767
+          }
+        ]
+      }
+    ],
+    "realApp": true,
+    "realPostgresNonOwnerRole": true,
+    "realMinio": true,
+    "routeMocks": false,
+    "sqlStockSeeds": false,
+    "viewports": [
+      {
+        "project": "warehouse-desktop",
+        "width": 1280,
+        "height": 900
+      },
+      {
+        "project": "warehouse-mobile",
+        "width": 375,
+        "height": 812
+      }
+    ]
+  },
+  "checks": {
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS",
+    "existingWebUnitFiles": 5,
+    "existingWebUnitTests": 16,
+    "realServerBootJarAndWebProductionBuild": "PASS",
+    "ownedServicesStoppedAndVolumesRetained": true
+  },
+  "businessAssertions": [
+    "UI-only tenant, roles, area, scopes, locations, customer, SKUs and supplier setup",
+    "Actual receipt 1000000MM cable + 10 serialized ONU; issued 100000MM + 1 ONU",
+    "Restricted technician receives both, starts PSB, consumes 82500MM, installs loan ONU and signs customer handover",
+    "Same measured remnant identity 17500MM returned, acknowledged, received and inspected back into stock",
+    "Independent restricted QA approves actual completion evidence and reads frozen usage and device",
+    "Authorized stock response and visible table show 917500MM cable and 9 ONU available"
+  ],
+  "failureHistory": [
+    {
+      "attempt": "r1",
+      "failed": 2,
+      "reason": "Test matched the disabled background report-use button before the confirmation portal settled; scoped final button to dialog in r2. No product change for this selector issue."
+    }
+  ],
+  "artifacts": {
+    "privateReport": ".omo/runtime/numeric-browser-r2-report.json",
+    "privateAuthenticatedTraces": ".omo/runtime/numeric-browser-r2-artifacts",
+    "screenshots": [
+      {
+        "file": "warehouse-empty-tenant-emp-47237--and-independent-QA-screens-warehouse-desktop/customer-loan-accepted.png",
+        "sha256": "0bd86cc7926b9a6548f9652faa5dadf3e8e2c5e03b590e09f873a126c4d3c662"
+      },
+      {
+        "file": "warehouse-empty-tenant-emp-47237--and-independent-QA-screens-warehouse-desktop/independent-qa-material-review.png",
+        "sha256": "677743c997e8502410479bc2451e4522e5bc36f01f9339a1363e6e4e926f0e96"
+      },
+      {
+        "file": "warehouse-empty-tenant-emp-47237--and-independent-QA-screens-warehouse-desktop/numeric-final-stock.png",
+        "sha256": "5db4da44ff9724fd5e785f89e92f80cc2e6e8ef9d3080a84e24a0db58ba65885"
+      },
+      {
+        "file": "warehouse-empty-tenant-emp-47237--and-independent-QA-screens-warehouse-mobile/customer-loan-accepted.png",
+        "sha256": "d7e363e5a5c323a7ecf3613648408baa063b4757a491d3737103cec13f2e0b01"
+      },
+      {
+        "file": "warehouse-empty-tenant-emp-47237--and-independent-QA-screens-warehouse-mobile/independent-qa-material-review.png",
+        "sha256": "6b8685497811c720fc492e1c4e6283a82c6d8a10130c6ca5a63bb089aa22ce02"
+      },
+      {
+        "file": "warehouse-empty-tenant-emp-47237--and-independent-QA-screens-warehouse-mobile/numeric-final-stock.png",
+        "sha256": "7bf11c093f438632c05294cf9287067ae2269fd7f385fd695614c489baf95efb"
+      }
+    ]
+  },
+  "limits": [
+    "Task45 remains open for sale/swap/removal/reuse/RMA, exceptions, tablet and themes",
+    "No hardware GPON or native runtime certification",
+    "Full release regression remains task46"
+  ]
+}

@@ -19,11 +19,12 @@ import { useConfirm, useToast } from '@/system'
 import { IconCustomers } from '@/components/atoms/icons'
 import { downloadBlob } from '@/utils/download'
 import { CustomerDetailBlade } from './CustomerDetailPage'
+import { CustomerAreaField } from '@/components/organisms/customer/CustomerAreaField'
 
 /**
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
- * terisi = menyunting pelanggan itu (PUT). `areaId` dibawa apa adanya (form ini tak punya
- * pemilih area) agar sunting field lain tak diam-diam menghapus penempatan area pelanggan.
+ * terisi = menyunting pelanggan itu (PUT). Penempatan area tetap dibawa saat menyunting
+ * field lain; perubahan area dipilih secara eksplisit dari cakupan operator.
  *
  * `planId` hanya berlaku saat MENAMBAH: pelanggan lahir bersama paketnya, sekali kirim.
  * Saat menyunting biodata, paket sengaja tak ikut — pindah paket berdampak ke tagihan &
@@ -470,6 +471,7 @@ export function CustomersPage() {
                 if (errors.address) setErrors((p) => ({ ...p, address: undefined }))
               }}
             />
+            <CustomerAreaField value={draft.areaId} onChange={areaId => setDraft({ ...draft, areaId })} />
             <Field label="Lokasi">
               <LocationPicker
                 longitude={draft.longitude}

@@ -38,6 +38,7 @@ import { AssigneeChips, WoField } from './views'
 import { WorkOrderFiberWork } from './WorkOrderFiberWork'
 import { ProofOfWorkCompletion } from './ProofOfWorkCompletion'
 import { WorkOrderMaterials } from './WorkOrderMaterials'
+import { WorkOrderSignatureUpload } from './WorkOrderSignatureUpload'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -59,6 +60,7 @@ export function WorkOrderDetailBody({
 
   // Satu kolom catatan dipakai bersama: opsional saat menyetujui, wajib saat menolak.
   const [decisionNote, setDecisionNote] = useState('')
+  const [proofVersion, setProofVersion] = useState(0)
 
   const id = wo.id
   const canAssign = can('workorder.order.assign')
@@ -179,7 +181,7 @@ export function WorkOrderDetailBody({
               value={note}
               onChange={(_, data) => setNote(data.value)}
             />
-            <ProofOfWorkCompletion workOrderId={id} type={wo.type} note={note} onAct={onAct} />
+            <ProofOfWorkCompletion key={proofVersion} workOrderId={id} type={wo.type} note={note} onAct={onAct} />
           </section>
         )}
 
@@ -239,7 +241,7 @@ export function WorkOrderDetailBody({
         <div className="card stack" id="work-order-evidence" style={{ gap: '1.1rem' }}>
           {/* Redaman optik (bukti kualitas) + foto & tanda tangan pengerjaan. */}
           {showOptical && <OpticalSection wo={wo} canEdit={canRecordOptical} onAct={onAct} />}
-          {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} />}
+          {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} approved={wo.approvalStatus === 'APPROVED'} onChanged={() => setProofVersion(value => value + 1)} />}
         </div>
       )}
 
@@ -440,10 +442,10 @@ function AuthedImage({ path, alt, size }: { path: string; alt: string; size: num
  * (teknisi), dan selama work order sudah dikerjakan (bukan draft/batal — server juga
  * menegakkan ini).
  */
-function EvidenceSection({ workOrderId, status }: { workOrderId: string; status: WorkOrderStatus }) {
+function EvidenceSection({ workOrderId, status, approved, onChanged }: { workOrderId: string; status: WorkOrderStatus; approved: boolean; onChanged: () => void }) {
   const { can } = useCan()
   const toast = useToast()
-  const canManage = can('workorder.evidence.manage') || can('workorder.order.field')
+  const canManage = !approved && (can('workorder.evidence.manage') || can('workorder.order.field'))
   const documentable = status !== 'DRAFT' && status !== 'CANCELLED'
 
   const [photos, setPhotos] = useState<EvidenceView[]>([])
@@ -490,6 +492,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
       setCaption('')
       if (fileRef.current) fileRef.current.value = ''
       await reload()
+      onChanged()
       toast.success('Foto bukti diunggah')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengunggah foto')
@@ -502,6 +505,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
     try {
       await api.del(`/api/work-orders/${workOrderId}/evidence/${evidenceId}`)
       await reload()
+      onChanged()
       toast.success('Foto dihapus')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus foto')
@@ -512,6 +516,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
     try {
       await api.del(`/api/work-orders/${workOrderId}/signature`)
       setSignature(null)
+      onChanged()
       toast.success('Tanda tangan dihapus')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus tanda tangan')
@@ -590,12 +595,13 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                   Fluent Input tak mendukung type=file (ref-nya tak menunjuk ke elemen input).
                   `capture` sengaja TAK dipasang — teknisi kerap memotret dulu lalu mengunggah
                   belakangan, dan `capture` mengunci pilihan hanya ke kamera saat itu juga. */}
-              <input ref={fileRef} className="wo-file" type="file" accept="image/*" />
+              <input ref={fileRef} className="wo-file" type="file" accept="image/*" aria-label="Berkas foto bukti" />
               <Button variant="primary" disabled={busy} onClick={() => void upload()}>
                 {busy ? 'Mengunggah…' : 'Unggah foto'}
               </Button>
             </div>
           )}
+          {canManage && (status === 'IN_PROGRESS' || status === 'DONE') && <WorkOrderSignatureUpload workOrderId={workOrderId} existing={signature !== null} onDone={() => { void reload(); onChanged() }} />}
         </>
       )}
     </section>

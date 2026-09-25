@@ -42,7 +42,7 @@ export async function createRole(page: Page, name: string, permissions: string[]
   await expect(page.getByRole('gridcell', { name, exact: true })).toBeVisible()
 }
 
-export async function createUser(page: Page, role: string, options: { areas?: string[]; prefix?: string } = {}) {
+export async function createUser(page: Page, role: string, options: { areas?: string[]; prefix?: string; additionalRoles?: string[] } = {}) {
   const user = identity(options.prefix ?? 'Pemeriksa')
   await page.goto('/users')
   await page.getByRole('button', { name: 'Pengguna baru', exact: true }).click()
@@ -50,6 +50,7 @@ export async function createUser(page: Page, role: string, options: { areas?: st
   await page.getByLabel('Email').fill(user.email)
   await page.getByLabel('Password (min. 8 karakter)').fill(user.password)
   await page.getByRole('checkbox', { name: role, exact: true }).check()
+  for (const extra of options.additionalRoles ?? []) await page.getByRole('checkbox', { name: extra, exact: true }).check()
   for (const area of options.areas ?? []) await page.getByRole('checkbox', { name: area, exact: true }).check()
   const response = page.waitForResponse(response => response.url().endsWith('/api/users') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Simpan', exact: true }).click()

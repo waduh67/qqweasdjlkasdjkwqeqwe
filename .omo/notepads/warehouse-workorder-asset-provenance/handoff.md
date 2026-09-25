@@ -1,4 +1,4 @@
-Current resume status is at the top of `continuation.md`: tasks1-43 complete;44-48/F1-F4 remain. Historical notes below are superseded. Continue the active full-scope goal.
+Current resume status is at the top of `continuation.md`: tasks1–44 complete;45 in progress;46–48/F1–F4 remain. Numeric browser desktop/mobile checkpoint green; continue the active full-scope goal. Historical notes below are superseded.
 
 # Warehouse Workorder Asset Provenance Handoff
 
