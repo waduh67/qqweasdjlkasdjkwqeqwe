@@ -1,3 +1,19 @@
+## V178.7 applied to the browser fixture: optional RMA category
+
+V178.7 (`V178_7__warehouse_rma_optional_category.sql`) is applied and immutable in
+the current owned browser database. SHA256:
+`726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081`.
+A serialized SKU may have no category. Its RMA authorization now treats that absent
+category as `createsOnu=false`, matching the application; only ONU/ONT creates a
+network ONU episode. All physical source, customer, custody, title, revision and
+replay bindings remain enforced. No stored rows or old migration files are changed.
+
+The regression reproduced exactly one failure among three cases before this fix:
+NULL category failed, ONU and ROUTER passed. The focused post-fix server matrix and
+preserved old-volume upgrade are pending; this checkpoint does not claim a release
+gate. The next free forward migration is V178.8. Earlier sections below are dated
+implementation history, including their then-current version reservations.
+
 ## V178.6 applied: canonical serial matching on return, repair and RMA
 
 V178.6 is applied and immutable in both owned QA volume sets, SHA256

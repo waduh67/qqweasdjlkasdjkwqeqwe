@@ -20,7 +20,7 @@ export async function confirmOperation(page: Page, path: string, button: string,
 }
 
 /** All business fixtures are created through visible UI, with real server responses. */
-export async function prepareMaterialWorkOrder(page: Page, options: { customerName?: string } = {}) {
+export async function prepareMaterialWorkOrder(page: Page, options: { customerName?: string; serialPrefix?: string; cableCostMinor?: string } = {}) {
   const admin = await signup(page)
   const area = await setupOwnArea(page, admin)
   const warehouse = await addLocation(page, { code: 'MAIN', name: 'Gudang utama', area: area.optionLabel })
@@ -28,7 +28,7 @@ export async function prepareMaterialWorkOrder(page: Page, options: { customerNa
   const quarantine = await addLocation(page, { code: 'QA', name: 'Pemeriksaan barang', area: area.optionLabel, kind: 'QUARANTINE' })
   const source = await addLocation(page, { code: 'RECEIPT_SOURCE', name: 'Penerimaan pemasok', area: area.optionLabel, kind: 'TRANSIT' })
   const cable = await addSku(page, { code: 'CABLE', name: 'Kabel drop', tracking: 'LOT', unit: 'MM', inspectionRequired: false })
-  const onu = await addSku(page, { code: 'ONU', name: 'ONU pelanggan', tracking: 'SERIAL', inspectionRequired: false })
+  const onu = await addSku(page, { code: 'ONU', name: 'ONU pelanggan', tracking: 'SERIAL', category: 'ONU', inspectionRequired: false })
   const supplier = await addSupplier(page, 'DISTRIB', 'Distributor material')
   await page.goto('/warehouse/receipts')
   await page.getByRole('button', { name: 'Buat penerimaan', exact: true }).click()
@@ -39,10 +39,15 @@ export async function prepareMaterialWorkOrder(page: Page, options: { customerNa
   await selectNamed(page, 'Barang 1', `${cable.name} · ${cable.code}`)
   await page.getByRole('textbox', { name: 'Panjang reel aktual (m)', exact: true }).fill('1000')
   await page.getByRole('textbox', { name: 'Kode lot / reel', exact: true }).fill('REEL-WO')
+  if (options.cableCostMinor) {
+    await page.getByText('Konversi kemasan dan biaya', { exact: true }).click()
+    await page.getByRole('checkbox', { name: 'Catat biaya kelompok barang', exact: true }).check()
+    await page.getByRole('textbox', { name: 'Total biaya (satuan minor)', exact: true }).fill(options.cableCostMinor)
+  }
   await page.getByRole('button', { name: 'Tambah baris barang', exact: true }).click()
   await selectNamed(page, 'Barang 2', `${onu.name} · ${onu.code}`)
   await page.getByRole('textbox', { name: 'Jumlah aktual (unit)', exact: true }).fill('10')
-  const serials = Array.from({ length: 10 }, (_, index) => `WO-ONU-${String(index + 1).padStart(3, '0')}`)
+  const serials = Array.from({ length: 10 }, (_, index) => `${options.serialPrefix ?? 'WO-ONU-'}${String(index + 1).padStart(3, '0')}`)
   await page.getByRole('textbox', { name: 'Serial dan MAC', exact: true }).fill(serials.join('\n'))
   await page.getByRole('button', { name: 'Tinjau draft', exact: true }).click()
   const receipt = await confirmOperation(page, '/api/v1/warehouse/receipts', 'Simpan draft')
@@ -90,5 +95,5 @@ export async function prepareMaterialWorkOrder(page: Page, options: { customerNa
   await page.goto('/warehouse/requests')
   await page.getByRole('link', { name: `${workOrder.code} · Pemasangan material gudang`, exact: true }).click()
   await expect(page.getByText('Rencana material belum disusun.', { exact: true })).toBeVisible()
-  return { admin, area, warehouse, bin, quarantine, cable, onu, technician, workOrder, receipt, customer }
+  return { admin, area, warehouse, bin, quarantine, cable, onu, technician, workOrder, receipt, customer, serials }
 }

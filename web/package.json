@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "typecheck:warehouse-e2e": "tsc -p tsconfig.warehouse-e2e.json"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.5",

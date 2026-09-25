@@ -54,12 +54,13 @@ export async function addLocation(page: Page, input: { code: string; name: strin
   return { id: body.id as string, code: input.code, name: input.name, label: `${input.name} · ${input.code}`, areaId: body.areaId as string }
 }
 
-export async function addSku(page: Page, input: { code: string; name: string; tracking: 'LOT' | 'SERIAL' | 'BULK'; unit?: 'MM' | 'EA'; minimum?: string; inspectionRequired?: boolean }) {
+export async function addSku(page: Page, input: { code: string; name: string; tracking: 'LOT' | 'SERIAL' | 'BULK'; unit?: 'MM' | 'EA'; category?: string; minimum?: string; inspectionRequired?: boolean }) {
   await page.goto('/warehouse/catalog?tab=skus')
   await page.getByRole('button', { name: 'Tambah barang', exact: true }).click()
   await page.getByRole('textbox', { name: 'Kode barang', exact: true }).fill(input.code)
   await page.getByRole('textbox', { name: 'Nama barang', exact: true }).fill(input.name)
   await page.getByRole('combobox', { name: 'Pelacakan', exact: true }).selectOption(input.tracking)
+  if (input.category) await page.getByRole('textbox', { name: 'Kategori', exact: true }).fill(input.category)
   if (input.tracking !== 'SERIAL') await page.getByRole('combobox', { name: 'Satuan', exact: true }).selectOption(input.unit ?? 'EA')
   if (input.minimum) await page.getByRole('textbox', { name: /^Stok minimum/ }).fill(input.minimum)
   if (input.inspectionRequired === false) await page.getByRole('checkbox', { name: 'Wajib diperiksa sebelum tersedia', exact: true }).uncheck()

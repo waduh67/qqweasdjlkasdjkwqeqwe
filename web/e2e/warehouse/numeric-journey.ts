@@ -4,6 +4,11 @@ import { createRole, createUser, login } from './helpers'
 import { confirmOperation, prepareMaterialWorkOrder, selectNamed } from './fulfillment'
 
 export async function switchUser(page: Page, user: { email: string; password: string }) {
+  const customer = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Detail pelanggan', exact: true }) })
+  if (await customer.isVisible()) {
+    await customer.getByRole('button', { name: 'Tutup', exact: true }).click()
+    await expect(customer).toBeHidden()
+  }
   await page.getByRole('button', { name: 'Keluar', exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)
   await login(page, user)
@@ -25,9 +30,9 @@ export async function grantLocations(page: Page, user: { name: string; email: st
 }
 
 /** Empty tenant to actual dispatch: no API fixture writes or stock seeds. */
-export async function prepareNumericJourney(page: Page) {
-  const fixture = await prepareMaterialWorkOrder(page, { customerName: 'Pelanggan perjalanan numerik' })
-  const { area, warehouse, bin, quarantine, technician, workOrder, cable, onu } = fixture
+export async function prepareNumericJourney(page: Page, options: { serialPrefix?: string; cableCostMinor?: string } = {}) {
+  const fixture = await prepareMaterialWorkOrder(page, { customerName: 'Pelanggan perjalanan numerik', ...options })
+  const { area, warehouse, quarantine, technician, workOrder, cable, onu } = fixture
   const transit = await addLocation(page, { code: 'WO_TRANSIT', name: 'Pengiriman pekerjaan', area: area.optionLabel, kind: 'TRANSIT' })
   const field = await addLocation(page, { code: 'FIELD_STOCK', name: 'Barang teknisi', area: area.optionLabel, kind: 'TECHNICIAN', custodian: `${technician.name} · ${technician.email}` })
   const consumed = await addLocation(page, { code: 'CONSUMED', name: 'Kabel terpasang', area: area.optionLabel, kind: 'TRANSIT' })
@@ -52,11 +57,11 @@ export async function prepareNumericJourney(page: Page) {
   await confirmOperation(page, `/api/v1/warehouse/material-requests/${demand.demandDocumentId}/reserve`, 'Konfirmasi reservasi')
   await page.getByRole('button', { name: 'Siapkan barang', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Pilih REEL-WO', exact: true }).check()
-  const serialChoice = page.getByRole('checkbox', { name: /^Pilih WO-ONU-/ })
+  const serialChoice = page.getByRole('checkbox', { name: /^Pilih (?!REEL-WO$)/ })
   const serial = (await serialChoice.getAttribute('aria-label'))?.replace(/^Pilih /, '')
     ?? (await page.getByRole('group').filter({ has: serialChoice }).locator('legend').innerText()).split(' · ').at(-1)!
   await serialChoice.check()
-  const scanner = page.getByRole('textbox', { name: /^Pindai WO-ONU-/ })
+  const scanner = page.getByRole('textbox', { name: /^Pindai / })
   await scanner.fill(serial); await scanner.press('Enter')
   await page.getByRole('button', { name: 'Tinjau pilihan', exact: true }).click()
   const picked = await confirmOperation(page, `${root}/pick`, 'Siapkan pilihan')
@@ -66,7 +71,9 @@ export async function prepareNumericJourney(page: Page) {
   await page.getByRole('button', { name: 'Kirim barang', exact: true }).click()
   const issue = await confirmOperation(page, `${root}/dispatch`, 'Konfirmasi kirim')
   expect(issue.lines).toHaveLength(2)
-  return { ...fixture, reviewer, transit, field, consumed, installed, issue, serial, root }
+  const recordedSerial = fixture.serials.find(value => value.toUpperCase() === serial.toUpperCase())!
+  expect(recordedSerial).toBeTruthy()
+  return { ...fixture, reviewer, transit, field, consumed, installed, issue, serial, recordedSerial, root }
 }
 
 export type NumericJourney = Awaited<ReturnType<typeof prepareNumericJourney>>
@@ -93,7 +100,7 @@ export async function acknowledgeNumericJourney(page: Page, fixture: NumericJour
   await confirmOperation(page, `/api/work-orders/${fixture.workOrder.id}/start`, 'Mulai')
 }
 
-export async function consumeAndInstallNumericJourney(page: Page, fixture: NumericJourney) {
+export async function consumeAndInstallNumericJourney(page: Page, fixture: NumericJourney, ownership: 'LOAN' | 'SALE' = 'LOAN') {
   await page.goto(`/my-materials?workOrderId=${fixture.workOrder.id}`)
   await page.getByRole('button', { name: 'Catat pemakaian', exact: true }).click()
   await selectNamed(page, 'Barang diterima 1', `Kabel drop · REEL-WO · ${fixture.issue.code}`)
@@ -104,24 +111,29 @@ export async function consumeAndInstallNumericJourney(page: Page, fixture: Numer
   await page.getByRole('link', { name: 'Pasang perangkat pada aset pelanggan', exact: true }).click()
   await page.getByRole('button', { name: 'Pasang perangkat dari gudang', exact: true }).click()
   await selectNamed(page, 'WO pemasangan', `${fixture.workOrder.code} · PSB · IN_PROGRESS`)
-  await selectNamed(page, 'Perangkat yang sudah diterima', `${fixture.serial} · ONU pelanggan · ${fixture.issue.code}`)
+  await selectNamed(page, 'Perangkat yang sudah diterima', `${fixture.recordedSerial} · ONU pelanggan · ${fixture.issue.code}`)
   await page.getByRole('textbox', { name: 'Serial perangkat', exact: true }).fill(fixture.serial)
   await page.getByRole('textbox', { name: 'Serial perangkat', exact: true }).press('Enter')
-  await page.getByRole('combobox', { name: 'Kepemilikan perangkat', exact: true }).selectOption('LOAN')
+  await page.getByRole('combobox', { name: 'Kepemilikan perangkat', exact: true }).selectOption(ownership)
   await page.getByRole('button', { name: 'Tinjau pemasangan', exact: true }).click()
   const installation = await confirmOperation(page, `/api/customers/${fixture.customer!.id}/assets/install`, 'Pasang perangkat')
+  expect(installation.onuId).toMatch(/^[a-f0-9-]{36}$/)
   await expect(page.getByRole('region', { name: 'Aset perangkat pelanggan', exact: true })).toContainText('Milik ISP')
   return { usage, installation }
 }
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jK1cAAAAASUVORK5CYII=', 'base64')
 
-export async function uploadNumericProof(page: Page, fixture: NumericJourney) {
-  await page.goto(`/my-work-orders/${fixture.workOrder.id}`)
-  const root = `/api/work-orders/${fixture.workOrder.id}`
-  await page.getByRole('textbox', { name: 'Nama penanda tangan', exact: true }).fill(fixture.customer!.name)
+export async function uploadCustomerSignature(page: Page, workOrderId: string, customerName: string) {
+  await page.goto(`/my-work-orders/${workOrderId}`)
+  await page.getByRole('textbox', { name: 'Nama penanda tangan', exact: true }).fill(customerName)
   await page.getByLabel('Berkas tanda tangan', { exact: true }).setInputFiles({ name: 'tanda-tangan.png', mimeType: 'image/png', buffer: png })
-  await confirmOperation(page, `${root}/signature`, 'Simpan tanda tangan', 'PUT')
+  await confirmOperation(page, `/api/work-orders/${workOrderId}/signature`, 'Simpan tanda tangan', 'PUT')
+}
+
+export async function uploadNumericProof(page: Page, fixture: NumericJourney) {
+  await uploadCustomerSignature(page, fixture.workOrder.id, fixture.customer!.name)
+  const root = `/api/work-orders/${fixture.workOrder.id}`
   for (const kind of ['FAT', 'ODP', 'DROPCORE', 'ONT', 'ONU', 'OPTICAL_BEFORE', 'OPTICAL_AFTER', 'TECHNICIAN_SIGNATURE', 'LOCATION']) {
     await page.getByRole('combobox', { name: 'Jenis', exact: true }).selectOption(kind)
     await page.getByLabel('Berkas foto bukti', { exact: true }).setInputFiles({ name: `${kind}.png`, mimeType: 'image/png', buffer: png })
