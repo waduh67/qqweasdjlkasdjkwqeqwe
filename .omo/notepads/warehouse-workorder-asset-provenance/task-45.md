@@ -305,3 +305,9 @@ Actual restricted ACK/unused return, independent warehouse intake and inspection
 60/40transfer discrepancy, blindcounter/independent rejection and append-only stale
 recount. Exact scenarios and source hashes in issue-return-count-browser-verification.json.
 Assets screenshot rerun and legacy UI cutover remain pending.
+
+### Approval workbench browser assertion correction
+Current UI lists approvals at /approvals/workbench?page=0 and displays the scoped
+empty state. Updated the assertion/allowed request path to this existing API.
+R5 setup: 4/4 real desktop/mobile tests passed; stock denial remains HTTP403.
+The complete R5 matrix is still running and is not yet a final task45 PASS.

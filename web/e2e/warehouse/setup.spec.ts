@@ -25,14 +25,14 @@ test('real signup, independent approver navigation and explicit unavailable rout
   await page.getByRole('link', { name: 'Ringkasan Gudang', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Gudang & Logistik', exact: true })).toBeVisible()
   await expect(page.getByText('0 persetujuan menunggu', { exact: true })).toBeVisible()
-  const approvalResponse = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/approvals' && new URL(res.url()).search === '?page=0')
+  const approvalResponse = page.waitForResponse(res => { const url = new URL(res.url()); return res.request().method() === 'GET' && url.pathname === '/api/v1/warehouse/approvals/workbench' && url.searchParams.get('page') === '0' })
   await page.getByRole('link', { name: 'Buka persetujuan gudang', exact: true }).click()
   const response = await approvalResponse
   expect(response.ok()).toBeTruthy()
   expect(await response.json()).toMatchObject({ items: [], page: 0, totalElements: 0 })
-  await expect(page.getByText('Tidak ada persetujuan dalam cakupan Anda', { exact: true })).toBeVisible()
+  await expect(page.getByText('Belum ada permintaan persetujuan dalam cakupan Anda', { exact: true })).toBeVisible()
   expect(warehouseReads.length).toBeGreaterThan(0)
-  expect(warehouseReads.every(path => path === '/api/v1/warehouse/approvals')).toBeTruthy()
+  expect(warehouseReads.every(path => ['/api/v1/warehouse/approvals', '/api/v1/warehouse/approvals/workbench'].includes(path))).toBeTruthy()
 
   // Obtain this real request's in-memory authorization only for a negative server assertion.
   // No session injection, browser mocks or database seed is used in this journey.

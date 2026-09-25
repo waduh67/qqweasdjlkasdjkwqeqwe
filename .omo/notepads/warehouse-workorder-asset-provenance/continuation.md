@@ -1,3 +1,42 @@
+## Current checkpoint: isolated fixtures, portal and legacy cutover verified; final matrix running
+
+Goal ACTIVE; tasks 1–44 DONE, 45 IN PROGRESS, 46–48/F1–F4 OPEN. Keep working after push.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. No subagents authorized.
+Latest committed fixes: ddf494b3 separate DATABASE/public for every migration/restart
+fixture (isolation 10/10); fcdd987a AFTER_COMMIT portal contact index transaction
+(60/60 portal tests); f49250b0 historical V172 UI -> current cutover -> restart (6/6).
+QA shared warehouse_e2e functions recovered against a fresh migrated reference:
+three deterministic functions restored, activation timestamp preserved, 322 tables /
+31,173 business rows and all Flyway checksums unchanged. warehouse_test unchanged.
+Never use sibling schemas for historical migrations that explicitly reference public.
+V178.6 and V178.7 immutable in BOTH retained environments; next available V178.8.
+
+Current browser matrix R5 uses unchanged product with corrected approval workbench
+assertion and new scrolled asset-history screenshots. Five specs already pass:
+setup 4, receiving 2, provenance 2, issue 2, returns 4. Exceptions is running;
+numeric and customer-assets follow. Private reports/source hashes/artifacts:
+.omo/runtime/task45-matrix-r5-<spec>-{report.json,source.json,artifacts/}.
+Session 42129 / task45-browser-matrix-r5.sh/log. DO NOT edit ANY E2E files while active.
+Full server R2 queued session 51803 / full-server-r2.sh/log under host fd8 lock.
+It requires all eight R5 reports green first, then runs historical projection gate
+and ALL modern server tests. Full gate deadline 7200s; focused remains 1800s.
+Archives complete JUnit in .omo/runtime/full-server-r2-reports before any rerun.
+Do not edit executing/queued wrappers or kill unrelated Java process 1045933.
+
+CI foundation being committed: mandatory server/web/KMP/eight browser/legacy/native
+jobs before publish/deploy; safe result summaries + encrypted raw reports. 17 Python
+guard tests pass (including failing/missing/empty/skipped/flaky/cancelled cases),
+actionlint passes. age and actionlint installed via pacman on Arch. Repository
+variable WAREHOUSE_EVIDENCE_RECIPIENT is the existing user's SSH Ed25519 PUBLIC key;
+private key never uploaded. Real five-report encryption roundtrip byte-identical.
+Task48 NOT DONE: actual remote CI, exact Docker image smoke and publication identity
+must still be completed. Docker context/bootJar fixes, docs47 and preflight remain
+drafts. Preflight runner .omo/runtime/runbook-preflight-r1.sh exists but is NOT queued
+or verified. Old active-session lists below are obsolete. Continue through 45–48
+and final audits, preserving private credentials/traces and retaining QA volumes.
+
+## Earlier checkpoints (superseded by the status above)
+
 ## Current checkpoint: issue, returns and count browser gates pass
 
 Follows71d5cb9f. Goal ACTIVE; tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN.
