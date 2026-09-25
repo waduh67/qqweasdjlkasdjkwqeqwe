@@ -100,7 +100,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
         return Batch(token, actor, old, mapper.readTree(begin.body()).path("batch").path("id").asString(), cases, cable, serial)
     }
 
-    private fun evidence(batch: Batch, source: JsonNode): String {
+    private fun evidence(batch: Batch, source: JsonNode, expectedStatus: Int = 201): String {
         val boundary = "migration-resolution-file"
         val json = mapper.writeValueAsString(mapOf("expectedEpoch" to 1, "expectedCaseHash" to source.path("sourceHash").asString(), "label" to "Bukti pemeriksaan fisik"))
         val bytes = ("--$boundary\r\nContent-Disposition: form-data; name=\"request\"\r\n\r\n$json\r\n--$boundary\r\n" +
@@ -110,8 +110,8 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             .header("Authorization", "Bearer ${batch.token}").header("Idempotency-Key", UUID.randomUUID().toString())
             .header("Content-Type", "multipart/form-data; boundary=$boundary").timeout(Duration.ofSeconds(20))
             .POST(HttpRequest.BodyPublishers.ofByteArray(bytes)).build(), HttpResponse.BodyHandlers.ofString())
-        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(201)
-        return mapper.readTree(response.body()).path("id").asString()
+        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(expectedStatus)
+        return if (expectedStatus == 201) mapper.readTree(response.body()).path("id").asString() else ""
     }
 
     private fun body(source: JsonNode, file: String, kind: String = "PROVENANCE_ONLY", revision: Long = 0,
@@ -128,6 +128,12 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     private fun cleanup(batch: Batch) {
         val prefix = "${batch.old.tenant}/warehouse/migrations/${batch.id}/"
         storage.list(batch.old.tenant.toString(), prefix).objects.forEach { storage.delete(it.key) }
+    }
+
+    private fun runInFailure(batch: Batch, command: WarehousePostingFixture.() -> Unit): String {
+        val failure = runCatching { fixture(batch.token).transaction { command() } }.exceptionOrNull()
+        assertThat(failure).isNotNull()
+        return generateSequence(requireNotNull(failure)) { it.cause }.filterIsInstance<java.sql.SQLException>().first().sqlState
     }
 
     private fun review(batch: Batch): JsonNode {
@@ -259,18 +265,14 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
                 assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE value_numerator IS NULL AND value_denominator IS NULL AND currency IS NULL")).isEqualTo("2")
             }
-            fixture(batch.token).transaction {
+            val drift = runInFailure(batch) {
                 sql("UPDATE fulfillment_checkpoint SET required_effects='WORK_ORDER' WHERE id='${checkpoints[0]}'")
             }
-            val changed = decide(actors[2].first, approvals[0], 2)
-            assertThat(changed.statusCode()).withFailMessage(diagnostic(changed)).isEqualTo(409)
-            assertThat(mapper.readTree(changed.body()).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
-            assertThat(changed.body()).doesNotContain("fulfillment_checkpoint", "SELECT", "SQL")
+            assertThat(drift).isEqualTo("23514")
             fixture(batch.token).transaction {
                 assertThat(scalar("SELECT count(*) FROM inventory_migration_admission")).isEqualTo("0")
                 assertThat(scalar("SELECT count(*) FROM warehouse_migration_cancellation_receipt")).isEqualTo("0")
                 assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE status='PENDING' AND revision=2")).isEqualTo("2")
-                sql("UPDATE fulfillment_checkpoint SET required_effects='INVENTORY,WORK_ORDER' WHERE id='${checkpoints[0]}'")
             }
             val outbox = context.getBean(FulfillmentOutboxRepository::class.java)
             val delivery = TenantContext.runAs(batch.old.tenant) { requireNotNull(outbox.claimPending(batch.old.tenant, "legacy-worker", Instant.now(), Instant.now().plusSeconds(300))) }
@@ -313,6 +315,16 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT count(*) FROM fulfillment_outbox WHERE published_at IS NULL AND claimed_by='legacy-worker'")).isEqualTo("1")
                 assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='OPENING_BALANCE'")).isEqualTo("1")
             }
+            val closedCase = batch.case(batch.old.balance)
+            evidence(batch, closedCase, 409)
+            val history = request("GET", batch.path(closedCase) + "/resolutions", batch.token)
+            assertThat(history.status).isEqualTo(200)
+            val original = mapper.readTree(history.contentAsString).path("items").path(0)
+            val file = original.path("evidence").path(0).path("id").asString()
+            val revised = send(batch.token, batch.path(closedCase) + "/resolutions", body(closedCase, file, revision = 1))
+            assertThat(revised.statusCode()).withFailMessage(revised.body()).isEqualTo(409)
+            assertThat(mapper.readTree(revised.body()).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
+            assertThat(request("GET", batch.path(closedCase) + "/resolutions", batch.token).contentAsString).isEqualTo(history.contentAsString)
             for (command in listOf("UPDATE fulfillment_checkpoint SET state='READY' WHERE id='${checkpoints[0]}'",
                 "UPDATE fulfillment_outbox SET claimed_by=NULL,lease_until=NULL WHERE id='${messages[0]}'",
                 "UPDATE fulfillment_checkpoint SET id='${UUID.randomUUID()}' WHERE id='${checkpoints[0]}'",

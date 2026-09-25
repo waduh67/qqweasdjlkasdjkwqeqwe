@@ -1,3 +1,23 @@
+## V177.10 applied: legacy closure and admitted review seal verified
+
+V177.10 is applied and immutable: SHA256
+`7fb239b034ff5fae3469d857d055acdddeb9129c569a74f43eccea860dd3df08`.
+31tests/6suites PASS3m38s; source proof `task43/legacy-closure-verification.json`.
+New legacy WO effects/deliveries and business identity changes are closed after
+cutoff. Existing terminal replays, reconciliation, leases and ACK remain; current
+frozen fulfillment still operates normally. Old tombstones are append-only with
+application writes revoked. New evidence/resolutions reject after opening admission,
+while existing history remains readable. Next free177.11;178 reserved forM06.
+Finalization, mixed-tenant restart and provenance management UI remain pending.
+
+## V177.10 reservation: close obsolete legacy writes and seal admitted review
+
+V177.10 is reserved for legacy fulfillment creation/business/progress fences after
+cutoff, append-only old tombstones with application writes revoked, and rejection
+of new case evidence/resolutions after committed opening admission. Terminal replay,
+current frozen fulfillment and historical reads remain. V177–177.9 are immutable;
+V178 remains reserved for M06. This reservation precedes apply.
+
 ## V177.9 applied: current raw identity reservations verified
 
 V177.9 is applied and immutable: SHA256

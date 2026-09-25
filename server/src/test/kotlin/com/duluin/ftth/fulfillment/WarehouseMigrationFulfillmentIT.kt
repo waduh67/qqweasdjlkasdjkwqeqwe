@@ -64,7 +64,7 @@ class WarehouseMigrationFulfillmentIT : WarehousePolicyHttpFixture() {
         }
     }
     companion object {
-        private val legacy = List(2) { Legacy() }
+        private val legacy = List(3) { Legacy() }
         private val database = WarehouseSchemaDatabase("172").also { db -> db.ownerFixture { connection -> legacy.forEach { it.seed(connection) } } }
         @JvmStatic @DynamicPropertySource fun database(registry: DynamicPropertyRegistry) {
             registry.add("spring.datasource.url") { database.url }
@@ -243,4 +243,49 @@ class WarehouseMigrationFulfillmentIT : WarehousePolicyHttpFixture() {
             sql.executeQuery("SELECT EXISTS(SELECT FROM pg_stat_activity WHERE $pid=ANY(pg_blocking_pids(pid)))").use { rows -> rows.next(); rows.getBoolean(1) }
         } } }
     }
+    @Test fun `cutoff closes new legacy effects and identity changes while old terminal delivery and ACK remain usable`() {
+        val admin = setup(2)
+        val old = legacy[2]
+        begin(admin)
+        val coordinator = context.getBean(FulfillmentCoordinator::class.java)
+        val creation = runCatching { TenantContext.runAs(old.stock.tenant) {
+            coordinator.accept(old.request(0).copy(operationKey = UUID.randomUUID().toString()))
+        } }.exceptionOrNull()
+        assertThat(creation).isNotNull()
+        assertThat(generateSequence(requireNotNull(creation)) { it.cause }.filterIsInstance<java.sql.SQLException>().first().sqlState).isEqualTo("23514")
+        val fixture = fixture(admin)
+        for ((command, expected) in listOf(
+            "UPDATE fulfillment_checkpoint SET source='MIGRATION' WHERE id='${old.ids[0]}'" to "23514",
+            "UPDATE fulfillment_checkpoint SET required_effects='WORK_ORDER' WHERE id='${old.ids[0]}'" to "23514",
+            "UPDATE fulfillment_checkpoint SET state='READY' WHERE id='${old.ids[1]}'" to "23514",
+            "UPDATE fulfillment_outbox SET payload_hash='${"b".repeat(64)}' WHERE id='${old.outbox[0]}'" to "23514",
+            "INSERT INTO fulfillment_outbox(id,tenant_id,fulfillment_id,sequence,event_type,payload_hash,payload) VALUES ('${UUID.randomUUID()}','${old.stock.tenant}','${old.ids[0]}',2,'FULFILLMENT_APPLY','${"a".repeat(64)}','{}')" to "23514",
+            "INSERT INTO fulfillment_effect_progress(id,tenant_id,fulfillment_id,effect_type,status) VALUES ('${UUID.randomUUID()}','${old.stock.tenant}','${old.ids[0]}','INVENTORY','STARTED')" to "23514",
+            "DELETE FROM fulfillment_checkpoint WHERE id='${old.ids[0]}'" to "23514",
+            "INSERT INTO inventory_serial_tombstone(id,tenant_id,serial_number) VALUES ('${UUID.randomUUID()}','${old.stock.tenant}','FORGED')" to "42501",
+            "DELETE FROM inventory_serial_tombstone" to "42501",
+        )) {
+            val failure = runCatching { fixture.transaction { sql(command) } }.exceptionOrNull()
+            assertThat(failure).isNotNull()
+            assertThat(generateSequence(requireNotNull(failure)) { it.cause }.filterIsInstance<java.sql.SQLException>().first().sqlState).isEqualTo(expected)
+        }
+        TenantContext.runAs(old.stock.tenant) {
+            assertThat(coordinator.accept(old.request(0)).state).isEqualTo(FulfillmentState.DISPATCHED)
+            assertThat(coordinator.process(old.request(0)).state).isEqualTo(FulfillmentState.REQUIRES_RECONCILIATION)
+            assertThat(coordinator.accept(old.request(1)).state).isEqualTo(FulfillmentState.APPLIED)
+            assertThat(coordinator.accept(old.request(2)).outcome).isEqualTo("Original manual resolution")
+            val outbox = context.getBean(FulfillmentOutboxRepository::class.java)
+            val delivery = requireNotNull(outbox.claimPending(old.stock.tenant, "legacy-ack", Instant.now(), Instant.now().plusSeconds(60)))
+            outbox.markOutboxConsumed(delivery.id, delivery.claimedBy)
+        }
+        fixture.transaction {
+            assertThat(scalar("SELECT count(*) FROM fulfillment_checkpoint")).isEqualTo("3")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_outbox")).isEqualTo("3")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_outbox WHERE published_at IS NOT NULL")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_document")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement")).isEqualTo("2")
+        }
+    }
+
 }

@@ -1,3 +1,50 @@
+## Task43 legacy closure and admitted review seal verified; finalization/M06 NEXT
+
+Branch work/warehouse-completion; remote origin/feat/warehouse-workorder. This
+checkpoint follows pushed8e84c464 (current identity reservations). Locate containing
+commit with git log -1. Tasks1–42 done;43 in progress;44–48/F1–F4 remain. Goal ACTIVE.
+Continue full scope and keep verified source/proof/handoff commits pushed.
+
+V177.10 APPLIED and IMMUTABLE, SHA256
+7fb239b034ff5fae3469d857d055acdddeb9129c569a74f43eccea860dd3df08.
+Next free M05 version177.11;178 reserved forM06. Only product change this phase is
+SQL. Legacy WORK_ORDER checkpoint/outbox/progress creation is closed after cutoff;
+business/hash/source/effect identity and terminal outcome are protected. Current
+frozen fulfillment works; onboarding MIGRATION source retains its owner flow.
+Existing terminal claimOrCreate replay and harmless legacy lease/ACK/reconciliation
+remain usable. Tombstone app INSERT/UPDATE/DELETE revoked; history append-only.
+New migration evidence/resolution after admission rejects under the same batch lock,
+so a committed opening's review cannot become irrecoverably stale. Original replay
+and read-only history retain their existing behavior.
+
+31tests/6suites PASS3m38s, zero failures/skips. Safe proof task43/
+legacy-closure-verification.json records source hashes. Real HTTP+PG+MinIO tests:
+new ambiguous legacy work in ENFORCED creates no checkpoint; original V172 sources
+still reconcile/replay/ACK; SQL creation/source/effect/hash changes, progress, terminal
+reopen and tombstone writes denied; new case file/resolution after admission409 and
+old history unchanged. Normal WO material verification, service owner effects,
+concurrency and rollback pass. OpeningApprovalIT's requiredEffects drift now fails
+earlier at the new DB guard rather than accepting a change then rejecting approval.
+
+NEXT implement finalization/M06 under exclusive cutover with real independent
+opening/cancellation/current-identity proof, actual mixed-tenant HTTP+restart gate,
+and full /warehouse/provenance management UI. Then44–48/F1–F4. Existing sources and
+original IDs/services remain; no finalization or ENFORCED transition exists yet.
+Read cancellation-followup.md in .omo/notepads/warehouse-workorder-asset-provenance
+for design audit (some closure items are now completed by177.10).
+
+Read paths for MigrationEvidenceService and MigrationResolutionService already use
+MIGRATION_REPORT plus caseHash, not VALIDATING-only batch lock; they can retain history
+after ENFORCED. Mutating replay is still subject to current cutover operation gate.
+Current policy.finalizeValidation and warehouse_cutover_guard retain their closed
+stubs; replace/remove them precisely when owner finalization is implemented. Do not
+reuse pre-admission review_issues after posting: verified assets leave legacy live
+views intentionally. Validate immutable admission bindings and actual stock instead.
+
+Owned QA stopped, volumes retained. Private migration-closure.sh/log. JDK21, host
+QA lock, workers2,1536MiB test heap/context cache1. Never commit private env, raw logs,
+XML or uploads. Older sections below are history; this leading status takes precedence.
+
 ## Task43 current identity reservations verified; finalization/legacy closure NEXT
 
 Branch work/warehouse-completion, remote origin/feat/warehouse-workorder. This

@@ -4,6 +4,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.inventory.MaterialMode
 import com.duluin.ftth.inventory.MaterialUsageRequest
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -79,19 +80,16 @@ class WarehouseFulfillmentIT : WarehouseFulfillmentFixture() {
     }
 
     @Test
-    fun `ambiguous legacy delivery requires durable reconciliation when applicability is absent`() {
+    fun `new ambiguous legacy delivery cannot create a checkpoint after warehouse enforcement`() {
         val token = tenant()
         val tenant = fixture(token).tenant
         val input = FulfillmentRequest(tenant, "workorder.fulfillment.approve", UUID.randomUUID().toString(), "a".repeat(64),
             FulfillmentSource.WORK_ORDER, UUID.randomUUID(), null, null, "PREVENTIVE", true, approvalActorId = UUID.randomUUID())
-        TenantContext.runAs(tenant) { coordinator.accept(input) }
-
-        val result = TenantContext.runAs(tenant) { coordinator.process(input) }
-
-        assertThat(result.state).isEqualTo(FulfillmentState.REQUIRES_RECONCILIATION)
+        assertThatThrownBy { TenantContext.runAs(tenant) { coordinator.accept(input) } }
+            .hasStackTraceContaining("legacy fulfillment creation or removal is closed after cutoff")
         fixture(token).transaction {
-            assertThat(scalar("SELECT state FROM fulfillment_checkpoint WHERE operation_key='${input.operationKey}'"))
-                .isEqualTo("REQUIRES_RECONCILIATION")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_checkpoint")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_outbox")).isEqualTo("0")
             assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress")).isEqualTo("0")
         }
     }
