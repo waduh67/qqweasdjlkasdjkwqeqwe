@@ -75,6 +75,9 @@ case "$MODE" in
         ;;
     browser)
         [[ $# == 1 && "$1" =~ ^[a-zA-Z0-9_-]+\.spec\.ts$ ]] || refuse 'browser requires one warehouse spec filename'
+        # A failed build/readiness check must not leave a previous spec's report as this attempt.
+        export PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNTIME/warehouse-playwright.json"
+        rm -f -- "$PLAYWRIGHT_JSON_OUTPUT_NAME"
         [[ -f "$ROOT/web/playwright.warehouse.config.ts" && -f "$ROOT/web/e2e/warehouse/$1" ]] || refuse 'real warehouse browser config/spec missing; implement plan task31 before running browser'
         [[ -f "$ROOT/server/src/main/resources/application-warehouse-e2e.yml" ]] || refuse 'warehouse-e2e external-adapter isolation profile missing; provide task31 profile before launching a backend'
         [[ ! -e "$RUNTIME/warehouse-backend.pid" && ! -e "$RUNTIME/warehouse-web.pid" ]] || refuse 'owned or stale E2E processes exist; run qa.sh stop first'
@@ -96,8 +99,6 @@ case "$MODE" in
         await_json "$WAREHOUSE_E2E_BACKEND_URL/actuator/health"
         start_owned web node --input-type=module -e 'import {preview} from "vite"; await preview({root:process.argv[1],preview:{host:"127.0.0.1",port:14188,strictPort:true,proxy:{"/api":{target:process.env.WAREHOUSE_E2E_BACKEND_URL},"/actuator":{target:process.env.WAREHOUSE_E2E_BACKEND_URL}}}})' "$ROOT/web"
         await_json "$WAREHOUSE_E2E_WEB_URL/actuator/health"
-        export PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNTIME/warehouse-playwright.json"
-        rm -f -- "$PLAYWRIGHT_JSON_OUTPUT_NAME"
         web npx playwright test --config playwright.warehouse.config.ts "e2e/warehouse/$1" --project warehouse-desktop --project warehouse-mobile --trace on
         jq -e '.stats.expected > 0 and .stats.unexpected == 0 and .stats.skipped == 0 and .stats.flaky == 0' "$PLAYWRIGHT_JSON_OUTPUT_NAME" >/dev/null || refuse 'zero, skipped, flaky, or failing browser tests'
         for project in warehouse-desktop warehouse-mobile; do

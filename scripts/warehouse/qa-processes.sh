@@ -57,7 +57,7 @@ start_owned() {
 
 await_json() {
     local url=$1 attempt
-    for attempt in {1..120}; do
+    for ((attempt=0; attempt<120; attempt++)); do
         if curl --noproxy '*' -fsS --max-time 2 -H 'Accept: application/json' "$url" >"$RUNTIME/warehouse-readiness.json" 2>/dev/null &&
             jq -e --arg marker "$WH_MARKER" 'type == "object" and .status == "UP" and .components.warehouse.details.database == "warehouse_e2e" and .components.warehouse.details.user == "warehouse_app" and .components.warehouse.details.marker == $marker' "$RUNTIME/warehouse-readiness.json" >/dev/null 2>&1; then
             return 0

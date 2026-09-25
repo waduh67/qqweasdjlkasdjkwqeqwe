@@ -106,3 +106,13 @@ pre-upgrade fixture, no fabricated stock/admission bypass. Then46 full regressio
 (including known175.21 ProjectionUpgrade fixture),47 runbooks/preflight,48requiredCI,
 F1–F4 currentartifact audits. V178.6 immutable bothQAenvs; next178.7. No native/hardware
 claim. All QA serialized under existing host fd8 lock; never kill unrelated processes.
+
+## RMA and numeric checkpoint after aa22c32e
+
+V178.7 passed14 focused RMA tests and9 tests on retained OLD populated upgrade.
+2142 preexisting tenants/23 tables unchanged; old migration checksums unchanged.
+Both environments immutable through178.7, next178.8. Numeric browser2/2 passed with
+actual ONU record917500MM/9available/1installed. MatrixR2 issue2/2 passed; returns,
+exceptions and visual asset rerun still executing. HistoricalV172 UI2/2 passed;
+post-upgrade cutover failed fixture area-access ordering, requires correction.
+No task45 completion claimed.

@@ -1,3 +1,59 @@
+## Current checkpoint: RMA migration verified in both retained environments
+
+Follows aa22c32e; locate containing commit with git log -1. Goal ACTIVE.
+Tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN. CONTINUE after commit/push.
+No subagents authorized. Branch work/warehouse-completion -> origin/feat/warehouse-workorder.
+
+V178.7 is APPLIED/IMMUTABLE in BOTH default and retained OLD environments.
+SHA726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081.
+RMA14/14 tests in4suites PASS; OLD populated upgrade9/9 in2suites PASS.
+All2142 prior tenants and23 compared tables have unchanged counts/fingerprints;
+all old migration checksums unchanged, only178.7 applied. Nextfree178.8.
+Default marker98b38fbf54518f766065f31955d52574 restored; OLDabc63ab0045a7096566cf763c8f477fc retained.
+Proof task45/rma-category-verification.json; private XMLs archived separately.
+Current numeric browser2/2 also PASS122.5s with actual categoryONU and realonuId,
+917500MM/9available/1installed. customer-assets4/4 PASS365.5s as previous checkpoint.
+Safe numeric-onu-browser-verification.json supersedes old assignment-only limitation.
+Native macOS run36097475699 compiled both actual iOS targets successfully at636209cf;
+mobile/build inputs identical throughaa22c32e. task46/native-source-equivalence.json.
+Native compile is not runtime/hardware/release proof.
+
+qa.sh now removes prior Playwright JSON before build/readiness so a failed preflight
+cannot accidentally reuse the preceding spec's result. Shared readiness loop cleanup;
+ShellCheck -P SCRIPTDIR -x and bash -n PASS. Product/browser inputs unchanged by checkpoint.
+
+RUNNING/QUEUED (read logs before new work):
+- session1401 .omo/runtime/task45-browser-matrix-r2.sh/log: issue2PASS76.1s;
+  returns4 -> exceptions2 -> customer-assets4 (improved drawer history screenshots).
+  Freeze ALL E2E source while matrix runs: per-spec TypeScript checks scan all fixtures.
+- session39156 .omo/runtime/portal-contact-red.sh/log queued after browsermatrix;
+  new PortalContactIdentityIT compiles, not executed yet. Archive XML before focused rerun.
+LegacyR2 session36699 completed: oldV172 UI2/2PASS creates2customers+2ONUs, after-upgrade
+2failed because setupOwnArea restricts admin before assigning oldNULL-area customer,
+so raw customer list becomes empty. Source selector itself matches actual UI.
+Nextfix: create area viaUI without changing access, assign customer area while admin's
+legacy raw list is unrestricted, then grant that area/relogin for warehouse review.
+Do not change production authorization. Remaining cutover phases not yet proven.
+Private R2 schema/artifacts: .omo/runtime/warehouse-legacy-a0f7db143b5ed570c54008f2c3e1c9ab
+(use .omo/runtime/warehouse-legacy-latest.txt for exact path; no deletes).
+
+Uncommitted legacy harness + fixture drafts must be finished and committed; no PASS
+claimed. Existing historicalV172 checkout remains clean. New detached task-owned
+.omo/runtime/warehouse-v175-fixture atc164c4eb was just created for task46 historical
+fixture repair; no edits/build/test yet. Current ProjectionUpgrade test still fails
+before intended assertion because newservices require post175.21 columns. Need real
+version-correct historical fixture; no production fallbacks or unrelated409 shortcut.
+Portal AFTER_COMMIT bug remains unfixed pending red test.
+
+MatrixR1 issue NEVER EXECUTED: a transient unused E2E import stopped TypeScript before
+launch; its copied numeric JSON was quarantined as issue-NOT_EXECUTED. Do not count it.
+R2 source/report archives are per-spec and stop on first failure. Remaining45 legacy
+cutover and currentmatrix; then46fullregressions,47docs/preflight,48CI,F1–F4audits.
+Preserve private env/logs/traces, no auth artifact upload in PUBLIC repo. Retain volumes,
+never kill unrelatedJava1045933. Commit/push checkpoints and CONTINUE.
+
+## Previous checkpoint (superseded)
+
 ## Current checkpoint: real customer asset journeys pass; task45 continues
 
 Follows e3e9708b; locate containing commit with git log -1. Goal ACTIVE.

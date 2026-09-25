@@ -1,7 +1,7 @@
-## V178.7 applied to the browser fixture: optional RMA category
+## V178.7 applied: optional RMA category
 
 V178.7 (`V178_7__warehouse_rma_optional_category.sql`) is applied and immutable in
-the current owned browser database. SHA256:
+both owned QA environments (default and preserved old volume). SHA256:
 `726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081`.
 A serialized SKU may have no category. Its RMA authorization now treats that absent
 category as `createsOnu=false`, matching the application; only ONU/ONT creates a
@@ -9,10 +9,14 @@ network ONU episode. All physical source, customer, custody, title, revision and
 replay bindings remain enforced. No stored rows or old migration files are changed.
 
 The regression reproduced exactly one failure among three cases before this fix:
-NULL category failed, ONU and ROUTER passed. The focused post-fix server matrix and
-preserved old-volume upgrade are pending; this checkpoint does not claim a release
-gate. The next free forward migration is V178.8. Earlier sections below are dated
-implementation history, including their then-current version reservations.
+NULL category failed, ONU and ROUTER passed. The fixed server matrix passes14 tests
+across4 suites;9 further deployment/guard tests pass on the preserved old volume.
+Its 2142 pre-existing tenants retain identical rows/digests across23 audited
+tables, including customer/ONU records and deployment evidence; prior migration
+checksums are unchanged. Only178.7 was added. Task45 also has4 passing customer-asset
+browser cases and2 complete numeric cases on desktop/mobile; remaining gates stay
+open. Safe proof: task45/rma-category-verification.json. Next free migration: V178.8.
+Earlier sections below are dated implementation history and version reservations.
 
 ## V178.6 applied: canonical serial matching on return, repair and RMA
 

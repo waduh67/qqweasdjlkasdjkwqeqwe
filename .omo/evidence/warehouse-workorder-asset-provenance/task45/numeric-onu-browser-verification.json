@@ -1,0 +1,26 @@
+{
+  "sourceCheckpoint": "aa22c32e",
+  "tests": 2,
+  "failed": 0,
+  "skipped": 0,
+  "flaky": 0,
+  "durationMs": 122546.85999999999,
+  "projects": [
+    "warehouse-desktop",
+    "warehouse-mobile"
+  ],
+  "setup": "UI only, actual HTTP/server/non-owner PostgreSQL and MinIO; technician and independent QA logins",
+  "assertions": [
+    "1000m cable and 10 ONU received",
+    "100m cable and 1 ONU acknowledged by restricted technician",
+    "82.5m physically used and one actual ONU episode created",
+    "customer signed handover accepted; 17.5m returned, warehouse acknowledged and inspected",
+    "independent QA completes work; available stock 917500 MM and 9 EA"
+  ],
+  "sha256": {
+    "web/e2e/warehouse/warehouse-empty-tenant.spec.ts": "59d7eaf5a519139bd130b93a95f7f76b4f9b0fad679194a2242b2621390cb59d",
+    "web/e2e/warehouse/numeric-journey.ts": "712d84ddc9aca4984009458a92cfceaa942383167f5e6af50d958beddf32ffe0",
+    "web/e2e/warehouse/fulfillment.ts": "e8ac4fb0710374ac320e292dfda9ebef17ae2ae592e88a4c3515c211dcb29bb5",
+    "web/e2e/warehouse/catalog.ts": "c8e7d53d56d1fcc4de0cf257b01096ba8619f7f42f69d919b33cac4dc09f161b"
+  }
+}
