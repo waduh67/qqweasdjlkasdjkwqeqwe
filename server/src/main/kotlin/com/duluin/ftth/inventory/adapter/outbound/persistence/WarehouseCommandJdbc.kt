@@ -17,10 +17,10 @@ class WarehouseCommandJdbc(private val entityManager: EntityManager) {
             check(sql.value("SELECT current_setting('app.tenant_id',true)") == sql.tenant.toString())
             try { action(sql) } catch (failure: java.sql.SQLException) {
                 when (failure.sqlState) {
-                    "40001", "40P01", "55P03" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.STALE_REVISION)
-                    "23505" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
-                    "23503" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.NOT_FOUND)
-                    "23514" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                    "40001", "40P01", "55P03" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.STALE_REVISION, failure)
+                    "23505" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.IDEMPOTENCY_CONFLICT, failure)
+                    "23503" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.NOT_FOUND, failure)
+                    "23514" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.SOURCE_NOT_VERIFIED, failure)
                     else -> throw failure
                 }
             }

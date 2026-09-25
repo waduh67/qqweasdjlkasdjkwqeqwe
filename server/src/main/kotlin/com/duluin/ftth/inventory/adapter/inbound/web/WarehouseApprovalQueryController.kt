@@ -14,6 +14,11 @@ class WarehouseApprovalQueryController(private val queries: InventoryApprovalQue
     fun list(@RequestParam parameters: MultiValueMap<String, String>) = privateResponse(queries.list(WarehouseApprovalFilters.parse(parameters)))
     @GetMapping("/sources/{id}") fun source(@PathVariable id: UUID) = privateResponse(queries.source(id))
     @GetMapping("/{id}/details") fun details(@PathVariable id: UUID) = privateResponse(queries.details(id))
+    @GetMapping("/{id}/migration-cases")
+    fun migrationCases(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<WarehousePage<MigrationReviewCase>> {
+        val filter = WarehouseApprovalFilters.parse(parameters, history = true)
+        return privateResponse(queries.migrationCases(id, WarehousePageRequest(filter.page, filter.size)))
+    }
     @GetMapping("/{id}/attachments")
     fun attachments(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<WarehousePage<WarehouseApprovalAttachment>> {
         val filter = WarehouseApprovalFilters.parse(parameters, history = true)

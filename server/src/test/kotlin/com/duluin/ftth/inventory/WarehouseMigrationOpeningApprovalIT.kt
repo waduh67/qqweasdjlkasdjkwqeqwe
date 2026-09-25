@@ -1,0 +1,348 @@
+package com.duluin.ftth.inventory
+
+import com.duluin.ftth.common.storage.ObjectStorage
+import com.duluin.ftth.inventory.application.service.WarehouseCanonicalPayload
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.context.annotation.Import
+import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import tools.jackson.databind.JsonNode
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(ReceiptRealStorage::class, WarehouseMigrationOpeningApprovalIT.Configuration::class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
+    companion object {
+        private val legacy = List(4) { WarehouseMigrationLegacyFixture() }
+        private val database = WarehouseSchemaDatabase("172").also { db -> db.ownerFixture { connection ->
+            legacy.forEach { it.seed(connection) }
+        } }
+        @JvmStatic @DynamicPropertySource fun database(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url") { database.url }
+            registry.add("spring.flyway.url") { database.url }
+            registry.add("spring.flyway.schemas") { database.schema }
+            registry.add("spring.flyway.default-schema") { database.schema }
+        }
+        @JvmStatic @AfterAll fun cleanup() { database.close() }
+    }
+    @LocalServerPort private var port: Int = 0
+    @Autowired private lateinit var storage: ObjectStorage
+    @Autowired private lateinit var inbox: WarehouseInboxApi
+    private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+
+    private data class Batch(val token: String, val actor: String, val old: WarehouseMigrationLegacyFixture, val id: String,
+        val cases: List<JsonNode>, val cable: String, val serial: String) {
+        fun case(sourceId: UUID) = cases.single { it.path("sourceId").asString() == sourceId.toString() }
+        fun path(source: JsonNode) = "/api/v1/warehouse/provenance/batches/$id/cases/${source.path("id").asString()}"
+    }
+
+    private fun setup(index: Int): Batch {
+        val old = legacy[index]
+        val token = tenant("migration-${old.tenant}")
+        val actor = mapper.readTree(request("GET", "/api/me", token).contentAsString).path("id").asString()
+        database.ownerFixture { connection -> connection.createStatement().use { sql ->
+            sql.execute("SET app.tenant_id='${old.tenant}'")
+            sql.execute("UPDATE inventory_location SET name='Gudang lama',area_id='${area(token)}',revision=revision+1 WHERE id='${old.location}'")
+            sql.execute("UPDATE customer SET area_id='${area(token)}' WHERE id='${old.customer}'")
+        } }
+        grant(token, actor, listOf(old.location.toString()))
+        val cable = create("skus", token, """{"code":"CABLE","name":"Kabel lama","tracking":"LOT","baseUnit":"MM"}""").path("id").asString()
+        val serial = create("skus", token, """{"code":"ONU","name":"ONU lama","tracking":"SERIAL","baseUnit":"EA"}""").path("id").asString()
+        val report = request("GET", "/api/v1/warehouse/provenance", token)
+        assertThat(report.status).withFailMessage(report.contentAsString).isEqualTo(200)
+        val begin = send(token, "/api/v1/warehouse/provenance/batches", mapper.writeValueAsString(mapOf("expectedEpoch" to 0,
+            "expectedPreservationHash" to mapper.readTree(report.contentAsString).path("preservationHash").asString())))
+        assertThat(begin.statusCode()).withFailMessage(begin.body()).isEqualTo(201)
+        val cases = mapper.readTree(request("GET", "/api/v1/warehouse/provenance/cases", token).contentAsString).path("items").asSequence().toList()
+        return Batch(token, actor, old, mapper.readTree(begin.body()).path("batch").path("id").asString(), cases, cable, serial)
+    }
+
+    private fun evidence(batch: Batch, source: JsonNode): String {
+        val boundary = "migration-resolution-file"
+        val json = mapper.writeValueAsString(mapOf("expectedEpoch" to 1, "expectedCaseHash" to source.path("sourceHash").asString(), "label" to "Bukti pemeriksaan fisik"))
+        val bytes = ("--$boundary\r\nContent-Disposition: form-data; name=\"request\"\r\n\r\n$json\r\n--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"file\"; filename=\"proof.pdf\"\r\nContent-Type: application/pdf\r\n\r\n").toByteArray() +
+            ReceiptEvidenceFixtures.pdf() + "\r\n--$boundary--\r\n".toByteArray()
+        val response = client.send(HttpRequest.newBuilder(URI("http://127.0.0.1:$port${batch.path(source)}/evidence"))
+            .header("Authorization", "Bearer ${batch.token}").header("Idempotency-Key", UUID.randomUUID().toString())
+            .header("Content-Type", "multipart/form-data; boundary=$boundary").timeout(Duration.ofSeconds(20))
+            .POST(HttpRequest.BodyPublishers.ofByteArray(bytes)).build(), HttpResponse.BodyHandlers.ofString())
+        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(201)
+        return mapper.readTree(response.body()).path("id").asString()
+    }
+
+    private fun body(source: JsonNode, file: String, kind: String = "PROVENANCE_ONLY", revision: Long = 0,
+        stock: Map<String, String>? = null, duplicate: String? = null, reason: String = "Pemeriksaan data dan bukti asli") =
+        mapper.writeValueAsString(mapOf("expectedEpoch" to 1, "expectedCaseHash" to source.path("sourceHash").asString(),
+            "expectedResolutionRevision" to revision, "kind" to kind, "reason" to reason, "evidenceIds" to listOf(file),
+            "stock" to stock, "duplicateCaseId" to duplicate))
+    private fun stock(sku: String, unit: String, owner: String = "ISP") = mapOf("skuId" to sku, "sourceUnit" to unit, "legalOwner" to owner)
+    private fun command(token: String, path: String, body: String, key: String) = HttpRequest.newBuilder(URI("http://127.0.0.1:$port$path"))
+        .header("Authorization", "Bearer $token").header("Idempotency-Key", key).header("Content-Type", "application/json")
+        .timeout(Duration.ofSeconds(25)).POST(HttpRequest.BodyPublishers.ofString(body)).build()
+    private fun send(token: String, path: String, body: String, key: String = UUID.randomUUID().toString()) =
+        client.send(command(token, path, body, key), HttpResponse.BodyHandlers.ofString())
+    private fun cleanup(batch: Batch) {
+        val prefix = "${batch.old.tenant}/warehouse/migrations/${batch.id}/"
+        storage.list(batch.old.tenant.toString(), prefix).objects.forEach { storage.delete(it.key) }
+    }
+
+    private fun review(batch: Batch): JsonNode {
+        val response = request("GET", "/api/v1/warehouse/provenance/batches/${batch.id}/review", batch.token)
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
+        return mapper.readTree(response.contentAsString)
+    }
+    private fun openingInput(batch: Batch, review: JsonNode = review(batch)): String {
+        val location = mapper.readTree(request("GET", "/api/v1/warehouse/locations/${batch.old.location}", batch.token).contentAsString)
+        return mapper.writeValueAsString(mapOf("expectedEpoch" to 1, "expectedReviewHash" to review.path("reviewHash").asString(),
+            "reviewLocationId" to batch.old.location, "expectedReviewLocationRevision" to location.path("revision").asLong(),
+            "migrationReference" to "Catatan stok sebelum migrasi", "reason" to "Hasil pemeriksaan fisik dan riwayat asli"))
+    }
+    private fun resolve(batch: Batch, id: UUID, kind: String, stock: Map<String, String>? = null, duplicate: String? = null,
+        revision: Long = 0): String {
+        val source = batch.case(id)
+        val file = evidence(batch, source)
+        val response = send(batch.token, batch.path(source) + "/resolutions", body(source, file, kind, revision, stock, duplicate))
+        assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(201)
+        return file
+    }
+    private fun ready(batch: Batch): String {
+        resolve(batch, batch.old.first, "BASELINE_STOCK", stock(batch.serial, "EA"))
+        resolve(batch, batch.old.second, "DUPLICATE", duplicate = batch.case(batch.old.first).path("id").asString())
+        val balanceFile = resolve(batch, batch.old.balance, "BASELINE_STOCK", stock(batch.cable, "MM"))
+        resolve(batch, batch.old.pending, "CANCEL_PENDING")
+        assertThat(review(batch).path("issues").size()).isZero()
+        return balanceFile
+    }
+
+    class FailureProbe : WarehouseApprovalProbe {
+        val stage = java.util.concurrent.atomic.AtomicReference<WarehouseApprovalStage?>()
+        val lastError = java.util.concurrent.atomic.AtomicReference<String?>()
+        override fun reached(stage: WarehouseApprovalStage, requestId: UUID) {
+            if (this.stage.get() == stage) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.STALE_REVISION, "Injected opening rollback"))
+        }
+    }
+    @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
+    class Configuration {
+        @org.springframework.context.annotation.Bean fun openingFailureProbe() = FailureProbe()
+        @org.springframework.context.annotation.Bean fun openingDiagnostics(probe: FailureProbe) = object : org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
+            override fun extendHandlerExceptionResolvers(resolvers: MutableList<org.springframework.web.servlet.HandlerExceptionResolver>) {
+                resolvers.add(0, org.springframework.web.servlet.HandlerExceptionResolver { _, _, _, exception ->
+                    val cause = generateSequence<Throwable>(exception) { it.cause }.last()
+                    // Keep diagnostic context in private test output, never in the HTTP response.
+                    probe.lastError.set(cause.javaClass.simpleName + ": " + cause.message?.lineSequence()?.firstOrNull() +
+                        " at " + cause.stackTrace.firstOrNull())
+                    null
+                })
+            }
+        }
+    }
+    @Autowired private lateinit var failure: FailureProbe
+    private fun diagnostic(response: HttpResponse<String>) = response.body() + "\n" + failure.lastError.get().orEmpty()
+
+    private fun tiers(token: String, place: String, count: Int): List<Pair<String, String>> {
+        val approvers = List(count) { approver(token, listOf(place)) }
+        configure(token, mapper.writeValueAsString(mapOf("expectedRevision" to 0, "currency" to "IDR", "expiryHours" to 24,
+            "warehouseIds" to listOf(place), "rules" to listOf(mapOf("operation" to "OPENING_BALANCE", "tiers" to approvers.mapIndexed { index, actor ->
+                mapOf("minimumMinor" to ((index + 1L) * 100000000).toString(), "userIds" to listOf(actor.second), "roleIds" to emptyList<String>())
+            })))))
+        return approvers
+    }
+    private fun seal(batch: Batch): String {
+        val result = send(batch.token, "/api/v1/warehouse/provenance/batches/${batch.id}/opening", openingInput(batch))
+        assertThat(result.statusCode()).withFailMessage(diagnostic(result)).isEqualTo(201)
+        return mapper.readTree(result.body()).path("id").asString()
+    }
+    private fun pending(token: String, document: String): String {
+        val source = request("GET", "/api/v1/warehouse/approvals/sources/$document", token)
+        assertThat(source.status).withFailMessage(source.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(source.contentAsString).path("canRequest").asBoolean()).withFailMessage(source.contentAsString).isTrue()
+        val result = send(token, "/api/v1/warehouse/approvals/request", mapper.writeValueAsString(mapOf("sourceDocumentId" to document, "sourceRevision" to 0)))
+        assertThat(result.statusCode()).withFailMessage(diagnostic(result)).isEqualTo(201)
+        return mapper.readTree(result.body()).path("requestId").asString()
+    }
+    private fun decide(token: String, approval: String, revision: Long = 0, key: String = UUID.randomUUID().toString(), action: String = "APPROVE") =
+        send(token, "/api/v1/warehouse/approvals/decide", decision(approval, revision, action, if (action == "REJECT") "Pemeriksaan ulang diperlukan" else null), key)
+
+    @Test fun `independent all-tier approval admits exact original physical identity and one competing baseline wins`() {
+        val batch = setup(0)
+        try {
+            ready(batch)
+            val first = seal(batch)
+            val second = seal(batch)
+            val actors = tiers(batch.token, batch.old.location.toString(), 3)
+            val approvals = listOf(pending(batch.token, first), pending(batch.token, second))
+            assertThatThrownBy { fixture(batch.token).transaction {
+                sql("SELECT warehouse_admit_migration_opening('$first','${approvals[0]}','${UUID.randomUUID()}')")
+            } }.hasStackTraceContaining("opening admission requires current independent approval and exact source")
+            assertThatThrownBy { fixture(batch.token).transaction {
+                sql("INSERT INTO inventory_migration_admission SELECT * FROM inventory_migration_admission WHERE false")
+            } }.hasStackTraceContaining("permission denied for table inventory_migration_admission")
+            val details = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/details", actors[0].first)
+            assertThat(details.status).withFailMessage(details.contentAsString).isEqualTo(200)
+            val view = mapper.readTree(details.contentAsString)
+            assertThat(view.path("document").path("migration").path("baselineCount").asInt()).isEqualTo(2)
+            assertThat(view.path("document").path("migration").path("valuation").asString()).isEqualTo("UNKNOWN")
+            assertThat(view.path("document").path("lines").asSequence().map { it.path("serial").asString() }.toList()).contains(" Serial-A ")
+            assertThat(view.path("actions").path("canDecide").asBoolean()).isTrue()
+            assertThat(view.path("cost").isMissingNode).isTrue()
+            val cases = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/migration-cases?size=2", actors[0].first)
+            assertThat(cases.status).isEqualTo(200)
+            assertThat(mapper.readTree(cases.contentAsString).path("totalElements").asInt()).isEqualTo(11)
+            assertThat(mapper.readTree(cases.contentAsString).path("items").size()).isEqualTo(2)
+            val attachments = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/attachments", actors[0].first)
+            assertThat(attachments.status).isEqualTo(200)
+            assertThat(attachments.contentAsString).doesNotContain("objectKey", "storageKey", "/warehouse/migrations/")
+            val files = mapper.readTree(attachments.contentAsString).path("items").asSequence().toList()
+            assertThat(files).hasSize(4)
+            for (file in files) {
+                val download = request("GET", "/api/v1/warehouse/approvals/${approvals[0]}/attachments/${file.path("id").asString()}", actors[0].first)
+                assertThat(download.status).isEqualTo(200)
+                assertThat(download.contentAsByteArray).isEqualTo(ReceiptEvidenceFixtures.pdf())
+            }
+            assertThat(request("GET", "/api/v1/warehouse/provenance/batches/${batch.id}/review", actors[0].first).status).isEqualTo(403)
+            for (approval in approvals) for (tier in 0..1) {
+                val result = decide(actors[tier].first, approval, tier.toLong())
+                assertThat(result.statusCode()).withFailMessage(result.body()).isEqualTo(200)
+            }
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_migration_admission")).isEqualTo("0")
+                assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
+                assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE value_numerator IS NULL AND value_denominator IS NULL AND currency IS NULL")).isEqualTo("2")
+            }
+            val keys = List(2) { UUID.randomUUID().toString() }
+            val outcomes = approvals.mapIndexed { index, approval -> client.sendAsync(command(actors[2].first,
+                "/api/v1/warehouse/approvals/decide", decision(approval, 2), keys[index]), HttpResponse.BodyHandlers.ofString()) }.map { it.get(25, TimeUnit.SECONDS) }
+            assertThat(outcomes.map { it.statusCode() }.sorted()).withFailMessage(outcomes.joinToString { it.body() }).isEqualTo(listOf(200, 409))
+            val winner = outcomes.indexOfFirst { it.statusCode() == 200 }
+            assertThat(decide(actors[2].first, approvals[winner], 2, keys[winner]).body()).isEqualTo(outcomes[winner].body())
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_migration_admission")).isEqualTo("1")
+                assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE kind='OPENING_BALANCE' AND state='APPLIED'")).isEqualTo("1")
+                assertThat(scalar("SELECT count(*) FROM inventory_approval_effect")).isEqualTo("1")
+                assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE status='STALE'")).isEqualTo("1")
+                assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED' AND status='AVAILABLE' AND quantity_base IN (1,82500)")).isEqualTo("2")
+                assertThat(scalar("SELECT warehouse_admission||':'||serial_number FROM inventory_serialized_asset WHERE id='${batch.old.first}'")).isEqualTo("VERIFIED: Serial-A ")
+                assertThat(scalar("SELECT warehouse_admission||':'||serial_number FROM inventory_serialized_asset WHERE id='${batch.old.second}'")).isEqualTo("LEGACY_UNRESOLVED:serial-a")
+                assertThat(scalar("SELECT quantity FROM inventory_balance_projection WHERE id='${batch.old.balance}'")).isEqualTo("82500")
+                assertThat(scalar("SELECT count(*) FROM inventory_lot WHERE supplier_id IS NULL AND cost_total_minor IS NULL")).isEqualTo("1")
+                assertThat(scalar("SELECT state FROM inventory_tenant_cutover")).isEqualTo("VALIDATING")
+            }
+        } finally { cleanup(batch) }
+    }
+
+    @Test fun `failure after physical admission rolls back original assets claims lot stock and final decision then same key succeeds`() {
+        val batch = setup(1)
+        try {
+            ready(batch)
+            val document = seal(batch)
+            val actor = tiers(batch.token, batch.old.location.toString(), 1).single()
+            val approval = pending(batch.token, document)
+            val key = UUID.randomUUID().toString()
+            for (stage in listOf(WarehouseApprovalStage.OWNER_EFFECT, WarehouseApprovalStage.EFFECT_RECEIPT, WarehouseApprovalStage.RESPONSE)) {
+                failure.stage.set(stage)
+                try {
+                    val result = decide(actor.first, approval, key = key)
+                    assertThat(result.statusCode()).withFailMessage(result.body()).isEqualTo(409)
+                    fixture(batch.token).transaction {
+                        for (table in listOf("inventory_migration_admission", "inventory_migration_admission_line", "inventory_lot", "inventory_segment", "inventory_approval_decision", "inventory_approval_effect", "inventory_outbox", "inventory_inbox"))
+                            assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
+                        assertThat(scalar("SELECT count(*) FROM inventory_identity_claim WHERE state='ADMITTED'")).isEqualTo("0")
+                        assertThat(scalar("SELECT count(*) FROM inventory_serialized_asset WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
+                        assertThat(scalar("SELECT status||':'||revision FROM inventory_approval")).isEqualTo("PENDING:0")
+                        assertThat(scalar("SELECT count(*) FROM inventory_document_line WHERE stock_identity_id IS NOT NULL")).isEqualTo("0")
+                    }
+                } finally { failure.stage.set(null) }
+            }
+            val result = decide(actor.first, approval, key = key)
+            assertThat(result.statusCode()).withFailMessage(diagnostic(result)).isEqualTo(200)
+            assertThat(decide(actor.first, approval, key = key).body()).isEqualTo(result.body())
+        } finally { cleanup(batch) }
+    }
+
+    @Test fun `changed current owner area stales the sealed approval and rejection requires a new immutable request`() {
+        val batch = setup(2)
+        try {
+            ready(batch)
+            val document = seal(batch)
+            val actor = tiers(batch.token, batch.old.location.toString(), 1).single()
+            val approval = pending(batch.token, document)
+            val response = request("POST", "/api/areas", batch.token, """{"code":"NEW-CUSTOMER","name":"Current customer area"}""")
+            assertThat(response.status).isEqualTo(201)
+            val addedArea = mapper.readTree(response.contentAsString).path("id").asString()
+            for (id in listOf(batch.actor, actor.second)) {
+                val principal = mapper.readTree(request("GET", "/api/users/$id", batch.token).contentAsString)
+                assertThat(request("PUT", "/api/users/$id/access", batch.token, mapper.writeValueAsString(mapOf(
+                    "roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(batch.token), addedArea)))).status).isEqualTo(200)
+            }
+            database.ownerFixture { connection -> connection.createStatement().use { sql ->
+                sql.execute("SET app.tenant_id='${batch.old.tenant}'")
+                sql.execute("UPDATE customer SET area_id='$addedArea' WHERE id='${batch.old.customer}'")
+            } }
+            val stale = decide(actor.first, approval)
+            assertThat(stale.statusCode()).withFailMessage(stale.body()).isEqualTo(409)
+            assertThat(mapper.readTree(stale.body()).path("status").asString()).isEqualTo("STALE")
+            val revised = seal(batch)
+            val rejected = pending(batch.token, revised)
+            val reject = decide(actor.first, rejected, action = "REJECT")
+            assertThat(reject.statusCode()).withFailMessage(reject.body()).isEqualTo(200)
+            val detail = request("GET", "/api/v1/warehouse/approvals/$rejected/details", batch.token)
+            assertThat(detail.status).withFailMessage(detail.contentAsString).isEqualTo(200)
+            assertThat(mapper.readTree(detail.contentAsString).path("actions").path("canRework").asBoolean()).isFalse()
+            assertThat(seal(batch)).isNotEqualTo(revised)
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_migration_admission")).isEqualTo("0")
+                assertThat(scalar("SELECT approval_disposition FROM inventory_document WHERE id='$revised'")).isEqualTo("REWORK_REQUIRED")
+            }
+        } finally { cleanup(batch) }
+    }
+
+    @Test fun `empty legacy tenant posts explicit approved zero baseline without physical SKU line or valuation`() {
+        val old = legacy[3]
+        val token = tenant("migration-${old.otherTenant}")
+        val place = create("locations", token, """{"code":"EMPTY","name":"Empty baseline review","kind":"WAREHOUSE"}""")
+        val report = mapper.readTree(request("GET", "/api/v1/warehouse/provenance", token).contentAsString)
+        val begin = send(token, "/api/v1/warehouse/provenance/batches", mapper.writeValueAsString(mapOf("expectedEpoch" to 0,
+            "expectedPreservationHash" to report.path("preservationHash").asString())))
+        assertThat(begin.statusCode()).withFailMessage(begin.body()).isEqualTo(201)
+        val batch = mapper.readTree(begin.body()).path("batch").path("id").asString()
+        val review = mapper.readTree(request("GET", "/api/v1/warehouse/provenance/batches/$batch/review", token).contentAsString)
+        val opened = send(token, "/api/v1/warehouse/provenance/batches/$batch/opening", mapper.writeValueAsString(mapOf(
+            "expectedEpoch" to 1, "expectedReviewHash" to review.path("reviewHash").asString(), "reviewLocationId" to place.path("id").asString(),
+            "expectedReviewLocationRevision" to place.path("revision").asLong(), "migrationReference" to "Confirmed no physical stock", "reason" to "No stock or pending legacy effects")))
+        assertThat(opened.statusCode()).withFailMessage(opened.body()).isEqualTo(201)
+        val document = mapper.readTree(opened.body()).path("id").asString()
+        val actor = tiers(token, place.path("id").asString(), 1).single()
+        val approval = pending(token, document)
+        val approved = decide(actor.first, approval)
+        assertThat(approved.statusCode()).withFailMessage(diagnostic(approved)).isEqualTo(200)
+        fixture(token).transaction {
+            for (table in listOf("inventory_sku", "inventory_document_line", "inventory_movement_leg", "inventory_balance_projection", "inventory_lot", "inventory_migration_admission_line"))
+                assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM inventory_migration_admission")).isEqualTo("1")
+            assertThat(scalar("SELECT kind||':'||state FROM inventory_movement")).isEqualTo("OPENING_BALANCE:APPLIED")
+            assertThat(scalar("SELECT count(*) FROM inventory_approval_effect")).isEqualTo("1")
+            assertThat(scalar("SELECT state FROM inventory_tenant_cutover")).isEqualTo("VALIDATING")
+            val event = UUID.fromString(scalar("SELECT id FROM inventory_outbox WHERE event_kind='OPENING_POSTED'"))
+            assertThat(inbox.consume(event, "warehouse.approval.receipt") { error("A duplicate delivery cannot apply again") }).isFalse()
+        }
+        assertThatThrownBy { fixture(token).transaction {
+            val event = UUID.fromString(scalar("SELECT id FROM inventory_outbox WHERE event_kind='OPENING_POSTED'"))
+            inbox.consume(event, "ordinary.effect") { error("Ordinary consumers remain gated during migration") }
+        } }.isInstanceOf(WarehouseContractException::class.java)
+    }
+}

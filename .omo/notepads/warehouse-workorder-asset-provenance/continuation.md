@@ -1,3 +1,51 @@
+## Task43 opening approval, admission and web review verified
+
+Branch `work/warehouse-completion`, remote `origin/feat/warehouse-workorder`.
+This checkpoint builds on `7b02a825`; locate its commit with `git log -1`.
+Tasks1–42 complete;43 in progress;44–48 and F1–F4 remain. Continue full scope.
+
+Real HTTP + PostgreSQL + MinIO gate:47 tests in9 suites PASS, no failures/skips,
+6m28s. Safe proof `task43/opening-admission-verification.json` records source hashes.
+Approved opening preserves original physical IDs/raw serial, posts exact1EA and
+82500MM unknown-cost stock, and supports an explicit zero baseline without fake SKU.
+All tiers are independent; current owner areas, source manifest and original files
+are checked. Competing finals admit once, exact response replay works, and three
+failure stages roll back every physical/control effect. Ordinary posting/restart,
+receipt approval/evidence/workbench, policy, schema and module regressions passed.
+The earlier broad-run heap failure is resolved by1536MiB and context cache size1.
+
+Web warehouse gate:257 tests/50 files PASS38.26s, lint PASS (existing unrelated
+warnings), TypeScript and production build PASS. Safe proof
+`task43/opening-web-verification.json`. Approval workbench now reviews opening
+cutoff, physical lines or explicit zero, unknown valuation, unresolved history,
+bounded sealed cases and actual private evidence with SHA256 validation. Current
+permission denial removes download controls. Full provenance management page and
+browser acceptance remain pending; these tests are not browser acceptance.
+
+V177.7–177.7.3 APPLIED and IMMUTABLE; hashes in docs/warehouse-migrations.md.
+Next free M05 version177.8;178 reserved forM06. Tenant stays VALIDATING after
+opening. Narrow OPENING_POSTED approval-receipt inbox exception requires the
+current owner admission; ordinary consumers remain closed. No legacy price,
+supplier, receipt or identity is invented. Applied migrations must not be edited.
+
+NEXT: approved permanent cancellation of captured pending legacy effects; reserve
+all current identities, including sources changed/created since boot; finalization
+and M06 mixed-tenant restart; actionable `/warehouse/provenance` management UI.
+Then44–48/F1–F4. CANCEL_PENDING resolutions are currently proposals only.
+Legacy fulfillment CONTROL_PLANE fencing does not freeze checkpoint/outbox state:
+old dispatch can still mark reconciliation or change leases. Cancellation must
+recheck current owner state, permanently prevent later dispatch, preserve history,
+and join the approved opening effect atomically or use a bound durable receipt.
+Do not falsely claim pending effects are already canceled.
+
+QA Docker services stopped, volumes retained. Use host lock
+`/home/fajar/ftth/warehouse-workorder-asset-provenance-resume/.omo/runtime/wave5-host-qa.lock`,
+JDK21, task-local Gradle cache/workers2, owned QA marker/private environment.
+Private runtime logs: migration-opening-admission-final-retry.log and
+migration-opening-web-final.log. Never commit raw logs/XML/private environment.
+Commit and push coherent verified phases with updated proof and these notes.
+Older sections below are historical; this leading status takes precedence.
+
 ## Task43 unvalued opening policy evaluation verified; actual approval/posting NEXT
 
 15tests PASS: Opening4,PolicyEvaluation6,DurableReceiptApproval2,Modularity3.

@@ -1,13 +1,13 @@
-import { array, boolean, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
+import { array, boolean, decimal, digest, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { approval, timestamp, type WarehouseApproval } from './approvals'
 import { baseUnit } from './materialModels'
 import { CONDITIONS, LEGAL_OWNERS, TRACKING } from './models'
 import { parameters, query } from './transport'
 import { api } from '../client'
 
-export const APPROVAL_KINDS = ['RECEIPT', 'ADJUSTMENT', 'COUNT', 'TITLE_CORRECTION', 'RETURN_TITLE', 'LOSS', 'SCRAP', 'DISPOSITION_REVERSAL', 'ASSET_LOSS'] as const
+export const APPROVAL_KINDS = ['RECEIPT', 'ADJUSTMENT', 'COUNT', 'TITLE_CORRECTION', 'RETURN_TITLE', 'LOSS', 'SCRAP', 'DISPOSITION_REVERSAL', 'ASSET_LOSS', 'OPENING_BALANCE'] as const
 export const POLICY_OPERATIONS = ['RECEIPT', 'ISSUE', 'ISSUE_EXCEPTION', 'OPENING_BALANCE', 'ADJUSTMENT', 'LOSS', 'SCRAP', 'COUNT_VARIANCE', 'TITLE_REACQUISITION'] as const
-export const EFFECT_ACTIONS = ['RECEIVE', 'TRANSFER_REMAINDER', 'COUNT_VARIANCE', 'TITLE_REACQUISITION', 'LOSS', 'SCRAP', 'DISPOSITION_REVERSED'] as const
+export const EFFECT_ACTIONS = ['RECEIVE', 'TRANSFER_REMAINDER', 'COUNT_VARIANCE', 'TITLE_REACQUISITION', 'LOSS', 'SCRAP', 'DISPOSITION_REVERSED', 'OPENING_BALANCE'] as const
 function person(value: unknown, path = 'person') {
   const row = record(value, path)
   return { id: uuid(row.id, path), name: nullable(row.name, text, path) }
@@ -30,15 +30,27 @@ function comparison(value: unknown, path = 'comparison') {
 }
 function evidenceReference(value: unknown, path = 'reference') {
   const row = record(value, path)
-  return { kind: oneOf(row.kind, ['RECEIPT', 'TRANSFER', 'DISPOSITION', 'COMPENSATION', 'TITLE_TRANSFER'], path), reference: text(row.reference, path) }
+  return { kind: oneOf(row.kind, ['RECEIPT', 'TRANSFER', 'DISPOSITION', 'COMPENSATION', 'TITLE_TRANSFER', 'MIGRATION'], path), reference: text(row.reference, path) }
+}
+function migration(value: unknown, path = 'migration') {
+  const row = record(value, path), watermark = text(row.watermark, path)
+  const result = { batchId: uuid(row.batchId, path), watermark,
+    cutoff: timestamp(watermark.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00'), path),
+    sourceHash: digest(row.sourceHash, path), reviewHash: digest(row.reviewHash, path), caseCount: integer(row.caseCount, path),
+    baselineCount: integer(row.baselineCount, path), unresolvedHistoricalCount: integer(row.unresolvedHistoricalCount, path), valuation: oneOf(row.valuation, ['UNKNOWN'], path) }
+  if (result.baselineCount + result.unresolvedHistoricalCount > result.caseCount) throw new WarehouseDataError(path)
+  return result
 }
 export function approvalDocument(value: unknown, path = 'document') {
   const row = record(value, path)
+  const opening = nullable(row.migration, migration, path)
   const document = { id: uuid(row.id, path), revision: integer(row.revision, path), kind: oneOf(row.kind, APPROVAL_KINDS, path), code: text(row.code, path), state: text(row.state, path),
     reason: nullable(row.reason, text, path), createdAt: timestamp(row.createdAt, path), requester: person(row.requester, path), locations: array(row.locations, location, path, 1000),
     lines: array(row.lines, line, path, 1000), comparisons: array(row.comparisons, comparison, path, 100), evidenceReferences: array(row.evidenceReferences ?? [], evidenceReference, path, 5),
-    receiptId: nullable(row.receiptId, uuid, path), countId: nullable(row.countId, uuid, path), transferId: nullable(row.transferId, uuid, path), returnId: nullable(row.returnId, uuid, path) }
-  if (!document.lines.length || new Set(document.lines.map(line => line.id)).size !== document.lines.length ||
+    receiptId: nullable(row.receiptId, uuid, path), countId: nullable(row.countId, uuid, path), transferId: nullable(row.transferId, uuid, path), returnId: nullable(row.returnId, uuid, path),
+    ...(opening ? { migration: opening } : {}) }
+  if ((document.kind === 'OPENING_BALANCE') !== (opening !== null) || (opening && (opening.baselineCount !== document.lines.length || !document.locations.length)) ||
+    (!document.lines.length && !opening) || new Set(document.lines.map(line => line.id)).size !== document.lines.length ||
     document.lines.some(line => [line.locationId, line.destinationLocationId].some(id => id !== null && !document.locations.some(location => location.id === id))) ||
     document.lines.some(line => document.kind === 'COUNT' ? line.quantityBase !== null : line.quantityBase === null) ||
     (document.comparisons.length > 0 && (document.kind !== 'COUNT' || !['SUBMITTED', 'APPROVED', 'POSTED'].includes(document.state))) ||
@@ -91,17 +103,18 @@ export function approvalDetails(value: unknown, path = 'details') {
     result.actions.reworkSourceRevision !== result.currentSourceRevision || result.actions.canDecide === (result.actions.decisionBlock !== null) ||
     (result.actions.canDecide && (result.approval.status !== 'PENDING' || result.actions.currentTier === null || result.currentSourceRevision !== result.approval.sourceRevision)) ||
     (result.effect?.operationId ?? null) !== result.approval.effectOperationId || (result.effect && (result.approval.status !== 'APPROVED' || result.effect.businessAction !== ({
-      RECEIPT: 'RECEIVE', ADJUSTMENT: 'TRANSFER_REMAINDER', COUNT: 'COUNT_VARIANCE', TITLE_CORRECTION: 'TITLE_REACQUISITION', RETURN_TITLE: 'TITLE_REACQUISITION', LOSS: 'LOSS', SCRAP: 'SCRAP', ASSET_LOSS: 'LOSS', DISPOSITION_REVERSAL: 'DISPOSITION_REVERSED',
-    } as const)[result.document.kind]))) throw new WarehouseDataError(path)
+      RECEIPT: 'RECEIVE', ADJUSTMENT: 'TRANSFER_REMAINDER', COUNT: 'COUNT_VARIANCE', TITLE_CORRECTION: 'TITLE_REACQUISITION', RETURN_TITLE: 'TITLE_REACQUISITION', LOSS: 'LOSS', SCRAP: 'SCRAP', ASSET_LOSS: 'LOSS', DISPOSITION_REVERSAL: 'DISPOSITION_REVERSED', OPENING_BALANCE: 'OPENING_BALANCE',
+    } as const)[result.document.kind])) || (result.document.migration && result.cost !== null)) throw new WarehouseDataError(path)
   return result
 }
 export type ApprovalDetails = ReturnType<typeof approvalDetails>
 export function approvalAttachment(value: unknown, path = 'attachment') {
   const row = record(value, path)
-  const file = { id: uuid(row.id, path), kind: oneOf(row.kind, ['RECEIPT', 'SIGNATURE'], path), recordedAt: timestamp(row.recordedAt, path),
+  const file = { id: uuid(row.id, path), kind: oneOf(row.kind, ['RECEIPT', 'SIGNATURE', 'MIGRATION_EVIDENCE'], path), recordedAt: timestamp(row.recordedAt, path),
     contentType: nullable(row.contentType, (value, path) => oneOf(value, ['image/png', 'image/jpeg', 'application/pdf'], path), path),
-    sizeBytes: nullable(row.sizeBytes, integer, path), signerLabel: nullable(row.signerLabel, text, path) }
-  if (file.kind === 'RECEIPT' && (file.contentType === null || file.sizeBytes === null || file.sizeBytes < 1 || file.sizeBytes > 15728640)) throw new WarehouseDataError(path)
+    sizeBytes: nullable(row.sizeBytes, integer, path), signerLabel: nullable(row.signerLabel, text, path),
+    ...(row.kind === 'MIGRATION_EVIDENCE' ? { label: text(row.label, path), sha256: digest(row.sha256, path), caseId: uuid(row.caseId, path) } : {}) }
+  if (file.kind !== 'SIGNATURE' && (file.contentType === null || file.sizeBytes === null || file.sizeBytes < 1 || file.sizeBytes > 15728640)) throw new WarehouseDataError(path)
   return file
 }
 export type ApprovalAttachment = ReturnType<typeof approvalAttachment>

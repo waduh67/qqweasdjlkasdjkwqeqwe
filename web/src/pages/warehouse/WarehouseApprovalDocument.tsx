@@ -16,19 +16,27 @@ export function WarehouseApprovalDocument({ document }: { document: ApprovalDocu
     <p>{approvalKindLabels[document.kind]} · <WarehouseStatus status={document.state} /> · Revisi sumber {document.revision}</p>
     <p>Pembuat: {approvalPersonLabel(document.requester)} · <WarehouseTime value={document.createdAt} /></p>
     {document.reason && <p>{document.reason}</p>}
-    {document.evidenceReferences.length > 0 && <div><h3>Referensi bukti sumber</h3><ul>{document.evidenceReferences.map((row, index) => <li key={index} style={{ overflowWrap: 'anywhere' }}>{({ RECEIPT: 'Dokumen penerimaan', TRANSFER: 'Berita acara transfer', DISPOSITION: 'Bukti disposisi', COMPENSATION: 'Bukti koreksi', TITLE_TRANSFER: 'Serah terima hak milik' } as const)[row.kind]}: {row.reference}</li>)}</ul></div>}
+    {document.evidenceReferences.length > 0 && <div><h3>Referensi bukti sumber</h3><ul>{document.evidenceReferences.map((row, index) => <li key={index} style={{ overflowWrap: 'anywhere' }}>{({ RECEIPT: 'Dokumen penerimaan', TRANSFER: 'Berita acara transfer', DISPOSITION: 'Bukti disposisi', COMPENSATION: 'Bukti koreksi', TITLE_TRANSFER: 'Serah terima hak milik', MIGRATION: 'Catatan migrasi' } as const)[row.kind]}: {row.reference}</li>)}</ul></div>}
+    {document.migration && <section className="stack" aria-label="Ringkasan saldo awal"><h3>Saldo awal migrasi</h3>
+      <p>Batas data: <WarehouseTime value={document.migration.cutoff} />. {document.migration.caseCount} kasus sumber diperiksa, {document.migration.baselineCount} posisi stok pada usulan.</p>
+      <p>Harga historis belum diketahui. Semua tahap persetujuan dalam kebijakan wajib diperiksa.</p>
+      {document.migration.baselineCount === 0 && <p>Usulan ini menyatakan tidak ada stok fisik. Tidak ada jumlah barang yang ditambahkan.</p>}
+      {document.migration.unresolvedHistoricalCount > 0 && <p>{document.migration.unresolvedHistoricalCount} catatan historis belum diselesaikan dan tetap disimpan di luar stok yang dapat digunakan.</p>}
+      <details><summary>Referensi audit migrasi</summary><p style={{ overflowWrap: 'anywhere' }}>Batch: {document.migration.batchId}</p>
+        <p style={{ overflowWrap: 'anywhere' }}>Sidik sumber: {document.migration.sourceHash}</p><p style={{ overflowWrap: 'anywhere' }}>Sidik tinjauan: {document.migration.reviewHash}</p></details>
+    </section>}
     <div className="row wrap">
       {document.receiptId && can('inventory.receipt.view') && <Link to={receiptLink(document.receiptId)}>Buka penerimaan sumber</Link>}
       {document.countId && can('inventory.count.view') && <Link to={`/warehouse/counts?countId=${encodeURIComponent(document.countId)}`}>Buka stock opname sumber</Link>}
       {document.transferId && can('inventory.transfer.view') && <Link to={`/warehouse/transfers?transferId=${encodeURIComponent(document.transferId)}`}>Buka transfer sumber</Link>}
       {document.returnId && can('inventory.return.view') && <Link to={`/warehouse/returns?returnId=${encodeURIComponent(document.returnId)}`}>Buka retur sumber</Link>}
     </div>
-    <DataTable presentation="warehouse" rows={document.lines} rowKey={line => line.id} columns={[
+    {(document.lines.length > 0 || !document.migration) && <DataTable presentation="warehouse" rows={document.lines} rowKey={line => line.id} columns={[
       { key: 'item', header: 'Barang', cell: approvalLineLabel },
       { key: 'quantity', header: 'Jumlah sumber', cell: line => line.quantityBase === null ? 'Lihat hasil pengajuan' : <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /> },
       { key: 'locations', header: 'Asal → Tujuan', cell: line => `${location(line.locationId)} → ${location(line.destinationLocationId)}` },
       { key: 'condition', header: 'Kondisi / Pemilik', cell: line => <span><WarehouseStatus status={line.condition} /> · <WarehouseStatus status={line.legalOwner} /></span> },
-    ]} />
+    ]} />}
     {document.kind === 'COUNT' && (document.comparisons.length ? <><h3>Perbandingan pada pengajuan ini</h3>
       <DataTable presentation="warehouse" rows={document.comparisons} rowKey={row => row.balanceId} columns={[
         { key: 'item', header: 'Posisi barang', cell: row => <span>{document.lines.find(line => line.skuId === row.skuId)?.name}<p className="muted" style={{ overflowWrap: 'anywhere' }}>{row.balanceId}</p></span> },

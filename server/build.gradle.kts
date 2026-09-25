@@ -85,7 +85,10 @@ tasks.withType<Test> {
     useJUnitPlatform()
     maxParallelForks = 1
     forkEvery = 50
-    maxHeapSize = "768m"
+    // Integration suites also open a second real server for restart checks.
+    // Bound cached contexts so earlier HTTP suites cannot exhaust the test JVM.
+    maxHeapSize = "1536m"
+    systemProperty("spring.test.context.cache.maxSize", "1")
     systemProperty("ftth.scheduling.enabled", "false")
     testLogging {
         events("passed", "skipped", "failed")

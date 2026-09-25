@@ -3,13 +3,15 @@ package com.duluin.ftth.inventory.application.service
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehousePolicyPersistence
+import com.duluin.ftth.inventory.adapter.outbound.persistence.MigrationOpeningStore
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
 
 @Component
-class WarehouseApprovalAuthority(private val access: WarehousePolicyAccess, private val policy: WarehousePolicyPersistence) {
+class WarehouseApprovalAuthority(private val access: WarehousePolicyAccess, private val policy: WarehousePolicyPersistence,
+    private val openings: MigrationOpeningStore) {
     fun authorize(record: WarehouseApprovalRecord, tier: Int, current: CurrentAuthority,
         decisions: List<WarehouseApprovalDecisionRecord>, now: Instant): WarehouseDelegation? {
         access.permission(current, "inventory.approval.view")
@@ -20,7 +22,11 @@ class WarehouseApprovalAuthority(private val access: WarehousePolicyAccess, priv
         val directory = access.directory(current)
         val principal = directory.users.singleOrNull { it.id == actor } ?: masterFailure(WarehouseErrorCode.FORBIDDEN)
         val locations = record.snapshot.locations
-        if (actor in excluded || !access.eligible(principal, locations)) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        val requiredAreas = openings.find(evaluation.sourceDocumentId)?.view?.let { opening ->
+            val sources = openings.currentAccess(opening.batchId)
+            (sources.customers.mapNotNull { it.areaId } + sources.workOrders.mapNotNull { it.areaId }).toSet()
+        }.orEmpty()
+        if (actor in excluded || !access.eligible(principal, locations, requiredAreas)) masterFailure(WarehouseErrorCode.FORBIDDEN)
         val grants = policy.delegations().filter { it.revokedAt == null && it.validFrom <= now && it.validUntil > now && it.operation == evaluation.operation }
         if (grants.any { it.delegateId == actor && it.approverId in excluded }) masterFailure(WarehouseErrorCode.FORBIDDEN)
         val requirement = requireNotNull(evaluation.policy).rules.single { it.operation == evaluation.operation }.tiers[tier - 1]
@@ -32,7 +38,7 @@ class WarehouseApprovalAuthority(private val access: WarehousePolicyAccess, priv
         val delegation = grants.sortedBy { it.id.toString() }.firstOrNull { grant ->
             val delegator = directory.users.singleOrNull { it.id == grant.approverId }
             grant.delegateId == actor && grant.approverId in sealedDirect && grant.approverId !in excluded && grant.approverId !in used && delegator != null &&
-                access.eligible(delegator, locations) && locations.filter { policy.covered(it, requireNotNull(evaluation.policy).warehouseIds) }
+                access.eligible(delegator, locations, requiredAreas) && locations.filter { policy.covered(it, requireNotNull(evaluation.policy).warehouseIds) }
                     .all { policy.covered(it, listOf(grant.locationId)) } &&
                 (if (grant.sourceRoleId == null) grant.approverId in requirement.userIds
                 else grant.sourceRoleId in decidingRoles && grant.sourceRoleId in delegator.roleIds) &&

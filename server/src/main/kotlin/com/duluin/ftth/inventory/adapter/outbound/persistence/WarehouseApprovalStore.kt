@@ -22,11 +22,19 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             ApprovalSourceState(it.getLong("revision"), it.getString("state"), it.getString("kind"), it.uuid("actor_id"),
                 it.getString("code"), it.getString("approval_disposition"), "", emptySet())
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+        if (header.kind == "OPENING_BALANCE" && sql.value("SELECT 1 FROM inventory_migration_opening_request WHERE tenant_id=? AND id=?", sql.tenant, id) == null)
+            sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val locations = sql.query("SELECT location_id,destination_location_id FROM inventory_document_line WHERE tenant_id=? AND document_id=? ORDER BY id FOR SHARE",
-            sql.tenant, id) { listOfNotNull(it.optionalUuid("location_id"), it.optionalUuid("destination_location_id")) }.flatten().toSet()
+            sql.tenant, id) { listOfNotNull(it.optionalUuid("location_id"), it.optionalUuid("destination_location_id")) }.flatten().toSet() +
+            sql.query("SELECT review_location_id FROM inventory_migration_opening_request WHERE tenant_id=? AND id=?", sql.tenant, id) { it.uuid("review_location_id") }
         val content = requireNotNull(sql.value("""SELECT (jsonb_build_object('document',to_jsonb(document),'lines',
             (SELECT jsonb_agg(to_jsonb(line) ORDER BY line.id) FROM inventory_document_line line WHERE line.tenant_id=document.tenant_id AND line.document_id=document.id),
             'intake',(SELECT to_jsonb(intake) FROM inventory_receipt_intake intake WHERE intake.tenant_id=document.tenant_id AND intake.id=document.id))
+            || CASE WHEN document.kind='OPENING_BALANCE' THEN (SELECT jsonb_build_object('opening',opening.original_body::jsonb,
+                'openingCurrentReview',warehouse_migration_review_manifest(opening.batch_id),
+                'openingCurrentAccess',warehouse_migration_source_access(opening.batch_id),
+                'openingCurrentIssues',warehouse_migration_review_issues(warehouse_migration_review_manifest(opening.batch_id)))
+                FROM inventory_migration_opening_request opening WHERE opening.tenant_id=document.tenant_id AND opening.id=document.id) ELSE '{}'::jsonb END
             || CASE WHEN document.kind='TITLE_CORRECTION' THEN jsonb_build_object('title',
                 (SELECT snapshot::jsonb FROM inventory_asset_title_request WHERE tenant_id=document.tenant_id AND id=document.id)) ELSE '{}'::jsonb END
             || CASE WHEN document.kind='RETURN_TITLE' THEN jsonb_build_object('returnTitle',
@@ -65,6 +73,12 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
         val snapshot = record.snapshot
         val evaluation = snapshot.evaluation
         val policy = requireNotNull(evaluation.policy)
+        if (evaluation.operation != PolicyOperation.OPENING_BALANCE) {
+            requireNotNull(evaluation.valueNumerator)
+            requireNotNull(evaluation.valueDenominator)
+        } else if (evaluation.valueNumerator != null || evaluation.valueDenominator != null || evaluation.currency != null) {
+            sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        }
         sql.update("""INSERT INTO inventory_approval(id,tenant_id,approval_type,amount,requester_id,policy_version,policy_snapshot,
             policy_snapshot_hash,operation_key,operation_hash,requested_at,expires_at,status,revision,policy_version_id,source_document_id,
             source_document_revision,source_snapshot_hash,business_action,value_numerator,value_denominator,currency,independence_snapshot,
@@ -72,8 +86,8 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             VALUES (?,?,?,NULL,?,?,?::jsonb,?,?,?,?,?,'PENDING',0,?,?,?,?,?,?,?,?,?::jsonb,?,?,?,?,?)""",
             record.id, sql.tenant, evaluation.operation.name, snapshot.requesterId, policy.revision, mapper.writeValueAsString(policy),
             WarehouseCanonicalPayload.parse(mapper.writeValueAsString(policy)).hash, key, hash, record.requestedAt, record.expiresAt, policy.id, evaluation.sourceDocumentId,
-            evaluation.sourceRevision, snapshot.sourceHash, evaluation.operation.name, requireNotNull(evaluation.valueNumerator).toBigDecimal(),
-            requireNotNull(evaluation.valueDenominator).toBigDecimal(), evaluation.currency, mapper.writeValueAsString(evaluation.excludedUserIds),
+            evaluation.sourceRevision, snapshot.sourceHash, evaluation.operation.name, evaluation.valueNumerator?.toBigDecimal(),
+            evaluation.valueDenominator?.toBigDecimal(), evaluation.currency, mapper.writeValueAsString(evaluation.excludedUserIds),
             evaluation.authorityEpoch, mapper.writeValueAsString(snapshot), snapshot.source,
             sql.connection.createArrayOf("uuid", snapshot.locations.toTypedArray()), snapshot.cutoverEpoch)
     }
@@ -127,7 +141,7 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             record.snapshot.evaluation.sourceDocumentId, record.snapshot.evaluation.sourceRevision, operation, body, event)
     }
     fun event(operation: UUID): UUID = jdbc.execute { sql ->
-        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','RETURN_RECEIVED','COUNT_POSTED','DISPOSED','DISPOSITION_REVERSED')", sql.tenant, operation) { it.uuid("id") }.single()
+        sql.query("SELECT id FROM inventory_outbox WHERE tenant_id=? AND operation_id=? AND event_kind IN ('RECEIVED','TITLE_REACQUIRED','RETURN_RECEIVED','COUNT_POSTED','DISPOSED','DISPOSITION_REVERSED','OPENING_POSTED')", sql.tenant, operation) { it.uuid("id") }.single()
     }
     fun candidates(): List<UUID> = jdbc.execute { sql ->
         sql.query("SELECT id FROM inventory_approval WHERE tenant_id=? AND evaluation_snapshot IS NOT NULL ORDER BY requested_at DESC,id", sql.tenant) { it.uuid("id") }

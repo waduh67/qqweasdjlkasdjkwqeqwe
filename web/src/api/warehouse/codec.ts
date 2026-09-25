@@ -25,6 +25,12 @@ export function uuid(value: unknown, path = 'id'): string {
   return id
 }
 
+export function digest(value: unknown, path = 'digest'): string {
+  const result = text(value, path)
+  if (!/^[0-9a-f]{64}$/.test(result)) throw new WarehouseDataError(path)
+  return result
+}
+
 export function integer(value: unknown, path = 'revision'): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new WarehouseDataError(path)
   return value

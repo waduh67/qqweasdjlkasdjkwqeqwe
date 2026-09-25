@@ -19,7 +19,8 @@ internal class PostingSql(val connection: Connection, val tenant: UUID) {
         statement.executeQuery().use { rows -> buildList { while(rows.next()) add(map(rows)) } }
     }
     fun value(sql: String, vararg parameters: Any?): String? = query(sql,*parameters) { it.getString(1) }.singleOrNull()
-    fun fail(code: WarehouseErrorCode): Nothing = throw WarehouseContractException(WarehouseError(code,code.name))
+    fun fail(code: WarehouseErrorCode, cause: Throwable? = null): Nothing =
+        throw WarehouseContractException(WarehouseError(code,code.name)).apply { if (cause != null) initCause(cause) }
 }
 
 internal fun ResultSet.uuid(column: String): UUID = getObject(column,UUID::class.java)

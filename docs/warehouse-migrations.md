@@ -1,3 +1,34 @@
+## Approved opening admission: V177.7 through V177.7.3 applied
+
+All four files are applied and immutable. The real PostgreSQL + HTTP + MinIO
+opening gate passes4tests: physical baseline and competing final decisions, empty
+baseline, current owner-area staleness/rejection, and rollback at three approval
+stages followed by an exact same-key retry. Broader posting/approval regression
+passes47 tests in9 suites, no failures/skips,6m28s; source hashes and results are in
+`task43/opening-admission-verification.json`.
+
+| Version | Purpose | SHA256 |
+| --- | --- | --- |
+|177.7|Owner admission, exact original identity/lot/ledger proof, sealed review and all-tier approval|96cfc4248a805342b65b04df3bbe1fc29368de6b6c6da8cac2fa16166ab1c26e|
+|177.7.1|All-null valuation permitted only for opening; ordinary exact-cost requirements retained|6d7d10af5298f749c47e0afbef69ce11ea9f96b706635ebb1c85d76e0a955db4|
+|177.7.2|Qualified configured tier reference|408dc32e72ec9f3bf101011044acda3e23ae791929260e62e01df7a037b42209|
+|177.7.3|Qualified origin document parameter and admission lot variable|1576f7e37ca0bec3e0cbaf190c9dcd03d778ca18cc154a2a4ffb0a2c67592a31|
+
+Only the checked owner function can insert admission witnesses or promote original
+legacy assets. Posting and its approval effect/event/inbox receipt commit together.
+No legacy price, supplier or receipt is fabricated. A zero-stock baseline has no SKU
+or physical line. Current actor and customer/WO area scope are reloaded for review,
+decision and evidence downloads. The independent approver has a bounded frozen-case
+and private-file API without requiring provenance-management permission. The web
+approval workbench now displays sealed cases and verifies original file SHA256
+before download. Warehouse web gate257 tests/50files, lint and production build
+pass; safe proof `task43/opening-web-verification.json`.
+
+The tenant remains VALIDATING after opening. Pending legacy cancellation execution,
+reservation of all current unresolved identities, finalization/M06 and the provenance
+web page are still required. Next free M05 version177.8;178 reserved for M06.
+Earlier sections below record previous phases and are superseded by this status.
+
 ## Opening policy evaluation following V177.6
 
 The existing policy evaluator now requires every configured tier for a sealed

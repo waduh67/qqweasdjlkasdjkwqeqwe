@@ -1,0 +1,35 @@
+{
+  "phase": "Independent opening review in approval workbench",
+  "baseCommit": "7b02a825c6ec7ea84f8d403837cc7ff09494103b",
+  "tests": 257,
+  "testFiles": 50,
+  "duration": "38.26s",
+  "lint": "PASS; existing unrelated warnings remain",
+  "build": "PASS: tsc -b and production Vite build; existing bundle-size warning",
+  "files": {
+    "web/src/api/warehouse/approvalReads.ts": "42cdef38999f5e8e274391882a1a17f5d90db004c7d0a1aa8e8cb42771756bd8",
+    "web/src/api/warehouse/codec.ts": "268c7dc6d1cb8048b7ddae831bbd371ef6cb9326120e65082698f2a6b64f3952",
+    "web/src/api/warehouse/migrationReview.test.ts": "3345734771f297fd4e6b2deee050373c6a1d983f0f08de4f10cf9218eeed1207",
+    "web/src/api/warehouse/migrationReview.ts": "49480056d44ad86eea1f300fbe843fe6a3f0d3b34e7cf176bf320a75d601c17c",
+    "web/src/pages/warehouse/WarehouseApprovalDocument.tsx": "9c74d685525b3176852a393a74c01a226d4bc5079818ad5e9f482ca813b8c3b2",
+    "web/src/pages/warehouse/WarehouseApprovalEvidence.tsx": "8e8b524c77940d2ba15c953ddb679243556d9448f08a65ba9c4c53cbb0353323",
+    "web/src/pages/warehouse/WarehouseApprovalMigration.test.tsx": "242d509478624245ff60d089c0630b347e51cb8f2b75542376df0bcde930d10a",
+    "web/src/pages/warehouse/WarehouseApprovalMigration.tsx": "0b5ded99fed614f9d234ebc88601be37c89e9db5efc03496410a4eb9f22f6b9f",
+    "web/src/pages/warehouse/WarehouseApprovalsPage.tsx": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0",
+    "web/src/pages/warehouse/approvalPresentation.ts": "369627c43daebdfa7ee1ad6aa0b469031f4b143687b19f042d8cbe54ecf982bf",
+    "web/src/pages/warehouse/stockPresentation.ts": "9cdda23f1eccc35ceb9b4151224e95af5cc4bf24b96c703bf5d8a2927e9b51b8",
+    "web/src/test/warehouseMigrationFixture.ts": "4ae1a756a689766c1f54842c7f7a9950f7085b06ea967d6bb27fee4b75d2bee8"
+  },
+  "checks": [
+    "Sealed opening metadata, exact physical baseline counts and explicit empty baseline decode strictly; missing metadata and fabricated cost reject.",
+    "Opening review displays cutoff, unknown historical cost, exact base units and unresolved historical exclusions.",
+    "Case page validates sealed case total and resolution batch; raw blank legacy identity stays explicit.",
+    "Actual private attachment endpoint bytes are SHA256 checked against sealed evidence before download. Permission loss removes download controls.",
+    "Ordinary approval, stock, material, customer, RMA and warehouse components pass the bounded warehouse regression."
+  ],
+  "remaining": [
+    "Provenance management page",
+    "Actual browser acceptance",
+    "Legacy pending cancellation and finalization/M06"
+  ]
+}

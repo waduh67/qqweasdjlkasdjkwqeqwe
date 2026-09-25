@@ -11,6 +11,7 @@ class WarehouseInboxStore(private val jdbc: WarehouseCommandJdbc, private val cu
     @Transactional(rollbackFor = [Exception::class])
     override fun consume(eventId: UUID, consumer: String, localEffect: (WarehouseDocumentEvent) -> Unit): Boolean {
         require(consumer.matches(Regex("[a-z][a-z0-9.-]{0,119}")))
+        cutover.lockForCommand(cutover.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
         val event = jdbc.execute { sql ->
             sql.query("""SELECT event.*,operation.cutover_epoch,document.work_order_id FROM inventory_outbox event
                 JOIN inventory_operation operation ON operation.tenant_id=event.tenant_id AND operation.id=event.operation_id
@@ -23,7 +24,20 @@ class WarehouseInboxStore(private val jdbc: WarehouseCommandJdbc, private val cu
                     it.getTimestamp("recorded_at").toInstant()), it.getLong("cutover_epoch"), it.getString("payload"))
             }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         }
-        cutover.lockForCommand(event.second, WarehouseOperationClass.ORDINARY_STOCK).assertHeld()
+        val openingReceipt = event.first.kind == WarehouseEventKind.OPENING_POSTED && consumer == "warehouse.approval.receipt"
+        cutover.lockForCommand(event.second, if (openingReceipt) WarehouseOperationClass.MIGRATION_BASELINE else WarehouseOperationClass.ORDINARY_STOCK).assertHeld()
+        if (openingReceipt) {
+            val received = jdbc.execute { sql ->
+                if (sql.value("SELECT 1 FROM inventory_inbox WHERE tenant_id=? AND event_id=? AND consumer=?", sql.tenant, eventId, consumer) != null) true
+                else {
+                    if (sql.value("""SELECT 1 FROM inventory_migration_admission WHERE tenant_id=? AND operation_id=? AND request_id=?
+                        AND created_xid=pg_current_xact_id()""", sql.tenant, event.first.operationId, event.first.documentId) == null)
+                        sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+                    false
+                }
+            }
+            if (received) return false
+        }
         val hash = MessageDigest.getInstance("SHA-256").digest(event.third.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         val inserted = jdbc.execute { sql ->
             sql.update("""INSERT INTO inventory_inbox(id,tenant_id,event_id,consumer,operation_id,payload_hash)

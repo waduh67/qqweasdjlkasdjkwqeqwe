@@ -22,6 +22,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
         command.approval?.let { approval ->
             val expectedKind = when (approval.kind) {
                 ApprovalPostingKind.RECEIPT -> com.duluin.ftth.inventory.domain.model.MovementKind.RECEIVE
+                ApprovalPostingKind.OPENING_BALANCE -> com.duluin.ftth.inventory.domain.model.MovementKind.OPENING_BALANCE
                 ApprovalPostingKind.TITLE_CORRECTION, ApprovalPostingKind.RETURN_TITLE -> com.duluin.ftth.inventory.domain.model.MovementKind.TITLE_CORRECTION
                 ApprovalPostingKind.ADJUSTMENT -> com.duluin.ftth.inventory.domain.model.MovementKind.TRANSFER
                 ApprovalPostingKind.COUNT -> com.duluin.ftth.inventory.domain.model.MovementKind.COUNT_VARIANCE
@@ -56,7 +57,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
     private fun <T> within(block: (PostingSql) -> T): T {
         check(TransactionSynchronizationManager.isActualTransactionActive() && !TransactionSynchronizationManager.isCurrentTransactionReadOnly())
         entityManager.flush()
-        return entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+        return entityManager.unwrap(Session::class.java).doReturningWork<T> { connection: Connection ->
             val sql = PostingSql(connection,TenantContext.tenantId())
             check(!connection.autoCommit)
             check(sql.value("SELECT current_setting('app.tenant_id',true)") == sql.tenant.toString()) { "Posting tenant context mismatch" }

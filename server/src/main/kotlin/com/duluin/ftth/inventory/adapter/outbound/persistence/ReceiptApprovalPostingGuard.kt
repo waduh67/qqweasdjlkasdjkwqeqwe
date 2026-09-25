@@ -60,7 +60,8 @@ internal fun assertReceiptApproval(sql: PostingSql, guard: ReceiptPostingApprova
                 row.getString("policy_snapshot_hash") != guard.policyHash || row.getString("source_snapshot_hash") != guard.sourceHash -> WarehouseApprovalStatus.STALE
             row.uuid("source_document_id") != attempt.sourceDocumentId || row.getLong("source_document_revision") != attempt.sourceRevision ||
                 row.getLong("document_revision") != documentRevision || row.getString("kind") != guard.kind.name || row.getString("document_state") != documentState -> WarehouseApprovalStatus.STALE
-            row.getLong("epoch") != guard.cutoverEpoch || row.getString("cutover_state") != "ENFORCED" -> WarehouseApprovalStatus.STALE
+            row.getLong("epoch") != guard.cutoverEpoch || row.getString("cutover_state") !=
+                (if (guard.kind == ApprovalPostingKind.OPENING_BALANCE) "VALIDATING" else "ENFORCED") -> WarehouseApprovalStatus.STALE
             else -> null
         }
     }

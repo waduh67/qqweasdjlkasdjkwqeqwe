@@ -33,7 +33,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
     fun request(input: WarehouseSourceInput, key: String): WarehouseApprovalResponse {
         receiptKey(key)
         if (input.sourceRevision < 0) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         access.permission(current, "inventory.approval.request")
         access.permission(current, "inventory.approval.view")
@@ -41,8 +41,11 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         masters.lockTopology()
         val source = store.source(input.sourceDocumentId)
         source.locations.forEach { access.location(it, current) }
+        if (source.kind == "OPENING_BALANCE") access.permission(current, "inventory.provenance.manage")
         val hash = hash(input)
         replay("request", key, hash, current)?.let { return it }
+        cutovers.lockForCommand(cutover.snapshot.epoch, if (source.kind == "OPENING_BALANCE")
+            WarehouseOperationClass.MIGRATION_APPROVAL else WarehouseOperationClass.ORDINARY_STOCK)
         if (source.revision != input.sourceRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         if (store.findSource(input.sourceDocumentId, input.sourceRevision) != null) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
         owner(source.kind).validate(source, input.sourceDocumentId)
@@ -113,7 +116,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         }
         val invalid = when {
             now >= record.expiresAt -> WarehouseApprovalStatus.EXPIRED
-            cutover.snapshot.epoch != record.snapshot.cutoverEpoch || cutover.snapshot.state != WarehouseCutoverState.ENFORCED -> WarehouseApprovalStatus.STALE
+            cutover.snapshot.epoch != record.snapshot.cutoverEpoch || cutover.snapshot.state !=
+                (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) -> WarehouseApprovalStatus.STALE
             source.revision != record.snapshot.evaluation.sourceRevision || WarehouseCanonicalPayload.parse(source.content).hash != record.snapshot.sourceHash -> WarehouseApprovalStatus.STALE
             else -> null
         }
@@ -144,7 +148,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (final) {
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
                 record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash,
-                when (source.kind) { "TITLE_CORRECTION", "RETURN_TITLE" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; "COUNT" -> "COUNT_VARIANCE"; "LOSS", "SCRAP" -> source.kind; "ASSET_LOSS" -> "LOSS"; "DISPOSITION_REVERSAL" -> "DISPOSITION_REVERSED"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
+                when (source.kind) { "TITLE_CORRECTION", "RETURN_TITLE" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; "COUNT" -> "COUNT_VARIANCE"; "LOSS", "SCRAP", "OPENING_BALANCE" -> source.kind; "ASSET_LOSS" -> "LOSS"; "DISPOSITION_REVERSAL" -> "DISPOSITION_REVERSED"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
             owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
@@ -179,7 +183,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             "Create a new discrepancy report from the current transfer with corrected reason and evidence"))
         if (store.isReplacement(record.snapshot.evaluation.sourceDocumentId)) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new supplier replacement request with current evidence"))
-        if (source.kind in setOf("LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS")) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
+        if (source.kind in setOf("LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS", "OPENING_BALANCE")) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new disposition request with current evidence"))
         if (source.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         store.reworkDisposition(record.snapshot.evaluation.sourceDocumentId, source.revision, false)

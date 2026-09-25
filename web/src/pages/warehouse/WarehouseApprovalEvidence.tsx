@@ -27,14 +27,14 @@ function EvidenceFiles({ id }: { id: string }) {
       const blob = await downloadApprovalAttachment(id, file)
       if (!mounted.current) return
       if (blob.type === 'application/pdf') saveReceiptFile(blob, `bukti-persetujuan-${file.id}.pdf`)
-      else setPreview({ url: URL.createObjectURL(blob), label: file.signerLabel ? `Tanda tangan ${file.signerLabel}` : 'Bukti penerimaan pada pengajuan' })
+      else setPreview({ url: URL.createObjectURL(blob), label: file.label ?? (file.signerLabel ? `Tanda tangan ${file.signerLabel}` : 'Bukti penerimaan pada pengajuan') })
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Bukti belum dapat dibaca. Muat ulang dan coba lagi.') }
     finally { setBusy(null) }
   }
   return <><Button onClick={result.reload}>Muat ulang bukti</Button><WarehouseState {...result}>{data => <>
     {data.items.length === 0 ? <p>Tidak ada lampiran pada halaman pengajuan ini. Periksa referensi bukti tertulis pada dokumen sumber.</p>
       : <ul className="stack">{data.items.map(file => <li key={file.id} className="stack">
-        <p>{file.kind === 'SIGNATURE' ? `Tanda tangan · ${file.signerLabel ?? 'Penerima'}` : 'Bukti penerimaan'} · <WarehouseTime value={file.recordedAt} /></p>
+        <p>{file.kind === 'SIGNATURE' ? `Tanda tangan · ${file.signerLabel ?? 'Penerima'}` : file.kind === 'MIGRATION_EVIDENCE' ? file.label : 'Bukti penerimaan'} · <WarehouseTime value={file.recordedAt} /></p>
         <Button disabled={busy !== null} onClick={() => void view(file)}>{busy === file.id ? 'Membaca bukti…' : file.contentType === 'application/pdf' ? 'Unduh PDF bukti' : 'Lihat gambar bukti'}</Button>
       </li>)}</ul>}
     <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />

@@ -25,13 +25,16 @@ class WarehouseApprovalProjection(private val query: WarehouseApprovalQuery, pri
         val requester = document.requiredId("actor_id")
         val names = people(comparisons.map { it.requiredId("counter_id") }.toSet() + requester)
         val intake = source.path("intake").optionalText("snapshot")?.let(mapper::readTree)
+        val opening = if (kind == "OPENING_BALANCE") mapper.treeToValue(source.path("opening"), WarehouseMigrationOpening::class.java) else null
+        val baseline = opening?.manifest?.cases?.filter { it.resolution?.kind == MigrationResolutionKind.BASELINE_STOCK }.orEmpty()
         val lines = source.path("lines").asSequence().map { line ->
             val skuId = line.requiredId("sku_id")
             val item = query.item(skuId)
             val intakeLine = intake?.path("lines")?.asSequence()?.firstOrNull { it.optionalId("id") == line.requiredId("id") }
+            val migrationSource = baseline.getOrNull(line.path("line_number").asInt() - 1)
             WarehouseApprovalLine(line.requiredId("id"), skuId, item.first, item.second, item.third,
                 WarehouseBaseUnit.valueOf(line.path("base_unit").asString()), if (kind == "COUNT") null else line.path("quantity_base").asLong().toString(),
-                intakeLine?.optionalText("serial") ?: query.serial(line.optionalId("stock_identity_id")),
+                intakeLine?.optionalText("serial") ?: migrationSource?.sourceSnapshot?.optionalText("serialNumber") ?: query.serial(line.optionalId("stock_identity_id")),
                 intakeLine?.optionalText("lotCode") ?: query.lot(line.optionalId("lot_id")), line.optionalId("location_id"), line.optionalId("destination_location_id"),
                 WarehouseCondition.valueOf(line.path("condition").asString()), AssetLegalOwner.valueOf(line.path("legal_owner").asString()))
         }.toList()
@@ -47,11 +50,14 @@ class WarehouseApprovalProjection(private val query: WarehouseApprovalQuery, pri
             reference("DISPOSITION", source.path("disposition").path("input").optionalText("evidenceReference"))
             reference("COMPENSATION", source.path("compensation").path("input").optionalText("evidenceReference"))
             reference("TITLE_TRANSFER", source.path("returnTitle").path("request").optionalText("titleTransferReference"))
+            reference("MIGRATION", opening?.migrationReference)
         }
         return WarehouseApprovalDocument(id, document.path("revision").asLong(), kind, document.path("code").asString(), state,
             document.optionalText("reason"), Instant.parse(document.path("created_at").asString()), person(requester, names), query.locations(locations), lines, measured,
             receiptId = id.takeIf { kind == "RECEIPT" }, countId = id.takeIf { kind == "COUNT" },
-            transferId = document.optionalId("source_document_id").takeIf { kind == "ADJUSTMENT" }, returnId = returnId, evidenceReferences = references)
+            transferId = document.optionalId("source_document_id").takeIf { kind == "ADJUSTMENT" }, returnId = returnId, evidenceReferences = references,
+            migration = opening?.let { WarehouseApprovalMigration(it.batchId, it.manifest.watermark, it.manifest.sourceHash, it.reviewHash,
+                it.manifest.cases.size, baseline.size, it.manifest.cases.count { sourceCase -> sourceCase.resolution == null }) })
     }
     private fun JsonNode.optionalText(key: String): String? = path(key).takeUnless { it.isNull || it.isMissingNode }?.asString()
     private fun JsonNode.optionalId(key: String): UUID? = optionalText(key)?.let(UUID::fromString)

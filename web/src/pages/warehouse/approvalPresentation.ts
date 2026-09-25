@@ -1,11 +1,12 @@
 import type { ApprovalDetails, ApprovalDocument, POLICY_OPERATIONS } from '@/api/warehouse/approvalReads'
 
 export const approvalOperationLabels: Record<typeof POLICY_OPERATIONS[number], string> = { RECEIPT: 'Penerimaan', ISSUE: 'Pengeluaran', ISSUE_EXCEPTION: 'Pengecualian pengeluaran', OPENING_BALANCE: 'Saldo awal', ADJUSTMENT: 'Selisih transfer', LOSS: 'Kehilangan', SCRAP: 'Penghapusan barang', COUNT_VARIANCE: 'Selisih stock opname', TITLE_REACQUISITION: 'Perubahan kepemilikan' }
-export const approvalKindLabels: Record<ApprovalDocument['kind'], string> = { RECEIPT: 'Penerimaan', ADJUSTMENT: 'Selisih transfer', COUNT: 'Stock opname', TITLE_CORRECTION: 'Koreksi kepemilikan', RETURN_TITLE: 'Perolehan kembali dari pelanggan', LOSS: 'Kehilangan', SCRAP: 'Penghapusan barang', DISPOSITION_REVERSAL: 'Pembalikan disposisi', ASSET_LOSS: 'Kehilangan perangkat pelanggan' }
+export const approvalKindLabels: Record<ApprovalDocument['kind'], string> = { RECEIPT: 'Penerimaan', ADJUSTMENT: 'Selisih transfer', COUNT: 'Stock opname', TITLE_CORRECTION: 'Koreksi kepemilikan', RETURN_TITLE: 'Perolehan kembali dari pelanggan', LOSS: 'Kehilangan', SCRAP: 'Penghapusan barang', DISPOSITION_REVERSAL: 'Pembalikan disposisi', ASSET_LOSS: 'Kehilangan perangkat pelanggan', OPENING_BALANCE: 'Saldo awal migrasi' }
 export const approvalPersonLabel = (person: { id: string; name: string | null }) => person.name ?? `Petugas ${person.id}`
 export const approvalLineLabel = (line: ApprovalDocument['lines'][number]) => `${line.name} · ${line.code}${line.serial ? ` · ${line.serial}` : line.lotCode ? ` · ${line.lotCode}` : ''}`
 export function approvalImpact(kind: ApprovalDocument['kind']) {
   switch (kind) {
+    case 'OPENING_BALANCE': return 'Persetujuan akhir membukukan stok lama yang sudah diperiksa sebagai saldo awal di gudang asal. Harga historis belum diketahui; seluruh tahap pemeriksaan wajib diselesaikan. Aktivasi gudang masih memerlukan penyelesaian cutover.'
     case 'RECEIPT': return 'Persetujuan akhir menerima barang ke pemeriksaan. Barang belum menjadi stok tersedia sampai pemeriksaan dan penempatan selesai.'
     case 'ADJUSTMENT': return 'Persetujuan akhir menyelesaikan sisa transfer ke tujuan penanganan yang tercatat. Jumlah yang benar-benar diterima tetap terpisah.'
     case 'COUNT': return 'Persetujuan akhir membukukan selisih dari penghitungan yang diajukan. Perubahan stok selama pemeriksaan dapat mewajibkan hitung ulang.'

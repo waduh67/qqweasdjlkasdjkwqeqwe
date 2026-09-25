@@ -41,6 +41,15 @@ class MigrationOpeningStore(private val jdbc: WarehouseCommandJdbc) {
             ?: sql.fail(WarehouseErrorCode.NOT_FOUND))
     }
 
+    fun lockHistory(batch: UUID) = jdbc.execute { sql ->
+        sql.value("SELECT warehouse_lock_migration_history(?,?)", sql.tenant, batch)
+        Unit
+    }
+
+    fun currentAccess(batch: UUID): MigrationOpeningScope = jdbc.execute { sql ->
+        mapper.readValue(requireNotNull(sql.value("SELECT warehouse_migration_source_access(?)::text", batch)), MigrationOpeningScope::class.java)
+    }
+
     fun insert(view: WarehouseMigrationOpening, key: String, payload: WarehouseCanonicalPayload): String = jdbc.execute { sql ->
         sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,source_reference,reason,migration_batch_id,
             cutover_epoch,authority_epoch) VALUES (?,?,?,'OPENING_BALANCE',?,?,?,?,?,?)""", view.id, sql.tenant, view.code,

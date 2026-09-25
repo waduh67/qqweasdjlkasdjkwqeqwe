@@ -34,9 +34,21 @@ internal class PostingStock(private val sql: PostingSql) {
             require(piece.sku==leg.dimension.skuId && piece.lot==leg.dimension.lotId && piece.quantity.unit==leg.quantity.unit)
             if(piece.quantity.unit==StockUnit.MM || piece.kind=="SERIAL") require(piece.quantity==leg.quantity) { "A physical piece must move whole or split atomically" }
             if(leg.endpoint==PostingEndpoint.RECEIPT_SOURCE) {
-                require(sql.value("SELECT code FROM inventory_location WHERE tenant_id=? AND id=?",sql.tenant,leg.dimension.locationId)=="RECEIPT_SOURCE")
-                require(sql.value("SELECT kind FROM inventory_document WHERE tenant_id=? AND id=?",sql.tenant,command.documentId)=="RECEIPT")
-                require(sql.value("SELECT id FROM inventory_movement_leg WHERE tenant_id=? AND stock_identity_id=? LIMIT 1",sql.tenant,piece.id)==null) { "Identity was already received" }
+                if (command.kind == com.duluin.ftth.inventory.domain.model.MovementKind.OPENING_BALANCE) {
+                    require(command.approval?.kind == ApprovalPostingKind.OPENING_BALANCE)
+                    require(sql.value("""SELECT 1 FROM inventory_migration_admission admitted JOIN inventory_migration_admission_line binding
+                        ON binding.tenant_id=admitted.tenant_id AND binding.request_id=admitted.request_id
+                        JOIN inventory_document_line line ON line.tenant_id=binding.tenant_id AND line.id=binding.line_id
+                        WHERE admitted.tenant_id=? AND admitted.request_id=? AND admitted.operation_id=? AND admitted.created_xid=pg_current_xact_id()
+                            AND binding.stock_identity_id=? AND line.location_id=? AND line.id=?""", sql.tenant, command.documentId,
+                        command.operation.id, piece.id, leg.dimension.locationId, leg.documentLineId) != null)
+                    require(sql.value("SELECT id FROM inventory_movement_leg WHERE tenant_id=? AND stock_identity_id=? AND warehouse_admission='VERIFIED' LIMIT 1",
+                        sql.tenant, piece.id) == null) { "Identity was already admitted" }
+                } else {
+                    require(sql.value("SELECT code FROM inventory_location WHERE tenant_id=? AND id=?",sql.tenant,leg.dimension.locationId)=="RECEIPT_SOURCE")
+                    require(sql.value("SELECT kind FROM inventory_document WHERE tenant_id=? AND id=?",sql.tenant,command.documentId)=="RECEIPT")
+                    require(sql.value("SELECT id FROM inventory_movement_leg WHERE tenant_id=? AND stock_identity_id=? LIMIT 1",sql.tenant,piece.id)==null) { "Identity was already received" }
+                }
                 require(sql.value("""SELECT line.document_id FROM inventory_document_line line
                     LEFT JOIN inventory_lot lot ON lot.tenant_id=line.tenant_id AND lot.origin_document_line_id=line.id
                     LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=line.tenant_id AND asset.origin_document_line_id=line.id

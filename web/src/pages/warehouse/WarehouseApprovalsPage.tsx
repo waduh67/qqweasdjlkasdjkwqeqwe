@@ -17,6 +17,7 @@ import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatu
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { WarehouseApprovalDocument } from './WarehouseApprovalDocument'
 import { WarehouseApprovalEvidence } from './WarehouseApprovalEvidence'
+import { WarehouseApprovalMigration } from './WarehouseApprovalMigration'
 import { WarehouseApprovalFilters } from './WarehouseApprovalFilters'
 import { approvalBlockLabels, approvalCostLabel, approvalImpact, approvalOperationLabels, approvalPersonLabel } from './approvalPresentation'
 
@@ -107,7 +108,9 @@ function ApprovalBody({ details, reload }: { details: ApprovalDetails; reload: (
       : approval.status === 'PENDING' && <p role="status">{own ? approvalBlockLabels.INDEPENDENT_APPROVER_REQUIRED : approvalBlockLabels[actions.decisionBlock ?? 'NOT_CURRENT_APPROVER'] ?? approvalBlockLabels.NOT_CURRENT_APPROVER}</p>}
     {actions.canRework && own && can('inventory.approval.request') && <Button onClick={() => setReworking(true)}>Buka perbaikan dokumen</Button>}
     {['EXPIRED', 'STALE', 'REWORK_REQUIRED'].includes(approval.status) && <p>Periksa catatan keputusan dan dokumen sumber. Penghitungan perlu putaran baru; permintaan berbasis bukti baru dibuat dari alur sumbernya.</p>}
-  </section><WarehouseApprovalDocument document={document} /><WarehouseApprovalEvidence key={approval.requestId} id={approval.requestId} />
+  </section><WarehouseApprovalDocument document={document} />
+    {document.migration && <WarehouseApprovalMigration key={approval.requestId} id={approval.requestId} document={document} />}
+    <WarehouseApprovalEvidence key={approval.requestId} id={approval.requestId} />
     <details className="card"><summary>Persyaratan pemeriksa tersimpan</summary><p>Versi kebijakan {details.policy.revision}. Kelayakan tindakan tetap diperiksa terhadap izin dan cakupan saat ini.</p>
       <ol>{details.policy.tiers.map(tier => <li key={tier.number}>Tahap {tier.number}: {tier.approvers.map(approvalPersonLabel).join(', ')}</li>)}</ol></details>
     <ApprovalHistory id={approval.requestId} />

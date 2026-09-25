@@ -80,7 +80,7 @@ class WarehouseOpeningBalanceService(private val cutovers: InventoryTenantCutove
         return record.body
     }
 
-    private fun verifyEvidence(manifest: MigrationReviewManifest) {
+    internal fun verifyEvidence(manifest: MigrationReviewManifest) {
         manifest.cases.forEach { source -> source.resolution?.evidence?.forEach { reference ->
             val evidence = batches.get(manifest.batchId, source.caseId, reference.id)
             if (evidence.view.sourceHash != source.sourceHash || evidence.view.sha256 != reference.sha256 ||

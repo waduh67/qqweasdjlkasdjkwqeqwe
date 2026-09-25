@@ -5,7 +5,7 @@ export const custodianLabels: Record<string, string> = { WAREHOUSE: 'Gudang', VE
 export const segmentLabels: Record<string, string> = { REEL: 'Reel asal', CUT: 'Potongan', REMNANT: 'Sisa potongan', BULK: 'Curah', SERIAL: 'Unit serial' }
 export const segmentStateLabels: Record<string, string> = { ACTIVE: 'Bagian aktif', SPLIT: 'Sudah dipecah', RETIRED: 'Selesai / dihentikan' }
 const movementLabels: Record<string, string> = {
-  RESTOCK: 'Penambahan stok', RECEIVE: 'Penerimaan', RESERVE: 'Reservasi', RELEASE: 'Pelepasan reservasi', ISSUE: 'Pengeluaran', ISSUE_EXCEPTION: 'Pengecualian pengeluaran',
+  RESTOCK: 'Penambahan stok', RECEIVE: 'Penerimaan', OPENING_BALANCE: 'Saldo awal migrasi', RESERVE: 'Reservasi', RELEASE: 'Pelepasan reservasi', ISSUE: 'Pengeluaran', ISSUE_EXCEPTION: 'Pengecualian pengeluaran',
   TRANSFER: 'Pemindahan', TRANSFER_RECEIPT: 'Penerimaan transfer', RETURN: 'Pengembalian', REPAIR: 'Servis', QUARANTINE: 'Karantina', ADJUSTMENT: 'Penyesuaian', LOSS: 'Kehilangan',
   SCRAP: 'Barang tidak layak', WRITE_OFF: 'Penghapusan', COUNT_VARIANCE: 'Selisih penghitungan', DISPOSAL: 'Pemusnahan', CONSUME: 'Pemakaian', REVERSAL: 'Pembalikan', DEPLOY: 'Pemasangan', TITLE_TRANSFER: 'Alih kepemilikan', TITLE_CORRECTION: 'Koreksi kepemilikan',
 }

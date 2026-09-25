@@ -14,6 +14,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Duration
 import java.util.UUID
+import tools.jackson.module.kotlin.jacksonObjectMapper
 
 @Service
 class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, private val projection: WarehouseApprovalProjection,
@@ -74,9 +75,10 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         source.locations.forEach { access.location(it, current) }
         val owner = owners.singleOrNull { it.kind == source.kind } ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
         val block = when {
-            cutovers.read().state != WarehouseCutoverState.ENFORCED -> "CUTOVER_REQUIRED"
+            cutovers.read().state != (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) -> "CUTOVER_REQUIRED"
             source.requester != current.fence.identity.userId -> "REQUESTER_REQUIRED"
             !current.platformAdmin && "inventory.approval.request" !in current.permissions -> "REQUEST_PERMISSION_REQUIRED"
+            source.kind == "OPENING_BALANCE" && !current.platformAdmin && "inventory.provenance.manage" !in current.permissions -> "REQUEST_PERMISSION_REQUIRED"
             store.findSource(id, source.revision) != null -> "REQUEST_ALREADY_EXISTS"
             else -> {
                 try { owner.validate(source, id); null }
@@ -98,6 +100,17 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         evidence.download(record, evidenceId, current.fence)
     }
 
+    override fun migrationCases(id: UUID, page: WarehousePageRequest): WarehousePage<MigrationReviewCase> = ownTransaction {
+        if (page.page < 0 || page.size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val record = locked(id).record
+        if (record.snapshot.evaluation.operation != PolicyOperation.OPENING_BALANCE) masterFailure(WarehouseErrorCode.NOT_FOUND)
+        val mapper = jacksonObjectMapper()
+        val opening = mapper.treeToValue(mapper.readTree(record.snapshot.source).path("opening"), WarehouseMigrationOpening::class.java)
+        val cases = opening.manifest.cases
+        val offset = page.page.toLong() * page.size
+        WarehousePage(if (offset >= cases.size) emptyList() else cases.drop(offset.toInt()).take(page.size), page.page, page.size, cases.size.toLong())
+    }
+
     override fun details(id: UUID): WarehouseApprovalDetails = ownTransaction {
         val (record, source, current) = locked(id)
         val decisions = store.decisions(id)
@@ -105,7 +118,8 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         val tier = evaluation.tiers.getOrNull(decisions.size)?.number
         val block = when {
             record.status != WarehouseApprovalStatus.PENDING -> "REQUEST_TERMINAL"
-            cutovers.read().let { it.state != WarehouseCutoverState.ENFORCED || it.epoch != record.snapshot.cutoverEpoch } -> "CUTOVER_CHANGED"
+            cutovers.read().let { it.state != (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) ||
+                it.epoch != record.snapshot.cutoverEpoch } -> "CUTOVER_CHANGED"
             source.revision != evaluation.sourceRevision || WarehouseCanonicalPayload.parse(source.content).hash != record.snapshot.sourceHash -> "SOURCE_CHANGED"
             current.fence.identity.userId in evaluation.excludedUserIds -> "INDEPENDENT_APPROVER_REQUIRED"
             tier == null -> "NO_REMAINING_TIER"
@@ -117,7 +131,7 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         }
         val rework = record.status == WarehouseApprovalStatus.REWORK_REQUIRED && source.disposition == "REWORK_REQUIRED" &&
             record.snapshot.requesterId == current.fence.identity.userId && (current.platformAdmin || "inventory.approval.request" in current.permissions) &&
-            source.kind !in setOf("ADJUSTMENT", "RETURN_TITLE", "LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS", "COUNT") && !store.isReplacement(evaluation.sourceDocumentId)
+            source.kind !in setOf("ADJUSTMENT", "RETURN_TITLE", "LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS", "COUNT", "OPENING_BALANCE") && !store.isReplacement(evaluation.sourceDocumentId)
         val names = projection.people(evaluation.tiers.flatMap { it.approvers.map { it.userId } }.toSet())
         val policyView = WarehouseApprovalPolicyView(requireNotNull(evaluation.policy).id, evaluation.policy.revision,
             evaluation.tiers.map { item -> WarehouseApprovalTierView(item.number, item.approvers.map { projection.person(it.userId, names) }) })
