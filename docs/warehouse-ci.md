@@ -5,7 +5,37 @@ manual requests. The deployment workflow calls it as a required dependency befor
 publishing application images. Server tests include both the historical projection
 upgrade and the complete current suite; browser jobs execute every warehouse spec
 on desktop and mobile with real PostgreSQL and object storage. Web checks, shared
-KMP tests, and native iOS compilation also have to succeed.
+KMP tests, native iOS compilation, and smoke tests of the actual Docker images
+also have to succeed.
+
+The image job builds server and web once, runs their exact image IDs against a
+separate QA database, and verifies readiness through both the backend and a staging
+gateway. Real receipts, transfers, count decisions, authorization checks and replay
+run before and after restarting the server container. The web container serves its
+actual HTML, JavaScript and CSS bundle. No production services are contacted.
+
+Only after that succeeds are the tested Docker archives uploaded for three days.
+Publication downloads these same archives in the same workflow run, validates their
+SHA256, image IDs, source revision and configuration digests, then pushes the commit
+tags. It verifies that each registry manifest references the tested configuration.
+The SSH deployment supplies verified immutable `FTTH_SERVER_IMAGE` and
+`FTTH_WEB_IMAGE` registry digest references; `IMAGE_TAG` selects the same commit for
+GenieACS. It uploads the reviewed Compose file to a commit-specific release directory
+and checks its SHA256 before use. The existing `/opt/ftth/.env`, relative mount paths
+and `ftth` project remain the deployment inputs. Application images are
+not rebuilt between smoke and publication. Merge and deployment still require the
+repository's existing authorization; a feature push only runs verification.
+
+## Reproducible QA dependencies
+
+The historical official MinIO image became unavailable from its registry. QA now
+builds the same upstream release from a commit-pinned source archive with an `ADD`
+checksum and pinned Go/Alpine base images. This is a source build, not a claim of
+byte equality with the former vendor image. Its Docker context contains only the
+QA Dockerfile; application credentials are supplied only when containers start.
+The upstream license is included in the image. The first build can take several
+minutes; subsequent builds use Docker's cache. Timescale is also pinned by digest.
+The QA source build does not replace production PostgreSQL or object storage.
 
 The acceptance job rejects failed, cancelled, skipped, or missing prerequisites.
 Result validation rejects empty suites, test failures, skipped cases, retries, and
@@ -51,6 +81,7 @@ Install Python 3 with PyYAML, `age`, and `actionlint`, then run:
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-results.py
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-artifacts.py
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-workflow.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-publish-images.py
 actionlint
 ```
 
@@ -58,6 +89,8 @@ These checks exercise the result parsers, actual encryption/decryption, and the
 workflow's acceptance script with failing prerequisites. Real application gates
 remain necessary; a successful parser test does not prove the application passed.
 
-Application-image smoke and exact publication identity are tracked in task48.
-Until their executed evidence is recorded, this CI checkpoint is not a completed
-release gate. See [the local review guide](warehouse-review.md) for application QA.
+Image publication additionally rejects missing readiness, restart, real HTTP,
+stock reads/writes, bundle checks, mutable tags, changed archives, and another
+source commit. See [the local review guide](warehouse-review.md) for application QA.
+Release acceptance requires successful executed image evidence as well as these
+guard tests; the workflow's presence alone is not a completed verification.

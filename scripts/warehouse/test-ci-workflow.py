@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-REQUIRED = {"server", "web", "shared", "browser", "legacy-upgrade", "native"}
+REQUIRED = {"server", "web", "shared", "browser", "legacy-upgrade", "native", "images"}
 
 
 def dependencies(job):
@@ -68,6 +68,38 @@ class WorkflowGateTest(unittest.TestCase):
                     self.assertNotEqual(execute(changed), 0)
             with self.subTest(missing=name):
                 self.assertNotEqual(execute({key: value for key, value in good.items() if key != name}), 0)
+
+    def test_publication_consumes_tested_images_without_rebuilding_them(self):
+        steps = self.deploy["build-and-push"]["steps"]
+        downloader = next(step for step in steps if step.get("uses", "").startswith("actions/download-artifact@"))
+        self.assertEqual(downloader["with"]["name"], "warehouse-tested-images-${{ github.sha }}")
+        publisher = next(step for step in steps if "publish-images.py" in step.get("run", ""))
+        self.assertNotIn("if", publisher)
+        self.assertLess(steps.index(downloader), steps.index(publisher))
+        for step in steps:
+            if step.get("uses", "").startswith("docker/build-push-action@"):
+                self.assertEqual(step["with"]["context"], "./docker/genieacs")
+        image_steps = self.warehouse["images"]["steps"]
+        builds = [step for step in image_steps if step.get("uses", "").startswith("docker/build-push-action@")]
+        self.assertEqual(len(builds), 2)
+        for step in builds:
+            self.assertTrue(step["with"]["load"])
+            self.assertFalse(step["with"].get("push", False))
+        smoke = next(step for step in image_steps if "image-smoke.sh" in step.get("run", ""))
+        save = next(step for step in image_steps if "docker save" in step.get("run", ""))
+        self.assertLess(image_steps.index(smoke), image_steps.index(save))
+        upload = next(step for step in image_steps if step.get("with", {}).get("name", "").startswith("warehouse-tested-images-"))
+        self.assertNotIn("if", upload)
+        self.assertLess(image_steps.index(save), image_steps.index(upload))
+        ssh = next(step for step in self.deploy["deploy"]["steps"] if step.get("uses", "").startswith("appleboy/ssh-action@"))
+        deploy_script = ssh["with"]["script"]
+        self.assertIn("export IMAGE_TAG='${{ github.sha }}'", deploy_script)
+        self.assertEqual(ssh["with"]["envs"], "FTTH_SERVER_IMAGE,FTTH_WEB_IMAGE,FTTH_COMPOSE_SHA256")
+        self.assertIn("sha256sum --check --status", deploy_script)
+        self.assertIn('--project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose"', deploy_script)
+        compose = (ROOT / "deploy/docker-compose.prod.yml").read_text()
+        self.assertIn("image: ${FTTH_SERVER_IMAGE:-", compose)
+        self.assertIn("image: ${FTTH_WEB_IMAGE:-", compose)
 
 
 if __name__ == "__main__":

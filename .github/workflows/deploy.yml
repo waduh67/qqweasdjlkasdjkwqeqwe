@@ -35,36 +35,23 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Build & push ftth-server
-              uses: docker/build-push-action@v6
+            - uses: actions/download-artifact@v4
               with:
-                  context: .
-                  file: server/Dockerfile
-                  push: true
-                  tags: |
-                      ${{ env.IMAGE_PREFIX }}/ftth-server:latest
-                      ${{ env.IMAGE_PREFIX }}/ftth-server:${{ github.sha }}
-                  # Matikan attestation provenance/SBOM: manifest attestation-nya memicu
-                  # 403 saat push blob ke GHCR pada tag kedua (git-sha), dan tak diperlukan
-                  # untuk pipeline deploy privat ini.
-                  provenance: false
-                  sbom: false
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                  name: warehouse-tested-images-${{ github.sha }}
+                  path: .omo/runtime/tested-images
 
-            - name: Build & push ftth-web
-              uses: docker/build-push-action@v6
+            - name: Publish only the exact tested server and web images
+              run: |
+                  set -euo pipefail
+                  python3 scripts/warehouse/publish-images.py .omo/runtime/tested-images \
+                    --commit "$GITHUB_SHA" --prefix "$IMAGE_PREFIX"
+
+            - uses: actions/upload-artifact@v4
               with:
-                  context: ./web
-                  file: web/Dockerfile
-                  push: true
-                  tags: |
-                      ${{ env.IMAGE_PREFIX }}/ftth-web:latest
-                      ${{ env.IMAGE_PREFIX }}/ftth-web:${{ github.sha }}
-                  provenance: false
-                  sbom: false
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                  name: warehouse-published-images-${{ github.sha }}
+                  path: .omo/runtime/tested-images/published.json
+                  if-no-files-found: error
+                  retention-days: 14
 
             # GenieACS (ACS TR-069 untuk modul `cpe`). Isinya cuma `npm i -g
             # genieacs@<versi pin>`, jadi tak berubah tiap commit — tetap ikut
@@ -91,16 +78,59 @@ jobs:
         needs: build-and-push
         runs-on: ubuntu-latest
         steps:
-            - name: Deploy lewat SSH
-              uses: appleboy/ssh-action@v1
+            - uses: actions/checkout@v4
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: warehouse-published-images-${{ github.sha }}
+                  path: verified-release
+
+            - name: Read immutable verified registry references
+              run: |
+                  python3 - <<'PY'
+                  import hashlib, json, os, re
+                  from pathlib import Path
+                  proof = json.loads(Path('verified-release/published.json').read_text())
+                  assert proof['commit'] == os.environ['GITHUB_SHA']
+                  assert set(proof['images']) == {'server', 'web'}
+                  with open(os.environ['GITHUB_ENV'], 'a') as output:
+                      for service, image in proof['images'].items():
+                          reference = image['registryDigest']
+                          expected = re.escape(os.environ['IMAGE_PREFIX'] + '/ftth-' + service)
+                          assert re.fullmatch(expected + r'@sha256:[a-f0-9]{64}', reference)
+                          output.write('FTTH_' + service.upper() + '_IMAGE=' + reference + '\n')
+                      checksum = hashlib.sha256(Path('deploy/docker-compose.prod.yml').read_bytes()).hexdigest()
+                      output.write('FTTH_COMPOSE_SHA256=' + checksum + '\n')
+                  PY
+
+            - name: Upload the reviewed Compose file into its release directory
+              uses: appleboy/scp-action@v1
               with:
                   host: ${{ secrets.VPS_HOST }}
                   username: ${{ secrets.VPS_USER }}
                   key: ${{ secrets.VPS_SSH_KEY }}
+                  source: deploy/docker-compose.prod.yml
+                  target: /opt/ftth/releases/${{ github.sha }}
+                  strip_components: 1
+
+            - name: Deploy lewat SSH
+              uses: appleboy/ssh-action@v1
+              env:
+                  FTTH_SERVER_IMAGE: ${{ env.FTTH_SERVER_IMAGE }}
+                  FTTH_WEB_IMAGE: ${{ env.FTTH_WEB_IMAGE }}
+                  FTTH_COMPOSE_SHA256: ${{ env.FTTH_COMPOSE_SHA256 }}
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USER }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
+                  envs: FTTH_SERVER_IMAGE,FTTH_WEB_IMAGE,FTTH_COMPOSE_SHA256
                   script: |
                       set -e
                       cd /opt/ftth
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
-                      docker compose -f docker-compose.prod.yml pull
-                      docker compose -f docker-compose.prod.yml up -d
-                      docker image prune -f
+                      export IMAGE_TAG='${{ github.sha }}'
+                      export FTTH_SERVER_IMAGE FTTH_WEB_IMAGE
+                      release_compose="releases/$IMAGE_TAG/docker-compose.prod.yml"
+                      printf '%s  %s\n' "$FTTH_COMPOSE_SHA256" "$release_compose" | sha256sum --check --status
+                      docker compose --project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose" pull
+                      docker compose --project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose" up -d

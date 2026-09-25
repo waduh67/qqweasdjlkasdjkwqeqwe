@@ -160,7 +160,7 @@ services:
 
   # --- Backend Spring Boot ---
   server:
-    image: ${IMAGE_PREFIX}/ftth-server:${IMAGE_TAG:-latest}
+    image: ${FTTH_SERVER_IMAGE:-${IMAGE_PREFIX}/ftth-server:${IMAGE_TAG:-latest}}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -329,7 +329,7 @@ services:
 
   # --- Frontend statis (Nginx) ---
   web:
-    image: ${IMAGE_PREFIX}/ftth-web:${IMAGE_TAG:-latest}
+    image: ${FTTH_WEB_IMAGE:-${IMAGE_PREFIX}/ftth-web:${IMAGE_TAG:-latest}}
     restart: unless-stopped
 
   # --- Reverse proxy + TLS otomatis (satu-satunya yang terekspos ke internet) ---

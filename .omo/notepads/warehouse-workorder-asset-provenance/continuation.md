@@ -1,3 +1,29 @@
+## Current checkpoint: tasks1–45 done; full regression and Docker image CI active
+
+Goal ACTIVE. Continue until46–48 and final audits are handled; no checkpoint final.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. No subagents.
+Task45 completed in38e068e3:22real browser cases/eight specs; legacy6separatePASS.
+QA dependency fix9ce591d5: MinIO built from checksum-pinned upstreamrelease source;
+Timescale pinned to the existing tested digest. Environment7/7PASS including S3.
+RemoteCI36114803368 had web576PASS/native2COMPILED/shared44PASS; overallFAILED
+because formerMinIO registrydenial and parser[jvm] (fixed2907bc7f). Preserve raw
+encrypted artifacts in .omo/runtime/ci-remote-r1; publicsafeproof task46.
+
+LIVE full-serverR3 session11018 (.omo/runtime/full-server-r3.sh/log), underfd8.
+Env7PASS, historicalprojectionPASS, complete modernserver suite RUNNING. Archive
+.omo/runtime/full-server-r3-reports whenfinished. NEVER editactivewrapper/QA/server
+inputs. PreflightR2 session47709 (.omo/runtime/runbook-preflight-r2.sh/log) queued.
+OldR2 cancelledwhilequeued, zeroexecuted; MinIOsourcebuild91077completed successfully.
+
+Current exact-image CI checkpoint adds mandatoryimages prerequisite, actualHTTP
+smoke/restart, exportedtestedimages andcheckedpublication+immutabledeployreferences.
+24guardtests andactionlintPASS; realDockerimagejob has NOTexecuted yet. Featurepush
+startsCI; no imagepublish/mainmerge/deploy authorized orperformed. Draftdocs47 and
+preflight.sql await actualpositive+3negativerun. Review CI thenfix failures, archive
+fullserverreports, finishrunbooks/audits andkeepcommitting+pushingsafecheckpoints.
+
+## Earlier checkpoints (superseded)
+
 ## Current checkpoint: task45 complete; continue final regression and release gates
 
 Tasks1–45 DONE;46 IN PROGRESS;47–48/F1–F4 OPEN. Goal ACTIVE. No subagents authorized.

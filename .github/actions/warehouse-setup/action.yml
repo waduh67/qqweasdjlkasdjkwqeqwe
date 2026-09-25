@@ -38,6 +38,7 @@ runs:
         python3 scripts/warehouse/test-ci-results.py
         python3 scripts/warehouse/test-ci-artifacts.py
         python3 scripts/warehouse/test-ci-workflow.py
+        python3 scripts/warehouse/test-publish-images.py
     - name: Install web dependencies
       if: inputs.web == 'true'
       shell: bash

@@ -39,3 +39,22 @@ source file hashes/image identity in task48/minio-source-verification.json.
 Full-serverR3 session11018 now runs historical then complete modern server against
 this source-built MinIO. PreflightR2 session47709 follows under host lock. Do not
 edit their wrappers or tested backend/QA source while active.
+
+## Exact-image gate checkpoint (real smoke execution pending)
+Added image-smoke.sh/image-http.py using separate owned fixture DB, exact image IDs,
+real Nginx bundle+gateway, backend+gateway JSON identity checks, real wave5 receipts/
+transfers/counts/reviewer authority and full restart/replay. No SQL business seeds.
+The warehouse images job builds/loads once, smokes, archives and binds saved image
+configuration/tar hashes. Deploy loads these same images, verifies both before any
+push, checks registry manifest config digests, and uses immutable registry references.
+The reviewed production Compose is uploaded to a versioned release directory and
+SHA-checked before use, preserving existing env/mount base/project. No actual image
+push/SSH/deploy performed. Feature CI verifies only; publish remains main-only.
+24 guard tests PASS, including execution of acceptance with each failed/skipped/
+cancelled/missing prerequisite and archive/tag/revision validation; actionlint PASS.
+Real Docker smoke still PENDING until CI executes it; no task48 completion claim.
+
+LIVE full-serverR3 session11018: environment7PASS, historical projection phase PASS,
+now complete modern server suite. It archives all XML before any focused rerun.
+PreflightR2 session47709 queued after full server. Do not edit their wrappers or
+backend/QA harness inputs while they execute. Product browser22 and legacy6 verified.

@@ -252,8 +252,89 @@ jobs:
   native:
     uses: ./.github/workflows/mobile-materials.yml
 
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/warehouse-setup
+      - uses: docker/setup-buildx-action@v3
+      - name: Build server image for verification
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          load: true
+          tags: warehouse-ci-server:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=warehouse-server
+          cache-to: type=gha,mode=max,scope=warehouse-server
+      - name: Build web image for verification
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: web/Dockerfile
+          load: true
+          tags: warehouse-ci-web:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=warehouse-web
+          cache-to: type=gha,mode=max,scope=warehouse-web
+      - name: Exercise the exact images with real HTTP and restart
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          server=$(docker image inspect -f '{{.Id}}' "warehouse-ci-server:$GITHUB_SHA")
+          web=$(docker image inspect -f '{{.Id}}' "warehouse-ci-web:$GITHUB_SHA")
+          scripts/warehouse/image-smoke.sh "$server" "$web" "$GITHUB_SHA" > .omo/runtime/ci/image-smoke.log 2>&1
+          read -r smoke < .omo/runtime/warehouse-image-latest.txt
+          cp "$smoke/verification.json" .omo/runtime/ci/image-smoke.json
+      - name: Save the tested images for the dependent publication job
+        run: |
+          set -euo pipefail
+          mkdir -p .omo/runtime/ci/images
+          docker save -o .omo/runtime/ci/images/server.tar "warehouse-ci-server:$GITHUB_SHA"
+          docker save -o .omo/runtime/ci/images/web.tar "warehouse-ci-web:$GITHUB_SHA"
+          cp .omo/runtime/ci/image-smoke.json .omo/runtime/ci/images/verification.json
+          python3 scripts/warehouse/publish-images.py .omo/runtime/ci/images --commit "$GITHUB_SHA" --prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-tested-images-${{ github.sha }}
+          path: .omo/runtime/ci/images/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Stop owned QA resources
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f .omo/runtime/warehouse-test.env ]]; then
+            scripts/warehouse/test-environment.sh down
+          fi
+      - name: Encrypt image smoke evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          raw=(.omo/runtime/ci/image-smoke.log)
+          if [[ -f .omo/runtime/warehouse-image-latest.txt ]]; then
+            read -r smoke < .omo/runtime/warehouse-image-latest.txt
+            raw+=("$smoke/containers.log" "$smoke/state.json" "$smoke/before-restart.json" "$smoke/after-restart.json")
+          fi
+          python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" --output .omo/runtime/ci/image-evidence.age "${raw[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-image-proof-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
   acceptance:
-    needs: [server, web, shared, browser, legacy-upgrade, native]
+    needs: [server, web, shared, browser, legacy-upgrade, native, images]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -264,7 +345,7 @@ jobs:
           python3 - <<'PY'
           import json, os
           results = json.loads(os.environ['GATE_RESULTS'])
-          required = {'server', 'web', 'shared', 'browser', 'legacy-upgrade', 'native'}
+          required = {'server', 'web', 'shared', 'browser', 'legacy-upgrade', 'native', 'images'}
           assert set(results) == required, 'Required warehouse gate is missing'
           assert all(value['result'] == 'success' for value in results.values()), 'Warehouse release prerequisites failed, skipped, or were cancelled'
           print('PASS: every warehouse release prerequisite succeeded')
