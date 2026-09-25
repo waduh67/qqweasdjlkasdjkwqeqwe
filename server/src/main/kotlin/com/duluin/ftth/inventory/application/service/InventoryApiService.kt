@@ -10,7 +10,6 @@ import com.duluin.ftth.inventory.WarehouseContractException
 import com.duluin.ftth.inventory.WarehouseError
 import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
-import com.duluin.ftth.inventory.application.port.outbound.InventoryLocationRepository
 import com.duluin.ftth.inventory.domain.model.InventoryStatus
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -21,25 +20,7 @@ class InventoryApiService(
     private val assets: SerializedAssetRepository,
     private val durableFulfillment: DurableInventoryFulfillmentService,
     private val allocationReader: com.duluin.ftth.inventory.InventoryReservationApi,
-    private val locations: InventoryLocationRepository? = null,
 ) : InventoryApi {
-    @Transactional(readOnly = true)
-    fun locations(): List<InventoryLocationView> = (locations ?: error("inventory location query is not configured")).findAll(TenantContext.tenantId()).map { InventoryLocationView(it.id, it.code, it.kind.name) }
-
-    @Transactional(readOnly = true)
-    fun items(): List<InventoryItemView> = assets.findAll(TenantContext.tenantId()).map { InventoryItemView(it.id, it.skuId, it.serialNumber, it.macAddress, it.status.name) }
-
-    @Transactional(readOnly = true)
-    fun stock(): List<InventoryStockView> = assets.findAll(TenantContext.tenantId()).groupBy { it.skuId to it.locationId }
-        .map { (key, rows) -> InventoryStockView(key.first, key.second, rows.groupingBy { it.status }.eachCount()) }
-
-    @Transactional(readOnly = true)
-    fun reservations(): List<InventoryReservationView> = assets.findAll(TenantContext.tenantId()).filter { it.status == InventoryStatus.RESERVED }
-        .map { InventoryReservationView(it.id, it.skuId, it.locationId, it.custody.ownerId) }
-
-    @Transactional(readOnly = true)
-    fun custody(): List<InventoryCustodyView> = assets.findAll(TenantContext.tenantId())
-        .map { InventoryCustodyView(it.id, it.skuId, it.status.name, it.custody.ownerKind.name, it.custody.ownerId, it.locationId) }
     @Transactional(readOnly = true)
     override fun findSerializedAsset(assetId: UUID): InventoryAssetRef? = assets.findById(assetId)?.toRef()
 

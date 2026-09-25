@@ -113,8 +113,22 @@ eksternal. Tidak ada changeset/migration baru untuk task09; V173/V174.x tetap id
 yang hanya menghitung serialized assets. MM maupun bulk EA tidak pernah masuk
 field count, termasuk bulk3 miliar EA. Scope/current authority sekarang berlaku
 juga di HTTP stock lama. Header Link menunjuk successor version, body tidak berubah.
+
+Seluruh pembacaan `/api/inventory` memakai fence dan predicate lokasi/area/site yang
+sama: `/warehouses` memerlukan `inventory.location.view`; `/items`, `/stock` dan
+`/serialized/{id}` memerlukan `inventory.item.view`; `/custody` dan `/reservations`
+memerlukan `inventory.custody.view`. Izin custody/location tidak perlu izin item
+tambahan. Pencabutan scope atau izin berlaku pada request berikutnya dengan sesi
+yang sama. Asset tersembunyi/tenant lain/missing sama-sama404, dan response tidak
+boleh dicache. Field DTO lama tetap, termasuk ID fisik dan jumlah perangkat integer.
+
+`/reservations` memproyeksikan serialized asset dengan reservation durable `OPEN`
+yang masih memiliki unpicked atau picked positif pada lokasi/custodian fisik itu.
+Pick tetap tampil; release atau dispatch menghapusnya dari daftar. Status asset
+fisik tidak diubah menjadi RESERVED. Lot/MM/bulk tidak masuk DTO perangkat lama.
 Item, lookup, InventoryAssetRef dan portal field sets dikunci compatibility tests;
-consumer legacy internal lain tidak dialihkan ke jumlah panjang.
+consumer legacy internal lain tidak dialihkan ke jumlah panjang. API owner internal
+tetap terpisah dari controller pembacaan operator yang wajib memeriksa authority.
 
 ## Bukti task09
 

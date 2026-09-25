@@ -66,6 +66,10 @@ jobs:
             com.duluin.ftth.inventory.WarehouseReportExportIT
             com.duluin.ftth.inventory.WarehouseReportCsvTest
             com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT
+            com.duluin.ftth.inventory.WarehouseQueryITCompatibility
+            com.duluin.ftth.inventory.WarehouseQueryITPrivacy
+            com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT
+            com.duluin.ftth.inventory.WarehouseLegacyReservationIT
             com.duluin.ftth.ModularityTests
           )
           args=()

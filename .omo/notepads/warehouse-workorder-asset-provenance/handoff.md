@@ -1,3 +1,21 @@
+## Latest checkpoint: F2 legacy correction prepared with five new real tests
+
+Read legacy-read-scope.md. Current validation includes the scoped legacy HTTP
+projections and canonical reservation reader; independent F2 source recheck accepts
+the correction, runtime/compile still pending. Workflow now selects34focused classes.
+Push this commit to NEW work/warehouse-legacy-read-scope, preserving active report CI.
+The previous report remote remains work/warehouse-report-scope at a1d4eb19.
+
+Older CI36131581036 is COMPLETED SUCCESS and actual reports revalidated:3783modern/
+609suites,241focused,7historical+1projection,375sourceinputhashes,all15jobsPASS. Safe
+proof task46/ci-2c1d8e08-complete-server-verification.json. This old result cannot
+close later report/legacy changes. LocalR7/session39048 is still running at40.
+Current e178 full CI36137258991 and feature40 CI36135632377 remain active.
+
+Independent F4 preliminary and six safe records are preserved in evidence root;
+images were inspected without loading/publishing. F1 draft update/expiry findings
+remain unresolved and are the next product task. Final approval remains pending.
+
 # Warehouse continuation — current checkpoint, 2026-09-25
 
 This file supersedes old runtime directions. Continue to completion after every saved

@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.adapter.inbound.web
 
 import com.duluin.ftth.inventory.InventoryApi
 import com.duluin.ftth.inventory.InventoryAssetRef
+import com.duluin.ftth.inventory.application.service.WarehouseQueryService
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.http.HttpStatus
@@ -17,10 +18,11 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/inventory")
-class InventoryController(private val inventory: InventoryApi) {
+class InventoryController(private val inventory: InventoryApi, private val warehouse: WarehouseQueryService) {
     @GetMapping("/serialized/{id}")
-    @PreAuthorize("@authz.can('inventory.item.view')")
-    fun get(@PathVariable id: UUID): InventoryAssetRef = inventory.findSerializedAsset(id) ?: error("serialized asset not found")
+    fun get(@PathVariable id: UUID) = org.springframework.http.ResponseEntity.ok()
+        .contentType(org.springframework.http.MediaType.APPLICATION_JSON).header("Cache-Control", "no-store")
+        .body(warehouse.legacyAsset(id))
 
     @PostMapping("/serialized/{id}/installed-onu")
     @ResponseStatus(HttpStatus.OK)
