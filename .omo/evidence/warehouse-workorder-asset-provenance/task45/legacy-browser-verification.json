@@ -1,0 +1,67 @@
+{
+  "legacyHead": "abaecd9e129cdfe12058d777fad3da2a9320c3c2",
+  "currentHead": "fcdd987a6cff5e23815c7050acf34071d9fa4313",
+  "jars": {
+    "current": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2",
+    "legacy": "e70f76715e6c302a23cf4c101410ea4c777eb29abe9bd45fc8615eec71f6d0d5"
+  },
+  "projects": [
+    "warehouse-desktop",
+    "warehouse-mobile"
+  ],
+  "phases": [
+    "before",
+    "after",
+    "restart"
+  ],
+  "tests": 6,
+  "preservedCustomers": 2,
+  "preservedOnus": 2,
+  "historicalChecksumsUnchanged": true,
+  "databaseRetained": true,
+  "separateDatabase": true,
+  "sharedFunctionDefinitionsUnchanged": true,
+  "phaseCounts": {
+    "before": {
+      "startTime": "2026-09-25T08:24:01.655Z",
+      "duration": 14739.06,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "after": {
+      "startTime": "2026-09-25T08:24:48.228Z",
+      "duration": 46297.26,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "restart": {
+      "startTime": "2026-09-25T08:25:57.262Z",
+      "duration": 7504.942,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "sourceHashes": {
+    "scripts/warehouse/legacy-browser.sh": "713853329ae47424b83b47e55c0e51e4aa96f77509c7f0779779bcbace86510c",
+    "scripts/warehouse/qa-processes.sh": "4775d5b1a660a1748813db6aaaee12cf03f33da0e184cc4c9de45af07d94a9e4",
+    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/config/WarehouseQaHealthIndicator.kt": "d185d0d67c649efd39c9d27c6779015535eaed4022b30277837b568e886b1809",
+    "web/playwright.warehouse-legacy.config.ts": "6eb6e33aafed5bde548116772330dd59e43025ff214fd9d42d131c16abafc083",
+    "web/e2e/warehouse-legacy/before.spec.ts": "0a377ad27bd4f528d497b398880efe81b65deb42bb03d5d62dfbd4fe6b4be661",
+    "web/e2e/warehouse-legacy/cutover.spec.ts": "ad7c4f7ec1cd601951ee6dbd13a52b80bec7b4eff1b423cbfbfe0149c9246f6a",
+    "web/e2e/warehouse-legacy/fixture.ts": "7213e68f2f06aa5c8e32e59151cb4c3558aebd19bc4c0206411df7b5e0d8e7ec"
+  },
+  "assertions": [
+    "Actual V172 customer and ONU creation entirely through UI, then unchanged migrations upgrade the same dedicated database",
+    "Original customer and ONU identifiers and raw serials survive cutover and process restart",
+    "First area assignment works for the legacy customer before operator area restriction",
+    "Independent restricted OPENING_BALANCE reviewer approves zero baseline; maker has no self-approval control",
+    "ENFORCED cutover persists after restart; available stock remains empty; unresolved legacy identity is never admitted as invented stock",
+    "Shared QA database functions and all preexisting legacy Flyway checksums remain unchanged"
+  ]
+}

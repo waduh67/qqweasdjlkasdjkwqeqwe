@@ -1,3 +1,40 @@
+## Current checkpoint: historical UI cutover6 PASS, including restart
+
+Follows pushedfcdd987a; locate containing commit with git log -1. Goal ACTIVE;
+tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN. Continue after commit and push.
+
+LegacyR6 PASS6 real browser cases: before2/14.7s, after2/46.3s, restart2/7.5s,
+desktop1280 and mobile375. Actual V172 application creates2customers+2ONUs through
+UI in a fresh marker-verified database. Latest unchanged migrations upgrade it;
+first customer area assignment, reviewed PROVENANCE_ONLY evidence, independent
+restricted OPENING_BALANCE approval, zero baseline and ENFORCED finalization all
+work. Same IDs/raw serials/checksums persist through restart; available stock empty.
+Both shared QA databases retain identical function definitions. Two inspected safe
+mobile images and legacy-browser-verification.json saved under task45. Raw traces,
+fixture credentials and complete screenshots remain private in the retained run.
+
+R5 before2PASS/after2FAIL was only an E2E raw-response expectation: HTTP uses
+sourceSnapshot.serialNumber, whereas the decoded web model has source.serial.
+R6 corrected the assertion without changing product behavior. Legacy fixture uses
+separate database/public schema; QA health and readiness bind exact database name.
+No sibling-schema migration runs remain. R6session26618 complete0; all services down,
+all volumes and isolated historical DB retained. BothV178.6/V178.7 immutable.
+
+Next launch prepared .omo/runtime/task45-browser-matrix-r4.sh/log: all8 specs after
+shared QA function restoration, including history-card screenshots. It is NOT yet
+running at this commit. Do not edit any E2E source while that matrix is active.
+Then fullserver/web/KMP, runbook preflight, CI/release gates, F1–F4 and user review.
+Portal60PASS, isolation10PASS and historical projection1PASS are saved in task46;
+full regression has not run. Unfiltered server deadline draft is now7200s because
+there are2456 test declarations plus real restart processes; focused gates stay1800s.
+
+Other uncommitted drafts: asset screenshots; docs/preflight; Docker build/context
+fixes; CI count validator9testsPASS and encrypted archive helper. age1.3.2 installed
+with pacman; five actual report files encrypted/decrypted byte-identically using
+existing SSH identity. No private key printed or uploaded. GitHub workflow/recipient
+variable not configured yet; no CI gate completion or image build claimed. No agents,
+main merge, deployment or native runtime claim. Keep raw credentials/logs/XML private.
+
 ## Current checkpoint: portal regression60 PASS; historical upgrade1 PASS
 
 Follows pushedddf494b3; locate containing commit with git log -1. Goal ACTIVE;

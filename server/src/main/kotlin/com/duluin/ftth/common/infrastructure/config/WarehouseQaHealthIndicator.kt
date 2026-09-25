@@ -13,10 +13,14 @@ import org.springframework.stereotype.Component
 class WarehouseQaHealthIndicator(
     private val jdbc: JdbcTemplate,
     @Value("\${WAREHOUSE_ENVIRONMENT_MARKER:}") private val expectedMarker: String,
+    @Value("\${WAREHOUSE_E2E_DATABASE:warehouse_e2e}") private val expectedDatabase: String,
 ) : HealthIndicator {
     override fun health(): Health {
         if (!expectedMarker.matches(Regex("warehouse-[a-f0-9]{12}-[a-f0-9]{32}"))) {
             return Health.down().withDetail("reason", "Missing owned environment marker").build()
+        }
+        if (expectedDatabase != "warehouse_e2e" && !expectedDatabase.matches(Regex("warehouse_fixture_[a-f0-9]{32}"))) {
+            return Health.down().withDetail("reason", "Invalid owned browser database name").build()
         }
         return try {
             val rows = jdbc.queryForList("""
@@ -25,7 +29,7 @@ class WarehouseQaHealthIndicator(
                 FROM warehouse_environment.identity, pg_roles WHERE rolname = current_user
             """.trimIndent())
             val row = rows.singleOrNull()
-            if (row == null || row["database"] != "warehouse_e2e" || row["username"] != "warehouse_app" ||
+            if (row == null || row["database"] != expectedDatabase || row["username"] != "warehouse_app" ||
                 row["marker"] != expectedMarker || row["restricted"] != true) {
                 Health.down().withDetail("reason", "Database, role or marker does not match the owned browser environment").build()
             } else {
