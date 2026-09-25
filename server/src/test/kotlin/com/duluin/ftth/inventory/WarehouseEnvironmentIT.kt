@@ -29,15 +29,18 @@ class WarehouseEnvironmentIT {
     private val root = Path.of(System.getProperty("user.dir")).parent
 
     @Test
-    fun `warehouse images retain Timescale and pin official same-release MinIO manifest`() {
+    fun `warehouse dependencies pin Timescale and verified upstream MinIO source`() {
         val images = Files.readAllLines(root.resolve("deploy/docker-compose.warehouse-test.yml"))
             .map(String::trim)
             .filter { it.startsWith("image:") }
         assertThat(images).containsExactly(
-            "image: timescale/timescaledb-ha:pg17",
-            "image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:" +
-                "14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+            "image: timescale/timescaledb-ha:pg17@sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a",
+            "image: warehouse-test-minio:release-2025-09-07-source",
         )
+        val minioBuild = Files.readString(root.resolve("deploy/minio-warehouse-test/Dockerfile"))
+        assertThat(minioBuild)
+            .contains("https://codeload.github.com/minio/minio/tar.gz/07c3a429bfed433e49018cb0f78a52145d4bedeb")
+            .contains("ADD --checksum=sha256:8819e3e7817e46b7b3798f8f200ead208562e571563c2e040352378031abe9f2")
     }
 
     @Test

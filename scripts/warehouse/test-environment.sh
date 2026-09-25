@@ -79,6 +79,8 @@ owned_resources() {
 }
 
 sql_app() {
+    # Credentials expand inside the owned container, never in host command text.
+    # shellcheck disable=SC2016
     compose exec -T postgres sh -c 'PGPASSWORD="$WH_APP_PASSWORD" PGCONNECT_TIMEOUT=5 exec psql -X -h 127.0.0.1 -U warehouse_app -d "$1" -v ON_ERROR_STOP=1 -At' sh "$1"
 }
 
@@ -116,7 +118,8 @@ SQL
 generate_environment() {
     [[ ! -e "$ENV_FILE" ]] || return 0
     umask 077
-    local marker="warehouse-$TASK_ID-$(openssl rand -hex 16)"
+    local marker
+    marker="warehouse-$TASK_ID-$(openssl rand -hex 16)"
     {
         printf 'WH_MARKER=%s\nWH_PROJECT=%s\n' "$marker" "$marker"
         printf 'WH_HOST=127.0.0.1\nWH_PG_PORT=25432\nWH_S3_PORT=29000\nWH_TEST_DB=warehouse_test\nWH_E2E_DB=warehouse_e2e\nWH_APP_USER=warehouse_app\nWH_OWNER_USER=warehouse_owner\n'
@@ -164,12 +167,21 @@ environment_main() {
     owned_resources
     case "$1" in
         up)
+            # status is assigned when the EXIT trap executes.
+            # shellcheck disable=SC2154
             trap 'status=$?; trap - EXIT INT TERM; if (( status != 0 )); then owned_resources && compose down --timeout 60; fi; exit "$status"' EXIT
             trap 'exit 130' INT
             trap 'exit 143' TERM
-            compose up -d --wait --wait-timeout 150
+            # Upstream binary registries stopped serving this historical release.
+            # Build its checksum-pinned source in an isolated, credential-free
+            # context. Cold Go compilation needs longer than container startup.
+            timeout --kill-after=30s 1800s "${DOCKER[@]}" compose --env-file "$ENV_FILE" \
+                -p "$WH_PROJECT" -f "$COMPOSE_FILE" build minio
+            compose up -d --no-build --wait --wait-timeout 150
             initialize_databases
             local attempt
+            # The loop variable bounds retries; readiness does not use its value.
+            # shellcheck disable=SC2034
             for attempt in {1..30}; do
                 if curl --noproxy '*' -fsS --max-time 2 "http://127.0.0.1:$WH_S3_PORT/minio/health/ready" >/dev/null 2>&1; then break; fi
                 sleep 1

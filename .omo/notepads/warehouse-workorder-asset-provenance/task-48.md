@@ -27,3 +27,15 @@ base-image digests; no byte-equivalence claim to old vendor image.
 Full-server R2 was safely terminated while still QUEUED (empty log), so final full
 server gate can use the fixed dependency configuration. It ran zero tests.
 R5 browser continues using its original environment; no source/config change.
+
+## QA dependency source build verified
+MinIO source build completed successfully from the checksum-pinned upstream release
+archive and pinned Go/Alpine bases. Runtime reports correct release and source commit.
+QA Compose now builds this local image before startup (separate cold-build timeout);
+Timescale points to the already-tested immutable registry digest. No production
+Compose changes. All seven WarehouseEnvironmentIT tests PASS, including real S3
+round-trip, PostgreSQL role/marker/migration and forbidden override guards. Exact
+source file hashes/image identity in task48/minio-source-verification.json.
+Full-serverR3 session11018 now runs historical then complete modern server against
+this source-built MinIO. PreflightR2 session47709 follows under host lock. Do not
+edit their wrappers or tested backend/QA source while active.
