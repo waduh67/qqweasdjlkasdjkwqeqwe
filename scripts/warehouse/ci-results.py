@@ -44,7 +44,7 @@ def junit(source):
         root = ET.parse(path).getroot()
         require(root.tag == "testsuite", "Unsupported JUnit report")
         name = root.attrib.get("name", "")
-        require(re.fullmatch(r"[A-Za-z0-9_.$:-]+", name), "Invalid JUnit suite identity")
+        require(re.fullmatch(r"[A-Za-z0-9_.$:-]+(?:\[[A-Za-z0-9_-]+\])?", name), "Invalid JUnit suite identity")
         counts = {key: integer(root.attrib.get(key, "0")) for key in ("tests", "failures", "errors", "skipped")}
         require(counts["tests"] > 0, "A JUnit suite executed zero tests")
         require(counts["failures"] == counts["errors"] == counts["skipped"] == 0,

@@ -53,6 +53,12 @@ class ReleaseResultsTest(unittest.TestCase):
         with self.assertRaises(RESULTS.InvalidResults):
             RESULTS.playwright(self.root / "missing.json", PROJECTS)
 
+    def test_kotlin_multiplatform_suite_preserves_its_target_suffix(self):
+        self.xml()
+        path = self.root / "TEST-Guard.xml"
+        path.write_text(path.read_text().replace('name="warehouse.Guard"', 'name="MaterialQuantityTest[jvm]"'))
+        self.assertEqual(RESULTS.junit(self.root)[1]["suites"][0]["suite"], "MaterialQuantityTest[jvm]")
+
     def test_zero_tests_block_the_gate(self):
         self.xml(tests=0, cases="")
         with self.assertRaises(RESULTS.InvalidResults):
