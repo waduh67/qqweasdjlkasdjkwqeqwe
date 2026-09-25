@@ -14,6 +14,7 @@ import java.util.UUID
 @Transactional(timeout = 30, rollbackFor = [Exception::class])
 class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantCutoverApi,
     private val policy: InventoryTenantPolicyService,
+    private val customers: InventoryProvenanceCustomerPort,
     private val access: WarehouseProvenanceAccess, private val store: WarehouseProvenanceStore) {
 
     private val mapper = jacksonObjectMapper()
@@ -40,7 +41,7 @@ class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantC
             WarehouseCutoverState.VALIDATING -> fence.snapshot
             WarehouseCutoverState.ENFORCED -> masterFailure(WarehouseErrorCode.CUTOVER_REQUIRED)
         }
-        store.capture(validating, current.fence.identity.userId)
+        store.capture(validating, current.fence.identity.userId, customers.captureSources(fence, current))
         val body = store.summary(validating)
         store.record(key, payload, input.expectedEpoch, validating, current.fence.identity.userId, current.fence.epoch, body)
         return body

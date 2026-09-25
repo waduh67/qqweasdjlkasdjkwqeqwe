@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
 import com.duluin.ftth.inventory.ProvenanceCustomerReference
+import com.duluin.ftth.inventory.ProvenanceSourceSnapshot
 import com.duluin.ftth.inventory.TenantCutoverSnapshot
 import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.application.service.WarehouseCanonicalPayload
@@ -21,9 +22,22 @@ class WarehouseProvenanceStore(private val jdbc: WarehouseCommandJdbc) {
         }.singleOrNull()
     }
 
-    fun capture(cutover: TenantCutoverSnapshot, actorId: UUID) = jdbc.execute { sql ->
+    fun capture(cutover: TenantCutoverSnapshot, actorId: UUID, customerSources: List<ProvenanceSourceSnapshot>) = jdbc.execute { sql ->
         if (sql.value("SELECT id FROM inventory_migration_batch WHERE tenant_id=? AND id=?", sql.tenant, cutover.migrationBatchId) != null)
             sql.fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+        sql.update("""INSERT INTO inventory_provenance_case(id,tenant_id,source_table,source_id,source_snapshot)
+            SELECT warehouse_provenance_case_id(actual.tenant_id,actual.source_table,actual.source_id,actual.source_hash),
+                actual.tenant_id,actual.source_table,actual.source_id,actual.source_snapshot
+            FROM inventory_live_provenance_source actual WHERE actual.tenant_id=? AND NOT EXISTS (
+                SELECT FROM inventory_provenance_case preserved WHERE preserved.tenant_id=actual.tenant_id
+                    AND preserved.source_table=actual.source_table AND preserved.source_id=actual.source_id AND preserved.source_hash=actual.source_hash)
+            ORDER BY actual.source_table,actual.source_id""", sql.tenant)
+        customerSources.forEach { source ->
+            check(source.sourceTable == "onu")
+            sql.update("""INSERT INTO inventory_provenance_case(id,tenant_id,source_table,source_id,source_snapshot)
+                SELECT ?,?,?,?,?::jsonb WHERE NOT EXISTS (SELECT FROM inventory_provenance_case WHERE tenant_id=? AND id=?)""",
+                source.id, sql.tenant, source.sourceTable, source.sourceId, source.snapshotJson, sql.tenant, source.id)
+        }
         sql.update("""INSERT INTO inventory_migration_batch(id,tenant_id,cutover_epoch,snapshot_watermark,requested_by)
             VALUES (?,?,?,?,?)""", requireNotNull(cutover.migrationBatchId), sql.tenant, cutover.epoch, requireNotNull(cutover.snapshotWatermark), actorId)
     }
@@ -40,18 +54,18 @@ class WarehouseProvenanceStore(private val jdbc: WarehouseCommandJdbc) {
     fun customerIds(): Set<UUID> = referenceIds("customerId")
 
     fun existingLocationIds(): Set<UUID> = jdbc.execute { sql ->
-        sql.query("""SELECT DISTINCT location.id FROM inventory_location location JOIN inventory_provenance_case source
+        sql.query("""SELECT DISTINCT location.id FROM inventory_location location JOIN warehouse_report_provenance_case source
             ON source.tenant_id=location.tenant_id AND source.source_snapshot->>'locationId'=location.id::text
             WHERE location.tenant_id=? ORDER BY location.id""", sql.tenant) { it.uuid("id") }.toSet()
     }
 
     private fun referenceIds(field: String): Set<UUID> = jdbc.execute { sql ->
-        sql.query("""SELECT DISTINCT (source_snapshot->>?)::uuid id FROM inventory_provenance_case
+        sql.query("""SELECT DISTINCT (source_snapshot->>?)::uuid id FROM warehouse_report_provenance_case
             WHERE tenant_id=? AND source_snapshot->>? IS NOT NULL ORDER BY id""", field, sql.tenant, field) { it.uuid("id") }.toSet()
     }
 
     fun summary(cutover: TenantCutoverSnapshot): String = jdbc.execute { sql ->
-        requireNotNull(sql.value("""WITH source AS MATERIALIZED (SELECT * FROM inventory_provenance_case WHERE tenant_id=?),
+        requireNotNull(sql.value("""WITH source AS MATERIALIZED (SELECT * FROM warehouse_report_provenance_case WHERE tenant_id=?),
             manifest AS (SELECT coalesce(jsonb_agg(jsonb_build_object('caseId',id,'sourceTable',source_table,
                 'sourceId',source_id,'sourceHash',source_hash) ORDER BY source_table,source_id),'[]'::jsonb) body FROM source),
             kinds AS (SELECT unnest(ARRAY['inventory_serialized_asset','inventory_balance_projection','onu','inventory_serial_tombstone',
@@ -87,7 +101,7 @@ class WarehouseProvenanceStore(private val jdbc: WarehouseCommandJdbc) {
                     AND candidate.source_id=source.source_id),'[]'::jsonb))"""
         // Explicit joins keep one row per preserved source and avoid leaking unscoped current records.
         val query = """WITH request AS (SELECT ?::uuid tenant,?::text source_table,?::uuid id,?::jsonb customers),
-            matches AS MATERIALIZED (SELECT source.*,$row body FROM inventory_provenance_case source
+            matches AS MATERIALIZED (SELECT source.*,$row body FROM warehouse_report_provenance_case source
                 CROSS JOIN request LEFT JOIN inventory_location location ON location.tenant_id=source.tenant_id
                     AND location.id=(source.source_snapshot->>'locationId')::uuid
                 WHERE source.tenant_id=request.tenant AND (request.source_table IS NULL OR source.source_table=request.source_table)

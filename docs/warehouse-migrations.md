@@ -1,3 +1,17 @@
+## V177.4 applied: current cutoff snapshots
+
+Full packaged migrations and13tests passed in2m54s, including actual HTTP and a
+blocked PostgreSQL legacy writer. V177.4 is now applied and immutable.
+SHA-256: `6275f0da7a4d0c23e06aaf94a36f7214fd934d8c28d54f60b283e9966ac3ed50`.
+Next free version177.5;178reserved. Snapshot history and raw physical IDs remain.
+
+## V177.4 reservation: current source capture at the cutoff
+
+V177–V177.3 are applied and immutable. V177.4 is reserved for versioned immutable
+source snapshots, owner-provided live source views, and exact batch capture after
+legacy writers drain under the exclusive cutover fence. V178 remains reserved.
+No V177.4 application yet. Historical snapshot rows/IDs must remain intact.
+
 ## V177.3 applied: immutable resolution proposals
 
 Full packaged Spring Boot with legacy collisions/orphan references applied V177.3

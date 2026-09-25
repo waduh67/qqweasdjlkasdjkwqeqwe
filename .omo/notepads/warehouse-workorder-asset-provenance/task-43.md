@@ -1,3 +1,50 @@
+## Task43 current cutoff snapshots verified; legacy fulfillment effects NEXT
+
+V177.4 APPLIED and IMMUTABLE; next free177.5,178reserved.13testsPASS/BUILD SUCCESSFUL
+2m54s: Capture2/Boot2/Query2/Resolution4/Modularity3. Safeproof task43/current-cutoff-
+verification.json. OwnedQA containers/network stopped;volumesretained. Goal ACTIVE;
+1–42DONE;43–48/F1–F4OPEN. Continue whole scope, commit/push coherent checkpoints.
+
+The stale Flyway snapshot gap is fixed. Read-only live owner views provide current
+source data beforebatch; GET doesnotpersist. Begin exclusivecutover waitsoldwriters
+then checks actualreviewhash. Changedsources get immutable newcaseversions; identical
+sources reuse originalcaseID. Deterministic SHA-derived candidateIDs make previewID
+matchcapture. inventory_provenance_case uniqueness nowtenant/table/sourceID/hash;
+no oldrows deleted. InsertguardrequiresinitialVALIDATINGexclusivefence+actualowner
+snapshot+stableID and refusesafterbatchseal. Inventorycapturesown7sourcekinds;
+customer rootport captureSources obtainsactualONUwhitelist+currentareaauthority.
+Databasechecks refer to RLS-invoking publicowner sourceviews. No directinventory
+Kotlinqueryonprivatecustomertables. BatchtriggerrequiresALLactualcurrentsources
+captured, derivesmanifest/hash. warehouse_report_provenance_case useslive data before
+batch andexactfrozenmanifestafterwards; eligibility ignoresobsoletehistoryversions.
+
+CaptureITrealHTTP holdsactualappDBsharedcutoverlock, changeslegacyquantity, starts
+BEGIN, observespg_blocking_pids (no sleeprace), commitswriter: BEGIN409STALE_REVISION.
+GETshows91000but old82500snapshotunchanged; refreshBEGIN201capturesnewversion and
+exactreplay. Addedsourceincluded, removedprojectionexcludedfromcurrentmanifestbut
+oldcase preserved. All previous query/resolution/boot regressionspass. No newdocs/
+verifiedstock/admission. Currentreportcases are the activegeneration; rawhistorical
+versions remain inbase table, notsilentlydeleted.
+
+NEXT177.5: capture pendinglegacyfulfillmenteffects throughinventoryrootport implemented
+infulfillment. Existing InventoryTenantPolicyPersistence.beginValidation onlyrecords
+inventory_movementstate!=APPLIED; FulfillmentCheckpointPersistenceAdapter claim/claim-
+Pending/claimOrCreate useCONTROL_PLANEfence. Actualownerwork istransactional, but old
+pendingoutbox/checkpointIDs also need cutoffmanifest and terminalreconciliation so
+oldreplay neverpostsafterbaseline. Use actualcheckpoint/outbox/effectprogress, not
+fakeinventoryfacts or rawpayload disclosure. FulfillmentINVENTORY executor currently
+approvals.verify (no newstockeffect); retain history and distinguish alreadycompleted
+frompending. Cancel proposals still proposals, notexecutedmutations.
+
+Then: seal actualresolutions/evidence/master revisions; reuseexistingdurableapproval
+owner andsinglepostingauthority forOPENING_BALANCE with explicitunvaluedfulltiers,
+no fake0cost or receipt. Emptyvalidated tenant needs independent controlapproval
+withoutfakephysicallines. Admitwinner actualassetID+claims atomically; oldduplicate
+rows remain staged. FinalizeexclusiveepochENFORCED aftercounts/units/conflicts/effects.
+Unmatched/unknowninstalled provenanceonly remainsstaged,neverISPavailability. Add
+/warehouse/provenance UI (stillabsent), mixedtenantrealHTTP+restart andbrowserproof.
+Branchwork/warehouse-completion ->origin/feat/warehouse-workorder; no merge/deploy.
+
 ## Task43 resolution proposals verified; current cutoff capture NEXT
 
 V177.3 APPLIED and IMMUTABLE; next free177.4,178reserved. Nine tests PASS1m59s

@@ -5,6 +5,19 @@ ID, serial/MAC mentah, kuantitas, hubungan pelanggan/ONU, dan riwayat pergerakan
 tetap ada. Kuantitas tanpa satuan yang terbukti tidak berubah menjadi EA atau MM.
 Snapshot tidak membuat pembelian, biaya, saldo tersedia, atau penugasan perangkat.
 
+Sebelum batch dibuka, laporan membaca sumber terkini melalui proyeksi baca milik
+inventory dan pelanggan. GET tidak menyimpan snapshot. Ketika batch dimulai,
+penguncian eksklusif menunggu penulis lama selesai, kemudian hash laporan dicek
+kembali. Perubahan sumber membuat perintah kedaluwarsa; operator perlu membaca
+ulang laporan sebelum mengirim perintah baru.
+
+Di cutoff, sumber yang tidak berubah memakai ID kasus lama. Versi yang berubah
+disimpan sebagai kasus baru dengan hash dan ID stabil; versi lama tetap utuh.
+Sumber tambahan harus ikut manifest, sedangkan proyeksi yang sudah tidak ada
+tidak dimasukkan sebagai saldo saat ini. Setelah batch dibuat, daftar kasus dan
+jumlah sumber memakai manifest yang dibekukan. Snapshot ONU berasal dari port
+milik pelanggan dan tetap memerlukan cakupan area terkini.
+
 `inventory_provenance_case` memuat snapshot terpisah untuk aset, saldo, ONU,
 tombstone, pergerakan, kaki pergerakan, efek fulfillment, dan fakta material lama.
 Hash SHA-256 dihitung database. Akun aplikasi hanya dapat membacanya. Kontak,
@@ -88,7 +101,7 @@ operasi tersebut tetap berlaku. Tenant baru kosong
 tetap memakai inisialisasi atomik ENFORCED yang sudah tersedia; tenant lama kosong
 memerlukan jalur validasi dan persetujuan tersendiri.
 
-Verifikasi dasar ada di `WarehouseMigrationITBoot`, `WarehouseMigrationITQuery`,
+Verifikasi dasar ada di `WarehouseMigrationITBoot`, `WarehouseMigrationITQuery`, `WarehouseMigrationCaptureIT`,
 `WarehouseMigrationEvidenceIT`, `WarehouseMigrationResolutionIT`, dan
 `WarehouseMigrationInventoryTest`. Tes bukti
 menggunakan HTTP serta MinIO sungguhan, kehilangan respons, penghentian backend

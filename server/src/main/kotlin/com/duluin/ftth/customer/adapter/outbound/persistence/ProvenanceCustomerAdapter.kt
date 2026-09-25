@@ -14,6 +14,27 @@ import java.util.UUID
 @Component
 @Transactional(propagation = Propagation.MANDATORY)
 class ProvenanceCustomerAdapter(private val entityManager: EntityManager) : InventoryProvenanceCustomerPort {
+    override fun captureSources(cutover: TenantCutoverChangeFence, current: CurrentAuthority): List<ProvenanceSourceSnapshot> {
+        cutover.assertHeld()
+        current.fence.assertHeld()
+        check(cutover.snapshot.tenantId == current.fence.identity.tenantId && cutover.snapshot.tenantId == TenantContext.tenantId())
+        return entityManager.unwrap(Session::class.java).doReturningWork<List<ProvenanceSourceSnapshot>> { connection: java.sql.Connection ->
+            val customerIds = connection.prepareStatement("SELECT DISTINCT customer_id FROM onu WHERE tenant_id=? AND warehouse_admission='LEGACY_UNRESOLVED'").use { query ->
+                query.setObject(1, TenantContext.tenantId())
+                query.executeQuery().use { rows -> buildSet { while (rows.next()) add(rows.getObject(1, UUID::class.java)) } }
+            }
+            authorize(customerIds, current)
+            connection.prepareStatement("""SELECT warehouse_provenance_case_id(tenant_id,source_table,source_id,source_hash) id,
+                source_table,source_id,source_snapshot::text snapshot FROM customer_live_provenance_source WHERE tenant_id=? ORDER BY source_id""").use { query ->
+                query.setObject(1, TenantContext.tenantId())
+                query.executeQuery().use { rows -> buildList {
+                    while (rows.next()) add(ProvenanceSourceSnapshot(rows.getObject("id", UUID::class.java), rows.getString("source_table"),
+                        rows.getObject("source_id", UUID::class.java), rows.getString("snapshot")))
+                } }
+            }
+        }
+    }
+
     override fun authorize(customerIds: Set<UUID>, current: CurrentAuthority): Map<UUID, ProvenanceCustomerReference> {
         current.fence.assertHeld()
         check(current.fence.identity.tenantId == TenantContext.tenantId())
