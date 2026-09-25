@@ -1,3 +1,34 @@
+## Verified reassignment/return and upgraded-database preflight supplement
+
+CI36124045412 at c227f6bc completed: all nonserver jobs PASS. Server compile failed
+on the removed onboarding field, already corrected in7013 and compiled successfully
+in CI36125103447 at53e9. The latter is now running16focused fixture suites; full
+server is still pending. No aggregate PASS is claimed.
+
+Downloaded returns and legacy artifacts, verified GitHub ZIP/encrypted hashes,
+decrypted privately, and revalidated actual Playwright reports against safe proofs:
+returns4 (desktop2/mobile2), legacy6 (before/after/restart2each). Reassignment retains
+old custody and gives the new technician zero inherited stock; cancel does not
+restock; physical return/inspection restores the exact ONU. Upgraded V172 legacy
+keeps2customers/2ONUs, persists2UI-created MM SKUs after restart, and still creates
+no available stock. Read-only SQL in that same upgraded DB passes2positive probes
+and rejects6wrong migration/unit/cutover probes; all8raw output hashes match.
+Safe proof is in task45/ci-r3-return-reassignment-verification.json and
+ task47/ci-r3-upgraded-preflight-verification.json. Authenticated raw artifacts stay
+ignored/private. Two mobile screenshots were visually reviewed and safely saved.
+
+The new-technician screenshot exposed a raw IN_PROGRESS badge. WarehouseStatus now
+labels ASSIGNED/IN_PROGRESS/DONE in Indonesian. MyMaterialsPage7tests and full web
+lint pass (existing warnings remain). Browser proof for this label change is still
+pending; do not attribute old c227 screenshots to the new label source.
+
+Originalcheckout remains0a14and frozen with R3/session11018 running; preflight47709
+waits for its lock. Continue in work/warehouse-regression-fixtures. After R3 exits,
+run archive-full-server-r3.py, let preflight finish, then FAST-FORWARD original to
+this branch. Do not reapply patches. Run16focused+5historical and fixed full server;
+continue final browser/CI/audits. No reviewer agents authorized yet. GoalACTIVE;
+tasks46-48/F1-F4 remain open. Commit/push checkpoints, then keep working.
+
 ## Historical regression supplement: five version-correct application fixtures prepared
 
 Follows pushed0ee64efd. Full R3/session11018 STILL RUNNING, now over1386passed and

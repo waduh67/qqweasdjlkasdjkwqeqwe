@@ -1,0 +1,185 @@
+{
+  "status": "PASSED_SUPPLEMENT",
+  "ciRun": 36124045412,
+  "testedCommit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+  "revalidatedAtUtc": "2026-09-25T10:48:22.656962+00:00",
+  "artifacts": [
+    {
+      "artifactId": 10859917804,
+      "name": "warehouse-browser-returns-c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+      "artifactDigest": "sha256:8b43c4c7ab919cfbfff6ed1d19610a26d83b05adbb56211f245e952101ccc56b",
+      "downloadedAndDecrypted": true,
+      "encryption": {
+        "commit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+        "encryptedArchiveSha256": "91826158ac8903b5a04b633e2c963a13222b79f5f3392499cf3ef68d3b3c0439",
+        "recipientSha256": "13195131d58b9e3fc71e6c5812c38d79d40d31f907fd1aada28fa10952049818",
+        "fileCount": 41
+      }
+    },
+    {
+      "artifactId": 10859207996,
+      "name": "warehouse-legacy-c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+      "artifactDigest": "sha256:5b971a29e9ea7233f4422fd8d2508b93e88a39f0764f1c95096dcbe3c07d6cc8",
+      "downloadedAndDecrypted": true,
+      "encryption": {
+        "commit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+        "encryptedArchiveSha256": "4bc19bee1111850265ff53572d0d751a31fd515104cbd3373ee3699a511f179c",
+        "recipientSha256": "13195131d58b9e3fc71e6c5812c38d79d40d31f907fd1aada28fa10952049818",
+        "fileCount": 44
+      }
+    }
+  ],
+  "reports": {
+    "browser": {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": [
+        "1d5f55a8a5d777116c552c57ae1998510f7ab2a20b5ccf65ad3cb7414f45b7c7"
+      ],
+      "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+    },
+    "legacy-before": {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "570688166098138af9c12865109c1dc6ac9d57277da9f158578951acc271c23f"
+      ]
+    },
+    "legacy-after": {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "13e0cfb9e3d199fbe2477aa14298d96e984a728e2d67193483914049d002e169"
+      ]
+    },
+    "legacy-restart": {
+      "kind": "playwright",
+      "status": "PASSED",
+      "commit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": [
+        "93ace1401472f50b0ed407c3e8caae745eb45e9313b305ff35a730955a5ba94a"
+      ]
+    }
+  },
+  "upgrade": {
+    "legacyHead": "abaecd9e129cdfe12058d777fad3da2a9320c3c2",
+    "currentHead": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+    "jars": {
+      "current": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2",
+      "legacy": "e70f76715e6c302a23cf4c101410ea4c777eb29abe9bd45fc8615eec71f6d0d5"
+    },
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ],
+    "phases": [
+      "before",
+      "after",
+      "restart"
+    ],
+    "tests": 6,
+    "upgradedCatalogSkus": 2,
+    "readOnlyPreflight": {
+      "status": "PASSED",
+      "schemaBefore": "172",
+      "schemaAfter": "178.7",
+      "readOnly": true,
+      "positiveProbes": 2,
+      "negativeProbes": 6,
+      "negativeReasons": [
+        "migration mismatch",
+        "SKU unit mismatch",
+        "cutover mismatch"
+      ],
+      "rows": [
+        {
+          "database": "warehouse_fixture_0137936932f720c2c3675f6ebffbf95b",
+          "schema": "public",
+          "applicationRole": "warehouse_app",
+          "version": "178.7",
+          "cutover": "ENFORCED",
+          "customers": 1,
+          "onus": 1,
+          "positions": 0,
+          "movements": 1,
+          "verifiedQuantityByUnit": {}
+        },
+        {
+          "database": "warehouse_fixture_0137936932f720c2c3675f6ebffbf95b",
+          "schema": "public",
+          "applicationRole": "warehouse_app",
+          "version": "178.7",
+          "cutover": "ENFORCED",
+          "customers": 1,
+          "onus": 1,
+          "positions": 0,
+          "movements": 1,
+          "verifiedQuantityByUnit": {}
+        }
+      ],
+      "preflightSqlSha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+      "reports": {
+        "preflight-1-migration.txt": "8e1b5ab16cdaacbd1a4b8ba9f9698871634144e7fbf7abe7cdee390d7d63a455",
+        "preflight-0-unit.txt": "b24c85c0351e1856e52333f5f8f7605564fcad7e4e451750ea55f3623c528cda",
+        "preflight-0-migration.txt": "198e8d6690c0014e084ad2c9cc8f798c9e656944756b4a2750f67c12c24a837f",
+        "preflight-0-positive.txt": "54fc65ddbb086350c595d10ad827d453e8bb4f3316be85deb269e8beda6760d4",
+        "preflight-1-positive.txt": "657b3e04feb7573125eab3c8438457d1c813bf8a6d9c5c4cba759c8c48c87ce1",
+        "preflight-0-cutover.txt": "75c63d85efb7b3a70dd8c6c5469c20d0508c1bfc8622f0f1eae5df3f7ec097c2",
+        "preflight-1-cutover.txt": "9df2dda1b0a5c1746b3b44f8564222e5e5e45d607fe266575cc2195112ae9a6b",
+        "preflight-1-unit.txt": "75915274bc67856ebdd20fdcf76e935049fecd45a5f6650e27ed55c7ea927d0d"
+      }
+    },
+    "preservedCustomers": 2,
+    "preservedOnus": 2,
+    "historicalChecksumsUnchanged": true,
+    "databaseRetained": true,
+    "separateDatabase": true,
+    "sharedFunctionDefinitionsUnchanged": true
+  },
+  "screenshots": [
+    {
+      "file": "task45/ci-r3-cancelled-job-custody-awaiting-physical-return.png",
+      "sha256": "755be7783d2cb1a7f87f1f2f22c16302c9d08c7ac1fa2248115aa276ed1b151f",
+      "reviewed": true
+    },
+    {
+      "file": "task45/ci-r3-reassigned-technician-no-inherited-custody.png",
+      "sha256": "bc08eefd672b28cf64dca1d4dd8877de9c3659ef2d60e6e0dedaab487b87f787",
+      "reviewed": true
+    }
+  ],
+  "scope": [
+    "Actual restricted technician reassignment transfers no custody; original custodian cannot post new use but can return goods.",
+    "Cancellation retains the same outstanding ONU and 100m cable; only physical return and inspection restores the same ONU to available stock.",
+    "V172 customer/ONU identities survive current upgrade and restart; UI-created MM catalog entries persist without invented stock.",
+    "Read-only preflight on the same upgraded database: two positive and six wrong-version/unit/cutover probes."
+  ],
+  "limits": [
+    "The CI server compile failed at this tested commit; these passing nonserver jobs do not establish full regression success.",
+    "Screenshots reveal the old raw IN_PROGRESS label. This checkpoint localizes that label; its new browser validation is pending.",
+    "No independent final F1-F4 approval or publication/deployment is claimed."
+  ]
+}

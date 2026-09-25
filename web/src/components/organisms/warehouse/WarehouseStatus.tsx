@@ -2,6 +2,7 @@ import { StatusBadge, type Tone } from '@/components/atoms/Badge'
 
 const states: Record<string, [string, Tone]> = {
   ACTIVE: ['Aktif', 'good'], ARCHIVED: ['Diarsipkan', 'neutral'], DRAFT: ['Draf', 'neutral'],
+  ASSIGNED: ['Ditugaskan', 'accent'], IN_PROGRESS: ['Dikerjakan', 'accent'], DONE: ['Teknis selesai', 'good'],
   COUNTING: ['Sedang dihitung', 'accent'], RECOUNT_REQUIRED: ['Perlu hitung ulang', 'warning'],
   DISCREPANCY: ['Penanganan selisih', 'warning'], REPAIR: ['Dalam servis', 'warning'],
   AVAILABLE: ['Tersedia', 'good'], RESERVED: ['Dipesan', 'accent'], PICKED: ['Disiapkan', 'accent'],
