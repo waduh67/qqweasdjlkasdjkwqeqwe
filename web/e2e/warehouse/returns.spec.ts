@@ -3,8 +3,11 @@ import { login, signup } from './helpers'
 import { addLocation, addSku, addSupplier, setupOwnArea } from './catalog'
 import { confirmOperation, selectNamed } from './fulfillment'
 import { setupDiscrepancyApprover } from './approvals'
+import { randomUUID } from 'node:crypto'
+import { acknowledgeNumericJourney, prepareNumericJourney, switchUser } from './numeric-journey'
+import { inspectAsset } from './asset-journey'
 
-// Tasks36/37: actual partial transfer and independent discrepancy. Technician returns/RMA follow in task45.
+// Transfer discrepancy and technician returns use separate tenants and documents.
 test('warehouse receives sixty metres and independently resolves forty metres after partial transfer', async ({ page }, testInfo) => {
   test.setTimeout(360_000)
   const admin = await signup(page), area = await setupOwnArea(page, admin)
@@ -165,4 +168,45 @@ test('warehouse receives sixty metres and independently resolves forty metres af
     await expect(page.getByRole('row').filter({ hasText: 'Kabel transfer' })).toContainText(status === 'AVAILABLE' ? '60,000 m' : '40,000 m')
     await page.screenshot({ path: testInfo.outputPath(`discrepancy-final-${status.toLowerCase()}.png`), fullPage: true })
   }
+})
+
+test('technician returns an unused mixed-case serial and warehouse inspection releases that same unit', async ({ page }, testInfo) => {
+  test.setTimeout(360_000)
+  const fixture = await prepareNumericJourney(page, { serialPrefix: `Unused-${randomUUID().slice(0, 8)}-` })
+  await acknowledgeNumericJourney(page, fixture)
+  await page.goto(`/my-materials?workOrderId=${fixture.workOrder.id}`)
+  await page.getByRole('button', { name: 'Kembalikan perangkat', exact: true }).click()
+  const scanner = page.getByRole('textbox', { name: 'Serial perangkat', exact: true })
+  await scanner.fill(fixture.serial.toLowerCase()); await scanner.press('Enter')
+  await page.getByRole('textbox', { name: 'Jumlah dikembalikan (unit)', exact: true }).fill('1')
+  await selectNamed(page, 'Karantina tujuan', `${fixture.quarantine.code} · ${fixture.quarantine.name}`)
+  await page.getByRole('textbox', { name: 'Referensi bukti pengembalian', exact: true }).fill('Unit belum dipasang; serial utuh dikembalikan')
+  await page.getByRole('textbox', { name: 'Alasan pengembalian', exact: true }).fill('Pemasangan perangkat ditunda')
+  await page.getByRole('button', { name: 'Tinjau pengembalian', exact: true }).click()
+  const returned = await confirmOperation(page, `${fixture.root}/return`, 'Kirim pengembalian')
+  expect(returned).toMatchObject({ purpose: 'RETURN', request: { quantityBase: '1', baseUnit: 'EA' } })
+  await expect(page.getByRole('button', { name: 'Kembalikan perangkat', exact: true })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('unused-serial-returned-by-technician.png'), fullPage: true })
+  await switchUser(page, fixture.admin)
+  await page.goto('/warehouse/returns')
+  await page.getByRole('button', { name: 'Lihat sisa menunggu penerimaan', exact: true }).click()
+  await page.getByRole('button', { name: 'Akui penerimaan sisa', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Bukti penerimaan serah-terima', exact: true }).fill('Petugas lain menerima satu unit asli')
+  await page.getByRole('button', { name: 'Tinjau serah-terima', exact: true }).click()
+  await confirmOperation(page, `${fixture.root}/residuals/acknowledge`, 'Akui penerimaan')
+  await page.getByRole('button', { name: 'Terima retur baru', exact: true }).click()
+  const source = page.getByRole('combobox', { name: 'Sumber retur', exact: true })
+  await expect(source.locator(`option[value="${returned.id}"]`)).toBeAttached()
+  await source.selectOption(returned.id)
+  await page.getByRole('textbox', { name: 'Referensi bukti penerimaan retur', exact: true }).fill('Serial cocok dengan unit belum terpasang')
+  await page.getByRole('button', { name: 'Tinjau penerimaan retur', exact: true }).click()
+  const intake = await confirmOperation(page, '/api/v1/warehouse/returns', 'Catat retur')
+  expect(intake.stockIdentityId).toBe(returned.transit.stockIdentityId)
+  await inspectAsset(page, fixture, intake.id, 'SERVICEABLE', 'ISP')
+  const read = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/stock' && new URL(res.url()).searchParams.get('bucket') === 'AVAILABLE')
+  await page.goto('/warehouse/stock?bucket=AVAILABLE')
+  const stock = await (await read).json()
+  expect(stock.items.find((row: { skuId: string }) => row.skuId === fixture.onu.id)).toMatchObject({ available: { quantityBase: '10' } })
+  expect(stock.items.find((row: { skuId: string }) => row.skuId === fixture.cable.id)).toMatchObject({ available: { quantityBase: '900000' } })
+  await page.screenshot({ path: testInfo.outputPath('unused-serial-same-unit-available.png'), fullPage: true })
 })

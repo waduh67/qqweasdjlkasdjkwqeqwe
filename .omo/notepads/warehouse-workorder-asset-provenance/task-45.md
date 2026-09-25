@@ -123,3 +123,11 @@ R3 proved historical UI2/2, then exposed first-area picker deadlock after upgrad
 CustomerAreaField now honors existing customer administration unrestricted-area
 contract, without changing warehouse authority. Red3/1; green4/4 in2files.
 R4 real legacy rerun queued; no cutover completion claimed.
+
+## Issue, return, count browser gates
+
+8 real tests PASS across both projects: issue2(R2),returns4(R3),exceptions2(R3).
+Actual restricted ACK/unused return, independent warehouse intake and inspection,
+60/40transfer discrepancy, blindcounter/independent rejection and append-only stale
+recount. Exact scenarios and source hashes in issue-return-count-browser-verification.json.
+Assets screenshot rerun and legacy UI cutover remain pending.

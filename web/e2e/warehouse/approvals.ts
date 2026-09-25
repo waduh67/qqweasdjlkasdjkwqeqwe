@@ -3,7 +3,7 @@ import { createRole, createUser } from './helpers'
 import { confirmOperation, selectNamed } from './fulfillment'
 
 /** All policy, user and warehouse grants are created through real UI. */
-export async function setupDiscrepancyApprover(page: Page, areaLabel: string, scopes: { id: string; label: string }[], policyLocations: { id: string; label: string }[]) {
+export async function setupDiscrepancyApprover(page: Page, areaLabel: string, scopes: { id: string; label: string }[], policyLocations: { id: string; label: string }[], operation: 'ADJUSTMENT' | 'COUNT_VARIANCE' | 'OPENING_BALANCE' = 'ADJUSTMENT') {
   const role = 'Pemeriksa selisih independen'
   await createRole(page, role, ['inventory.approval.view', 'inventory.approval.decide'])
   const checker = await createUser(page, role, { areas: [areaLabel], prefix: 'Pemeriksa' })
@@ -28,13 +28,13 @@ export async function setupDiscrepancyApprover(page: Page, areaLabel: string, sc
     await selectNamed(page, 'Lokasi kebijakan', location.label)
     await page.getByRole('button', { name: 'Tambahkan lokasi kebijakan', exact: true }).click()
   }
-  await page.getByRole('combobox', { name: 'Jenis transaksi aturan 1', exact: true }).selectOption('ADJUSTMENT')
+  await page.getByRole('combobox', { name: 'Jenis transaksi aturan 1', exact: true }).selectOption(operation)
   await selectNamed(page, 'Pemeriksa aturan 1 tahap 1', checker.name)
   await page.getByRole('button', { name: 'Tambah pemeriksa aturan 1 tahap 1', exact: true }).click()
   await page.getByRole('button', { name: 'Tinjau kebijakan', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Konfirmasi perubahan kebijakan', exact: true })).toContainText(checker.name)
   const policy = await confirmOperation(page, '/api/v1/warehouse/settings/policy', 'Simpan kebijakan', 'PUT')
-  expect(policy).toMatchObject({ revision: 1, warehouseIds: policyLocations.map(row => row.id), rules: [{ operation: 'ADJUSTMENT', tiers: [{ minimumMinor: '1', userIds: [checkerId], roleIds: [] }] }] })
+  expect(policy).toMatchObject({ revision: 1, warehouseIds: policyLocations.map(row => row.id), rules: [{ operation, tiers: [{ minimumMinor: '1', userIds: [checkerId], roleIds: [] }] }] })
   await expect(page.getByRole('region', { name: 'Kebijakan tersimpan', exact: true })).toContainText('Versi 1')
   return { ...checker, id: checkerId }
 }

@@ -1,3 +1,36 @@
+## Current checkpoint: issue, returns and count browser gates pass
+
+Follows71d5cb9f. Goal ACTIVE; tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN.
+New safe proof task45/issue-return-count-browser-verification.json:8 realPASS,
+2issue(R2,76.1s),4returns(R3,173.2s),2exceptions(R3,142.6s), both projects no skips/retries.
+Restrictedtechnician ACK andunusedmixedcaseunitreturn->independentwarehouseACK,
+intake/resetinspection10availableONU/900000MM; separate60/40transfer+independent
+resolution; blindcounter,approvalonlycheckerREWORK_REQUIRED(noadjustment), physical
+transitACKstales open count, appendedrecount0preserves100observation. Tablet768/theme
+coverage also passes. No SQLstockseed/mockAPI. Sourcefiles andsafeproof committed.
+
+LIVE fd8 queue, inspect logs, no editing running scripts or any E2E files:
+-39842 task45-browser-matrix-r3: nowcustomer-assets4cases toverify drawer screenshots.
+-24817 projection-upgrade-r1: queued; newhistoricalrunner/movedtest NOT VERIFIED YET.
+-74710 portal-contact-green: queued; AFTER_COMMIT fix/test NOT VERIFIED YET.
+-35108 legacy-browser-r4: queued; area pickerfix nowunit4PASS, realcutoverstillpending.
+-21703 runbook-preflight-r1: queued; new read-only SQL with wrongversion/unit/cutover
+  negative cases. Draftdocs47 andpreflight.sql NOT VERIFIED YET.
+-76343 full-regression-r1: queued; full historical+current server --rerun-tasks.
+  Its archive runs on failure too: if historical phase fails before current suite,
+  do NOT treat copied prior XML as full-suite evidence; inspect log andsource identity.
+
+Task48 preparatoryUNCOMMITTED Docker changes: .dockerignore excludes.omo/.env
+(runtimecredentials were previously eligible for buildercontext);web .env/reports
+excluded. ServerDockerfile uses exact GradlebootJar metadata and boundedbuildworkers,
+no ambiguouswildcardorcompile retries. No Dockerimagebuilt/published/deployed yet.
+CIworkflowimplementation stillpending. Docswarehouse.md/review +mobile/work-order/deploy
+links drafted;preflight requiresrealSKU andknownexpectedunit/cutover,read-only approle.
+Need executebefore marking47done. Earliernotesdescribe otheropenwork andsafety.
+Continue longrun; commit/push and continue, no prematurefinal.
+
+## Previous checkpoint (superseded)
+
 ## Current checkpoint: legacy customer area selector repaired; keep running
 
 Follows a3c83602. Goal ACTIVE; tasks1–44 DONE,45 IN PROGRESS,46–48/F1–F4 OPEN.

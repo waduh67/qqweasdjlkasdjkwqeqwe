@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { confirmOperation, prepareMaterialWorkOrder, selectNamed } from './fulfillment'
+import { addLocation } from './catalog'
+import { grantLocations, switchUser } from './numeric-journey'
 
 test('warehouse reserves partial demand, picks and unpicks actual pieces, then dispatches to visible transit', async ({ page }, testInfo) => {
   test.setTimeout(240_000)
@@ -59,7 +61,7 @@ test('warehouse reserves partial demand, picks and unpicks actual pieces, then d
   await expect(page.getByRole('textbox', { name: 'Kode lokasi', exact: true })).toHaveValue('WO_TRANSIT')
   await selectNamed(page, 'Area lokasi', area.optionLabel)
   await page.getByRole('button', { name: 'Tinjau perubahan', exact: true }).click()
-  await confirmOperation(page, '/api/v1/warehouse/locations', 'Simpan lokasi')
+  const transit = await confirmOperation(page, '/api/v1/warehouse/locations', 'Simpan lokasi')
   async function pick() {
     await page.getByRole('button', { name: 'Siapkan barang', exact: true }).click()
     await page.getByRole('checkbox', { name: 'Pilih REEL-WO', exact: true }).check()
@@ -119,4 +121,28 @@ test('warehouse reserves partial demand, picks and unpicks actual pieces, then d
   await page.evaluate(() => window.scrollTo(0, 0))
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.screenshot({ path: testInfo.outputPath('issue-transit.png'), fullPage: true })
+  const field = await addLocation(page, { code: 'FIELD_STOCK', name: 'Barang teknisi', kind: 'TECHNICIAN', area: area.optionLabel, custodian: `${technician.name} · ${technician.email}` })
+  await grantLocations(page, technician, [fixture.bin, { id: transit.id, label: `${transit.name} · ${transit.code}` }, field])
+  await switchUser(page, technician)
+  await page.goto(`/my-materials?workOrderId=${workOrder.id}`)
+  await expect(page.getByRole('link', { name: 'Stok & Perangkat', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Terima barang', exact: true }).click()
+  await selectNamed(page, 'Barang yang diterima', 'Kabel drop · REEL-WO')
+  await page.getByRole('textbox', { name: 'Jumlah diterima (m)', exact: true }).fill('60')
+  await page.getByRole('textbox', { name: 'Referensi bukti penerimaan', exact: true }).fill('Teknisi menerima kabel kiriman pertama sepanjang 60 m')
+  await page.getByRole('button', { name: 'Tinjau penerimaan', exact: true }).click()
+  await confirmOperation(page, `${root}/acknowledge`, 'Terima material')
+  await page.getByRole('button', { name: 'Terima barang', exact: true }).click()
+  const serial = dispatched.lines.find((line: { serial: string | null }) => line.serial).serial
+  const scanner = page.getByRole('textbox', { name: 'Serial perangkat', exact: true })
+  await scanner.fill(serial); await scanner.press('Enter')
+  await page.getByRole('textbox', { name: 'Jumlah diterima (unit)', exact: true }).fill('1')
+  await page.getByRole('textbox', { name: 'Referensi bukti penerimaan', exact: true }).fill('Teknisi mencocokkan serial unit kiriman pertama')
+  await page.getByRole('button', { name: 'Tinjau penerimaan', exact: true }).click()
+  await confirmOperation(page, `${root}/acknowledge`, 'Terima material')
+  await expect(page.getByRole('button', { name: 'Terima barang', exact: true })).toHaveCount(0)
+  const custody = page.getByRole('region', { name: 'Barang di tangan saya', exact: true })
+  await expect(custody).toContainText('60,000 m')
+  await expect(custody).toContainText(serial)
+  await page.screenshot({ path: testInfo.outputPath('partial-issue-technician-acknowledged.png'), fullPage: true })
 })
