@@ -2,6 +2,7 @@ package com.duluin.ftth.common.infrastructure.persistence
 
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.NotFoundException
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.hibernate.Session
@@ -46,9 +47,17 @@ class TenantEraser(txManager: PlatformTransactionManager) {
         TenantContext.runAs(tenantId) {
             txTemplate.executeWithoutResult {
                 entityManager.unwrap(Session::class.java).doWork { conn ->
+                    // Block concurrent inserts through tenant FKs before inspecting
+                    // history. No new child may arrive between the check and delete.
+                    conn.prepareStatement("SELECT id FROM tenant WHERE id = ? FOR UPDATE").use { query ->
+                        query.setObject(1, tenantId)
+                        query.executeQuery().use { rows ->
+                            if (!rows.next()) throw NotFoundException("Tenant $tenantId tidak ditemukan")
+                        }
+                    }
                     val tables = tenantScopedTables(conn)
                     requireDeletableHistory(conn, tables, tenantId)
-                    deleteAll(conn, tables, tenantId)
+                    deleteAll(conn, tables.filterNot { it in CASCADE_ONLY_CONTROL_TABLES }, tenantId)
                     deleteTenantRow(conn, tenantId)
                 }
             }
@@ -162,6 +171,10 @@ class TenantEraser(txManager: PlatformTransactionManager) {
     }
 
     private companion object {
+        // Their guards forbid direct deletion/epoch reset while the tenant exists.
+        // They disappear only through the final tenant-row FK cascade.
+        val CASCADE_ONLY_CONTROL_TABLES = setOf("inventory_tenant_cutover", "iam_authorization_epoch")
+
         /**
          * Kelas SQLState `23` = integrity_constraint_violation (FK 23503, CHECK 23514, dst).
          * Semua bisa muncul saat urutan hapus belum benar — ditunda & dicoba ulang. Penjaga

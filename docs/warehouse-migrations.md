@@ -1,7 +1,7 @@
 # Warehouse migration and cutover manifest
 
-The current highest packaged version is **178.8**; the next available version is
-**178.9**. Applied migrations are immutable. Historical sections below record the
+The current highest packaged version is **178.9**; the next available version is
+**178.10**. Applied migrations are immutable. Historical sections below record the
 version reservations at their original checkpoints, not the current next version.
 Operational steps are in [the warehouse runbook](warehouse.md), with an application
 role read-only preflight in [the review guide](warehouse-review.md).
@@ -19,6 +19,18 @@ After cutover, remediation is forward-only, or a coordinated restore during main
 Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
 the new records, or disable guards to make an old fixture boot.
 
+## V178.9: remove control rows only with their deleted empty tenant
+
+`V178_9__warehouse_empty_tenant_control_cleanup.sql` gives only the cutover and IAM
+authorization control rows tenant-owned FK cascades. Their replacement delete guard
+requires the row tenant scope and an already absent parent tenant. Direct deletion
+while the tenant exists still rejects, so this cannot reset a live tenant's epochs.
+No business-history guard, RLS policy, role grant or security-definer path is relaxed.
+The eraser locks the parent before checking history and leaves these controls to the
+final FK cascade. Existing control bytes survive migration unchanged. Runtime proof
+for178.9 is pending;178.8 scope/provenance/catalog tests passed in the229-case focused
+run, whose sole remaining failure was empty-tenant deletion before this correction.
+
 ## V178.8: check return-title tenant scope before reading a request
 
 `V178_8__warehouse_return_title_scope_entry.sql` moves the existing deferred tenant
@@ -27,7 +39,9 @@ not make row-level security hide a request and skip the assertion. This changes
 only the validator entry; posted stock, request validation and old migration bytes
 remain intact. The regression reproduces the178.7 behavior, applies the full upgrade,
 and checks cleared/foreign/stale rejection plus correct/restored-scope controls.
-Runtime verification is pending at this checkpoint.
+The dedicated old/new scope test, provenance tests and complete58-function entry
+catalog passed locally and in CI36129278994. The aggregate229-case gate still failed
+on the separate empty-tenant deletion case addressed by178.9.
 
 ## V178.7 applied: optional RMA category
 

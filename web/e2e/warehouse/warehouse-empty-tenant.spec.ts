@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { captureAssetHistory } from './asset-screenshots'
 import { acceptNumericHandover, acknowledgeNumericJourney, assertNumericStock, completeNumericJourney, consumeAndInstallNumericJourney, prepareNumericJourney, returnNumericRemnant, uploadNumericProof } from './numeric-journey'
 
 test('empty tenant completes the measured cable and loan ONU journey through warehouse, technician and independent QA screens', async ({ page }, testInfo) => {
@@ -8,7 +9,7 @@ test('empty tenant completes the measured cable and loan ONU journey through war
   const physical = await consumeAndInstallNumericJourney(page, fixture)
   await uploadNumericProof(page, fixture)
   await acceptNumericHandover(page, fixture)
-  await page.screenshot({ path: testInfo.outputPath('customer-loan-accepted.png'), fullPage: true })
+  await captureAssetHistory(page, testInfo, 'customer-loan-accepted')
   const returned = await returnNumericRemnant(page, fixture)
   expect(returned.intake.stockIdentityId).toBe(physical.usage.lines[0].remainder.stockIdentityId)
   await completeNumericJourney(page, fixture)

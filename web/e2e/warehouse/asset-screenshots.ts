@@ -2,6 +2,9 @@ import { expect, type Page, type TestInfo } from '@playwright/test'
 
 /** The customer drawer scrolls independently; a full-page image alone misses its history. */
 export async function captureAssetHistory(page: Page, testInfo: TestInfo, prefix: string) {
+  // Let transient upload confirmations expire normally before recording the
+  // persistent history. Do not hide or dismiss UI elements for a screenshot.
+  await expect(page.locator('.toast-host .toast')).toHaveCount(0)
   const cards = page.getByRole('region', { name: 'Aset perangkat pelanggan', exact: true }).getByRole('article')
   const count = await cards.count()
   expect(count).toBeGreaterThan(0)

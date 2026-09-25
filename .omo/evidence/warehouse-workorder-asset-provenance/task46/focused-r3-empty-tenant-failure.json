@@ -1,0 +1,388 @@
+{
+  "status": "FAILED_COMPLETE_FOCUSED",
+  "testedCommit": "64e5057378df0b370c42dbe8d0d53b589a535126",
+  "ciRun": 36129278994,
+  "download": {
+    "run": 36129278994,
+    "artifactId": 10860899292,
+    "name": "warehouse-server-64e5057378df0b370c42dbe8d0d53b589a535126",
+    "artifactDigest": "sha256:5b252b0835e48f970e3c87d69b1df211635c015e80f3ec483a7a24ed337d393a",
+    "encryptedArchiveSha256": "d64faf702635b1ba8fafb33c6667f0d7126510b3cbed44bbc80dd15827c3f39d",
+    "downloadedAndDecrypted": true
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.AlarmRuleIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "be30b649ee5cbd1dc7a3b82573d5fc5d5469944c34d900da70995fb4abd66b0f"
+    },
+    {
+      "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "e144695163a39df489391f1d10dd3bee310fda0f16b5959e6210a1e34df896ef"
+    },
+    {
+      "suite": "com.duluin.ftth.GisImpactedIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "b4476e803cc5e38e1e6547b8ae9ebef49cb23637c6ae4da69937a79d11a02e5d"
+    },
+    {
+      "suite": "com.duluin.ftth.GisUtilizationIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "89445303768652e089ca421084c4b07d718088829d730f2a7788c5b3f65fa4b6"
+    },
+    {
+      "suite": "com.duluin.ftth.IncidentIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "d823ae816e099cbb5b9bfa7aefd88d4fec4e96f38eaa2f7fe7a222794cb2a14e"
+    },
+    {
+      "suite": "com.duluin.ftth.NetworkEndToEndIT",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "32f63611a02ba112f08a7d077bd690edb3a03c4fc916eae5cae056462cc9f5d0"
+    },
+    {
+      "suite": "com.duluin.ftth.NotificationIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "771ca196d83dd121afdf3e1c4954f09161260102de015084b2b31dbc68697f3f"
+    },
+    {
+      "suite": "com.duluin.ftth.OdpPortBoardIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "6814e27fec3cea9a40e99419db409d8540544c915860bc1d0598cc504221bb42"
+    },
+    {
+      "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "68a3d14a86b19e882f26d8cc4bd057645fd486c75f9df629f3d76abcc7ece3b3"
+    },
+    {
+      "suite": "com.duluin.ftth.SurveyCapacityIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "95a42799dcb381264e4c6c9aaa617d19f354847c31819369081b3ac42953407d"
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "a70529617d60f4e36e5738f95d968138db9bbb1e7975b10dfb0d7fd66cf8e49f"
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "fa1248eafbc65b2f759f5913e47ca6669f1bfe287f9361a84a52c5a05546ea62"
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "0b7fb797afa110fc59d62f00721d63b590563f42d50bef072698dfe8abcf0006"
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "2ab71f8a6db17d691fcdc3b0a65031afc797c1788afab93d782128f09a17b097"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "860bdffc34a99a3f9ec240e59597d8550b81fa9bb61a5587359bfcfbe189679b"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "86d321cb0440b55e8f76aecf3efd66dc62df4e928b8ba3335a3eda61ab634dd4"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "bf7a55ab170fede2a287e93577201d69ac22565f003fa483be05627311e89abb"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "0dd13796d8a21c174480062540d44dbd68d231ed2d05910b684c621414409d45"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+      "tests": 62,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "0f023c224434084f59b3a83a94f9ee93ecaacd19bd8761a3956fc0c35deb0fa5"
+    },
+    {
+      "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [],
+      "reportSha256": "b07f4b9e2cd2082d7706b7860652bee42dca44fb0ce62e65ad58799f10784ea5"
+    },
+    {
+      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "tests": 3,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "hapus tenant membersihkan seluruh datanya tanpa menyentuh tenant lain()"
+      ],
+      "reportSha256": "5b96823106133be073db2e9b33832ff34bd8a32540fcd691551216861344845b"
+    }
+  ],
+  "localSuites": [
+    {
+      "suite": "com.duluin.ftth.AlarmRuleIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "4a8e241956cc6e605184decdac94ade04d1e268516465af7af925baf390cbf24"
+    },
+    {
+      "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "b9212e00132ed8caeec0b4776d8a605ab57116500fef74b93a9653656193229f"
+    },
+    {
+      "suite": "com.duluin.ftth.GisImpactedIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "07493ceb9728aa3fcb37ba3f043d93494ad108cb014e18521732450568f39e27"
+    },
+    {
+      "suite": "com.duluin.ftth.GisUtilizationIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "cd3a5f732794597d2007fd6319be35f20871e1f99b5fe2d99fd3a6af025a9200"
+    },
+    {
+      "suite": "com.duluin.ftth.IncidentIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "70c466825b3ed677110e544d9ea8512344c809974a2040488fee42cc7a6674d4"
+    },
+    {
+      "suite": "com.duluin.ftth.NetworkEndToEndIT",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "70b25c177ecec17ebaa6ad0dc5b0de6d47c14b4ef4becb1739c1a06de44e00b1"
+    },
+    {
+      "suite": "com.duluin.ftth.NotificationIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "bd05a8e98fdddc187c34cdd3a92327abeb1f006a4d761cd4f6dde54c9d0fedc8"
+    },
+    {
+      "suite": "com.duluin.ftth.OdpPortBoardIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "825a3c21a474c0dda4ae5d85830832b2af89aa78458a6a102fc78be9a09b6b8e"
+    },
+    {
+      "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "61cbd54e6986e98beffaf11377554bf796d68784c83bdd2f911bc641d8bc995f"
+    },
+    {
+      "suite": "com.duluin.ftth.SurveyCapacityIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "4e7c621a0e81899adabf46dc6fcf2242d7875660e543a99e3c54faf6a3f23804"
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "1d5b558bcc02d0a354ae1125786f613d570ec8a0a66995346204eff2fafe6353"
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "250ecfb986c57804fd31375185441c57496d23fc485549f556f5c2bedffeb28c"
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "49da49eac0ad1a5dc14498ffc83f8c66765979ae9e5981d613f969f81c82d928"
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "0722cea26158e340542ed7a0274418b510ac06068fb943eae9c66d36a0a80dff"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "b2a1d6ae03b56aa24046c79e649316ba7d4a09fdcd253de62ad6e6e6afe4ba52"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "96bef0da1e5ea85484c3ed1c9cf32f31596711a5edb5ceaca242a643685f23f9"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "d59be03a34be7a3ea794cf560206edac2948cd3248bd653ef4c284d0b1a57591"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "28c7298fdd959c74e2d6ba5adc9c04e119b867904e706a23a02cedd42f0da1fe"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+      "tests": 62,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "062208fdab0fc939ef7e349ddca16a75176c22e5963eb11f0b28dae200586e49"
+    },
+    {
+      "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "5f09acec83be483841b6ad2ec14f8b74ae8b9835988fcabffab7e7782a3c3511"
+    },
+    {
+      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "tests": 3,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "e8b1ce532f14dde1b1fc314d7291f26de39005884891083fc287550875cfa986"
+    }
+  ],
+  "counts": {
+    "tests": 229,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "localSessionResult": "6617 returned143 after complete BUILD FAILED, archived XML, and successful owned cleanup; signal cause not established. Complete JUnit agrees with CI.",
+  "failure": "DeleteTenantIT empty-tenant deletion expected204 got409; auto-created iam_authorization_epoch and inventory_tenant_cutover rows were mistaken for business history.",
+  "scopeProvenanceAndCatalogPassed": true,
+  "migration1788Sha256": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
+  "historicalTestsThisAttempt": "not run because focused gate failed",
+  "pendingCorrection": "178.9 permits scoped FK cascade of two control rows only after their parent tenant is deleted; live-tenant direct deletion still rejects."
+}

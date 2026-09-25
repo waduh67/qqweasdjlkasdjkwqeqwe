@@ -137,6 +137,8 @@ riwayat terlindungi. Dokumen gudang, identitas legacy, dan catatan permanen tida
 dihapus lewat aksi ini; server menolak sebelum menghapus data apa pun. Gunakan
 **Suspend** untuk menghentikan tenant sambil mempertahankan riwayatnya. Tenant kosong
 tetap dapat dihapus, meskipun tenant lain mempunyai riwayat pada tabel yang sama.
+Baris kontrol otorisasi dan cutover yang dibuat saat onboarding ikut hilang hanya
+ketika baris tenant dihapus; baris kontrol tenant aktif tidak dapat dihapus langsung.
 
 Bukti foto, tanda tangan, dan file pemeriksaan bersifat privat. Gunakan unduhan
 yang memeriksa izin dan integritas. Pertahankan aturan retensi dan legal hold;

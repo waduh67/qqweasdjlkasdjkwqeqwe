@@ -1,3 +1,50 @@
+## Empty-tenant control correction prepared after229-case focused verification
+
+GoalACTIVE;1–45DONE,46IN PROGRESS,47–48/F1–F4OPEN. Continue aftercommit/push.
+Original64e50573/session6617 has FINISHED. Complete local and CI36129278994 focused
+results match:229tests/1failure/0errors/0skips across21classes. All scope178.8,
+provenance,58-validator catalog, manual conflict and protected-history deletion checks
+PASS. The only failure is empty tenant expected204/got409. CI full/historical were
+not reached. Local session returned143 despite complete BUILD FAILED/XML and successful
+owned cleanup; no signal cause established. Reports are preserved in focused-r3-reports.
+Safe proof: task46/focused-r3-empty-tenant-failure.json. No unfiltered PASS exists.
+
+A read-only app-role query of the failed tenant found only ordinary onboarding rows
+plus two protected controls:iam_authorization_epoch and inventory_tenant_cutover.
+Prepared ADDITIVE178.9 changes only those two FKs to tenant-delete cascades and adds
+an INVOKER delete guard requiring matching row scope and an already absent parent.
+Direct control deletion while the tenant exists still rejects; no epoch reset, grants,
+RLS disable, security-definer bypass or business-history deletion is introduced.
+TenantEraser locks the root before checking history, skips those two controls until
+the final parent delete, and still rejects protected business history before deletion.
+New old178.8→178.9 test checks preserved epoch bytes, direct-delete denial, wrong-scope
+rollback, nonempty FK rejection, scoped empty cascade, and untouched other tenant.
+Existing actual HTTP204/409/400 tests remain. Runtime of these changes is PENDING.
+CI focused selection is now23classes, followed by mandatory7historical and fullserver.
+Highestmigration178.9, next178.10. Never edit applied178.8 or older migration bytes.
+
+All nonserver jobs for64e50573 PASSED:22browser,6legacybrowser,576web,44shared,
+2actual iOS compilation targets and real image smoke/restart. All12 encrypted archives
+were downloaded/hash-verified/decrypted privately, executed reports revalidated; native
+log checked separately. Legacy178.8 kept2customers/2ONUs,2UIcatalog SKUs afterrestart,
+no available stock, and passed2positive+6negative SQLpreflights. Safe aggregate:
+ task46/ci-64e50573-nonserver-verification.json. Raw secrets remain ignored/private.
+Reviewed numeric mobile screenshot shows917,500m cable/9ONUs, saved in task45.
+Its earlier handover image missed the episode and had transient upload notifications;
+new screenshot-only helper waits for normal toast expiry and scrolls to the history.
+E2E TypeScript, workflowguard5, actionlint/shellsyntax passed; new browsercapture PENDING.
+
+NEXT: commit/push current correction, fast-forward original from validation only after
+checking clean state, then a NEWfocused-r4 runner archives/hash-checks R3 before
+running23classes+7historical. Full-server-r5.sh is now OUTDATED(21classes); prepare a
+NEWfull runner once focused/historical pass. Do not launch obsolete runners or reapply
+oldpatches. Original currentlyfree; use one checkout for runtime and another for fixes.
+FeatureCI36127543781/b360 was still active at lastcheck; preserve its eventual outcome.
+Notes-onlyCI36129663422 was cancelled BEFORE start; activeCIwas never cancelled.
+User's optional reviewer-agent and deletion-policy questions remain unanswered.
+No subagents, independent verdict, main merge, publication or deployment authorized.
+Keepworking afterpush; neverfinal at a checkpoint.
+
 ## Running the corrected21-suite gate; mobile label visually inspected
 
 64e5057378df0b370c42dbe8d0d53b589a535126 is committed and pushed to the validation

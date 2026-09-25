@@ -56,6 +56,8 @@ jobs:
             com.duluin.ftth.inventory.WarehouseSchemaITProvenance
             com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming
             com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT
+            com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT
+            com.duluin.ftth.inventory.WarehouseSchemaITPolicy
             com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT
             com.duluin.ftth.tenancy.DeleteTenantIT
           )
