@@ -106,23 +106,11 @@ class WarehouseSchemaITSelectiveTiming {
                 while (rows.next()) {
                     names.add(rows.getString(1))
                     assertThat(rows.getBoolean(3)).isFalse()
-                    val assertion = if (rows.getString(1) in setOf("warehouse_consumed_truth_guard", "warehouse_fulfillment_bound_guard", "warehouse_fulfillment_owner_guard", "warehouse_residual_position_final_guard", "warehouse_authorization_final_guard", "warehouse_authorization_source_guard",
-                            "warehouse_asset_handover_final_guard", "warehouse_title_final_guard", "warehouse_deployment_document_final_guard",
-                            "warehouse_deployment_fact_final_guard", "warehouse_deployment_final_guard", "warehouse_deployment_posting_final_guard"))
-                        "PERFORM warehouse_assert_deferred_scope(CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END);"
-                    else "PERFORM warehouse_assert_deferred_scope(NEW.tenant_id);"
-                    assertThat(rows.getString(2).substringAfter("BEGIN").trimStart())
-                        .describedAs(rows.getString(1)).startsWith(assertion)
+                    val expected = WarehouseDeferredGuardCatalog.expected.getValue(rows.getString(1))
+                    assertThat(WarehouseDeferredGuardCatalog.normalized(rows.getString(2).substringAfter("BEGIN")))
+                        .describedAs(rows.getString(1)).startsWith(expected)
                 }
-                assertThat(names).containsExactlyInAnyOrderElementsOf(WarehouseTimingFamily.entries.map { it.function } +
-                    listOf("warehouse_approval_terminal_guard", "warehouse_approval_decision_binding", "warehouse_material_submission_binding_guard",
-                        "warehouse_live_issue_binding_guard", "warehouse_issue_dispatch_binding_guard", "warehouse_material_receipt_guard",
-                         "warehouse_material_usage_bound_guard", "warehouse_consumed_balance_guard", "warehouse_consumed_truth_guard", "warehouse_fulfillment_bound_guard", "warehouse_fulfillment_owner_guard",
-                         "warehouse_material_lifecycle_final_guard", "warehouse_material_obligation_origin_guard", "warehouse_residual_position_final_guard", "warehouse_material_close_final_guard",
-                          "warehouse_material_rework_final_guard", "warehouse_asset_episode_final_guard",
-                           "warehouse_authorization_final_guard", "warehouse_authorization_source_guard",
-                           "warehouse_asset_handover_final_guard", "warehouse_title_final_guard", "warehouse_deployment_document_final_guard",
-                           "warehouse_deployment_fact_final_guard", "warehouse_deployment_final_guard", "warehouse_deployment_posting_final_guard"))
+                assertThat(names).containsExactlyInAnyOrderElementsOf(WarehouseDeferredGuardCatalog.expected.keys)
             }
         } }
     }

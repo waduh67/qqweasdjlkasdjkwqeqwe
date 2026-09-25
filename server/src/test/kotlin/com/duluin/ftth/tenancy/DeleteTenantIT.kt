@@ -115,12 +115,12 @@ class DeleteTenantIT {
     /**
      * Semai satu ONU yang TERPASANG di ODP (odp_id & odp_port_number terisi) untuk [tenantId].
      * Ini kunci reproduksi bug: `DELETE FROM odp` akan men-`SET NULL` `onu.odp_id` (FK ON DELETE
-     * SET NULL) padahal port masih terisi → melanggar CHECK `ck_onu_attachment` (SQLState 23514)
-     * bila `odp` dihapus sebelum `onu`. Insert via SQL native di dalam konteks tenant (RLS).
+     * SET NULL) padahal port masih terisi. Perangkat ini mempunyai provenance legacy eksplisit;
+     * riwayatnya kini dilindungi sehingga seluruh penghapusan harus ditolak tanpa efek.
      */
-    private fun seedAttachedOnu(tenantId: UUID) {
-        TenantContext.runAs(tenantId) {
-            tx.executeWithoutResult {
+    private fun seedAttachedOnu(tenantId: UUID, token: String) {
+        val (customerId, odpId, serial) = TenantContext.runAs(tenantId) {
+            tx.execute {
                 val customerId = UUID.randomUUID()
                 val odpId = UUID.randomUUID()
                 val suffix = uniq()
@@ -141,14 +141,13 @@ class DeleteTenantIT {
                         "VALUES (:id, :t, :code, 'ODP Test', ST_SetSRID(ST_MakePoint(106.8, -6.2), 4326), 8)",
                 ).setParameter("id", odpId).setParameter("t", tenantId)
                     .setParameter("code", "ODP-$suffix").executeUpdate()
-                em.createNativeQuery(
-                    "INSERT INTO onu (id, tenant_id, customer_id, odp_id, odp_port_number, serial_number) " +
-                        "VALUES (:id, :t, :cust, :odp, 1, :sn)",
-                ).setParameter("id", UUID.randomUUID()).setParameter("t", tenantId)
-                    .setParameter("cust", customerId).setParameter("odp", odpId)
-                    .setParameter("sn", "SN-$suffix").executeUpdate()
-            }
+                Triple(customerId, odpId, "SN-$suffix")
+            }!!
         }
+        val onu = com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customerId.toString(), serial)
+        mockMvc.perform(post("/api/customers/onus/$onu/attach").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"odpId":"$odpId","portNumber":1}"""))
+            .andExpect(status().isOk)
     }
 
     @Test
@@ -163,6 +162,7 @@ class DeleteTenantIT {
         val bystander = onboarding.onboard(
             OnboardTenantCommand(bystanderSlug, "Bystander ISP", bystanderAdmin, "Admin B", pass),
         ).tenant
+        seedAttachedOnu(bystander.id, login(bystanderSlug, bystanderAdmin))
 
         val tables = tenantScopedTables()
 
@@ -200,13 +200,13 @@ class DeleteTenantIT {
     }
 
     @Test
-    fun `hapus tenant dengan ONU terpasang di ODP tetap sukses (regresi ck_onu_attachment)`() {
+    fun `tenant dengan riwayat ONU terlindungi ditolak sebelum ada data yang dihapus`() {
         val slug = "onu${uniq()}"
         val admin = "admin@$slug.test"
         val victim = onboarding.onboard(
             OnboardTenantCommand(slug, "ONU ISP", admin, "Admin", pass),
         ).tenant
-        seedAttachedOnu(victim.id)
+        seedAttachedOnu(victim.id, login(slug, admin))
 
         // Prasyarat reproduksi: ONU benar-benar terpasang (odp_id terisi). Menghapus `odp`
         // sebelum `onu` akan men-SET NULL odp_id & melanggar ck_onu_attachment (dulu → 500).
@@ -216,14 +216,17 @@ class DeleteTenantIT {
         assertThat(countFor("odp", victim.id)).isEqualTo(1)
         assertThat(countFor("onu", victim.id)).isEqualTo(1)
 
+        val tables = tenantScopedTables()
+        val before = tables.associateWith { countFor(it, victim.id) }
         val root = login("platform", "root@ftth.local", "rootadmin123")
         mockMvc.perform(
             delete("/api/platform/tenants/${victim.id}").header("Authorization", "Bearer $root"),
-        ).andExpect(status().isNoContent)
-
-        assertThat(countFor("onu", victim.id)).isZero
-        assertThat(countFor("odp", victim.id)).isZero
-        assertThat(countFor("customer", victim.id)).isZero
+        ).andExpect(status().isConflict)
+        mockMvc.perform(get("/api/platform/tenants/${victim.id}").header("Authorization", "Bearer $root"))
+            .andExpect(status().isOk)
+        tables.forEach { table ->
+            assertThat(countFor(table, victim.id)).describedAs(table).isEqualTo(before[table])
+        }
     }
 
     @Test

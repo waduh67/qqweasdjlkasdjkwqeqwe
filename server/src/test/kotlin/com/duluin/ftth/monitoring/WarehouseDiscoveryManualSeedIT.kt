@@ -65,6 +65,10 @@ class WarehouseDiscoveryManualSeedIT : CustomerDeploymentFixture() {
 class WarehouseDiscoveryManualEpisodesIT : CustomerAssetEpisodeFixture() {
     @Test
     fun `prepare retained A and current B episode fixture for built history and ACS proof`() {
+        prepareEpisodes()
+    }
+
+    internal fun prepareEpisodes(): String {
         val serial = "MANUAL-${UUID.randomUUID()}".uppercase()
         val fixture = episodeCase(listOf(serial, "$serial-SPARE"))
         val start = Instant.now().minusSeconds(3600).truncatedTo(ChronoUnit.MILLIS)
@@ -99,17 +103,18 @@ class WarehouseDiscoveryManualEpisodesIT : CustomerAssetEpisodeFixture() {
             assertThat(scalar("SELECT count(*) FROM inventory_asset_assignment WHERE ended_at IS NULL")).isEqualTo("1")
             assertThat(scalar("SELECT count(*) FROM cpe_device")).isEqualTo("2")
         }
+        return serial
     }
 }
 
 class WarehouseDiscoveryManualConflictIT : CustomerDeploymentFixture() {
     @Test
     fun `prepare an issued competing tenant owner without consuming it before live QA`() {
-        val runtime = Path.of(System.getProperty("user.dir")).parent.resolve(".omo/runtime")
-        val source = runtime.resolve("task23-manual-episodes.json")
-        check(Files.isRegularFile(source) && !Files.isSymbolicLink(source))
-        val serial = mapper.readTree(Files.readString(source)).path("serial").asString()
-        check(serial.startsWith("MANUAL-"))
+        // Each invocation owns both tenants; a full suite must not depend on
+        // another test class having generated a private manifest first.
+        val owner = WarehouseDiscoveryManualEpisodesIT()
+        context.autowireCapableBeanFactory.autowireBean(owner)
+        val serial = owner.prepareEpisodes()
         val installation = installation(serials = listOf(serial, "$serial-OTHER"))
         val stock = fixture(installation.receipt.stock.token)
         val admin = mapper.readTree(request("GET", "/api/me", installation.receipt.stock.token).contentAsString)

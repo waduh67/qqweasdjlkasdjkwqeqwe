@@ -49,18 +49,23 @@ class WarehouseSchemaITProvenance {
 
     @Test
     fun `AV02 opening status alone cannot authorize verified origin`() = fixture(false) {
+        val beforeAttempt = connection.setSavepoint()
         val failure = assertThrows<SQLException> {
             sql("INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,cutover_epoch,authority_epoch) VALUES ('$document','$tenant','opening','OPENING_BALANCE','$actor',0,0)")
             sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,base_unit,tracking,quantity_base,location_id,custodian_id,custodian_kind,condition,legal_owner) VALUES ('$line','$tenant','$document',1,0,'$sku','MM','LOT',82500,'$location','$actor','TECHNICIAN','SERVICEABLE','ISP')")
             sql("INSERT INTO inventory_lot(id,tenant_id,sku_id,code,base_unit,received_quantity_base,received_at,origin_document_line_id) VALUES ('$lot','$tenant','$sku','opening','MM',82500,now(),'$line')")
             sql("INSERT INTO inventory_segment(id,tenant_id,sku_id,lot_id,kind,base_unit,quantity_base) VALUES ('$segment','$tenant','$sku','$lot','REEL','MM',82500)")
             sql("UPDATE inventory_document_line SET stock_identity_id='$segment',lot_id='$lot',revision=1 WHERE id='$line'")
-            for ((index,state) in listOf("SUBMITTED","APPROVED","POSTED").withIndex()) {
-                sql("UPDATE inventory_document SET state='$state',revision=${index+1} WHERE id='$document'")
-            }
+            sql("UPDATE inventory_document SET state='POSTED',revision=1 WHERE id='$document'")
             connection.commit()
         }
-        assertThat(failure.sqlState).isEqualTo("42501")
+        assertThat(failure.sqlState).isEqualTo("23514")
+        assertThat(failure.message).contains("opening origin requires its actual independently approved posting")
+        connection.rollback(beforeAttempt)
+        for (table in listOf("inventory_document", "inventory_lot", "inventory_segment", "inventory_balance_projection")) {
+            assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("0")
+        }
+        connection.releaseSavepoint(beforeAttempt)
     }
 
     @Test

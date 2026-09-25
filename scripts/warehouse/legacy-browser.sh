@@ -188,12 +188,12 @@ WHERE sku.id=:'sku_id'::uuid AND customer.id=:'customer_id'::uuid AND sku.code='
 SQL
 )
     [[ "$preflight_tenant" =~ ^[a-f0-9-]{36}$ ]] || refuse 'Upgraded browser SKU/customer tenant identity mismatch'
-    legacy_preflight_probe 178.7 MM ENFORCED > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-positive.txt"
+    legacy_preflight_probe 178.8 MM ENFORCED > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-positive.txt"
     for gate in migration unit cutover; do
         case "$gate" in
             migration) version=170; unit=MM; cutover=ENFORCED; message='migration mismatch' ;;
-            unit) version=178.7; unit=EA; cutover=ENFORCED; message='SKU unit mismatch' ;;
-            cutover) version=178.7; unit=MM; cutover=LEGACY; message='cutover mismatch' ;;
+            unit) version=178.8; unit=EA; cutover=ENFORCED; message='SKU unit mismatch' ;;
+            cutover) version=178.8; unit=MM; cutover=LEGACY; message='cutover mismatch' ;;
         esac
         if legacy_preflight_probe "$version" "$unit" "$cutover" > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-$gate.txt" 2>&1; then
             refuse "Wrong $gate passed upgraded-database preflight"
@@ -213,11 +213,11 @@ for index in range(2):
     assert len(rows) == 1
     row = rows[0]
     assert row['applicationRole'] == 'warehouse_app' and row['schema'] == 'public'
-    assert row['version'] == '178.7' and row['cutover'] == 'ENFORCED'
+    assert row['version'] == '178.8' and row['cutover'] == 'ENFORCED'
     assert row['customers'] == row['onus'] == 1 and row['positions'] == 0 and row['verifiedQuantityByUnit'] == {}
     probes.append(row)
 (root / 'preflight-verification.json').write_text(json.dumps({'status': 'PASSED', 'schemaBefore': '172',
-    'schemaAfter': '178.7', 'readOnly': True, 'positiveProbes': 2, 'negativeProbes': 6,
+    'schemaAfter': '178.8', 'readOnly': True, 'positiveProbes': 2, 'negativeProbes': 6,
     'negativeReasons': ['migration mismatch', 'SKU unit mismatch', 'cutover mismatch'], 'rows': probes,
     'preflightSqlSha256': hashlib.sha256(Path(sys.argv[2]).read_bytes()).hexdigest(),
     'reports': {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in root.glob('preflight-*.txt')}}, indent=2) + '\n')

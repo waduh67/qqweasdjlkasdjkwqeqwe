@@ -119,7 +119,7 @@ Kasus riwayat saja dan saldo awal nol tidak boleh membuat unit atau biaya fiktif
 ID pelanggan/ONU, serial mentah, dan sejarah lama tetap dipertahankan.
 
 Versi migrasi dan aturan checksum ada pada [manifest migrasi](warehouse-migrations.md).
-Versi tertinggi saat panduan ini ditulis adalah **178.7**. File yang sudah diterapkan
+Versi tertinggi saat panduan ini ditulis adalah **178.8**. File yang sudah diterapkan
 tidak boleh diedit. Ambil cadangan database dan object storage yang konsisten,
 verifikasi latihan restore pada lingkungan terisolasi, lalu catat identitas image
 dan hasil preflight sebelum rilis. Migrasi membutuhkan role pemilik; aplikasi
@@ -131,6 +131,12 @@ baru bukan rollback yang didukung. Jangan menghapus volume, mengubah stok langsu
 lewat SQL, mengubah checksum Flyway, atau menonaktifkan validator untuk memaksakan boot.
 Detail [rekonsiliasi](warehouse-provenance.md), [backup](backup.md),
 dan [deploy](../deploy/DEPLOY.md) harus dibaca bersama hasil gate rilis yang aktual.
+
+Penghapusan tenant melalui admin platform hanya tersedia bila tenant tidak mempunyai
+riwayat terlindungi. Dokumen gudang, identitas legacy, dan catatan permanen tidak
+dihapus lewat aksi ini; server menolak sebelum menghapus data apa pun. Gunakan
+**Suspend** untuk menghentikan tenant sambil mempertahankan riwayatnya. Tenant kosong
+tetap dapat dihapus, meskipun tenant lain mempunyai riwayat pada tabel yang sama.
 
 Bukti foto, tanda tangan, dan file pemeriksaan bersifat privat. Gunakan unduhan
 yang memeriksa izin dan integritas. Pertahankan aturan retensi dan legal hold;

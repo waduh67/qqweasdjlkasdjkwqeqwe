@@ -1,7 +1,7 @@
 # Warehouse migration and cutover manifest
 
-The current highest packaged version is **178.7**; the next available version is
-**178.8**. Applied migrations are immutable. Historical sections below record the
+The current highest packaged version is **178.8**; the next available version is
+**178.9**. Applied migrations are immutable. Historical sections below record the
 version reservations at their original checkpoints, not the current next version.
 Operational steps are in [the warehouse runbook](warehouse.md), with an application
 role read-only preflight in [the review guide](warehouse-review.md).
@@ -18,6 +18,16 @@ Take and test a consistent database/object-storage backup before an authorized r
 After cutover, remediation is forward-only, or a coordinated restore during maintenance.
 Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
 the new records, or disable guards to make an old fixture boot.
+
+## V178.8: check return-title tenant scope before reading a request
+
+`V178_8__warehouse_return_title_scope_entry.sql` moves the existing deferred tenant
+assertion before the conditional request lookup. A cleared or foreign tenant must
+not make row-level security hide a request and skip the assertion. This changes
+only the validator entry; posted stock, request validation and old migration bytes
+remain intact. The regression reproduces the178.7 behavior, applies the full upgrade,
+and checks cleared/foreign/stale rejection plus correct/restored-scope controls.
+Runtime verification is pending at this checkpoint.
 
 ## V178.7 applied: optional RMA category
 

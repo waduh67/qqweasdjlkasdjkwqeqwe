@@ -3,7 +3,7 @@
 The `warehouse` workflow runs on `feat/warehouse-workorder` and `work/warehouse-*`
 pushes, pull requests to `main`, and manual requests. The deployment workflow calls it as a required dependency before
 publishing application images. Server tests include the historical projection
-upgrade, five additional historical upgrades through the complete current migration
+upgrade, seven additional historical upgrades through the complete current migration
 chain, and the complete current suite. Historical application versions are pinned.
 Browser jobs execute every warehouse spec on desktop and mobile with real PostgreSQL
 and object storage. The legacy browser lane also runs read-only SQL preflight after

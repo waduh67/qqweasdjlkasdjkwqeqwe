@@ -1,3 +1,44 @@
+## Active checkpoint: seven late regressions and a historical JDBC fixture correction
+
+Goal ACTIVE. Tasks1–45 DONE;46 IN PROGRESS;47–48/F1–F4 OPEN. Continue after commits.
+Primary EDIT checkout is again .omo/runtime/warehouse-regression-validation on
+work/warehouse-regression-fixtures. Original b3609065 focusedR2/session51192 has
+FINISHED exit1: all149 modern tests PASS, fulfillment2 historical PASS, deployment1
+PASS, title1 FAIL (PostgreSQL0A000 stale prepared result shape after in-place DDL).
+Episode was not reached. Original executing inputs were never edited. Reports/log
+remain private in compatibility-focused-r2* and historical-upgrades latest directory.
+Safe proofs: task46/local-focused-r2-verification.json and local-historical-r2-failure.json.
+
+CI36116539885 finally completed its FULL modern suite:3787tests/48failures/0errors/
+0skips across614suites. Artifact10860197914 was downloaded, hash verified and privately
+decrypted. Safe complete proof task46/ci-r2-complete-server-failure.json. Seven later
+failures were beyond the previously known41; this is a complete FAILED run.
+
+Current corrections, runtime still PENDING: additive migration178.8 checks return-title
+scope BEFORE any RLS-filtered query; exact58-function deferred entry catalog and an
+old178.7/new178.8 scope upgrade test; current opening source denial; two additional
+unchanged historical HTTP tests moved to version-correct pins (seven total); manual
+conflict fixture creates its own episodes; tenant erasure skips empty protected tables
+and rejects existing immutable history before any deletion. The latter assumes the
+existing permanent-history contract, with Suspend as the available alternative; an
+optional user preference question is pending, no answer/approval claimed. Historical
+title test now evicts pooled sessions immediately after DDL to match application
+restart. All corruption, scope, replay, byte-preservation and positive controls remain.
+Workflow guard5/actionlint/shellsyntax PASS; new Kotlin/database runtime NOT yet run.
+
+NEXT: commit/push this checkpoint, archive current149 reports before any new run,
+fast-forward original safely from this branch, run21focused classes+7historical checks,
+fix actual failures and then run unfiltered full14400s server. The old full-server-r4
+wrapper expects16classes/5historical and is OUTDATED: prepare a NEW runner. No old
+pending patches should be reapplied. No full successful regression exists yet.
+
+CI36127543781 atb360 is RUNNING fullserver; allother jobsPASS including latestlabels.
+CI36126213391 at6853 completed: nonserverPASS, focused monitoring10oldfailures (fixed
+byd8a, now149locallyPASS). Validationd8a CI36126725025 was cancelled BEFORE execution.
+Download6853orcurrentb360returns artifact to visually verify new Indonesian badge.
+No active CI has been cancelled; no subagents authorized; no main merge/publish/deploy.
+Commit, push, update notes frequently and KEEP WORKING; no final at a checkpoint.
+
 ## Primary checkout resumed after the old full regression was archived
 
 Continue in the ORIGINAL checkout on `work/warehouse-completion`. It was safely

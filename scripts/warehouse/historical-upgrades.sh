@@ -102,15 +102,18 @@ historical_upgrades() {
         com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT \
         com.duluin.ftth.customer.CustomerDeploymentUpgradeIT
     historical_upgrade_group customer-episode dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb "$report_root" \
-        com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT
+        com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT \
+        com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical
+    historical_upgrade_group discovery-receipt 1580145c27d41a63cb2485f2bfadcba7cc0fb8a3 "$report_root" \
+        com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade
     python3 - "$report_root" <<'PY'
 from pathlib import Path
 import json, sys
 root = Path(sys.argv[1])
-groups = [json.loads((root / name / 'verification.json').read_text()) for name in ('fulfillment', 'customer-title', 'customer-episode')]
+groups = [json.loads((root / name / 'verification.json').read_text()) for name in ('fulfillment', 'customer-title', 'customer-episode', 'discovery-receipt')]
 assert all(group['status'] == 'PASSED' for group in groups)
-assert sum(group['tests'] for group in groups) == 5
-(root / 'verification.json').write_text(json.dumps({'status': 'PASSED', 'tests': 5, 'groups': groups}, indent=2) + '\n')
-print('PASS: five historical upgrade tests; no skipped cases')
+assert sum(group['tests'] for group in groups) == 7
+(root / 'verification.json').write_text(json.dumps({'status': 'PASSED', 'tests': 7, 'groups': groups}, indent=2) + '\n')
+print('PASS: seven historical upgrade tests; no skipped cases')
 PY
 }

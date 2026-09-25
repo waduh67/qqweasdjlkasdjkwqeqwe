@@ -86,9 +86,9 @@ dapat memasangnya. Pada Arch, gunakan paket distro untuk library yang dilaporkan
 hilang; VPS pengembangan ini memerlukan `alsa-lib`. Jangan menjalankan pemasang
 dependensi Ubuntu pada Arch.
 
-`qa.sh server` menjalankan tes historis proyeksi V175.21 → V175.22, kemudian lima
-tes upgrade fulfillment/deployment/title/revisi episode dari schema V175 yang sesuai,
-lalu seluruh tes server terbaru. Kelima tes memakai aplikasi historis yang dipatok
+`qa.sh server` menjalankan tes historis proyeksi V175.21 → V175.22, kemudian tujuh
+tes upgrade fulfillment/deployment/title/revisi episode/discovery dari schema V175 yang sesuai,
+lalu seluruh tes server terbaru. Ketujuh tes memakai aplikasi historis yang dipatok
 dan menerapkan seluruh rantai migrasi terbaru. Semua migrasi yang sudah ada pada
 versi historis dibandingkan byte demi byte dengan checkout kini.
 Setiap fixture migrasi memakai database terpisah dengan schema `public`; schema
@@ -132,7 +132,7 @@ dan `REVIEW_SKU` dari tenant/SKU yang benar-benar sedang diperiksa:
 ```bash
 psql -X -v ON_ERROR_STOP=1 \
   -v "tenant_id=$REVIEW_TENANT" -v "sku_id=$REVIEW_SKU" \
-  -v expected_version=178.7 -v expected_cutover=ENFORCED -v expected_unit=MM \
+  -v expected_version=178.8 -v expected_cutover=ENFORCED -v expected_unit=MM \
   -f scripts/warehouse/preflight.sql
 ```
 

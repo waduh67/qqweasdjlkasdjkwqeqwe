@@ -35,6 +35,10 @@ class CustomerAssetTitleUpgradeIT : CustomerAssetOwnershipFixture() {
         val fingerprint = stock.transaction { scalar("SELECT md5(snapshot) FROM inventory_asset_acceptance WHERE handover_id='$handover'") }
 
         val migration = database.migrate()
+        // Production restarts the application after DDL. Replace pooled sessions
+        // here too: old PostgreSQL prepared plans retain pre-upgrade row shapes.
+        context.getBean(javax.sql.DataSource::class.java)
+            .unwrap(com.zaxxer.hikari.HikariDataSource::class.java).hikariPoolMXBean.softEvictConnections()
 
         assertThat(migration.migrationsExecuted).isGreaterThan(0)
         stock.transaction {
