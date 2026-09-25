@@ -1,0 +1,25 @@
+{
+  "status": "CANCELLED_BEFORE_ANY_JOB",
+  "cancelledRun": 36134311367,
+  "cancelledCommit": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
+  "jobsStarted": 0,
+  "coveringActiveRun": 36135632377,
+  "coveringCommit": "40cbd34f31b967268fb3766b246c613a4af7026f",
+  "coveringFullServerStage": "in_progress",
+  "changedFiles": [
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-historical-r5-verification.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task47/current-runbook-verification.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task48/current-release-guard-verification.json",
+    ".omo/notepads/warehouse-workorder-asset-provenance/decisions.md",
+    ".omo/notepads/warehouse-workorder-asset-provenance/handoff.md",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-46.md",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-47.md",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-48.md",
+    "deploy/DEPLOY.md",
+    "docs/warehouse-ci.md",
+    "docs/warehouse-migrations.md",
+    "docs/warehouse.md"
+  ],
+  "reason": "All product, test, migration, runner and workflow inputs are identical to the already running feature checkpoint. Only docs/evidence/notes differ. No active run was cancelled.",
+  "finalConclusion": "cancelled"
+}
