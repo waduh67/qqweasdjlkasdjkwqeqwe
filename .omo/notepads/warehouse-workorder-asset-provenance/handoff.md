@@ -1,3 +1,42 @@
+## Historical regression supplement: five version-correct application fixtures prepared
+
+Follows pushed0ee64efd. Full R3/session11018 STILL RUNNING, now over1386passed and
+39failed observed; no final result. Preflight R2/session47709 remains queued. Freeze
+server/test/QA sources until R3 exits and preserve all available reports before fixes.
+CI36116539885 at c622a85b is still active; queued checkpoint-only CI36120239630 was
+cancelled before execution. No active full report has been cancelled.
+
+The latest pending-historical-upgrades.patch.gz now covers FIVE tests and supersedes
+its old3-test version plus obsolete pending-episode-upgrade.patch.gz. Confirmed R3
+failures include both WarehouseFulfillmentITOwnerUpgrade and BngLineageUpgrade:
+modern ONU mapping requires retired_at absent in their175.29/175.34 schemas.
+Their historical app is pinned3bfe12331428eb43740c8c0399b61a956c8820a7 (schema175.36).
+The only test behavior change is removing the mocked later MaterialSettlementService;
+all original source, tenant timing, replay and preservation assertions remain.
+Customer title/deployment use fd2cf7c5; episode uses dfa25e79. All groups add exact
+current migrations, current isolated-DB adapter and migration inventory helper;
+the customer deployment group also overlays the reviewed orphan-revision fixture.
+
+Future qa.sh full regression deadline becomes14400s; CI server job360minutes,
+including bounded historical groups. R3 remains on its original7200s deadline and
+has not been modified. If it times out, preserve log and in-progress binary results,
+mark the attempt incomplete, and run the fixed full suite again. Never count old
+focused XML as a complete server result. The private prepared compatibility-focused-r1.sh
+assumes a normally finished R3 with matching WAREHOUSE_COUNTS/XML; adapt a NEW runner
+if timeout prevents complete XML. It has NOT been launched. It selects14 modern
+suites, requires every selected suite, archives results before historical groups,
+and validates the old full report hashes before clearing stale root XML.
+
+Additional pending patches remain as listed in the preceding checkpoint. Latest
+historical draft passes bash syntax, actionlint and git apply --check, but has not
+compiled/executed. No product or migration changes made at this checkpoint.
+The next core step is still complete R3 -> fix all failures -> focused/full reruns.
+
+An optional asynchronous question was sent asking the user to authorize separate
+reviewer agents for the plan's independent F1–F4 audit. NO ANSWER YET; do not spawn
+agents without explicit authorization. Core work continues while awaiting a reply.
+Goal ACTIVE; tasks46–48/F1–F4 remain open. Continue after commit/push; do not final.
+
 ## Latest recovery checkpoint: expanded regression fixture corrections prepared
 
 Goal ACTIVE. Tasks 1–45 DONE;46 IN PROGRESS;47–48/F1–F4 OPEN. Continue after push.

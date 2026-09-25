@@ -1,17 +1,26 @@
 {
   "status": "prepared, not applied or executed",
-  "supersedes": "pending-episode-upgrade.patch.gz; apply only this expanded historical patch, not both",
-  "classes": [
-    "CustomerAssetTitleUpgradeIT",
-    "CustomerDeploymentUpgradeIT",
-    "CustomerAssetEpisodeRevisionUpgradeIT"
-  ],
+  "supersedes": "pending-episode-upgrade.patch.gz and the previous three-case version of this patch; apply only the latest expanded patch",
+  "classes": {
+    "fulfillment": [
+      "WarehouseFulfillmentITOwnerUpgrade",
+      "WarehouseFulfillmentITBngLineageUpgrade"
+    ],
+    "customer": [
+      "CustomerAssetTitleUpgradeIT",
+      "CustomerDeploymentUpgradeIT",
+      "CustomerAssetEpisodeRevisionUpgradeIT"
+    ]
+  },
   "historicalApplications": {
+    "fulfillment": "3bfe12331428eb43740c8c0399b61a956c8820a7",
     "customer-title": "fd2cf7c58f02022525e655a8b0884ac2f5df49b0",
     "customer-episode": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb"
   },
   "preserved": "Every original test assertion; full current migration chain; separate databases with unchanged shared QA functions",
-  "dependency": "Apply pending-deployment-orphan.patch.gz first so both modern and historical lineage probes use an unused physical revision; leave the separate duplicate-sequence probe intact",
-  "next": "Inspect final R3 XML; validate any additional upgrade failures; apply only after full run/archive/cleanup. Compile and execute historical-upgrades mode before full rerun.",
-  "patchSha256": "ac087ff7a5d0384ff1ee0c9934e6fcb1c7c1ac51d1fe14c5c8a759b12a133671"
+  "fulfillmentMocks": "Remove the workaround mocking a later MaterialSettlementService; historical application predates that component",
+  "dependency": "Apply pending-deployment-orphan.patch.gz first; both modern and historical lineage probes need an unused physical revision",
+  "deadlines": "Future full regression gets four hours plus bounded historical groups, CI server job six hours. Active R3 wrapper/7200s timeout is unchanged. No timeout is a PASS.",
+  "next": "Inspect complete R3 results; apply only after the process exits and all available reports are archived. Run focused modern suites and historical-upgrades before full rerun.",
+  "patchSha256": "bdc91a71f21b59b5d93814379ba0f75733bed3ed533f8af1285234c3a8981a4b"
 }

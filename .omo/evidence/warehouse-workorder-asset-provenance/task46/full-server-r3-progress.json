@@ -1,10 +1,10 @@
 {
   "status": "RUNNING, incomplete observation, not a full-suite result",
-  "observedAt": "2026-09-25T09:45:18.632329+00:00",
-  "checkpointCommit": "362f321c3d7cce7bad6877860c8ac4ada459afa5",
+  "observedAt": "2026-09-25T09:56:42.806090+00:00",
+  "checkpointCommit": "0ee64efd6c6ffabef2f21dd7e2c2a5f4ab1af8e3",
   "countsObserved": {
-    "PASSED": 1252,
-    "FAILED": 37
+    "PASSED": 1386,
+    "FAILED": 39
   },
   "failedCasesObserved": [
     "AlarmRuleIT > melonggarkan ambang langsung menurunkan kelas alarm yang sudah terbuka()",
@@ -43,14 +43,16 @@
     "CustomerDeploymentFinalStateIT > invalid final deployment graph rejects under every tenant timing(String, String) > [13] mutation = \"ORPHAN_DOCUMENT\", scope = \"MISMATCHED\"",
     "CustomerDeploymentFinalStateIT > invalid final deployment graph rejects under every tenant timing(String, String) > [14] mutation = \"ORPHAN_DOCUMENT\", scope = \"RESTORED\"",
     "CustomerDeploymentFinalStateIT > invalid final deployment graph rejects under every tenant timing(String, String) > [15] mutation = \"ORPHAN_DOCUMENT\", scope = \"SELECTIVE\"",
-    "CustomerDeploymentUpgradeIT > upgrade preserves admitted corruption but fails validated reads and private replay()"
+    "CustomerDeploymentUpgradeIT > upgrade preserves admitted corruption but fails validated reads and private replay()",
+    "WarehouseFulfillmentITBngLineageUpgrade > upgrade discovers unlisted action references under every tenant timing without rewriting history()",
+    "WarehouseFulfillmentITOwnerUpgrade > upgrade rejects both admitted owner corruptions without rewriting history()"
   ],
   "log": "Private .omo/runtime/full-server-r3.log; final XML and counts must be archived before focused reruns",
   "knownCauses": [
     "26 obsolete serial-only fixtures",
     "RMA positive control missing real inspected handover",
     "Two handover denials now fail source validation before pending-state revision",
-    "Three historical API fixtures run latest application against pre-RMA schemas",
+    "Five historical API fixtures run latest application against pre-RMA or pre-ONU-episode schemas; missing inventory_repair_replacement_request or onu.retired_at",
     "Five orphan-document timing probes encounter newer unique physical revision guard before deferred source checks"
   ],
   "noProductOrMigrationChanges": true
