@@ -27,9 +27,9 @@ class WarehouseOpeningBalanceService(private val cutovers: InventoryTenantCutove
     private val mapper = jacksonObjectMapper()
 
     fun review(batch: UUID): WarehouseMigrationReview {
-        val fence = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.MIGRATION_REPORT)
         val current = access.current()
-        batches.lockBatch(batch, fence.snapshot.epoch)
+        store.lockHistory(batch)
         access.sources(current)
         return store.review(batch)
     }

@@ -1,3 +1,14 @@
+## M06 V178 applied: finalization and full restart verified
+
+V178 is applied and immutable: SHA256
+`f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d`.
+45tests/8suites PASS5m4s: complete-package boot, independent finalization, actual
+application shutdown/restart with mixed tenant states, capture and stock regression. Owner-checked finalization stores immutable cutover
+receipts and enforces VERIFIED reference scope while preserving unresolved legacy
+rows. Source-matched proof: task43/finalization-verification.json.
+V177 through177.10 remain immutable. Next free M06 version178.1. Full provenance UI
+and remaining acceptance tasks are still open.
+
 ## V177.10 applied: legacy closure and admitted review seal verified
 
 V177.10 is applied and immutable: SHA256

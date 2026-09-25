@@ -1,3 +1,58 @@
+## Task43 M06 finalization and full application restart verified; management UI NEXT
+
+Branch work/warehouse-completion; remote origin/feat/warehouse-workorder. This
+checkpoint follows pushed b462c622; find containing commit with git log -1.
+Tasks1–42 done;43 in progress;44–48/F1–F4 remain. Goal ACTIVE. Continue full scope,
+keep source/proofs/recovery handoff committed and pushed. Do not stop at checkpoint.
+
+V178 APPLIED/IMMUTABLE, SHA256
+f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d.
+Next free M06 version178.1; V177–177.10 unchanged/immutable.
+M06 adds owner-only finalization receipts, replaces the closed cutover transition
+with a current-XID finalization witness, validates VERIFIED references while
+preserving legacy null/orphan rows. No global tenant admission is needed at boot.
+
+GET/POST /api/v1/warehouse/provenance/batches/{batch}/finalization installed.
+Input expectedEpoch,openingDocumentId,expectedReviewHash,reason +Idempotency-Key.
+Owner checks actual independent approved posting/event/inbox, immutable review,
+every pending cancellation receipt, current legacy identity reservations, exact
+VERIFIED available baseline and admitted physical claims. API rechecks real file
+bytes and current IAM/all source scopes. Exclusive tenant lock then history batch;
+receipt/epoch ENFORCED2 atomically. Original source counts (zeros included), exact
+unit totals, historical exclusions, cancellation/retained identity counts, actor,
+authority epoch/reason/time recorded. Replay returns original response after current
+authority even across successful epoch transition. Existing policy stub removed.
+Concrete policy.lockCurrentForTransition fixes read-before-lock race for finalizer
+and begin/report owner; ordinary API epoch checks unchanged. Opening review GET now
+uses immutable history lock so reads survive finalization.
+
+45tests/8suites PASS5m4s; zero failures/errors/skips. Source proof
+task43/finalization-verification.json. OpeningApproval6,Policy11,Boot2,Capture3,
+Query2,Posting12,ReceiptGuards6,Modularity3. Real HTTP+Postgres+MinIO includes
+ordered preparation then full Spring app shutdown (ContextClosedEvent asserted)
+then fresh application boot/HTTP replay: A ENFORCED/B VALIDATING, original raw
+asset/ONU/customer IDs, current reserved serial rejects competing receipt, B new
+writes denied. Realzero baseline finalizes with0SKU/stock/lot. Same-key concurrency,
+rollback after owner function returns, altered evidence denial/restoration,
+3 real legacy inventory/checkpoint/outbox cancellation receipts and current actor
+revocation pass. Direct SQL cutover/witness writes and pre-approval finalization
+reject. Initial r2 exposed stale epoch race fixed in Kotlin; V178 SQL unchanged.
+R3 nested simultaneous application experiment caused one lease fixture interference;
+latest test closes the original application before restart and all6tests pass.
+
+Owned QA stopped, volumes retained. Private runner migration-finalization-regression.sh
+and log migration-finalization-r4.log. JDK21, host lock, workers2,heap1536MiB/cache1.
+Never commit raw env/logs/XML/uploads. docs/warehouse-provenance.md updated API guide.
+
+NEXT full /warehouse/provenance management UI. Draft unverified web source already
+started in working tree: provenanceModels.ts,provenance.ts, plus reusable exports
+from migrationReview.ts. Not part of this backend checkpoint. Need bounded opening
+list API to rediscover sealed requests after refresh, complete case/evidence/resolution
+forms +review/opening approval links +finalization. Read finalization-ui-followup.md,
+actual server response models and web/DESIGN.md section9. Reuse existing guards,
+dialogs, scoped pagers/selectors, exact quantity/file verification. Keep task43
+unchecked until UI +browser proof. Then44–48/F1–F4 all remain.
+
 ## Task43 legacy closure and admitted review seal verified; finalization/M06 NEXT
 
 Branch work/warehouse-completion; remote origin/feat/warehouse-workorder. This

@@ -3,7 +3,6 @@ package com.duluin.ftth.inventory
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseDocumentJpaEntity
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseSkuJpaEntity
-import com.duluin.ftth.inventory.application.service.CutoverTransitionUnavailable
 import com.duluin.ftth.inventory.application.service.InventoryTenantPolicyService
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
@@ -165,7 +164,7 @@ class WarehouseSchemaITPolicy {
     }
 
     @Test
-    fun `validation snapshots persist and finalization stays typed closed`() {
+    fun `validation snapshots persist and finalization requires its owner receipt`() {
         val existing = tenant(true)
         transaction(existing) { policy.initializeExistingTenant() }
         val validating = requireNotNull(transaction(existing) { policy.beginValidation(0) })
@@ -175,12 +174,12 @@ class WarehouseSchemaITPolicy {
         assertThat(validating.snapshotWatermark).isNotBlank()
         val stale = assertThrows<WarehouseContractException> { transaction(existing) { policy.lockForCommand(0, WarehouseOperationClass.CONTROL_PLANE) } }
         assertThat(stale.error.code).isEqualTo(WarehouseErrorCode.STALE_CUTOVER)
-        assertThat(transaction(existing) { policy.finalizeValidation(1) }).isEqualTo(CutoverTransitionUnavailable.INDEPENDENT_APPROVAL_NOT_INSTALLED)
-        for (operation in listOf(WarehouseOperationClass.PROVENANCE_RESOLUTION, WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.MIGRATION_APPROVAL)) {
+        assertThatThrownBy { transaction(existing) {
+            entityManager.createNativeQuery("UPDATE inventory_tenant_cutover SET state='ENFORCED',epoch=2,revision=2").executeUpdate()
+        } }.hasStackTraceContaining("cutover requires its current owner finalization receipt")
+        for (operation in listOf(WarehouseOperationClass.PROVENANCE_RESOLUTION, WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.MIGRATION_APPROVAL, WarehouseOperationClass.CUTOVER_FINALIZATION)) {
             transaction(existing) { policy.lockForCommand(1, operation).assertHeld() }
         }
-        val unavailable = assertThrows<WarehouseContractException> { transaction(existing) { policy.lockForCommand(1, WarehouseOperationClass.CUTOVER_FINALIZATION) } }
-        assertThat(unavailable.error.code).isEqualTo(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
         assertThat(transaction(existing) { policy.read() }).isEqualTo(validating)
     }
 

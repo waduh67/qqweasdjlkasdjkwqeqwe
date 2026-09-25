@@ -17,3 +17,6 @@ data class WarehouseMigrationResolutionInput(val expectedEpoch: Long, val expect
 
 data class WarehouseMigrationOpeningInput(val expectedEpoch: Long, val expectedReviewHash: String,
     val reviewLocationId: UUID, val expectedReviewLocationRevision: Long, val migrationReference: String, val reason: String)
+
+data class WarehouseMigrationFinalizeInput(val expectedEpoch: Long, val openingDocumentId: UUID,
+    val expectedReviewHash: String, val reason: String)

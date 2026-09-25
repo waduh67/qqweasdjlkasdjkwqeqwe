@@ -9,6 +9,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Order
+import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.MethodOrderer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
@@ -26,10 +29,12 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @Import(ReceiptRealStorage::class, WarehouseMigrationOpeningApprovalIT.Configuration::class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     companion object {
+        private var restart: Restart? = null
         private val legacy = List(5) { WarehouseMigrationLegacyFixture() }
         private val checkpoints = List(2) { UUID.randomUUID() }
         private val messages = List(2) { UUID.randomUUID() }
@@ -219,6 +224,52 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     private fun decide(token: String, approval: String, revision: Long = 0, key: String = UUID.randomUUID().toString(), action: String = "APPROVE") =
         send(token, "/api/v1/warehouse/approvals/decide", decision(approval, revision, action, if (action == "REJECT") "Pemeriksaan ulang diperlukan" else null), key)
 
+    private fun finalizationInput(batch: String, document: String, hash: String) = mapper.writeValueAsString(mapOf(
+        "expectedEpoch" to 1, "openingDocumentId" to document, "expectedReviewHash" to hash,
+        "reason" to "Saldo awal dan riwayat sudah diperiksa independen"))
+
+    private fun finalized(token: String, batch: String, document: String): Pair<String, String> {
+        val path = "/api/v1/warehouse/provenance/batches/$batch/finalization"
+        val review = request("GET", path, token)
+        assertThat(review.status).withFailMessage(review.contentAsString).isEqualTo(200)
+        val snapshot = mapper.readTree(review.contentAsString)
+        assertThat(snapshot.path("issues").size()).withFailMessage(review.contentAsString).isZero()
+        val body = finalizationInput(batch, document, snapshot.path("reviewHash").asString())
+        val key = UUID.randomUUID().toString()
+        val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("batchId" to batch, "input" to mapper.readTree(body))))
+        assertThatThrownBy { fixture(token).transaction {
+            val actor = scalar("SELECT actor_id FROM inventory_migration_opening_request WHERE id='$document'")
+            jdbc { connection -> connection.prepareStatement("SELECT warehouse_finalize_migration(?,?,?,?,?)").use {
+                it.setObject(1, UUID.fromString(batch)); it.setObject(2, UUID.fromString(actor)); it.setLong(3, 0)
+                it.setString(4, key); it.setString(5, canonical.json)
+                it.executeQuery().use { rows -> assertThat(rows.next()).isTrue() }
+            } }
+            error("Injected finalization transaction rollback")
+        } }.hasStackTraceContaining("Injected finalization transaction rollback")
+        fixture(token).transaction {
+            assertThat(scalar("SELECT state||':'||epoch FROM inventory_tenant_cutover")).isEqualTo("VALIDATING:1")
+            assertThat(scalar("SELECT count(*) FROM inventory_migration_finalization")).isEqualTo("0")
+        }
+        val barrier = java.util.concurrent.CyclicBarrier(2)
+        val responses = java.util.concurrent.Executors.newFixedThreadPool(2).use { pool ->
+            List(2) { pool.submit<HttpResponse<String>> {
+                barrier.await(10, TimeUnit.SECONDS)
+                send(token, path, body, key)
+            } }.map { it.get(30, TimeUnit.SECONDS) }
+        }
+        responses.forEach { assertThat(it.statusCode()).withFailMessage(diagnostic(it)).isEqualTo(200) }
+        assertThat(responses[0].body()).isEqualTo(responses[1].body())
+        assertThat(send(token, path, body.replace("independen", "ulang"), key).statusCode()).isEqualTo(409)
+        assertThat(send(token, path, body).statusCode()).isEqualTo(409)
+        assertThat(send(token, path, body.dropLast(1) + ",\"actorId\":\"${UUID.randomUUID()}\"}", key).statusCode()).isEqualTo(400)
+        assertThat(request("GET", path + "?unknown=true", token).status).isEqualTo(400)
+        fixture(token).transaction {
+            assertThat(scalar("SELECT state||':'||epoch FROM inventory_tenant_cutover")).isEqualTo("ENFORCED:2")
+            assertThat(scalar("SELECT count(*) FROM inventory_migration_finalization")).isEqualTo("1")
+        }
+        return key to responses[0].body()
+    }
+
     @Test fun `independent all-tier approval admits exact original physical identity and one competing baseline wins`() {
         val batch = setup(0)
         try {
@@ -275,7 +326,10 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT count(*) FROM inventory_approval WHERE status='PENDING' AND revision=2")).isEqualTo("2")
             }
             val outbox = context.getBean(FulfillmentOutboxRepository::class.java)
-            val delivery = TenantContext.runAs(batch.old.tenant) { requireNotNull(outbox.claimPending(batch.old.tenant, "legacy-worker", Instant.now(), Instant.now().plusSeconds(300))) }
+            val delivery = TenantContext.runAs(batch.old.tenant) { outbox.claimPending(batch.old.tenant, "legacy-worker", Instant.now(), Instant.now().plusSeconds(300)) }
+                ?: error(fixture(batch.token).transaction { scalar("""SELECT 'Legacy lease unavailable: published='||(published_at IS NOT NULL)::text||
+                    ', leased='||(lease_until IS NOT NULL)::text||', checkpoint='||(SELECT state FROM fulfillment_checkpoint WHERE id=fulfillment_id)
+                    FROM fulfillment_outbox WHERE id='${messages[0]}'""") })
             val keys = List(2) { UUID.randomUUID().toString() }
             val outcomes = approvals.mapIndexed { index, approval -> client.sendAsync(command(actors[2].first,
                 "/api/v1/warehouse/approvals/decide", decision(approval, 2), keys[index]), HttpResponse.BodyHandlers.ofString()) }.map { it.get(25, TimeUnit.SECONDS) }
@@ -335,6 +389,8 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(denied).isNotNull()
                 assertThat(generateSequence(requireNotNull(denied)) { it.cause }.filterIsInstance<java.sql.SQLException>().first().sqlState).isIn("23514", "42501")
             }
+            val completed = finalized(batch.token, batch.id, listOf(first, second)[winner])
+            assertThat(mapper.readTree(completed.second).path("cancellationCount").asInt()).isEqualTo(3)
         } finally { cleanup(batch) }
     }
 
@@ -437,12 +493,28 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             val event = UUID.fromString(scalar("SELECT id FROM inventory_outbox WHERE event_kind='OPENING_POSTED'"))
             inbox.consume(event, "ordinary.effect") { error("Ordinary consumers remain gated during migration") }
         } }.isInstanceOf(WarehouseContractException::class.java)
+        val completed = finalized(token, batch, document)
+        assertThat(mapper.readTree(completed.second).path("baselineCount").asInt()).isZero()
+        assertThat(mapper.readTree(completed.second).path("baselineTotals").size()).isZero()
+        fixture(token).transaction {
+            for (table in listOf("inventory_sku", "inventory_document_line", "inventory_movement_leg", "inventory_balance_projection", "inventory_lot"))
+                assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
+        }
     }
+    @Order(1)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test fun `approved original asset admission retains obsolete candidate history while changed peer remains reserved`() {
         val batch = setup(4)
         try {
-            ready(batch)
+            val balanceFile = ready(batch)
             val document = seal(batch)
+            val path = "/api/v1/warehouse/provenance/batches/${batch.id}/finalization"
+            val before = mapper.readTree(request("GET", path, batch.token).contentAsString)
+            assertThat(before.path("issues").asSequence().map { it.asString() }.toList()).containsExactly("APPROVED_OPENING_REQUIRED")
+            val premature = finalizationInput(batch.id, document, review(batch).path("reviewHash").asString())
+            assertThat(send(batch.token, path, premature).statusCode()).isEqualTo(409)
+            assertThat(runInFailure(batch) { sql("UPDATE inventory_tenant_cutover SET state='ENFORCED',epoch=2,revision=2") }).isEqualTo("42501")
+            assertThat(runInFailure(batch) { sql("INSERT INTO inventory_migration_finalization SELECT * FROM inventory_migration_finalization WHERE false") }).isEqualTo("42501")
             val actor = tiers(batch.token, batch.old.location.toString(), 1).single()
             val approval = pending(batch.token, document)
             val response = decide(actor.first, approval)
@@ -455,6 +527,86 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT warehouse_admission||':'||serial_number FROM inventory_serialized_asset WHERE id='${batch.old.first}'")).isEqualTo("VERIFIED: Serial-A ")
                 assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED' AND status='AVAILABLE'")).isEqualTo("2")
             }
+            val other = setup(3)
+            val objectKey = fixture(batch.token).transaction { scalar("SELECT object_key FROM inventory_migration_evidence WHERE id='$balanceFile'") }
+            val original = storage.get(objectKey)
+            storage.put(objectKey, original.contentType, original.bytes + byteArrayOf(1))
+            try {
+                assertThat(send(batch.token, path, premature).statusCode()).isEqualTo(409)
+                fixture(batch.token).transaction {
+                    assertThat(scalar("SELECT state FROM inventory_tenant_cutover")).isEqualTo("VALIDATING")
+                    assertThat(scalar("SELECT count(*) FROM inventory_migration_finalization")).isEqualTo("0")
+                }
+            } finally { storage.put(objectKey, original.contentType, original.bytes) }
+            val completed = finalized(batch.token, batch.id, document)
+            val finalizedBody = mapper.readTree(completed.second)
+            assertThat(finalizedBody.path("baselineCount").asInt()).isEqualTo(2)
+            assertThat(finalizedBody.path("baselineTotals").path("MM").asString()).isEqualTo("82500")
+            assertThat(finalizedBody.path("baselineTotals").path("EA").asString()).isEqualTo("1")
+            assertThat(finalizedBody.path("cancellationCount").asInt()).isEqualTo(1)
+            assertThat(finalizedBody.path("retainedIdentityCount").asInt()).isPositive()
+            val payload = finalizationInput(batch.id, document, finalizedBody.path("reviewHash").asString())
+            assertThat(runInFailure(batch) { sql("DELETE FROM inventory_migration_finalization") }).isEqualTo("42501")
+            val closed = java.util.concurrent.atomic.AtomicBoolean()
+            context.addApplicationListener(org.springframework.context.ApplicationListener<org.springframework.context.event.ContextClosedEvent> { closed.set(true) })
+            restart = Restart(batch, other, document, completed, payload, area(batch.token), closed)
+        } catch (failure: Throwable) { cleanup(batch); throw failure }
+    }
+
+    private data class Restart(val batch: Batch, val other: Batch, val document: String, val completed: Pair<String, String>,
+        val payload: String, val areaId: String, val stopped: java.util.concurrent.atomic.AtomicBoolean)
+
+    @Order(2)
+    @Test fun `stopped application restarts with enforced A validating B original IDs and exact finalization replay`() {
+        val saved = requireNotNull(restart)
+        assertThat(saved.stopped.get()).describedAs("Original application was fully closed before this boot").isTrue()
+        val batch = saved.batch
+        val other = saved.other
+        val completed = saved.completed
+        val payload = saved.payload
+        val areaId = saved.areaId
+        val freshPort = port
+        val path = "/api/v1/warehouse/provenance/batches/${batch.id}/finalization"
+        try {
+            fun getFresh(token: String, resource: String) = client.send(HttpRequest.newBuilder(URI("http://127.0.0.1:$freshPort$resource"))
+                .header("Authorization", "Bearer $token").GET().build(), HttpResponse.BodyHandlers.ofString())
+            val replay = client.send(HttpRequest.newBuilder(URI("http://127.0.0.1:$freshPort$path"))
+                .header("Authorization", "Bearer ${batch.token}").header("Idempotency-Key", completed.first)
+                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(payload)).build(), HttpResponse.BodyHandlers.ofString())
+            assertThat(replay.statusCode()).withFailMessage(replay.body()).isEqualTo(200)
+            assertThat(replay.body()).isEqualTo(completed.second)
+            val a = getFresh(batch.token, "/api/v1/warehouse/provenance")
+            val b = getFresh(other.token, "/api/v1/warehouse/provenance")
+            assertThat(a.statusCode()).withFailMessage(a.body()).isEqualTo(200)
+            assertThat(b.statusCode()).withFailMessage(b.body()).isEqualTo(200)
+            assertThat(mapper.readTree(a.body()).path("cutover").path("state").asString()).isEqualTo("ENFORCED")
+            assertThat(mapper.readTree(b.body()).path("cutover").path("state").asString()).isEqualTo("VALIDATING")
+            val history = getFresh(batch.token, batch.path(batch.case(batch.old.first)) + "/resolutions")
+            assertThat(history.statusCode()).withFailMessage(history.body()).isEqualTo(200)
+            val reviewHistory = getFresh(batch.token, "/api/v1/warehouse/provenance/batches/${batch.id}/review")
+            assertThat(reviewHistory.statusCode()).withFailMessage(reviewHistory.body()).isEqualTo(200)
+            WarehousePostingFixture(context, batch.old.tenant).transaction {
+                assertThat(scalar("SELECT serial_number FROM inventory_serialized_asset WHERE id='${batch.old.first}'")).isEqualTo(" Serial-A ")
+                assertThat(scalar("SELECT installed_onu_id FROM inventory_serialized_asset WHERE id='${batch.old.installed}'")).isEqualTo(batch.old.episode.toString())
+                assertThat(scalar("SELECT customer_id FROM onu WHERE id='${batch.old.episode}'")).isEqualTo(batch.old.customer.toString())
+                assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("2")
+            }
+            WarehousePostingFixture(context, other.old.tenant).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
+                assertThat(scalar("SELECT serial_number FROM inventory_serialized_asset WHERE id='${other.old.first}'")).isEqualTo(" Serial-A ")
+            }
+            val supplier = create("suppliers", batch.token, """{"code":"NEW","name":"New supplier"}""").path("id").asString()
+            val source = create("locations", batch.token, """{"code":"RECEIPT_SOURCE","name":"Inbound","kind":"TRANSIT","areaId":"$areaId"}""").path("id").asString()
+            val quarantine = create("locations", batch.token, """{"code":"INSPECT","name":"Inspection","kind":"QUARANTINE","areaId":"$areaId"}""").path("id").asString()
+            val receipt = Setup(batch.token, supplier, source, quarantine, batch.old.location.toString(), batch.cable, batch.serial)
+            val conflicting = draft(receipt, """{"skuId":"${batch.serial}","quantityBase":"1","serials":[{"serial":"MOVED-AWAY"}]}""")
+            assertThat(request("POST", "/api/v1/warehouse/receipts/${conflicting.path("id").asString()}/receive", batch.token, """{"expectedRevision":0}""").status).isEqualTo(409)
+            assertThat(request("POST", "/api/v1/warehouse/receipts", other.token, draftBody(receipt, """{"skuId":"${batch.serial}","quantityBase":"1","serials":[{"serial":"MOVED-AWAY"}]}""")).status).isEqualTo(409)
+            val (disabler, _) = user(batch.token, setOf("iam.user.update"))
+            assertThat(request("POST", "/api/users/${batch.actor}/disable", disabler).status).isEqualTo(200)
+            val denied = send(batch.token, path, payload, completed.first)
+            assertThat(denied.statusCode()).isEqualTo(403)
+            assertThat(denied.body()).doesNotContain("finalizedBy", "reviewHash", "baselineTotals")
         } finally { cleanup(batch) }
     }
 

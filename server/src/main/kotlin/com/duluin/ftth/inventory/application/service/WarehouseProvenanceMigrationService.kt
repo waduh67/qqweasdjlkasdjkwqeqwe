@@ -12,8 +12,7 @@ import java.util.UUID
 /** A tenant migration needs authority over every affected source, checked before counts or rows. */
 @Service
 @Transactional(timeout = 30, rollbackFor = [Exception::class])
-class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantCutoverApi,
-    private val policy: InventoryTenantPolicyService,
+class WarehouseProvenanceMigrationService(private val policy: InventoryTenantPolicyService,
     private val customers: InventoryProvenanceCustomerPort,
     private val effects: InventoryMigrationEffectsPort,
     private val access: WarehouseProvenanceAccess, private val store: WarehouseProvenanceStore) {
@@ -24,7 +23,7 @@ class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantC
         receiptKey(key)
         if (input.expectedEpoch !in 0 until Long.MAX_VALUE || !input.expectedPreservationHash.matches(Regex("[0-9a-f]{64}"))) malformed()
         // Read the current fence first so a response-loss replay can cross its own LEGACY -> VALIDATING transition.
-        val fence = cutovers.lockForTransition(cutovers.read().epoch)
+        val fence = policy.lockCurrentForTransition()
         val current = access.current()
         access.sources(current)
         val payload = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
@@ -51,14 +50,14 @@ class WarehouseProvenanceMigrationService(private val cutovers: InventoryTenantC
     fun summary(): String {
         // Live sources can appear between scope checks and counts under READ_COMMITTED.
         // An exclusive read fence keeps this tenant-wide report consistent without a GET mutation.
-        val cutover = cutovers.lockForTransition(cutovers.read().epoch)
+        val cutover = policy.lockCurrentForTransition()
         access.sources(access.current())
         return store.summary(cutover.snapshot)
     }
 
     fun cases(page: Int, size: Int, sourceTable: String?, id: UUID? = null): String {
         if (page < 0 || size !in 1..100 || (sourceTable != null && sourceTable !in sourceTables)) malformed()
-        cutovers.lockForTransition(cutovers.read().epoch)
+        policy.lockCurrentForTransition()
         val references = access.sources(access.current())
         return store.cases(page, size, sourceTable, id, references.customers, references.workOrders)
     }

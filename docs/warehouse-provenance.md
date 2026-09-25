@@ -42,6 +42,11 @@ hanya mencakup sebagian sumber tidak mendapat laporan tenant yang menyesatkan.
 | `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/evidence/{id}` | Unduh melalui pemeriksaan hak terkini dan verifikasi isi file |
 | `POST /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/resolutions` | Usulkan keputusan kasus dengan bukti dan revisi yang ditinjau |
 | `GET /api/v1/warehouse/provenance/batches/{batch}/cases/{case}/resolutions` | Riwayat keputusan, terbaru dahulu; `page` dan `size` 1–100 |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/review` | Manifest pemeriksaan, hash, dan masalah yang perlu diselesaikan |
+| `POST /api/v1/warehouse/provenance/batches/{batch}/opening` | Segel usulan saldo awal untuk persetujuan independen |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/opening/{id}` | Usulan saldo awal yang disegel |
+| `GET /api/v1/warehouse/provenance/batches/{batch}/finalization` | Kesiapan finalisasi, jumlah sumber/saldo/pembatalan, dan bukti finalisasi bila sudah selesai |
+| `POST /api/v1/warehouse/provenance/batches/{batch}/finalization` | Finalisasi saldo awal yang sudah disetujui dan aktifkan ENFORCED secara atomik |
 
 Pembukaan batch memakai `Idempotency-Key` dan body
 `{"expectedEpoch":0,"expectedPreservationHash":"<hash laporan aktual>"}`.
@@ -106,11 +111,40 @@ tersebut sebagai snapshot saja. Nama/data lokasi tenant lain tidak dikembalikan,
 dan referensi itu tidak dapat dipakai untuk calon saldo awal. Operator biasa tetap
 memerlukan cakupan seluruh sumber yang valid sebelum mendapat laporan.
 
-Usulan keputusan belum mengaktifkan stok. Persetujuan independen, posting saldo
-awal, dan finalisasi ENFORCED masih tahap berikutnya di task43. Guard yang menutup
-operasi tersebut tetap berlaku. Tenant baru kosong
-tetap memakai inisialisasi atomik ENFORCED yang sudah tersedia; tenant lama kosong
-memerlukan jalur validasi dan persetujuan tersendiri.
+Usulan keputusan belum mengaktifkan stok. Usulan saldo awal disegel dengan hash
+pemeriksaan, lokasi pemeriksa, referensi migrasi, dan alasan. Persetujuan menggunakan
+alur persetujuan gudang biasa dengan jenis OPENING_BALANCE. Semua tingkat pemeriksa
+harus menyetujui tanpa mengarang nilai pembelian. Pembuat batch, pengusul, penyelesai
+kasus, dan pengunggah bukti tidak dapat menyetujui hasilnya sendiri. Persetujuan akhir
+membukukan saldo awal melalui pemilik posting tunggal, mempromosikan aset asli,
+serta mencatat bukti pembatalan efek lama dalam transaksi yang sama. Tenant tetap
+VALIDATING; operasi stok biasa belum dibuka.
+
+Setelah persetujuan selesai, baca endpoint finalization. Kirim `Idempotency-Key`
+bersama `expectedEpoch`, `openingDocumentId`, `expectedReviewHash`, dan `reason`.
+Epoch, dokumen, dan hash harus berasal dari hasil pemeriksaan tersebut. Finalisasi
+memeriksa posting independen, bukti file asli, event dan inbox persetujuan,
+pembatalan efek lama, reservasi identitas terkini, serta kecocokan stok tersedia
+dengan seluruh baris saldo awal. Penguncian eksklusif tenant mendahului otorisasi
+terkini dan penguncian batch. Bukti finalisasi dan perubahan epoch ke ENFORCED
+disimpan bersama; rollback membatalkan keduanya.
+
+Respons menyimpan jumlah sumber termasuk nol, total saldo per satuan dasar, jumlah
+pembatalan, identitas yang tetap dicadangkan, aktor, alasan, dan waktu finalisasi.
+Jika respons hilang, ulangi kunci dan body yang sama. Respons asli dikembalikan
+setelah pemeriksaan hak terkini walaupun epoch telah berubah. Kunci sama dengan
+isi atau aktor berbeda ditolak. Jangan mengganti kunci untuk mengatasi respons
+yang belum pasti. Riwayat kasus, bukti, dan usulan tetap dapat dibaca setelah
+finalisasi; dokumen yang telah dibukukan tidak membuka kembali rekonsiliasi.
+
+Data historis dan perangkat lama yang belum terbukti tetap staged, dikecualikan
+dari stok baru, dan identitasnya tetap menghalangi penerimaan yang bentrok. Serial,
+ID aset/ONU, hubungan pelanggan, serta nilai mentah tidak dihapus. Tenant baru
+kosong memakai inisialisasi atomik ENFORCED; tenant lama kosong memerlukan saldo
+awal nol dengan pemeriksaan dan persetujuan independen. Jalur nol tidak membuat
+SKU, lot, baris stok, kuantitas, atau biaya fiktif. M06 memvalidasi referensi hanya
+pada baris VERIFIED sehingga data lama dengan referensi yang belum lengkap tetap
+bisa dibaca dan tidak menggagalkan boot seluruh tenant.
 
 Verifikasi dasar ada di `WarehouseMigrationITBoot`, `WarehouseMigrationITQuery`, `WarehouseMigrationCaptureIT`,
 `WarehouseMigrationEvidenceIT`, `WarehouseMigrationResolutionIT`, dan
@@ -119,5 +153,6 @@ menggunakan HTTP serta MinIO sungguhan, kehilangan respons, penghentian backend
 database setelah file ditulis, dan penguncian transaksi yang belum terselesaikan.
 Fixture upgrade dimulai sebelum V173 dengan
 serial/MAC bentrok dan ONU lama, lalu memuat semua migrasi paket. Setup metadata
-area pada fixture bukan bukti UI rekonsiliasi; perjalanan UI dan restart sesudah
-admission tetap menjadi pemeriksaan task43/45.
+area pada fixture bukan bukti UI rekonsiliasi; perjalanan UI tetap menjadi
+pemeriksaan task43/45. `WarehouseMigrationOpeningApprovalIT` mencakup persetujuan,
+finalisasi, rollback, replay konkuren, tenant kosong, dan pemeliharaan identitas lama.

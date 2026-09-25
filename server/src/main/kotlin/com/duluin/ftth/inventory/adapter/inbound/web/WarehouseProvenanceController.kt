@@ -2,6 +2,8 @@ package com.duluin.ftth.inventory.adapter.inbound.web
 
 import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
+import com.duluin.ftth.inventory.application.service.WarehouseMigrationFinalizationService
+import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationFinalizeInput
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationBeginInput
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationEvidenceInput
 import com.duluin.ftth.inventory.application.port.inbound.WarehouseMigrationResolutionInput
@@ -22,7 +24,19 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/warehouse/provenance")
 class WarehouseProvenanceController(private val service: WarehouseProvenanceMigrationService, private val evidence: MigrationEvidenceService,
-    private val resolutions: MigrationResolutionService, private val opening: WarehouseOpeningBalanceService) {
+    private val resolutions: MigrationResolutionService, private val opening: WarehouseOpeningBalanceService,
+    private val finalization: WarehouseMigrationFinalizationService) {
+    @GetMapping("/batches/{batch}/finalization")
+    fun finalization(@PathVariable batch: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        if (parameters.isNotEmpty()) invalid()
+        return response(finalization.review(batch))
+    }
+    @PostMapping("/batches/{batch}/finalization")
+    fun finalize(@PathVariable batch: UUID, @RequestHeader("Idempotency-Key") key: String,
+        @RequestBody body: String, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<String> {
+        if (parameters.isNotEmpty()) invalid()
+        return response(finalization.finalize(batch, WarehouseReceiptJson.decode(body, WarehouseMigrationFinalizeInput::class.java), key))
+    }
     @GetMapping("/batches/{batch}/review")
     fun review(@PathVariable batch: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<*> {
         if (parameters.isNotEmpty()) invalid()

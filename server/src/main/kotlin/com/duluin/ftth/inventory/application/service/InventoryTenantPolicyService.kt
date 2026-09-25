@@ -18,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
-enum class CutoverTransitionUnavailable { INDEPENDENT_APPROVAL_NOT_INSTALLED }
-
 @Service
 class InventoryTenantPolicyService(private val repository: InventoryTenantPolicyRepository) : InventoryTenantCutoverApi, InventoryTenantInitializationApi {
     @Transactional(readOnly = true)
@@ -29,14 +27,15 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
     override fun lockForCommand(expectedEpoch: Long, operation: WarehouseOperationClass): TenantCutoverFence {
         val snapshot = locked(expectedEpoch, false)
         if (!allows(snapshot.state, operation)) fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Operasi memerlukan cutover gudang yang sesuai")
-        if (operation in approvalOperations && operation !in setOf(WarehouseOperationClass.PROVENANCE_RESOLUTION,
-                WarehouseOperationClass.MIGRATION_APPROVAL, WarehouseOperationClass.MIGRATION_BASELINE))
-            fail(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED, "Persetujuan migrasi belum tersedia")
         return Fence(snapshot)
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockForTransition(expectedEpoch: Long): TenantCutoverChangeFence = Fence(locked(expectedEpoch, true))
+
+    /** Control owners compare expected epochs only after checking an original command replay. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun lockCurrentForTransition(): TenantCutoverChangeFence = Fence(repository.lock(true) ?: missing())
 
     @Transactional(propagation = Propagation.MANDATORY)
     override fun initializeNewEmptyTenant(): TenantCutoverSnapshot = repository.initialize(newEmptyTenant = true)
@@ -49,12 +48,6 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
         val snapshot = locked(expectedEpoch, true)
         if (snapshot.state != WarehouseCutoverState.LEGACY) fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Validasi hanya dimulai dari LEGACY")
         return repository.beginValidation(expectedEpoch)
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY)
-    fun finalizeValidation(expectedEpoch: Long): CutoverTransitionUnavailable {
-        locked(expectedEpoch, true)
-        return CutoverTransitionUnavailable.INDEPENDENT_APPROVAL_NOT_INSTALLED
     }
 
     fun allows(state: WarehouseCutoverState, operation: WarehouseOperationClass): Boolean = when (state) {
