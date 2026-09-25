@@ -1,0 +1,42 @@
+{
+  "phase": "Task44 partial: full numeric HTTP loss and application/outbox recovery",
+  "baseCommit": "636209cfacd8e54ab9704e525e89d730b483bf46",
+  "status": "Recovery gate passes; task44 remains in progress",
+  "server": {
+    "build": "SUCCESS1m17s",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "checks": [
+    "Actual controller/PG/MinIO numeric setup:1000000MM and10 serialized ONUs received;100000MM and1ONU issued and acknowledged;82500MM used,ONU installed/LOAN handed over,17500MM returned/inspected,PSB proof completed and independently approved.",
+    "Test-only ContentCachingResponseWrapper withholds real HTTP inspection response after controller transaction returns. Separate DB transaction sees exactly1 durable operation, client receives0 bytes then closes with TCP reset. Original saved body comes from durable operation row.",
+    "@DirtiesContext closes the entire first Spring application and web server. ContextClosedEvent, inactive original context, different fresh context and real HTTP replay prove restart. No owned/unrelated process killing and no claim of SIGKILL coverage here.",
+    "Actual delivery store claims inspection event, production reader loads it, real fulfillment delivery persists1 inbox and observation; ACK deliberately omitted. Fresh application expires scheduling lease metadata only, production dispatcher claims/redelivers, old lease cannot finish, new attempt2 isDELIVERED. Inbox/observation remain1.",
+    "Exact original inspection request/key returns exact original status/body after restart. Physical audit unchanged; totals917500MM available+82500MM consumed=1000000MM,9available+1installed=10ONU;0 technicianMM,1active assignment,1ONU episode,1handover.",
+    "Foreign-tenant inspection replay404. Old JWT reads original usage200 before current location-scope revoke and404 afterward. Completed WO repeat-use409 never returns original source; physical counters remain unchanged."
+  ],
+  "testHistory": [
+    "r1:1/2 passed. All physical/restart/outbox checks passed, then final scope-write assertion expected404 but closed WO correctly returned409.",
+    "r2:2/2 passed. Added real historical-read200 before revoke/404 after revoke, retained precise409 closed-job denial and unchanged numeric audit."
+  ],
+  "remaining": [
+    "Reassignment QA regression currently being validated; remaining combined races and delayed reuse attribution.",
+    "Tasks45\u201348 and F1\u2013F4; known historical175.21 projection-upgrade fixture mismatch remains."
+  ],
+  "files": {
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseResponseLossProbe.kt": "2ab8ca6b95d1a94ee8e3ac9965d280264e7df22d519a1eac412d3e2e6e058107",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "7514d0c3ce45c1fc2022db0fcaead7fdce974001788a7bcc49c492a30d61c697"
+  }
+}

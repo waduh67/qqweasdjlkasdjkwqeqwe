@@ -1,3 +1,37 @@
+## Current checkpoint: full numeric restart/outbox recovery verified
+
+This checkpoint follows pushed636209cf; locate its containing commit with git log -1.
+Goal ACTIVE, tasks1–43 done,44 in progress,45–48/F1–F4 open. Continue working.
+WarehouseRecoveryIT runs2 ordered tests with a full real warehouse/customer/QA flow.
+Actual HTTP inspection response is held after commit and client socket reset before
+any bytes arrive. Whole first Spring app closes; fresh app replays exact durable
+inspection outcome. Actual outbox claim/reader/fulfillment delivery loses ACK; fresh
+production dispatcher redelivers once, old lease fenced, attempt2DELIVERED,1 inbox
+and1 observation. All numeric physical totals and counts survive unchanged:
+917500MM available,82500MM consumed,0 techMM,9availableONU,1installed,10assets.
+Only scheduling lease metadata is expired in SQL. No physical seed, fake delivery
+algorithm or process kill. Historical usage current-scope access tested with oldJWT.
+2 tests PASS1m17s; full reports privately archived before next run. Proof:
+.omo/evidence/warehouse-workorder-asset-provenance/task44/numeric-recovery-verification.json.
+R1 failed only a final404 expectation on terminal WO write; r2 explicitly proves
+history200 before revoke/404 after, and correct terminal409 write with no effects.
+
+NEXT: WarehouseReassignmentSettlementIT is currently an UNCOMMITTED regression.
+First red attempt stopped at redundant signature upload requiring correctionReason;
+fixture now reuses the real original customer handover signature while the new
+technician uploads fresh completion proof. Redr2 running via
+.omo/runtime/reassignment-settlement-red-r2.sh, log same basename.log; inspect
+actual failure before product changes. If local drafts are lost, recreate2 boolean
+cases(includeCable=true/false): full actual use/install/handover/return, reassign
+before completion, new tech completes with original handover signature, QA should
+verify those physical facts; old tech new-use403 and no new physical movement.
+Suspect checks requiring original usage/deployment actor still in current roster.
+No actor guards changed yet. Three current SQL definitions captured privately as
+.omo/runtime/warehouse_{assert_fulfillment_snapshot,fulfillment_deployments_guard,assert_deployment_only_settlement}-1784.sql.
+Do not edit applied migrations. V178.4 immutable in BOTH QA volumes; next178.5.
+After reassignment proof/fix continue remaining44 races,45 browser,46 full regression
+including historical175.21 fixture repair,47 runbooks,48 CI andF1–F4. No subagents.
+
 ## Current checkpoint: serial-only QA verified; recovery next
 
 This checkpoint follows pushed aebe3912. Locate its containing commit with git log -1.

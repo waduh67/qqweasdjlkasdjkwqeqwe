@@ -155,7 +155,7 @@ abstract class WarehouseNumericLifecycleFixture : WarehouseFulfillmentFixture() 
                 "artifacts" to artifacts, "resolutionNote" to "Completed planned warehouse installation")), "numeric-complete")
     }
 
-    protected fun saveCommand(path: String, token: String, body: String, key: String, status: Int = 200): SavedCommand {
+    protected open fun saveCommand(path: String, token: String, body: String, key: String, status: Int = 200): SavedCommand {
         val response = request("POST", path, token, body, key)
         assertThat(response.status).withFailMessage("$path: ${response.contentAsString}").isEqualTo(status)
         return SavedCommand(path, token, body, key, status, response.contentAsString)
