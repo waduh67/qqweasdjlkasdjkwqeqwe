@@ -1,3 +1,19 @@
+## V177.1 applied: begin-validation receipt
+
+V177.1 applied successfully in the full packaged Spring Boot upgrade at
+07:09:43.887 JKT. It is immutable. SHA-256: `456b3c169eb30a406629fc52ae520442e130c81d9cb4fd97eb7aeff9861a4023`.
+Application tests reached successful reads, batch capture and response replay;
+expected error cases exposed the new controller missing from warehouse error
+advice. The Kotlin registration is fixed; applied SQL is unchanged.
+Next migration slot is V177.2; V178 remains reserved.
+
+## V177.1 reservation: durable begin-validation command
+
+V177 is applied and unchanged. V177.1 is reserved for the immutable command
+receipt that binds batch creation, expected source hash, actor and resulting
+cutover epoch. It does not admit stock or relax approval/finalization guards.
+The API will capture existing VALIDATING batches without inventing a new cutoff.
+
 ## V177 applied: immutable preservation evidence
 
 V177 successfully applied in full clean and V172 legacy-collision upgrade fixtures.
