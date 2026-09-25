@@ -1,3 +1,13 @@
+## V177 applied: immutable preservation evidence
+
+V177 successfully applied in full clean and V172 legacy-collision upgrade fixtures.
+It is immutable from this point. SHA-256: `dcfa14774e95a35af8d86135889fe03dd2085500f704f23f3189a7eed519cb88`.
+The first attempt rolled back (PostgreSQL requires immutable generated-column
+expressions); no successful V177 was edited. Hashes are now computed on INSERT.
+New structures preserve eight legacy source kinds and derive batch manifests
+under the exclusive VALIDATING fence. There is no data admission or stock posting.
+M05 follow-ups use V177.x; V178 remains reserved for final constraints.
+
 ## Task43 M05 reservation: V177 preservation snapshots
 
 V175.148 is the latest packaged applied version. V177 and V178 remain reserved

@@ -45,7 +45,7 @@ class WarehouseSchemaITUpgrade {
     }
 
     @Test
-    fun `all packaged migrations boot in a clean schema and validate twice`() = isolated { schema, url, owner ->
+    fun `M01 and M02 expansion through 174_13 boots in a clean schema and validates twice`() = isolated { schema, url, owner ->
         val flyway = migrations(schema, url, "174.13")
         assertThat(flyway.migrate().migrationsExecuted).isEqualTo(184)
         flyway.validate()

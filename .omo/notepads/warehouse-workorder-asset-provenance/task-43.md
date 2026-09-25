@@ -1,3 +1,31 @@
+## Task43 M05 preservation checkpoint verified; interactive API NEXT
+
+V177 applied successfully and now IMMUTABLE. Fifteen tests PASS (full-packaged
+WarehouseMigrationITBoot2, inventory10, old schema3), BUILD SUCCESSFUL1m9s.
+Safe proof task43/preservation-migration-verification.json. Full clean and V172
+colliding upgrade run every packaged migration. 3 original assets,2ONU,11cases,
+3 identity conflicts; unknown82500 units preserved,0 new verified stock/documents.
+Batch test derives all11manifest rows/hash under VALIDATING, rejects forged empty
+manifest, immutable evidence, foreign tenant visibility and premature ENFORCED.
+No actual application HTTP reconciliation/admission yet;43 stays OPEN.
+
+M05 snapshots8 legacy source kinds in inventory_provenance_case, exact source IDs/
+whitelisted JSON/DB-generated SHA256. No new units/prices/origins/stock. Immutable
+inventory_migration_batch binds existing cutover batchid/epoch/watermark and derives
+case manifest. App can only SELECT cases, INSERT/SELECT batch under validatingfence.
+No prior VALIDATING row is forced to have a batch before operator bootstrap.
+Next free177.1;178reserved finalconstraints. Initial V177 attempt rolled back
+(nonimmutable convert_to in generated column); fixed before first successful apply.
+
+NEXT: current-authority/scoped dryrun and bounded cases API, exclusive begin-batch
+control command with original-response idempotency, then resolution/independent
+approval/opening/posting/finalization andUI. Reuse existing durable approval owner.
+For customer scope use inventory root port implemented in customer (current tenant/
+area) rather than inventory SQL reading customer tables. Gate global tenant report
+before counts if operator lacks affected location/area coverage. Old source snapshots
+must remain immutable. Task42complete at01c051f6pushed,41JVM+bothmacOSiOScompilesPASS.
+Tasks43–48/F1–F4remain; active goal. No deploy/mainmerge. Commit+push checkpoints.
+
 ## Task43 in progress: preservation snapshots first
 
 V177/V178 checked unused and reserved. Current max is175.148; noV176 file. Need
