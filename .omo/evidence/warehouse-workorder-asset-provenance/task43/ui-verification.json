@@ -1,0 +1,100 @@
+{
+  "status": "PASS",
+  "task": 43,
+  "timestamp": "2026-09-25T03:54:47.367443+00:00",
+  "parentCommit": "38d40e9c547db49a1f743bfa034454f18358baa0",
+  "sources": {
+    "web/src/api/warehouse/provenanceModels.ts": "edc77ab049c374384f962f0a143ed98107a3fa9467efa5f4aabc32063a0e9abb",
+    "web/src/pages/warehouse/WarehouseProvenancePage.tsx": "a25a884e59dac45191c8289ccd2fc076b50e2fe5e8cf23586202cdffc888b8f1",
+    "web/src/pages/warehouse/WarehouseProvenanceCase.tsx": "3d25bfe60a4ff4f05b3493792c3c1960f1ea3d63c430cf27319b3df3061745b6",
+    "web/src/pages/warehouse/WarehouseProvenanceOpening.tsx": "ff3fd12f5f5a6a79d0da7de7fc1986310129450c8da6f1c3d5a6a275a4b7931a",
+    "web/src/pages/warehouse/WarehouseProvenanceSource.tsx": "7f9e44801bb21214cddd4e263820e962b75e4dbde069168527038ab5d3eff60f",
+    "web/src/pages/warehouse/provenancePresentation.ts": "e4d034a00197d4f25ce49e55b342963febd87c7d8e38921e4a8b00faab5ebf0e",
+    "web/src/pages/warehouse/WarehouseProvenancePage.test.tsx": "00e6ddb51ea397768ba9dd0ae9e74af20be03b3786e919880725462f793fd8f1",
+    "web/src/pages/warehouse/WarehouseRoutes.tsx": "8c58448f5bdfed1e49f0f5ac2695f97f3ed226608119867cec8e0a1aa4796477",
+    "web/src/pages/warehouse/navigation.ts": "e7b6f41668f3897f0f3b71c3e822065d4570c37b66ceb1e511d2a23861df710a",
+    "web/src/test/warehouseProvenanceFixture.ts": "7ec95689d86ca7671b993d43d8502090f9e13913d00e64a1aa84e8cd85d5c365",
+    "web/e2e/warehouse/provenance.spec.ts": "31f9b87b5a40b3559b729508a9416a942402d079667a6c703af3b66601321415",
+    "docs/warehouse-provenance.md": "df0709327c02e23f23d84d24c2343aa36c72beafd1aac34933c72e4135ffec0d"
+  },
+  "verification": {
+    "warehouseWeb": {
+      "files": 52,
+      "tests": 272,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 47.44
+    },
+    "build": "TypeScript and Vite PASS",
+    "lint": "full lint PASS with pre-existing warnings; changed provenance files and spec no warnings",
+    "browser": {
+      "tests": 2,
+      "projects": [
+        "warehouse-desktop",
+        "warehouse-mobile"
+      ],
+      "seconds": 19.5,
+      "widths": [
+        375,
+        768,
+        1280
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "setup": "real UI signup and IAM roles/users; real packaged server with PostgreSQL warehouse_app NOSUPERUSER NOBYPASSRLS; no route mocks or SQL stock seeds",
+      "assertions": [
+        "new tenant ENFORCED epoch0, batch null, all ten source counts exactly zero",
+        "reload retains empty active state without opening commands",
+        "provenance-only role can read empty report without stock role",
+        "approval-only role hides provenance navigation and is denied by page and real API",
+        "no horizontal page overflow at tested widths"
+      ],
+      "initialFailure": "test waited on old approvals list path; corrected to actual /approvals/workbench, rerun passed"
+    },
+    "backend": "unchanged from 38d40e9c/e5f70e52; see opening-directory-verification.json and finalization-verification.json"
+  },
+  "coverage": [
+    "case/raw evidence and identity display",
+    "private multipart evidence upload and verified download",
+    "evidence-bound proposal with exact source-unit conversion and server-derived stock quantity",
+    "resolution history, duplicate and pending cancellation proposals",
+    "paged sealed opening directory and approval source links",
+    "explicit zero opening review and active review location",
+    "issues/read-only after admission/current permission revocation",
+    "captured-command retry after response loss",
+    "finalization readiness and durable original outcome"
+  ],
+  "limits": [
+    "Mocked component/client tests are not legacy browser acceptance. Full legacy data migration is separately verified by real HTTP/PostgreSQL/MinIO/restart gates. Interactive legacy browser journey remains in task45.",
+    "Tasks44-48 and F1-F4 are still open."
+  ],
+  "screenshots": [
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui/warehouse-desktop-provenance-empty.png",
+      "sha256": "f6003483f4ed317451016e597a317a3bddc6aad4e911df83e5a7b2aa13e33c47"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui/warehouse-desktop-provenance-empty-dark.png",
+      "sha256": "1048b16a920174c33cf317140380b48ea9396b772bca3a60e57d82c5d449931e"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui/warehouse-desktop-provenance-denied.png",
+      "sha256": "c01b61ae427760e6e9a2521c4b5c8c5c47c61973a320848410fdc8120d1cc643"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui/warehouse-mobile-provenance-empty.png",
+      "sha256": "96b59f392974a666fad4c9ff337ce03fe2d76f4550d114934caefeb24220f45f"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui/warehouse-mobile-provenance-empty-dark.png",
+      "sha256": "c6b89899364bdc8e65062cad8b55da6f272929c80a6f001c6c166b0a7fee3b11"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui/warehouse-mobile-provenance-denied.png",
+      "sha256": "7d7da162b0e0bae9d9682ebe32c15faf85814a3dc2312f4bc0f27f7928481b7b"
+    }
+  ],
+  "runtime": "owned services stopped; volumes retained; raw logs, traces and env remain private"
+}

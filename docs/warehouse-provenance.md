@@ -1,5 +1,38 @@
 # Rekonsiliasi data gudang lama
 
+## Melalui halaman gudang
+
+Buka **Gudang & Logistik → Rekonsiliasi Data Lama** (`/warehouse/provenance`)
+dengan izin `inventory.provenance.manage` dan akses ke seluruh sumber batch.
+Tenant baru langsung menampilkan gudang aktif dengan saldo kosong. Tenant lama
+menampilkan jumlah tiap sumber, benturan identitas, satuan yang belum terbukti,
+dan pekerjaan lama yang tertunda. Jumlah nol tetap ditampilkan.
+
+1. Pilih **Mulai pemeriksaan gudang**, lalu periksa dampaknya sebelum mengonfirmasi.
+2. Buka setiap kasus. Baca serial, MAC, lokasi, dan kuantitas asli; unggah bukti
+   PDF, PNG, atau JPEG. Pilih bukti yang mendukung keputusan kasus. Unduhan selalu
+   memakai pemeriksaan akses dan integritas file.
+3. Tentukan apakah sumber hanya menyimpan riwayat, menjadi calon saldo awal,
+   merupakan duplikat sumber yang sudah dibuktikan, atau merupakan efek tertunda
+   yang perlu dibatalkan. Calon stok memerlukan SKU, satuan yang terbukti, dan
+   kepemilikan ISP. Jumlah berasal dari catatan asli, bukan isian stok baru.
+4. Buka **Saldo awal & aktivasi**. Tinjau masalah dan kuantitas per satuan, pilih
+   lokasi pemeriksaan, lalu simpan usulan. Saldo awal nol memerlukan pernyataan
+   pemeriksaan kosong. Usulan tersimpan dapat ditemukan kembali setelah halaman
+   dimuat ulang.
+5. Buka tautan persetujuan pada usulan. Pembuat mengajukan dokumen; pemeriksa
+   independen menyelesaikan seluruh tahap kebijakan. Pembuat, pengunggah bukti,
+   dan pihak yang memutuskan kasus tidak boleh menyetujui batchnya sendiri.
+6. Kembali ke **Saldo awal & aktivasi** dan muat ulang. Aktivasi tersedia setelah
+   seluruh pemeriksaan final lolos. Tinjau jumlah saldo, pembatalan, dan identitas
+   yang tetap dicadangkan sebelum mengonfirmasi. Hasil aktivasi tetap terbaca
+   setelah keluar atau memuat ulang halaman.
+
+Setelah saldo awal dibukukan, kasus dan bukti menjadi riwayat baca saja. Jika
+respons suatu tindakan tidak sampai, gunakan coba ulang pada konfirmasi yang
+sama agar perintah tersimpan diperiksa kembali. Persetujuan yang belum selesai
+atau kasus bermasalah harus diselesaikan sebelum aktivasi.
+
 Migrasi V177 menyimpan bukti data lama sebelum ada penerimaan stok ke sistem baru.
 ID, serial/MAC mentah, kuantitas, hubungan pelanggan/ONU, dan riwayat pergerakan
 tetap ada. Kuantitas tanpa satuan yang terbukti tidak berubah menjadi EA atau MM.

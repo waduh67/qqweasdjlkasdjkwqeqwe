@@ -42,7 +42,10 @@ export function migrationCase(value: unknown, path = 'case') {
     source: { serial: nullable(snapshot.serialNumber, migrationRawText, path), mac: nullable(snapshot.macAddress, migrationRawText, path),
       model: nullable(snapshot.model, migrationRawText, path), legacySkuId: nullable(snapshot.legacySkuId, uuid, path),
       state: nullable(snapshot.state ?? snapshot.status ?? snapshot.checkpointState, text, path), locationId: nullable(snapshot.locationId, uuid, path),
-      legacyQuantity: nullable(snapshot.legacyQuantity, migrationRawText, path), baseUnit: nullable(snapshot.baseUnit, migrationRawText, path) },
+      legacyQuantity: nullable(snapshot.legacyQuantity, migrationRawText, path), baseUnit: nullable(snapshot.baseUnit, migrationRawText, path),
+      quantityBase: nullable(snapshot.quantityBase, migrationRawText, path), condition: nullable(snapshot.condition, text, path),
+      legalOwner: nullable(snapshot.legalOwner, text, path), custodyOwnerKind: nullable(snapshot.custodyOwnerKind, text, path),
+      installedOnuId: nullable(snapshot.installedOnuId, uuid, path), warehouseSkuId: nullable(snapshot.warehouseSkuId, uuid, path) },
     location: nullable(r.location, named, path), customer: nullable(r.customer, named, path), workOrder: nullable(r.workOrder, named, path),
     claims: array(r.claims, (value, path = 'claim') => {
       const row = record(value, path)

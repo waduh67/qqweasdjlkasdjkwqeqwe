@@ -16,12 +16,13 @@ import { WarehouseSettingsPage } from './WarehouseSettingsPage'
 import { WarehouseReportsPage } from './WarehouseReportsPage'
 import { WarehouseReplenishmentPage } from './WarehouseReplenishmentPage'
 import { WarehouseOverviewPage } from './WarehouseOverviewPage'
+import { WarehouseProvenancePage } from './WarehouseProvenancePage'
 
 const pages = {
   catalog: WarehouseCatalogPage, receipts: WarehouseReceiptsPage, approvals: WarehouseApprovalsPage,
   stock: WarehouseStockPage, requests: WarehouseRequestsPage, replenishment: WarehouseReplenishmentPage,
   transfers: WarehouseTransfersPage, returns: WarehouseReturnsPage, counts: WarehouseCountsPage,
-  settings: WarehouseSettingsPage, reports: WarehouseReportsPage,
+  settings: WarehouseSettingsPage, reports: WarehouseReportsPage, provenance: WarehouseProvenancePage,
 } satisfies Record<typeof WAREHOUSE_PAGES[number]['path'], ComponentType>
 
 function WarehouseGate({ permissions, children }: { permissions: readonly string[]; children: ReactNode }) {

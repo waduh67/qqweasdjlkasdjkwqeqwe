@@ -1,3 +1,5 @@
+Current resume status is at the top of `continuation.md`: tasks1-43 complete;44-48/F1-F4 remain. Historical notes below are superseded. Continue the active full-scope goal.
+
 # Warehouse Workorder Asset Provenance Handoff
 
 ## Resume point

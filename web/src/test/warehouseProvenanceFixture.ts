@@ -14,7 +14,8 @@ export function provenanceSummaryFixture(state: 'LEGACY' | 'VALIDATING' | 'ENFOR
 export function provenanceCaseFixture() {
   const row = migrationCaseFixture()
   return { id: row.caseId, sourceId: row.sourceId, sourceTable: row.sourceTable, sourceHash: row.sourceHash,
-    sourceSnapshot: { ...row.sourceSnapshot, locationId: id.source, legacySkuId: id.sku },
+    sourceSnapshot: { ...row.sourceSnapshot, locationId: id.source, legacySkuId: id.sku, custodyOwnerKind: 'WAREHOUSE',
+      custodyOwnerId: id.source, condition: 'SERVICEABLE', legalOwner: 'UNKNOWN' },
     location: { id: id.source, code: 'OLD', name: 'Gudang lama' }, customer: null, workOrder: null, claims: [] }
 }
 export function provenanceEvidenceFixture() {

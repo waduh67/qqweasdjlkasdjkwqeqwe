@@ -1,3 +1,54 @@
+## Task43 complete: provenance management UI verified; task44 NEXT
+
+Checkpoint follows pushed38d40e9c; locate this containing commit with git log -1.
+Branch work/warehouse-completion -> origin/feat/warehouse-workorder. Goal ACTIVE.
+Tasks1-43 DONE;44-48/F1-F4 OPEN. Keep going through the full plan; save and push
+coherent source/proof/handoff commits. Do not stop at this checkpoint.
+
+Full /warehouse/provenance management page is installed: bounded cases, raw serial/
+MAC/quantities, original private evidence upload/download, evidence-bound resolution
+with exact EA/MM/M conversion, original quantity retained, duplicate/cancellation,
+read-only admitted history. Opening review has explicit zero acknowledgement,
+active named review location, issues, paged saved proposal directory and independent
+approval source links. Finalization reviews approved counts and persists its result.
+Current permission loss clears page; command retry retains exact request/key.
+Navigation uses inventory.provenance.manage. Docs include actual UI workflow.
+
+Verification:272tests/52files PASS47.44s, full TS/Vite build PASS, full lint PASS with
+pre-existing unrelated warnings; changed files clean. Real browser2tests PASS19.5s
+at375/768/1280,light/dark, UI-created empty tenant and restricted IAM roles. All10
+source counts0, ENFORCED0/no batch, no fake opening; manager-only allowed and
+approval-only page/API403. Initial test listened on obsolete approvals endpoint;
+correct /approvals/workbench rerun passed. Safe proof task43/ui-verification.json
+and6screenshots; raw traces/logs private. Actual legacy HTTP+PG+MinIO full-app
+restart is already proven by e5f70e52/finalization-verification.json45tests and
+38d40e9c/opening-directory-verification.json9tests. UI mocks are not legacybrowser
+proof; interactive legacy browser journey is still task45, along with numeric suite.
+No server or SQL changes this checkpoint; V178 immutable, next178.1.
+
+NEXT44: implement full numeric cross-module fixture (1,000,000MM+10ONU receipt,
+100,000MM+1ONU issue/ACK,82,500MM use+real device install,17,500MM inspected return,
+QA replay). Actual stock/identity/assignment commands only, no fake installations.
+Need DB rollback, concurrent commands/cuts/counts, outbox redelivery, whole app
+restart and conserved917500MM/9availableONU/1installed/0techMM. Existing generic
+PostingIT and earlier cable-only fulfillment are support, not full acceptance.
+Useful fixture chain: WarehouseFulfillmentFixture -> MaterialUsageFixture ->
+MaterialReceiptFixture -> WarehouseIssueFixture -> MaterialWorkflowFixture ->
+WarehouseReceiptHttpFixture. Extend with a combined numeric fixture, use real
+receipt/issue/ACK/deployment/handover/return APIs. MaterialUsagePreparation rejects
+SERIAL: report only cable, install ONU through deployment authorization/customer.
+INSTALL requires PSB; mint after any cable usage/WO start so revision is current.
+WarehouseReturnIT has real accepted17500MM inspection flow. Whole-app restart
+pattern is ordered methods + @DirtiesContext(AFTER_METHOD), assert ContextClosedEvent
+before fresh HTTP calls; existing WarehousePolicyITRestart also has owned child
+SIGKILL/restart harness. Do not alter product replay/authorization to simplify tests.
+Then45 browser complete numeric/customer/exceptions/legacy,46 regressions,47 docs,
+48 required CI gates, F1-F4 final audits. No subagents authorized in this session.
+
+OwnedQA fully stopped, retained volumes. Private runner provenance-browser.sh and
+log provenance-browser-r2.log. Host QA lock/JDK21/test cache settings unchanged.
+Never commit env/rawlogs/XML/uploads/authenticated traces. Older sections are history.
+
 ## Task43 scoped opening directory and browser clients verified; actual page NEXT
 
 Checkpoint follows pushed e5f70e52 (M06 finalization45PASS). Locate containingcommit
