@@ -1,0 +1,56 @@
+{
+  "phase": "M05 all-tier unvalued opening policy evaluation, prior to executable durable opening approval",
+  "build": "BUILD SUCCESSFUL in 2m 42s",
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehousePolicyITEvaluation",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseApprovalIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "tests": 15,
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationOpeningPolicyContext.kt": "1b0221f167125b58c4f4cd63dd123fc49ca27f8b6ac07bd272cf81709f2be034",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "3729f919b4e9f8df685dd725ac45a4ed2712f2a04f1699ad166a4341ee0cc339",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseProvenanceController.kt": "717a60b3d8c109ddea191254d87e620142b58cb349ef215d49e677861919cbcb",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePolicySource.kt": "086eccd8d915125b386fa9eda17507b628d8249a8e25e704120c9139744d6c7b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyAccess.kt": "e59b19e81a5b6d150a7b1fac5d258051acf82fa88cae449ac2489e8fb2888ad9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyEvaluationService.kt": "9c47755513e7b6608ed11afb3fae6bf9204d1cd28895ab1464b1f310fea196e3",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseEvaluationQuery.kt": "b3c3d7579182ca5f69f598b78c3caffebbf5744dc7f55f47909c796546ca6ca2",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt": "71c9153f2f0eb7479456f14d10e4c850809d0cf07ffa9c54e6dbe04d7bf7c103"
+  },
+  "checks": [
+    "Real HTTP opening evaluation with three configured thresholds100000000,200000000,300000000 requires all three tiers without pretending unknown cost is zero.",
+    "Even a cost-authorized actor receives no invented value/currency fields; operational message explicitly identifies unknown historical cost and all-tier review.",
+    "Four distinct participants: cutoff batch creator, resolver, evidence uploader, opening requester are all excluded despite being otherwise eligible named policy candidates.",
+    "Current customer area change blocks old-area operator; extending only operator access still rejects old-area approval candidates; full current area grants restore evaluation.",
+    "Independent approval viewer can evaluate the actual source without provenance-management permission, after full source-scope checks.",
+    "A later resolution changes review hash and rejects evaluation of the earlier opening draft.",
+    "Existing empty tenant evaluates two configured tiers from real review-location metadata with no fake physical line or SKU.",
+    "No approval record, verified stock or fabricated cost is created by evaluation.",
+    "Existing policy evaluation6, durable receipt approval2 and module graph3 regressions pass."
+  ]
+}

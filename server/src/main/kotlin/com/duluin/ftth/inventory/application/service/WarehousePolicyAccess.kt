@@ -33,8 +33,8 @@ class WarehousePolicyAccess(private val scopes: InventoryWarehouseScopeApi, priv
         if (location.state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.NOT_FOUND)
         return true
     }
-    fun eligible(principal: ApprovalPrincipal, locations: Collection<UUID>): Boolean {
-        if ("inventory.approval.decide" !in principal.permissions) return false
+    fun eligible(principal: ApprovalPrincipal, locations: Collection<UUID>, requiredAreas: Set<UUID> = emptySet()): Boolean {
+        if ("inventory.approval.decide" !in principal.permissions || !principal.areaIds.containsAll(requiredAreas)) return false
         val scope = store.locationsFor(principal.id)
         return locations.all { id ->
             val location = masters.get(MasterKind.LOCATION, id) as LocationSnapshot

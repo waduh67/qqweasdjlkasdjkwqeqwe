@@ -1,3 +1,50 @@
+## Task43 unvalued opening policy evaluation verified; actual approval/posting NEXT
+
+15tests PASS: Opening4,PolicyEvaluation6,DurableReceiptApproval2,Modularity3.
+Safe proof task43/opening-policy-verification.json; final runtime log
+migration-opening-policy-final.log. No new SQL migration in this phase.
+V177.6 remains immutable; next free177.7;178reserved forM06. Goal ACTIVE.
+Owned QA stopped, volumes retained. Task43 still OPEN;44–48/F1–F4 outstanding.
+
+MigrationOpeningPolicyContext looks up the actual sealed opening, takes batch advisory
+before owner scope locks, requires exact current review/no issues, and reads batch
+requester. PolicySource has explicit OpeningPolicyContext for review location,
+participants and extra current customer/WO areas. Empty physical lines are allowed
+only with this actual source context. No artificial PolicySourceLine is inserted.
+WarehousePolicyEvaluationService evaluates every configured tier for an opening;
+value numerator/denominator/currency remain null. Source costs of ordinary receipts
+still require a known basis under their existing policy rules. Public evaluation
+keeps cost fields omitted and explains unknown historical cost/all-tier review.
+
+Tests place FOUR distinct actors in policy candidates and prove exclusion of batch
+creator, resolution reviewer, file uploader and opening requester. Policy candidates
+and both sides of delegation must cover all current customer/WO areas in addition to
+warehouse scopes. Current customer area changes deny old-area callers/candidates;
+updated scopes permit evaluation. New resolution makes old opening evaluation stale.
+An approval-view actor can inspect evaluation with full source scopes; no provenance
+management permission is silently required of independent approvers.
+
+NEXT implement real WarehouseApprovalOwner for OPENING_BALANCE and narrow batch-bound
+DB admission/stock posting. DurableApprovalService request and non-ENFORCED decisions
+are STILL CLOSED for this source; no approval record/stock created by the new preview.
+Existing durable receipt flow and unknown receipt-cost rejection passed regression.
+MigrationOpeningPolicyContext currently uses VALIDATING-only batch lock. Actual
+approval get/replay after finalization must instead support immutable batch read locks.
+WarehouseApprovalAuthority must recheck extra current source areas for delegates too,
+not just rely on initial evaluation. Seal/source hash must bind current source-owner
+scope snapshots as well as latest review so a changed customer/WO area invalidates
+an existing approval. Use owner public reference contracts/views, never module internals.
+
+Existing stock-origin constraints also need precise approved-opening support:
+warehouse_assert_opening_approval is a stub inV174.2; warehouse_origin_guard rejects
+all UPDATE origin changes, including legacy null->approved origin. Do not bypass these
+broadly. Migration owner admission must be narrow, tenant/fence/approved batch-bound,
+fixed search_path, original selected asset ID/raw identity preserved. Single posting
+owner must admit and create the approval effect atomically; zero baseline needs a
+real control posting with zero physical legs. Pending cancellation receipts,
+reservation of postboot legacy identity candidates, final exclusive epoch flip,
+provenance UI, mixed-tenant API+restart proof/M06 and remaining plan still required.
+
 ## Task43 opening review sealed and verified; independent approval/admission NEXT
 
 V177.6 is APPLIED and IMMUTABLE, SHA-256

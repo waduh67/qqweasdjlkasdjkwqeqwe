@@ -1,3 +1,17 @@
+## Opening policy evaluation following V177.6
+
+The existing policy evaluator now requires every configured tier for a sealed
+OPENING_BALANCE whose historical cost is unknown. It retains null values internally
+and omits monetary fields from the public view. Empty baselines use a real review
+location, with no physical line or SKU. Batch creator, resolver, evidence uploader
+and opening requester are excluded. Candidates and delegated parties need all
+current source-customer/work-order areas as well as warehouse scope.
+
+This phase adds no migration. V177.6 remains immutable; V177.7 is still free and
+V178 reserved. Actual independent opening approval/admission/posting remain the
+next phase. Verification:15tests pass (Opening4,PolicyEvaluation6,ReceiptApproval2,
+Modularity3), safe proof task43/opening-policy-verification.json.
+
 ## V177.6 applied: sealed opening review
 
 V177.6 applied in the real HTTP + PostgreSQL + MinIO gate: opening review3,

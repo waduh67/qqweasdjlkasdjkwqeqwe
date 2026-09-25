@@ -29,7 +29,9 @@ class WarehouseEvaluationQuery(private val evaluation: WarehousePolicyEvaluation
         val current = authority.lockCurrent()
         val resolution = when (full.code) {
             "IN_POLICY" -> "CONTINUE_OPERATION" to "Continue through the normal warehouse operation; no approval is required."
-            "APPROVAL_REQUIRED" -> "REQUEST_APPROVAL" to "Request independent document approval before posting this operation."
+            "APPROVAL_REQUIRED" -> "REQUEST_APPROVAL" to if (full.operation == PolicyOperation.OPENING_BALANCE)
+                "Historical cost is unknown. Every configured approval tier must review this opening balance."
+                else "Request independent document approval before posting this operation."
             else -> error("Unsupported policy evaluation outcome")
         }
         val status = WarehouseOperationEvaluation(full.code, full.sourceDocumentId, full.sourceRevision, resolution.first, resolution.second)

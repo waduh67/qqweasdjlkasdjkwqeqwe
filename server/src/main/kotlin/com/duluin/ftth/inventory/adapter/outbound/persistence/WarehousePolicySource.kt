@@ -8,15 +8,20 @@ import java.util.UUID
 data class PolicySourceLine(val locationId: UUID?, val custodianId: UUID?, val quantity: BigInteger,
     val numerator: BigInteger?, val denominator: BigInteger?, val currency: String?)
 data class PolicySource(val id: UUID, val revision: Long, val operation: PolicyOperation, val requesterId: UUID,
-    val counters: Set<UUID>, val lines: List<PolicySourceLine>, val titleCorrection: Boolean)
+    val counters: Set<UUID>, val lines: List<PolicySourceLine>, val titleCorrection: Boolean,
+    val opening: OpeningPolicyContext? = null)
+data class OpeningPolicyContext(val documentId: UUID, val reviewLocationId: UUID, val reviewLocationRevision: Long,
+    val participants: Set<UUID>, val requiredAreaIds: Set<UUID>)
 
 @Repository
 class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
-    fun lock(input: WarehouseSourceInput, action: PolicyOperation? = null): PolicySource = jdbc.execute { sql ->
+    fun lock(input: WarehouseSourceInput, action: PolicyOperation? = null, opening: OpeningPolicyContext? = null): PolicySource = jdbc.execute { sql ->
         val header = sql.query("SELECT kind,actor_id,revision FROM inventory_document WHERE tenant_id=? AND id=? FOR NO KEY UPDATE", sql.tenant, input.sourceDocumentId) {
             Triple(it.getString("kind"), it.uuid("actor_id"), it.getLong("revision"))
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         if (header.third != input.sourceRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
+        if ((header.first == "OPENING_BALANCE") != (opening != null) || (opening != null && opening.documentId != input.sourceDocumentId))
+            sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (header.first == "COUNT" && sql.value("SELECT state FROM inventory_document WHERE tenant_id=? AND id=?", sql.tenant, input.sourceDocumentId)
             !in setOf("SUBMITTED", "APPROVED", "POSTED")) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val derived = when (header.first) {
@@ -50,7 +55,7 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
                 it.getString("quantity_base").toBigInteger(), it.getString("numerator")?.toBigInteger(),
                 it.getString("denominator")?.toBigInteger(), it.getString("currency"))
         }
-        if (lines.isEmpty() || lines.any { it.locationId == null }) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if ((lines.isEmpty() && opening == null) || lines.any { it.locationId == null }) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         val counters = sql.query("SELECT counter_id FROM inventory_cycle_count WHERE tenant_id=? AND document_id=? AND counter_id IS NOT NULL",
             sql.tenant, input.sourceDocumentId) { it.uuid("counter_id") }.toSet() + if (header.first == "TITLE_CORRECTION") sql.query("""SELECT handover.actor_id,request.customer_id
             FROM inventory_asset_title_request request JOIN inventory_asset_handover handover ON handover.tenant_id=request.tenant_id
@@ -68,7 +73,8 @@ class WarehousePolicySource(private val jdbc: WarehouseCommandJdbc) {
             listOf("customerId", "handoverActorId", "removalActorId").map { key -> UUID.fromString(body.path("context").path(key).asString()) } +
                 UUID.fromString(body.path("returned").path("view").path("receivedBy").asString())
         }.flatten() else emptyList()
-        PolicySource(input.sourceDocumentId, header.third, operation, header.second, counters + transferParties + returnParties,
-            lines, header.first in setOf("TITLE_CORRECTION", "RETURN_TITLE"))
+        PolicySource(input.sourceDocumentId, header.third, operation, header.second,
+            counters + transferParties + returnParties + opening?.participants.orEmpty(),
+            lines, header.first in setOf("TITLE_CORRECTION", "RETURN_TITLE"), opening)
     }
 }

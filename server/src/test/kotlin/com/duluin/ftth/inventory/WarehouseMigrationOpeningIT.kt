@@ -263,11 +263,91 @@ class WarehouseMigrationOpeningIT : WarehousePolicyHttpFixture() {
             "migrationReference" to "Pemeriksaan tenant tanpa stok", "reason" to "Tidak ditemukan stok fisik atau efek lama"))
         val opened = send(token, "/api/v1/warehouse/provenance/batches/$batch/opening", input)
         assertThat(opened.statusCode()).withFailMessage(opened.body()).isEqualTo(201)
+        val approvers = List(2) { approver(token, listOf(place)) }
+        configure(token, openingPolicy(place, approvers.map { it.second }))
+        val evaluation = evaluate(token, mapper.readTree(opened.body()).path("id").asString())
+        assertThat(evaluation.status).withFailMessage(evaluation.contentAsString).isEqualTo(200)
+        val policy = mapper.readTree(evaluation.contentAsString)
+        assertThat(policy.path("tiers").size()).isEqualTo(2)
+        for (field in listOf("valueNumerator", "valueDenominator", "currency")) assertThat(policy.path(field).isMissingNode).isTrue()
         fixture(token).transaction {
             assertThat(scalar("SELECT count(*) FROM inventory_document WHERE kind='OPENING_BALANCE'")).isEqualTo("1")
             for (table in listOf("inventory_document_line", "inventory_sku", "inventory_movement", "inventory_migration_evidence", "inventory_balance_projection"))
                 assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
             assertThat(scalar("SELECT state FROM inventory_tenant_cutover")).isEqualTo("VALIDATING")
         }
+    }
+
+    private fun openingPolicy(location: String, users: List<String>, participants: List<String> = emptyList()) = mapper.writeValueAsString(mapOf(
+        "expectedRevision" to 0, "currency" to "IDR", "expiryHours" to 24, "warehouseIds" to listOf(location),
+        "rules" to listOf(mapOf("operation" to "OPENING_BALANCE", "tiers" to users.mapIndexed { index, actor ->
+            mapOf("minimumMinor" to ((index + 1L) * 100000000).toString(), "userIds" to (participants + actor), "roleIds" to emptyList<String>())
+        }))))
+
+    @Test fun `unvalued opening evaluates every tier excludes all review participants and requires current customer areas`() {
+        val batch = setup(2)
+        try {
+            val permissions = setOf("inventory.provenance.manage", "inventory.approval.view", "inventory.approval.decide", "inventory.cost.view")
+            val reviewer = user(batch.token, permissions)
+            val requester = user(batch.token, permissions)
+            val uploader = user(batch.token, permissions)
+            for (actor in listOf(reviewer, requester, uploader)) grant(batch.token, actor.second, listOf(batch.old.location.toString()))
+            val first = batch.case(batch.old.first)
+            val file = evidence(batch.copy(token = uploader.first, actor = uploader.second), first)
+            val resolution = send(reviewer.first, batch.path(first) + "/resolutions", body(first, file, "BASELINE_STOCK", stock = stock(batch.serial, "EA")))
+            assertThat(resolution.statusCode()).withFailMessage(resolution.body()).isEqualTo(201)
+            val reviewBatch = batch.copy(token = reviewer.first, actor = reviewer.second)
+            resolve(reviewBatch, batch.old.second, "DUPLICATE", duplicate = first.path("id").asString())
+            resolve(reviewBatch, batch.old.balance, "BASELINE_STOCK", stock(batch.cable, "MM"))
+            resolve(reviewBatch, batch.old.pending, "CANCEL_PENDING")
+            val opened = send(requester.first, "/api/v1/warehouse/provenance/batches/${batch.id}/opening", openingInput(batch))
+            assertThat(opened.statusCode()).withFailMessage(opened.body()).isEqualTo(201)
+            val id = mapper.readTree(opened.body()).path("id").asString()
+            assertThat(evaluate(requester.first, id).status).isEqualTo(409)
+            val approvers = List(3) { approver(batch.token, listOf(batch.old.location.toString())) }
+            configure(batch.token, openingPolicy(batch.old.location.toString(), approvers.map { it.second },
+                listOf(batch.actor, reviewer.second, requester.second, uploader.second)))
+            val evaluated = evaluate(requester.first, id)
+            assertThat(evaluated.status).withFailMessage(evaluated.contentAsString).isEqualTo(200)
+            val policy = mapper.readTree(evaluated.contentAsString)
+            assertThat(policy.path("policy").path("operation").asString()).isEqualTo("OPENING_BALANCE")
+            assertThat(policy.path("message").asString()).contains("unknown", "Every configured approval tier")
+            assertThat(policy.path("tiers").size()).isEqualTo(3)
+            policy.path("tiers").asSequence().forEachIndexed { index, tier ->
+                assertThat(tier.path("approvers").asSequence().map { it.path("userId").asString() }.toList()).isEqualTo(listOf(approvers[index].second))
+            }
+            for (field in listOf("valueNumerator", "valueDenominator", "currency")) assertThat(policy.path(field).isMissingNode).isTrue()
+            assertThat(evaluate(approvers.first().first, id).status).isEqualTo(200)
+            val areaResponse = request("POST", "/api/areas", batch.token, """{"code":"CUSTOMER-REVIEW","name":"Area pelanggan saat ini"}""")
+            assertThat(areaResponse.status).isEqualTo(201)
+            val customerArea = mapper.readTree(areaResponse.contentAsString).path("id").asString()
+            database.ownerFixture { connection -> connection.createStatement().use { sql ->
+                sql.execute("SET app.tenant_id='${batch.old.tenant}'")
+                sql.execute("UPDATE customer SET area_id='$customerArea' WHERE id='${batch.old.customer}'")
+            } }
+            assertThat(evaluate(batch.token, id).status).isEqualTo(404)
+            fun areas(actor: String) {
+                val principal = mapper.readTree(request("GET", "/api/users/$actor", batch.token).contentAsString)
+                assertThat(request("PUT", "/api/users/$actor/access", batch.token, mapper.writeValueAsString(mapOf(
+                    "roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(),
+                    "areaIds" to listOf(area(batch.token), customerArea)))).status).isEqualTo(200)
+            }
+            areas(batch.actor)
+            val missingArea = evaluate(batch.token, id)
+            assertThat(missingArea.status).withFailMessage(missingArea.contentAsString).isEqualTo(409)
+            assertThat(mapper.readTree(missingArea.contentAsString).path("code").asString()).isEqualTo("INDEPENDENT_APPROVER_REQUIRED")
+            approvers.forEach { areas(it.second) }
+            assertThat(evaluate(batch.token, id).status).isEqualTo(200)
+            assertThat(evaluate(approvers.first().first, id).status).isEqualTo(200)
+            resolve(batch, batch.old.balance, "BASELINE_STOCK", stock(batch.cable, "M"), revision = 1)
+            val stale = evaluate(batch.token, id)
+            assertThat(stale.status).isEqualTo(409)
+            assertThat(mapper.readTree(stale.contentAsString).path("code").asString()).isEqualTo("STALE_REVISION")
+            fixture(batch.token).transaction {
+                assertThat(scalar("SELECT count(*) FROM inventory_approval")).isEqualTo("0")
+                assertThat(scalar("SELECT count(*) FROM inventory_balance_projection WHERE warehouse_admission='VERIFIED'")).isEqualTo("0")
+                assertThat(scalar("SELECT count(*) FROM inventory_document_line WHERE cost_total_minor IS NOT NULL")).isEqualTo("0")
+            }
+        } finally { cleanup(batch) }
     }
 }

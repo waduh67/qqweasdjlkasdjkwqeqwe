@@ -11,7 +11,8 @@ import java.math.BigInteger
 
 @Service
 class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
-    private val access: WarehousePolicyAccess, private val store: WarehousePolicyPersistence, private val sources: WarehousePolicySource) : WarehousePolicyEvaluationApi {
+    private val access: WarehousePolicyAccess, private val store: WarehousePolicyPersistence, private val sources: WarehousePolicySource,
+    private val openings: MigrationOpeningPolicyContext) : WarehousePolicyEvaluationApi {
     private val mapper = jacksonObjectMapper()
     @Transactional(rollbackFor = [Exception::class])
     override fun evaluate(source: WarehouseSourceInput): WarehousePolicyEvaluation = evaluateSource(source, null)
@@ -23,16 +24,20 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         if (!current.platformAdmin && current.permissions.none { it in setOf("inventory.approval.view", "inventory.approval.request",
-                "inventory.receipt.manage", "inventory.issue.manage", "inventory.count.manage") }) masterFailure(WarehouseErrorCode.FORBIDDEN)
-        val document = sources.lock(source, action)
+                "inventory.receipt.manage", "inventory.issue.manage", "inventory.count.manage", "inventory.provenance.manage") }) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        val opening = openings.lock(source.sourceDocumentId, current)
+        val document = sources.lock(source, action, opening)
         if (!current.platformAdmin && "inventory.approval.view" !in current.permissions) access.permission(current, when (document.operation) {
             PolicyOperation.RECEIPT -> "inventory.receipt.manage"
             PolicyOperation.ISSUE -> "inventory.issue.manage"
             PolicyOperation.COUNT_VARIANCE -> "inventory.count.manage"
+            PolicyOperation.OPENING_BALANCE -> "inventory.provenance.manage"
             else -> "inventory.approval.request"
         })
-        val locations = document.lines.map { requireNotNull(it.locationId) }.distinct()
+        val locations = (document.lines.map { requireNotNull(it.locationId) } + listOfNotNull(opening?.reviewLocationId)).distinct()
         locations.forEach { access.location(it, current) }
+        if (opening != null && access.location(opening.reviewLocationId, current).revision != opening.reviewLocationRevision)
+            masterFailure(WarehouseErrorCode.STALE_REVISION)
         val policy = store.current()
         val rule = policy?.rules?.singleOrNull { it.operation == document.operation }
         val excluded = (listOf(document.requesterId) + document.lines.mapNotNull { it.custodianId } + document.counters).toSet()
@@ -43,12 +48,13 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
         if (rule != null) {
             if (locations.any { !store.covered(it, policy.warehouseIds) }) masterFailure(WarehouseErrorCode.NOT_FOUND)
             val titleCorrection = document.titleCorrection
-            if (!titleCorrection && document.lines.any { it.numerator == null || it.denominator == null || it.currency == null })
+            val unvaluedOpening = opening != null
+            if (!titleCorrection && !unvaluedOpening && document.lines.any { it.numerator == null || it.denominator == null || it.currency == null })
                 masterFailure(WarehouseErrorCode.COST_BASIS_REQUIRED, "Record the source receipt cost numerator, base quantity denominator and currency")
-            if (!titleCorrection && document.lines.any { it.currency != policy.currency }) masterFailure(WarehouseErrorCode.CURRENCY_MISMATCH, "Policy currency ${policy.currency} must match each source cost; FX is not supported")
+            if (!titleCorrection && !unvaluedOpening && document.lines.any { it.currency != policy.currency }) masterFailure(WarehouseErrorCode.CURRENCY_MISMATCH, "Policy currency ${policy.currency} must match each source cost; FX is not supported")
             var total = BigInteger.ZERO
             var basis = BigInteger.ONE
-            document.lines.filter { !titleCorrection }.forEach { line ->
+            document.lines.filter { !titleCorrection && !unvaluedOpening }.forEach { line ->
                 val lineBasis = requireNotNull(line.denominator)
                 total = total * lineBasis + requireNotNull(line.numerator) * line.quantity * basis
                 basis *= lineBasis
@@ -56,17 +62,16 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
                 total /= divisor
                 basis /= divisor
             }
-            numerator = total
-            denominator = basis
+            if (!unvaluedOpening) { numerator = total; denominator = basis }
             val directory = access.directory(current)
             val now = store.now()
             val delegations = store.delegations().filter { it.revokedAt == null && it.validFrom <= now && it.validUntil > now && it.operation == document.operation }
             val excludedDelegates = delegations.filter { it.approverId in excluded }.map { it.delegateId }.toSet()
             rule.tiers.forEachIndexed { index, tier ->
-                if (titleCorrection || (document.operation.exception && index == 0) || total >= tier.minimumMinor.toBigInteger() * basis) {
+                if (titleCorrection || unvaluedOpening || (document.operation.exception && index == 0) || total >= tier.minimumMinor.toBigInteger() * basis) {
                     val decidingRoles = tier.roleIds.filter { "inventory.approval.decide" in directory.roles[it].orEmpty() }.toSet()
                     val direct = directory.users.filter { it.id in tier.userIds || it.roleIds.any(decidingRoles::contains) }
-                    val candidates = direct.filter { it.id !in excluded && it.id !in excludedDelegates && access.eligible(it, locations) }
+                    val candidates = direct.filter { it.id !in excluded && it.id !in excludedDelegates && access.eligible(it, locations, opening?.requiredAreaIds.orEmpty()) }
                         .map { PolicyEligibleApprover(it.id) }.toMutableList()
                     delegations.forEach { delegation ->
                         val delegator = direct.singleOrNull { it.id == delegation.approverId }
@@ -76,7 +81,7 @@ class WarehousePolicyEvaluationService(private val cutovers: InventoryTenantCuto
                         if (delegator != null && delegate != null && sourceMatches && delegation.approverId !in excluded &&
                             delegation.delegateId !in excluded && delegation.delegateId !in excludedDelegates &&
                             locations.all { store.covered(it, listOf(delegation.locationId)) } &&
-                            access.eligible(delegator, locations) && access.eligible(delegate, locations)) {
+                            access.eligible(delegator, locations, opening?.requiredAreaIds.orEmpty()) && access.eligible(delegate, locations, opening?.requiredAreaIds.orEmpty())) {
                             candidates += PolicyEligibleApprover(delegate.id, delegator.id, delegation.id)
                         }
                     }

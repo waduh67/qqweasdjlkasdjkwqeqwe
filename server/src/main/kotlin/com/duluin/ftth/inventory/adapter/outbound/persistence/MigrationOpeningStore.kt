@@ -31,6 +31,16 @@ class MigrationOpeningStore(private val jdbc: WarehouseCommandJdbc) {
             sql.tenant, batch, id, map = ::stored).singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 
+    fun find(id: UUID): StoredMigrationOpening? = jdbc.execute { sql ->
+        sql.query("SELECT original_body,payload_hash FROM inventory_migration_opening_request WHERE tenant_id=? AND id=?",
+            sql.tenant, id, map = ::stored).singleOrNull()
+    }
+
+    fun batchRequester(batch: UUID): UUID = jdbc.execute { sql ->
+        UUID.fromString(sql.value("SELECT requested_by FROM inventory_migration_batch WHERE tenant_id=? AND id=?", sql.tenant, batch)
+            ?: sql.fail(WarehouseErrorCode.NOT_FOUND))
+    }
+
     fun insert(view: WarehouseMigrationOpening, key: String, payload: WarehouseCanonicalPayload): String = jdbc.execute { sql ->
         sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,source_reference,reason,migration_batch_id,
             cutover_epoch,authority_epoch) VALUES (?,?,?,'OPENING_BALANCE',?,?,?,?,?,?)""", view.id, sql.tenant, view.code,
