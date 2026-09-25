@@ -1,0 +1,9 @@
+{
+  "status": "corrected expected wire inventory; runtime pending",
+  "failure": "WarehouseContractTest line153 exact enum list omitted existing WarehouseReturnState.LOST",
+  "change": "Append LOST to the explicit ordered list; retain exact equality and JSON round trips for every enum value.",
+  "productChanged": false,
+  "otherEnumInventories": "all match current source",
+  "focusedSuiteCount": 16,
+  "testSha256": "e89411b8a96b314b67d14df7fd2d680643994671d03f27ff0e9872510fbd60d2"
+}

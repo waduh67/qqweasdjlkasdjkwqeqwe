@@ -52,6 +52,7 @@ jobs:
             com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT
             com.duluin.ftth.customer.CustomerDeploymentFinalStateIT
             com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions
+            com.duluin.ftth.inventory.WarehouseContractTest
           )
           args=()
           for name in "${classes[@]}"; do args+=(--tests "$name"); done

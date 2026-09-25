@@ -1,3 +1,25 @@
+## Additional full-suite wire contract correction
+
+OriginalR3 isstillRUNNING with41observedfailures. The new failure is
+WarehouseContractTest's exact enum inventory: WarehouseReturnState already exposes
+LOST from the implemented loss workflow, but the old expected list ends atSCRAP.
+Only that explicit expected string is extended withLOST; exact ordered equality and
+serialization/deserialization of every member remain required. All other enumerated
+contracts match current source. Include WarehouseContractTest in focused gates
+(now16classes). Runtime verification is stillpending.
+
+Validation branch7013b28e is pushed; it fixes the unused multiline onboarding field
+and adds the early15-classcompatibility stage beforemandatoryfullserver. CI for
+c227f6bc isstillrunning its otherjobs afterservercompilefailed. Its web/shared/native
+andprovenancebrowser passed sofar. The next queuedCI must use thelatest correction.
+A mistyped extra remote refs/refs/heads/work/warehouse-regression-fixtures was created
+by the push, then explicitly removed; the real work/warehouse-regression-fixtures
+branch was updated normally. No existing branch/ref/data was removed or rewritten.
+
+Originalcheckout remains0a14andfrozen untilR3exit/archive; preflight47709stillqueued.
+Continue fixes HERE, thenfast-forwardoriginal afterarchive, run16focused+historical,
+fullserver/browser/legacypreflight, finalCI/audits. GoalACTIVE; no checkpointfinal.
+
 ## CI compilation correction and early fixture verification
 
 CI36124045412 at c227f6bc started on work/warehouse-regression-fixtures. Web/shared
