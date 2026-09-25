@@ -50,9 +50,11 @@ class WorkflowGateTest(unittest.TestCase):
         self.assertEqual(set(matrix["matrix"]["spec"]),
                          {"setup", "receiving", "provenance", "issue", "returns", "exceptions", "warehouse-empty-tenant", "customer-assets"})
         self.assertEqual(self.warehouse["native"]["uses"], "./.github/workflows/mobile-materials.yml")
-        commands = "\n".join(step.get("run", "") for step in self.warehouse["server"]["steps"])
-        self.assertIn("scripts/warehouse/qa.sh server >", commands)
-        self.assertNotIn("--tests", commands)
+        full = next(step for step in self.warehouse["server"]["steps"]
+                    if step.get("name") == "Full server, fresh migrations and historical upgrade")
+        self.assertNotIn("if", full)
+        self.assertIn("scripts/warehouse/qa.sh server >", full["run"])
+        self.assertNotIn("--tests", full["run"])
 
     def test_actual_acceptance_script_rejects_failure_skip_cancel_and_missing_gate(self):
         script = self.warehouse["acceptance"]["steps"][0]["run"]

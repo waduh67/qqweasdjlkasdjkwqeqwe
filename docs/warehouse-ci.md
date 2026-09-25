@@ -11,6 +11,11 @@ its real V172 upgrade, with two positive and six wrong-version/unit/cutover prob
 KMP tests, native iOS compilation, and smoke tests of the actual Docker images
 also have to succeed.
 
+The server job compiles current tests first and runs the repaired compatibility
+fixtures before its unfiltered regression. Their reports are archived separately
+and removed from the active XML directory before the full run, so an interrupted
+full run cannot reuse a successful focused report. Both stages must pass.
+
 The image job builds server and web once, runs their exact image IDs against a
 separate QA database, and verifies readiness through both the backend and a staging
 gateway. Real receipts, transfers, count decisions, authorization checks and replay

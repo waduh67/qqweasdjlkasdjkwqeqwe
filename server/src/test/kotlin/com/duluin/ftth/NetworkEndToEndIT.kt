@@ -31,9 +31,6 @@ class NetworkEndToEndIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture
     @Autowired
     private lateinit var mockMvc: MockMvc
 
-    @Autowired
-    private lateinit var onboarding: OnboardTenantUseCase
-
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
     private fun newTenantAdmin(prefix: String): String = tenant("$prefix${uniq()}")

@@ -32,6 +32,47 @@ jobs:
       - uses: ./.github/actions/warehouse-setup
       - name: Compile current server tests before running historical applications
         run: ./gradlew :server:compileTestKotlin --no-daemon --no-parallel --max-workers=2
+      - name: Check repaired compatibility fixtures before the full regression
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          classes=(
+            com.duluin.ftth.AlarmRuleIT
+            com.duluin.ftth.GisCutBlastRadiusIT
+            com.duluin.ftth.GisImpactedIT
+            com.duluin.ftth.GisUtilizationIT
+            com.duluin.ftth.IncidentIT
+            com.duluin.ftth.NetworkEndToEndIT
+            com.duluin.ftth.NotificationIT
+            com.duluin.ftth.OdpPortBoardIT
+            com.duluin.ftth.SurveyCapacityIT
+            com.duluin.ftth.PredictiveMaintenanceIT
+            com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes
+            com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT
+            com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT
+            com.duluin.ftth.customer.CustomerDeploymentFinalStateIT
+            com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions
+          )
+          args=()
+          for name in "${classes[@]}"; do args+=(--tests "$name"); done
+          result=0
+          scripts/warehouse/qa.sh server "${args[@]}" > .omo/runtime/ci/compatibility.log 2>&1 || result=$?
+          if [[ -d server/build/test-results/test ]]; then
+            cp -a server/build/test-results/test .omo/runtime/ci/compatibility-results
+          fi
+          (( result == 0 )) || exit "$result"
+          python3 scripts/warehouse/ci-results.py junit --source .omo/runtime/ci/compatibility-results \
+            --output .omo/runtime/ci/compatibility.json --commit "$GITHUB_SHA"
+          python3 - "${classes[@]}" <<'PYCODE'
+          from pathlib import Path
+          import sys, xml.etree.ElementTree as ET
+          reports = list(Path('server/build/test-results/test').glob('TEST-*.xml'))
+          assert {ET.parse(report).getroot().attrib['name'] for report in reports} == set(sys.argv[1:])
+          # The focused reports are preserved privately. A later failed build or
+          # interrupted full suite must not reuse their successful XML.
+          for report in reports:
+              report.unlink()
+          PYCODE
       - name: Full server, fresh migrations and historical upgrade
         run: |
           set -euo pipefail
@@ -60,6 +101,9 @@ jobs:
         run: |
           set -euo pipefail
           raw=(server/build/test-results/test .omo/runtime/ci/server.log)
+          for evidence in .omo/runtime/ci/compatibility.log .omo/runtime/ci/compatibility-results; do
+            [[ ! -e "$evidence" ]] || raw+=("$evidence")
+          done
           for gate in projection-upgrade historical-upgrades; do
             if [[ -f ".omo/runtime/$gate-latest.txt" ]]; then
               read -r historical < ".omo/runtime/$gate-latest.txt"

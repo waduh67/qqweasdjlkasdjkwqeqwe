@@ -1,7 +1,7 @@
 {
   "pending-network-fixtures.patch.gz": {
-    "patchSha256": "b946ec453a1df8a47b6d6705b8cfb9ec4163280d9ed4cf56553787dd97c132f8",
-    "status": "prepared, not applied or tested",
+    "patchSha256": "28c2d0dabd1223b2722f8ff83b1dc7e2a5157240859705d25dbd44e82a8f4d47",
+    "status": "applied on validation branch; unused multiline onboarding field corrected after CI compile diagnostic; runtime verification pending",
     "restore": "gzip -dc .omo/evidence/warehouse-workorder-asset-provenance/task46/pending-network-fixtures.patch.gz | git apply --check; repeat without --check only after active server suite finishes",
     "customerAreaScope": "Every customer creation now explicitly uses the same MAIN area as its work order and restricted installer; no authorization rules changed."
   },

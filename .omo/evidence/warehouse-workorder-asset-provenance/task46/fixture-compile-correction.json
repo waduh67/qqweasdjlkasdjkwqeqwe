@@ -1,0 +1,17 @@
+{
+  "status": "compile correction applied; CI retry pending",
+  "failedRun": 36124045412,
+  "failedHead": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+  "failedGate": "server compileTestKotlin",
+  "diagnostic": "NetworkEndToEndIT.kt:35:38 unresolved OnboardTenantUseCase on an unused leftover field",
+  "fix": "Remove unused injection; tenant setup comes from the real warehouse fixture base.",
+  "workflow": "15selected compatibility suites run before full gate; reports archived, active XML cleared; all full prerequisites still mandatory.",
+  "validation": {
+    "workflowGuards": 5,
+    "actionlint": "PASS"
+  },
+  "sourceSha256": {
+    ".github/workflows/warehouse.yml": "6d9dbe942745911214569bd870f06f2b66365e27e10e671b316165521920aa98",
+    "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt": "88ad9eca9bd2bf08a40edacfedcb3731a59bb6e5ae97537bd7075894157826b8"
+  }
+}

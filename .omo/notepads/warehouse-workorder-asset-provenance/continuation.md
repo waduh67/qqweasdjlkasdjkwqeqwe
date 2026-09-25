@@ -1,3 +1,26 @@
+## CI compilation correction and early fixture verification
+
+CI36124045412 at c227f6bc started on work/warehouse-regression-fixtures. Web/shared
+passed; server compile failed on a leftover multiline onboarding field in
+NetworkEndToEndIT (removed import, still-unused field). The field is now removed.
+The remaining browser/legacy/native/images jobs from that run continue; do not
+cancel them before their evidence is captured. No server runtimePASS from thisrun.
+
+The server CI job now runs all15repaired modernfixtureclasses immediately after
+compilation, before the unfiltered full gate. Each selectedsuite must appear; every
+actualcase must pass. FocusedXML/binary/logs are preserved separately and successful
+activeXML is cleared before the full gate, preventing stale focusedPASS on a later
+interruption. Both focused and full stages remain required before acceptance.
+Five workflow guards andactionlintpass after this change. Full current browser
+TypeScript and24guardtests passed at c227; Kotlincompile must rerun after thisfix.
+
+Corrected pending-network-fixtures.patch.gz can still restore the full nine-class
+change against original0a14; current validation-branch source is authoritative and
+alreadyincludes allninepatches. Do not reapply those patches here. Originalcheckout
+stillfrozen at0a14, localR3session11018 andqueuedpreflight47709remainactive.
+Follow the isolated-checkout instructions below, fast-forward only after archiving
+originalR3, andcontinue until allrealgates/audits are finished. GoalACTIVE.
+
 ## Isolated regression validation checkout: fixes applied, runtime results pending
 
 This branch is `work/warehouse-regression-fixtures`, created from0a14cc2f in
