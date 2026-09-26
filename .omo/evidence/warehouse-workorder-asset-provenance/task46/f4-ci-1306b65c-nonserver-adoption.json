@@ -1,0 +1,19 @@
+{
+  "status": "ADOPTED_EXACT_REVIEWER_BYTES",
+  "atUtc": "2026-09-26T19:36:53.209249+00:00",
+  "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "ciRun": 36265279847,
+  "reviewer": "/root/release_review",
+  "verifiedCurrentSourceInputs": 3693,
+  "sourceMismatch": [],
+  "proofSha256": {
+    "f4-ci-1306b65c-nonserver-incremental-r1.json": "c7adbf177747541cefff4d8ca269711a0c9bcab0397fde116e20641545b1565c",
+    "f4-ci-1306b65c-nonserver-recheck.md": "e69f1aa7019f65e761791e7883a9b8044197a9a12fe5f380f760c993a434bd39",
+    "f4-ci-1306b65c-nonserver-recheck.json": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "f4-ci-1306b65c-source-input-hashes.json": "4ea854e322b08078177fb1e6678f46a4d21af42f6c84686dfa62a15983f940cb",
+    "f4-current-release-guard-recheck.json": "2a41d8661703e339b31a5d7e9ca8ee318ce31de03385f48e683abce7515d4751"
+  },
+  "rawReportsCopied": false,
+  "finalF4Approval": false,
+  "fullServerStillPending": true
+}
