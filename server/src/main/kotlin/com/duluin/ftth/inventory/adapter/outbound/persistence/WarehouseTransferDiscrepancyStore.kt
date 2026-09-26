@@ -23,7 +23,7 @@ class WarehouseTransferDiscrepancyStore(private val jdbc: WarehouseCommandJdbc) 
         val state = sql.value("SELECT state FROM inventory_document WHERE tenant_id=? AND id=? AND kind='ADJUSTMENT' AND source_document_id=? FOR SHARE",
             sql.tenant, id, record.id) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         if (state != "DRAFT") return@execute "DISCREPANCY_ALREADY_POSTED"
-        if (sql.value("SELECT 1 FROM inventory_approval WHERE tenant_id=? AND source_document_id=? AND status IN ('PENDING','APPROVED') LIMIT 1", sql.tenant, id) != null)
+        if (sql.value("SELECT 1 FROM inventory_approval WHERE tenant_id=? AND source_document_id=? AND (status='APPROVED' OR (status='PENDING' AND warehouse_document_draft_expired_at(tenant_id,source_document_id) IS NULL)) LIMIT 1", sql.tenant, id) != null)
             return@execute "PRIOR_APPROVAL_ACTIVE"
         if (sql.value("SELECT 1 FROM inventory_approval_effect WHERE tenant_id=? AND source_document_id=? LIMIT 1", sql.tenant, id) != null)
             return@execute "DISCREPANCY_ALREADY_POSTED"

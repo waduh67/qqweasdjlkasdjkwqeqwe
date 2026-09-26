@@ -31,7 +31,9 @@ data class WarehouseTransferDiscrepancyRecovery(val transferId: UUID, val revisi
 data class WarehouseTransferView(val id: UUID, val code: String, val revision: Long, val state: WarehouseTransferState,
     val sourceLocationId: UUID, val destinationLocationId: UUID, val transitLocationId: UUID,
     val senderId: UUID, val receiverId: UUID, val reason: String, val recordedAt: Instant,
-    val lines: List<WarehouseTransferLineView>, val resolutionDocumentId: UUID? = null)
+    val lines: List<WarehouseTransferLineView>, val resolutionDocumentId: UUID? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)
 data class WarehouseTransferLineView(val id: UUID, val skuId: UUID, val stockIdentityId: UUID,
     val baseUnit: WarehouseBaseUnit, val quantityBase: String, val receivedBase: String, val inTransitBase: String,
     val remainingIdentityId: UUID?, val condition: WarehouseCondition, val legalOwner: AssetLegalOwner,

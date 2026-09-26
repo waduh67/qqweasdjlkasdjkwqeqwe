@@ -47,12 +47,14 @@ internal fun assertReceiptApproval(sql: PostingSql, guard: ReceiptPostingApprova
     val states = sql.query("""SELECT approval.status,approval.revision,approval.expires_at,approval.policy_snapshot_hash,
         approval.policy_version_id,approval.source_snapshot_hash,approval.source_document_id,approval.source_document_revision,
         policy.snapshot_hash,document.kind,document.state document_state,document.revision document_revision,
-        cutover.epoch,cutover.state cutover_state,clock_timestamp() checked_at
+        cutover.epoch,cutover.state cutover_state,clock_timestamp() checked_at,
+        warehouse_document_draft_expired_at(document.tenant_id,document.id) draft_expiry
         FROM inventory_approval approval JOIN inventory_approval_policy_version policy ON policy.tenant_id=approval.tenant_id AND policy.id=approval.policy_version_id
         JOIN inventory_document document ON document.tenant_id=approval.tenant_id AND document.id=approval.source_document_id
         JOIN inventory_tenant_cutover cutover ON cutover.tenant_id=approval.tenant_id
         WHERE approval.tenant_id=? AND approval.id=?""", sql.tenant, attempt.requestId) { row ->
         when {
+            row.getTimestamp("draft_expiry") != null -> WarehouseApprovalStatus.EXPIRED
             row.getTimestamp("checked_at").toInstant() >= row.getTimestamp("expires_at").toInstant() -> WarehouseApprovalStatus.EXPIRED
             row.getTimestamp("expires_at").toInstant() != guard.expiresAt || row.getString("status") != (if (decided) "APPROVED" else "PENDING") -> WarehouseApprovalStatus.STALE
             row.getLong("revision") != attempt.requestRevision + (if (decided) 1 else 0) -> WarehouseApprovalStatus.STALE

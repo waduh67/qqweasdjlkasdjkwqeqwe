@@ -7,7 +7,7 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 @Repository
-class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
+class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
 
     /** Resolve current receiver eligibility through IAM before applying LIMIT or counting rows. */
@@ -26,7 +26,7 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
             WHERE (candidate.state='DRAFT' OR (jsonb_exists(receiver.people,candidate.transfer_receiver_id::text)
                 AND (candidate.destination_kind NOT IN ('TECHNICIAN','VEHICLE') OR candidate.destination_custodian=candidate.transfer_receiver_id)
                 AND (candidate.destination_kind<>'TECHNICIAN' OR (receiver.people->>candidate.transfer_receiver_id::text)::boolean)))
-                AND (request.status IS NULL OR candidate.body->>'state'=request.status)
+                AND (request.status IS NULL OR warehouse_document_current_state(candidate.tenant_id,candidate.id,candidate.state)=request.status)
                 AND (request.location IS NULL OR request.location IN (candidate.transfer_source_location_id,
                     candidate.transfer_transit_location_id,candidate.transfer_destination_location_id,candidate.resolution_location_id))
                 AND (request.since IS NULL OR candidate.created_at>=request.since)
@@ -40,7 +40,11 @@ class WarehouseTransferQuery(private val jdbc: WarehouseCommandJdbc) {
                 AND (?::text IS NULL OR position(lower(?::text) IN lower(candidate.code))>0)"""
         val result = mapper.readTree(query.result(candidates + query.page(rows, "body", "created_at"),
             mapper.writeValueAsString(receivers), filter.query, filter.query))
-        WarehousePage(result.path("items").asSequence().map { mapper.treeToValue(it, WarehouseTransferView::class.java) }.toList(),
+        WarehousePage(result.path("items").asSequence().map { item ->
+            val view = mapper.treeToValue(item, WarehouseTransferView::class.java)
+            val expiry = lifetime.document(view.id)
+            view.copy(state = if (expiry != null) WarehouseTransferState.EXPIRED else view.state, draftExpiry = expiry)
+        }.toList(),
             filter.page, filter.size, result.path("totalElements").asLong())
     }
 

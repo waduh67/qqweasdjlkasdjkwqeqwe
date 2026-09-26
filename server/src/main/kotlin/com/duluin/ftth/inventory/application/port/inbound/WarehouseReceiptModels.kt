@@ -47,7 +47,9 @@ data class ReceiptView(val id: UUID, val revision: Long, val state: WarehouseRec
     val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>, val inspections: List<ReceiptInspectionView>,
     val sourceLocationName: String, val inspectionLocationName: String, val costVisible: Boolean,
     @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-    val draftEditability: ReceiptDraftEditability? = null)
+    val draftEditability: ReceiptDraftEditability? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)
 data class ReceiptInspectionView(val id: UUID, val lineId: UUID, val acceptedBase: String, val rejectedBase: String,
     val baseUnit: WarehouseBaseUnit, val evidenceId: UUID, val reason: String, val disposition: String, val operationId: UUID)
 data class ReceiptHistory(val operationId: UUID, val revision: Long, val action: String, val recordedAt: Instant)

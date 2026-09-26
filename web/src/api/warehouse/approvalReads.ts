@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { array, boolean, decimal, digest, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { approval, timestamp, type WarehouseApproval } from './approvals'
 import { baseUnit } from './materialModels'
@@ -63,7 +64,7 @@ export function approvalDocument(value: unknown, path = 'document') {
 export type ApprovalDocument = ReturnType<typeof approvalDocument>
 export function approvalSource(value: unknown, path = 'source') {
   const row = record(value, path)
-  const result = { document: approvalDocument(row.document, path), canRequest: boolean(row.canRequest, path), requestBlock: nullable(row.requestBlock, text, path) }
+  const result = { document: approvalDocument(row.document, path), ...draftExpiryFields(row.draftExpiry), canRequest: boolean(row.canRequest, path), requestBlock: nullable(row.requestBlock, text, path) }
   if (result.canRequest === (result.requestBlock !== null)) throw new WarehouseDataError(path)
   return result
 }
@@ -98,6 +99,7 @@ function cost(value: unknown, path = 'cost') {
 export function approvalDetails(value: unknown, path = 'details') {
   const row = record(value, path)
   const result = { approval: approval(row.approval, path), document: approvalDocument(row.document, path), currentSourceRevision: integer(row.currentSourceRevision, path), currentSourceState: text(row.currentSourceState, path),
+    ...draftExpiryFields(row.draftExpiry, row.currentSourceState === 'EXPIRED'),
     requestedAt: timestamp(row.requestedAt, path), policy: policy(row.policy, path), actions: actions(row.actions, path), effect: nullable(row.effect, effect, path), cost: nullable(row.cost, cost, path) }
   if (result.document.id !== result.approval.sourceDocumentId || result.document.revision !== result.approval.sourceRevision ||
     result.actions.reworkSourceRevision !== result.currentSourceRevision || result.actions.canDecide === (result.actions.decisionBlock !== null) ||

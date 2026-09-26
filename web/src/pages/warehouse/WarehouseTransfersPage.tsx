@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
@@ -46,7 +47,7 @@ function TransferList() {
       { key: 'route', header: 'Asal → Tujuan', cell: row => <span>{transferLocationLabel(row, row.transfer.sourceLocationId)} → {transferLocationLabel(row, row.transfer.destinationLocationId)}</span> },
       { key: 'receiver', header: 'Penerima', cell: row => transferPersonLabel(row, row.transfer.receiverId) },
       { key: 'state', header: 'Status', cell: row => <WarehouseStatus status={row.transfer.state} /> },
-      { key: 'remaining', header: 'Sisa perjalanan', cell: row => row.transfer.state === 'DRAFT' ? 'Belum dikirim' : <ul>{row.transfer.lines.map(line => <li key={line.id}>{transferLineLabel(row, line.id)}: <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /></li>)}</ul> },
+      { key: 'remaining', header: 'Sisa perjalanan', cell: row => ['DRAFT', 'EXPIRED'].includes(row.transfer.state) ? 'Belum dikirim' : <ul>{row.transfer.lines.map(line => <li key={line.id}>{transferLineLabel(row, line.id)}: <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /></li>)}</ul> },
     ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></>}</WarehouseState>
   </>
 }
@@ -68,7 +69,8 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
   return <><section className="card stack" aria-label="Detail transfer"><h2 style={{ overflowWrap: 'anywhere' }}>{transfer.code}</h2><p><WarehouseStatus status={transfer.state} /> · Revisi {transfer.revision} · <WarehouseTime value={transfer.recordedAt} /></p>
     <p>{transferLocationLabel(details, transfer.sourceLocationId)} → {transferLocationLabel(details, transfer.transitLocationId)} → {transferLocationLabel(details, transfer.destinationLocationId)}</p>
     <p>Pengirim: <strong>{transferPersonLabel(details, transfer.senderId)}</strong> · Penerima: <strong>{transferPersonLabel(details, transfer.receiverId)}</strong></p><p>{transfer.reason}</p>
-    <p>{transfer.state === 'DRAFT' ? 'Draft belum memindahkan atau mencadangkan stok. Pengirim harus memeriksa dan mengirim barang.' : 'Jumlah diterima berasal dari konfirmasi penerima. Sisa dalam perjalanan tetap tercatat sampai diterima atau diselesaikan dengan persetujuan independen.'}</p>
+    <WarehouseDraftExpired expiry={transfer.draftExpiry} />
+    {transfer.state !== 'EXPIRED' && <p>{transfer.state === 'DRAFT' ? 'Draft belum memindahkan atau mencadangkan stok. Pengirim harus memeriksa dan mengirim barang.' : 'Jumlah diterima berasal dari konfirmasi penerima. Sisa dalam perjalanan tetap tercatat sampai diterima atau diselesaikan dengan persetujuan independen.'}</p>}
     <div className="row wrap"><Button onClick={reload}>Muat ulang transfer</Button>
       {manage && transfer.state === 'DRAFT' && <Button variant="primary" disabled={!sender || !receiverActive} onClick={() => setOperation(dispatchTransfer(transfer.id, transfer.revision))}>Kirim ke transit</Button>}
       {manage && transfer.state === 'DRAFT' && <Button disabled={!sender || !can('inventory.item.view') || !can('inventory.location.view')} onClick={() => setEditing(true)}>Ubah draft transfer</Button>}
@@ -87,7 +89,7 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
   </section>
     <DataTable presentation="warehouse" rows={transfer.lines} rowKey={line => line.id} columns={[
       { key: 'item', header: 'Barang', cell: line => <span>{transferLineLabel(details, line.id)}<p className="muted" style={{ overflowWrap: 'anywhere' }}>Identitas asal: {line.stockIdentityId}</p></span> },
-      { key: 'quantity', header: transfer.state === 'DRAFT' ? 'Rencana kirim' : 'Dikirim', cell: line => <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /> },
+      { key: 'quantity', header: ['DRAFT', 'EXPIRED'].includes(transfer.state) ? 'Rencana kirim' : 'Dikirim', cell: line => <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /> },
       { key: 'received', header: 'Diterima', cell: line => <WarehouseQuantity value={line.receivedBase} unit={line.baseUnit} /> },
       { key: 'transit', header: 'Dalam perjalanan', cell: line => <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /> },
       { key: 'resolved', header: 'Diselesaikan', cell: line => <WarehouseQuantity value={line.resolvedBase} unit={line.baseUnit} /> },

@@ -33,7 +33,7 @@ export function WarehouseReceiptEvidence({ receipt, onChanged }: { receipt: Ware
     finally { setDownloading(false) }
   }
   return <section className="stack" aria-label="Bukti penerimaan"><h2>Bukti penerimaan</h2>
-    {can('inventory.receipt.manage') && receipt.state !== 'CLOSED' && <div className="card stack">
+    {can('inventory.receipt.manage') && !['CLOSED', 'EXPIRED'].includes(receipt.state) && <div className="card stack">
       <label className="stack">File bukti (PNG, JPEG, PDF; maksimal 15 MiB)<input type="file" accept="image/png,image/jpeg,application/pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setError(null) }} style={{ maxWidth: '100%' }} /></label>
       <Button onClick={prepare} disabled={!file}>Tinjau unggahan</Button><p className="muted">Bukti mengikuti isi draft saat diunggah. Pengubahan draft memerlukan bukti baru.</p>
     </div>}

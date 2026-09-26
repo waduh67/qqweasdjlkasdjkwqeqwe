@@ -8,6 +8,7 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReceiptPersistence
 import com.duluin.ftth.inventory.adapter.outbound.persistence.SupplierReplacementStore
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseDraftLifetimeStore
 import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.port.outbound.PostingOperation
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
@@ -21,7 +22,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val masterService: WarehouseMasterService, private val validation: ReceiptDraftValidation,
     private val store: WarehouseReceiptPersistence, private val operations: WarehouseOperationStore,
-    private val replacements: SupplierReplacementStore) {
+    private val replacements: SupplierReplacementStore, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
 
     fun draft(id: UUID?, input: ReceiptDraftInput, key: String): WarehouseOperationReceipt = draft(id, input, key, null)
@@ -56,6 +57,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
             return prior.receipt
         }
         if (existing != null && existing.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        if (existing != null) lifetime.assertDocumentLive(target)
         if (existing != null && existing.state != WarehouseReceiptState.DRAFT) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (existing != null && replacements.forReceipt(target) != null)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Create a new supplier replacement request from its return case with corrected evidence")
@@ -67,6 +69,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
             "receipt:$target", canonical.hash, action, if (existing == null) 201 else 200, body, current.fence.epoch)
         store.operation(operation, revision, cutover.snapshot.epoch)
         operations.storeIdentity(operation.id, mapper.writeValueAsString(intake), current.fence.identity.sessionId)
+        if (existing != null) store.sealDraftSave(operation, canonical.json)
         return WarehouseOperationReceipt(operation.id, target, revision, operation.originalStatus, body, operation.recordedAt)
     }
 
@@ -111,11 +114,15 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         return WarehousePage(page.map { currentView(it, current.platformAdmin || "inventory.cost.view" in current.permissions) }, filter.page, filter.size, records.size.toLong())
     }
 
-    private fun currentView(record: ReceiptRecord, cost: Boolean) = view(record, cost).copy(draftEditability = when {
-        record.state != WarehouseReceiptState.DRAFT -> ReceiptDraftEditability.NOT_DRAFT
-        replacements.forReceipt(record.id) != null -> ReceiptDraftEditability.SEALED_SUPPLIER_REPLACEMENT
-        else -> ReceiptDraftEditability.EDITABLE
-    })
+    private fun currentView(record: ReceiptRecord, cost: Boolean): ReceiptView {
+        val expiry = lifetime.document(record.id)
+        return view(record, cost).copy(state = if (expiry != null) WarehouseReceiptState.EXPIRED else record.state,
+            draftExpiry = expiry, draftEditability = when {
+                expiry != null || record.state != WarehouseReceiptState.DRAFT -> ReceiptDraftEditability.NOT_DRAFT
+                replacements.forReceipt(record.id) != null -> ReceiptDraftEditability.SEALED_SUPPLIER_REPLACEMENT
+                else -> ReceiptDraftEditability.EDITABLE
+            })
+    }
 
     internal fun authorize(intake: ReceiptIntake, current: CurrentAuthority, scope: AuthorityScope) {
         for (location in listOf(intake.source, intake.inspection)) {

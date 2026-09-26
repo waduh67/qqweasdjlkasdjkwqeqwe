@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { timestamp } from './approvals'
 import { decimal, integer, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { baseUnit } from './materialModels'
@@ -9,7 +10,8 @@ export interface DispositionInput { sourceDocumentId: string; expectedRevision: 
 export interface CompensationInput { expectedRevision: number; expectedReturnRevision: number; destinationLocationId: string; reason: string; evidenceReference: string }
 function common(value: unknown, path: string) {
   const row = record(value, path)
-  const result = { id: uuid(row.id, path), code: text(row.code, path), revision: integer(row.revision, path), state: oneOf(row.state, ['DRAFT', 'REWORK_REQUIRED', 'POSTED'], path),
+  const result = { id: uuid(row.id, path), code: text(row.code, path), revision: integer(row.revision, path), state: oneOf(row.state, ['DRAFT', 'EXPIRED', 'REWORK_REQUIRED', 'POSTED'], path),
+    ...draftExpiryFields(row.draftExpiry, row.state === 'EXPIRED'),
     stockIdentityId: uuid(row.stockIdentityId, path), quantityBase: decimal(row.quantityBase, path), baseUnit: baseUnit(row.baseUnit, path),
     sourceLocationId: uuid(row.sourceLocationId, path), destinationLocationId: uuid(row.destinationLocationId, path), reason: text(row.reason, path), evidenceReference: text(row.evidenceReference, path), recordedAt: timestamp(row.recordedAt, path) }
   if (BigInt(result.quantityBase) <= 0n || result.sourceLocationId === result.destinationLocationId) throw new WarehouseDataError(path)

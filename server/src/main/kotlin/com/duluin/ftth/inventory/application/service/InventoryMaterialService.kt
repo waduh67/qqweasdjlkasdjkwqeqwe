@@ -17,7 +17,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
     private val templates: MaterialTemplateStore, private val commands: MaterialCommandStore, private val validation: MaterialPlanValidation,
     private val reservations: InventoryReservationApi, private val reservationStore: WarehouseReservationStore,
     private val invalidation: InventoryApprovalInvalidationApi, private val physical: MaterialPhysicalTotalsStore,
-    private val reworks: MaterialReworkStore, private val lifecycle: MaterialLifecycleStore) : UnavailableMaterialActions() {
+    private val reworks: MaterialReworkStore, private val lifecycle: MaterialLifecycleStore, private val lifetime: WarehouseDraftLifetimeStore) : UnavailableMaterialActions() {
     private val mapper = jacksonObjectMapper()
 
     override fun summary(context: MaterialPlanningContext): MaterialSummary {
@@ -56,7 +56,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
             if (context.customerId == null) MaterialInstallationState.NOT_APPLICABLE else MaterialInstallationState.NOT_INSTALLED,
             context.qaState, MaterialProvisioningState.NOT_APPLICABLE,
             if (lifecycle.closed(context.workOrderId)) MaterialSettlementState.CLOSED else MaterialSettlementState.OPEN, totals,
-            plan, demand?.id, demand?.revision, templates.current(context.workType, context.action))
+            plan, demand?.id, demand?.revision, templates.current(context.workType, context.action), history?.state, history?.draftExpiry)
     }
 
     override fun history(context: MaterialPlanningContext, page: WarehousePageRequest): WarehousePage<MaterialPlanHistory> {
@@ -111,6 +111,7 @@ class InventoryMaterialService(private val authority: CurrentAuthorityApi, priva
             masterFailure(WarehouseErrorCode.STALE_REVISION)
         if (action != "RELEASE" && plan.materialMode == MaterialMode.MATERIAL_REQUIRED) validation.revalidate(plan.lines, current)
         if (action == "SUBMIT") {
+            lifetime.assertPlanLive(plan.id)
             if (history.state != "DRAFT") masterFailure(WarehouseErrorCode.STALE_REVISION)
             store.submit(plan, context)
         } else {

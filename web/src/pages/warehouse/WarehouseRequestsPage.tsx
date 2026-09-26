@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
@@ -85,13 +86,14 @@ function RequestBody({ summary, workOrder, allocations, reload }: { summary: Mat
   return <>
     <section className="card stack" aria-label="Permintaan work order"><h2>{workOrder.code} · {workOrder.title}</h2>
       <p>{workOrder.customerId ? workOrder.customerName ?? 'Nama pelanggan tidak tersedia' : 'Pekerjaan tanpa pelanggan'} · Teknisi: {workOrder.assignees.map(person => person.name ?? 'Nama tidak tersedia').join(', ') || 'Belum ditugaskan'}</p>
-      <p>Rencana {summary.revisions.planRevision} · WO revisi {summary.revisions.workOrderRevision}{summary.demandRevision !== null && ` · Permintaan revisi ${summary.demandRevision}`} · <WarehouseStatus status={summary.demandState} /></p>
+      <p>Rencana {summary.revisions.planRevision} · WO revisi {summary.revisions.workOrderRevision}{summary.demandRevision !== null && ` · Permintaan revisi ${summary.demandRevision}`} · <WarehouseStatus status={summary.planState === 'EXPIRED' ? 'EXPIRED' : summary.demandState} /></p>
+      <WarehouseDraftExpired expiry={summary.draftExpiry} />
       {!summary.plan ? <p>Rencana material belum disusun.</p> : summary.materialMode === 'NONE' ? <p>Tanpa material: {summary.noMaterialReason ?? summary.plan.reason}</p> : <p>Jumlah diminta, dicadangkan dan dikirim berasal dari catatan permintaan. Konfirmasi diterima ditampilkan per slip di bawah.</p>}
       {shortage && <p role="status">Masih ada kekurangan material. Reservasi atau pengiriman sebagian tetap mencatat sisa yang harus dipenuhi.</p>}
       {stale && <p role="alert">Alokasi berubah saat halaman dimuat. Muat ulang permintaan sebelum memilih barang.</p>}
       <div className="row wrap"><Button onClick={reload}>Muat ulang permintaan</Button>
-        {planManage && <Button disabled={!active || hasObligations} onClick={() => setEditor('plan')}>{summary.plan ? 'Revisi rencana' : 'Susun rencana material'}</Button>}
-        {planManage && summary.plan && summary.demandState === 'DRAFT' && <Button variant="primary" disabled={!active || !override || (summary.materialMode === 'MATERIAL_REQUIRED' && !can('inventory.sku.view'))} onClick={() => setOperation({ action: 'submit', command: submitMaterialRequest(workOrder.id, { expectedRevision: summary.revisions.planRevision, workOrderRevision: summary.revisions.workOrderRevision }) })}>{summary.materialMode === 'NONE' ? 'Ajukan rencana tanpa material' : 'Ajukan permintaan'}</Button>}
+        {planManage && <Button disabled={!active || hasObligations} onClick={() => setEditor('plan')}>{summary.planState === 'EXPIRED' ? 'Susun rencana material baru' : summary.plan ? 'Revisi rencana' : 'Susun rencana material'}</Button>}
+        {planManage && summary.plan && summary.demandState === 'DRAFT' && summary.planState !== 'EXPIRED' && <Button variant="primary" disabled={!active || !override || (summary.materialMode === 'MATERIAL_REQUIRED' && !can('inventory.sku.view'))} onClick={() => setOperation({ action: 'submit', command: submitMaterialRequest(workOrder.id, { expectedRevision: summary.revisions.planRevision, workOrderRevision: summary.revisions.workOrderRevision }) })}>{summary.materialMode === 'NONE' ? 'Ajukan rencana tanpa material' : 'Ajukan permintaan'}</Button>}
         {manage && summary.demandDocumentId && <><Button disabled={!active || stale || !shortage || !override} onClick={() => setOperation({ action: 'reserve', command: materialRequestAction(summary.demandDocumentId!, 'reserve', buildReservation(summary, [], '', false, true)) })}>Cadangkan otomatis</Button>
           <Button disabled={!active || stale || !shortage || !override} onClick={() => setEditor('reserve')}>Reservasi sebagian / pilih stok</Button><Button disabled={!active || stale || !canSelect || !override} onClick={() => setEditor('release')}>Lepas reservasi</Button></>}
         {can('inventory.issue.manage') && <Button variant="primary" disabled={!active || stale || !pickManage || !canSelect || !workOrder.assignees.length} onClick={() => setEditor('pick')}>Siapkan barang</Button>}
@@ -132,5 +134,5 @@ function MaterialHistory({ workOrderId }: { workOrderId: string }) {
   const loader = useCallback(() => getMaterialHistory(workOrderId, page), [workOrderId, page])
   const result = useWarehouseQuery(loader)
   return <details className="card"><summary>Riwayat rencana material</summary><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section key={row.plan.id}><h3>Rencana {row.plan.planRevision} · <WarehouseStatus status={row.state} /></h3>
-    {row.plan.materialMode === 'NONE' ? <p>Tanpa material: {row.plan.reason}</p> : <ul>{row.plan.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.sku.baseUnit} />{line.substitution && <p>Pengganti {line.originalSku?.name}: {line.substitution.reason}</p>}</li>)}</ul>}</section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></details>
+    <WarehouseDraftExpired expiry={row.draftExpiry} />{row.plan.materialMode === 'NONE' ? <p>Tanpa material: {row.plan.reason}</p> : <ul>{row.plan.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.sku.baseUnit} />{line.substitution && <p>Pengganti {line.originalSku?.name}: {line.substitution.reason}</p>}</li>)}</ul>}</section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></details>
 }

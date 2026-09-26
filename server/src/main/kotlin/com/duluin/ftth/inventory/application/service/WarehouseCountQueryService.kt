@@ -40,6 +40,7 @@ class WarehouseCountQueryService(private val counts: InventoryCountApi, private 
         val current = current("inventory.count.view", "inventory.count.manage")
         val view = counts.get(id)
         if (query.requester(id) != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        if (view.state == WarehouseCountState.EXPIRED) masterFailure(WarehouseErrorCode.DRAFT_EXPIRED)
         if (view.state != WarehouseCountState.DRAFT) masterFailure(WarehouseErrorCode.STALE_REVISION)
         val details = WarehouseCountDetails(view, query.references(view, names(listOf(view))))
         val selected = query.positions(WarehouseCountFilter(size = 100, locationId = view.locationId), visibility(current),

@@ -6,6 +6,7 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperation
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReceiptOrigins
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReceiptPersistence
 import com.duluin.ftth.inventory.adapter.outbound.persistence.ReceiptInspectionPersistence
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseDraftLifetimeStore
 import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.MovementKind
@@ -20,7 +21,7 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
     private val operations: WarehouseOperationStore, private val origins: WarehouseReceiptOrigins, private val posting: WarehousePosting,
     private val planning: ReceiptDispositionPlanning, private val inspections: ReceiptInspectionPersistence, private val completion: ReceiptCompletion,
     private val policy: WarehousePolicyEvaluationApi, private val approvals: com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseApprovalStore,
-    private val replacement: SupplierReplacementAdmission) {
+    private val replacement: SupplierReplacementAdmission, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
     fun execute(id: UUID, input: ReceiptInput, key: String): WarehouseOperationReceipt {
         receiptKey(key)
@@ -51,6 +52,7 @@ class ReceiptTransitionService(private val cutovers: InventoryTenantCutoverApi, 
             return prior.receipt
         }
         if (record.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        lifetime.assertDocumentLive(id)
         if (record.state != if (input is ReceiptReceiveInput) WarehouseReceiptState.DRAFT else WarehouseReceiptState.RECEIVED_IN_INSPECTION)
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (input is ReceiptReceiveInput) {

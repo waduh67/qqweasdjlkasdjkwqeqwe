@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { timestamp } from './approvals'
 import { array, boolean, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { baseUnit } from './materialModels'
@@ -89,6 +90,8 @@ export type ReturnSource = ReturnType<typeof returnSource>
 function replacement(value: unknown, path = 'replacement') {
   const row = record(value, path)
   return { id: uuid(row.id, path), returnId: uuid(row.returnId, path), repairCaseId: uuid(row.repairCaseId, path), receiptId: uuid(row.receiptId, path),
+    ...(row.receiptState == null ? {} : { receiptState: oneOf(row.receiptState, ['DRAFT', 'EXPIRED', 'RECEIVED_IN_INSPECTION', 'PUTAWAY', 'CLOSED'], path) }),
+    ...draftExpiryFields(row.draftExpiry, row.receiptState === 'EXPIRED'),
     originalAssetId: uuid(row.originalAssetId, path), legalOwner: oneOf(row.legalOwner, LEGAL_OWNERS, path), replacementAssetId: nullable(row.replacementAssetId, uuid, path) }
 }
 export type SupplierReplacement = ReturnType<typeof replacement>
@@ -99,10 +102,11 @@ function reacquisition(value: unknown, path = 'reacquisition') {
 export type ReacquisitionRef = ReturnType<typeof reacquisition>
 export function reacquisitionEntry(value: unknown, path = 'reacquisitionEntry') {
   const row = record(value, path)
-  const result = { ...reacquisition(row, path), code: text(row.code, path), sourceReturnRevision: integer(row.sourceReturnRevision, path),
+  const result = { ...reacquisition(row, path), ...(row.state == null ? {} : { state: oneOf(row.state, ['DRAFT', 'EXPIRED', 'POSTED'], path) }),
+    ...draftExpiryFields(row.draftExpiry, row.state === 'EXPIRED'), code: text(row.code, path), sourceReturnRevision: integer(row.sourceReturnRevision, path),
     reason: text(row.reason, path), titleTransferReference: text(row.titleTransferReference, path), evidenceId: uuid(row.evidenceId, path),
     recordedAt: timestamp(row.recordedAt, path), appliedReturnRevision: nullable(row.appliedReturnRevision, integer, path) }
-  if (result.revision !== 0 || (result.appliedReturnRevision !== null && result.appliedReturnRevision !== result.sourceReturnRevision + 1)) throw new WarehouseDataError(path)
+  if ((row.state == null && result.revision !== 0) || (result.appliedReturnRevision !== null && result.appliedReturnRevision !== result.sourceReturnRevision + 1)) throw new WarehouseDataError(path)
   return result
 }
 export type ReacquisitionEntry = ReturnType<typeof reacquisitionEntry>

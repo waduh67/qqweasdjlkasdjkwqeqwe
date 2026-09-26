@@ -92,7 +92,7 @@ class WarehouseOpeningBalanceService(private val cutovers: InventoryTenantCutove
         val record = store.get(batch, id)
         val location = masters.get(MasterKind.LOCATION, record.view.reviewLocation.id) as LocationSnapshot
         masterAccess.authorizeLocation(location, current, scopes.currentUnderFence(current.fence))
-        return record.body
+        return store.currentBody(record)
     }
 
     internal fun verifyEvidence(manifest: MigrationReviewManifest) {

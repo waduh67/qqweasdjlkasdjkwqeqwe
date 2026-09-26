@@ -21,6 +21,15 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open') }
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
+
+it('shows expired disposition history and keeps fresh source proposal creation available', async () => {
+  const expired = { ...disposition, state: 'EXPIRED', draftExpiry: { deadline: '2026-09-26T12:00:00Z', recordedAt: null, reason: 'IDLE_DEADLINE' } }
+  vi.stubGlobal('fetch', vi.fn(async () => page([expired])))
+  render(<MemoryRouter><WarehouseReturnDispositions details={returnDetailsFixture()} reload={vi.fn()} /></MemoryRouter>)
+  await screen.findByText(/Draf kedaluwarsa sejak/)
+  expect(screen.getByRole('link', { name: 'Buka persetujuan DSP-001' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Ajukan kehilangan / scrap' })).toBeTruthy()
+})
 async function fill(target: string) {
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Lokasi tujuan disposisi' })).not.toHaveProperty('disabled', true))
   fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi tujuan disposisi' }), { target: { value: target } })

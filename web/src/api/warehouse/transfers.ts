@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { timestamp } from './approvals'
 import { array, boolean, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { baseUnit } from './materialModels'
@@ -5,7 +6,7 @@ import { CONDITIONS, LEGAL_OWNERS } from './models'
 import type { BaseUnit } from './quantity'
 import { command, parameters, query } from './transport'
 
-export const TRANSFER_STATES = ['DRAFT', 'DISPATCHED', 'PART_RECEIVED', 'RECEIVED', 'DISCREPANCY'] as const
+export const TRANSFER_STATES = ['DRAFT', 'EXPIRED', 'DISPATCHED', 'PART_RECEIVED', 'RECEIVED', 'DISCREPANCY'] as const
 export type TransferState = typeof TRANSFER_STATES[number]
 export interface TransferFilter { page?: number; size?: number; state?: TransferState; locationId?: string; skuId?: string; serial?: string; query?: string; from?: string; until?: string }
 export interface TransferDraft {
@@ -28,12 +29,13 @@ export function transferView(value: unknown, path = 'transfer') {
   if (!lines.length || new Set(lines.map(line => line.id)).size !== lines.length) throw new WarehouseDataError(path)
   for (const line of lines) {
     const requested = BigInt(line.quantityBase), received = BigInt(line.receivedBase), transit = BigInt(line.inTransitBase), resolved = BigInt(line.resolvedBase)
-    if (requested <= 0n || (state === 'DRAFT' ? received + transit + resolved !== 0n : received + transit + resolved !== requested) ||
+    if (requested <= 0n || (['DRAFT', 'EXPIRED'].includes(state) ? received + transit + resolved !== 0n : received + transit + resolved !== requested) ||
       (transit > 0n && !line.remainingIdentityId)) throw new WarehouseDataError(path)
   }
   const sourceLocationId = uuid(row.sourceLocationId, path), destinationLocationId = uuid(row.destinationLocationId, path), transitLocationId = uuid(row.transitLocationId, path)
   if (new Set([sourceLocationId, destinationLocationId, transitLocationId]).size !== 3) throw new WarehouseDataError(path)
   return { id: uuid(row.id, path), code: text(row.code, path), revision: integer(row.revision, path), state, sourceLocationId, destinationLocationId, transitLocationId,
+    ...draftExpiryFields(row.draftExpiry, state === 'EXPIRED'),
     senderId: uuid(row.senderId, path), receiverId: uuid(row.receiverId, path), reason: text(row.reason, path), recordedAt: timestamp(row.recordedAt, path), lines,
     resolutionDocumentId: nullable(row.resolutionDocumentId, uuid, path) }
 }

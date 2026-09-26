@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Checkbox } from '@fluentui/react-components'
@@ -40,7 +41,7 @@ function OpeningDirectory({ batch, onSelect }: { batch: string; onSelect: (id: s
       {!data.items.length ? <p>Belum ada usulan dalam cakupan lokasi Anda. Tinjau hasil pemeriksaan untuk membuat usulan.</p> : <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} columns={[
         { key: 'name', header: 'Usulan', cell: row => <span>{row.code}<p className="muted">{row.migrationReference}</p></span> },
         { key: 'location', header: 'Lokasi pemeriksaan', cell: row => row.reviewLocation.name || row.reviewLocation.code },
-        { key: 'state', header: 'Pembukuan', cell: row => row.state === 'POSTED' ? 'Sudah dibukukan' : 'Belum dibukukan' },
+        { key: 'state', header: 'Pembukuan', cell: row => row.state === 'EXPIRED' ? 'Kedaluwarsa' : row.state === 'POSTED' ? 'Sudah dibukukan' : 'Belum dibukukan' },
         { key: 'time', header: 'Disimpan', cell: row => <WarehouseTime value={row.createdAt} /> },
         { key: 'action', header: 'Tindakan', cell: row => <Button onClick={() => onSelect(row.id)}>Buka {row.code}</Button> },
       ]} />}
@@ -53,7 +54,7 @@ function OpeningDocument({ batch, id, onClose, onCase }: { batch: string; id: st
   const result = useWarehouseQuery(useCallback(async () => getMigrationOpening(batch, id), [batch, id]))
   return <section className="card stack"><Button onClick={onClose}>Kembali ke usulan tersimpan</Button><WarehouseState {...result}>{document => <>
     <h2>{document.code}</h2><p>{document.migrationReference} · <WarehouseTime value={document.createdAt} /></p><p>{document.reason}</p>
-    <p>Usulan ini menyimpan hasil pemeriksaan pada saat dibuat. Keputusan kasus yang lebih baru memerlukan tinjauan dan usulan baru.</p>
+    <WarehouseDraftExpired expiry={document.draftExpiry} /><p>Usulan ini menyimpan hasil pemeriksaan pada saat dibuat. Keputusan kasus yang lebih baru memerlukan tinjauan dan usulan baru.</p>
     <p>Nilai pembelian dan biaya asal tidak diketahui. Usulan tidak membuat transaksi pembelian.</p>
     {can('inventory.approval.view') ? <Link to={'/warehouse/approvals?sourceDocumentId=' + encodeURIComponent(document.id)}>Buka persetujuan saldo awal</Link>
       : <p>Petugas dengan akses persetujuan gudang perlu mengajukan dan memeriksa usulan ini.</p>}

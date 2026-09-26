@@ -18,6 +18,7 @@ export function approvalImpact(kind: ApprovalDocument['kind']) {
   }
 }
 export const approvalBlockLabels: Record<string, string> = {
+  DRAFT_EXPIRED: 'Draf sumber sudah kedaluwarsa. Buat draf atau proposal baru dari alur sumber sebelum mengajukan persetujuan.',
   REQUESTER_REQUIRED: 'Pengajuan hanya dapat dilakukan pembuat dokumen sumber.', REQUEST_PERMISSION_REQUIRED: 'Izin ajukan persetujuan diperlukan.',
   REQUEST_ALREADY_EXISTS: 'Revisi sumber ini sudah pernah diajukan. Buka permintaan tersimpan di bawah.', SOURCE_NOT_READY: 'Selesaikan dokumen sumber sebelum mengajukan persetujuan baru.',
   CUTOVER_REQUIRED: 'Aktifkan gudang sebelum mengajukan persetujuan.', CUTOVER_CHANGED: 'Status aktivasi gudang berubah. Muat ulang dan periksa setelan gudang.',

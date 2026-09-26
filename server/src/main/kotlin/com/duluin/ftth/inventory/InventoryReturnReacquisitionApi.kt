@@ -14,4 +14,8 @@ data class ReturnReacquisitionRef(val documentId: UUID, val returnId: UUID, val 
 
 data class ReturnReacquisitionEntry(val documentId: UUID, val returnId: UUID, val revision: Long,
     val code: String, val sourceReturnRevision: Long, val reason: String, val titleTransferReference: String,
-    val evidenceId: UUID, val recordedAt: Instant, val appliedReturnRevision: Long?)
+    val evidenceId: UUID, val recordedAt: Instant, val appliedReturnRevision: Long?,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val state: String? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)

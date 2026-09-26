@@ -148,3 +148,5 @@ Berbagi laporan QA cukup dengan hitungan, hash sumber, dan screenshot yang diper
 Kode GPON mempunyai [bukti dokumentasi dan fixture offline](gpon-profile-evidence.md).
 Itu tidak menyatakan sertifikasi perangkat fisik. Kontrak material KMP dan kompilasi
 iOS juga tidak menyatakan aplikasi native telah diuji pada perangkat atau dirilis.
+
+Idle draft deadlines and retained history are described in [warehouse-draft-expiry.md](warehouse-draft-expiry.md).

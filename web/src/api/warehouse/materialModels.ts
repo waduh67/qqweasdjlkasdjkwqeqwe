@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { timestamp } from './approvals'
 import { array, boolean, decimal, integer, nullable, oneOf, record, text, uuid, WarehouseDataError } from './codec'
 import { TRACKING } from './models'
@@ -52,10 +53,12 @@ export function materialSummary(value: unknown, path = 'material') {
     revisions: materialRevisions(row.revisions, path), demandState: oneOf(row.demandState, DEMAND_STATES, path), installationState: oneOf(row.installationState, ['NOT_APPLICABLE', 'NOT_INSTALLED', 'PROVISIONAL', 'INSTALLED', 'REMOVED'], path),
     qaState: oneOf(row.qaState, ['PENDING', 'APPROVED', 'REJECTED'], path), provisioningState: oneOf(row.provisioningState, ['NOT_APPLICABLE', 'PENDING', 'SUCCEEDED', 'FAILED'], path),
     settlementState: oneOf(row.settlementState, ['OPEN', 'RESIDUAL_PENDING', 'CLOSED'], path), lines: array(row.lines, materialTotals, path), plan: nullable(row.plan, materialPlan, path),
+    ...(row.planState == null ? {} : { planState: oneOf(row.planState, ['DRAFT', 'SUBMITTED', 'EXPIRED'], path) }),
+    ...draftExpiryFields(row.draftExpiry, row.planState === 'EXPIRED'),
     demandDocumentId: nullable(row.demandDocumentId, uuid, path), demandRevision: nullable(row.demandRevision, integer, path), template: nullable(row.template, materialTemplate, path) }
 }
 export type MaterialSummary = ReturnType<typeof materialSummary>
 export function materialHistory(value: unknown, path = 'history') {
   const row = record(value, path)
-  return { plan: materialPlan(row.plan, path), state: oneOf(row.state, ['DRAFT', 'SUBMITTED'], path), demandDocumentId: nullable(row.demandDocumentId, uuid, path) }
+  return { plan: materialPlan(row.plan, path), state: oneOf(row.state, ['DRAFT', 'SUBMITTED', 'EXPIRED'], path), ...draftExpiryFields(row.draftExpiry, row.state === 'EXPIRED'), demandDocumentId: nullable(row.demandDocumentId, uuid, path) }
 }

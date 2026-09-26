@@ -29,6 +29,16 @@ beforeEach(() => {
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
+it('shows expired transfer plans without dispatch or edit and preserves their planned amount', async () => {
+  const expired: WarehouseTransfer = { ...transferFixture(), state: 'EXPIRED',
+    draftExpiry: { deadline: '2026-09-26T12:00:00Z', recordedAt: null, reason: 'IDLE_DEADLINE' } }
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => read(path, expired)))
+  show(); await screen.findByText(/Draf kedaluwarsa sejak/)
+  expect(screen.queryByRole('button', { name: 'Kirim ke transit' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Ubah draft transfer' })).toBeNull()
+  expect(screen.getByRole('columnheader', { name: /Rencana kirim/ })).toBeTruthy()
+})
+
 it('blocks inaccessible or malformed deep links before reading warehouse data', () => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch)
   mocks.permissions.delete('inventory.transfer.view')

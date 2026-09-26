@@ -1,6 +1,6 @@
 import type { CountDetails, CountPerson, CountPosition, WarehouseCount } from '@/api/warehouse/counts'
 
-export const countStateLabels: Record<WarehouseCount['state'], string> = { DRAFT: 'Draf', COUNTING: 'Sedang dihitung', SUBMITTED: 'Diajukan', RECOUNT_REQUIRED: 'Perlu hitung ulang', APPROVED: 'Disetujui', POSTED: 'Dibukukan' }
+export const countStateLabels: Record<WarehouseCount['state'], string> = { EXPIRED: 'Kedaluwarsa', DRAFT: 'Draf', COUNTING: 'Sedang dihitung', SUBMITTED: 'Diajukan', RECOUNT_REQUIRED: 'Perlu hitung ulang', APPROVED: 'Disetujui', POSTED: 'Dibukukan' }
 export const countPersonLabel = (person: CountPerson) => person.name ?? `Petugas ${person.id}`
 export const countItemLabel = (item: CountPosition['item']) => `${item.name} · ${item.code}${item.serial ? ` · ${item.serial}` : item.lotCode ? ` · ${item.lotCode}` : ''}`
 export function countLineLabel(details: Pick<CountDetails, 'references'>, balanceId: string) {

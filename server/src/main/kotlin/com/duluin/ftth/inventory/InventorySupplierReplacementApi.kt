@@ -15,4 +15,8 @@ data class SupplierReplacementInput(val expectedRevision: Long, val externalRefe
 data class SupplierReplacementCost(val totalMinor: String, val currency: String)
 data class SupplierReplacementView(val id: UUID, val returnId: UUID, val repairCaseId: UUID,
     val receiptId: UUID, val originalAssetId: UUID, val legalOwner: AssetLegalOwner,
-    val replacementAssetId: UUID? = null)
+    val replacementAssetId: UUID? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val receiptState: String? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)

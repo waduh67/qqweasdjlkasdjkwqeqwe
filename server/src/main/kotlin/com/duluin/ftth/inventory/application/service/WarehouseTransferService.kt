@@ -6,6 +6,7 @@ import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseTransferQuery
+import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseDraftLifetimeStore
 import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.MovementKind
@@ -20,7 +21,8 @@ import java.util.UUID
 class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehouseTransferAccess, private val planning: WarehouseTransferPlanning,
     private val store: WarehouseTransferStore, private val operations: WarehouseOperationStore,
-    private val posting: WarehousePosting, private val historyQueries: WarehouseTransferQuery) : InventoryTransferApi {
+    private val posting: WarehousePosting, private val historyQueries: WarehouseTransferQuery,
+    private val lifetime: WarehouseDraftLifetimeStore) : InventoryTransferApi {
     private val mapper = jacksonObjectMapper()
 
     override fun create(request: WarehouseTransferDraft, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
@@ -70,6 +72,7 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
             return prior.receipt
         }
         if (record.revision != request.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        lifetime.assertDocumentLive(id)
         if (record.state != WarehouseTransferState.DRAFT) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Only an unposted transfer draft can be edited")
         access.authorize(request.draft, current)
@@ -103,7 +106,8 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
         access.lockTopology()
         val record = store.get(id)
         access.authorize(record, current, requireReceiver = record.state != WarehouseTransferState.DRAFT)
-        return record.view()
+        val expiry = lifetime.document(id)
+        return record.view().copy(state = if (expiry != null) WarehouseTransferState.EXPIRED else record.state, draftExpiry = expiry)
     }
 
     override fun history(id: UUID, page: WarehousePageRequest): List<WarehouseTransferView> {
@@ -133,6 +137,7 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
             return prior.receipt
         }
         if (record.revision != revision) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        lifetime.assertDocumentLive(id)
         val prepared = prepare(record, locations)
         val state = if (action == "dispatch") WarehouseTransferState.DISPATCHED else
             if (prepared.lines.all { it.received == it.quantity }) WarehouseTransferState.RECEIVED else WarehouseTransferState.PART_RECEIVED

@@ -10,12 +10,22 @@ import java.util.UUID
 data class StoredMigrationOpening(val view: WarehouseMigrationOpening, val payloadHash: String, val body: String)
 
 @Repository
-class MigrationOpeningStore(private val jdbc: WarehouseCommandJdbc) {
+class MigrationOpeningStore(private val jdbc: WarehouseCommandJdbc, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
+
+    fun currentBody(record: StoredMigrationOpening): String = jdbc.execute { sql ->
+        val body = mapper.readTree(record.body) as tools.jackson.databind.node.ObjectNode
+        val expiry = lifetime.document(record.view.id)
+        val state = if (expiry != null) "EXPIRED" else sql.value(
+            "SELECT state FROM inventory_document WHERE tenant_id=? AND id=?", sql.tenant, record.view.id)
+        body.put("state", state)
+        if (expiry != null) body.set("draftExpiry", mapper.valueToTree(expiry))
+        mapper.writeValueAsString(body)
+    }
 
     fun list(batch: UUID, page: Int, size: Int, access: WarehouseQueryAccess): String = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page = page, size = size), access)
-        query.result(query.page("""SELECT opening.id,opening.created_at,jsonb_build_object(
+        val result = mapper.readTree(query.result(query.page("""SELECT opening.id,opening.created_at,jsonb_build_object(
             'id',opening.id,'batchId',opening.batch_id,'code',document.code,'state',document.state,
             'reviewHash',opening.review_hash,'requestedBy',opening.actor_id,'createdAt',${queryTime("opening.created_at")},
             'migrationReference',opening.original_body::jsonb->>'migrationReference',
@@ -23,7 +33,14 @@ class MigrationOpeningStore(private val jdbc: WarehouseCommandJdbc) {
             FROM inventory_migration_opening_request opening JOIN inventory_document document
                 ON document.tenant_id=opening.tenant_id AND document.id=opening.id
             JOIN visible_locations location ON location.tenant_id=opening.tenant_id AND location.id=opening.review_location_id,request
-            WHERE opening.tenant_id=request.tenant AND opening.batch_id=?""", "body", "created_at"), batch)
+            WHERE opening.tenant_id=request.tenant AND opening.batch_id=?""", "body", "created_at"), batch))
+        result.path("items").forEach { item ->
+            lifetime.document(UUID.fromString(item.path("id").asString()))?.let { expiry ->
+                (item as tools.jackson.databind.node.ObjectNode).put("state", "EXPIRED")
+                    .set("draftExpiry", mapper.valueToTree(expiry))
+            }
+        }
+        mapper.writeValueAsString(result)
     }
 
     fun review(batch: UUID): WarehouseMigrationReview = jdbc.execute { sql ->

@@ -14,4 +14,6 @@ data class WarehouseCompensationInput(val expectedRevision: Long, val expectedRe
 data class WarehouseCompensationView(val id: UUID, val code: String, val revision: Long, val state: WarehouseDispositionState,
     val originalDispositionId: UUID, val originalPostingId: UUID, val returnId: UUID, val stockIdentityId: UUID,
     val quantityBase: String, val baseUnit: WarehouseBaseUnit, val sourceLocationId: UUID, val destinationLocationId: UUID,
-    val reason: String, val evidenceReference: String, val recordedAt: Instant)
+    val reason: String, val evidenceReference: String, val recordedAt: Instant,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)

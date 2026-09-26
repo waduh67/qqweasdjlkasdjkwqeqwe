@@ -39,7 +39,8 @@ data class WarehouseApprovalDocument(val id: UUID, val revision: Long, val kind:
     val lines: List<WarehouseApprovalLine>, val comparisons: List<WarehouseApprovalComparison>,
     val receiptId: UUID? = null, val countId: UUID? = null, val transferId: UUID? = null, val returnId: UUID? = null,
     val evidenceReferences: List<WarehouseApprovalEvidenceReference> = emptyList(), val migration: WarehouseApprovalMigration? = null)
-data class WarehouseApprovalSourceView(val document: WarehouseApprovalDocument, val canRequest: Boolean, val requestBlock: String?)
+data class WarehouseApprovalSourceView(val document: WarehouseApprovalDocument, val canRequest: Boolean, val requestBlock: String?,
+    @get:JsonInclude(JsonInclude.Include.NON_NULL) val draftExpiry: WarehouseDraftExpiry? = null)
 data class WarehouseApprovalSummary(val approval: WarehouseApprovalView, val documentCode: String, val operation: PolicyOperation,
     val requester: WarehouseApprovalPerson, val requestedAt: Instant)
 data class WarehouseApprovalActions(val canDecide: Boolean, val decisionBlock: String?, val canRework: Boolean,
@@ -52,6 +53,6 @@ data class WarehouseApprovalEffectView(val operationId: UUID, val businessAction
 data class WarehouseApprovalDetails(val approval: WarehouseApprovalView, val document: WarehouseApprovalDocument,
     val currentSourceRevision: Long, val currentSourceState: String, val requestedAt: Instant,
     val policy: WarehouseApprovalPolicyView, val actions: WarehouseApprovalActions,
-    val effect: WarehouseApprovalEffectView?, val cost: WarehouseApprovalAmount?)
+    val effect: WarehouseApprovalEffectView?, val cost: WarehouseApprovalAmount?, val draftExpiry: WarehouseDraftExpiry? = null)
 data class WarehouseApprovalHistoryEntry(val id: UUID, val tier: Int, val approver: WarehouseApprovalPerson, val decision: String,
     val reason: String?, val decidedAt: Instant, val revision: Long, val delegatedFrom: WarehouseApprovalPerson?, val evidenceReference: UUID?)

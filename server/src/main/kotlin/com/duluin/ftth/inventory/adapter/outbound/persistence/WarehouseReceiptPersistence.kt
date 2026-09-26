@@ -60,6 +60,12 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
             state, sql.tenant, id, revision) != 1) sql.fail(WarehouseErrorCode.STALE_REVISION)
     }
 
+    fun sealDraftSave(operation: PostingOperation, canonical: String) = jdbc.execute { sql ->
+        sql.update("""INSERT INTO inventory_receipt_draft_command(id,tenant_id,document_id,canonical_request)
+            VALUES (?,?,?,?)""", operation.id, sql.tenant, operation.resourceId, canonical)
+        Unit
+    }
+
     fun history(id: UUID): List<ReceiptHistory> = jdbc.execute { sql ->
         sql.query("""SELECT id,document_revision,business_action,created_at FROM inventory_operation
             WHERE tenant_id=? AND document_id=? ORDER BY document_revision,id""", sql.tenant, id) {
@@ -88,7 +94,7 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
     fun candidates(filter: ReceiptFilter): List<UUID> = jdbc.execute { sql ->
         val conditions = mutableListOf("document.tenant_id=?")
         val values = mutableListOf<Any?>(sql.tenant)
-        filter.status?.let { conditions += "document.state=?"; values += it }
+        filter.status?.let { conditions += "warehouse_document_current_state(document.tenant_id,document.id,document.state)=?"; values += it }
         filter.skuId?.let { conditions += "EXISTS(SELECT FROM inventory_document_line WHERE tenant_id=document.tenant_id AND document_id=document.id AND sku_id=?)"; values += it }
         filter.locationId?.let { conditions += "(intake.inspection_location_id=? OR intake.source_location_id=?)"; values += it; values += it }
         filter.from?.let { conditions += "document.created_at>=?"; values += it }

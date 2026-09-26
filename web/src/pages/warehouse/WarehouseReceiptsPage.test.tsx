@@ -29,6 +29,18 @@ beforeEach(() => {
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
+it('shows an expired receipt as retained history without receive edit or upload actions', async () => {
+  const current = { ...receiptFixture(), state: 'EXPIRED', draftEditability: 'NOT_DRAFT',
+    draftExpiry: { deadline: '2026-09-26T12:00:00Z', recordedAt: null, reason: 'IDLE_DEADLINE' } }
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => path.endsWith('/history') ? response([])
+    : path.includes('/attachments?') ? response(page([])) : response(current)))
+  render(<MemoryRouter initialEntries={[`/warehouse/receipts?id=${id.document}`]}><WarehouseReceiptsPage /></MemoryRouter>)
+  await screen.findByText(/Draf kedaluwarsa sejak/)
+  expect(screen.getByText(/belum mengubah stok, reservasi, atau kepemilikan/)).toBeTruthy()
+  for (const name of ['Terima barang', 'Ubah draft', 'Tinjau unggahan']) expect(screen.queryByRole('button', { name })).toBeNull()
+  expect(screen.queryByText(/Penerimaan telah selesai/)).toBeNull()
+})
+
 it.each(['SEALED_SUPPLIER_REPLACEMENT', null] as const)('does not offer ordinary draft editing for current editability %s', async draftEditability => {
   const current = { ...receiptFixture(), draftEditability }
   const fetch = vi.fn(async (path: string) => {

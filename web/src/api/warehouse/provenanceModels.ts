@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { array, decimal, digest, integer, nullable, oneOf, record, text, uuid, WarehouseDataError } from './codec'
 import { timestamp } from './approvals'
 import { MIGRATION_SOURCES, migrationRawText, migrationResolution, migrationReviewCase } from './migrationReview'
@@ -89,7 +90,8 @@ export function migrationReview(value: unknown, path = 'review') {
 export type MigrationReview = ReturnType<typeof migrationReview>
 export function migrationOpening(value: unknown, path = 'opening') {
   const r = record(value, path), location = record(r.reviewLocation, path)
-  const result = { id: uuid(r.id, path), code: text(r.code, path), batchId: uuid(r.batchId, path), reviewHash: digest(r.reviewHash, path),
+  const result = { id: uuid(r.id, path), code: text(r.code, path), batchId: uuid(r.batchId, path),
+    ...(r.state == null ? {} : { state: oneOf(r.state, ['DRAFT', 'EXPIRED', 'POSTED'], path) }), ...draftExpiryFields(r.draftExpiry, r.state === 'EXPIRED'), reviewHash: digest(r.reviewHash, path),
     manifest: manifest(r.manifest, path), reviewLocation: { id: uuid(location.id, path), revision: integer(location.revision, path), areaId: nullable(location.areaId, uuid, path) },
     requestedBy: uuid(r.requestedBy, path), authorityEpoch: integer(r.authorityEpoch, path), cutoverEpoch: integer(r.cutoverEpoch, path),
     migrationReference: text(r.migrationReference, path), reason: text(r.reason, path), createdAt: timestamp(r.createdAt, path) }
@@ -100,7 +102,7 @@ export function migrationOpening(value: unknown, path = 'opening') {
 export type MigrationOpening = ReturnType<typeof migrationOpening>
 export function migrationOpeningSummary(value: unknown, path = 'openingSummary') {
   const r = record(value, path), location = record(r.reviewLocation, path)
-  return { id: uuid(r.id, path), batchId: uuid(r.batchId, path), code: text(r.code, path), state: oneOf(r.state, ['DRAFT', 'POSTED'], path),
+  return { id: uuid(r.id, path), batchId: uuid(r.batchId, path), code: text(r.code, path), state: oneOf(r.state, ['DRAFT', 'EXPIRED', 'POSTED'], path), ...draftExpiryFields(r.draftExpiry, r.state === 'EXPIRED'),
     reviewHash: digest(r.reviewHash, path), requestedBy: uuid(r.requestedBy, path), createdAt: timestamp(r.createdAt, path), migrationReference: text(r.migrationReference, path),
     reviewLocation: { id: uuid(location.id, path), code: text(location.code, path), name: nullable(location.name, migrationRawText, path) } }
 }

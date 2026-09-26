@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getMaterials, submitMaterialRequest } from '@/api/warehouse/materials'
@@ -18,11 +19,11 @@ export function WorkOrderMaterialPlanning({ id, active, onChanged }: { id: strin
   return <WarehouseState {...result}>{summary => {
     const locked = summary.lines.some(row => BigInt(row.issuedBase) + BigInt(row.reservedPickedBase) + BigInt(row.reservedUnpickedBase) > 0n)
     const override = !summary.plan?.lines.some(row => row.substitution) || can('inventory.request.override')
-    return <section className="stack" aria-label="Perencanaan material WO">
+    return <section className="stack" aria-label="Perencanaan material WO"><WarehouseDraftExpired expiry={summary.draftExpiry} />
       {editing ? <MaterialPlanEditor summary={summary} onSaved={refresh} onReload={refresh} onClose={() => setEditing(false)} /> : <>
-        {manage && <Button disabled={!active || locked} onClick={() => setEditing(true)}>{summary.plan ? 'Revisi rencana material' : 'Susun rencana material'}</Button>}
+        {manage && <Button disabled={!active || locked} onClick={() => setEditing(true)}>{summary.planState === 'EXPIRED' ? 'Susun rencana material baru' : summary.plan ? 'Revisi rencana material' : 'Susun rencana material'}</Button>}
         {locked && manage && <p>Reservasi atau pengeluaran mengunci rencana. Lepas reservasi yang belum dikirim; setelah pemakaian, perubahan memakai alur pengerjaan ulang.</p>}
-        {manage && active && summary.plan && summary.demandState === 'DRAFT' && <Button disabled={!override} onClick={() => setOperation(submitMaterialRequest(id, { expectedRevision: summary.revisions.planRevision, workOrderRevision: summary.revisions.workOrderRevision }))}>Ajukan rencana material</Button>}
+        {manage && active && summary.plan && summary.demandState === 'DRAFT' && summary.planState !== 'EXPIRED' && <Button disabled={!override} onClick={() => setOperation(submitMaterialRequest(id, { expectedRevision: summary.revisions.planRevision, workOrderRevision: summary.revisions.workOrderRevision }))}>Ajukan rencana material</Button>}
         {summary.lines.length > 0 && <ul>{summary.lines.map(line => <li key={line.planLineId}>{summary.plan?.lines.find(row => row.id === line.planLineId)?.sku.name ?? 'Material rencana sebelumnya'}: diminta <WarehouseQuantity value={line.requestedBase} unit={line.baseUnit} />, dikirim <WarehouseQuantity value={line.issuedBase} unit={line.baseUnit} />, terpakai <WarehouseQuantity value={line.physicallyUsedBase} unit={line.baseUnit} />, kekurangan <WarehouseQuantity value={line.backorderBase} unit={line.baseUnit} />
           {can('inventory.item.view') && <p><Link to={`/warehouse/stock?skuId=${line.skuId}`}>Periksa stok barang</Link></p>}</li>)}</ul>}
       </>}

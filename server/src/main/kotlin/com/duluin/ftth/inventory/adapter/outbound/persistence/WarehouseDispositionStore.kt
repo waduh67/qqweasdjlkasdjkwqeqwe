@@ -10,7 +10,7 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 @Repository
-class WarehouseDispositionStore(private val jdbc: WarehouseCommandJdbc) {
+class WarehouseDispositionStore(private val jdbc: WarehouseCommandJdbc, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
 
     fun workOrder(returnId: UUID): UUID = jdbc.execute { sql ->
@@ -80,7 +80,7 @@ class WarehouseDispositionStore(private val jdbc: WarehouseCommandJdbc) {
                 ON document.tenant_id=request.tenant_id AND document.id=request.id
             WHERE request.tenant_id=? AND request.id=?""", sql.tenant, id) {
             mapper.readValue(it.getString("snapshot"), WarehouseDispositionRecord::class.java)
-                .view(it.getLong("revision"), state(it.getString("state"), it.getString("approval_disposition")))
+                .view(it.getLong("revision"), state(it.getString("state"), it.getString("approval_disposition"))).let(::currentView)
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 
@@ -100,8 +100,13 @@ class WarehouseDispositionStore(private val jdbc: WarehouseCommandJdbc) {
             filter.sourceDocumentId, filter.action?.name, filter.action?.name))
         WarehousePage(result.path("items").asSequence().map { row ->
             mapper.treeToValue(row.path("snapshot"), WarehouseDispositionRecord::class.java).view(row.path("revision").asLong(),
-                state(row.path("state").asString(), row.path("approvalDisposition").asString(null)))
+                state(row.path("state").asString(), row.path("approvalDisposition").asString(null))).let(::currentView)
         }.toList(), filter.page, filter.size, result.path("totalElements").asLong())
+    }
+
+    private fun currentView(view: WarehouseDispositionView): WarehouseDispositionView {
+        val expiry = lifetime.document(view.id) ?: return view
+        return view.copy(state = WarehouseDispositionState.EXPIRED, draftExpiry = expiry)
     }
 
     private fun state(state: String, disposition: String?): WarehouseDispositionState = when {

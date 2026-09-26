@@ -18,7 +18,7 @@ class WarehouseCountQuery(private val jdbc: WarehouseCommandJdbc) {
                 AND (document.actor_id=?::uuid OR EXISTS (SELECT FROM inventory_count_entry entry
                     WHERE entry.tenant_id=document.tenant_id AND entry.document_id=document.id AND entry.counter_id=?::uuid))
                 AND (request.location IS NULL OR scope.location_id=request.location)
-                AND (request.status IS NULL OR document.state=request.status)
+                AND (request.status IS NULL OR warehouse_document_current_state(document.tenant_id,document.id,document.state)=request.status)
                 AND (request.since IS NULL OR document.created_at>=request.since)
                 AND (request.until IS NULL OR document.created_at<request.until)
                 AND (?::text IS NULL OR position(lower(?::text) IN lower(document.code))>0)

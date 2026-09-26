@@ -21,7 +21,7 @@ class WarehouseApprovalQuery(private val jdbc: WarehouseCommandJdbc) {
                 AND NOT EXISTS (SELECT FROM unnest(approval.location_ids) location(id)
                     WHERE location.id NOT IN (SELECT id FROM visible_locations WHERE state='ACTIVE'))
                 AND (request.location IS NULL OR request.location=ANY(approval.location_ids))
-                AND (request.status IS NULL OR request.status=CASE WHEN approval.status='PENDING' AND approval.expires_at<=clock_timestamp() THEN 'EXPIRED' ELSE approval.status END)
+                AND (request.status IS NULL OR request.status=CASE WHEN approval.status='PENDING' AND (approval.expires_at<=clock_timestamp() OR warehouse_document_draft_expired_at(approval.tenant_id,approval.source_document_id) IS NOT NULL) THEN 'EXPIRED' ELSE approval.status END)
                 AND (?::uuid IS NULL OR approval.source_document_id=?::uuid)
                 AND (?::text IS NULL OR position(lower(?::text) IN lower(approval.source_snapshot::jsonb->'document'->>'code'))>0)
                 AND (?::text IS NULL OR approval.business_action=?::text)

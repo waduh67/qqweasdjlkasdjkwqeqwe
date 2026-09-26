@@ -100,6 +100,10 @@ data class MaterialSummary(
     val demandDocumentId: UUID? = null,
     val demandRevision: Long? = null,
     val template: MaterialTemplateSnapshot? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val planState: String? = null,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null,
 )
 
 data class MaterialSettlementSnapshot(

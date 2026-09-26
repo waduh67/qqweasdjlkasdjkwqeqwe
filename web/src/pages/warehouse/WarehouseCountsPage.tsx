@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
@@ -83,6 +84,7 @@ function CountBody({ details, recent, reload }: { details: CountDetails; recent:
     {manage && owner && count.state === 'DRAFT' && !can('inventory.location.view') && <p className="muted">Perubahan draft memerlukan izin lihat lokasi.</p>}
     {!owner && <p className="muted">Pembuat dokumen memulai, mengajukan, dan membuka hitung ulang. Anda hanya dapat mencatat posisi yang ditugaskan kepada Anda.</p>}
     {owner && count.state === 'COUNTING' && !complete && <p role="status">Tunggu hasil hitung seluruh posisi sebelum mengajukan.</p>}
+    <WarehouseDraftExpired expiry={count.draftExpiry} />
     {count.state === 'RECOUNT_REQUIRED' && <p role="alert">Dokumen memerlukan hitung ulang. Mulai putaran baru dan catat kembali hasil fisik seluruh posisi.</p>}
     {count.state === 'SUBMITTED' && <><p>Hasil diajukan. Stok belum disesuaikan; pembuat perlu mengajukan persetujuan dan pemeriksa independen mengambil keputusan.</p>
       {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(count.id)}`}>Buka persetujuan stock opname</Link>}</>}

@@ -23,7 +23,7 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
     private val eligibility: WarehouseApprovalAuthority, private val masters: WarehouseMasterStore,
     private val sourceLocks: List<WarehouseApprovalSourceLock>, private val owners: List<WarehouseApprovalOwner>,
     private val policy: WarehousePolicyPersistence, private val scopes: InventoryWarehouseScopeApi, private val sites: SiteReferenceApi,
-    transactions: PlatformTransactionManager) : InventoryApprovalQueryApi {
+    transactions: PlatformTransactionManager, private val lifetime: WarehouseDraftLifetimeStore) : InventoryApprovalQueryApi {
     private val transaction = TransactionTemplate(transactions).apply { timeout = 30 }
 
     override fun list(filter: WarehouseApprovalFilter): WarehousePage<WarehouseApprovalSummary> {
@@ -74,7 +74,9 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         val source = store.source(id)
         source.locations.forEach { access.location(it, current) }
         val owner = owners.singleOrNull { it.kind == source.kind } ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+        val expiry = lifetime.document(id)
         val block = when {
+            expiry != null -> "DRAFT_EXPIRED"
             cutovers.read().state != (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) -> "CUTOVER_REQUIRED"
             source.requester != current.fence.identity.userId -> "REQUESTER_REQUIRED"
             !current.platformAdmin && "inventory.approval.request" !in current.permissions -> "REQUEST_PERMISSION_REQUIRED"
@@ -88,7 +90,9 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
                 }
             }
         }
-        WarehouseApprovalSourceView(projection.document(source.content, source.locations), block == null, block)
+        WarehouseApprovalSourceView(projection.document(source.content, source.locations).let {
+            if (expiry != null) it.copy(state = "EXPIRED") else it
+        }, block == null, block, expiry)
     }
 
     override fun attachments(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseApprovalAttachment> = ownTransaction {
@@ -116,7 +120,9 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         val decisions = store.decisions(id)
         val evaluation = record.snapshot.evaluation
         val tier = evaluation.tiers.getOrNull(decisions.size)?.number
+        val expiry = lifetime.document(evaluation.sourceDocumentId)
         val block = when {
+            expiry != null -> "DRAFT_EXPIRED"
             record.status != WarehouseApprovalStatus.PENDING -> "REQUEST_TERMINAL"
             cutovers.read().let { it.state != (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) ||
                 it.epoch != record.snapshot.cutoverEpoch } -> "CUTOVER_CHANGED"
@@ -129,7 +135,7 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
                     "NOT_CURRENT_APPROVER"
                 }
         }
-        val rework = record.status == WarehouseApprovalStatus.REWORK_REQUIRED && source.disposition == "REWORK_REQUIRED" &&
+        val rework = expiry == null && record.status == WarehouseApprovalStatus.REWORK_REQUIRED && source.disposition == "REWORK_REQUIRED" &&
             record.snapshot.requesterId == current.fence.identity.userId && (current.platformAdmin || "inventory.approval.request" in current.permissions) &&
             source.kind !in setOf("ADJUSTMENT", "RETURN_TITLE", "TITLE_CORRECTION", "LOSS", "SCRAP", "DISPOSITION_REVERSAL", "ASSET_LOSS", "COUNT", "OPENING_BALANCE") && !store.isReplacement(evaluation.sourceDocumentId)
         val names = projection.people(evaluation.tiers.flatMap { it.approvers.map { it.userId } }.toSet())
@@ -138,8 +144,9 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         val view = ApprovalOutcomeCodec.view(record)
         val amount = if ((current.platformAdmin || "inventory.cost.view" in current.permissions) && evaluation.valueNumerator != null &&
             evaluation.valueDenominator != null && evaluation.currency != null) WarehouseApprovalAmount(evaluation.valueNumerator, evaluation.valueDenominator, evaluation.currency) else null
-        WarehouseApprovalDetails(view, projection.document(record.snapshot.source, record.snapshot.locations), source.revision, source.state, record.requestedAt,
-            policyView, WarehouseApprovalActions(block == null, block, rework, source.revision, tier), view.effectOperationId?.let { query.effect(id, it) }, amount)
+        WarehouseApprovalDetails(view, projection.document(record.snapshot.source, record.snapshot.locations), source.revision,
+            if (expiry != null) "EXPIRED" else source.state, record.requestedAt,
+            policyView, WarehouseApprovalActions(block == null, block, rework, source.revision, tier), view.effectOperationId?.let { query.effect(id, it) }, amount, expiry)
     }
 
     override fun history(id: UUID, page: WarehousePageRequest): WarehousePage<WarehouseApprovalHistoryEntry> = ownTransaction {
@@ -160,7 +167,9 @@ class WarehouseApprovalQueryService(private val query: WarehouseApprovalQuery, p
         eligibility.view(preview, current)
         store.source(preview.snapshot.evaluation.sourceDocumentId)
         val record = store.get(id, true)
-        if (record.status == WarehouseApprovalStatus.PENDING && policy.now() >= record.expiresAt) approvals.terminate(record, WarehouseApprovalStatus.EXPIRED)
+        val expiry = lifetime.document(preview.snapshot.evaluation.sourceDocumentId)
+        if (record.status == WarehouseApprovalStatus.PENDING && (expiry != null || policy.now() >= record.expiresAt))
+            approvals.terminate(record, WarehouseApprovalStatus.EXPIRED, "DRAFT_EXPIRED".takeIf { expiry != null })
         return Locked(store.get(id), store.source(preview.snapshot.evaluation.sourceDocumentId), current)
     }
     private fun current(): CurrentAuthority {

@@ -25,7 +25,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
     private val store: WarehouseApprovalStore, private val access: WarehousePolicyAccess,
     private val eligibility: WarehouseApprovalAuthority, private val masters: WarehouseMasterStore,
     private val inbox: WarehouseInboxApi, private val owners: List<WarehouseApprovalOwner>, private val probes: List<WarehouseApprovalProbe>,
-    transactionManager: PlatformTransactionManager, private val sourceLocks: List<WarehouseApprovalSourceLock>, private val counts: WarehouseCountStore) {
+    transactionManager: PlatformTransactionManager, private val sourceLocks: List<WarehouseApprovalSourceLock>, private val counts: WarehouseCountStore,
+    private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
     private val transaction = TransactionTemplate(transactionManager)
 
@@ -50,6 +51,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (store.findSource(input.sourceDocumentId, input.sourceRevision) != null) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
         owner(source.kind).validate(source, input.sourceDocumentId)
         if (source.requester != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        lifetime.assertDocumentLive(input.sourceDocumentId)
         val evaluation = policy.evaluate(input)
         if (evaluation.tiers.isEmpty()) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (!independentAssignment(evaluation.tiers, emptySet())) masterFailure(WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED)
@@ -102,7 +104,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             check(original.requestId == record.id && original.sourceDocumentId == attempt.sourceDocumentId &&
                 original.sourceRevision == attempt.sourceRevision && original.policyVersionId == attempt.policyVersionId)
             val response = when {
-                record.status == WarehouseApprovalStatus.PENDING && record.revision == original.requestRevision -> terminate(record, stopped.status)
+                record.status == WarehouseApprovalStatus.PENDING && record.revision == original.requestRevision -> terminate(record, stopped.status,
+                    "DRAFT_EXPIRED".takeIf { lifetime.document(attempt.sourceDocumentId) != null })
                 record.status == stopped.status -> WarehouseApprovalResponse(409, requireNotNull(record.terminalBody))
                 else -> WarehouseApprovalResponse(409, mapper.writeValueAsString(view(record).copy(code = "STALE_REVISION")))
             }
@@ -115,6 +118,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             return response
         }
         val invalid = when {
+            lifetime.document(attempt.sourceDocumentId) != null -> WarehouseApprovalStatus.EXPIRED
             now >= record.expiresAt -> WarehouseApprovalStatus.EXPIRED
             cutover.snapshot.epoch != record.snapshot.cutoverEpoch || cutover.snapshot.state !=
                 (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) -> WarehouseApprovalStatus.STALE
@@ -122,7 +126,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             else -> null
         }
         if (invalid != null) {
-            val response = terminate(record, invalid)
+            val response = terminate(record, invalid, "DRAFT_EXPIRED".takeIf { lifetime.document(attempt.sourceDocumentId) != null })
             recordResponse("decide", key, hash, current, record.id, response, attempt)
             return response
         }
@@ -176,6 +180,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         if (record.snapshot.requesterId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
         val hash = hash(input)
         replay("rework", key, hash, current)?.let { return it }
+        lifetime.assertDocumentLive(record.snapshot.evaluation.sourceDocumentId)
         if (record.status != WarehouseApprovalStatus.REWORK_REQUIRED || source.disposition != "REWORK_REQUIRED") masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (source.kind == "RETURN_TITLE") throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED,
             "Create a new return title request with current evidence"))
@@ -228,12 +233,13 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         store.response(namespace, key, current.fence.identity.userId, id, hash, response, attempt)
         probe(WarehouseApprovalStage.RESPONSE, id)
     }
-    internal fun terminate(record: WarehouseApprovalRecord, status: WarehouseApprovalStatus): WarehouseApprovalResponse {
+    internal fun terminate(record: WarehouseApprovalRecord, status: WarehouseApprovalStatus, code: String? = null): WarehouseApprovalResponse {
         if (record.snapshot.evaluation.operation == PolicyOperation.COUNT_VARIANCE) {
             val session = counts.get(record.snapshot.evaluation.sourceDocumentId)
             if (session.view.state == WarehouseCountState.SUBMITTED) counts.advance(session.view.id, session.view.revision, WarehouseCountState.RECOUNT_REQUIRED)
         }
-        val result = body(record.copy(status = status, revision = record.revision + 1))
+        val terminal = record.copy(status = status, revision = record.revision + 1)
+        val result = if (code == null) body(terminal) else mapper.writeValueAsString(view(terminal).copy(code = code))
         store.advance(record, status, result)
         return WarehouseApprovalResponse(409, result)
     }

@@ -21,7 +21,9 @@ data class MaterialPlanSnapshot(val id: UUID, val workOrderId: UUID, val workOrd
     val action: String, val customerId: UUID?, val workOrderRevision: Long, val planRevision: Long,
     val materialMode: MaterialMode, val reason: String?, val templateId: UUID?, val actorId: UUID,
     val lines: List<MaterialPlanSnapshotLine>, val recordedAt: Instant)
-data class MaterialPlanHistory(val plan: MaterialPlanSnapshot, val state: String, val demandDocumentId: UUID?)
+data class MaterialPlanHistory(val plan: MaterialPlanSnapshot, val state: String, val demandDocumentId: UUID?,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)
 data class MaterialTemplateSnapshot(val id: UUID, val workType: String, val action: String, val revision: Long,
     val lines: List<MaterialPlanSnapshotLine>)
 data class MaterialTemplateRequest(val expectedRevision: Long, val lines: List<MaterialPlanLine>)

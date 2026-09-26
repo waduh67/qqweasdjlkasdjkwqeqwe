@@ -27,6 +27,17 @@ beforeEach(() => {
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
+it('keeps expired plan revision visible and offers a new plan without submitting the old one', async () => {
+  const expired = { ...materialSummaryFixture, planState: 'EXPIRED', demandState: 'DRAFT',
+    demandDocumentId: null, demandRevision: null, lines: [],
+    draftExpiry: { deadline: '2026-09-26T12:00:00Z', recordedAt: null, reason: 'IDLE_DEADLINE' } }
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => reader(path, expired, [])))
+  show(); await screen.findByText(/Draf kedaluwarsa sejak/)
+  expect(screen.getByRole('button', { name: 'Susun rencana material baru' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Ajukan permintaan' })).toBeNull()
+  expect(screen.getByText(/Rencana 1 · WO revisi 5/)).toBeTruthy()
+})
+
 it('requires both request and work-order visibility before reading any scoped data', () => {
   mocks.permissions.delete('inventory.request.view')
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); show()

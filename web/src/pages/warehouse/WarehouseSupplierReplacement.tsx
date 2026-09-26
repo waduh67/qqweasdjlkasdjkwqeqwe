@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Checkbox } from '@fluentui/react-components'
@@ -40,7 +41,7 @@ function ReplacementReceipt({ item }: { item: SupplierReplacement }) {
   const loader = useCallback(() => getReceipt(item.receiptId), [item.receiptId]), result = useWarehouseQuery(loader)
   return <WarehouseState {...result}>{receipt => <section className="stack"><h3>{receipt.externalReference}</h3>
     <p>{receipt.supplierName} · <WarehouseStatus status={receipt.state} /> · <WarehouseStatus status={item.legalOwner} /></p>
-    {receipt.lines.map(line => <p key={line.id}>{line.skuName} · {line.serial ?? 'Serial belum tercatat'}</p>)}
+    <WarehouseDraftExpired expiry={receipt.draftExpiry} />{receipt.lines.map(line => <p key={line.id}>{line.skuName} · {line.serial ?? 'Serial belum tercatat'}</p>)}
     <p>{item.replacementAssetId ? 'Identitas pengganti telah terbentuk; ikuti pemeriksaan dan lokasi pada penerimaannya.' : 'Usulan pengganti sudah tercatat. Belum ada perangkat pengganti yang diterima.'}</p>
     <Link to={`/warehouse/receipts?receiptId=${encodeURIComponent(item.receiptId)}`}>Buka penerimaan {receipt.externalReference}</Link>
   </section>}</WarehouseState>

@@ -39,6 +39,15 @@ function server({ conflict = false, missingSignature = false } = {}) {
   } }
 }
 function show() { return render(<MemoryRouter initialEntries={[`/warehouse/returns?returnId=${id.returnCase}`]}><WarehouseReturnsPage /></MemoryRouter>) }
+
+it('retains an expired ownership proposal without presenting it as an applied transfer', async () => {
+  const state = server()
+  state.entries.push({ ...entry, state: 'EXPIRED', draftExpiry: { deadline: '2026-09-26T12:00:00Z', recordedAt: null, reason: 'IDLE_DEADLINE' } })
+  show(); await screen.findByText(/Draf kedaluwarsa sejak/)
+  expect(screen.getByRole('link', { name: 'Buka persetujuan RET-TITLE-001' })).toBeTruthy()
+  expect(screen.queryByText(/Alih kepemilikan sudah dicatat pada retur revisi/)).toBeNull()
+  expect(screen.getByRole('button', { name: 'Siapkan alih kepemilikan' })).toBeTruthy()
+})
 async function prepare() {
   fireEvent.click(await screen.findByRole('button', { name: 'Siapkan alih kepemilikan' }))
   const form = await screen.findByRole('form', { name: 'Permintaan alih kepemilikan' })

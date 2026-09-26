@@ -51,7 +51,7 @@ dependencies {
     // Boot 4 memecah autoconfigure per teknologi; FlywayAutoConfiguration ada di modul ini.
     implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
-    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.postgresql:postgresql")
 
     // Geometri PostGIS. Kehadiran modul ini membuat PostgreSQLDialect otomatis
     // mengaktifkan dukungan spasial; JTS ikut sebagai dependensi transitif.

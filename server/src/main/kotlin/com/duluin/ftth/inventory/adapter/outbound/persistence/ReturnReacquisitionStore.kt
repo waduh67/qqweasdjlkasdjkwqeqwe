@@ -9,13 +9,13 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 @Repository
-class ReturnReacquisitionStore(private val jdbc: WarehouseCommandJdbc) {
+class ReturnReacquisitionStore(private val jdbc: WarehouseCommandJdbc, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
 
     fun list(id: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): WarehousePage<ReturnReacquisitionEntry> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page.page, page.size, "createdAt", "desc"), access)
         val rows = """SELECT document.id,document.created_at,
-                jsonb_build_object('snapshot',title.snapshot::jsonb,'appliedReturnRevision',effect.return_revision) body
+                jsonb_build_object('snapshot',title.snapshot::jsonb,'appliedReturnRevision',effect.return_revision,'state',document.state,'revision',document.revision) body
             FROM inventory_return_title_request title
             JOIN inventory_document document ON document.tenant_id=title.tenant_id AND document.id=title.id
             LEFT JOIN inventory_return_title_effect effect ON effect.tenant_id=title.tenant_id AND effect.request_id=title.id,request
@@ -26,9 +26,11 @@ class ReturnReacquisitionStore(private val jdbc: WarehouseCommandJdbc) {
         val result = mapper.readTree(query.result(query.page(rows, "body", "created_at"), id))
         val items = result.path("items").asSequence().map { item ->
             val record = mapper.treeToValue(item.path("snapshot"), ReturnTitleRecord::class.java)
-            ReturnReacquisitionEntry(record.id, record.returned.view.id, 0, record.code, record.returned.view.revision,
+            val expiry = lifetime.document(record.id)
+            ReturnReacquisitionEntry(record.id, record.returned.view.id, item.path("revision").asLong(), record.code, record.returned.view.revision,
                 record.request.reason, record.request.titleTransferReference, record.signature.id, record.recordedAt,
-                item.path("appliedReturnRevision").takeUnless { it.isNull }?.asLong())
+                item.path("appliedReturnRevision").takeUnless { it.isNull }?.asLong(),
+                if (expiry == null) item.path("state").asString() else "EXPIRED", expiry)
         }.toList()
         WarehousePage(items, page.page, page.size, result.path("totalElements").asLong())
     }

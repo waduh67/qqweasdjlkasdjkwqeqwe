@@ -25,7 +25,9 @@ data class WarehouseCountObservation(val expectedRevision: Long, val balanceId: 
 data class WarehouseCountEntry(val balanceId: UUID, val counterId: UUID, val stockIdentityId: UUID,
     val skuId: UUID, val baseUnit: WarehouseBaseUnit)
 data class WarehouseCountView(val id: UUID, val revision: Long, val state: WarehouseCountState, val locationId: UUID,
-    val partialLocation: Boolean, val roundRevision: Long?, val entries: List<WarehouseCountEntry>)
+    val partialLocation: Boolean, val roundRevision: Long?, val entries: List<WarehouseCountEntry>,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)
 data class WarehouseCountFact(val id: UUID, val balanceId: UUID, val counterId: UUID, val roundRevision: Long,
     val quantityBase: String, val baseUnit: WarehouseBaseUnit, val reason: String, val documentReference: String)
 data class WarehouseCountComparison(val balanceId: UUID, val counterId: UUID, val bookQuantityBase: String,

@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getReceipt, getReceiptHistory, listReceipts, RECEIPT_STATES, receiveReceipt, type ReceiptTransition, type WarehouseReceipt } from '@/api/warehouse/receipts'
@@ -21,7 +22,7 @@ import { WarehouseReceiptEvidence } from './WarehouseReceiptEvidence'
 import { receiptLink, saveReceiptFile } from './receiptFiles'
 import { WarehouseLocationEditor } from './WarehouseLocationEditor'
 
-const stateLabels: Record<WarehouseReceipt['state'], string> = { DRAFT: 'Draft', RECEIVED_IN_INSPECTION: 'Dalam pemeriksaan', PUTAWAY: 'Selesai ditempatkan', CLOSED: 'Ditutup' }
+const stateLabels: Record<WarehouseReceipt['state'], string> = { EXPIRED: 'Kedaluwarsa', DRAFT: 'Draft', RECEIVED_IN_INSPECTION: 'Dalam pemeriksaan', PUTAWAY: 'Selesai ditempatkan', CLOSED: 'Ditutup' }
 
 export function WarehouseReceiptsPage() {
   const [params, setParams] = useSearchParams()
@@ -87,7 +88,8 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
     <section className="card stack" aria-label="Detail penerimaan"><h2>{receipt.externalReference}</h2><p>{receipt.supplierName} · <WarehouseStatus status={receipt.state} /> · Revisi {receipt.revision}</p>
       <p>{receipt.sourceLocationName ?? 'Batas penerimaan'} → {receipt.inspectionLocationName ?? 'Lokasi pemeriksaan'}</p>
       <p className="muted"><WarehouseTime value={receipt.createdAt} /> · Referensi audit: {receipt.id}</p>
-      <p>{receipt.state === 'DRAFT' ? 'Draft belum menambah stok.' : receipt.state === 'RECEIVED_IN_INSPECTION' ? 'Barang sudah diterima. Bagian yang lolos pemeriksaan masih karantina sampai ditempatkan.' : 'Penerimaan telah selesai; lihat jumlah diterima, ditolak dan ditempatkan di bawah.'}</p>
+      <WarehouseDraftExpired expiry={receipt.draftExpiry} />
+      {receipt.state !== 'EXPIRED' && <p>{receipt.state === 'DRAFT' ? 'Draft belum menambah stok.' : receipt.state === 'RECEIVED_IN_INSPECTION' ? 'Barang sudah diterima. Bagian yang lolos pemeriksaan masih karantina sampai ditempatkan.' : 'Penerimaan telah selesai; lihat jumlah diterima, ditolak dan ditempatkan di bawah.'}</p>}
       <div className="row wrap"><Button onClick={reload}>Muat ulang</Button><Button onClick={saveReference}>Simpan referensi</Button>
         {manage && receipt.state === 'DRAFT' && <>{receipt.draftEditability === 'EDITABLE' && <Button disabled={!can('inventory.cost.view') || !receipt.costVisible || !can('inventory.sku.view') || !can('inventory.location.view')} onClick={() => setEdit(true)}>Ubah draft</Button>}
           <Button variant="primary" onClick={() => setOperation(receiveReceipt(receipt.id, receipt.revision))}>Terima barang</Button></>}

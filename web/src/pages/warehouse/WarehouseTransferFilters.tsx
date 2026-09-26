@@ -9,7 +9,7 @@ import { locationLabel } from './receiptChoices'
 
 const skus = (search: string, page: number) => listSkus({ search, page })
 const locations = (search: string, page: number) => listLocations({ search, page })
-const stateLabels: Record<TransferState, string> = { DRAFT: 'Draf', DISPATCHED: 'Dikirim', PART_RECEIVED: 'Sebagian diterima', RECEIVED: 'Diterima', DISCREPANCY: 'Penanganan selisih' }
+const stateLabels: Record<TransferState, string> = { EXPIRED: 'Kedaluwarsa', DRAFT: 'Draf', DISPATCHED: 'Dikirim', PART_RECEIVED: 'Sebagian diterima', RECEIVED: 'Diterima', DISCREPANCY: 'Penanganan selisih' }
 export function WarehouseTransferFilters({ onApply }: { onApply: (filter: TransferFilter) => void }) {
   const { can } = useCan()
   const [sku, setSku] = useState<WarehouseSku | null>(null), [location, setLocation] = useState<WarehouseLocation | null>(null)

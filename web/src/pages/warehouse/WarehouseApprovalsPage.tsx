@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
@@ -56,7 +57,7 @@ function ApprovalList({ sourceId }: { sourceId?: string }) {
 }
 function ApprovalSource({ id }: { id: string }) {
   const loader = useCallback(() => getApprovalSource(id), [id]), result = useWarehouseQuery(loader)
-  return <WarehouseState {...result}>{source => <><WarehouseApprovalDocument document={source.document} />
+  return <WarehouseState {...result}>{source => <><WarehouseApprovalDocument document={source.document} /><WarehouseDraftExpired expiry={source.draftExpiry} />
     <SourceRequest document={source.document} allowed={source.canRequest} block={source.requestBlock} reload={result.reload} /><ApprovalList sourceId={id} />
   </>}</WarehouseState>
 }
@@ -94,7 +95,7 @@ function ApprovalBody({ details, reload }: { details: ApprovalDetails; reload: (
   const own = user?.id === document.requester.id
   return <><section className="card stack" aria-label="Status persetujuan"><h2><WarehouseStatus status={approval.status} /></h2>
     <p>Revisi permintaan {approval.revision} · Diajukan <WarehouseTime value={details.requestedAt} /></p>
-    <p>Berlaku sampai <WarehouseTime value={approval.expiresAt} /></p>
+    <p>Berlaku sampai <WarehouseTime value={approval.expiresAt} /></p><WarehouseDraftExpired expiry={details.draftExpiry} />
     <p>Dokumen yang diperiksa: revisi {document.revision}. Sumber saat ini: revisi {details.currentSourceRevision}, <WarehouseStatus status={details.currentSourceState} />.</p>
     <p>{approvalImpact(document.kind)}</p><div className="row wrap"><Button onClick={reload}>Muat ulang persetujuan</Button><Link to={sourcePath(document.id)}>Buka sumber dan pengajuan lainnya</Link></div>
     {details.cost && can('inventory.cost.view') && <p>Nilai persetujuan: <strong>{approvalCostLabel(details.cost)}</strong></p>}

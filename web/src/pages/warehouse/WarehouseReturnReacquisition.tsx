@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Checkbox } from '@fluentui/react-components'
@@ -25,7 +26,7 @@ export function WarehouseReturnReacquisition({ details, reload }: { details: Ret
     <WarehouseState {...result}>{data => <>
       {data.items.length ? data.items.map(item => <section className="stack" key={item.documentId}>
         <h3 style={{ overflowWrap: 'anywhere' }}>{item.code}</h3><p>Retur sumber revisi {item.sourceReturnRevision} · <WarehouseTime value={item.recordedAt} /></p>
-        <p>Alasan: {item.reason}</p><p>Referensi persetujuan pelanggan: {item.titleTransferReference}</p>
+        <WarehouseDraftExpired expiry={item.draftExpiry} /><p>Alasan: {item.reason}</p><p>Referensi persetujuan pelanggan: {item.titleTransferReference}</p>
         <p>{item.appliedReturnRevision === null ? 'Dokumen permintaan tersimpan. Periksa keputusan pada halaman persetujuan.' : `Alih kepemilikan sudah dicatat pada retur revisi ${item.appliedReturnRevision}. Ikuti kondisi dan lokasi terbaru pada retur.`}</p>
         <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(item.documentId)}`}>Buka persetujuan {item.code}</Link>
       </section>) : <p>Belum ada permintaan alih kepemilikan pada halaman ini.</p>}

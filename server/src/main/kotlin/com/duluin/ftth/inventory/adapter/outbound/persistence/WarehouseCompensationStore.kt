@@ -10,7 +10,7 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 @Repository
-class WarehouseCompensationStore(private val jdbc: WarehouseCommandJdbc) {
+class WarehouseCompensationStore(private val jdbc: WarehouseCommandJdbc, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
 
     fun originalPosting(id: UUID): Pair<UUID, Long> = jdbc.execute { sql ->
@@ -75,7 +75,7 @@ class WarehouseCompensationStore(private val jdbc: WarehouseCommandJdbc) {
             FROM inventory_compensation_request request JOIN inventory_document document
                 ON document.tenant_id=request.tenant_id AND document.id=request.id WHERE request.tenant_id=? AND request.id=?""", sql.tenant, id) {
             mapper.readValue(it.getString("snapshot"), WarehouseCompensationRecord::class.java)
-                .view(it.getLong("revision"), state(it.getString("state"), it.getString("approval_disposition")))
+                .view(it.getLong("revision"), state(it.getString("state"), it.getString("approval_disposition"))).let(::currentView)
         }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 
@@ -90,8 +90,13 @@ class WarehouseCompensationStore(private val jdbc: WarehouseCommandJdbc) {
         val result = mapper.readTree(query.result(query.page(rows, "body", "created_at"), original))
         WarehousePage(result.path("items").asSequence().map {
             mapper.treeToValue(it.path("snapshot"), WarehouseCompensationRecord::class.java).view(it.path("revision").asLong(),
-                state(it.path("state").asString(), it.path("approvalDisposition").asString(null)))
+                state(it.path("state").asString(), it.path("approvalDisposition").asString(null))).let(::currentView)
         }.toList(), page.page, page.size, result.path("totalElements").asLong())
+    }
+
+    private fun currentView(view: WarehouseCompensationView): WarehouseCompensationView {
+        val expiry = lifetime.document(view.id) ?: return view
+        return view.copy(state = WarehouseDispositionState.EXPIRED, draftExpiry = expiry)
     }
 
     private fun state(state: String, disposition: String?): WarehouseDispositionState = when {

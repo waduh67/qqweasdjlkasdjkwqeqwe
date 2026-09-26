@@ -35,10 +35,12 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
             assertReceiptApproval(sql, approval, true)
         }
         val result = WarehousePostResult(command.operation.postingId,command.operation.id,Math.addExact(command.expectedRevision,1),command.operation.recordedAt)
-        documents.advance(command,result,cutoverEpoch)
-        try { documents.header(command,result) }
+        try {
+            documents.advance(command,result,cutoverEpoch)
+            documents.header(command,result)
+        }
         catch (failure: SQLException) {
-            if (command.approval != null && failure.sqlState == "23514" && failure.message.orEmpty().contains("posting requires live document-bound approval"))
+            if (command.approval != null && (failure.isDraftExpired() || (failure.sqlState == "23514" && failure.message.orEmpty().contains("posting requires live document-bound approval"))))
                 throw ApprovalPostingStopped(command.approval, com.duluin.ftth.inventory.WarehouseApprovalStatus.EXPIRED)
             throw failure
         }
@@ -66,6 +68,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
                 when(failure.sqlState) {
                     "23505" -> sql.fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
                     "40001", "40P01" -> sql.fail(WarehouseErrorCode.STALE_REVISION)
+                    "23514" -> if (failure.isDraftExpired()) sql.fail(WarehouseErrorCode.DRAFT_EXPIRED) else throw failure
                     else -> throw failure
                 }
             }

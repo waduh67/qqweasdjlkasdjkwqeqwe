@@ -8,7 +8,7 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 @Repository
-class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc) {
+class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc, private val lifetime: WarehouseDraftLifetimeStore) {
     private val mapper = jacksonObjectMapper()
 
     fun context(id: UUID): SupplierReplacementContext = jdbc.execute { sql ->
@@ -70,13 +70,18 @@ class SupplierReplacementStore(private val jdbc: WarehouseCommandJdbc) {
     fun list(id: UUID, page: WarehousePageRequest, access: WarehouseQueryAccess): List<SupplierReplacementView> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, WarehouseQueryFilter(page.page, page.size, "createdAt", "asc"), access)
         val rows = """SELECT replacement.id,replacement.created_at,(replacement.snapshot::jsonb->'view')
-                || jsonb_build_object('replacementAssetId',line.stock_identity_id) body
+                || jsonb_build_object('replacementAssetId',line.stock_identity_id,'receiptState',document.state) body
             FROM inventory_repair_replacement_request replacement
+            JOIN inventory_document document ON document.tenant_id=replacement.tenant_id AND document.id=replacement.receipt_id
             JOIN inventory_document_line line ON line.tenant_id=replacement.tenant_id AND line.document_id=replacement.receipt_id,request
             WHERE replacement.tenant_id=request.tenant AND replacement.return_id=?
                 AND (replacement.snapshot::jsonb#>>'{input,sourceLocationId}')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')
                 AND (replacement.snapshot::jsonb#>>'{input,inspectionLocationId}')::uuid IN (SELECT id FROM visible_locations WHERE state='ACTIVE')"""
         mapper.readTree(query.result(query.page(rows, "body", "created_at"), id)).path("items")
-            .asSequence().map { mapper.treeToValue(it, SupplierReplacementView::class.java) }.toList()
+            .asSequence().map {
+                val view = mapper.treeToValue(it, SupplierReplacementView::class.java)
+                val expiry = lifetime.document(view.receiptId)
+                if (expiry == null) view else view.copy(receiptState = "EXPIRED", draftExpiry = expiry)
+            }.toList()
     }
 }

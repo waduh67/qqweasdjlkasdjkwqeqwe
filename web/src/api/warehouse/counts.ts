@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { array, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { baseUnit } from './materialModels'
 import { timestamp } from './approvals'
@@ -5,7 +6,7 @@ import { CONDITIONS, LEGAL_OWNERS, STOCK_STATES, TRACKING } from './models'
 import { CUSTODIAN_KINDS } from './stock'
 import { command, parameters, query } from './transport'
 
-export const COUNT_STATES = ['DRAFT', 'COUNTING', 'SUBMITTED', 'RECOUNT_REQUIRED', 'APPROVED', 'POSTED'] as const
+export const COUNT_STATES = ['DRAFT', 'EXPIRED', 'COUNTING', 'SUBMITTED', 'RECOUNT_REQUIRED', 'APPROVED', 'POSTED'] as const
 export interface CountDraft { locationId: string; partialLocation: true; reason: string; entries: { balanceId: string; counterId: string }[] }
 export interface CountObservation { expectedRevision: number; balanceId: string; quantityBase: string; reason: string; documentReference: string }
 function countEntry(value: unknown, path = 'entry') {
@@ -16,6 +17,7 @@ function countEntry(value: unknown, path = 'entry') {
 export function countView(value: unknown, path = 'count') {
   const row = record(value, path), entries = array(row.entries, countEntry, path, 100)
   const result = { id: uuid(row.id, path), revision: integer(row.revision, path), state: oneOf(row.state, COUNT_STATES, path), locationId: uuid(row.locationId, path),
+    ...draftExpiryFields(row.draftExpiry, row.state === 'EXPIRED'),
     partialLocation: row.partialLocation, roundRevision: nullable(row.roundRevision, integer, path), entries }
   if (result.partialLocation !== true || !entries.length || new Set(entries.map(row => row.balanceId)).size !== entries.length ||
     (result.roundRevision !== null && result.roundRevision > result.revision) || (result.state === 'COUNTING' && result.roundRevision === null)) throw new WarehouseDataError(path)

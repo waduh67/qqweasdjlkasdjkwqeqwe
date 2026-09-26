@@ -1,3 +1,4 @@
+import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listCompensations, listDispositions, type Disposition } from '@/api/warehouse/dispositions'
@@ -25,7 +26,7 @@ export function WarehouseReturnDispositions({ details, reload }: { details: Retu
     <Button onClick={result.reload}>Muat ulang disposisi</Button><WarehouseState {...result}>{data => <>
       {data.items.length ? data.items.map(row => <section className="stack" key={row.id}><h3 style={{ overflowWrap: 'anywhere' }}>{row.code}</h3><p>{row.action === 'LOSS' ? 'Kehilangan' : 'Scrap'} · <WarehouseStatus status={row.state} /> · Revisi {row.revision}</p>
         <p><WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> · Retur sumber revisi {row.sourceRevision} · <WarehouseTime value={row.recordedAt} /></p>
-        <p>{row.reason}</p><p style={{ overflowWrap: 'anywhere' }}>Bukti: {row.evidenceReference}</p>
+        <WarehouseDraftExpired expiry={row.draftExpiry} /><p>{row.reason}</p><p style={{ overflowWrap: 'anywhere' }}>Bukti: {row.evidenceReference}</p>
         {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(row.id)}`}>Buka persetujuan {row.code}</Link>}
         {row.state === 'POSTED' && <Compensations details={details} original={row} manage={manage} reload={reload} />}
       </section>) : <p>Belum ada disposisi pada halaman ini.</p>}
@@ -40,7 +41,7 @@ function Compensations({ details, original, manage, reload }: { details: ReturnD
     {creating ? <WarehouseDispositionForm details={details} original={original} onClose={() => setCreating(false)} onDone={() => { setCreating(false); result.reload() }} onReload={reload} />
       : manage && details.returnCase.legalOwner === 'ISP' && ['LOST', 'SCRAP'].includes(details.returnCase.state) && <Button onClick={() => setCreating(true)}>Ajukan koreksi ke karantina</Button>}
     <WarehouseState {...result}>{data => <>{data.items.map(row => <div key={row.id}><p>{row.code} · <WarehouseStatus status={row.state} /> · <WarehouseTime value={row.recordedAt} /></p>
-      <p>{row.reason} · Bukti: {row.evidenceReference}</p><p style={{ overflowWrap: 'anywhere' }}>Pembukuan yang dikoreksi: {row.originalPostingId}</p>
+      <WarehouseDraftExpired expiry={row.draftExpiry} /><p>{row.reason} · Bukti: {row.evidenceReference}</p><p style={{ overflowWrap: 'anywhere' }}>Pembukuan yang dikoreksi: {row.originalPostingId}</p>
       {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(row.id)}`}>Buka persetujuan {row.code}</Link>}</div>)}
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></>}</WarehouseState>
   </div>

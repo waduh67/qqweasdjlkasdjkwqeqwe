@@ -2,6 +2,7 @@ import { ApiError } from '../client'
 import { WarehouseDataError } from './codec'
 
 const messages: Record<string, string> = {
+  DRAFT_EXPIRED: 'Draf sudah kedaluwarsa. Muat ulang untuk melihat riwayat, lalu buat draf atau proposal baru dari alur sumber.',
   MALFORMED_REQUEST: 'Periksa kembali isian, satuan dan format jumlah sebelum menyimpan.',
   INSUFFICIENT_STOCK: 'Stok yang tersedia tidak cukup. Muat ulang stok lalu pilih jumlah atau sumber lain.',
   SOURCE_NOT_VERIFIED: 'Sumber belum memenuhi syarat atau kode/serial sudah digunakan. Periksa barang, status dan referensinya.',

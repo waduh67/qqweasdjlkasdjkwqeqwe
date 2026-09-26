@@ -17,4 +17,6 @@ data class WarehouseAssetLossView(val id: UUID, val code: String, val revision: 
     val state: WarehouseDispositionState, val assignmentId: UUID, val sourceHandoverId: UUID,
     val stockIdentityId: UUID, val sourceLocationId: UUID, val destinationLocationId: UUID,
     val quantityBase: String, val baseUnit: WarehouseBaseUnit, val reason: String,
-    val evidenceId: UUID, val recordedAt: Instant)
+    val evidenceId: UUID, val recordedAt: Instant,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftExpiry: WarehouseDraftExpiry? = null)

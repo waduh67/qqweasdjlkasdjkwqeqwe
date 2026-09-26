@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "checkpointParent": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+  "source": "uncommitted C7 server core, receipt actual-clock tests and catalog",
+  "runner": "draft-expiry-receipt-r1.sh",
+  "runnerSha256": "73e6392eb335fcc1f04c63a9e5c38c6acf788032377e7073569fba19669ab359",
+  "exitCode": 0,
+  "cleanupExitCode": 0,
+  "sourceInputCount": 2607,
+  "sourceInputInventorySha256": "5ef307956fa2439b8ce5d8f5d71d63236902ce2699f1c17d04000f24c24d7d68",
+  "counts": {
+    "tests": 98,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "d69db9692f82b100420240b9ecaba882076e71cdaaed323c44c40ae1c998de73",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryReceiptIT",
+      "sha256": "975c1db8706bc32170c9ef116f8fdf6ddcbd4ab43829f54fc36305e40588309d",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReceiptITFormState",
+      "sha256": "af2626ed17de4acf116ac96b20c7b5cf59d88d8d6ab0acddc99ca99c154d6bce",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+      "sha256": "3349a4e9e8f27c6b6115ad320d8517c07208a7edf01dfffd82e386dcd7fd2d95",
+      "tests": 62,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "migration": {
+    "file": "V178_12__warehouse_idle_draft_expiry.sql",
+    "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+    "applied": true,
+    "immutable": true
+  },
+  "scope": [
+    "5 receipt expiry tests with real database clock, worker disabled command guard, terminal worker persistence, original replay, pinned policy, application privilege rejection and blocked save deadline race",
+    "28 existing receipt form-state tests",
+    "62 selective deferred-scope/catalog tests",
+    "3 module tests"
+  ],
+  "excludes": [
+    "other C7 families, upgrade handoff, worker pending-approval race",
+    "C7 browser/full regression and final F1-F4"
+  ]
+}

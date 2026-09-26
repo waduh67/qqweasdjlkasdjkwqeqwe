@@ -25,6 +25,16 @@ beforeEach(() => {
   mocks.user.id = id.requester; tokenStore.clear()
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
+
+it('retains expired count assignments without allowing a count round to start', async () => {
+  const expired: WarehouseCount = { ...countFixture(), state: 'EXPIRED',
+    draftExpiry: { deadline: '2026-09-26T12:00:00Z', recordedAt: null, reason: 'IDLE_DEADLINE' } }
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => read(path, expired)))
+  show(); await screen.findByText(/Draf kedaluwarsa sejak/)
+  expect(screen.queryByRole('button', { name: 'Mulai penghitungan' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Ubah draft stock opname' })).toBeNull()
+  expect(screen.getByText('Penghitung A')).toBeTruthy()
+})
 it('rejects inaccessible and duplicate deep links before requesting data', () => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); mocks.permissions.clear()
   const first = show(); expect(screen.getByRole('alert')).toBeTruthy(); first.unmount()

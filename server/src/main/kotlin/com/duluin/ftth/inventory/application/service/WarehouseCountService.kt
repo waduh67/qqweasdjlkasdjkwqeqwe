@@ -16,7 +16,8 @@ import java.util.UUID
 class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehousePolicyAccess, private val masters: WarehouseMasterStore,
     private val store: WarehouseCountStore, private val receipts: WarehouseCountReceipts, private val operations: WarehouseOperationStore,
-    private val query: WarehouseCountQuery, private val counters: WarehouseCountCounters) : InventoryCountApi {
+    private val query: WarehouseCountQuery, private val counters: WarehouseCountCounters,
+    private val lifetime: WarehouseDraftLifetimeStore) : InventoryCountApi {
     private val mapper = jacksonObjectMapper()
 
     override fun create(input: WarehouseCountDraft, key: String): WarehouseOperationReceipt {
@@ -41,6 +42,7 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         validateDraft(input.draft)
         return mutate(id, input, input.expectedRevision, "update", key) { session, current ->
             requester(session, current)
+            lifetime.assertDocumentLive(id)
             state(session, WarehouseCountState.DRAFT)
             if (session.view.roundRevision != null || store.facts(id).isNotEmpty()) masterFailure(WarehouseErrorCode.STALE_REVISION)
             val positions = positions(input.draft, current)
@@ -51,6 +53,7 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
 
     override fun start(id: UUID, input: WarehouseCountRevision, key: String) = mutate(id, input, input.expectedRevision, "start", key) { session, current ->
         requester(session, current)
+        lifetime.assertDocumentLive(id)
         state(session, WarehouseCountState.DRAFT)
         store.advance(id, input.expectedRevision, WarehouseCountState.COUNTING)
         store.startRound(id, input.expectedRevision + 1)
@@ -108,7 +111,7 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         masters.lockTopology()
         val session = store.get(id)
         authorize(session, current)
-        return session.view
+        return currentView(session.view)
     }
 
     override fun history(id: UUID, page: WarehousePageRequest): List<WarehouseCountFact> {
@@ -139,7 +142,7 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         access.permission(current, "inventory.count.view")
         masters.lockTopology()
         val visible = store.candidates().mapNotNull { id ->
-            try { store.get(id).also { authorize(it, current) }.view }
+            try { currentView(store.get(id).also { authorize(it, current) }.view) }
             catch (failure: WarehouseContractException) { if (failure.error.code == WarehouseErrorCode.NOT_FOUND) null else throw failure }
         }
         val offset = page.toLong() * size
@@ -168,6 +171,11 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
             if (error == null) 200 else error.httpStatus, body)
         if (result.state == WarehouseCountState.POSTED) store.complete(session, revision, receipt.operationId, null)
         return receipt
+    }
+
+    private fun currentView(view: WarehouseCountView): WarehouseCountView {
+        val expiry = lifetime.document(view.id)
+        return view.copy(state = if (expiry != null) WarehouseCountState.EXPIRED else view.state, draftExpiry = expiry)
     }
 
     private fun replay(action: String, key: String, hash: String, current: CurrentAuthority, epoch: Long): WarehouseOperationReceipt? {

@@ -1,3 +1,4 @@
+import { draftExpiryFields } from './draftExpiry'
 import { api } from '../client'
 import { array, boolean, decimal, integer, nullable, oneOf, pageOf, record, text, uuid, WarehouseDataError } from './codec'
 import { timestamp } from './approvals'
@@ -5,7 +6,7 @@ import { CONDITIONS, LEGAL_OWNERS, STOCK_STATES, TRACKING } from './models'
 import type { BaseUnit } from './quantity'
 import { command, parameters, query, uploadCommand } from './transport'
 
-export const RECEIPT_STATES = ['DRAFT', 'RECEIVED_IN_INSPECTION', 'PUTAWAY', 'CLOSED'] as const
+export const RECEIPT_STATES = ['DRAFT', 'EXPIRED', 'RECEIVED_IN_INSPECTION', 'PUTAWAY', 'CLOSED'] as const
 export interface ReceiptSerialInput { serial: string; mac?: string | null }
 export interface ReceiptConversion { numerator: string; denominator: string; packageQuantity: string }
 export interface ReceiptCost { totalMinor: string; currency: string }
@@ -55,6 +56,7 @@ export function receipt(value: unknown, path = 'receipt') {
     // Original replay responses may predate the additive snapshot-name fields. Always reload after a command.
     sourceLocationName: nullable(row.sourceLocationName, text, path), inspectionLocationName: nullable(row.inspectionLocationName, text, path),
     costVisible: row.costVisible === undefined ? false : boolean(row.costVisible, path),
+    ...draftExpiryFields(row.draftExpiry, row.state === 'EXPIRED'),
     draftEditability: nullable(row.draftEditability, (value, key) => oneOf(value, ['EDITABLE', 'SEALED_SUPPLIER_REPLACEMENT', 'NOT_DRAFT'], key), path),
     lines: array(row.lines, line, path, 500), inspections: array(row.inspections, inspection, path, 10000) }
 }

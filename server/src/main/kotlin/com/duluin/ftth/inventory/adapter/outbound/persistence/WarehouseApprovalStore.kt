@@ -111,8 +111,8 @@ class WarehouseApprovalStore(private val jdbc: WarehouseCommandJdbc) {
             decision.delegation?.id, requireNotNull(record.snapshot.evaluation.policy).id, decision.authorityEpoch,
             mapper.writeValueAsString(decision), decision.evidenceReference) }
         catch (failure: java.sql.SQLException) {
-            if (postingApproval != null && failure.sqlState == "23514" &&
-                failure.message.orEmpty().contains("decision requires current pending revision and unexpired request"))
+            if (postingApproval != null && (failure.isDraftExpired() || (failure.sqlState == "23514" &&
+                failure.message.orEmpty().contains("decision requires current pending revision and unexpired request"))))
                 throw ApprovalPostingStopped(postingApproval, WarehouseApprovalStatus.EXPIRED)
             throw failure
         }
