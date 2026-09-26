@@ -14,7 +14,7 @@ const states: Record<string, [string, Tone]> = {
   POSTED: ['Dibukukan', 'good'], PARTIAL: ['Sebagian selesai', 'warning'], COMPLETED: ['Selesai', 'good'],
   SUBMITTED: ['Diajukan', 'accent'], PART_RESERVED: ['Sebagian dicadangkan', 'warning'], PART_ISSUED: ['Sebagian dikirim', 'warning'],
   DISPATCHED: ['Dikirim', 'accent'], UNPICKED: ['Persiapan dibatalkan', 'neutral'], PART_RECEIVED: ['Sebagian diterima', 'warning'], RECEIVED: ['Diterima', 'good'], SETTLING: ['Penyelesaian material', 'warning'], CANCELLED: ['Dibatalkan', 'neutral'],
-  RECEIVED_IN_INSPECTION: ['Diterima — dalam pemeriksaan', 'warning'], PUTAWAY: ['Selesai ditempatkan', 'good'], CLOSED: ['Ditutup', 'neutral'], ACCEPTED: ['Lolos pemeriksaan', 'good'], SUPPLIER_RETURN: ['Untuk retur pemasok', 'serious'],
+  RECEIVED_IN_INSPECTION: ['Diterima untuk pemeriksaan', 'warning'], PUTAWAY: ['Selesai ditempatkan', 'good'], CLOSED: ['Ditutup', 'neutral'], ACCEPTED: ['Lolos pemeriksaan', 'good'], SUPPLIER_RETURN: ['Untuk retur pemasok', 'serious'],
   SERVICEABLE: ['Layak pakai', 'good'], DAMAGED: ['Rusak', 'serious'], SCRAP: ['Tidak dapat dipakai', 'critical'],
   UNKNOWN: ['Belum diketahui', 'warning'], LEGACY_UNRESOLVED: ['Asal belum diverifikasi', 'warning'],
   ISP: ['Milik ISP', 'accent'], CUSTOMER: ['Milik pelanggan', 'neutral'], LOAN: ['Pinjaman', 'accent'], SALE: ['Penjualan', 'neutral'],

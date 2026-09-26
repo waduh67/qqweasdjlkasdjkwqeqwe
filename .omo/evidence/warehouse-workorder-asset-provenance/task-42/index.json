@@ -1,39 +1,61 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 42,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
-      "line": 6,
       "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
     },
     {
       "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
-      "line": 16,
       "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
     },
     {
       "path": "mobile/feature/materials",
-      "directory": true
+      "kind": "directory",
+      "files": [
+        {
+          "path": "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt",
+          "sha256": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8"
+        },
+        {
+          "path": "mobile/feature/materials/src/commonTest/kotlin/com/duluin/ftth/mobile/materials/MaterialFeatureTest.kt",
+          "sha256": "ca24ed460e6128d7569f691c4936b895a87e6814802823867bbdfbb9b8d61204"
+        },
+        {
+          "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialScreen.kt",
+          "sha256": "f8ff4b5d0b3d86b8106f375adfa7feebeb55cb4f1669dd725d3b14849394ec5e"
+        },
+        {
+          "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialMvi.kt",
+          "sha256": "5dc823efb2a020d98cc76faff54d4785f804d9aa3b7f7a3c62d11db4c8750973"
+        },
+        {
+          "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialFeature.kt",
+          "sha256": "4eaf754029f1bed7855a422afe961203de047e2beb6149a9482ed20c28c81955"
+        },
+        {
+          "path": "mobile/feature/materials/build.gradle.kts",
+          "sha256": "41ec8d1fa93be5f1798edf3489c273aaf67ba01c1a1f6e17e9dcb1dadff291e3"
+        }
+      ]
     },
     {
       "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
-      "line": 31,
       "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
     },
     {
       "path": "settings.gradle.kts",
-      "line": 1,
       "sha256": "dc313390fb86876fe4e50dd869d85580569cd3eb611eb0b3b1e8a3cf77a71926"
     }
   ],
   "requiredSelectors": [
     "K"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/41",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/41",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-feature-verification.json",
@@ -74,8 +96,431 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "8b2df1159ba9b31407d9256b318313a9b2ca441886c673b6f3d31552cd3100a1",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+        "line": 6,
+        "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
+      },
+      {
+        "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+        "line": 16,
+        "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
+      },
+      {
+        "path": "mobile/feature/materials",
+        "directory": true
+      },
+      {
+        "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+        "line": 31,
+        "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
+      },
+      {
+        "path": "settings.gradle.kts",
+        "line": 1,
+        "sha256": "dc313390fb86876fe4e50dd869d85580569cd3eb611eb0b3b1e8a3cf77a71926"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/41",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "K": {
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 44,
+          "suites": [
+            {
+              "suite": "WorkOrderReducerTest[jvm]",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "25de4c3ac2f490287621c9ad3a3cd756d41f76f00ee3eb6cb580fa799cc18319"
+            },
+            {
+              "suite": "WorkOrderScreenUiTest[jvm]",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "5eb0b58fa361943d4a9299245189c48d5d19aa7552e3bf2b2f4f7677838f1938"
+            },
+            {
+              "suite": "MaterialFeatureTest[jvm]",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "116d4afd49a62d16f82397b883b050628c69cd732138c24d73200ca525c2247b"
+            },
+            {
+              "suite": "MaterialScreenUiTest[jvm]",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "73412c6cfeeadc2424a1aba1484177e210b322348ffa65549722bd79ac53b573"
+            },
+            {
+              "suite": "MaterialQuantityTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a6e1c76db5f2e2204019aac4d1f195225f68e295cb4ca0a5c08f4ca7ecd45194"
+            },
+            {
+              "suite": "NavigationTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "56b12c2a8acf4f2579c8436795faae5e9881d2ddd6b44b93cc70b9aca911e7b8"
+            },
+            {
+              "suite": "OutboxTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "586108029e05b57e4e5a470abb4034586906bb723e03af38932e05930ef3771d"
+            },
+            {
+              "suite": "WorkOrderReducerTest[jvm]",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "4ffb9ecc23a34741b4b1f12adc5510ec6dced42fdfdd2896b6f1243ed09c81b3"
+            },
+            {
+              "suite": "MaterialRepositoryTest[jvm]",
+              "tests": 9,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "ffe95d3ade2e53b60c3925b8f72f3954f08046a1bb3f2f473a48b7a23bba0ab7"
+            },
+            {
+              "suite": "WorkOrderRepositoryTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "84f8fca2d9c9331c4a1316e2cb8678413a4f82cb2b9d48aaf86a760d29d62bf0"
+            },
+            {
+              "suite": "EncryptedOutboxTest[jvm]",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "17571c490b59a3043c818b50d0b94a8dc5275773f69d883dc0620bf5cb7acbb7"
+            },
+            {
+              "suite": "MviStoreTest[jvm]",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3f49fd602c6badc253ee839785010e18cf3c5468d95f12b14f6b0f549279e165"
+            },
+            {
+              "suite": "MviViewModelTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "07669cb0ac40ad1f4b94c9cb6f8ab6038c0a39651dfadee6278853ca6358bd82"
+            },
+            {
+              "suite": "DiTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "cb8a4b2643316ded2ec343098742059ae4958c3ba8f79ebb63cf876f627a23ee"
+            }
+          ],
+          "nativeCompileTasks": 2,
+          "nativeRuntimeOrRelease": false
+        },
+        "matchingCurrentSource": [
+          {
+            "path": "mobile/feature/workorders/src/jvmTest/kotlin/com/duluin/ftth/mobile/workorders/WorkOrderScreenUiTest.kt",
+            "sha256": "2c9833a113dc5c30a350282cddc3d8d4d231f41ab4b5c7d2c98f112fb95419a2"
+          },
+          {
+            "path": "mobile/feature/workorders/src/commonTest/kotlin/com/duluin/ftth/mobile/workorders/WorkOrderReducerTest.kt",
+            "sha256": "a1e5841e13dd55eca1e996de984c935eb63ee4e8059387eaf55938a44ecc76f9"
+          },
+          {
+            "path": "mobile/feature/payroll/src/jvmTest/kotlin/com/duluin/ftth/mobile/payroll/PayrollScreenUiTest.kt",
+            "sha256": "ccd08c1ea9153bcdb58bdd049110b04dc139d805723fdb1343c11557a624a970"
+          },
+          {
+            "path": "mobile/feature/payroll/src/commonTest/kotlin/com/duluin/ftth/mobile/payroll/PayrollReducerTest.kt",
+            "sha256": "c6943355f61ef1eec9382e80717f9c72f684a3babdd175eb12abf231db158cea"
+          },
+          {
+            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt",
+            "sha256": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8"
+          },
+          {
+            "path": "mobile/feature/materials/src/commonTest/kotlin/com/duluin/ftth/mobile/materials/MaterialFeatureTest.kt",
+            "sha256": "ca24ed460e6128d7569f691c4936b895a87e6814802823867bbdfbb9b8d61204"
+          },
+          {
+            "path": "mobile/feature/attendance/src/jvmTest/kotlin/com/duluin/ftth/mobile/attendance/AttendanceScreenUiTest.kt",
+            "sha256": "6b204be562d66fef2c08880d1a1c1fb8f9e2d6e2f10355025ec0370f018b3b51"
+          },
+          {
+            "path": "mobile/feature/attendance/src/commonTest/kotlin/com/duluin/ftth/mobile/attendance/AttendanceReducerTest.kt",
+            "sha256": "bd71dbee00d07dd82b235ce7639b0bf5dab1e80fee8e74f058596d45ba2cf927"
+          },
+          {
+            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/WorkOrderReducerTest.kt",
+            "sha256": "86092d8e80a63fafde645effe16a01b26952514e492156c1067a519a033eb2a5"
+          },
+          {
+            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/OutboxTest.kt",
+            "sha256": "6056b61e30e38d0adb805aaa86d07cbc4513c8efe61db587abb3e921beee802c"
+          },
+          {
+            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/NavigationTest.kt",
+            "sha256": "f78a7933e4b1f42479715a3f337e96fe91774a482f2ec1309cd954046f64598a"
+          },
+          {
+            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/MaterialQuantityTest.kt",
+            "sha256": "3ee1a9192efd58595b3656ee0a1c69bc7615c181198bdb128886f964372808c3"
+          },
+          {
+            "path": "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/WorkOrderRepositoryTest.kt",
+            "sha256": "61f2d27ef593e57d603e4c30a139fd551ccb3ccd7da85ed678dd9463ef8fbb40"
+          },
+          {
+            "path": "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/MaterialRepositoryTest.kt",
+            "sha256": "5baa20c1639b703049b2f92dca431405f52ee910633af8eed94b0ed233fd4af1"
+          },
+          {
+            "path": "mobile/core/ui/src/commonTest/kotlin/com/duluin/ftth/mobile/ui/ScreenContentTest.kt",
+            "sha256": "def6ac1ff3c3b7e543e64b2faffdd429595d793bcf4f8c77f8ae6100c9fee38e"
+          },
+          {
+            "path": "mobile/app/src/commonTest/kotlin/com/duluin/ftth/mobile/app/DiTest.kt",
+            "sha256": "bcbb135431ba2bb330403637f23cf4c13607c09bc995fb75e655da124a1bff49"
+          },
+          {
+            "path": "mobile/core/storage/src/commonTest/kotlin/com/duluin/ftth/mobile/storage/EncryptedOutboxTest.kt",
+            "sha256": "47386e22abb20f5b1b2ca892593c9097df7b6e9905bfb2f1c5f1862d79564cfd"
+          },
+          {
+            "path": "mobile/core/mvi/src/commonTest/kotlin/com/duluin/ftth/mobile/mvi/MviViewModelTest.kt",
+            "sha256": "e78f22383c2edcb4a03953b0b1795ac75066f3f13cd5be58616b92e102b0afa5"
+          },
+          {
+            "path": "mobile/core/mvi/src/commonTest/kotlin/com/duluin/ftth/mobile/mvi/MviStoreTest.kt",
+            "sha256": "460b4f342901b8fc8b785a6be2554649b002e14945d3c2be94acf80a111bdcb1"
+          }
+        ],
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "MOBILE_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 44,
+          "suites": [
+            {
+              "suite": "DiTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "ab10df3f459d00b6c44c6b45e52e2717f4199d98c63ecef15d28926ff53784f7",
+              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.app.DiTest.xml"
+            },
+            {
+              "suite": "MviStoreTest[jvm]",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "cf4c268004152d8e6e4e63e4ef5f3ad9000b37ac3cef31fdf9e0f5570164cf50",
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviStoreTest.xml"
+            },
+            {
+              "suite": "MviViewModelTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "5b3606925898bec57ab3a69212c63c32e7b9aeecf53d3f8e73f1ce9cfa2263b6",
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviViewModelTest.xml"
+            },
+            {
+              "suite": "EncryptedOutboxTest[jvm]",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3e0523473f1dbc81d8facbe81b7af66f3a7f539f96e77612a9d2f0ca09fc861d",
+              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.storage.EncryptedOutboxTest.xml"
+            },
+            {
+              "suite": "MaterialRepositoryTest[jvm]",
+              "tests": 9,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "5f0fd7c91a895de15087b832056ed6eae1fba113d9d3f62fd387e0a68e5b8841",
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.MaterialRepositoryTest.xml"
+            },
+            {
+              "suite": "WorkOrderRepositoryTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3eb872dcc11e32c07266956fc47a9ed07c761d1ce37d71f8085bc282a1ddd195",
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.WorkOrderRepositoryTest.xml"
+            },
+            {
+              "suite": "MaterialQuantityTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "c4efec74c3fb7f749781f42fdb0ef7fe9f4c04bf3044046c8f9cd3b7ccc414c9",
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.MaterialQuantityTest.xml"
+            },
+            {
+              "suite": "NavigationTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "742f6c301d38669cd4baf7a7199c384d897af67b7168a777efb42bb79fd7e7a7",
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.NavigationTest.xml"
+            },
+            {
+              "suite": "OutboxTest[jvm]",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a56428e71e5efd3fa5a763d249d16e67f9621793eafa5ede11082e91da979966",
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.OutboxTest.xml"
+            },
+            {
+              "suite": "WorkOrderReducerTest[jvm]",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1927de2622ff51879514c0fbbd6c1b6e7d6d5470c286fe9675fed71611dd8b2f",
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.WorkOrderReducerTest.xml"
+            },
+            {
+              "suite": "MaterialFeatureTest[jvm]",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "cd97ad699487427c68dcf099b78e78920324170bd761bf1775096beb645155d4",
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialFeatureTest.xml"
+            },
+            {
+              "suite": "MaterialScreenUiTest[jvm]",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "638180669c8f1a3bd89e1d49d9531af06e4e5fc46184a45e848464a9472b5e7c",
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialScreenUiTest.xml"
+            },
+            {
+              "suite": "WorkOrderReducerTest[jvm]",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "90d78b0384cb56a64480ec9a261e1633d695d9b5d793b6a1818b20a594292c37",
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderReducerTest.xml"
+            },
+            {
+              "suite": "WorkOrderScreenUiTest[jvm]",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1a147f79352661f55401d1f8bfe633add49f3a69e867a004b693b050339f794b",
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "nativeCompileTasks": 2,
+          "nativeRuntimeOrRelease": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [],
+    "assertionsAndExpectedFailureBehavior": "QA: `K` plus `./gradlew :mobile:feature:materials:jvmTest --no-parallel`; test response-loss replay, offline->conflict, user switch purge and DI resolution. Compile existing iOS targets and record native runtime as not part of shared-contract proof. Save E(42). Commit: `feat(mobile): selaraskan kontrak dan alur material lapangan`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "K"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

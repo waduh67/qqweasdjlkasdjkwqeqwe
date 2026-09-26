@@ -1,40 +1,47 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 23,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/DiscoveredOnuService.kt",
-      "line": 27,
       "sha256": "b21987ec8545936b72991f1dd4843a3064c3455036dc3c656fc48c3642207894"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/AutoProvisionScheduler.kt",
-      "line": 33,
       "sha256": "678e16a47e95bd05c5b6207d97c590d7aaec395d6933784258c491f9a0458e64"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/MetricIngestionService.kt",
-      "line": 40,
       "sha256": "f89099d0b846001b04ecbbc814716b89f339649156549756c0f25cbf3f9ff7a9"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/cpe/adapter/outbound/persistence/CpeObservationBindingStore.kt",
-      "line": 13,
       "sha256": "01e2766b48b59b535bbfd03b1597a099a319897626b8338c9e36de4572b651f0"
     },
     {
       "path": "docs/gpon-profile-evidence.md",
-      "line": 1,
       "sha256": "1cef4b858920441620eb919d34fca05657f4849abac443413d1ad99e5e966451"
+    },
+    {
+      "path": "snmp/src/main/kotlin/com/duluin/ftth/snmp/MibProfiles.kt",
+      "sha256": "6f09ad4f4d2e72ed40b3c96445418d6c3a67acf82d74c2fb5ba0a96bdffc4e28"
+    },
+    {
+      "path": "snmp/src/main/kotlin/com/duluin/ftth/snmp/GponSnmpAdapter.kt",
+      "sha256": "af4c428365ee7646fbf8fe4f084b489c21cb06d12a71b35dd73bf05533c43384"
+    },
+    {
+      "path": "snmp/src/test/kotlin/com/duluin/ftth/snmp/GponDocumentedProfileTest.kt",
+      "sha256": "5bf2c0afd72e12d4ca1d05a445b55393a46f8a1946aa342642391bf04f2f5e0b"
     }
   ],
   "requiredSelectors": [
     "G(WarehouseDiscoveryIT)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/22",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/22",
   "historicalEvidence": [],
   "historicalTaskDirectoryWasMissing": true,
   "verifiedLaterBackend": {
@@ -331,9 +338,11 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
   ],
   "verifiedCurrentOfflineProtocols": {
     "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
@@ -350,5 +359,1049 @@
     "documentedGponProfileCases": 8,
     "sourceInputCount": 130,
     "scope": "Fresh offline module execution, all25Gradleactiontasks executed; nofail/error/skip; physicalGPONcertification remainsdeferred. Current fullserver/CI andfinalgates separate."
+  },
+  "priorIndexSha256": "4b963789702c91cc16345dc9f8b604f1a04e16b02b3037612d592944623bcc14",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/DiscoveredOnuService.kt",
+        "line": 27,
+        "sha256": "b21987ec8545936b72991f1dd4843a3064c3455036dc3c656fc48c3642207894"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/AutoProvisionScheduler.kt",
+        "line": 33,
+        "sha256": "678e16a47e95bd05c5b6207d97c590d7aaec395d6933784258c491f9a0458e64"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/MetricIngestionService.kt",
+        "line": 40,
+        "sha256": "f89099d0b846001b04ecbbc814716b89f339649156549756c0f25cbf3f9ff7a9"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/cpe/adapter/outbound/persistence/CpeObservationBindingStore.kt",
+        "line": 13,
+        "sha256": "01e2766b48b59b535bbfd03b1597a099a319897626b8338c9e36de4572b651f0"
+      },
+      {
+        "path": "docs/gpon-profile-evidence.md",
+        "line": 1,
+        "sha256": "1cef4b858920441620eb919d34fca05657f4849abac443413d1ad99e5e966451"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/22",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "G(WarehouseDiscoveryIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITV3Ingestion.kt",
+            "sha256": "878259134bbce57939eab856c58c4564ebe2d24204210051e9752afe13ff38ab",
+            "testAnnotations": 4
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITUpgrade.kt",
+            "sha256": "552439c014351bd6315609eefec907b2d70189e629f4e0134e8910f566f5d51b",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITTemporal.kt",
+            "sha256": "5c46a0ced24f603ef57ccdb632d3cd11d2e452edcb4372eb3388b8f9dbcd988c",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewTopology.kt",
+            "sha256": "7964e840c057885fc859f4f57dbe65c59ec47b54b91538794e58ac6109e89fd5",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewScope.kt",
+            "sha256": "0f7a8f423e8728109bd00cbd59ea463f486096b3cdb31e1e0cf0692262f749ac",
+            "testAnnotations": 3
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewRetention.kt",
+            "sha256": "3f5371cd77f2693b6e5611abca42d93a03b702bf0a3b45151f5f6c8b5080a378",
+            "testAnnotations": 3
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewReceiptTruth.kt",
+            "sha256": "25e40ceea5eb911884c2236eb22c1ca5f4af02e1a217d418a4d62cb4d6357e1d",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewReceiptTime.kt",
+            "sha256": "2359d6c24e15b62b7f91e61636ab212584451e0fc28c8e40150f1652946d7135",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewReceipt.kt",
+            "sha256": "524a201b8517af25602503a8a706b6e2172c7c0fdc8273a296e5facb9d5fe3c5",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewRace.kt",
+            "sha256": "3edeab2b5b2d5dc8c53c8419d50309ba2f3e29e5824b34a6152b3847b9e1e0d7",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewPollWindow.kt",
+            "sha256": "d50f21cedfa5720b2fd3bea4caefb965fe85886fd7a28712d9ecda01911afedd",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewParameter.kt",
+            "sha256": "637dbeee9b484090cad18c03a56cedd0d5b0ed550248f737296f48876430e83e",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewOperation.kt",
+            "sha256": "976440b07ee20dc99554064bb4bd07f742272519b664fd836089da9a1202e2cf",
+            "testAnnotations": 5
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewMetrics.kt",
+            "sha256": "1ea4d05a6b3b9dfabf738e4e5fcdf32ce728d49430374828d69a02046bc5a698",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewLockOrder.kt",
+            "sha256": "d582d6d198297cd0d33c080a22463972238e5091b463a691aac0499ac4d3a966",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewLegacyBounds.kt",
+            "sha256": "e113480f0ebca3bcf9f98ec73240bdfeb49334b73e81cbd121895559ad9bccd9",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewFuture.kt",
+            "sha256": "8b417e4cb566fe762fdfd96be13e9d9e0300ff28fd05c013005ffd0842250a47",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewEvidence.kt",
+            "sha256": "eb2f34081b9d0e09c163a8b440f8a57fb13fc83a5abe8cd3ff3c607ab63dcb50",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewDiagnostics.kt",
+            "sha256": "8587911fe47d3a55d0e22b194c438fe10aa4efd3c71796446730570b1e84d306",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewCurrentOwner.kt",
+            "sha256": "5874e49a0f55e5314ea1c5fcfda80a767b9ac731ab28d508d84aae6cca7c44d1",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITRediscovery.kt",
+            "sha256": "b20edf6bd06f8a474679fa3ecf1ac4ce866762ed20f41ced789ab39f9b2320bf",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2ReceiptTiming.kt",
+            "sha256": "63361be143308bf52dff08b5e43ec3bf59b41545addd855c0ec3a81ff4d0cc21",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Receipt.kt",
+            "sha256": "f866e151be419c5345fa41fbb126260ec76db6ce10d5efaa44437173f5e6c8c7",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Preparation.kt",
+            "sha256": "5ed9d536a154225206973bbb96283bdd1210bccff12f9dfe81d57823e7195b66",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Legacy.kt",
+            "sha256": "42935ec97bc779f6078996b25eefd17f43c20030c98257c3b84ef5fabfb96669",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Isolation.kt",
+            "sha256": "80c7b827b1b3115116de527223a0f318bb0d58f13df6e3a47505bc7153e60995",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Interval.kt",
+            "sha256": "943fc81766a9dacf1e5b05b94338a14401428e5e961cd1022428e58eaab773a1",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Generation.kt",
+            "sha256": "6c1a762de63515cc6a8c87cd936856eb376a6e10070105e042530abb285aa48b",
+            "testAnnotations": 4
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Edges.kt",
+            "sha256": "0c7887110ca0ecd37f20f2458c524e4134b6651a7fa30861298a4739dc4b01e1",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITProvisioning.kt",
+            "sha256": "49fca8247240d3234a93943d0320572fe1b9bbbb09b286d2c5cd08a59897ccff",
+            "testAnnotations": 6
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITPrivacy.kt",
+            "sha256": "cb0547d5e05714b1237857ca133bbb3491fab8abeadcea27e1bc22ef77cc9a10",
+            "testAnnotations": 0
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITParameterTime.kt",
+            "sha256": "5d6087df9d91865d3e2ca9b7a9c4468375438a7f0e14db06222f3039fb730f0f",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITIntegrity.kt",
+            "sha256": "6f4ca5c70be6b05e2456a94603877e28c5e9f5c30ddac5fcade4f1e7d7271ce7",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITDeferredConflict.kt",
+            "sha256": "740888460204fb719c51647457295c998b9abee08054f3cfddf8f4f55eca3da7",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITClock.kt",
+            "sha256": "18a95c5c1c7df20e1f55f0a48fb1384f9f27ca0d0fcec44d6c9d2d1bc2603cdb",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITBatchScope.kt",
+            "sha256": "75199d0631605c1b2d873619c657d9e872b62ea8bbeee5bf63fceada4eddb62f",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITAuto.kt",
+            "sha256": "48c6b77a1d15fce5eb13fada6e082bcb6d8c84a30cd760b9e432e68e83679fec",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITAssignmentRevision.kt",
+            "sha256": "b782bdae1c9ca7260edf0260ddb3d2145a8c7ffad7d628f5d5e6e8d87bd7f4c9",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryIT.kt",
+            "sha256": "6b739c41bbaeaa281f209c1537a0ae0905f542c94d8757cc528329946ffdfac0",
+            "testAnnotations": 6
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 140,
+          "counts": {
+            "tests": 140,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryIT",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "05ff930eb166d9d95cb14d1a6cb9b3cef8666118ff34f96977dfd76490c91dfc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITAssignmentRevision",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "61002ae46ed665aca8ad83147969253354db18e194628dab17566f40c1f75f7c",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITAssignmentRevision.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITAuto",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "efd62160b4abed77a5e4c8520125f9b21ec9519ff803a77029061a17a6c0958c",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITAuto.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITBatchScope",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7d07d43c24c34261498bf97e79740e3bdb35178145934fd5009b07eac6cd2d01",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITBatchScope.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITClock",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "37dff92eb5541a84739fc7c9214521287ba1c5613c24b668811425182c775a8d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITClock.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITDeferredConflict",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "588d9471c1df70db42a1c1806df6cc73443d2e826fe7c49ddf620a6e371b90eb",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITDeferredConflict.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITIntegrity",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "244195d9dfe09514fbbfb64fde5aac1f88171e0dfbfed16873bf53eca581aa82",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITIntegrity.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITParameterTime",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "227197fbb4b8af75706adbf131ef9a5f3fe73e93bd9e201c7b0edfb8c6830a1b",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITParameterTime.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITPrivacy",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "b8fe62c7608a33bf4039fe7900856614c072c81db3841a075626a8424c263ba3",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITPrivacy.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITProvisioning",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "835589d6915b830c62b670b0a21370a34a6afa7d352de8dd28c425a9691f3ce5",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITProvisioning.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Edges",
+              "tests": 9,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1f093b342caa8bc257ea32112b00b7de64dc61911949233aaeaa97330aeea5c5",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Edges.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Generation",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "99ff0254ef3fdea5b06bbdb1cda0213861cae6389feadd20c9f2d6024df84e7b",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Generation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Interval",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "79adbfd9435a29acb3b20eea77f3fd8db5922308e575b986f700ebad1be54331",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Interval.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Isolation",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "8b42ec7990d5b09ebd29cbffe0ae26d1a03294c45c15d05aa50fb3c3988ff3a1",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Isolation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Legacy",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "c7150f19808eee9660cc51a8f27e4e9e128f893c31faf7c1081fa0fa2537a70f",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Legacy.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Preparation",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "39ee1f8c60dc696c1d60efb87019ea247df77bcb3468e73ff330402061bfdfe5",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Preparation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Receipt",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "69de441bd7cb39afe139fb056d156091c1848d20188eee1e25717303adb15fa8",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Receipt.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2ReceiptTiming",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "9c0be2ef0381f177bf4f47dcd0229d6f832b4720ab36a891989b2e3d767dcffa",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2ReceiptTiming.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITRediscovery",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a84a5ac3fb36bf9570ab537644a65acc779f33be623da503898814055f26b0b1",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITRediscovery.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewCurrentOwner",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "19ee901d597552ca1205d96da1af24ac290700d217c9d7f8fcc2c47102f1770f",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewCurrentOwner.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewDiagnostics",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "af15e93f48e8dac7701fce45d7eb62454c39652857b3189d0fd19f6fa4b6c6fe",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewDiagnostics.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewEvidence",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "40d7ea6c077c4f7f7c81fbd49d358d39cf5ad6ebedc7a8caf7dbedb8f455b2e1",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewEvidence.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewFuture",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "f2a4dc25f0cf8a8fca2af95c4ab6d549fc5e6da35e9d2a9d5a1569341a306e79",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewFuture.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLegacyBounds",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "5f4882d89c87f4226c60dc6f1f3465f49677a06ab55154fe02efdfba8f837ee8",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLegacyBounds.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLockOrder",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "45ded321b5dab73b502dfd15eb4185a385284511aa6cec36c867c3697ea429bd",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLockOrder.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewMetrics",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d7e22a18243fbf7faf51b31d2bf86ae49cab3e0c69678e70994acb5ed70552d4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewMetrics.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewOperation",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "578287d88f0df76c023ed56ac635004aeca9bd9a8525faccca87bf5901165467",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewOperation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewParameter",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "0d3844d736d5e9620533affbe4f4442b9802d0fa4278fe09d546b5ade4963d90",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewParameter.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewPollWindow",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "dc0a561b5a6174fac5ccce7ecf8111d1f329caf1a1d722268e2de00b2438b64e",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewPollWindow.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRace",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7b33b9b480f446f9774da406f2c9cf4ec270be7c8b7dfc93d36403dc3f2f0027",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRace.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceipt",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "be83434664b426a4ac570122ba842d9afcf8a86719d1eaf43aef4ca5446d55fc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceipt.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTime",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7987b14c6fcc5416084eff2bc93385c2d205cbb8a3c880481430fc55ca60e220",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTime.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTruth",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "f206ef67b30c584764c654cf1f6e53803ca318a003da01cdfbf75e122cc3aa36",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTruth.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRetention",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "abc35f39f8c2b31a80fe13e8e5d5676750c7aab3c078c69d7e0292e428f7bf08",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRetention.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewScope",
+              "tests": 10,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7d4ff2c944fc06a604f36f6759bb513b9cf126739ca9b7abf95a5e821ec5cfac",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewScope.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewTopology",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "8d3d02ce32b820c4c1a1b7138985d1c574ed6ddfc21ff0d1adb12bcfecc15962",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewTopology.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITTemporal",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "de187dc0222009e0bf73edb48e033ee8c46e835e9a1333de6fdd9eae7fe6a11d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITTemporal.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITUpgrade",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "63f30b349298efa7635afed56b30be20f3852310711234efaf7ce2f94db18961",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITUpgrade.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITV3Ingestion",
+              "tests": 16,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "61651b0b6540d286e5be14994e1efbcea0e35a19efea28c514cc9e426df5cd5a",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITV3Ingestion.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_C902_CI_36264069182_COMPLETE_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 140,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryIT",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "9e62cbc9a7f1642a05682dbd4423a8a2fa372609e0c087eb7a8d041f156f83cc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITAssignmentRevision",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "6a75bb209fbc6054f57d91906c226a69c69fa2ce90331bccd5e3a2572e03e7fc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITAssignmentRevision.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITAuto",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "26bd2b701b63370d5ce8ea773c5c7ead23ae73a9625a2692e025b4d8745e9337",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITAuto.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITBatchScope",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "710947447459e71c17eafcc1a8681be03b490d55726a109a010a3bf730184b2d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITBatchScope.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITClock",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "9f134b5aa6c29c9bbd281409d1a7b88842f25dd3781a31b90026a6518bc1edbc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITClock.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITDeferredConflict",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a3d3f4b69451caa54e44f9bbd6259d19f9e97655cedc6bedb7a725b23fbe12da",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITDeferredConflict.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITIntegrity",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1a16b7a80f5b8c2ec10b3701afaeec1702711cf673838293ee3764b57d06a0d3",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITIntegrity.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITParameterTime",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "caefaedf5bcd7310ef148049afd5bb6c2c94ab55cc098334ed9453ff755f75a6",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITParameterTime.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITPrivacy",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "581d6839ea5541a276cb07ca5e79787b346bf17ffd587bdadf9098dac9ef5fd4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITPrivacy.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITProvisioning",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d3230f6480ede43c94ddb1bbc23ad80dd65b7da2deea7ea28c96cca15ec0492c",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITProvisioning.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Edges",
+              "tests": 9,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d6985f9dc57c1c6ada2675d0f941c549d51c74ba413fbbbc205100f0c9f4ca37",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Edges.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Generation",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1cdabdde5c5004223edc17e32de88fdd98a1672458b1af843cfd2b162b8f6953",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Generation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Interval",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "cf1d4277dbca649dd1366a2ff1f8a39df9bc9c5f3718f0b63f247c403a762fdf",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Interval.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Isolation",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "f9077e1397b147c61c6cb61b66ce8527768964e083bfb2a8e46d734fb3593d3d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Isolation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Legacy",
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a9dea75443eec0120707b4d1663641dba2497a0c1743fe1b861fd6162eb96910",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Legacy.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Preparation",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3d28e2410a9371db460c380c2b3bee074fd56fac7a48523ce8c81db369a704cd",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Preparation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Receipt",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "2de9c0bc76efbea409a2d6c87288a00fa35737cd7f8de1a59895d3e32e01d911",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Receipt.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2ReceiptTiming",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d6ba3cb4711e4fda424196ee1b46a7dcbeeb92c991b279709fd1608f19c4f7db",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2ReceiptTiming.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITRediscovery",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "f414617a61360e79bf9e54103484fe6b8b89e6b44f71ba03e58961f993db0065",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITRediscovery.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewCurrentOwner",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "4b974058b4e298d706fa88ee6ddd81f2e85e0a5e7c9f2a2c2494ecc19b58354e",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewCurrentOwner.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewDiagnostics",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d970c1e157887ea64fe9b7874952773338329bfc9b734581172079fe865e0525",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewDiagnostics.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewEvidence",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7ab03dbb72fbe9030f7f2fd1c614f837ff58024a64ecad6040e4eaab7669abe6",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewEvidence.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewFuture",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "87d1faaf4840b16fb73b7d62cae4ced3e6b770a9910d084bc140fa541e3576ae",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewFuture.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLegacyBounds",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "73a6d8dd5e5ac63b747a5cf17901612d3b0088067140834f3a2575c5095a9302",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLegacyBounds.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLockOrder",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3beed21823857734e479248f1caa8f20c9db02727a62cf30402dea7b1af786a4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLockOrder.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewMetrics",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d189fe17b227412e639657c2677b77fc9caf4944cf733223d8b62559dba9fdd4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewMetrics.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewOperation",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "4b213bc1bffffdce6d75c54f24cea220288d334f36ae6102250bba08bffe3dd7",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewOperation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewParameter",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "ab5ea20812cd3205987b24b1b8efb17991c6cad5038ab2bd77d127c602da4c00",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewParameter.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewPollWindow",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "8ca9251626d298d35995d7a173ed15fa65523f558efcace75eae18793a428c6d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewPollWindow.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRace",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a51d77df8c3f449c1b9926f06cefc9636108fbccb5040a0e5dda783e39b2df49",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRace.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceipt",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3146dfec08de663e68316ebf5a753b5f9ea42485bbbbb0ab026f79aedfc20e74",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceipt.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTime",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "8d1e14f47c2f7129306d71a09498beab14f61adaf98f74a52fc622ccfbcc84d0",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTime.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTruth",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "959f6d98591e4d0c4cce0f8bd365bece636747325a62f35b5a37e78cfb3e3df4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTruth.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRetention",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d12374235a20aa2c86154f9ea9502dfd79c0f9d127ef2915938c7faa377c59a0",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRetention.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewScope",
+              "tests": 10,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "e0aad8f23eef01fd7ff71318fe6260dc9bb27bcbf633c6c9759359044ddba2a3",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewScope.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewTopology",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7f00b23d7f306af39ca3a78b8ea3257bd2277c4c14a30ec5556fed0f3a582074",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewTopology.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITTemporal",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "af432135e20ca820e21d3daf1daf734e0a917823acfa8c93e3650638fec3a988",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITTemporal.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITUpgrade",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a98d07823dfb93507a9099d0e11ffa167894e55bb061c84cabef942a1725ee05",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITUpgrade.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITV3Ingestion",
+              "tests": 16,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "aa47cf34848f3fc737879e3fe901c6b6bf840477ab9e3fb94cf720f4c7e4ff16",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITV3Ingestion.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      },
+      {
+        "path": "task46/f1-offline-protocol-executed-verification.json",
+        "sha256": "bf4632c0a5a0a0642877b7b3a8cf3d5bcb3b0f86f4e27d1595090ed6bb7d5d96"
+      }
+    ],
+    "focusedEvidenceIds": [],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(WarehouseDiscoveryIT)` issued authorized serial maps once; unknown/foreign serial creates no assets. After A->return->B reuse, delayed valid A batch goes only to A history and cannot update B alarms/status; stale ACS Inform cannot expose A data to B. Legacy active device telemetry remains valid. Documentation-backed GPON paths require offline fixtures and traceability checks; unknown mappings remain quarantined. This does not replace the remaining CPE/DB/temporal/privacy/source-gate regressions or final task23 verification. Save E(23). Commit: `fix(monitoring): cegah provisioning melewati asal barang`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "G(WarehouseDiscoveryIT)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false,
+    "offlineProtocolEvidence": {
+      "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "proofReference": "task46/f1-offline-protocol-executed-verification.json",
+      "proofSha256": "bf4632c0a5a0a0642877b7b3a8cf3d5bcb3b0f86f4e27d1595090ed6bb7d5d96",
+      "tests": 197,
+      "suites": 35,
+      "modules": {
+        "contract": 2,
+        "snmp": 25,
+        "collector": 170
+      },
+      "documentedProfileTests": 8,
+      "all130InputsMatch": true,
+      "hardwareValidated": false
+    }
   }
 }

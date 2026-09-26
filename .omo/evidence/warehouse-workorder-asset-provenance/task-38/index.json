@@ -1,33 +1,28 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 38,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "web/src/pages/warehouse/WarehouseOverviewPage.tsx",
-      "line": 23,
       "sha256": "4f031caeb7f67aae574fbac79ed8776ffe4ab740277110d3c9b18880b1a994c4"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseReplenishmentPage.tsx",
-      "line": 17,
       "sha256": "bc7cd678471859ade0fa1e73b72179e83e86ebc6d717c22704fc7dbc3060a2ea"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseReportsPage.tsx",
-      "line": 18,
       "sha256": "c5def9dadd5149114973b2152d5f700dc6165825e1d584354d1186f32a05b4c9"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseSettingsPage.tsx",
-      "line": 20,
       "sha256": "42d23cc87820215e963573536b9ec08bb2923b2f119424be0b5c85f2e1aad211"
     },
     {
       "path": "web/src/pages/WarehouseOperationsPage.tsx",
-      "line": 1,
       "sha256": "7517de2711818dbea3342ee27dd53a303eb823e4d7d24118367b4a2b7f9680db"
     }
   ],
@@ -36,7 +31,7 @@
     "W(WarehouseReportsPage)",
     "W(WarehouseSettingsPage)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/37",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/37",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/overview-verification.json",
@@ -83,8 +78,242 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "d1e071678350d28df48a392c467272d9cc979688de488d5bb22e386358b4452e",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "web/src/pages/warehouse/WarehouseOverviewPage.tsx",
+        "line": 23,
+        "sha256": "4f031caeb7f67aae574fbac79ed8776ffe4ab740277110d3c9b18880b1a994c4"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseReplenishmentPage.tsx",
+        "line": 17,
+        "sha256": "bc7cd678471859ade0fa1e73b72179e83e86ebc6d717c22704fc7dbc3060a2ea"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseReportsPage.tsx",
+        "line": 18,
+        "sha256": "c5def9dadd5149114973b2152d5f700dc6165825e1d584354d1186f32a05b4c9"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseSettingsPage.tsx",
+        "line": 20,
+        "sha256": "42d23cc87820215e963573536b9ec08bb2923b2f119424be0b5c85f2e1aad211"
+      },
+      {
+        "path": "web/src/pages/WarehouseOperationsPage.tsx",
+        "line": 1,
+        "sha256": "7517de2711818dbea3342ee27dd53a303eb823e4d7d24118367b4a2b7f9680db"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/37",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "W(WarehouseOverviewPage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseOverviewPage.test.tsx",
+            "sha256": "64b01f3dcfba5bd91eda647243c400729e0235dddc0ff98c69703727e032a707"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 5,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseOverviewPage.test.tsx",
+              "tests": 5
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 5,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseOverviewPage.test.tsx",
+              "tests": 5
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 5,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseOverviewPage.test.tsx",
+              "tests": 5
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        }
+      },
+      "W(WarehouseReportsPage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseReportsPage.test.tsx",
+            "sha256": "59ac6ef6df9de6d0983b4f609fc90b23844f41be06e2b4463da73e34467cb277"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 6,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseReportsPage.test.tsx",
+              "tests": 6
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 6,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseReportsPage.test.tsx",
+              "tests": 6
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 6,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseReportsPage.test.tsx",
+              "tests": 6
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        }
+      },
+      "W(WarehouseSettingsPage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseSettingsPage.test.tsx",
+            "sha256": "bbee10ebcbd396f64a8053a9f4a25e20a2437dffbe0564215bf63c84cc3c6cc7"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 4,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseSettingsPage.test.tsx",
+              "tests": 4
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 4,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseSettingsPage.test.tsx",
+              "tests": 4
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 4,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseSettingsPage.test.tsx",
+              "tests": 4
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [
+      "C7-web-full-r1"
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `W(WarehouseOverviewPage)` `W(WarehouseReportsPage)` `W(WarehouseSettingsPage)` happy drilldown/export/save and denied/empty/unknown-cost/stale states; existing warehouse route remains reachable. Save E(38). Commit: `feat(web): ringkasan laporan dan setelan logistik`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "W(WarehouseOverviewPage)",
+        "W(WarehouseReportsPage)",
+        "W(WarehouseSettingsPage)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

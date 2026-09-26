@@ -1,51 +1,48 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 43,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
-      "line": 15,
       "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
-      "line": 26,
-      "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
+      "sha256": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
-      "line": 15,
       "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseProvenancePage.tsx",
-      "line": 21,
       "sha256": "a25a884e59dac45191c8289ccd2fc076b50e2fe5e8cf23586202cdffc888b8f1"
     },
     {
       "path": "docs/warehouse-migrations.md",
-      "line": 1,
-      "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+      "sha256": "2823a1b6970f4305c8bcb85cbab16b9ae1f558a16b4217fb63e8ab0b859416da"
     },
     {
       "path": "server/src/main/resources/db/migration/V177__warehouse_legacy_preservation.sql",
-      "line": 1,
       "sha256": "dcfa14774e95a35af8d86135889fe03dd2085500f704f23f3189a7eed519cb88"
     },
     {
       "path": "server/src/main/resources/db/migration/V178__warehouse_tenant_finalization.sql",
-      "line": 1,
       "sha256": "f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql",
+      "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3"
     }
   ],
   "requiredSelectors": [
     "G(WarehouseMigrationIT)",
     "W(WarehouseProvenancePage)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/42",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/42",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/cancellation-final-verification.json",
@@ -186,8 +183,248 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "7ff444a5168553783b5edfa2766c5bdc1ef36f30ce58f98383fe049bf199f888",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+        "line": 15,
+        "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+        "line": 26,
+        "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+        "line": 15,
+        "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseProvenancePage.tsx",
+        "line": 21,
+        "sha256": "a25a884e59dac45191c8289ccd2fc076b50e2fe5e8cf23586202cdffc888b8f1"
+      },
+      {
+        "path": "docs/warehouse-migrations.md",
+        "line": 1,
+        "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V177__warehouse_legacy_preservation.sql",
+        "line": 1,
+        "sha256": "dcfa14774e95a35af8d86135889fe03dd2085500f704f23f3189a7eed519cb88"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V178__warehouse_tenant_finalization.sql",
+        "line": 1,
+        "sha256": "f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/42",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "G(WarehouseMigrationIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITQuery.kt",
+            "sha256": "23f5bc2b38817d946daa7152694ed83e2588769ba79500ec7b38102f0abeadc3",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITBoot.kt",
+            "sha256": "d5891a10b2ac45e74128a9c41bf39991208007d364391712a6d961abf5b43f51",
+            "testAnnotations": 2
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 4,
+          "counts": {
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "172f12da1feb1680e8a619ca1f2b384e2238b5c6fa633200d4a27a625c0751c6",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITBoot.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3f6b9ed919b15c331d497087db31beebef3bfac6a0b97efd8125e42a64de06ba",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITQuery.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_C902_CI_36264069182_COMPLETE_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 4,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "f3c71a25dacd11ba3971623a48d5108ebdd34bc889f9b7078c25160b04b94926",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITBoot.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "ec4593f8299e85fa996371b188e573f7fc123ea620cc62e87cdaad796b07bbd4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITQuery.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      },
+      "W(WarehouseProvenancePage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseProvenancePage.test.tsx",
+            "sha256": "00e6ddb51ea397768ba9dd0ae9e74af20be03b3786e919880725462f793fd8f1"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 9,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseProvenancePage.test.tsx",
+              "tests": 9
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 9,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseProvenancePage.test.tsx",
+              "tests": 9
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 9,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseProvenancePage.test.tsx",
+              "tests": 9
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [
+      "C7-specialized-r3",
+      "C7-backfill-r2",
+      "C7-web-full-r1"
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(WarehouseMigrationIT)` boots FULL packaged M01–M06 migrations with colliding canonical legacyserials and two tenants; via realHTTP reconcile/approve/baseline/promoteA->ENFORCED while B remainsVALIDATING, then restart and confirm mixed stages/oldIDs unchanged. Legacyclaim blocks new competing receipt; no global NOTNULL/UNIQUE bootfailure. Dryrun/rerun idempotent; paused legacy command/outbox across cutover fails stale with no duplicate. `W(WarehouseProvenancePage)` conflicts/resolution. Save E(43). Commit: `feat(warehouse): migrasikan asal aset tanpa menghapus riwayat`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "G(WarehouseMigrationIT)",
+        "W(WarehouseProvenancePage)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

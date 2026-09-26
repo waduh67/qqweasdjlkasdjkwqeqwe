@@ -1,48 +1,41 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 47,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "docs/warehouse.md",
-      "line": 1,
-      "sha256": "d515cd3cb3d38955c03ccea64630bc46bf93c9bf9f32907d66fbe7fa55cc09dc"
+      "sha256": "cb5a0e487c84d7a363c2b17b59050ab922e0b57a14873959b647a9c0bd5a1a66"
     },
     {
       "path": "docs/warehouse-review.md",
-      "line": 1,
-      "sha256": "070aa20fa40417ee5f2d5c10317e5e7a768b6130f1ae425a02afbb2a608c66c9"
+      "sha256": "3f7d50dd19943c6e509b46f85a9dccc0dd25a31d499eb927eddb5b5a370fd3fc"
     },
     {
       "path": "docs/warehouse-migrations.md",
-      "line": 1,
-      "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+      "sha256": "2823a1b6970f4305c8bcb85cbab16b9ae1f558a16b4217fb63e8ab0b859416da"
     },
     {
       "path": "docs/work-order.md",
-      "line": 1,
       "sha256": "ce742ca72f391fb6fecacf3493185b1eabe2ab467d9c7384924cfab44705bb34"
     },
     {
       "path": "docs/mobile.md",
-      "line": 1,
       "sha256": "fc1872cebc4a7842183ba38b8bffb1eafccbdf02e3d4bf91a0c5916eca5ff807"
     },
     {
       "path": "deploy/DEPLOY.md",
-      "line": 1158,
-      "sha256": "465d96303300c1c003483b0513b1e5bd5780bb688d26a02624d0d970be3e10d9"
+      "sha256": "22342eb68265d2e408add15677e69fa2d00e09663cc809e2dc4d41938b04c382"
     },
     {
       "path": "scripts/warehouse/preflight.sql",
-      "line": 1,
       "sha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338"
     }
   ],
   "requiredSelectors": [],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/46",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/46",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/ci-r3-upgraded-preflight-verification.json",
@@ -77,8 +70,98 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "aa1071a32441eda26d9b2fa8031a40e590e5ec8aa5640b870c4ce678e449e19b",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "docs/warehouse.md",
+        "line": 1,
+        "sha256": "d515cd3cb3d38955c03ccea64630bc46bf93c9bf9f32907d66fbe7fa55cc09dc"
+      },
+      {
+        "path": "docs/warehouse-review.md",
+        "line": 1,
+        "sha256": "070aa20fa40417ee5f2d5c10317e5e7a768b6130f1ae425a02afbb2a608c66c9"
+      },
+      {
+        "path": "docs/warehouse-migrations.md",
+        "line": 1,
+        "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+      },
+      {
+        "path": "docs/work-order.md",
+        "line": 1,
+        "sha256": "ce742ca72f391fb6fecacf3493185b1eabe2ab467d9c7384924cfab44705bb34"
+      },
+      {
+        "path": "docs/mobile.md",
+        "line": 1,
+        "sha256": "fc1872cebc4a7842183ba38b8bffb1eafccbdf02e3d4bf91a0c5916eca5ff807"
+      },
+      {
+        "path": "deploy/DEPLOY.md",
+        "line": 1158,
+        "sha256": "465d96303300c1c003483b0513b1e5bd5780bb688d26a02624d0d970be3e10d9"
+      },
+      {
+        "path": "scripts/warehouse/preflight.sql",
+        "line": 1,
+        "sha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/46",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {},
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [],
+    "assertionsAndExpectedFailureBehavior": "QA: execute documented demo with B specs and runbook SQL preflight in task-owned DB (app role, actual row counts); intentionally wrong migration/unit/cutover must fail. Save E(47). Commit: `docs(warehouse): panduan operasi pengujian dan cutover`.",
+    "commands": {
+      "requiredPlanMacros": [],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

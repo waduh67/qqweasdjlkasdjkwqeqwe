@@ -1,65 +1,55 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 19,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
-      "line": 17,
       "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
-      "line": 15,
       "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
-      "line": 1,
       "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_50__customer_asset_episode_history.sql",
-      "line": 1,
       "sha256": "a6d7c47827ed7d8e998639c4e9de9c7e4dac21a5ac64bf1a6c227f23203c12d2"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_51__customer_asset_episode_binding.sql",
-      "line": 1,
       "sha256": "69749a66ef0d4dbd84f4761d5a877836df56646b855698f7e470c6c7ec99527a"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_52__customer_asset_episode_binding_scope.sql",
-      "line": 1,
       "sha256": "ba39bcf24c5cb3044e8a1f049cef72c71ecef9687c78a1b6711eba0460c4d726"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_53__customer_asset_episode_snapshots.sql",
-      "line": 1,
       "sha256": "c207cdc91d215b310049f5ec31b209371e2ca1a7e77727c6e373de20b6da11f4"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_54__customer_asset_episode_canonical_truth.sql",
-      "line": 1,
       "sha256": "893f4a3c44ac387d062a74a6c62537bcf9283897a8bea306c7feb68f8a4d05f0"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_48__customer_asset_episode_storage.sql",
-      "line": 1,
       "sha256": "a3a0d1573e7b468a33c7aeadc787183c6812a219883204de3e46974908208279"
     },
     {
       "path": "server/src/main/resources/db/migration/V175_49__customer_asset_episode_legacy.sql",
-      "line": 1,
       "sha256": "4a538bea4076d8e98577c2bd9860025fc2afc0747fb2905850355b1639fcf590"
     }
   ],
   "requiredSelectors": [
     "G(CustomerAssetSchemaIT)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/18",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/18",
   "historicalEvidence": [],
   "historicalTaskDirectoryWasMissing": true,
   "verifiedLaterBackend": {
@@ -97,8 +87,209 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "aff538231bf74766cca8a531986f991493736b524d620006fbcd950ab4149c20",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
+        "line": 17,
+        "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
+        "line": 15,
+        "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
+        "line": 1,
+        "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_50__customer_asset_episode_history.sql",
+        "line": 1,
+        "sha256": "a6d7c47827ed7d8e998639c4e9de9c7e4dac21a5ac64bf1a6c227f23203c12d2"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_51__customer_asset_episode_binding.sql",
+        "line": 1,
+        "sha256": "69749a66ef0d4dbd84f4761d5a877836df56646b855698f7e470c6c7ec99527a"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_52__customer_asset_episode_binding_scope.sql",
+        "line": 1,
+        "sha256": "ba39bcf24c5cb3044e8a1f049cef72c71ecef9687c78a1b6711eba0460c4d726"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_53__customer_asset_episode_snapshots.sql",
+        "line": 1,
+        "sha256": "c207cdc91d215b310049f5ec31b209371e2ca1a7e77727c6e373de20b6da11f4"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_54__customer_asset_episode_canonical_truth.sql",
+        "line": 1,
+        "sha256": "893f4a3c44ac387d062a74a6c62537bcf9283897a8bea306c7feb68f8a4d05f0"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_48__customer_asset_episode_storage.sql",
+        "line": 1,
+        "sha256": "a3a0d1573e7b468a33c7aeadc787183c6812a219883204de3e46974908208279"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175_49__customer_asset_episode_legacy.sql",
+        "line": 1,
+        "sha256": "4a538bea4076d8e98577c2bd9860025fc2afc0747fb2905850355b1639fcf590"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/18",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "G(CustomerAssetSchemaIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaITIntegrity.kt",
+            "sha256": "6358a8d547c465a7dbf42e0ee1125cf7408b28802c02942d77e5062c1583827a",
+            "testAnnotations": 5
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaIT.kt",
+            "sha256": "5ba431df58a430b52e492559aeb48738f9c6bedea8310fd7e1d41559f2f179f9",
+            "testAnnotations": 8
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 25,
+          "counts": {
+            "tests": 25,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+              "tests": 19,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "ec1b4e3b7ae17f12ea707c8a23734f40cf64ba18b256b0a9773d6dcf1b86adf5",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "46b7aec78ffa13cac11f1baf8f924688449d8e918dc717f5d356ca4b62813921",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_C902_CI_36264069182_COMPLETE_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 25,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+              "tests": 19,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1b8c9eeeb8eb905fae16923ee9b9b482e94f2cc99ea4c360c7792cccb03175dc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "def6fd26a5f574318f6a00e6871672880789ec33783e61a28c91852d912526ef",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(CustomerAssetSchemaIT)` verifies schema permits readable legacy collisions yet rejects new conflicting verifiedassignment; two chronological episodes retain physicalasset; overlapping active assignment/wrongtenant denied. Full boot->interactive mixedtenant admission runs in task43. Save E(19). Commit: `feat(customer): simpan riwayat penempatan aset fisik`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "G(CustomerAssetSchemaIT)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

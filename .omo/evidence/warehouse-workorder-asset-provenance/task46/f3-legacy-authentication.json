@@ -1,0 +1,164 @@
+{
+  "authenticatedAtUtc": "2026-09-26T19:05:13.756428+00:00",
+  "scope": "Independent real historical V172 UI creation, current178.12 cutover and restart; directly read reports, trace response resources, snapshots and all eight preflight probe outputs.",
+  "metadataHead": "40cbd34f31b967268fb3766b246c613a4af7026f",
+  "jarSha256": {
+    "current": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+    "legacy": "e70f76715e6c302a23cf4c101410ea4c777eb29abe9bd45fc8615eec71f6d0d5"
+  },
+  "sourceInputs": 2486,
+  "capturedInputsUnchanged": true,
+  "runnerExitCode": 0,
+  "stopExitCode": 0,
+  "downExitCode": 0,
+  "reports": [
+    {
+      "phase": "before",
+      "cases": [
+        {
+          "project": "warehouse-desktop",
+          "title": "the historical V172 application creates a customer and ONU entirely through its UI",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-mobile",
+          "title": "the historical V172 application creates a customer and ONU entirely through its UI",
+          "status": "passed"
+        }
+      ],
+      "reportSha256": "9784d5f8a5ab86ea9f2e3ade49c4a7323d15a3d6dda2815cc3077eaf42644075"
+    },
+    {
+      "phase": "after",
+      "cases": [
+        {
+          "project": "warehouse-desktop",
+          "title": "historical customer identity survives independent zero-opening cutover and application restart",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-mobile",
+          "title": "historical customer identity survives independent zero-opening cutover and application restart",
+          "status": "passed"
+        }
+      ],
+      "reportSha256": "881bc2da0127c656ab97440451b3662330cefcd5aafd51d61ceb4f762b0eec79"
+    },
+    {
+      "phase": "restart",
+      "cases": [
+        {
+          "project": "warehouse-desktop",
+          "title": "historical customer identity survives independent zero-opening cutover and application restart",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-mobile",
+          "title": "historical customer identity survives independent zero-opening cutover and application restart",
+          "status": "passed"
+        }
+      ],
+      "reportSha256": "acd74687e4f2b32d6498294c4bd58714b5517804759bf88e0c5bf5babb77c465"
+    }
+  ],
+  "projects": [
+    {
+      "project": "warehouse-desktop",
+      "realHistoricalCustomerCreates": 1,
+      "realHistoricalOnuCreates": 1,
+      "preservedCustomerAndOnuIdentity": true,
+      "retainedLegacyIdentity": 1,
+      "openingBaselinePositions": 0,
+      "availableStockPositions": 0,
+      "postUpgradeSkuUnit": "MM",
+      "cutoverAfterRestart": "ENFORCED",
+      "traceSha256": {
+        "before": "ec8faeac878dfb68d6048c7e27227fb9ac41a0c5f68b4780ddb01be305bad133",
+        "after": "0a725de78440cb79e464ec7eb29cffb017a240d68d2896dfcf9e90f2e2c84f68",
+        "restart": "e9751cb6888ab726295071a048b048124be3577d6428a00c04717131bad21239"
+      }
+    },
+    {
+      "project": "warehouse-mobile",
+      "realHistoricalCustomerCreates": 1,
+      "realHistoricalOnuCreates": 1,
+      "preservedCustomerAndOnuIdentity": true,
+      "retainedLegacyIdentity": 1,
+      "openingBaselinePositions": 0,
+      "availableStockPositions": 0,
+      "postUpgradeSkuUnit": "MM",
+      "cutoverAfterRestart": "ENFORCED",
+      "traceSha256": {
+        "before": "d120e10e2821da20ef4492312a0b8bf1d2cc4730ae5e4e50ee62cab2a19d4ab5",
+        "after": "7fed13e8b3b81f00e87fa9eacebae43968439da411f1149204b2ac7b4cac3d58",
+        "restart": "81cd2569c0ae1b221df1738146e9691e1acea042e6b7b6692c392118cb27b9fa"
+      }
+    }
+  ],
+  "preflight": {
+    "positive": [
+      {
+        "projectIndex": 0,
+        "version": "178.12",
+        "cutover": "ENFORCED",
+        "customers": 1,
+        "onus": 1,
+        "positions": 0,
+        "reportSha256": "4f6f294f944091c112e8493d3623f546b9fa8eec75eb17b11cc003725d71dca7"
+      },
+      {
+        "projectIndex": 1,
+        "version": "178.12",
+        "cutover": "ENFORCED",
+        "customers": 1,
+        "onus": 1,
+        "positions": 0,
+        "reportSha256": "20a926411e45acbdf7f1c3195d74e8b98e418613055ccb17fb4cb0fe1b78f378"
+      }
+    ],
+    "negative": [
+      {
+        "projectIndex": 0,
+        "gate": "migration",
+        "expectedRejection": "migration mismatch",
+        "reportSha256": "1986c4cffd7717993e204f26e1e53b2e754be87bb6aebf79a59217722d705ae1"
+      },
+      {
+        "projectIndex": 0,
+        "gate": "unit",
+        "expectedRejection": "SKU unit mismatch",
+        "reportSha256": "cf464aa579174f7a6d0173c7b39d32244109a06faf8c03790c2200a82dcda1e8"
+      },
+      {
+        "projectIndex": 0,
+        "gate": "cutover",
+        "expectedRejection": "cutover mismatch",
+        "reportSha256": "ff63591f0b06a0cc7f95de56eec36170fecb6ecd9b901f32a1e7d49784404b5b"
+      },
+      {
+        "projectIndex": 1,
+        "gate": "migration",
+        "expectedRejection": "migration mismatch",
+        "reportSha256": "5aefbc837036f04612e5c7ce323ced84a2da9d51b02dba3435c19c564d2e6f54"
+      },
+      {
+        "projectIndex": 1,
+        "gate": "unit",
+        "expectedRejection": "SKU unit mismatch",
+        "reportSha256": "9ebb8ff5cbad33e0e92d567c58778362dcabd39990cc7dce66a6f406bb635791"
+      },
+      {
+        "projectIndex": 1,
+        "gate": "cutover",
+        "expectedRejection": "cutover mismatch",
+        "reportSha256": "680dd23cc2f3792e0658789b43254bd0feea134766608013e05d62dbcd37208f"
+      }
+    ],
+    "readOnly": true,
+    "sqlSha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338"
+  },
+  "historicalMigrationChecksumsUnchanged": true,
+  "sharedQaFunctionDefinitionsUnchanged": true,
+  "separateDatabaseRetained": true,
+  "rawSummarySha256": "303391dc6c1da4edc60838192d436eb4905668aef242aafcc6ee5eb1774bd94c"
+}

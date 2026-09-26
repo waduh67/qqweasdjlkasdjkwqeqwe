@@ -1,36 +1,36 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 41,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
-      "line": 14,
-      "sha256": "c87460823e4e39fc97a583ba0251cecc9ad8a766b3db8ab014a7446081f69f72"
+      "sha256": "e62d365c14e62ad5aa4e258afee6d20434cd80baa99b0d4394f08159a4bd9f5d"
     },
     {
       "path": "web/src/pages/CustomerDetailPage.tsx",
-      "line": 103,
       "sha256": "3d1259fd85b2830e7e450d2ce6b21442cb0a650f77bb495b9b0af2c82bdb26ac"
     },
     {
       "path": "web/src/components/organisms/DiscoveredOnuInbox.tsx",
-      "line": 59,
       "sha256": "3f7a3925b66dbde13f64147b2a73898d64b5f9c0cd9e7822355ae52bbabb7774"
     },
     {
       "path": "web/src/portal/portalAssets.ts",
-      "line": 6,
       "sha256": "1419208bcf229e3338b5c409607b84f3a5135faf622338a95098e6f627b75230"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetException.tsx",
+      "sha256": "69ac25e1d6dbba42da94b5b8422bdfbd0024b5c5ba731974ada4c7ca1104ab42"
     }
   ],
   "requiredSelectors": [
     "W(CustomerAssetPanel)",
     "B(customer-assets.spec.ts)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/40",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/40",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/customer-asset-core-verification.json",
@@ -65,8 +65,223 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "0d8316706b585f6beb5658b6b96758644b3acf6fbd1cd8a85c9c4c0503423f6f",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+        "line": 14,
+        "sha256": "c87460823e4e39fc97a583ba0251cecc9ad8a766b3db8ab014a7446081f69f72"
+      },
+      {
+        "path": "web/src/pages/CustomerDetailPage.tsx",
+        "line": 103,
+        "sha256": "3d1259fd85b2830e7e450d2ce6b21442cb0a650f77bb495b9b0af2c82bdb26ac"
+      },
+      {
+        "path": "web/src/components/organisms/DiscoveredOnuInbox.tsx",
+        "line": 59,
+        "sha256": "3f7a3925b66dbde13f64147b2a73898d64b5f9c0cd9e7822355ae52bbabb7774"
+      },
+      {
+        "path": "web/src/portal/portalAssets.ts",
+        "line": 6,
+        "sha256": "1419208bcf229e3338b5c409607b84f3a5135faf622338a95098e6f627b75230"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/40",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "W(CustomerAssetPanel)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx",
+            "sha256": "5f1864b1f526af1a7e228ef645a5aa0d37e36d366f35bc19844876f7a95923ce"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx",
+              "tests": 7
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx",
+              "tests": 7
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx",
+              "tests": 7
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        }
+      },
+      "B(customer-assets.spec.ts)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/e2e/warehouse/customer-assets.spec.ts",
+            "sha256": "6eb9636ed009601d3900ffb7cfd1c9fed957d33f20662eef9d4f4c381b39e615"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "e533fc54b7e4e254adf0c59e8fc8561723e2c3a60ff90453598963276f55a864"
+            },
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "e533fc54b7e4e254adf0c59e8fc8561723e2c3a60ff90453598963276f55a864"
+            },
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "e533fc54b7e4e254adf0c59e8fc8561723e2c3a60ff90453598963276f55a864"
+            },
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "e533fc54b7e4e254adf0c59e8fc8561723e2c3a60ff90453598963276f55a864"
+            }
+          ]
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "PRODUCTION_BROWSER_BUILD_AND_WORKFLOW_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "5f3c50f19f4f50efdafb2d7ec8e552ee1467068b3a0f9e2fbffb3529c97295a2",
+              "artifact": "warehouse-browser-customer-assets-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "5f3c50f19f4f50efdafb2d7ec8e552ee1467068b3a0f9e2fbffb3529c97295a2",
+              "artifact": "warehouse-browser-customer-assets-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "5f3c50f19f4f50efdafb2d7ec8e552ee1467068b3a0f9e2fbffb3529c97295a2",
+              "artifact": "warehouse-browser-customer-assets-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "customer-assets.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "5f3c50f19f4f50efdafb2d7ec8e552ee1467068b3a0f9e2fbffb3529c97295a2",
+              "artifact": "warehouse-browser-customer-assets-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "independentF3Claim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [
+      "C7-web-full-r1",
+      "C7-specialized-r3"
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `W(CustomerAssetPanel)` loan/sale/install/history and legacy/raw-serial/foreign/readonly denial; `B(customer-assets.spec.ts)` (new) exercises old/new serial chain and portal redaction. Save E(41). Commit: `feat(web): tampilkan sumber gudang perangkat pelanggan`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "W(CustomerAssetPanel)",
+        "B(customer-assets.spec.ts)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

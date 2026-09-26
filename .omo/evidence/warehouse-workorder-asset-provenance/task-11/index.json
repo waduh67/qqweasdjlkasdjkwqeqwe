@@ -1,40 +1,35 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 11,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyService.kt",
-      "line": 12,
       "sha256": "b23762a3b0b652e5fe24b00936209bb54a258a3357cd22b4125eb7581b771b09"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDelegationService.kt",
-      "line": 14,
       "sha256": "9f21e17db268b1d34eb4ba43d3c728132e219c75b8a625377ff5cc2c843b204f"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/iam/domain/catalog/PermissionCatalog.kt",
-      "line": 13,
       "sha256": "5843d163672973f850c303ae31ea0d5c2f69147ad2b54596e8ff0a622da04bdf"
     },
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWarehouseScopeApi.kt",
-      "line": 6,
       "sha256": "1d5bda19ded8bb0eb53dc46fb851b45e61b72f953807a164059b98ea471f0bac"
     },
     {
       "path": "server/src/main/resources/db/migration/V175__warehouse_policy_foundations.sql",
-      "line": 1,
       "sha256": "2d97d88e5a98721586b2e2f5a742cf4ae84612ce8d0abe84360da0f93e0929ce"
     }
   ],
   "requiredSelectors": [
     "G(WarehousePolicyIT)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/10",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/10",
   "historicalEvidence": [],
   "historicalTaskDirectoryWasMissing": true,
   "verifiedLaterBackend": {
@@ -121,8 +116,345 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "f95f23e0211a654d7c3138fc444bc2666f6ac5d004df3f33b66532cdea6158e8",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyService.kt",
+        "line": 12,
+        "sha256": "b23762a3b0b652e5fe24b00936209bb54a258a3357cd22b4125eb7581b771b09"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDelegationService.kt",
+        "line": 14,
+        "sha256": "9f21e17db268b1d34eb4ba43d3c728132e219c75b8a625377ff5cc2c843b204f"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/iam/domain/catalog/PermissionCatalog.kt",
+        "line": 13,
+        "sha256": "5843d163672973f850c303ae31ea0d5c2f69147ad2b54596e8ff0a622da04bdf"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWarehouseScopeApi.kt",
+        "line": 6,
+        "sha256": "1d5bda19ded8bb0eb53dc46fb851b45e61b72f953807a164059b98ea471f0bac"
+      },
+      {
+        "path": "server/src/main/resources/db/migration/V175__warehouse_policy_foundations.sql",
+        "line": 1,
+        "sha256": "2d97d88e5a98721586b2e2f5a742cf4ae84612ce8d0abe84360da0f93e0929ce"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/10",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "G(WarehousePolicyIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITVisibility.kt",
+            "sha256": "bb22361967afced9d0d1dea4d1ecbbd1cd910989e0a865832077515b4e8b8412",
+            "testAnnotations": 4
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITViewContract.kt",
+            "sha256": "953a3d807d8771a6c6c3428d93825cfcd57b6727595abfbd9564fbba4ee7535e",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITSchema.kt",
+            "sha256": "c9c1b528477ed02ca5cf03ebc73c6dde1de050e820ed9c892556697cc4708b5d",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITRoleAuthority.kt",
+            "sha256": "652005dde7c3a4673bca29744693ca88cb5666788809485a37489a3a8ba99120",
+            "testAnnotations": 3
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITRestart.kt",
+            "sha256": "4c632ca6dd6b7d5c22a85546fbceb2d692c8e7d29b9c6a62c32715e2d53abb02",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITEvaluation.kt",
+            "sha256": "5f58cca9cd53841dac859723803a146947749cfe1be6e2d802488578ef022e58",
+            "testAnnotations": 6
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITAuthorityRestart.kt",
+            "sha256": "4e6c3e2414e89f4c174dae938a2b9862f754419585446afd3dc4f417aa2fc728",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyITAuthority.kt",
+            "sha256": "ff2cfa4dcaf4e12ca803d4e221a95e46e3464670a6c34ac9de3ae908296a29cd",
+            "testAnnotations": 6
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePolicyIT.kt",
+            "sha256": "f7f921819b7a241fee749722d049915f20a9eaa980d1c0cec57bf6257252b7f0",
+            "testAnnotations": 3
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 27,
+          "counts": {
+            "tests": 27,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d72d3dbffb42efe90748b424d6977f17498a7387b59a23659c11ac79ea2c5e79",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthority",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "2063164420557a94e9ff34ffa02a5b720513c80fcb4c721dd965e6834109ea34",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITAuthority.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthorityRestart",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "5e7abddcd63d228bf640efe563f7d360db89cdb4c05e0f9c25960dc89acd93fa",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITAuthorityRestart.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITEvaluation",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "367e6c6ac4dc6f9e527d1863aff7c46317c225901c0d359ca2450178f8d865f4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITEvaluation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITRestart",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "005f9e1997ca1881399fc5b799858df28c9cae7112de92d4831552b173f4a213",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITRestart.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a5d9f0f1e2e547d8f066f7302ac214a508b4eb865851032223e040f811e1e705",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITSchema",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "af8f8d3af73b839807a5c793b07cf5b41c84513fcd3bbb5436bbfe865c2b6678",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITSchema.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITViewContract",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "7616650b2aedd6a1b1f1a51df3e891537682a7297cff7d55b271ad56bebd44fb",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITViewContract.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITVisibility",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "feee5310f362251263a4d22eb8f88d3843d8c10072be99e191e01cfc7f5f4d46",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITVisibility.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_C902_CI_36264069182_COMPLETE_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 27,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "bdd0c0dec94a615c45a17bef4433adefcee65c9abc193c4488fa762be1565460",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthority",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "37c02e2d88b5a974a3b252bf4839a438b2d84da3a5b8c2f183136774839a3d7d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITAuthority.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthorityRestart",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "c95a6372e29c142a2099301bb7fa1be7e83bf71ccb35b2a31d2b766a2a223d0d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITAuthorityRestart.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITEvaluation",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3a9b0be388aa7bc178fe6ab634d7a9def9e2b5e2597ffc34a6fec1a1184e1d6e",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITEvaluation.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITRestart",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "4794ea63f7dc67ca494f6ac1254c2ce5ebd947d3d8f4f66e5750dd6d9165abee",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITRestart.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "6b608c8b91654be60a88616423d1b53c16489180e66da50ea6c2655623f6beb5",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITSchema",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1375dc5eb9be7faadc837650f1c444185f042ab953f5d8f2e2e512ebee017b53",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITSchema.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITViewContract",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "e4affc8123db9057605b3f20043e8888f4840f122cdfd98f9de2052cf2cdbfbe",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITViewContract.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehousePolicyITVisibility",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "330fd684683f6db077c5926e4187783bd3ca873fcc864f83e3140c279549c9cd",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehousePolicyITVisibility.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(WarehousePolicyIT)` configures two-role policy via HTTP and evaluates role/warehouse/unknown-cost rules; spoofed policy authority and wrong warehouse denied. Actual durable approval queue/decision and delegated-self rejection run in task12 after its persistence exists. Save E(11). Commit: `feat(warehouse): kelola kebijakan dan ruang akses`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "G(WarehousePolicyIT)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }

@@ -114,7 +114,7 @@ function MaterialResiduals({ context, actor, enabled, reload }: { context: MyMat
     {data.items.length === 0 && <p>Belum ada pengembalian atau serah-terima dalam cakupan Anda.</p>}{data.items.map(row => <article className="card stack" key={row.id}>
       <h4>{row.sku.name} · {row.serial ?? row.lotCode}</h4><p><WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> · <WarehouseStatus status={row.state} /> · Revisi {row.revision}</p>
       <p>{row.sender?.name ?? 'Pengirim'} → {row.receiver?.name ?? row.location.name} · {row.purpose === 'RETURN' ? 'Pengembalian ke gudang' : 'Serah-terima teknisi'}</p>
-      {row.purpose === 'RETURN' && row.state === 'RECEIVED_IN_INSPECTION' && <p>Sudah diterima petugas; masih perlu pemeriksaan. Penerimaan belum berarti stok tersedia.</p>}
+      {row.purpose === 'RETURN' && row.state === 'RECEIVED_IN_INSPECTION' && <p>Sudah diterima petugas gudang. Ketersediaan stok mengikuti hasil pemeriksaan pada dokumen retur.</p>}
       {row.purpose === 'HANDOVER' && row.receiver?.id === actor && context.currentAssignee && context.active && row.state === 'DISPATCHED' && <MyMaterialResidualAcknowledgement row={row} enabled={enabled} onDone={reload} />}
     </article>)}<WarehousePagination page={page} size={data.size} total={data.totalElements} onChange={setPage} />
   </>}</WarehouseState></section>

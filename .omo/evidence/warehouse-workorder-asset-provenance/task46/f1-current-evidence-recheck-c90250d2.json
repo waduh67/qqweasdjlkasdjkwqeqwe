@@ -1,0 +1,374 @@
+{
+  "status": "BOUNDED_RAW_REPARSE_AND_CURRENT_SOURCE_COMPARISON_NOT_FINAL_F1",
+  "reviewedAtUtc": "2026-09-26T19:04:55.136335+00:00",
+  "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "reviewedDirtySource": false,
+  "server": [
+    {
+      "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+      "ciRun": 36252487886,
+      "authenticatedXmlFiles": 675,
+      "modernCounts": {
+        "tests": 3820,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "focusedCounts": {
+        "tests": 325,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "allDeclaredXmlHashesMatch": true,
+      "actualTestcaseCountsMatchHeaders": true,
+      "fullServerExecuted": true,
+      "duplicateFocusedCopiesCountedOnlyOnce": false
+    },
+    {
+      "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "ciRun": 36260966532,
+      "authenticatedXmlFiles": 135,
+      "modernCounts": null,
+      "focusedCounts": {
+        "tests": 326,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0
+      },
+      "allDeclaredXmlHashesMatch": true,
+      "actualTestcaseCountsMatchHeaders": true,
+      "fullServerExecuted": false,
+      "duplicateFocusedCopiesCountedOnlyOnce": true
+    }
+  ],
+  "nonserverReports": [
+    {
+      "artifact": "warehouse-browser-customer-assets-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": "5f3c50f19f4f50efdafb2d7ec8e552ee1467068b3a0f9e2fbffb3529c97295a2",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-draft-expiry-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "b31b2481d94b40952b91d1e4015e1c0f6ed4e7df9ca0df972c4086d200f3b87a",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-exceptions-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "86330bb086f849555713ef5e8c5314532599dd58d9a08dbbfee4b94828b7c674",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-issue-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "0c89b4de5b6687f7e6361c63045830599840f9593ce0ae9f303679d03fa78f8b",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-provenance-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "bfea35ae3d784f9d07134dec93f4a1772576b0a38713fdd3b2af47814c901623",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-receiving-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "cbaa02e0e9447552e3c1b6291c0bd810558bb58b612ea153acba59656e21e905",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-returns-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": "c58dec4d1e965121794bd5801010b3907cdd8397c519b7708f9d4c2aed8c6a0f",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-setup-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 4,
+      "projects": {
+        "warehouse-desktop": 2,
+        "warehouse-mobile": 2
+      },
+      "reportSha256": "fe764cf7b0e0297d9e573df6cd0a240ccfeda8476a6094134fcea575c3d0be9d",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-browser-warehouse-empty-tenant-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "a560ccdf74d68c20fa02a2fc394ca5c1e79b0c1f97439559ac8385fd3bd1111f",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-legacy-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "legacy-after.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "0494681426610e1b58611bf5dbbd1aea9b2f858e579e87b7ae7e355892ede2c0",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-legacy-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "legacy-before.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "1701c32eb64ad376c4ed4b175e36c50628baef978f8ebfe910ee7f6023eb1f5b",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-legacy-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "legacy-restart.json",
+      "kind": "playwright",
+      "tests": 2,
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "60d4e2202aa33450b9de0b2e2b44d39cfb66428cea52a8b54ae99debe57eeed6",
+      "zeroFailuresRetriesSkips": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-app.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-core-mvi.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-core-storage.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-data.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-domain.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-feature-materials.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-shared-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "receipt": "shared-feature-workorders.json",
+      "kind": "junit",
+      "counts": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reportHashesMatch": true
+    },
+    {
+      "artifact": "warehouse-web-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "kind": "vitest",
+      "tests": 607,
+      "files": 117,
+      "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+    }
+  ],
+  "nonserverCounts": {
+    "browser": 24,
+    "browserSpecs": 9,
+    "browserProjectExecutions": 18,
+    "legacyBrowser": 6,
+    "web": 607,
+    "shared": 44,
+    "nativeCompileTasks": 2
+  },
+  "nativeCompilationLogHashMatched": true,
+  "preflightRawHashesMatched": 8,
+  "preflightProof": {
+    "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+    "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+  },
+  "imageRawStateAndTwoPhaseHashesMatched": true,
+  "imageProof": {
+    "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+    "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+  },
+  "sixSourceManifest": {
+    "path": "task46/f4-ci-6bfb1337-source-input-hashes.json",
+    "sha256": "45567211523a12983bd4765d269462c6be04ef2f816cda54dd5e6a81adc3dd27",
+    "inputs": 3693,
+    "changedPathsAtReviewedHead": [
+      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt"
+    ],
+    "interpretation": "Production, migration, workflow, web, browser, protocol and native inputs unchanged; only four server contract expectations corrected."
+  },
+  "localContractCorrection": {
+    "counts": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
+        "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
+        "rawReference": "reports/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+      }
+    ],
+    "sourceInputCount": 3693,
+    "allSourceInputsMatchReviewedHead": true,
+    "sourceManifestSha256": "e7f067b74430879d7199a81cafc8d11ba58673f66fa63e5b82258ee654e20910",
+    "proof": {
+      "path": "task46/local-contract-expiry-r1.json",
+      "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+    },
+    "runnerExitCode": 0
+  },
+  "proofs": [
+    {
+      "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+      "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+    },
+    {
+      "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+      "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+    },
+    {
+      "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+      "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+    },
+    {
+      "path": "task46/local-contract-expiry-r1.json",
+      "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+    }
+  ],
+  "limitations": [
+    "1d complete server predates draft-expiry migration 178.12; not current full-server acceptance.",
+    "6b CI failed two stale contract expectations and skipped full server/historical gates; nonserver success is not aggregate CI success.",
+    "Corrected CI 36264069182 remains pending in this bounded capture; cancelled duplicate c122 is not a pass.",
+    "Hash-matched preflight/image raw records corroborate the independent F4 proof; this reviewer did not execute Docker or preflight.",
+    "No raw reports, records, traces, screenshots, logs, credentials or decrypted contents copied into public review notes."
+  ],
+  "qaExecutedByReviewer": false,
+  "finalF1Approval": false
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-desktop/blind-counter-returned-piece-only.png",
+    "sha256": "53a73a686ee15660a5cafe175468ef046eefdced24fce257a3d9de2a2c3e5b05",
+    "inspectedAtUtc": "2026-09-26T18:54:41.133678+00:00",
+    "observation": "Settled desktop blind count shows one assigned returned cable position, recorded 40,000 m, no book quantity, no repeat record control, no stock navigation. Text and controls visible without clipping."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-desktop/partial-return-count-stock-dark.png",
+    "sha256": "3e3783f2e125584a03ca296aea9d8da944c6a435581f07f9e8ea550dbb4bce82",
+    "inspectedAtUtc": "2026-09-26T18:54:41.133777+00:00",
+    "observation": "Settled 768 px dark stock table with sidebar closed: 940,000 m cable and nine ONUs available, zero reserved/prepared; clear readable columns without horizontal clipping."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-desktop/offline-partial-return-disabled-retains-command.png",
+    "sha256": "724683f8ad164b479671a02a64ca1a242699dae08e87622b75f4927f37c0b29c",
+    "inspectedAtUtc": "2026-09-26T18:54:41.133869+00:00",
+    "observation": "Offline confirmation retains 40 m and quarantine destination; submit is visibly disabled, retained form visible underneath."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-desktop/lost-reply-partial-return-retains-command.png",
+    "sha256": "bc1ea3cb7fbd01985c3815d1ad529bafc5b20fa08f3742b0cce8386b645bfb21",
+    "inspectedAtUtc": "2026-09-26T18:54:41.133967+00:00",
+    "observation": "Lost-response confirmation retains 40 m, explains uncertain transaction result, and exposes the same-transaction retry. Modal content and retry action are fully readable."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-mobile/blind-counter-returned-piece-only.png",
+    "sha256": "e036170f7ccb32f90790b3876be3cc1989ef60cf5a3592444ce141e4d5c11fc6",
+    "inspectedAtUtc": "2026-09-26T18:58:28.435247+00:00",
+    "observation": "375 px touch project: settled assigned count card shows 40,000 m and no repeat action, book stock hidden, wrapped identifiers and guidance readable."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-mobile/partial-return-count-stock-dark.png",
+    "sha256": "2adbfcfc9d8cb8801836aafff349d5a0da8f0cf53397698d65c5026977f68adf",
+    "inspectedAtUtc": "2026-09-26T18:58:28.435543+00:00",
+    "observation": "375 px dark stock cards show 940,000 m and nine available ONUs; zero reserved/prepared, responsive labels/values readable, horizontal tab strip remains scrollable."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-mobile/lost-reply-partial-return-retains-command.png",
+    "sha256": "12314261f799c435e6b731191329c327507a70c274bb92055083db919b8b7f69",
+    "inspectedAtUtc": "2026-09-26T18:58:28.435694+00:00",
+    "observation": "375 px lost-response confirmation retains 40 m and clear same-transaction retry; wrapped dialog title, explanation and controls fit."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-mobile/cancelled-custody-sixty-metres-retained.png",
+    "sha256": "11ee019e2ec86a0c4cea3a5006cbb3f580a954e628ce30483d21d2a4d50ce48f",
+    "inspectedAtUtc": "2026-09-26T18:58:28.436335+00:00",
+    "observation": "375 px cancelled original-technician view retains 60,000 m and one original ONU; exactly one 40,000 m returned piece is shown awaiting receipt. New usage action absent, physical return actions remain."
+  },
+  {
+    "path": "extra-r3/edge-artifacts/extra-edge-cancelled-reass-cdfed-artial-count-preserve-stock-warehouse-mobile/reassigned-technician-no-inherited-custody.png",
+    "sha256": "f7cb520764d2e3514f902f5799f6fee85736c2a498149965123a88a1a0adc80f",
+    "inspectedAtUtc": "2026-09-26T18:58:28.436614+00:00",
+    "observation": "375 px replacement-technician view shows no inherited shipments, custody or returns and readable empty-state guidance."
+  },
+  {
+    "path": "extra-r4/restart-artifacts/restart-the-completed-main-c2ea4--installation-after-restart-warehouse-desktop/restart-numeric-917500-nine-stock.png",
+    "sha256": "ac2cf556761869b44cdfaf308b342f8442272b7e7265935ad7bc131a81109b5d",
+    "inspectedAtUtc": "2026-09-26T19:01:56.463475+00:00",
+    "observation": "After actual backend restart, settled desktop stock shows exactly 917,500 m and nine available ONUs, zero reserved/prepared; readable table."
+  },
+  {
+    "path": "extra-r4/restart-artifacts/restart-the-completed-main-c2ea4--installation-after-restart-warehouse-mobile/restart-numeric-917500-nine-stock.png",
+    "sha256": "b17ed374b57c2515cb5bc327f547f551088e5026544d4b8abb740d7be083f58d",
+    "inspectedAtUtc": "2026-09-26T19:01:56.464195+00:00",
+    "observation": "After restart, 375 px responsive stock cards show 917,500 m and nine available ONUs with readable labels and zero reserved/prepared quantities."
+  },
+  {
+    "path": "extra-r4/restart-artifacts/restart-the-completed-main-c2ea4--installation-after-restart-warehouse-mobile/restart-numeric-one-installed-loan.png",
+    "sha256": "686de806791e3872da5a8d2958370c13f055da0181b6caf1bc2df7f537cc3347",
+    "inspectedAtUtc": "2026-09-26T19:01:56.464740+00:00",
+    "observation": "After restart, mobile asset panel shows one installed ISP-owned loan, original receipt/issue references, accepted customer handover and return obligation; wrapped content and actions readable."
+  },
+  {
+    "path": "extra-r4/restart-artifacts/restart-the-cancelled-part-39bde-ariance-count-after-restart-warehouse-desktop/restart-cancelled-sixty-metres-one-onu.png",
+    "sha256": "7405338d3ab2eba2db5e89da272187cb7f233cae9342472a463c1b71094a8c24",
+    "inspectedAtUtc": "2026-09-26T19:01:56.465281+00:00",
+    "observation": "After restart, cancelled original technician retains 60,000 m and one original ONU; return actions remain and usage absent. The residual handover tile still labels receipt-level RECEIVED_IN_INSPECTION and inspection guidance; separately authenticated warehouse return case is ACCEPTED 40000 and stock 940000. This tile is not evidence of final inspection status."
+  },
+  {
+    "path": "legacy-r1/artifacts/before-artifacts/before-the-historical-V172-f1285-ONU-entirely-through-its-UI-warehouse-desktop/historical-customer-and-onu.png",
+    "sha256": "eb475040532194f8d99d6d138b0f8213f233d968d09f2fe70525b6b0c0f38a54",
+    "inspectedAtUtc": "2026-09-26T19:06:54.742670+00:00",
+    "observation": "Historical V172 desktop UI visibly shows the newly created old customer and normalized legacy ONU serial; historical registration controls are present."
+  },
+  {
+    "path": "legacy-r1/artifacts/before-artifacts/before-the-historical-V172-f1285-ONU-entirely-through-its-UI-warehouse-mobile/historical-customer-and-onu.png",
+    "sha256": "666f0b65dbc7ae86fa872de1b64ee3f03177b9312a7c9344c9f62d53682910e0",
+    "inspectedAtUtc": "2026-09-26T19:06:54.742942+00:00",
+    "observation": "Historical V172 mobile customer panel shows the stored old ONU serial and registration success. This is historical UI evidence, not current UI certification."
+  },
+  {
+    "path": "legacy-r1/artifacts/after-artifacts/cutover-historical-custome-77e48-ver-and-application-restart-warehouse-desktop/legacy-cutover-after.png",
+    "sha256": "265f6b0a054c0be34a3accc7a4376f729232d94d00dc73105906f4fa556eb13a",
+    "inspectedAtUtc": "2026-09-26T19:06:54.743071+00:00",
+    "observation": "Current desktop finalization clearly shows active warehouse operations, one retained old identity, no conflicting identities, zero opening stock positions and preserved historical records."
+  },
+  {
+    "path": "legacy-r1/artifacts/after-artifacts/cutover-historical-custome-77e48-ver-and-application-restart-warehouse-mobile/independent-legacy-opening-approval.png",
+    "sha256": "423f38fcd0bc08f31d1c826836032d4501cfccb56d332b35d951f6eda3d734b7",
+    "inspectedAtUtc": "2026-09-26T19:06:54.743775+00:00",
+    "observation": "Current mobile independent approval visibly shows approved and posted result, one reviewed historical case, zero proposed stock positions, no invented physical stock. Long card wraps within viewport."
+  },
+  {
+    "path": "legacy-r1/artifacts/after-artifacts/cutover-historical-custome-77e48-ver-and-application-restart-warehouse-mobile/preserved-customer-after.png",
+    "sha256": "64d244d0ac0c150cc290c88beb54f646dacf18af1f1a3eb83a23f0276abff51a",
+    "inspectedAtUtc": "2026-09-26T19:06:54.743956+00:00",
+    "observation": "Current mobile customer panel retains original legacy serial; asset section explicitly identifies one historical device without verified warehouse origin and no warehouse-sourced installation."
+  },
+  {
+    "path": "legacy-r1/artifacts/restart-artifacts/cutover-historical-custome-77e48-ver-and-application-restart-warehouse-mobile/legacy-cutover-restart.png",
+    "sha256": "b8251796aeca6cc5f4abcd122960dec3917a498dd9160f2c4d03f84ab953b450",
+    "inspectedAtUtc": "2026-09-26T19:06:54.744294+00:00",
+    "observation": "After restart, mobile finalization remains active with zero opening stock and one retained reserved legacy identity; wrapped cards and navigation readable."
+  },
+  {
+    "path": "legacy-r1/artifacts/restart-artifacts/cutover-historical-custome-77e48-ver-and-application-restart-warehouse-desktop/preserved-customer-restart.png",
+    "sha256": "c4b447feaaa14f3482a569a9df436cbd381b6decad6fe2f14ea4bad90fe18fe1",
+    "inspectedAtUtc": "2026-09-26T19:06:54.744410+00:00",
+    "observation": "After restart, desktop customer panel retains original legacy serial and the explicit unverified-origin message; no direct legacy ONU registration button in the current asset panel."
+  }
+]

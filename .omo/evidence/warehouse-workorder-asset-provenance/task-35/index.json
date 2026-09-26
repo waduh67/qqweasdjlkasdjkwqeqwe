@@ -1,28 +1,24 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "task": 35,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "implementationSource": [
     {
       "path": "web/src/pages/warehouse/WarehouseRequestsPage.tsx",
-      "line": 27,
-      "sha256": "0d08913176592c24384be752541257d33fd1db1c1b92b025dbefe6fb52ea06e0"
+      "sha256": "76efcb97bf5507043af55d906c5929ab8200cab8323c3d3ca5772fa5c157c88f"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseReservationEditor.tsx",
-      "line": 16,
       "sha256": "fb8e2b79cd8f69cddadf9ac7f1e89a46d14b50a5eec1b233e0e2d09423ab2254"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseAllocationEditor.tsx",
-      "line": 13,
       "sha256": "515cb42a54b647fd416e884f8af2e5ca685615b01097070ba9969b336c6e66d9"
     },
     {
       "path": "web/src/pages/warehouse/WarehouseIssuePanel.tsx",
-      "line": 20,
       "sha256": "2723078f2a4d28fdcee8083ab7b836bb28f775e8a9156a84008ac15e3a37ccbf"
     }
   ],
@@ -30,7 +26,7 @@
     "W(WarehouseRequestsPage)",
     "B(issue.spec.ts)"
   ],
-  "independentMapping": "f1-compliance-source-evidence.json#tasks/34",
+  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/34",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/allocation-metadata-verification.json",
@@ -101,8 +97,194 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
-    "Missing original task-time evidence was not reconstructed or invented.",
-    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+  ],
+  "priorIndexSha256": "a7aa7d8ec734bfa886769cd657d443bc04b2da27c5c0e05ff0f413f6c1850d03",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": "web/src/pages/warehouse/WarehouseRequestsPage.tsx",
+        "line": 27,
+        "sha256": "0d08913176592c24384be752541257d33fd1db1c1b92b025dbefe6fb52ea06e0"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseReservationEditor.tsx",
+        "line": 16,
+        "sha256": "fb8e2b79cd8f69cddadf9ac7f1e89a46d14b50a5eec1b233e0e2d09423ab2254"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseAllocationEditor.tsx",
+        "line": 13,
+        "sha256": "515cb42a54b647fd416e884f8af2e5ca685615b01097070ba9969b336c6e66d9"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseIssuePanel.tsx",
+        "line": 20,
+        "sha256": "2723078f2a4d28fdcee8083ab7b836bb28f775e8a9156a84008ac15e3a37ccbf"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/34",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {
+      "W(WarehouseRequestsPage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx",
+            "sha256": "267776dfc0af28ea9681e0cc481b4452b71685fb16ebff58e4345358d19d575a"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 10,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx",
+              "tests": 10
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 11,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx",
+              "tests": 11
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 11,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx",
+              "tests": 11
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        }
+      },
+      "B(issue.spec.ts)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/e2e/warehouse/issue.spec.ts",
+            "sha256": "fe022fb029f4897aac26caa250d388cac7f89a1494c2c4d655a90911f8d45733"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 2,
+          "cases": [
+            {
+              "file": "issue.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "5d4318e6476ce745b38eb8183678499d01d9824f1abf7c9de9079ca292bc9c66"
+            },
+            {
+              "file": "issue.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "5d4318e6476ce745b38eb8183678499d01d9824f1abf7c9de9079ca292bc9c66"
+            }
+          ]
+        },
+        "executedCurrent": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "PRODUCTION_BROWSER_BUILD_AND_WORKFLOW_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 2,
+          "cases": [
+            {
+              "file": "issue.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "0c89b4de5b6687f7e6361c63045830599840f9593ce0ae9f303679d03fa78f8b",
+              "artifact": "warehouse-browser-issue-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "issue.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "0c89b4de5b6687f7e6361c63045830599840f9593ce0ae9f303679d03fa78f8b",
+              "artifact": "warehouse-browser-issue-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "independentF3Claim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [
+      "C7-web-full-r1"
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `W(WarehouseRequestsPage)` issue success/shortage/revision/denied; `B(issue.spec.ts)` at task35 covers warehouse reserve/pick/dispatch and visible transit only. Actual receiver UI acknowledgement is added/run in task45 after Material Saya task40; backend receipt assertions already execute in task15. No simulated browser acknowledgement as substitute. Save E(35). Commit: `feat(web): penuhi permintaan dan keluarkan material`.",
+    "commands": {
+      "requiredPlanMacros": [
+        "W(WarehouseRequestsPage)",
+        "B(issue.spec.ts)"
+      ],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  }
 }
