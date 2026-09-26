@@ -5,6 +5,10 @@ internal object WarehouseDeferredGuardCatalog {
     fun normalized(value: String) = value.trim().replace(Regex("\\s+"), " ")
 
     val expected: Map<String, String> = buildMap {
+        put("warehouse_count_draft_final_guard", normalized("""
+            IF TG_OP<>'INSERT' THEN PERFORM warehouse_assert_deferred_scope(OLD.tenant_id); END IF;
+            IF TG_OP<>'DELETE' THEN PERFORM warehouse_assert_deferred_scope(NEW.tenant_id); END IF;
+        """))
         listOf(
             "warehouse_approval_decision_binding",
             "warehouse_approval_terminal_guard",

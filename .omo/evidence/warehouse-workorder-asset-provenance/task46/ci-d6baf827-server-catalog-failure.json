@@ -1,0 +1,426 @@
+{
+  "status": "FAILED_FOCUSED_BEFORE_FULL_REGRESSION",
+  "run": 36237393856,
+  "commit": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+  "downloadVerification": {
+    "run": 36237393856,
+    "artifactId": 10904459629,
+    "name": "warehouse-server-d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+    "artifactDigest": "sha256:c1dd3ae8131c91ad2623d7feaa2f5974af540ddb247de9992ebde8d732d451e6",
+    "encryptedArchiveSha256": "2f1652ad325bebda2ecba6306c10721152848901770cde5e46c351cbe8d8dcf6",
+    "downloadedAndDecrypted": true
+  },
+  "counts": {
+    "tests": 325,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.AlarmRuleIT",
+      "sha256": "a7834099668d3cc5b3db0056426ee01a25975858a773d8d9d117492fbf6f83e3",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+      "sha256": "3106b1a5af5942606970277e027093d738c7323faa5a5b561f95bdae5964b8fa",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.GisImpactedIT",
+      "sha256": "21729b2c5f4d938f8a7f5cbae21e9c183d34ad217232f4f05fbbb1c1304fa2ad",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.GisUtilizationIT",
+      "sha256": "f4f6fa18f4091f21acfbdcdfc879bc76de45f3e8f922a52521decffe11cb46a1",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.IncidentIT",
+      "sha256": "23ba4a46e6ddd44bc58ebcf3b7bae0c7622fc1de1589d9f5d0def209e38c1722",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "d1f9de7a97d981854ff363429c34f47964e84d361a9e939dd38a863766de5b1a",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.NetworkEndToEndIT",
+      "sha256": "63a141a9e44006351ab4d2dfb799903583043645755b8ae9427cc4b7e04c6752",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.NotificationIT",
+      "sha256": "80a89145332be5974a59addb792cf109fa04810927c92bcf3dfcd9f2c4f91c7c",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.OdpPortBoardIT",
+      "sha256": "62f290930972d9c143dd3814726dbb6ad55280b4b2516d8513935771402cf27e",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+      "sha256": "cca72f5a90e5964ddc1542cbf4b5db0a4c0c0eedee52d57e72e6aa1d77a5792c",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.SurveyCapacityIT",
+      "sha256": "a0c9538c1eede4b3d3c500f48ea2e8dc90c27c577eaab2e460c7ebc542da843a",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+      "sha256": "6c36d704713ae04b4933176680fbbb9db26d579c9d30e58fff4bb221c9a60b68",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+      "sha256": "87bb72fa69c3aefc3ac7246bf438f49c6231325d1b1b2ecc9a12ad3d5fde9d86",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+      "sha256": "9018452cef8ba30f55ae00129f061328a7ea5a00a32fff9bbc41c54b23f85461",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+      "sha256": "7f1d1ba84aa447fa84e6c3a4da55ef7c2d0d7772ded5461d2a513f6928675a88",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+      "sha256": "21078844773e3972c895b28e50b3524119e5b86e1ef51900cf7f0620e55c9c15",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "sha256": "e202aef2d479dec0c8c9e8f23be088060914f7d99d33021cef9f724897938574",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftIT",
+      "sha256": "960790553d29aa4134ec53cc704c3bcec9d9b71d989367ca9a667b602cd32a81",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+      "sha256": "9a98edaa980074ed6f1a5b3a272ac2209a6c7896dcb7047ad387f91e7271ab7c",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+      "sha256": "d9a7f7737b03389b26c47bbca1d54869604b22bacb7567baf27adaa7be309946",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+      "sha256": "83736bca8d3abfa06ee20f0b3688e464aa7f4081a374e9581404f636ef55373a",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "sha256": "68469e365d55eed40fcb05ce89bfdbe5802a6d9c253cb2be5c76654807b4fcb4",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT",
+      "sha256": "a7d0ef4655306e981597aeccfced721d50cbbf7bc13f909b9135a9f3b1f6cc9b",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseLegacyReservationIT",
+      "sha256": "45df8bc3b1608bded81fbab5a8125ccd412173ccfe745473f116877aa69073a6",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseQueryITCompatibility",
+      "sha256": "23455a64242979fc80cd1163627432fd6572562606e3c0fe502b1079b465f97e",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+      "sha256": "a46e9f41003a967b7d6a599a4665aee04b486318b508383957fdfdf977cf3a50",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportCsvTest",
+      "sha256": "18c7066f9870efdb2aa74dbbd784439c9a7efca0680c8b39be58f46526033ba7",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportExportIT",
+      "sha256": "c42b7e02b1fed83a682e5b1de00779db7512dadc4ab3e3373b1aab0a8dd93f56",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+      "sha256": "358e132009e4ee7ec5242d09c2dd90e18ad32a82c72c4e3b8ee98ec31c169317",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportJourneyIT",
+      "sha256": "0e74f32afcd47ff81fc198264ef19acba89eacddf88e49c0da8f052b324987ff",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportPrivacyIT",
+      "sha256": "eeb3cb969b83bc919809670a50e2742f290487d05b473b278034813120ad39bd",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT",
+      "sha256": "79d074125cef594be2405737a4a0290266f4940786c2c5ea10bcca66386aa7b9",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
+      "sha256": "1862936098bdbe7f0774fe065746af72e36d3292e0d1186f820eeeb336f21320",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+      "sha256": "f744d95301e2af4af25f405883e139899cae48df12bf2a199b9c4a0a4f099ce5",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+      "sha256": "351336f06d46ed9a39f158609184bb8f112352b1f0358cf2fa13d5c058453d6c",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+      "sha256": "ad3c93e3789898b07cdc02fe60d5f5d18bad47d109b162079f15c97656cd85c5",
+      "tests": 62,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT",
+      "sha256": "b4fb2126306d2257927c3d8b37afb37241d82206a7b1be316dddd4fdc8f77626",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+      "sha256": "f92ec18dd39c067ca9c4e8eaac0c8dcd4589773e199bb15edba309a71434128a",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+      "sha256": "1421d76cb55a35b533244d11ddfc9454fb6fcb94a72cecb124ec93915642b516",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftIT",
+      "sha256": "e43bc74e1f1cd8957383dad3f58bb77dd359495f00a88a3c68bc662090c340ca",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+      "sha256": "19b9a70a923d3feb7848e02b36397e7faef0ec6d61333fad46ea6556fb3ca64c",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+      "sha256": "60d59b392bf37af128feb1f9edd0a0745beff8fd7601afd479720ba96b2daeef",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+      "sha256": "b18b1ba85d8efcebf89fb6d3e162cfa039ba06c1310182d8840fb812749142e4",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferITDurability",
+      "sha256": "ff982502d591daf0bb2f40941a35788dd5a8cd0ec681fef2683816d334ca274c",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferITGuards",
+      "sha256": "85a0178eda308e493fa7c592891b5b7976019bc747a29dc1895435b88a58874c",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferITPositions",
+      "sha256": "1fedb01d49adf8edb764b1cfbcfcca4d08f780517189385d8a762980887e8886",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+      "sha256": "dea7f314962c314dfc72799fe3f49a5043c40dd48196f5a430bb3738ce485e9b",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+      "sha256": "244ad7246817ecca5af83482ea89e514326037475a771f18d51a653a3b095d17",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
+      "sha256": "20f8b625a6fcea82fdf73cd7858b9e342b9ece041c9bf96cc426260d5d1bfe48",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "sha256": "5a0d4504edb2b5b895a0d1e504be3ed419632c210281c3a3146371b490f45513",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "failedCase": "WarehouseSchemaITSelectiveTiming.catalog covers every deferrable warehouse validator with an internal entry assertion",
+  "failure": "NoSuchElementException: warehouse_count_draft_final_guard missing from WarehouseDeferredGuardCatalog.expected",
+  "correction": "Add the actual OLD/NEW deferred tenant assertions to the explicit test catalog; V178.11 migration remains unchanged.",
+  "fullRegression": "SKIPPED_BY_FAILED_FOCUSED_GATE",
+  "limitation": "Actual XML checked once: compatibility-results and test-results are byte-identical copies, not separate executions. No complete server, historical upgrade or final acceptance claim."
+}

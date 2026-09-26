@@ -129,3 +129,12 @@ Task46 remains in progress. Current receipt GET/list expose domain editability; 
 Validation: actual local87/87 backend tests in4classes and14/14 web tests, warehouse E2E typecheck and production build passed. See task46/local-sealed-proposal-{server,web}-r1.json and independent f1-sealed-proposal-patch-review.md/source.json. Two mistyped backend selectors executed nothing and are explicitly excluded; ModularityTests will run with the next change. These checks precede the new asset exception creation UI. No new migration; V178.11 remains immutable and next is178.12.
 
 CI36237393856 at d6baf827 is still running; reviewer is authenticating its actual nonserver artifacts. Follow-up asset exception UI/API context is being implemented in the validation worktree. Do not treat its uncommitted files as tested. C7 expiry and final full regression/F1-F4 remain open. No deployment or main merge.
+
+
+## 2026-09-26 CI catalog correction (parent cc47f434)
+
+Remote work/warehouse-draft-lifecycle contains cc47f434 (sealed proposals). CI36237393856 at d6 failed one of325 focused tests: WarehouseDeferredGuardCatalog lacked the newly introduced COUNT final guard. Full server/historical regression was skipped. Both report directories contain identical XML copies; do not count them twice. Fixed the explicit catalog using the actual OLD/NEW tenant assertions; no migration changed. Actual local145/145 tests across5classes pass, including the62-case selective-timing/schema suite and ModularityTests. That run includes initial uncommitted asset-context code and does not certify the later reviewer fixes; see local-asset-exception-server-r1.json.
+
+Independent actual nonserver d6 artifacts all pass:22browser,6legacy,581web,44shared,2native compile tasks,8preflight checks and matched image/JAR/source/migration hashes. See f4-ci-d6baf827-nonserver-recheck.* and f4-d6-source-input-hashes.json. No aggregate CI/F4 pass.
+
+Still in task46. Asset exception GET/UI initial tests passed, but reviewer required customer-area checks again on fresh/replayed POST and approval.view for loss's original requester continuation. Root is implementing those plus real browser creation/rejection journeys in the validation worktree. C7 draft expiry and final full regression remain open. Highest schema remains178.11, next178.12.
