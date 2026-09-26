@@ -13,7 +13,9 @@ import org.springframework.web.context.WebApplicationContext
 class WarehouseCountDraftUpgradeIT {
     @Test fun `upgrade preserves existing draft counting and posted evidence and only the never started draft can change`() {
         WarehouseSchemaDatabase("178.10").use { database ->
-            postingContext(database, "178.10").use { context -> UpgradeClient(context).verify(database) }
+            val seed = WarehouseDraftUpgradeProcess.seed(database, "count", "178.10")
+            assertThat(database.migrate().migrations.map { it.version }).contains("178.11", "178.12")
+            postingContext(database).use { context -> UpgradeClient(context).verify(database, seed) }
         }
     }
 
@@ -25,35 +27,29 @@ class WarehouseCountDraftUpgradeIT {
             ReflectionTestUtils.setField(this, "onboarding", application.getBean(OnboardTenantUseCase::class.java))
         }
 
-        fun verify(database: WarehouseSchemaDatabase) {
-            val stock = transferStock()
+        fun verify(database: WarehouseSchemaDatabase, seed: tools.jackson.databind.JsonNode) {
+            val stock = mapper.treeToValue(seed.path("stock"), TransferStock::class.java)
             val token = stock.setup.token
             val root = "/api/v1/warehouse/counts"
-            val balance = fixture(token).transaction {
-                scalar("SELECT id FROM inventory_balance_projection WHERE stock_identity_id='${stock.identity}' AND location_id='${stock.setup.bin}'")
-            }
-            val body = """{"locationId":"${stock.setup.bin}","partialLocation":true,"reason":"Before upgrade",
-                "entries":[{"balanceId":"$balance","counterId":"${stock.receiver}"}]}"""
-            val oldDraft = request("POST", root, token, body, "old-draft")
-            assertThat(oldDraft.status).withFailMessage(oldDraft.contentAsString).isEqualTo(201)
-            val draftId = mapper.readTree(oldDraft.contentAsString).path("id").asString()
-            val countingId = create("counts", token, body).path("id").asString()
-            val oldStart = request("POST", "$root/$countingId/start", token, """{"expectedRevision":0}""", "old-start")
-            assertThat(oldStart.status).withFailMessage(oldStart.contentAsString).isEqualTo(200)
-            val postedId = create("counts", token, body).path("id").asString()
-            assertThat(request("POST", "$root/$postedId/start", token, """{"expectedRevision":0}""").status).isEqualTo(200)
-            assertThat(request("POST", "$root/$postedId/observe", token,
-                """{"expectedRevision":1,"balanceId":"$balance","quantityBase":"100000","reason":"Physical measurement","documentReference":"OLD-COUNT"}""").status).isEqualTo(200)
-            val oldPosted = request("POST", "$root/$postedId/submit", token, """{"expectedRevision":2}""", "old-submit")
-            assertThat(oldPosted.status).withFailMessage(oldPosted.contentAsString).isEqualTo(200)
-            val before = facts(token)
-            assertThat(database.migrate().migrations.map { it.version }).contains("178.11")
+            val balance = seed.path("balance").asString()
+            val body = seed.path("body").asString()
+            val draftId = seed.path("draftId").asString()
+            val countingId = seed.path("countingId").asString()
+            val postedId = seed.path("postedId").asString()
+            val oldDraft = seed.path("oldDraft").asString()
+            val oldStart = seed.path("oldStart").asString()
+            val oldPosted = seed.path("oldPosted").asString()
+            val before = seed.path("before").asString()
             assertThat(facts(token)).isEqualTo(before)
-            assertThat(request("POST", root, token, body, "old-draft").contentAsString).isEqualTo(oldDraft.contentAsString)
+            assertThat(request("POST", root, token, body, "old-draft").contentAsString).isEqualTo(oldDraft)
             assertThat(request("POST", "$root/$countingId/start", token, """{"expectedRevision":0}""", "old-start").contentAsString)
-                .isEqualTo(oldStart.contentAsString)
+                .isEqualTo(oldStart)
             assertThat(request("POST", "$root/$postedId/submit", token, """{"expectedRevision":2}""", "old-submit").contentAsString)
-                .isEqualTo(oldPosted.contentAsString)
+                .isEqualTo(oldPosted)
+            fixture(token).transaction {
+                assertThat(scalar("SELECT provenance FROM inventory_document_draft_activity WHERE document_id='$draftId'")).isEqualTo("LEGACY_BASELINE")
+                assertThat(scalar("SELECT (deadline>clock_timestamp())::text FROM inventory_document_draft_activity WHERE document_id='$draftId'")).isEqualTo("true")
+            }
             val changed = request("PUT", "$root/$draftId", token,
                 """{"expectedRevision":0,"draft":${body.replace("Before upgrade", "After upgrade")}}""")
             assertThat(changed.status).withFailMessage(changed.contentAsString).isEqualTo(200)

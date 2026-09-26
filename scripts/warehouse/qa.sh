@@ -66,6 +66,22 @@ case "$MODE" in
             esac
         done
         [[ " ${args[*]} " == *' --no-parallel '* ]] || args+=(--no-parallel)
+        # These regressions seed real HTTP commands with a pinned pre-expiry JVM,
+        # then migrate and open the same owned database with the current application.
+        draft_upgrade_needed=false
+        [[ " ${args[*]} " == *' --tests '* ]] || draft_upgrade_needed=true
+        for selector in "${args[@]}"; do
+            for upgrade_class in com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT; do
+                if [[ $upgrade_class == $selector || ${upgrade_class##*.} == $selector ||
+                    $upgrade_class == ${selector%.*} || ${upgrade_class##*.} == ${selector%.*} ]]; then
+                    draft_upgrade_needed=true
+                fi
+            done
+        done
+        if [[ "$draft_upgrade_needed" == true ]]; then
+            source "$ROOT/scripts/warehouse/draft-upgrade-bootstrap.sh"
+            prepare_draft_upgrade_bootstrap
+        fi
         if [[ " ${args[*]} " != *' --tests '* ]]; then
             source "$ROOT/scripts/warehouse/projection-upgrade.sh"
             projection_upgrade

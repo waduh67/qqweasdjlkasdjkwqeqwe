@@ -13,9 +13,9 @@ import org.springframework.web.context.WebApplicationContext
 class WarehouseTransferDraftUpgradeIT {
     @Test fun `upgrade retains old draft and dispatched commands and permits a revision only for the old draft`() {
         WarehouseSchemaDatabase("178.9").use { database ->
-            postingContext(database, "178.9").use { context ->
-                UpgradeClient(context).verify(database)
-            }
+            val seed = WarehouseDraftUpgradeProcess.seed(database, "transfer", "178.9")
+            assertThat(database.migrate().migrations.map { it.version }).contains("178.10", "178.12")
+            postingContext(database).use { context -> UpgradeClient(context).verify(database, seed) }
         }
     }
 
@@ -27,24 +27,26 @@ class WarehouseTransferDraftUpgradeIT {
             ReflectionTestUtils.setField(this, "onboarding", application.getBean(OnboardTenantUseCase::class.java))
         }
 
-        fun verify(database: WarehouseSchemaDatabase) {
-            val stock = transferStock()
+        fun verify(database: WarehouseSchemaDatabase, seed: tools.jackson.databind.JsonNode) {
+            val stock = mapper.treeToValue(seed.path("stock"), TransferStock::class.java)
             val admin = stock.setup.token
-            val original = request("POST", "/api/v1/warehouse/transfers", admin, transferBody(stock), "pre-upgrade")
-            assertThat(original.status).withFailMessage(original.contentAsString).isEqualTo(201)
-            val id = mapper.readTree(original.contentAsString).path("id").asString()
-            val shippedStock = transferStock()
-            val shippedId = transfer(shippedStock).path("id").asString()
-            val shipped = transferAction(shippedStock, shippedId, "dispatch", """{"expectedRevision":0}""", "pre-upgrade-dispatch")
-            val before = durableFacts(admin, id)
-            val postedBefore = durableFacts(shippedStock.setup.token, shippedId)
-            assertThat(database.migrate().migrations.map { it.version }).contains("178.10")
+            val original = seed.path("original").asString()
+            val id = seed.path("id").asString()
+            val shippedStock = mapper.treeToValue(seed.path("shippedStock"), TransferStock::class.java)
+            val shippedId = seed.path("shippedId").asString()
+            val shipped = seed.path("shipped")
+            val before = seed.path("before").asString()
+            val postedBefore = seed.path("postedBefore").asString()
             assertThat(durableFacts(admin, id)).isEqualTo(before)
             assertThat(durableFacts(shippedStock.setup.token, shippedId)).isEqualTo(postedBefore)
             assertThat(request("POST", "/api/v1/warehouse/transfers", admin, transferBody(stock), "pre-upgrade").contentAsString)
-                .isEqualTo(original.contentAsString)
+                .isEqualTo(original)
             assertThat(transferAction(shippedStock, shippedId, "dispatch", """{"expectedRevision":0}""", "pre-upgrade-dispatch"))
                 .isEqualTo(shipped)
+            fixture(admin).transaction {
+                assertThat(scalar("SELECT provenance FROM inventory_document_draft_activity WHERE document_id='$id'")).isEqualTo("LEGACY_BASELINE")
+                assertThat(scalar("SELECT (deadline>clock_timestamp())::text FROM inventory_document_draft_activity WHERE document_id='$id'")).isEqualTo("true")
+            }
             val updated = request("PUT", "/api/v1/warehouse/transfers/$id", admin,
                 """{"expectedRevision":0,"draft":${transferBody(stock).replace("100000", "60000")}}""")
             assertThat(updated.status).withFailMessage(updated.contentAsString).isEqualTo(200)

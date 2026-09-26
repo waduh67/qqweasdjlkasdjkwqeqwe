@@ -45,6 +45,17 @@ timestamps use the lower bound. No old source timestamp or command response is
 rewritten. Eligible sources missing protected activity are integrity failures;
 current reads never invent a new deadline for them.
 
+The current application checks required clock tables, row security, functions
+and enabled triggers after database initialization. An incomplete installation
+stops startup, including an explicit Flyway target older than the clock schema.
+Apply all current migrations before starting the current application.
+
+The two transfer/count upgrade regressions use `scripts/warehouse/qa.sh server`
+to compile a pinned pre-expiry application in a separate checkout. That JVM
+creates the old HTTP commands, then exits before the same owned fixture database
+is migrated and opened by the current application. Private seed responses and
+process logs are retained with encrypted CI evidence.
+
 Use the current detail's explanation and create a fresh draft or proposal from
 its source workflow. Expiry is not a tenant-erasure mechanism: tenants with
 protected warehouse history must be suspended instead of deleted.

@@ -145,6 +145,11 @@ jobs:
               raw+=("$historical")
             fi
           done
+          # Keep both focused and full-suite old-process handoffs, including
+          # private seed responses and diagnostics when a child JVM fails.
+          for evidence in .omo/runtime/draft-upgrade-bootstrap .omo/runtime/draft-upgrade-handoff-*; do
+            [[ ! -d "$evidence" ]] || raw+=("$evidence")
+          done
           python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" \
             --output .omo/runtime/ci/server-evidence.age "${raw[@]}"
       - uses: actions/upload-artifact@v4

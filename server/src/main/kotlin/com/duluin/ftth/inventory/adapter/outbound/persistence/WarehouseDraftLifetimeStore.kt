@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
+@org.springframework.context.annotation.DependsOn("warehouseDraftSchemaGuard")
 class WarehouseDraftLifetimeStore(private val jdbc: WarehouseCommandJdbc) {
     fun document(id: UUID): WarehouseDraftExpiry? = jdbc.execute { sql ->
         sql.query("""SELECT warehouse_document_draft_expired_at(?,?) deadline,
