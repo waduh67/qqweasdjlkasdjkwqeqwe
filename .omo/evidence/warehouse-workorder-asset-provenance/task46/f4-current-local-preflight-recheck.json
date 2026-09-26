@@ -1,0 +1,85 @@
+{
+  "applicationRole": "warehouse_app",
+  "capturedCurrentJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+  "capturedLegacyInputCount": 2486,
+  "capturedLegacyMetadataHead": "40cbd34f31b967268fb3766b246c613a4af7026f",
+  "changedInputsAtFinalSource": [
+    "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
+    "web/src/pages/MyMaterialsPage.tsx"
+  ],
+  "changesAreExactlyReviewedDisplayLiterals": true,
+  "cleanupExitCodes": {
+    "downExitCode": 0,
+    "runnerExitCode": 0,
+    "stopExitCode": 0
+  },
+  "finalF4Approval": false,
+  "finalSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "inputsUnchangedDuringExecution": true,
+  "legacyBrowserPhases": {
+    "after": {
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "881bc2da0127c656ab97440451b3662330cefcd5aafd51d61ceb4f762b0eec79",
+      "tests": 2
+    },
+    "before": {
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "9784d5f8a5ab86ea9f2e3ade49c4a7323d15a3d6dda2815cc3077eaf42644075",
+      "tests": 2
+    },
+    "restart": {
+      "projects": {
+        "warehouse-desktop": 1,
+        "warehouse-mobile": 1
+      },
+      "reportSha256": "acd74687e4f2b32d6498294c4bd58714b5517804759bf88e0c5bf5babb77c465",
+      "tests": 2
+    }
+  },
+  "negativeProbes": 6,
+  "newSqlOrBrowserExecutionByF4": false,
+  "packagedMigrationCount": 367,
+  "positiveProbes": 2,
+  "preflightSqlSha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+  "preservedCustomers": 2,
+  "preservedHistoricalChecksums": 169,
+  "preservedOnus": 2,
+  "readOnly": true,
+  "reportSha256": {
+    "preflight-0-cutover.txt": "ff63591f0b06a0cc7f95de56eec36170fecb6ecd9b901f32a1e7d49784404b5b",
+    "preflight-0-migration.txt": "1986c4cffd7717993e204f26e1e53b2e754be87bb6aebf79a59217722d705ae1",
+    "preflight-0-positive.txt": "4f6f294f944091c112e8493d3623f546b9fa8eec75eb17b11cc003725d71dca7",
+    "preflight-0-unit.txt": "cf464aa579174f7a6d0173c7b39d32244109a06faf8c03790c2200a82dcda1e8",
+    "preflight-1-cutover.txt": "680dd23cc2f3792e0658789b43254bd0feea134766608013e05d62dbcd37208f",
+    "preflight-1-migration.txt": "5aefbc837036f04612e5c7ce323ced84a2da9d51b02dba3435c19c564d2e6f54",
+    "preflight-1-positive.txt": "20a926411e45acbdf7f1c3195d74e8b98e418613055ccb17fb4cb0fe1b78f378",
+    "preflight-1-unit.txt": "9ebb8ff5cbad33e0e92d567c58778362dcabd39990cc7dce66a6f406bb635791"
+  },
+  "reviewedAtUtc": "2026-09-26T19:17:57.404400+00:00",
+  "schemaAfter": "178.12",
+  "schemaBefore": "172",
+  "scope": "Reparsed actual existing F3 raw reports and exact preflight positive/negative outputs; no rerun and no transfer of prior UI literal bytes to final UI. Current backend, migration and preflight inputs match.",
+  "status": "INDEPENDENTLY_AUTHENTICATED_EXISTING_F3_UPGRADE_AND_PREFLIGHT",
+  "tenantCounts": [
+    {
+      "customers": 1,
+      "movements": 1,
+      "onus": 1,
+      "positions": 0,
+      "verifiedQuantityByUnit": {}
+    },
+    {
+      "customers": 1,
+      "movements": 1,
+      "onus": 1,
+      "positions": 0,
+      "verifiedQuantityByUnit": {}
+    }
+  ]
+}

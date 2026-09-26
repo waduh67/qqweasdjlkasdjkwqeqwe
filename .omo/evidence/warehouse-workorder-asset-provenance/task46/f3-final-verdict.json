@@ -1,0 +1,109 @@
+{
+  "reviewedAtUtc": "2026-09-26T19:12:30.283817+00:00",
+  "review": "F3 independent final browser and UI QA",
+  "verdict": "PASS",
+  "blockingFindings": [],
+  "browserEvidence": {
+    "intendedCases": 36,
+    "mainMatrix": 24,
+    "extraEdge": 2,
+    "sameJarRestart": 4,
+    "legacyUpgradeAndRestart": 6,
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ],
+    "readOnlyPreflightProbes": 8,
+    "preflightPositive": 2,
+    "preflightNegative": 6,
+    "capturedJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+  },
+  "finalCopyDelta": {
+    "changedFiles": [
+      "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
+      "web/src/pages/MyMaterialsPage.tsx"
+    ],
+    "displayStringsOnly": true,
+    "sourceReview": "PASS",
+    "currentWebAssertions": 607,
+    "currentWebTypecheckLintBuild": "PASS",
+    "priorRawBrowserEvidenceRelabeled": false,
+    "additionalBrowserExecution": false
+  },
+  "independentObservedResults": [
+    "Completed numeric tenant retains 917500 mm cable, nine available ONUs, empty technician custody and one active accepted ISP-owned loan installation after real same-JAR restart.",
+    "Cancelled/reassigned work retains 60000 mm and one original ONU with original technician; one 40000 mm return has identical real commit/retry request and response bytes.",
+    "Accepted returned piece is the only partial count entry; posted zero-variance count preserves 940000 mm and nine available ONUs.",
+    "Historical V172 customers and ONUs survive current178.12 cutover and restart with applied migration checksums unchanged, separate database retained, zero opening/available stock, and working post-upgrade MM SKU.",
+    "Two positive and six expected negative read-only probes independently verified on the upgraded178.12 database.",
+    "Observed receipt wording limitation corrected with two string replacements, independently reviewed with current full web verification."
+  ],
+  "attemptBoundaries": {
+    "mainR1": "18 passing cases, then outer interruption before next browser launch; six continuation cases passed.",
+    "extraR1": {
+      "actualCases": [
+        [
+          "warehouse-desktop",
+          "unexpected",
+          [
+            "failed"
+          ]
+        ],
+        [
+          "warehouse-mobile",
+          "unexpected",
+          [
+            "failed"
+          ]
+        ]
+      ],
+      "classification": "Private fixture clicked correctly disabled offline submit; no POST. Failed attempt remains failed."
+    },
+    "extraR2": "One completed desktop private post-observation assertion failure, one duplicate archived-spec desktop interrupted at same expectation; no final report and no complete phase pass claimed.",
+    "extraR3": "Two edge cases passed. Restart had two passed and two failed on immediate second full navigation interrupting refresh; preserved failed report.",
+    "extraR4": "Four corrected restart cases passed; existing two R3 edge cases copied with exact hashes and zero reexecution."
+  },
+  "visualReview": {
+    "priorObservations": 23,
+    "supplementalPersonallyInspected": 20,
+    "desktopWidth": 1280,
+    "touchWidth": 375,
+    "additionalDarkWidth": 768
+  },
+  "limits": [
+    "Physical GPON/OLT certification remains deferred; browser monitoring UNKNOWN does not establish physical connectivity.",
+    "This F3 verdict does not certify full CI or other independent review roles.",
+    "Raw authentication, environment, traces and fixture data remain private."
+  ],
+  "cleanup": {
+    "extraR4": [
+      0,
+      0,
+      0
+    ],
+    "legacy": [
+      0,
+      0,
+      0
+    ],
+    "ownedPidRecordsAbsent": true,
+    "ownedPortsClosed": [
+      17880,
+      14188,
+      25432,
+      29000
+    ],
+    "outerLockReleased": true
+  },
+  "evidenceSha256": {
+    "f3-execution-verdict.json": "043efba90c9d1d9e331fe7d667bb19811358734adafa359140dcb51f0c4ad499",
+    "main-matrix-authentication.json": "e98ef0ad1c616c64daca6c38c12162bd940ed23e7dffa42281bae2c9603e4bca",
+    "asset-wire-authentication.json": "b91bc29bcab0ebd2c34216ae4d916fc8c5be6784195e825a8c114ed0bbe58850",
+    "extra-restart-authentication.json": "fe2f7bc8a2a2fe29f8cfd285ccbba853a5ad0cd79fbd59f7690bc192302cdcd6",
+    "legacy-authentication.json": "0bde7fd5d7ea6581beea841a43560707cbfb0943bfdc96c4f3dd56ff002add9f",
+    "visual-review.json": "dd9f754db985d4d5c75b44d85a7dab0c71e662d46c409938212618c272933338",
+    "supplemental-visual-review.json": "eae4ef49ddb324fa0036b91254787ea065c1e239c78c817cab5209d927dce6c5",
+    "f3-copy-source-review.json": "8f5b515f72834ea365138d334acac5009d175f68dcadd3931d350113f03ec591",
+    "f3-copy-web-authentication.json": "b2556f8e0d807fd632e0b4c75032bb657bc9224619e40a4d97040cb9805be501"
+  }
+}

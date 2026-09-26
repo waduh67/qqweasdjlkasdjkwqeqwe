@@ -1,0 +1,15 @@
+F3 PASS. No blocking browser/UI finding remains in this review scope.
+
+The independent evidence covers 36 intended browser cases: 24 main cases, two extra return/reassignment/cancellation/partial-count cases, four actual backend-restart readbacks, and six historical V172-to-178.12 upgrade/restart cases. Both desktop and mobile projects are represented. Eight read-only preflight probes passed their expected outcomes: two positive and six negative.
+
+The completed numeric tenant retained 917500 mm of cable, nine available ONUs and one accepted active ISP-owned loan installation after restart. Technician custody was empty and the work was DONE/APPROVED. The separate cancelled/reassigned journey retained 60000 mm and one original ONU with the original technician. Its single 40000 mm return replay used the same key/body and original reply bytes after a real backend commit with only the browser reply interrupted. The accepted returned piece was the only partial-count entry; its posted count preserved 940000 mm and nine available ONUs.
+
+Historical customer and ONU identities, and applied migration checksums, survived upgrade and restart. Independent zero-opening approval produced no invented stock. The upgraded tenants could create an MM catalog SKU. All probe outputs, actual browser reports and trace response resources were read directly; raw authentication and fixtures remain private.
+
+An observed receipt-level wording problem was corrected after browser execution in exactly two display strings: MyMaterialsPage.tsx now directs availability to the return inspection outcome, and WarehouseStatus.tsx labels the handover event as received for inspection. Comparison of all 2486 captured inputs found only these two changes; DOM, conditions, state keys, quantities and tone are unchanged. Current full web verification independently read 607/607 passing assertions, no failed/pending tests, successful typecheck/lint/build, and 523 stable source inputs. Prior browser reports retain their original source identity; no new browser execution is claimed for the two copy changes.
+
+Failed/interrupted attempts are preserved: main R1 stopped after 18 passing cases before the next browser launch and was completed by six continuation cases; extra R1 had private offline-submit fixture failures; extra R2 had one completed post-observation assertion failure and an interrupted duplicate archived spec; extra R3 had two edge passes and restart 2 pass/2 fail caused by immediate second navigation interrupting session refresh. Corrected restart-only R4 passed all four cases, referencing the existing two R3 edge cases without reexecuting them. These earlier attempts are not relabeled as passes.
+
+All current-application browser phases used current JAR SHA256 d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466. Owned cleanup succeeded, QA ports closed and the exclusive lease was released. Physical GPON/OLT certification remains deferred; this review makes no full-CI or other reviewer-role claim.
+
+The JSON verdict and linked SHA256 manifests carry the exact evidence identities and copy-delta boundary.
