@@ -9,7 +9,8 @@ internal class WarehouseDraftClockFixture(private val database: WarehousePosting
     fun policy(seconds: Int) {
         check(System.getenv("WAREHOUSE_QA") == "true")
         val url = database.context.environment.getRequiredProperty("spring.datasource.url")
-        check(url == "jdbc:postgresql://127.0.0.1:25432/warehouse_test")
+        check(url == "jdbc:postgresql://127.0.0.1:25432/warehouse_test" ||
+            url.matches(Regex("jdbc:postgresql://127\\.0\\.0\\.1:25432/warehouse_fixture_[a-f0-9]{32}")))
         DriverManager.getConnection(url, System.getenv("SPRING_FLYWAY_USER"), System.getenv("SPRING_FLYWAY_PASSWORD")).use { connection ->
             connection.autoCommit = false
             connection.prepareStatement("SELECT set_config('app.tenant_id',?,true)").use {

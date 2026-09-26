@@ -73,7 +73,7 @@ scripts/warehouse/test-environment.sh check
 scripts/warehouse/qa.sh server
 scripts/warehouse/qa.sh web-check
 scripts/warehouse/qa.sh kmp
-for spec in setup receiving provenance issue returns exceptions warehouse-empty-tenant customer-assets; do
+for spec in setup receiving provenance issue returns exceptions warehouse-empty-tenant customer-assets draft-expiry; do
     scripts/warehouse/qa.sh browser "$spec.spec.ts"
     # Simpan laporan/spec sebelumnya secara privat sebelum runner berikutnya.
 done
@@ -97,7 +97,15 @@ tambahan dalam database QA bersama tidak cukup karena migrasi lama menyebut nama
 Tesnya ada di `server/src/historicalTest`; tidak diabaikan atau ditandai skipped.
 Untuk mengulangnya, pakai `qa.sh projection-upgrade` dan `qa.sh historical-upgrades`.
 Kedua gate wajib berhasil; focused `qa.sh server --tests ...` hanya menjalankan kelas
-pada source set server terbaru.
+pada source set server terbaru. Dua tes upgrade draft transfer/count menyiapkan
+perintah HTTP dengan proses aplikasi lama yang dipatok, menutup proses itu,
+kemudian memigrasikan dan membuka database yang sama dengan aplikasi sekarang.
+
+Spec `draft-expiry` membuat draft lewat UI dan membuka editornya sebelum tenggat.
+Fixture QA menetapkan kebijakan singkat lewat role pemilik database, lalu menunggu
+waktu database sebenarnya. Simpan yang terlambat harus ditolak, dan muat ulang
+harus menampilkan alasan kedaluwarsa, baris asli, riwayat dan pilihan membuat draft
+baru. Tidak ada penggantian jam aplikasi atau pembuatan stok lewat SQL.
 
 Setiap browser spec wajib mempunyai tes berhasil di `warehouse-desktop` dan
 `warehouse-mobile`, tanpa skipped, flaky, retry otomatis, atau tes kosong.

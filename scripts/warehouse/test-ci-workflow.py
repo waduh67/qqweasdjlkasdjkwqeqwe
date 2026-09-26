@@ -48,7 +48,7 @@ class WorkflowGateTest(unittest.TestCase):
         matrix = self.warehouse["browser"]["strategy"]
         self.assertFalse(matrix["fail-fast"])
         self.assertEqual(set(matrix["matrix"]["spec"]),
-                         {"setup", "receiving", "provenance", "issue", "returns", "exceptions", "warehouse-empty-tenant", "customer-assets"})
+                         {"setup", "receiving", "provenance", "issue", "returns", "exceptions", "warehouse-empty-tenant", "customer-assets", "draft-expiry"})
         self.assertEqual(self.warehouse["native"]["uses"], "./.github/workflows/mobile-materials.yml")
         full = next(step for step in self.warehouse["server"]["steps"]
                     if step.get("name") == "Full server, fresh migrations and historical upgrade")

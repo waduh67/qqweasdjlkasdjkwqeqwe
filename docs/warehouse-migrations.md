@@ -1,7 +1,7 @@
 # Warehouse migration and cutover manifest
 
-The current highest packaged version is **178.11**; the next available version is
-**178.12**. Applied migrations are immutable. Historical sections below record the
+The current highest packaged version is **178.12**; the next available version is
+**178.13**. Applied migrations are immutable. Historical sections below record the
 version reservations at their original checkpoints, not the current next version.
 Operational steps are in [the warehouse runbook](warehouse.md), with an application
 role read-only preflight in [the review guide](warehouse-review.md).
@@ -18,6 +18,25 @@ Take and test a consistent database/object-storage backup before an authorized r
 After cutover, remediation is forward-only, or a coordinated restore during maintenance.
 Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
 the new records, or disable guards to make an old fixture boot.
+
+## V178.12: retain expired drafts without creating physical effects
+
+`V178_12__warehouse_idle_draft_expiry.sql` adds database-owned, versioned idle
+deadlines and append-only expiry records. It locks old writers before capturing
+the migration baseline and bounds old timestamps to one lifetime before that
+baseline through the baseline itself. Nonfinite timestamps expire at the baseline.
+Source rows, lines and original command replies remain unchanged. Accepted receipt,
+transfer and never-started count saves alone renew the pinned lifetime.
+
+Current reads report due drafts as EXPIRED even before a worker runs. Source admission,
+approval and posting guards reject overdue commands; expiry does not change stock,
+custody or legal ownership. Current application startup requires the complete clock
+schema after migrations. Old-schema setup in the two transfer/count regressions runs
+in a pinned pre-expiry application process before the current migration and context.
+See [the draft lifetime contract](warehouse-draft-expiry.md).
+
+Applied SHA-256: `add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3`.
+Any correction requires a forward migration; do not change these applied bytes.
 
 ## V178.11: revise a blind count before its first round
 

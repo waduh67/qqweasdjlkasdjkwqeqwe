@@ -79,7 +79,7 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
   const [action, setAction] = useState<'inspect' | 'putaway' | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<ReceiptTransition> | null>(null)
   const manage = can('inventory.receipt.manage')
-  if (edit) return <WarehouseReceiptEditor receipt={receipt} onClose={() => setEdit(false)} onSaved={reload} onReload={reload} />
+  if (edit && receipt.state === 'DRAFT' && receipt.draftEditability === 'EDITABLE') return <WarehouseReceiptEditor receipt={receipt} onClose={() => setEdit(false)} onSaved={reload} onReload={reload} />
   function saveReference() {
     const lines = receipt.lines.map(line => `${line.skuName} (${line.skuCode}) ${line.serial ?? line.lotCode ?? ''}: ${formatBaseQuantity(line.quantityBase, line.baseUnit)} ${displayUnit(line.baseUnit)}`)
     saveReceiptFile(new Blob([['Penerimaan barang', receipt.externalReference, `Pemasok: ${receipt.supplierName}`, `Status: ${stateLabels[receipt.state]} · Revisi ${receipt.revision}`, `Dibuat: ${receipt.createdAt}`, ...lines, `${window.location.origin}${receiptLink(receipt.id)}`].join('\n')], { type: 'text/plain;charset=utf-8' }), `penerimaan-${receipt.id}-r${receipt.revision}.txt`)

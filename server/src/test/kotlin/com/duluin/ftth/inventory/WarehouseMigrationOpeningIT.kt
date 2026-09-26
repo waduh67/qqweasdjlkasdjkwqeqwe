@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class WarehouseMigrationOpeningIT : WarehousePolicyHttpFixture() {
     companion object {
-        private val legacy = List(3) { WarehouseMigrationLegacyFixture() }
+        private val legacy = List(4) { WarehouseMigrationLegacyFixture() }
         private val database = WarehouseSchemaDatabase("172").also { db -> db.ownerFixture { connection ->
             legacy.forEach { it.seed(connection) }
         } }
@@ -158,7 +158,11 @@ class WarehouseMigrationOpeningIT : WarehousePolicyHttpFixture() {
             val opened = mapper.readTree(original)
             assertThat(opened.path("manifest")).isEqualTo(reviewed.path("manifest"))
             val id = opened.path("id").asString()
-            assertThat(request("GET", "$path/$id", batch.token).contentAsString).isEqualTo(original)
+            val current = request("GET", "$path/$id", batch.token)
+            assertThat(current.status).withFailMessage(current.contentAsString).isEqualTo(200)
+            val expectedCurrent = mapper.readTree(original) as tools.jackson.databind.node.ObjectNode
+            expectedCurrent.put("state", "DRAFT")
+            assertThat(mapper.readTree(current.contentAsString)).isEqualTo(expectedCurrent)
             fixture(batch.token).transaction {
                 assertThat(scalar("SELECT count(*) FROM inventory_migration_opening_request")).isEqualTo("1")
                 assertThat(scalar("SELECT count(*) FROM inventory_document WHERE kind='OPENING_BALANCE' AND state='DRAFT'")).isEqualTo("1")
@@ -208,6 +212,37 @@ class WarehouseMigrationOpeningIT : WarehousePolicyHttpFixture() {
             val sealedFile = sealedCase.path("resolution").path("evidence")[0].path("id").asString()
             storage.delete("${batch.old.tenant}/warehouse/migrations/${batch.id}/${sealedCase.path("caseId").asString()}/$sealedFile")
             assertThat(send(batch.token, path, input, key).statusCode()).isEqualTo(409)
+        } finally { cleanup(batch) }
+    }
+
+    @Test fun `due opening preserves its sealed review and cannot admit legacy stock`() {
+        val batch = setup(3)
+        try {
+            ready(batch)
+            val input = openingInput(batch)
+            val database = fixture(batch.token)
+            val clock = WarehouseDraftClockFixture(database)
+            clock.policy(1)
+            val path = "/api/v1/warehouse/provenance/batches/${batch.id}/opening"
+            val original = send(batch.token, path, input, "expiry-opening")
+            assertThat(original.statusCode()).withFailMessage(original.body()).isEqualTo(201)
+            val id = mapper.readTree(original.body()).path("id").asString()
+            val before = WarehouseDraftExpiryFacts.capture(database, id)
+            clock.awaitDocument(id)
+            val detail = request("GET", "$path/$id", batch.token)
+            assertThat(detail.status).withFailMessage(detail.contentAsString).isEqualTo(200)
+            val current = mapper.readTree(detail.contentAsString)
+            assertThat(current.path("state").asString()).isEqualTo("EXPIRED")
+            assertThat(current.path("manifest")).isEqualTo(mapper.readTree(original.body()).path("manifest"))
+            val list = request("GET", path, batch.token)
+            assertThat(list.status).withFailMessage(list.contentAsString).isEqualTo(200)
+            assertThat(mapper.readTree(list.contentAsString).path("items").single().path("state").asString()).isEqualTo("EXPIRED")
+            WarehouseDraftExpiryFacts.rejected(request("POST", "/api/v1/warehouse/approvals/request", batch.token,
+                """{"sourceDocumentId":"$id","sourceRevision":0}"""))
+            assertThat(send(batch.token, path, input, "expiry-opening").body()).isEqualTo(original.body())
+            WarehouseDraftExpiryFacts.expire(database, id)
+            assertThat(WarehouseDraftExpiryFacts.capture(database, id)).isEqualTo(before)
+            assertThat(send(batch.token, path, input, "expiry-fresh").statusCode()).isEqualTo(201)
         } finally { cleanup(batch) }
     }
 

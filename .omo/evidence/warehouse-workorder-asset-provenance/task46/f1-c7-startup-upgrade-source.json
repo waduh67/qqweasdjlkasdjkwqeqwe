@@ -1,0 +1,159 @@
+{
+  "review": "f1-c7-startup-upgrade-review.md",
+  "source_head": "b29cde332dc18885c30fe329f4807253bc6de01a",
+  "source_state": "HEAD plus uncommitted startup/upgrade implementation and later selector-only fix",
+  "status": "NO_REMAINING_ACTIONABLE_BLOCKER_IN_BOUNDED_REVIEW",
+  "qa_executed_by_reviewer": false,
+  "raw_r2_results_independently_validated": false,
+  "final_f1": false,
+  "reported_execution": {
+    "source": "parent report only",
+    "upgrade_r2_tests": 7,
+    "upgrade_r2_suites": 4,
+    "cleanup_exit": 0,
+    "later_selector_probes": 7
+  },
+  "r2_input_manifest": {
+    "path": ".omo/runtime/draft-expiry-upgrade-r2-inputs.json",
+    "sha256": "37dc672ba1171b89acd5633d059ab7075a5ee4f152f86f9df4c8f802bf5815bf",
+    "input_count": 2618
+  },
+  "pinned_bootstrap": {
+    "pinned_application": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+    "descriptor_sha256": "08ab0d500dcf54cf836f9c76f5b17e7b2a0eac9582f786116b5cc426f8f69732",
+    "pinned_source_inputs_independently_compared_to_git_archive": 2595,
+    "exact_pin_source_match": true,
+    "current_harness_input_match_count": 3,
+    "classpath_sha256": "0a5940b1c2a041de04365445340a7a937c0fef451e0dab7483d9bcec387045c8",
+    "classpath_hash_matches_descriptor": true,
+    "first_party_classpath_entries_in_pinned_checkout": 10,
+    "current_checkout_classpath_entries": 0
+  },
+  "resolved_finding": "qa.sh now supports simple class and class/method selectors; this later file hash is not covered by the frozen R2 input manifest.",
+  "evidence_limitations": [
+    "Transfer dispatch response is asserted as JSON equality; source and durable operation facts preserve raw body, but that upgrade assertion does not compare dispatch wire bytes.",
+    "Guard checks installed required capabilities, not arbitrary replacement SQL function bodies."
+  ],
+  "inputs": [
+    {
+      "path": ".github/workflows/warehouse.yml",
+      "sha256": "1455af397b19e907279575b3c957d1e15cad4d457e6d0b7d7502cbbcfb7ebee1",
+      "r2_sha256": null,
+      "matches_r2": null
+    },
+    {
+      "path": "scripts/warehouse/qa.sh",
+      "sha256": "0dfffa27edeaa40dfb903392e39c7f3f738ff977bbcf45c6320ada4f7277e6a6",
+      "r2_sha256": "769d72362c928aa74450f847e64cc022e5a0fb56e4da71fcfac64ee2d278900c",
+      "matches_r2": false
+    },
+    {
+      "path": "scripts/warehouse/draft-upgrade-bootstrap.sh",
+      "sha256": "76da710737f9f860f0e9af693bb1f8efea9fab4da48ca85d9f5f96aba5a68b6b",
+      "r2_sha256": "76da710737f9f860f0e9af693bb1f8efea9fab4da48ca85d9f5f96aba5a68b6b",
+      "matches_r2": true
+    },
+    {
+      "path": "scripts/warehouse/draft-upgrade-classpath.gradle",
+      "sha256": "52fdd4d3bc2121352ece2750bce6973a6d4903d75fb53e95a11a1a2098239e38",
+      "r2_sha256": "52fdd4d3bc2121352ece2750bce6973a6d4903d75fb53e95a11a1a2098239e38",
+      "matches_r2": true
+    },
+    {
+      "path": "scripts/warehouse/ci-artifacts.py",
+      "sha256": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f",
+      "r2_sha256": null,
+      "matches_r2": null
+    },
+    {
+      "path": "server/build.gradle.kts",
+      "sha256": "9417e0bbb612b7e8511aee1a4dfbad8441eff111fad9620425d12f1b5c2e63d3",
+      "r2_sha256": null,
+      "matches_r2": null
+    },
+    {
+      "path": "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+      "sha256": "22a443ac2ce8d80504d921e38e9525da12aba6674d5c7a5a4bacef6aa092b76f",
+      "r2_sha256": "22a443ac2ce8d80504d921e38e9525da12aba6674d5c7a5a4bacef6aa092b76f",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
+      "sha256": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
+      "r2_sha256": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+      "sha256": "d00dbc91068435ba1de6abf753bfab5715932705ef397a4d3baeda4966eb14c7",
+      "r2_sha256": "d00dbc91068435ba1de6abf753bfab5715932705ef397a4d3baeda4966eb14c7",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt",
+      "sha256": "f0ea9a23be070dd42ebf81b75991d096e6e7050edfced1f9a15ab95a50cc152c",
+      "r2_sha256": "f0ea9a23be070dd42ebf81b75991d096e6e7050edfced1f9a15ab95a50cc152c",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
+      "sha256": "fe4425924b1a4359a2a06954e566b454ed952fa21cb407ba4c12b9db3694ae37",
+      "r2_sha256": "fe4425924b1a4359a2a06954e566b454ed952fa21cb407ba4c12b9db3694ae37",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
+      "sha256": "430f6e188d2dfffcf091af39157f73c59ae1c4a91680e48098cb677fae76bb16",
+      "r2_sha256": "430f6e188d2dfffcf091af39157f73c59ae1c4a91680e48098cb677fae76bb16",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+      "sha256": "6fbc5ffb2079bcb800f46f5c2298ed71dc91a7df58645f2530a83c78252f59a6",
+      "r2_sha256": "6fbc5ffb2079bcb800f46f5c2298ed71dc91a7df58645f2530a83c78252f59a6",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt",
+      "sha256": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+      "r2_sha256": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt",
+      "sha256": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
+      "r2_sha256": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferFixture.kt",
+      "sha256": "a80ed43f0fe6c709b0b238a17ff62e59739e83edff1d8387cfeba17ad30efd65",
+      "r2_sha256": "a80ed43f0fe6c709b0b238a17ff62e59739e83edff1d8387cfeba17ad30efd65",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt",
+      "sha256": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
+      "r2_sha256": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+      "sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
+      "r2_sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseTransferController.kt",
+      "sha256": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8",
+      "r2_sha256": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8",
+      "matches_r2": true
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql",
+      "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "r2_sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "matches_r2": true
+    }
+  ]
+}
