@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "tests": 5,
+  "exitCode": 0,
+  "atUtc": "2026-09-26T21:25:33.345692+00:00",
+  "scope": "Executed only cleanup fragments against stub iptables; reproduces original clean-host exit1 and checks targeted correction, listing-failure propagation, unrelated-rule preservation. No real VPN installation.",
+  "applicationTemplateUnchanged": true,
+  "templateSha256": "468eb859ded93670ae39d8792913ee4bf79d1d1af275d239dda21c432ea13123",
+  "patcherSha256": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e",
+  "testSha256": "093f9f1da175856d30bbcf3de4e13d839dcd77b3eb254192f8e9644d850c83ba",
+  "logSha256": "3e0a927f49780e20454e98853316dd3f8fb830be16d9f2c5d2a910771cc03026"
+}

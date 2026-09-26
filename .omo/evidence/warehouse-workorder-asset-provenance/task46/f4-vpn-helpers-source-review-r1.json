@@ -1,0 +1,73 @@
+{
+  "status": "SOURCE_FINDINGS_REQUIRE_CORRECTION_BEFORE_HOST_VPN_INSTALL",
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "currentCodeCiRun": 36265279847,
+  "currentCodeCiCompleteEvidenceAuthenticated": false,
+  "reviewerExecutedQaSshDockerOrInstaller": false,
+  "actualRenderedInstallerAvailable": false,
+  "findings": [
+    {
+      "id": "VPN-SOURCE-01",
+      "severity": "high",
+      "kind": "pre_existing_generic_installer_clean_host_failure",
+      "source": "server/src/main/resources/vpn/install.sh.template:273",
+      "finding": "Under errexit plus pipefail, no legacy DNAT match exits before service activation; the preparation intentionally requires no such legacy rule.",
+      "executedFailureObserved": false,
+      "proposedHostOnlyCorrectionAcceptedInPrinciple": true,
+      "correctionSourceAndExecutionAuthenticated": false
+    },
+    {
+      "id": "VPN-SOURCE-02",
+      "severity": "medium",
+      "kind": "incomplete_and_stale_pre_mutation_host_conflict_checks",
+      "source": ".omo/runtime/azure-ftth-setup/install-production-vpn.py:34",
+      "finding": "Only the server directory is rechecked before installation. Sync/sysctl files can be overwritten; route/rule checks are stale, listener/legacy checks absent, and firewall helper/drop-in checks occur after mutation.",
+      "actualOverwriteObserved": false,
+      "correctionSourceAndExecutionAuthenticated": false
+    }
+  ],
+  "sourceInputs": {
+    ".omo/runtime/azure-ftth-setup/prepare-production-vpn.py": {
+      "sha256": "237cf489c981ab2e9d19a203b39699276bf41ac8682681bd562cf9a4d1eadc29",
+      "pythonAstParse": "PASS",
+      "lines": 85
+    },
+    ".omo/runtime/azure-ftth-setup/install-production-vpn.py": {
+      "sha256": "f58ad3b7669637c3a99e653c1766a8bfaadc602825d04d2ac434609e66d1b744",
+      "pythonAstParse": "PASS",
+      "lines": 100
+    },
+    "server/src/main/resources/vpn/install.sh.template": {
+      "sha256": "468eb859ded93670ae39d8792913ee4bf79d1d1af275d239dda21c432ea13123",
+      "matchesApplicationCommit": true
+    },
+    "server/src/main/kotlin/com/duluin/ftth/vpn/application/service/VpnConfigRenderer.kt": {
+      "sha256": "7b9352d4e5301a177f4d6afdab43c7c0f492957530344bd6daec4dba90f128db",
+      "matchesApplicationCommit": true
+    },
+    "server/src/main/kotlin/com/duluin/ftth/vpn/application/service/VpnServerService.kt": {
+      "sha256": "b2dd521b0730e249dee06cb98b27c58365bcad1fb9413bba696fffb201bfa24b",
+      "matchesApplicationCommit": true
+    },
+    "server/src/main/kotlin/com/duluin/ftth/vpn/adapter/inbound/web/VpnProvisioningController.kt": {
+      "sha256": "4cf8ef2952d1075dbdd9bcc46074815752a24538b71a3689c51fa92f894935bc",
+      "matchesApplicationCommit": true
+    },
+    "server/src/test/kotlin/com/duluin/ftth/vpn/VpnInstallScriptTest.kt": {
+      "sha256": "016b49e1b6b3db8eb9b830f68f65528cd758ba3e8d1262332dc7214a4874a68d",
+      "matchesApplicationCommit": true
+    }
+  },
+  "privacy": "Safe source hashes and findings only; no live token, key, environment or HTTP data included.",
+  "pending": [
+    "Corrected helper source",
+    "Real activated-application installer original bytes",
+    "Exact narrowly patched installer bytes and separate approval",
+    "Synthetic patch cases with listing errors preserved",
+    "Actual immediate host conflict preflight",
+    "Host installation and callback evidence",
+    "Boot persistence evidence, if claimed",
+    "Physical device certification remains outside this review",
+    "Current complete code CI and final F4 acceptance"
+  ]
+}

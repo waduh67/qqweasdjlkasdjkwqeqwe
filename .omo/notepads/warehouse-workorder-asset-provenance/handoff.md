@@ -62,6 +62,19 @@ commit and push recoverable checkpoints. No main merge or registry publication.
   not an ancestor of the current branch. Do not merge it again or force-update it.
   Validated descendants can later fast-forward original `work/warehouse-completion`
   and `origin/feat/warehouse-workorder` from40cbd34f after rechecking refs.
+- VPN preparation source review found a pre-existing generic installer defect at1306:
+  `set -euo pipefail` aborts on a clean host when the legacy DNAT grep pipeline has no
+  match. Application source/image remain unchanged. For this authorized host only,
+  the private preparation helper preserves the real original installer and applies
+  the exact reviewed single-block patch in `task46/patch-vpn-installer.py`, saving
+  patched bytes, `install.patch` and all hashes for review before installation.
+  Five stub-only cleanup cases passed, including reproduction of original exit1,
+  corrected empty success, genuine listing failure13 and unrelated-rule preservation.
+  Both helper findings are closed in source; no actual VPN registration or installer
+  execution yet. Safe source/proof mapping: `task46/deployment-vpn-preparation-adoption.json`.
+  Helpers recheck existing files/units/listeners/routes/rules before mutation and
+  add scoped boot-time tunnel firewall restoration. Do not execute the uncorrected
+  generic installer or claim the application template itself was fixed.
 - Migration178.12 is applied and immutable; next178.13. Reject tenant deletion with
   protected history; use Suspend. Physical GPON certification is deferred, while
   offline documentation/MIB coverage remains required.

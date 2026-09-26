@@ -1,0 +1,33 @@
+{
+  "atUtc": "2026-09-26T21:29:52.710791+00:00",
+  "status": "VPN_HOST_PREPARATION_SOURCE_AND_FRAGMENT_PROOFS_ADOPTED",
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentConfigCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "currentCiRun": 36265279847,
+  "applicationTemplateChanged": false,
+  "actualVpnHubCreated": false,
+  "actualInstallerRenderedOrExecuted": false,
+  "genericInstallerDefect": "Existing grep/pipefail cleanup exits1 when clean host has no legacy DNAT match; reproduced locally",
+  "hostCorrection": "Check iptables listing separately; filter with awk; empty succeeds and genuine listing failures propagate. Preserve original/patched/diff privately.",
+  "evidenceSha256": {
+    "f4-vpn-helpers-source-review-r1.md": "83913f014c06893a12e28c1510ae60765c1995af0ca6361e93340422cd82d5d5",
+    "f4-vpn-helpers-source-review-r1.json": "c7aef9eb2eda5263ed91b748a363d1bed2fac12b303f9dc3fc0b065fed8de5e4",
+    "f4-vpn-helpers-source-review-r2.md": "679ae29059946a8c1c2ffd48c49175008772705b94380d9ea95ba4b340c5bf32",
+    "f4-vpn-helpers-source-review-r2.json": "9f11f2c335f5541078d6588a38f326102feea4b6d8c532842b550a8687094d7e",
+    "patch-vpn-installer.py": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e",
+    "test_vpn_installer_patch.py": "093f9f1da175856d30bbcf3de4e13d839dcd77b3eb254192f8e9644d850c83ba",
+    "vpn-cleanup-patch-r1.json": "0f2046011e00578d4ef425860aa13742bdfe2d6186ae7d16ef000820cb3bded8"
+  },
+  "privateHelperSha256": {
+    "prepare-production-vpn.py": "7bfc97148da992c1a9be5d2cc8f0923eda85f058cace40bd7c3f47ab305cf0d4",
+    "install-production-vpn.py": "9e9ce97c67b030d8a3b4b011fae9f82aca0b8403826862ca0870523490892f7c",
+    "patch-vpn-installer.py": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e"
+  },
+  "pending": [
+    "Current full CI and independent activation readiness",
+    "Actual production activation",
+    "Real VPN registration/rendered installer/cert verification",
+    "Review and approve exact patched installer bytes",
+    "Installation/HTTPS callbacks/listener/firewall persistence configuration and idempotence checks"
+  ]
+}
