@@ -9,6 +9,48 @@ import java.util.UUID
 
 class CustomerAssetOwnershipIT : CustomerAssetTitleScopeCases() {
     @Test
+    fun `rejected sealed title correction offers a fresh proposal instead of unusable rework`() {
+        val pending = pendingCorrection()
+        val case = pending.case
+        val admin = case.ownership.installation.receipt.stock.token
+        val before = title(case.ownership)
+        val rejected = decideCorrection(pending, "REJECT")
+        assertThat(rejected.status).withFailMessage(rejected.contentAsString).isEqualTo(200)
+        val details = request("GET", "/api/v1/warehouse/approvals/${pending.approval}/details", admin)
+        assertThat(details.status).withFailMessage(details.contentAsString).isEqualTo(200)
+        val canRework = mapper.readTree(details.contentAsString).path("actions").path("canRework")
+        assertThat(canRework.isBoolean).isTrue()
+        assertThat(canRework.asBoolean()).isFalse()
+        val rework = request("POST", "/api/v1/warehouse/approvals/rework", admin,
+            """{"requestId":"${pending.approval}","expectedRevision":1}""", "unsupported-title-rework")
+        assertThat(rework.status).withFailMessage(rework.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(rework.contentAsString).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
+        assertThat(title(case.ownership)).isEqualTo(before)
+        val next = request("POST", "/api/v1/warehouse/asset-title-corrections", admin,
+            """{"assignmentId":"${case.ownership.installation.operation}","sourceHandoverId":"${case.handover}",
+                "expectedAssignmentRevision":1,"expectedTitleRevision":1,"targetOwner":"ISP",
+                "reason":"Corrected signed transfer proposal","evidenceId":"${case.ownership.signature}"}""", "corrected-title-proposal")
+        assertThat(next.status).withFailMessage(next.contentAsString).isEqualTo(201)
+        val document = mapper.readTree(next.contentAsString).path("documentId").asString()
+        assertThat(document).isNotEqualTo(pending.document)
+        val submitted = request("POST", "/api/v1/warehouse/approvals/request", admin,
+            """{"sourceDocumentId":"$document","sourceRevision":0}""", "corrected-title-approval")
+        assertThat(submitted.status).withFailMessage(submitted.contentAsString).isEqualTo(201)
+        val approval = mapper.readTree(submitted.contentAsString).path("requestId").asString()
+        val approved = request("POST", "/api/v1/warehouse/approvals/decide", case.checker.first,
+            """{"requestId":"$approval","expectedRevision":0,"decision":"APPROVE"}""", "corrected-title-decision")
+        assertThat(approved.status).withFailMessage(approved.contentAsString).isEqualTo(200)
+        assertThat(title(case.ownership)).isEqualTo("SALE|ISP|ISP|CUSTOMER_INSTALLED|2|1")
+        assertThat(decideCorrection(pending, "REJECT").contentAsString).isEqualTo(rejected.contentAsString)
+        fixture(admin).transaction {
+            assertThat(scalar("SELECT concat_ws('|',state,revision,approval_disposition) FROM inventory_document WHERE id='${pending.document}'"))
+                .isEqualTo("DRAFT|1|REWORK_REQUIRED")
+            assertThat(scalar("SELECT count(*) FROM inventory_asset_title_transfer WHERE assignment_id='${case.ownership.installation.operation}'"))
+                .isEqualTo("1")
+        }
+    }
+
+    @Test
     fun `public inventory owner accepts a signed loan without transferring title`() {
         val case = ownershipCase()
 

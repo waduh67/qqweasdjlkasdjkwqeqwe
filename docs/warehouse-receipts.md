@@ -144,6 +144,16 @@ Snapshot receipt juga menyertakan nama source/inspection dari intake tersimpan.
 response mutasi selalu false. Editor draft memuat GET terbaru dan membutuhkan true
 sebelum mengganti draft lengkap agar biaya tersembunyi tidak terhapus sebagai null.
 
+GET/detail dan daftar juga memberikan `draftEditability`: `EDITABLE` untuk draft
+penerimaan biasa, `SEALED_SUPPLIER_REPLACEMENT` untuk usulan pengganti vendor yang
+sudah tercatat, atau `NOT_DRAFT`. Nilai ini menyatakan aturan dokumen; izin pengguna
+tetap diperiksa terpisah. UI hanya menawarkan **Ubah draft** jika nilainya
+`EDITABLE`. Respons mutasi historis tidak ditambah field ini; field yang belum ada
+memerlukan GET baru sebelum mengedit. PUT baru terhadap usulan pengganti ditolak
+dengan `409 SOURCE_NOT_VERIFIED`. Koreksi dibuat sebagai usulan baru dari kasus
+retur asal; penerimaan dan inspeksi tetap mengikuti alurnya. Replay yang sah tetap
+mengembalikan respons asli tanpa mengubah usulan atau riwayatnya.
+
 Response unggah hanya metadata, bukan key, secret atau URL publik. Download memakai attachment
 disposition, no-store dan nosniff. Setelah rollback atau completion UNKNOWN,
 reconciler membuka transaksi REQUIRES_NEW dengan tenant yang sama. Lock dokumen

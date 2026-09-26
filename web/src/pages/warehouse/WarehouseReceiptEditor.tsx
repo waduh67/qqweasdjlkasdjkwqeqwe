@@ -29,6 +29,7 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseReceipt> | null>(null)
   const costVisible = can('inventory.cost.view')
   if (!can('inventory.receipt.manage')) return <WarehouseDenied />
+  if (receipt && receipt.draftEditability !== 'EDITABLE') return <div className="card stack" role="alert"><p>Penerimaan ini tidak dapat diubah melalui editor draft. Muat ulang detail; usulan pengganti yang sudah tercatat memerlukan usulan baru dari kasus retur asal.</p><Button onClick={onClose}>Kembali</Button></div>
   if (!can('inventory.sku.view') || !can('inventory.location.view')) return <div className="card stack" role="alert"><p>Izin lihat barang dan lokasi diperlukan untuk menyusun penerimaan.</p><Button onClick={onClose}>Kembali</Button></div>
   if (receipt && (!costVisible || !receipt.costVisible)) return <div className="card stack" role="alert"><p>Pengubahan draft memerlukan akses rincian biaya agar biaya tersimpan tetap terjaga. Penerimaan dan pemeriksaan tetap dapat dikerjakan dari detail dokumen.</p><Button onClick={onClose}>Kembali</Button></div>
   function update(key: string, patch: Partial<ReceiptDraftRow>) { setRows(current => current.map(row => row.key === key ? { ...row, ...patch } : row)) }

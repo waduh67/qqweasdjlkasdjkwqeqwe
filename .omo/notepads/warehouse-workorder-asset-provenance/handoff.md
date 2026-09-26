@@ -120,3 +120,12 @@ refs with inherited GIT_SSH/GIT_SSH_COMMAND unset and core.sshCommand using
 `ssh -i /home/fajar/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes`.
 After R7 safely ends, integrate validated descendants into original/feature and continue
 all required checks. Never mark completion merely because a checkpoint was saved.
+
+
+## 2026-09-26 sealed proposal checkpoint (parent d6baf827)
+
+Task46 remains in progress. Current receipt GET/list expose domain editability; supplier replacement proposals reject fresh ordinary draft PUT while historical response bytes stay unchanged. Web hides the unsupported editor and explains how to create a corrected proposal from the source return. TITLE_CORRECTION no longer offers generic rework; a fresh proposal uses current ownership/evidence after rejection.
+
+Validation: actual local87/87 backend tests in4classes and14/14 web tests, warehouse E2E typecheck and production build passed. See task46/local-sealed-proposal-{server,web}-r1.json and independent f1-sealed-proposal-patch-review.md/source.json. Two mistyped backend selectors executed nothing and are explicitly excluded; ModularityTests will run with the next change. These checks precede the new asset exception creation UI. No new migration; V178.11 remains immutable and next is178.12.
+
+CI36237393856 at d6baf827 is still running; reviewer is authenticating its actual nonserver artifacts. Follow-up asset exception UI/API context is being implemented in the validation worktree. Do not treat its uncommitted files as tested. C7 expiry and final full regression/F1-F4 remain open. No deployment or main merge.

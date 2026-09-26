@@ -8,6 +8,34 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class WarehouseSupplierReplacementGuardsIT : WarehouseSupplierReplacementFixture() {
+    @Test fun `receipt detail exposes sealed replacement editability and ordinary draft PUT cannot rewrite it`() {
+        val case = replacement()
+        val root = "/api/v1/warehouse/receipts"
+        val original = request("GET", "$root/${case.receipt}", case.token)
+        assertThat(original.status).withFailMessage(original.contentAsString).isEqualTo(200)
+        val view = mapper.readTree(original.contentAsString)
+        assertThat(view.path("draftEditability").asString()).isEqualTo("SEALED_SUPPLIER_REPLACEMENT")
+        val listing = request("GET", "$root?status=DRAFT", case.token)
+        assertThat(listing.status).withFailMessage(listing.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(listing.contentAsString).path("items").single { it.path("id").asString() == case.receipt }
+            .path("draftEditability").asString()).isEqualTo("SEALED_SUPPLIER_REPLACEMENT")
+        val draft = """{"supplierId":"${view.path("supplierId").asString()}","externalReference":"Corrected delivery",
+            "sourceLocationId":"${view.path("sourceLocationId").asString()}","inspectionLocationId":"${view.path("inspectionLocationId").asString()}",
+            "lines":[{"skuId":"${view.path("lines").single().path("skuId").asString()}","quantityBase":"1","serials":[{"serial":"ORDINARY-DRAFT"}]}]}"""
+        val denied = request("PUT", "$root/${case.receipt}", case.token, draft.replace("{\"supplierId", "{\"expectedRevision\":0,\"supplierId"), "sealed-edit")
+        assertThat(denied.status).withFailMessage(denied.contentAsString).isEqualTo(409)
+        assertThat(mapper.readTree(denied.contentAsString).path("code").asString()).isEqualTo("SOURCE_NOT_VERIFIED")
+        assertThat(request("GET", "$root/${case.receipt}", case.token).contentAsString).isEqualTo(original.contentAsString)
+        val created = request("POST", root, case.token, draft, "ordinary-draft")
+        assertThat(created.status).withFailMessage(created.contentAsString).isEqualTo(201)
+        assertThat(mapper.readTree(created.contentAsString).has("draftEditability")).isFalse()
+        val id = mapper.readTree(created.contentAsString).path("id").asString()
+        assertThat(mapper.readTree(request("GET", "$root/$id", case.token).contentAsString).path("draftEditability").asString()).isEqualTo("EDITABLE")
+        val edited = request("PUT", "$root/$id", case.token, draft.replace("{\"supplierId", "{\"expectedRevision\":0,\"supplierId"), "ordinary-edit")
+        assertThat(edited.status).withFailMessage(edited.contentAsString).isEqualTo(200)
+        assertThat(request("POST", root, case.token, draft, "ordinary-draft").contentAsString).isEqualTo(created.contentAsString)
+    }
+
     @Test fun `replacement pages apply current receipt location scope before the page limit`() {
         val repair = repairSetup()
         val outbound = dispatchRepair(repair)

@@ -5,7 +5,7 @@ export const receiptIds = { document: '0f3017da-ef2e-4b96-8c02-cb2a2832dfb4', li
 export function receiptFixture(): WarehouseReceipt {
   const id = receiptIds
   return { id: id.document, revision: 4, state: 'DRAFT', createdAt: '2026-09-24T17:00:00Z', supplierId: id.supplier, supplierName: 'Distributor kabel', externalReference: 'SJ-001',
-    sourceLocationId: id.source, inspectionLocationId: id.inspection, sourceLocationName: 'Penerimaan pemasok', inspectionLocationName: 'Pemeriksaan barang', costVisible: true,
+    sourceLocationId: id.source, inspectionLocationId: id.inspection, sourceLocationName: 'Penerimaan pemasok', inspectionLocationName: 'Pemeriksaan barang', costVisible: true, draftEditability: 'EDITABLE',
     lines: [{ id: id.line, inputLineNumber: 1, skuId: id.sku, skuCode: 'CABLE', skuName: 'Kabel drop', tracking: 'LOT', baseUnit: 'MM', quantityBase: '1000000', serial: null, mac: null, lotCode: 'R1', inspectionRequired: true,
       conversion: null, cost: { totalMinor: '1000006', currency: 'IDR', costBasisQuantityBase: '1000000' }, pieces: [], acceptedBase: '0', rejectedBase: '0', putawayBase: '0' }], inspections: [] }
 }

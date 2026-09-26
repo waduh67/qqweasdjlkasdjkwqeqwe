@@ -89,12 +89,14 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
       <p className="muted"><WarehouseTime value={receipt.createdAt} /> · Referensi audit: {receipt.id}</p>
       <p>{receipt.state === 'DRAFT' ? 'Draft belum menambah stok.' : receipt.state === 'RECEIVED_IN_INSPECTION' ? 'Barang sudah diterima. Bagian yang lolos pemeriksaan masih karantina sampai ditempatkan.' : 'Penerimaan telah selesai; lihat jumlah diterima, ditolak dan ditempatkan di bawah.'}</p>
       <div className="row wrap"><Button onClick={reload}>Muat ulang</Button><Button onClick={saveReference}>Simpan referensi</Button>
-        {manage && receipt.state === 'DRAFT' && <><Button disabled={!can('inventory.cost.view') || !receipt.costVisible || !can('inventory.sku.view') || !can('inventory.location.view')} onClick={() => setEdit(true)}>Ubah draft</Button>
+        {manage && receipt.state === 'DRAFT' && <>{receipt.draftEditability === 'EDITABLE' && <Button disabled={!can('inventory.cost.view') || !receipt.costVisible || !can('inventory.sku.view') || !can('inventory.location.view')} onClick={() => setEdit(true)}>Ubah draft</Button>}
           <Button variant="primary" onClick={() => setOperation(receiveReceipt(receipt.id, receipt.revision))}>Terima barang</Button></>}
         {manage && receipt.state === 'RECEIVED_IN_INSPECTION' && <><Button disabled={!receipt.lines.some(line => receiptCandidates(receipt, line, 'inspect').length)} onClick={() => setAction('inspect')}>Periksa barang</Button>
           <Button variant="primary" disabled={!can('inventory.location.view') || !receipt.lines.some(line => receiptCandidates(receipt, line, 'putaway').length)} onClick={() => setAction('putaway')}>Tempatkan ke bin</Button></>}
       </div>
-      {manage && receipt.state === 'DRAFT' && (!can('inventory.cost.view') || !receipt.costVisible) && <p className="muted">Ubah draft memerlukan akses rincian biaya agar biaya tersimpan tidak terhapus. Terima barang dan unggah bukti tetap tersedia.</p>}
+      {receipt.draftEditability === 'SEALED_SUPPLIER_REPLACEMENT' && <p>Usulan penerimaan pengganti sudah tercatat dan belum menambah stok. Untuk memperbaiki isinya, siapkan usulan baru dari kasus retur asal. Penerimaan fisik tetap mengikuti persetujuan yang berlaku.</p>}
+      {manage && receipt.state === 'DRAFT' && receipt.draftEditability === null && <p className="muted">Muat ulang detail untuk memeriksa apakah draft masih dapat diubah.</p>}
+      {manage && receipt.draftEditability === 'EDITABLE' && (!can('inventory.cost.view') || !receipt.costVisible) && <p className="muted">Ubah draft memerlukan akses rincian biaya agar biaya tersimpan tidak terhapus. Terima barang dan unggah bukti tetap tersedia.</p>}
       {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(receipt.id)}`}>Buka persetujuan penerimaan</Link>}
       {!manage && <p className="muted">Akses baca saja. Izin kelola penerimaan diperlukan untuk memproses dokumen.</p>}
       {manage && receipt.state === 'RECEIVED_IN_INSPECTION' && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih bin tujuan.</p>}

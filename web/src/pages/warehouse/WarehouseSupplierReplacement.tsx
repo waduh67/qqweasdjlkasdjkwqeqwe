@@ -31,7 +31,7 @@ export function WarehouseSupplierReplacements({ details, reload }: { details: Re
       {details.returnCase.state === 'REPAIR' && details.returnCase.repair?.returnedRevision === null && <>
         <Button disabled={!canCreate} onClick={() => setCreating(true)}>Siapkan penerimaan pengganti</Button>
         {!canCreate && <p className="muted">Pembuatan penerimaan pengganti memerlukan izin kelola retur, kelola penerimaan, dan lihat lokasi.</p>}
-        {items.length > 0 && <p className="muted">Periksa draft yang sudah ada sebelum membuat lagi. Satu kasus servis hanya dapat menerima satu perangkat pengganti.</p>}
+        {items.length > 0 && <p className="muted">Periksa usulan yang sudah tercatat sebelum membuat lagi. Satu kasus servis hanya dapat menerima satu perangkat pengganti.</p>}
       </>}
     </>}</WarehouseState>
   </section>
@@ -41,7 +41,7 @@ function ReplacementReceipt({ item }: { item: SupplierReplacement }) {
   return <WarehouseState {...result}>{receipt => <section className="stack"><h3>{receipt.externalReference}</h3>
     <p>{receipt.supplierName} · <WarehouseStatus status={receipt.state} /> · <WarehouseStatus status={item.legalOwner} /></p>
     {receipt.lines.map(line => <p key={line.id}>{line.skuName} · {line.serial ?? 'Serial belum tercatat'}</p>)}
-    <p>{item.replacementAssetId ? 'Identitas pengganti telah terbentuk; ikuti pemeriksaan dan lokasi pada penerimaannya.' : 'Masih draft. Belum ada perangkat pengganti yang diterima.'}</p>
+    <p>{item.replacementAssetId ? 'Identitas pengganti telah terbentuk; ikuti pemeriksaan dan lokasi pada penerimaannya.' : 'Usulan pengganti sudah tercatat. Belum ada perangkat pengganti yang diterima.'}</p>
     <Link to={`/warehouse/receipts?receiptId=${encodeURIComponent(item.receiptId)}`}>Buka penerimaan {receipt.externalReference}</Link>
   </section>}</WarehouseState>
 }
@@ -72,12 +72,12 @@ function ReplacementEditor({ details, onClose, onDone }: { details: ReturnDetail
     {can('inventory.cost.view') && <><Checkbox label="Nilai pengganti diketahui" checked={useCost} onChange={(_, data) => setUseCost(data.checked === true)} />
       {useCost ? <><WarehouseQuantityField label="Nilai total satuan terkecil mata uang" value={totalMinor} unit="EA" allowZero onChange={setTotalMinor} />
         <TextField label="Mata uang pengganti" value={currency} maxLength={3} onChange={(_, data) => setCurrency(data.value)} /></> : <p className="muted">Nilai belum diketahui; tidak dianggap nol.</p>}</>}
-    {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button variant="primary" type="submit">Tinjau draft pengganti</Button></div>
+    {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button variant="primary" type="submit">Tinjau usulan pengganti</Button></div>
   </form>
-    {operation && <WarehouseCommandDialog title="Konfirmasi penerimaan pengganti" confirmLabel="Buat draft pengganti" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+    {operation && <WarehouseCommandDialog title="Konfirmasi penerimaan pengganti" confirmLabel="Catat usulan pengganti" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
       summary={<><p>{reference} · {details.references.vendor?.name}</p><p>{details.references.item.name} · 1 unit · Serial baru: {serial}{mac && ` · MAC ${mac}`}</p>
         <p>{source && locationLabel(source)} → {quarantine && locationLabel(quarantine)}</p><p>Bukti: {evidence}</p>
-        <p>Perangkat lama tetap tercatat. Lanjutkan penerimaan fisik dan inspeksi melalui draft baru.</p><p><WarehouseStatus status={details.returnCase.legalOwner} /></p>
+        <p>Perangkat lama tetap tercatat. Usulan ini disimpan sebagai catatan tetap; lanjutkan persetujuan yang berlaku, penerimaan fisik, dan inspeksi dari detail penerimaan.</p><p><WarehouseStatus status={details.returnCase.legalOwner} /></p>
         {can('inventory.cost.view') && <p>{useCost ? `Nilai: ${totalMinor} ${currency.toUpperCase()} (satuan terkecil).` : 'Nilai belum diketahui.'}</p>}</>} />}
   </>
 }

@@ -221,7 +221,9 @@ operator, kedua batas wajib diisi dan paling panjang366 hari.
 - **Kirim ke servis / Terima dari servis**: pilih penyedia dan lokasi dari daftar,
   pindai serial yang sama, lalu catat dokumen vendor. Setelah kembali, lakukan
   inspeksi dan reset baru. Inspeksi sebelum servis tidak menggantikannya.
-- **Siapkan penerimaan pengganti**: serial berbeda membuat draft receipt baru.
+- **Siapkan penerimaan pengganti**: serial berbeda membuat usulan receipt baru
+  yang isinya tetap setelah dicatat. Koreksi memerlukan usulan baru dari kasus
+  retur asal; **Ubah draft** biasa tidak berlaku pada usulan pengganti.
   Daftar pengganti tersimpan menyediakan tautan melanjutkan receipt tersebut.
   Nilai biaya opsional; nilai yang belum diketahui tidak diubah menjadi nol.
 - **Siapkan serah-terima RMA**: setelah servis dan reset selesai, pilih WO

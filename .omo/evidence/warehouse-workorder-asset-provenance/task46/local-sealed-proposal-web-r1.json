@@ -1,0 +1,38 @@
+{
+  "status": "PASSED_FOCUSED",
+  "baseCommit": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+  "counts": {
+    "tests": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reportSha256": "936c90efe0f6e43acff4f5eb72ea86369dbc4c14d43f767c62100ded4cc81687",
+  "logSha256": "0ca2cee59910c13dfba26f23ebf9f732a2cc267b90078c1b3066d508585fc3eb",
+  "sourceSha256": {
+    "web/src/api/warehouse/receipts.ts": "5a2c53f3b3910aeb08f41ee0c9c986aa84424aeb09e8c63e2a739c0d174e0e5e",
+    "web/src/pages/warehouse/WarehouseReceiptEditor.tsx": "1b974ef23b0a2d18d7ef1603bcd1d8581d1394fa1e1157281d378539b7917dea",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx": "84d6cd3d9db2f96c007423adc3ce345cde8b3d8938271e679ac17d54fe7f7770",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.tsx": "3f53573e2f9ef0142135e59a3eea41f64ddd5f89e52be9c4e71d2339b5ff5eb7",
+    "web/src/pages/warehouse/WarehouseSupplierReplacement.test.tsx": "339c316ebbeb17ea03d18b74ff6daadce0d945363fb82f2eeff1026ec85b8953",
+    "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx": "045c188869359c87d279ea38f076d64a462569b1124fa1d1a02031ec2779c687",
+    "web/src/test/warehouseReceiptFixture.ts": "5eaa796c96a93d195128652612cc5b53c339c48a37a00fffb16912def2ba9c19"
+  },
+  "checks": {
+    "unitTests": "PASSED",
+    "warehouseE2eTypecheck": "PASSED",
+    "productionBuild": "PASSED"
+  },
+  "runner": {
+    "sessionId": 5409,
+    "observedExecExitCode": 0,
+    "observedTerminalOutput": "SEALED_PROPOSAL_WEB_EXIT 0",
+    "commands": [
+      "timeout 180s npm test -- --run src/pages/warehouse/WarehouseReceiptsPage.test.tsx src/pages/warehouse/WarehouseSupplierReplacement.test.tsx --reporter=default --reporter=junit --outputFile.junit=<private-runtime>/sealed-proposal-web-r1.xml",
+      "timeout 180s npm run typecheck:warehouse-e2e",
+      "timeout 240s npm run build"
+    ],
+    "receiptSource": "Root tool response after this sequential fail-fast runner completed"
+  },
+  "limitation": "Executed before the subsequent asset exception creation UI was added. These 7 unchanged sealed-receipt inputs remain covered; this is not validation of that new UI or the final full regression."
+}

@@ -29,6 +29,29 @@ beforeEach(() => {
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
+it.each(['SEALED_SUPPLIER_REPLACEMENT', null] as const)('does not offer ordinary draft editing for current editability %s', async draftEditability => {
+  const current = { ...receiptFixture(), draftEditability }
+  const fetch = vi.fn(async (path: string) => {
+    if (path.endsWith('/history')) return response([])
+    if (path.includes('/attachments?')) return response(page([]))
+    if (path.endsWith(`/receipts/${id.document}`)) return response(current)
+    throw new Error('Unexpected fixture request: ' + path)
+  })
+  vi.stubGlobal('fetch', fetch)
+  render(<MemoryRouter initialEntries={[`/warehouse/receipts?id=${id.document}`]}><WarehouseReceiptsPage /></MemoryRouter>)
+  await screen.findByRole('button', { name: 'Terima barang' })
+  expect(screen.queryByRole('button', { name: 'Ubah draft' })).toBeNull()
+  expect(screen.queryByText(/Ubah draft memerlukan akses rincian biaya/)).toBeNull()
+  expect(screen.getByText(draftEditability ? /Usulan penerimaan pengganti sudah tercatat/ : /Muat ulang detail untuk memeriksa/)).toBeTruthy()
+})
+
+it('refuses entering the ordinary editor for a sealed replacement even through a stale caller', () => {
+  vi.stubGlobal('fetch', vi.fn())
+  render(<MemoryRouter><WarehouseReceiptEditor receipt={{ ...receiptFixture(), draftEditability: 'SEALED_SUPPLIER_REPLACEMENT' }} onClose={vi.fn()} onSaved={vi.fn()} onReload={vi.fn()} /></MemoryRouter>)
+  expect(screen.getByRole('alert').textContent).toContain('usulan baru dari kasus retur asal')
+  expect(screen.queryByRole('button', { name: 'Tinjau draft' })).toBeNull()
+})
+
 it('rejects normalized duplicate serials and MACs and mismatched serial count before constructing a receipt', () => {
   expect(() => parseReceiptSerials('ONU-1\n onu-1 ')).toThrow('Serial ganda')
   expect(() => parseReceiptSerials('ONU1, AA:BB:CC:DD:EE:FF\nONU2, AABB.CCDD.EEFF')).toThrow('MAC ganda')

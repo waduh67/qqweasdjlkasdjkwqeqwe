@@ -55,6 +55,7 @@ export function receipt(value: unknown, path = 'receipt') {
     // Original replay responses may predate the additive snapshot-name fields. Always reload after a command.
     sourceLocationName: nullable(row.sourceLocationName, text, path), inspectionLocationName: nullable(row.inspectionLocationName, text, path),
     costVisible: row.costVisible === undefined ? false : boolean(row.costVisible, path),
+    draftEditability: nullable(row.draftEditability, (value, key) => oneOf(value, ['EDITABLE', 'SEALED_SUPPLIER_REPLACEMENT', 'NOT_DRAFT'], key), path),
     lines: array(row.lines, line, path, 500), inspections: array(row.inspections, inspection, path, 10000) }
 }
 export type WarehouseReceipt = ReturnType<typeof receipt>

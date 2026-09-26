@@ -7,6 +7,7 @@ import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseOperationStore
 import com.duluin.ftth.inventory.adapter.outbound.persistence.WarehouseReceiptPersistence
+import com.duluin.ftth.inventory.adapter.outbound.persistence.SupplierReplacementStore
 import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.port.outbound.PostingOperation
 import com.duluin.ftth.inventory.application.port.outbound.WarehouseMasterStore
@@ -19,7 +20,8 @@ import java.util.UUID
 class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val masters: WarehouseMasterStore,
     private val masterService: WarehouseMasterService, private val validation: ReceiptDraftValidation,
-    private val store: WarehouseReceiptPersistence, private val operations: WarehouseOperationStore) {
+    private val store: WarehouseReceiptPersistence, private val operations: WarehouseOperationStore,
+    private val replacements: SupplierReplacementStore) {
     private val mapper = jacksonObjectMapper()
 
     fun draft(id: UUID?, input: ReceiptDraftInput, key: String): WarehouseOperationReceipt = draft(id, input, key, null)
@@ -55,6 +57,8 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         }
         if (existing != null && existing.revision != input.expectedRevision) masterFailure(WarehouseErrorCode.STALE_REVISION)
         if (existing != null && existing.state != WarehouseReceiptState.DRAFT) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (existing != null && replacements.forReceipt(target) != null)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Create a new supplier replacement request from its return case with corrected evidence")
         val intake = validation.prepare(input)
         val revision = if (existing == null) 0 else Math.addExact(existing.revision, 1)
         store.saveDraft(target, intake, revision, current.fence.identity.userId, current.fence.epoch, cutover.snapshot.epoch, existing == null, source)
@@ -76,7 +80,7 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         receiptPermission(current, "inventory.receipt.view")
         val record = store.get(id, lock)
         authorize(record.intake, current, scopes.currentUnderFence(current.fence))
-        return view(record, current.platformAdmin || "inventory.cost.view" in current.permissions)
+        return currentView(record, current.platformAdmin || "inventory.cost.view" in current.permissions)
     }
 
     @Transactional
@@ -104,8 +108,14 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         }
         val offset = filter.page.toLong() * filter.size
         val page = if (offset >= records.size) emptyList() else records.drop(offset.toInt()).take(filter.size)
-        return WarehousePage(page.map { view(it, current.platformAdmin || "inventory.cost.view" in current.permissions) }, filter.page, filter.size, records.size.toLong())
+        return WarehousePage(page.map { currentView(it, current.platformAdmin || "inventory.cost.view" in current.permissions) }, filter.page, filter.size, records.size.toLong())
     }
+
+    private fun currentView(record: ReceiptRecord, cost: Boolean) = view(record, cost).copy(draftEditability = when {
+        record.state != WarehouseReceiptState.DRAFT -> ReceiptDraftEditability.NOT_DRAFT
+        replacements.forReceipt(record.id) != null -> ReceiptDraftEditability.SEALED_SUPPLIER_REPLACEMENT
+        else -> ReceiptDraftEditability.EDITABLE
+    })
 
     internal fun authorize(intake: ReceiptIntake, current: CurrentAuthority, scope: AuthorityScope) {
         for (location in listOf(intake.source, intake.inspection)) {

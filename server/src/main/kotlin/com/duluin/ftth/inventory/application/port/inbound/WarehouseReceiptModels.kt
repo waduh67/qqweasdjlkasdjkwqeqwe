@@ -41,10 +41,13 @@ data class ReceiptLineView(val id: UUID, val inputLineNumber: Int, val skuId: UU
     val serial: String?, val mac: String?, val lotCode: String?, val inspectionRequired: Boolean,
     val conversion: ReceiptPackageInput?, val cost: ReceiptCostSnapshot?, val pieces: List<ReceiptPiece>,
     val acceptedBase: String, val rejectedBase: String, val putawayBase: String)
+enum class ReceiptDraftEditability { EDITABLE, SEALED_SUPPLIER_REPLACEMENT, NOT_DRAFT }
 data class ReceiptView(val id: UUID, val revision: Long, val state: WarehouseReceiptState, val createdAt: Instant,
     val supplierId: UUID, val supplierName: String, val externalReference: String,
     val sourceLocationId: UUID, val inspectionLocationId: UUID, val lines: List<ReceiptLineView>, val inspections: List<ReceiptInspectionView>,
-    val sourceLocationName: String, val inspectionLocationName: String, val costVisible: Boolean)
+    val sourceLocationName: String, val inspectionLocationName: String, val costVisible: Boolean,
+    @get:com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    val draftEditability: ReceiptDraftEditability? = null)
 data class ReceiptInspectionView(val id: UUID, val lineId: UUID, val acceptedBase: String, val rejectedBase: String,
     val baseUnit: WarehouseBaseUnit, val evidenceId: UUID, val reason: String, val disposition: String, val operationId: UUID)
 data class ReceiptHistory(val operationId: UUID, val revision: Long, val action: String, val recordedAt: Instant)

@@ -85,6 +85,12 @@ Request and decision replay return their exact original durable outcomes only
 after current authority checks. Competing requests for the same source revision
 can produce at most one transfer; the other approval becomes stale.
 
+A rejected title correction remains an immutable historical proposal. Its
+approval details expose `canRework=false`, and a new generic rework command is
+rejected with `409 SOURCE_NOT_VERIFIED`. Create a new correction with current
+ownership, revisions and evidence, then submit it for independent approval.
+Authorized replay of an earlier command still returns its original result.
+
 ## Current ownership and cessation
 
 `GET /api/customers/{customerId}/assets/ownership` requires `customer.onu.view` and
