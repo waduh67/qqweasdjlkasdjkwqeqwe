@@ -334,5 +334,21 @@
     "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
     "Missing original task-time evidence was not reconstructed or invented.",
     "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
-  ]
+  ],
+  "verifiedCurrentOfflineProtocols": {
+    "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+    "proof": "task46/local-offline-protocol-r1.json",
+    "proofSha256": "36e78518729ae561d9575dff74280c6ad49ef9959050134f4ea8829a70bfabef",
+    "independentAuthentication": "task46/f1-offline-protocol-executed-verification.json",
+    "tests": 197,
+    "suites": 35,
+    "modules": {
+      "contract": 2,
+      "snmp": 25,
+      "collector": 170
+    },
+    "documentedGponProfileCases": 8,
+    "sourceInputCount": 130,
+    "scope": "Fresh offline module execution, all25Gradleactiontasks executed; nofail/error/skip; physicalGPONcertification remainsdeferred. Current fullserver/CI andfinalgates separate."
+  }
 }

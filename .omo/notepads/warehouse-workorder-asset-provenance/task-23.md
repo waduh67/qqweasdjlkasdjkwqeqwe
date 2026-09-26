@@ -254,3 +254,10 @@
 - Earlier CPE-R2/DB-R2 receipts at `39295078` and V3 receipt at `86419931` remain identity-bound to byte-unchanged blobs; they are not represented as fresh 545/95 reruns.
 - Physical ZTE/Huawei/FiberHome GPON validation is deferred per explicit owner decision. Huawei is documentation-backed/not hardware-validated; ZTE constants are documentation-unverified compatibility assumptions; contradicted FiberHome profile behavior is unsupported; unknown connected raw indexes remain `UNVERIFIED` and quarantined. No hardware or vendor-wide certification is claimed.
 - Task23 is complete under that approved scope and marked `[x]`. Task24 onboarding/import/read compatibility is next; no task24 implementation began in this checkpoint and no task25/later or F1-F4 completion is implied.
+
+
+## 2026-09-27 Current offline protocol evidence
+
+At6bfb13374db245e0f4d192c94ade42fdb07cd613, forced fresh :contract:test :snmp:test :collector:test (--rerun-tasks --no-build-cache) passes197tests/35suites: contract2/1, SNMP25/3 including8GponDocumentedProfileTest cases, collector170/31. All25Gradleactiontasks execute, runner0, all130 captured inputs unchanged. The CI result verifier passes separately for every module. Independent F1 parses all XML/casecounts/hashes and matches inputs to Git. See task46/local-offline-protocol-r1.json, offline-protocol-r1-source-hashes.json and f1-offline-protocol-executed-verification.*.
+
+This closes the current offline evidence lookup without treating the unavailable historical SNMP25/collector22 reports as verified. It does not replace current full warehouse regression or finalF1-F4. PhysicalGPON certification remains deferred; documented unknown/unsupported fields and raw-index quarantine remain unchanged. CI now requires these modules before the full server regression and retains their raw proof encrypted.

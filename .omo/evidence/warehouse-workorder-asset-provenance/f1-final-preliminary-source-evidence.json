@@ -4421,7 +4421,22 @@
         "C6"
       ],
       "safeTaskEvidenceReferences": [],
-      "offlineProtocolEvidenceStatus": "OPEN_REQUIRED_CURRENT_EXECUTION_HISTORICAL_COUNTS_UNVERIFIED"
+      "offlineProtocolEvidenceStatus": "CLOSED_CURRENT_EXECUTION_AT_6bfb1337",
+      "offlineProtocolEvidence": {
+        "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+        "proofReference": "task46/f1-offline-protocol-executed-verification.json",
+        "proofSha256": "bf4632c0a5a0a0642877b7b3a8cf3d5bcb3b0f86f4e27d1595090ed6bb7d5d96",
+        "tests": 197,
+        "suites": 35,
+        "modules": {
+          "contract": 2,
+          "snmp": 25,
+          "collector": 170
+        },
+        "documentedProfileTests": 8,
+        "all130InputsMatch": true,
+        "hardwareValidated": false
+      }
     },
     {
       "task": 24,
@@ -8764,7 +8779,7 @@
       ],
       "obligations": "Verified origin and acknowledged issue, same-transaction consume-time authorization, stable assignment/ONU episodes, loan/sale/title/reacquisition, no BYOD, swap/removal, temporal attribution and ACS freshness/privacy.",
       "currentSourceConclusion": "Direct customer consume invokes owner validation; loss/title creation uses selected-asset exception context and rechecks customer/area under locks. Visible UI requires usable requester permissions. GPON documentation labels unsupported raw indices UNVERIFIED; hardware certification remains explicitly deferred.",
-      "evidence": "Customer/source-gate/discovery G suites; source-bound C8 server and browser proof; C7-specialized-r3 title/loss/repair expiry. Dedicated offline profile/protocol execution remains an open gate: historical SNMP25/collector22 claims have no retained matching raw proof; root will obtain current proof and inspect CI dependency. Physical certification remains deferred.",
+      "evidence": "Customer/source-gate/discovery G suites; source-bound C8 server and browser proof; C7-specialized-r3 title/loss/repair expiry. Current offline execution at 6bfb1337 authenticated: contract 2 / SNMP 25 / collector 170,197 tests / 35 suites, including 8 documented GPON cases; all 130 inputs match before/after/current/Git. This closes only the offline-evidence gap. Physical certification remains deferred.",
       "status": "SOURCE_MAPPED_FINAL_GATES_PENDING"
     },
     {
@@ -9567,7 +9582,7 @@
       "checksReportedByRoot": [
         "Complete unfiltered Vitest607tests117files, no failures/skips/todos",
         "WarehouseE2E TypeScript check",
-        "oxlint exit0 with existing warnings",
+        "oxlint exit 0 with existing warnings",
         "production TypeScript/Vite build"
       ]
     },
@@ -9601,14 +9616,23 @@
         }
       ],
       "rootReportedCleanupExit": 0
+    },
+    {
+      "id": "OFFLINE-6bfb1337",
+      "proofReference": "task46/f1-offline-protocol-executed-verification.json",
+      "proofSha256": "bf4632c0a5a0a0642877b7b3a8cf3d5bcb3b0f86f4e27d1595090ed6bb7d5d96",
+      "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "tests": 197,
+      "suites": 35,
+      "all130InputsMatch": true,
+      "noHardwareClaim": true
     }
   ],
   "unresolvedRequiredGates": [
     "Complete current full server, historical upgrade, shared/native and broad browser matrix; preserve actual full reports and source identity. Current607 web and focusedC7 proofs need no redundant isolated rerun absent changed inputs.",
     "Current178.12 documented positive/negative preflight and runbook closure for task47.",
     "Current artifact/config/migration/image-smoke identity and mandatory release dependency/failure guards for task48.",
-    "Independent final F2/F3/F4 records and final F1 after implementation gates.",
-    "Task23 current source-bound offline GPON parser/protocol execution and durable task48 CI dependency; old claimed SNMP25/collector22 counts have no verified retained matching reports."
+    "Independent final F2/F3/F4 records and final F1 after implementation gates."
   ],
   "qaExecutedByReviewer": false,
   "finalF1": false,
@@ -9641,8 +9665,19 @@
     "claimOnly": true,
     "retainedMatchingRawReportVerified": false,
     "coordinatorSearchResult": "No matching retained raw report found by bounded search; later task23 index proves warehouse discovery140 only.",
-    "requiredFollowup": "Current source-bound :snmp:test and relevant offline protocol module proof, with task48 CI dependency checked by coordinator.",
+    "requiredFollowup": "None for current task23 offline execution evidence; aggregate current CI/final gates remain separate.",
     "physicalCertificationDeferred": true,
-    "noQaRunByReviewer": true
+    "noQaRunByReviewer": true,
+    "status": "CLOSED_BY_CURRENT_AUTHENTICATED_EXECUTION",
+    "closedAtTestedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+    "proofReference": "task46/f1-offline-protocol-executed-verification.json",
+    "currentCounts": {
+      "contract": 2,
+      "snmp": 25,
+      "collector": 170,
+      "total": 197,
+      "suites": 35,
+      "documentedGponProfileCases": 8
+    }
   }
 }

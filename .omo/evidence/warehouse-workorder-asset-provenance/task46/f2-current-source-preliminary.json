@@ -1,0 +1,871 @@
+{
+  "status": "BOUNDED_PRELIMINARY_NO_ADDITIONAL_BLOCKER_WITHIN_REVIEWED_SCOPE",
+  "recordedAtUtc": "2026-09-26T17:56:33.064214+00:00",
+  "head": "9d540107fc2fd47a3b02312371c9e65df75acb83",
+  "workingTree": "M .github/workflows/warehouse.yml\n M docs/warehouse-ci.md\n M docs/warehouse-review.md",
+  "priorInventory": "/home/fajar/ftth/qqweasdjlkasdjkwqeqwe/.omo/runtime/warehouse-f2-review/.omo/evidence/warehouse-workorder-asset-provenance/f2-source-inventory.json",
+  "priorInventorySha256": "d66cf47b43d36a92cab401219204584d7069f095273e3ffcbbae60dcff8752b8",
+  "priorInventoryEntries": 1646,
+  "priorHashUnchanged": 1516,
+  "priorHashChanged": [
+    {
+      "path": ".github/workflows/warehouse.yml",
+      "priorSha256": "3037ccfddecf452380ff4036ed50d3ec0d7368a971900a300f96496ce78c3de5",
+      "currentSha256": "9477b01cf3a9fa03ac8c1eab27ca3ee9fb38e93604c552b7f9e0e456950304c1"
+    },
+    {
+      "path": "deploy/DEPLOY.md",
+      "priorSha256": "465d96303300c1c003483b0513b1e5bd5780bb688d26a02624d0d970be3e10d9",
+      "currentSha256": "22342eb68265d2e408add15677e69fa2d00e09663cc809e2dc4d41938b04c382"
+    },
+    {
+      "path": "docs/warehouse-asset-handover.md",
+      "priorSha256": "5c2368a5d47aaca0f083b87bbb72a7513a36250c7a7e933e23805185dfaeb43b",
+      "currentSha256": "99a37f8e26e3b9067ed9f0a7a64f6131c3aa8328738928846a838cba06e9947e"
+    },
+    {
+      "path": "docs/warehouse-ci.md",
+      "priorSha256": "8c676d849fb49aaddf2cce730da284642db90729dc5da52194d55afdeaec0da8",
+      "currentSha256": "fc7c6c0be00becd2367a861caef8025cabe5fc02bd227bf782d3f9b13e20564c"
+    },
+    {
+      "path": "docs/warehouse-counts.md",
+      "priorSha256": "0f39692a8fb00ab54860a76348acba8fad2966fe3c6b3d786851dc9a4432f0de",
+      "currentSha256": "38bc0b44a5dfc228a06d8fa9087182dd8f91a418a2381a915a5b24c630e857dd"
+    },
+    {
+      "path": "docs/warehouse-dispositions.md",
+      "priorSha256": "c3e5d3fd0ff21e5efb134c74d53f5598e9a0858eec6ba3eea58445e59ecda216",
+      "currentSha256": "bdcfd1dd7ac5480533049fb5f841f86fc28dbadf3099914e22c03057a516e7b8"
+    },
+    {
+      "path": "docs/warehouse-migrations.md",
+      "priorSha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94",
+      "currentSha256": "2823a1b6970f4305c8bcb85cbab16b9ae1f558a16b4217fb63e8ab0b859416da"
+    },
+    {
+      "path": "docs/warehouse-queries.md",
+      "priorSha256": "1ad1b29a23ae86ad6f3b34d7ed6c293046f378151d21ca27c238ae85329fc83e",
+      "currentSha256": "7c7422d30d337774c573d004816be0d6c7512f144f1d5445a18c35d4b84f5db7"
+    },
+    {
+      "path": "docs/warehouse-receipts.md",
+      "priorSha256": "9bc9b6b6aee357f81e5097f1f772e2020917e04c299c547117f4352567870fc6",
+      "currentSha256": "312ba4110cf516708f07cddead68e48880b684c7a75ac0a2b1990956dc37b114"
+    },
+    {
+      "path": "docs/warehouse-returns.md",
+      "priorSha256": "9dafb7458f8584a0d23a978b7779a0a0f46ec570b72acac2acbec232789b9ebb",
+      "currentSha256": "ca5c64953bec69d86f312800b1b19682e8f49294adf34238b9452e81ac93c0c8"
+    },
+    {
+      "path": "docs/warehouse-review.md",
+      "priorSha256": "070aa20fa40417ee5f2d5c10317e5e7a768b6130f1ae425a02afbb2a608c66c9",
+      "currentSha256": "3f7d50dd19943c6e509b46f85a9dccc0dd25a31d499eb927eddb5b5a370fd3fc"
+    },
+    {
+      "path": "docs/warehouse-transfers.md",
+      "priorSha256": "25e9c872c0e8fd044d54c027bd868d66f1e4d95cdf3061bc7133b241497305b8",
+      "currentSha256": "22976262cdabaed8cc75bb5e72011670e8cc2d046d7ba17245c4262af71934bf"
+    },
+    {
+      "path": "docs/warehouse.md",
+      "priorSha256": "d515cd3cb3d38955c03ccea64630bc46bf93c9bf9f32907d66fbe7fa55cc09dc",
+      "currentSha256": "cb5a0e487c84d7a363c2b17b59050ab922e0b57a14873959b647a9c0bd5a1a66"
+    },
+    {
+      "path": "scripts/warehouse/legacy-browser.sh",
+      "priorSha256": "92836cbc0b886275db6b9742b9330c67e0cf8a3e86d35c41ef93cbc9b96df165",
+      "currentSha256": "6a17997d9a50720e53d718206159898d2af597bf95fb1d7d1cd826538b0a2786"
+    },
+    {
+      "path": "scripts/warehouse/qa.sh",
+      "priorSha256": "a49f51b1f2b9133c3b5560ca0a32473497e01f08b4503c1fb50b6d02faa6d60e",
+      "currentSha256": "f1b6536b7e7f614af828dd4c440b147ccb771ca955853ced4ebfdaaca138bc87"
+    },
+    {
+      "path": "scripts/warehouse/test-ci-workflow.py",
+      "priorSha256": "c96d629db2d6bfca9f9af46dd7cda689ceee6ef4fdaf65eed9250082b20d4935",
+      "currentSha256": "3e8ae89ed09013c181d7b942870b2bfc866047ec42b4fa358e304ea3b52608f2"
+    },
+    {
+      "path": "server/build.gradle.kts",
+      "priorSha256": "ca149a31652e646b184eb4f292b3959af0a973bf5235c71a5c6b019856b08de7",
+      "currentSha256": "9417e0bbb612b7e8511aee1a4dfbad8441eff111fad9620425d12f1b5c2e63d3"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
+      "priorSha256": "6afc61b6ef138e08245284ac7580b7f08655dda7b2531b819dc919ac3f21e1e4",
+      "currentSha256": "836df5b52e87817457833f70b974b93ef999395ea49db9cc8d93ce5baf7245c8"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipApi.kt",
+      "priorSha256": "b7689e5e437395546a60461db757c41f50274eb0fd0113f0b621067b7fb7c5b0",
+      "currentSha256": "6c5ef309dbf1f993daac28369a3c96e73cdb9fedaa960b3fc7035b7132e383b4"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+      "priorSha256": "5cf6f8412b73b0cc73837b072f5c2b8dd3ec14b7ada91c300111b903fcadb2eb",
+      "currentSha256": "8bd63f0ecdffc636567428dc461f3a81b216a219579a100a6fbe4b9b8b0d1dc4"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/AssetHandoverCustomerAdapter.kt",
+      "priorSha256": "01a3b3ae49b404787cf540f9fb75563fcb9613f094c05c1508fd35f3ff4358b4",
+      "currentSha256": "7ad61304449ead33a524371c7161bbf21b103d9e4dc577299291e9a5bf36b739"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+      "priorSha256": "0f88052f0b10822ea8c8174360c8865b7ccae5b874cefdbce122f179ea291bca",
+      "currentSha256": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/AssetHandoverContextPort.kt",
+      "priorSha256": "84235dea7d5114f83532b09e1bf2f759bbcefec393e17a8318ad1493bfaa1a68",
+      "currentSha256": "9552674ad665959d8c978299665ce80d22622348cc4de1bd12b1dbdadde1049b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryApprovalQueryApi.kt",
+      "priorSha256": "b69c955c818e01be1c750b5a9d52e5f57ec0482a50459bc80157295d9c001275",
+      "currentSha256": "5a7065902878acc4c8d0dc7d274196e40d180a58717ae74cdad0bcfe7dfa1909"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetLossApi.kt",
+      "priorSha256": "3c54321e365f5993e2d85877e9de351125f9fc03d43d5eb866c777dcc359c2b7",
+      "currentSha256": "50404c80d59d1f23ec42169518e385995f083cc5df5b7a6b56da5af79b5d7e5b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetTitleApi.kt",
+      "priorSha256": "4c029090b1dc8b8113e1ec13064371b9e5cef6178134ffc373b5291157541d59",
+      "currentSha256": "e93bbac4cd22878ab108c87af3b9c05b8257a9eb4d248cc4843f0b17eda60c1f"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCompensationApi.kt",
+      "priorSha256": "6a407d5e5c27a40de2e5dc6cb85dc52ddb9addb731ff32d872c5e837c2d5e07a",
+      "currentSha256": "86dd9d1d7bf79fa38f69917ac00e9d36059d101f9cc2601847eb1d7248fd88af"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountApi.kt",
+      "priorSha256": "65e34479218bf38ce43102a3d91f0644bfdee7d6d186d90818680810720e53c3",
+      "currentSha256": "84b1d42509fc88776c7c3358444348a56a0828800791c6e3420a43b2d814ceef"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountQueryApi.kt",
+      "priorSha256": "36c95260aa196a8378d267f52bf62e9296ec3373fa2cda4e60e993dea1f763f1",
+      "currentSha256": "e85c4835c64a7c4125193ee237770db634a458ea57d62b0efcd5cecf80fbb20e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDispositionApi.kt",
+      "priorSha256": "dcdc2cd23cc0a7c2349c49977c84f00106c26babed9319198b5e3e95b6206df7",
+      "currentSha256": "881ffc32533bb2f09bf103c18e62042f3ee3da191fab4956544c0ad48b5f14f0"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialApi.kt",
+      "priorSha256": "f55aa4ea78c20ab54cdddcd1e6b32e995de2d49fd6f5ace4936acbfef09ece4d",
+      "currentSha256": "45b05ce8836306b9cda515a97dfa8bff6559869420d97af560e8c73f50e91a59"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryReturnReacquisitionApi.kt",
+      "priorSha256": "5d9b8fdc78444257842e6f25bce0901846fe47969988584ec6b2b4bd99afd145",
+      "currentSha256": "8246b444dd61b59fb6da2d3482859628787ae80babb5ea883b92e4db49f9f9c5"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySupplierReplacementApi.kt",
+      "priorSha256": "b910741031c4c15f3ef32d3c2e661e55feeae47c75d365dc7588b3f1192a6a6e",
+      "currentSha256": "6b245c8a314778aa90f7020c948d54bf2377898a412b92e9d314b9dd10daa9f5"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferApi.kt",
+      "priorSha256": "b766e9e41a55a8b61ff313fb323aa18dd23bd4602e8a4b5bfe7429fa554e829f",
+      "currentSha256": "7cd7556b083b4807f57e6f4be9c547ce32f3ee7259693aae05b9e152ab234f84"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferQueryApi.kt",
+      "priorSha256": "efa445fba06320f4496b657bb25065f112afee6e1a44446e4245b9e17bd6c10e",
+      "currentSha256": "8d7248c6fa8ed650b37556410b2d854c4f378fb525000319023327462533beea"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialPlanningContracts.kt",
+      "priorSha256": "1a05d0d4d40f5f60130ca6a44bb19974c1038c4559803cbd699240f7adb69c71",
+      "currentSha256": "82e88980aafea09ad73534add6c292f9aa6146ddd44257fcb92fb2e4356f10c6"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+      "priorSha256": "5bccecbfce1b0dd489460da0faa0fbe450a3bf2cf3d9e61e8eb6fefe511fc2d2",
+      "currentSha256": "638a23af0cf3dbb0710add7ecf59ec13a642013a02f2e98f92c62ed9058e4438"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseErrors.kt",
+      "priorSha256": "37e1135890e49ed70714e2dfd5e9b67246307a40da0eba4981be007eab23cb2a",
+      "currentSha256": "c8585a3a9325ac08d5776c881e9c9ff2d86d71a2c8664727ec8f847a6cfb896e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryQueryController.kt",
+      "priorSha256": "d6fd19e717ed640403f99e9622ee2fe4c44485cc9a6bbc1eee53f4df98b0ff5b",
+      "currentSha256": "94a2becceeaf0bd6089606cbba5b1393966a6d34d06359a5aa6525d2e1125d50"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt",
+      "priorSha256": "e48df91917f37b840e346fea898e63f172d01938245ca0f04fadd22a7d2d317e",
+      "currentSha256": "f967ae6c90df54701bd5b118d993d35006c3fa141d58039ffa989a0066379d63"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountQueryController.kt",
+      "priorSha256": "b575e2969e59b0c69a26e3e34c8156d46178ae976faf9c2b5ea59f006ab44bbe",
+      "currentSha256": "8132d2c9e2a1f090e97cf2e6ad3825af7d08bc4d023b1d164f08f4b8c0ccd4d8"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseTransferController.kt",
+      "priorSha256": "13ab1ac32df11532e74ea4efffc9e7c05c67d0e749d5cdb1605d89777f1835c4",
+      "currentSha256": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt",
+      "priorSha256": "ab25600de6547b625a56ac8fbfe64e0a8f80e96416bfcfcd4189cbbe920c8799",
+      "currentSha256": "fe79648722c83a0465312c59eda6fdd6d5d7c52ad68c6bb7786be024d5e2c2f9"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt",
+      "priorSha256": "dca24d09a63dc348e29598fec6fcdde59bc7045f33e3a44825b8ca949842add5",
+      "currentSha256": "9980e080e6450327f2d49af17e56193df7526040e6a3daf5fad5a05532798413"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt",
+      "priorSha256": "e7c6b4e44431c641ee1162a97cd4fa129d9999e734e63cecea0a74b6a41524ee",
+      "currentSha256": "81abf645cf8fa6d6a0c86eefadb2caa0847a2fd00c30dc3eb0497908fff7df61"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReceiptApprovalPostingGuard.kt",
+      "priorSha256": "9fe6b9e6907c686eb05cc524ca279bbf8c51367f95d6f681b3b03147474d969e",
+      "currentSha256": "bd6b5a8487e27ce735783ddcf624b53741bc5c25efa9bdbd9dd1c4aecb790e76"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReturnReacquisitionStore.kt",
+      "priorSha256": "b24e6b257289e9eb097c52633aa5bf0224f43fb25656994726e5cf07205be593",
+      "currentSha256": "de18a13e8f8b5bcb4a56bd5fc4ed85eb88066202988ffe375c3300c9ea5cfc36"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
+      "priorSha256": "78b7ba1474d60b710f69f37b6f62173e2d4795917883856dcdcfc98199e39dd2",
+      "currentSha256": "6ac615c353ea4b5afa816648b67c8cf55453734310bc522af9b77525f4cf1519"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalQuery.kt",
+      "priorSha256": "dc67655a55c8bf615f5f227444d7928feab91c76c18c258f194414b44222a9d4",
+      "currentSha256": "da88bbf9fb23bd12975b0e1c61f9e06808097fa65e10297b876432e0938cca3a"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
+      "priorSha256": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76",
+      "currentSha256": "0bb6d174a17010ee829b3e3bb86bc6bdda531cc4246294246247db559ae1830d"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt",
+      "priorSha256": "4b519b5fc86f173b9e3a9264339f63262e8ac0e94a36a74204c4c19f366b191f",
+      "currentSha256": "343298120304ee918644ae26572d6ba00ca758375184d744f04bb8702e5df601"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCommandJdbc.kt",
+      "priorSha256": "c6a9532602b400c58095115b06e16d8771c1180a8619e94f5804ecbc863ace90",
+      "currentSha256": "2e319f0ab5a43d673214f38e78b679d539fa978d6410430bd04d9feffe8772d4"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCompensationStore.kt",
+      "priorSha256": "17c8729279ab3a39d29622040bf3fcb8102026aa19f849425af3e2b1f4ef112d",
+      "currentSha256": "fe35ce741db460e35c96e958918006b72ad62d684e2fe803985da3b7bd3de032"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountQuery.kt",
+      "priorSha256": "d5b1c9fd4a4a3cd237be67162f3da5835facc9ebf0b1eb587508bf0a6c9ffcdd",
+      "currentSha256": "f4549a7ebb7bbfc38b4fc7abcc01ca24a71693381d6a8d0ae6b3a58de0c61cff"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt",
+      "priorSha256": "550a5b3c4d96199c2751d63350fddf57a73b8707c8c4b96d05e0103d4174b282",
+      "currentSha256": "1627a10ae977bf51d5ffdcad5f0a5e1eabb31a4c00fbe91aa37ce9bef7a91aea"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDispositionStore.kt",
+      "priorSha256": "2b2e33bf0568b6f20e87124c710c8ab772c52e41d05abbba9b0f89f2199930ba",
+      "currentSha256": "5f099645fa9b0442e29cee42c24b8d5a2d6148b9b71e36aeb5ad92112c5c21da"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt",
+      "priorSha256": "8e6b14f57a3975e167bc8a27567f1112fe05ad485053ef63831edef078d1edc0",
+      "currentSha256": "1fd68bff1ea29caf2e0363801670b47f3a5e873753c4cfe76eb9f03413d758cd"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "priorSha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
+      "currentSha256": "b04a922d4d4590157d09cc8b79c27a63d3709ce46f4f991775086d7d688bd47d"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferDiscrepancyStore.kt",
+      "priorSha256": "832f99ec765db16deea065566e90ef8768b2151beda1af81f86d9704ab2d8210",
+      "currentSha256": "e62f4da187060d0b57bd498c8d81442295189d5389e36bc261bfa1b69a6568bb"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferQuery.kt",
+      "priorSha256": "8b026531c76d55aef998fba5f83eae004260b1a724a5e39de2cd0f792354933d",
+      "currentSha256": "7ad74a6875fd15921b63fc81f0c41de7249fc5310ec24a2bed4a80394cbf37fc"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferStore.kt",
+      "priorSha256": "4f959e3bf849984393b1aca325c50c34d702422b1eca007871a8328e965b68bb",
+      "currentSha256": "ceef5cc30ec3257b97590593d86d82dc28d8035f625bfd67a34e36d5c52504e9"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "priorSha256": "fd73bc9d2d359c2846846dc403c53bad84408a73f6a7703ec24bfd4b053c509b",
+      "currentSha256": "88457f956f627f2992058887c519d98d3b6487118fc75800413d73445f9bd3c7"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+      "priorSha256": "19036b8adf56b4342d45472514d44b8b1f0824d5abadba10e21305020e555825",
+      "currentSha256": "51a5515ebff4f41d8fb6d08f66969910c12e2165ddf4c3e46f6db7c34228cf4b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+      "priorSha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9",
+      "currentSha256": "8889a17cbe57d2871c4ee5b52125eee4effa538bd415ed6f5ead6f82ee53601e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+      "priorSha256": "4fb506ae5294f2847e93a38ef1c556f3c7bd4c367119322ad5bb04116b7e1f31",
+      "currentSha256": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt",
+      "priorSha256": "48d46cc0dc4758b078503de8655337e37c28178c7112f992a87718a3a2623756",
+      "currentSha256": "888185c5b704f79540288398d695b6059e76cea2318acc0a714dabc2d67b4942"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptTransitionService.kt",
+      "priorSha256": "14e2efbc1a03c634a979abf5c36468678252ff775b8fc83659581adf5d95f0c8",
+      "currentSha256": "00e85091cf5da3b63a0258dd2c5fd13e99ff1fb9b41cee227b43ca8a5fabd583"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
+      "priorSha256": "acc1a071a1eee9fe2cbeaad9bc8dbde5ebe027655486d2781930b2124e4a0821",
+      "currentSha256": "8ff776a477d6ff6ee8dfc0081fec9400dea15330c4d328969befa2a7841af1f6"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "priorSha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a",
+      "currentSha256": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+      "priorSha256": "c70bd771373dbaa4fe50041b19e36cd19160b18a16b11a3a30a41e35b9838a3f",
+      "currentSha256": "bad4ee414e7ff8160e785a3147c5d66a977260f6874d17d7e18e558c9b90999e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+      "priorSha256": "424d1d520f75dca21444d5980c7ca7fd1d89c159fc5db9dbd89730fb2915c6a5",
+      "currentSha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+      "priorSha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d",
+      "currentSha256": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseQueryService.kt",
+      "priorSha256": "d7944e546a151e4ef4964f52066548c59751425df496b8981b826d1d247496c2",
+      "currentSha256": "aab05ad0db33698d4dd848201b86abbc7705094c7fc11c77aa2e5824774f91a6"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "priorSha256": "aad286f05f70cf3c91f9d245858f666ede2790478d50c35ea09f7aee286a867b",
+      "currentSha256": "a6d40b78167b010da08d54a5f4564b846c582bd724ec37a5520883c01cb656a1"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferAccess.kt",
+      "priorSha256": "bb6cc02328963a0f1acd7602aaabc8c13b6368788bbcbed41cae0b5d11e5f668",
+      "currentSha256": "d2507a5d1f1da22694bbe6ad2bbcc819dd3c7f5169912eb8bc40142276a0f14c"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferModels.kt",
+      "priorSha256": "03c168fb3661af89ff38cabbc90d9db3bbf49607433515227e18f5a8fc6d1823",
+      "currentSha256": "df76390f02fed661df26e72005b01a463057411ef7449dddadf7398432015dcf"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferQueryService.kt",
+      "priorSha256": "745fa49f1592bd2c3b9a0e1c289abbe1ec3af46d7b6986e734bc0ae1ba70520f",
+      "currentSha256": "2e2e0026b7d5bf5e9087e6dcb7fd1006bd170b0bead838f15b6fd1a8f19a8276"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt",
+      "priorSha256": "d27a67d1f7438b7a508c8795293aae0ae55c5c44e99352f280ce85a6630e3987",
+      "currentSha256": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt",
+      "priorSha256": "07f02035f666c7c77bab337dbbffac00cf387db52b5e23d0780a4e768b6217ee",
+      "currentSha256": "5940a1b18e477dccfc7f2ea5a732de5abd500aba8635a7d34f6ebc834d38dbe9"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
+      "priorSha256": "696314a9966f51e4bbf97a7b3b7ae11e5803d6e89630ddbb181ea1b8c649426c",
+      "currentSha256": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt",
+      "priorSha256": "0ad792c93d372a0fcd1890587569aa0c18a36a653b5248abe6cd82e1a450208b",
+      "currentSha256": "ae541a0a0af7efd6020e90fe82787ddc0b59e0a56160deb75714424d66b76e1a"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt",
+      "priorSha256": "71c9153f2f0eb7479456f14d10e4c850809d0cf07ffa9c54e6dbe04d7bf7c103",
+      "currentSha256": "4dde1f3e7f432b585ff5e2499c3d4a72e725a87d1d9eee95a722755fb050302d"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt",
+      "priorSha256": "87ae25b6317745bb6fdaf52aa3efc4867c3ecec535aec0d5beab7590c22d8279",
+      "currentSha256": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
+      "priorSha256": "3111bbd93b32c07f8b9c9c5f868333bf02fb011680dc776ced76aaeb2650b568",
+      "currentSha256": "7c7d5775be5873544e1c0d711b7cffa440f2f8a569089a3b5199da53626d7f9c"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferListIT.kt",
+      "priorSha256": "5b0f4f28dd74d57e8d8811fbd3714ac8116510c537b90ac7086918abaf63fb22",
+      "currentSha256": "c24ace761e7fef8b5a7f1b4d190e216e8f870804a5b89391d9dc81aaebec6586"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt",
+      "priorSha256": "fb1671eb338c15682e02a72f6dda877264cdbb216f1d78137bca1e8321509ee6",
+      "currentSha256": "c7fc23137b7399e4bb2c999fc91aa895023faebc6bdbbdf4cb53e26467cdcda7"
+    },
+    {
+      "path": "web/DESIGN.md",
+      "priorSha256": "0cac864fa007745308c4bb19b55ad6ea42bec044e253db67874e2182251e18f5",
+      "currentSha256": "48b7d88fbd8cc7336c3236bf25eb68c83c65aaa210ef3c5d3f3edd1d7303ba2e"
+    },
+    {
+      "path": "web/e2e/warehouse/approvals.ts",
+      "priorSha256": "17d1a9f39452f7a4579791258261dfa1672aece2412c199d79d168c5e783ec76",
+      "currentSha256": "7ec854e8df92cfb5ae9ed63165a7a020bfe3b880377bdb99e17c98407bbd9a68"
+    },
+    {
+      "path": "web/e2e/warehouse/count-journey.ts",
+      "priorSha256": "6b76417f8b07def28febf76ada323f9e7d1029a36bf9660ea6e379b6eabcbf73",
+      "currentSha256": "92626c27ea0ffa291368085679d401f020360c4bb9e010e8509d05a697d582dd"
+    },
+    {
+      "path": "web/e2e/warehouse/customer-assets.spec.ts",
+      "priorSha256": "96e3008be3efdb8c28fb13aed7f5b1ec6b8cf263746eecf24edc1eed3e1f666b",
+      "currentSha256": "6eb9636ed009601d3900ffb7cfd1c9fed957d33f20662eef9d4f4c381b39e615"
+    },
+    {
+      "path": "web/e2e/warehouse/fulfillment.ts",
+      "priorSha256": "e8ac4fb0710374ac320e292dfda9ebef17ae2ae592e88a4c3515c211dcb29bb5",
+      "currentSha256": "d4dffa1636f130daf3dc8cb0108350d1f7e3a4f4efa24bb3236e15602a6388a4"
+    },
+    {
+      "path": "web/e2e/warehouse/loan-reuse-scenario.ts",
+      "priorSha256": "70b598772037711cbd5c5c39021b70287a60ad9499e20b464c0f429e761b76bc",
+      "currentSha256": "fd902cdcf15ad36f167f55b1fdbddf9536863c9d271790f343e11b607867793c"
+    },
+    {
+      "path": "web/e2e/warehouse/numeric-journey.ts",
+      "priorSha256": "712d84ddc9aca4984009458a92cfceaa942383167f5e6af50d958beddf32ffe0",
+      "currentSha256": "09fa6913e7e95dc393d71b04e9aaf4975bac2547617ef5908d3c33ae0c4d7474"
+    },
+    {
+      "path": "web/e2e/warehouse/returns.spec.ts",
+      "priorSha256": "92b85b8bdebd6ded03e9ae27f2edcf0db222559bf4678b8ccbd2ba2cfac82fb5",
+      "currentSha256": "e3e8ed5d57764db2c9a4123eaffa8eb51c82acc3e89807af727cead0a6221142"
+    },
+    {
+      "path": "web/src/api/warehouse/approvalReads.ts",
+      "priorSha256": "42cdef38999f5e8e274391882a1a17f5d90db004c7d0a1aa8e8cb42771756bd8",
+      "currentSha256": "e39ca0c9c80408cd2aebce0d689f5247abd0f71c2381e012b0b7b06f5bf7f031"
+    },
+    {
+      "path": "web/src/api/warehouse/counts.ts",
+      "priorSha256": "7e54fd776fe14e42cd6ab1ff6a33b8a855e5955c79ea7c5fc73b08664370259b",
+      "currentSha256": "696dbe550e56703b7387cfa0e4915df411c72427cc6a4744171cd6f03ded3542"
+    },
+    {
+      "path": "web/src/api/warehouse/dispositions.ts",
+      "priorSha256": "a923f8ba27b013b33667ac8661b72f01adfc5013d39d1681ad42b47fe366fb4f",
+      "currentSha256": "21d494ef1050ab254b4b59664f955f3627d3299fef0112d154b4fdaa9db40823"
+    },
+    {
+      "path": "web/src/api/warehouse/errors.ts",
+      "priorSha256": "32b170c8c8a1bec8920bf34efda6f2f343c217a4736b13b6537f4601c8940db5",
+      "currentSha256": "61a72843f2af5870723a4a9cfb77690205a1a2640d3804f387d0e055d2f3bd1f"
+    },
+    {
+      "path": "web/src/api/warehouse/materialModels.ts",
+      "priorSha256": "45266574248da435111dbdf01326fe4500490f93f3bddc601bbef7c8416ce253",
+      "currentSha256": "67c019bdc802eedcc43b4fbf2c9d13a085e531862c79c7c9d91231b66c55c9f9"
+    },
+    {
+      "path": "web/src/api/warehouse/provenanceModels.ts",
+      "priorSha256": "edc77ab049c374384f962f0a143ed98107a3fa9467efa5f4aabc32063a0e9abb",
+      "currentSha256": "d78ddda420a71d6d6e5e334fb013f8f07ba155a229529ef04bd832e3127fe933"
+    },
+    {
+      "path": "web/src/api/warehouse/receipts.ts",
+      "priorSha256": "dc274a6f3b30d77cdf118a6e5c3bf007e9b64b4d2df8afff96044a521d7807a3",
+      "currentSha256": "35c0ebaa76e1354765dd3bebe745f5115190265b208b43b52c929f8de27d1426"
+    },
+    {
+      "path": "web/src/api/warehouse/returns.ts",
+      "priorSha256": "591858aab3717e4538669aa711c3440d5fdd975fb122e2dbaed7efe07446b8b0",
+      "currentSha256": "4ce180224295e4fb94e1f9d9fa4f7a0584115a08710a1daef4bcc5b78c5575e9"
+    },
+    {
+      "path": "web/src/api/warehouse/transfers.ts",
+      "priorSha256": "5097f9dc5d8011f949b1622b314d92356428b77c1d0018a30a79ce39104c9e4b",
+      "currentSha256": "95b92d57312adc01da537b8b735874ac3cabe2486b114c51031d73ff6068ef2d"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+      "priorSha256": "c87460823e4e39fc97a583ba0251cecc9ad8a766b3db8ab014a7446081f69f72",
+      "currentSha256": "e62d365c14e62ad5aa4e258afee6d20434cd80baa99b0d4394f08159a4bd9f5d"
+    },
+    {
+      "path": "web/src/components/organisms/workorder/WorkOrderMaterialPlanning.tsx",
+      "priorSha256": "91049c5ba2dc4291ba04a54ee6fd9aecd6248586293b6708d0f6f2e95e6333ab",
+      "currentSha256": "bc1e723126431ad35a7e90e9e939a45ed3dd8c0056f4e37d069e4f5eed6ea339"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+      "priorSha256": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0",
+      "currentSha256": "35216a7642fb16fe21f191fde423d72225722c40dde9b67de40386570741c6b7"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseCountEditor.tsx",
+      "priorSha256": "01239fab492841a8a853a469e0d02f15ea82ca9cc1efbcf3a7da6d6043864c7b",
+      "currentSha256": "7d8a9813b8b60a30ab73a8cb2ed22fd9fd9c7f219a44e0c52ae50e255ad1cf31"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+      "priorSha256": "5efe35abe0623f72d8853b0e596e318bc8413b3522a26a5dd3757b807fcfd77a",
+      "currentSha256": "989f2b036e89ed36a00706a8aa4270bf2da3b758225c13bca8400c6a7e6b1583"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseCountsPage.tsx",
+      "priorSha256": "783f6d3b67494ab2826f7bdfb69dfcb534485f8c7f4259e4a1e4b55f4b6dfbc2",
+      "currentSha256": "ea3a4e021315426b123223120d9b7c0fe908c230e8b71f8be563c6f26459468b"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseProvenanceOpening.tsx",
+      "priorSha256": "ff3fd12f5f5a6a79d0da7de7fc1986310129450c8da6f1c3d5a6a275a4b7931a",
+      "currentSha256": "6766a3bbfb4ac86c120c0c7c13cf1fa2afdd0d6b655fb31a9f23415a36a2db90"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptEditor.tsx",
+      "priorSha256": "e36d8bbea839383d217a3e215ef8071c22e6d41c12676c341e0fc5f7cd122f53",
+      "currentSha256": "1b974ef23b0a2d18d7ef1603bcd1d8581d1394fa1e1157281d378539b7917dea"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptEvidence.tsx",
+      "priorSha256": "5931b16eb7b3c8d19a6647dd96b17a427fce591a294acbba7607a821ced2d9d7",
+      "currentSha256": "3a9e33d68dca62191f317442e196532e37482f705984189bc723ca9972797eaf"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx",
+      "priorSha256": "0346ac54d93cecb285bb8fcafbec5a4898b77ae2a7de82eb5fa0403e87b6c32d",
+      "currentSha256": "032f12e5e28145f748f898cd07ac76a9599809267e97adaaf3b36452d6427e0f"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptsPage.tsx",
+      "priorSha256": "f2a98d5c41b4a5dd3e4ac24d024aee9d58fe87ae0e3f03a9ca337d894d43c403",
+      "currentSha256": "4c2a7d3f34d2fdd39c96acb939ca84cd017f8d857d0e7cba150cbca53fc59281"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx",
+      "priorSha256": "52afdbe738705aa92fb8533ffb2cdc50805c0323ef4285674a7750f4d24fe6dc",
+      "currentSha256": "267776dfc0af28ea9681e0cc481b4452b71685fb16ebff58e4345358d19d575a"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseRequestsPage.tsx",
+      "priorSha256": "0d08913176592c24384be752541257d33fd1db1c1b92b025dbefe6fb52ea06e0",
+      "currentSha256": "76efcb97bf5507043af55d906c5929ab8200cab8323c3d3ca5772fa5c157c88f"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReturnDispositions.test.tsx",
+      "priorSha256": "8a312778c5eb3f50616e6afd82135e2c32001ac7919b9034911984d87c0341a3",
+      "currentSha256": "48c052c617e8cd2142e84964bd10a9e8db6c0d3b1eb323e64e7b9532e74cc7dd"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReturnDispositions.tsx",
+      "priorSha256": "6b356ce531c6faf2677b479a978e66cb339c71f33d20033a41db8e6e0d58fa86",
+      "currentSha256": "eb1caef2b99db60361f8c264c61ec06fbc328b1b62304269612b1a076293682c"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReturnReacquisition.test.tsx",
+      "priorSha256": "41169a200979289ce72f8f4e820eae339940cf0773fb0ba4783a2112589fffb1",
+      "currentSha256": "427824f457fa6e238eab92c2f9bc250dacfa8420519e105a74d1d6513b11b724"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReturnReacquisition.tsx",
+      "priorSha256": "7638ac596a5bf60ecf2645b9e9a2cd05769a5483661940b762e03a27de61101d",
+      "currentSha256": "42e948dac452ec503fed97e437043c3396e265fe8ea385330332c4c61cb30a9b"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseSupplierReplacement.test.tsx",
+      "priorSha256": "903c900f5f08214e7de031d2305c8401ca443bcca0d7c93a60ab107a013b8292",
+      "currentSha256": "339c316ebbeb17ea03d18b74ff6daadce0d945363fb82f2eeff1026ec85b8953"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx",
+      "priorSha256": "050ebd1e6f7805a18ca1ab0b9096047088ed299b27853285889c8b438e242e0b",
+      "currentSha256": "63ba790236607e859f657e8edae2dde1439aa8ab8a6897b697a92f40c94229e2"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseTransferEditor.tsx",
+      "priorSha256": "6e90656a331d4ce6e27787a60aa7b7b641e6697416dadbb062766db3756254e9",
+      "currentSha256": "d5a41333e3ce66c4f945f5fdfb3a01dbc93422a579e22043f8cffe874debbe78"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseTransferFilters.tsx",
+      "priorSha256": "71bb3f1d09fe8d0847d64da581c06be022894f9af82f43a2b362814cd11755f1",
+      "currentSha256": "8641d26c6912e1896137ec475dc3785a465923f1881dcad9bd3e3098d5ea5d5f"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseTransfersPage.test.tsx",
+      "priorSha256": "e3d307647512aa9ff691fe02d2181904ae061be60e37c6bcfb54ddd430592229",
+      "currentSha256": "d5cb39cfea8869fb6d1613f87f1e190147c453e75a7e14f6f93316b4675aaaa7"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseTransfersPage.tsx",
+      "priorSha256": "e360c4d36ab2aab188d4584a305ca557f14d3698dc872bc11517f3c4a8343bd3",
+      "currentSha256": "47362f7411b4e3222c50d32c84a22e62478fdb6a8800d854fa90d793b71cd541"
+    },
+    {
+      "path": "web/src/pages/warehouse/approvalPresentation.ts",
+      "priorSha256": "369627c43daebdfa7ee1ad6aa0b469031f4b143687b19f042d8cbe54ecf982bf",
+      "currentSha256": "5175a8bc745f622e627830633e48c68051caba2dbddb2e19cb0e9e453819c671"
+    },
+    {
+      "path": "web/src/pages/warehouse/countPresentation.ts",
+      "priorSha256": "ab83803e820ef34bb61e529410a0aaf706bf6c7a3b01af9684b51f82cb40ef17",
+      "currentSha256": "697e3633a3767dd010e02321113cd82e5825d7944cfedcf6c329e0c3ae56e76a"
+    },
+    {
+      "path": "web/src/test/warehouseReceiptFixture.ts",
+      "priorSha256": "45b0cac2b7c6c3f43fd10b3387353db49c5e02261db53e00b7f33be589809099",
+      "currentSha256": "5eaa796c96a93d195128652612cc5b53c339c48a37a00fffb16912def2ba9c19"
+    },
+    {
+      "path": "web/src/test/warehouseTransferFixture.ts",
+      "priorSha256": "a5699410450b1574dc0187dd91ce1d4f54c9248a5fc8a60eace1fe8b15fab7c5",
+      "currentSha256": "c151fa51027e0fcc272cbd499a84ebd62fc29617bdeed09d636336c6982cd97a"
+    }
+  ],
+  "priorMissing": [],
+  "deltaSincePriorInventory": {
+    ".github/workflows/warehouse.yml": "9477b01cf3a9fa03ac8c1eab27ca3ee9fb38e93604c552b7f9e0e456950304c1",
+    "deploy/DEPLOY.md": "22342eb68265d2e408add15677e69fa2d00e09663cc809e2dc4d41938b04c382",
+    "docs/warehouse-asset-handover.md": "99a37f8e26e3b9067ed9f0a7a64f6131c3aa8328738928846a838cba06e9947e",
+    "docs/warehouse-ci.md": "fc7c6c0be00becd2367a861caef8025cabe5fc02bd227bf782d3f9b13e20564c",
+    "docs/warehouse-counts.md": "38bc0b44a5dfc228a06d8fa9087182dd8f91a418a2381a915a5b24c630e857dd",
+    "docs/warehouse-dispositions.md": "bdcfd1dd7ac5480533049fb5f841f86fc28dbadf3099914e22c03057a516e7b8",
+    "docs/warehouse-draft-expiry.md": "a2a6ed1b0473881c15df3876f43ca2163822d7d4d67acab0320e356e5a3b9c46",
+    "docs/warehouse-migrations.md": "2823a1b6970f4305c8bcb85cbab16b9ae1f558a16b4217fb63e8ab0b859416da",
+    "docs/warehouse-queries.md": "7c7422d30d337774c573d004816be0d6c7512f144f1d5445a18c35d4b84f5db7",
+    "docs/warehouse-receipts.md": "312ba4110cf516708f07cddead68e48880b684c7a75ac0a2b1990956dc37b114",
+    "docs/warehouse-returns.md": "ca5c64953bec69d86f312800b1b19682e8f49294adf34238b9452e81ac93c0c8",
+    "docs/warehouse-review.md": "3f7d50dd19943c6e509b46f85a9dccc0dd25a31d499eb927eddb5b5a370fd3fc",
+    "docs/warehouse-transfers.md": "22976262cdabaed8cc75bb5e72011670e8cc2d046d7ba17245c4262af71934bf",
+    "docs/warehouse.md": "cb5a0e487c84d7a363c2b17b59050ab922e0b57a14873959b647a9c0bd5a1a66",
+    "scripts/warehouse/draft-clock-fixture.sh": "d46aaf55fb089ee54885efbf902e3f000a760d0bd08d87774b70e5628a27f3ed",
+    "scripts/warehouse/draft-upgrade-bootstrap.sh": "76da710737f9f860f0e9af693bb1f8efea9fab4da48ca85d9f5f96aba5a68b6b",
+    "scripts/warehouse/draft-upgrade-classpath.gradle": "52fdd4d3bc2121352ece2750bce6973a6d4903d75fb53e95a11a1a2098239e38",
+    "scripts/warehouse/legacy-browser.sh": "6a17997d9a50720e53d718206159898d2af597bf95fb1d7d1cd826538b0a2786",
+    "scripts/warehouse/qa.sh": "f1b6536b7e7f614af828dd4c440b147ccb771ca955853ced4ebfdaaca138bc87",
+    "scripts/warehouse/test-ci-workflow.py": "3e8ae89ed09013c181d7b942870b2bfc866047ec42b4fa358e304ea3b52608f2",
+    "server/build.gradle.kts": "9417e0bbb612b7e8511aee1a4dfbad8441eff111fad9620425d12f1b5c2e63d3",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt": "caa35731c166717c35c770315528e162fdf59861dd66d701da25e493d33f595b",
+    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt": "836df5b52e87817457833f70b974b93ef999395ea49db9cc8d93ce5baf7245c8",
+    "server/src/main/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipApi.kt": "6c5ef309dbf1f993daac28369a3c96e73cdb9fedaa960b3fc7035b7132e383b4",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt": "8bd63f0ecdffc636567428dc461f3a81b216a219579a100a6fbe4b9b8b0d1dc4",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/AssetHandoverCustomerAdapter.kt": "7ad61304449ead33a524371c7161bbf21b103d9e4dc577299291e9a5bf36b739",
+    "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/AssetHandoverContextPort.kt": "9552674ad665959d8c978299665ce80d22622348cc4de1bd12b1dbdadde1049b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryApprovalQueryApi.kt": "5a7065902878acc4c8d0dc7d274196e40d180a58717ae74cdad0bcfe7dfa1909",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetLossApi.kt": "50404c80d59d1f23ec42169518e385995f083cc5df5b7a6b56da5af79b5d7e5b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetTitleApi.kt": "e93bbac4cd22878ab108c87af3b9c05b8257a9eb4d248cc4843f0b17eda60c1f",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCompensationApi.kt": "86dd9d1d7bf79fa38f69917ac00e9d36059d101f9cc2601847eb1d7248fd88af",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountApi.kt": "84b1d42509fc88776c7c3358444348a56a0828800791c6e3420a43b2d814ceef",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountQueryApi.kt": "e85c4835c64a7c4125193ee237770db634a458ea57d62b0efcd5cecf80fbb20e",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDispositionApi.kt": "881ffc32533bb2f09bf103c18e62042f3ee3da191fab4956544c0ad48b5f14f0",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialApi.kt": "45b05ce8836306b9cda515a97dfa8bff6559869420d97af560e8c73f50e91a59",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryReturnReacquisitionApi.kt": "8246b444dd61b59fb6da2d3482859628787ae80babb5ea883b92e4db49f9f9c5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySupplierReplacementApi.kt": "6b245c8a314778aa90f7020c948d54bf2377898a412b92e9d314b9dd10daa9f5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferApi.kt": "7cd7556b083b4807f57e6f4be9c547ce32f3ee7259693aae05b9e152ab234f84",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferQueryApi.kt": "8d7248c6fa8ed650b37556410b2d854c4f378fb525000319023327462533beea",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialPlanningContracts.kt": "82e88980aafea09ad73534add6c292f9aa6146ddd44257fcb92fb2e4356f10c6",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt": "638a23af0cf3dbb0710add7ecf59ec13a642013a02f2e98f92c62ed9058e4438",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiry.kt": "3558761068283d0ac5689fb976a774c634201c7e6630de910f9ff286e2e99455",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseErrors.kt": "c8585a3a9325ac08d5776c881e9c9ff2d86d71a2c8664727ec8f847a6cfb896e",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryController.kt": "6e5ced7598e9c20874207683c971eccedc55544cd0594254a28f40685e1e53f5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryQueryController.kt": "94a2becceeaf0bd6089606cbba5b1393966a6d34d06359a5aa6525d2e1125d50",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt": "f967ae6c90df54701bd5b118d993d35006c3fa141d58039ffa989a0066379d63",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountQueryController.kt": "8132d2c9e2a1f090e97cf2e6ad3825af7d08bc4d023b1d164f08f4b8c0ccd4d8",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseTransferController.kt": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt": "fe79648722c83a0465312c59eda6fdd6d5d7c52ad68c6bb7786be024d5e2c2f9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt": "9980e080e6450327f2d49af17e56193df7526040e6a3daf5fad5a05532798413",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "81abf645cf8fa6d6a0c86eefadb2caa0847a2fd00c30dc3eb0497908fff7df61",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReceiptApprovalPostingGuard.kt": "bd6b5a8487e27ce735783ddcf624b53741bc5c25efa9bdbd9dd1c4aecb790e76",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReturnReacquisitionStore.kt": "de18a13e8f8b5bcb4a56bd5fc4ed85eb88066202988ffe375c3300c9ea5cfc36",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt": "6ac615c353ea4b5afa816648b67c8cf55453734310bc522af9b77525f4cf1519",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalQuery.kt": "da88bbf9fb23bd12975b0e1c61f9e06808097fa65e10297b876432e0938cca3a",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt": "0bb6d174a17010ee829b3e3bb86bc6bdda531cc4246294246247db559ae1830d",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt": "343298120304ee918644ae26572d6ba00ca758375184d744f04bb8702e5df601",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCommandJdbc.kt": "2e319f0ab5a43d673214f38e78b679d539fa978d6410430bd04d9feffe8772d4",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCompensationStore.kt": "fe35ce741db460e35c96e958918006b72ad62d684e2fe803985da3b7bd3de032",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountQuery.kt": "f4549a7ebb7bbfc38b4fc7abcc01ca24a71693381d6a8d0ae6b3a58de0c61cff",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt": "1627a10ae977bf51d5ffdcad5f0a5e1eabb31a4c00fbe91aa37ce9bef7a91aea",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDispositionStore.kt": "5f099645fa9b0442e29cee42c24b8d5a2d6148b9b71e36aeb5ad92112c5c21da",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt": "d00dbc91068435ba1de6abf753bfab5715932705ef397a4d3baeda4966eb14c7",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseLegacyQueries.kt": "9cae5c81e349e529b3e429c9b8682bc986da39e32c646b2227b8ed24064d680b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt": "1fd68bff1ea29caf2e0363801670b47f3a5e873753c4cfe76eb9f03413d758cd",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt": "b04a922d4d4590157d09cc8b79c27a63d3709ce46f4f991775086d7d688bd47d",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferDiscrepancyStore.kt": "e62f4da187060d0b57bd498c8d81442295189d5389e36bc261bfa1b69a6568bb",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferQuery.kt": "7ad74a6875fd15921b63fc81f0c41de7249fc5310ec24a2bed4a80394cbf37fc",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferStore.kt": "ceef5cc30ec3257b97590593d86d82dc28d8035f625bfd67a34e36d5c52504e9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt": "88457f956f627f2992058887c519d98d3b6487118fc75800413d73445f9bd3c7",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt": "51a5515ebff4f41d8fb6d08f66969910c12e2165ddf4c3e46f6db7c34228cf4b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt": "8889a17cbe57d2871c4ee5b52125eee4effa538bd415ed6f5ead6f82ee53601e",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt": "888185c5b704f79540288398d695b6059e76cea2318acc0a714dabc2d67b4942",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptTransitionService.kt": "00e85091cf5da3b63a0258dd2c5fd13e99ff1fb9b41cee227b43ca8a5fabd583",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt": "8ff776a477d6ff6ee8dfc0081fec9400dea15330c4d328969befa2a7841af1f6",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountCounters.kt": "ecce6889a78149d912819ddeb9e40b96d75acc2d53e7a99806f32c117a53aa5a",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt": "bad4ee414e7ff8160e785a3147c5d66a977260f6874d17d7e18e558c9b90999e",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDraftExpiryService.kt": "5e82db7114b5e19ee60d2d579a889ab893955b1b0d32d6f3e3044e6aadae8356",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseQueryService.kt": "aab05ad0db33698d4dd848201b86abbc7705094c7fc11c77aa2e5824774f91a6",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt": "a6d40b78167b010da08d54a5f4564b846c582bd724ec37a5520883c01cb656a1",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferAccess.kt": "d2507a5d1f1da22694bbe6ad2bbcc819dd3c7f5169912eb8bc40142276a0f14c",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferModels.kt": "df76390f02fed661df26e72005b01a463057411ef7449dddadf7398432015dcf",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferQueryService.kt": "2e2e0026b7d5bf5e9087e6dcb7fd1006bd170b0bead838f15b6fd1a8f19a8276",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
+    "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt": "5940a1b18e477dccfc7f2ea5a732de5abd500aba8635a7d34f6ebc834d38dbe9",
+    "server/src/main/resources/db/migration/V178_10__warehouse_transfer_draft_revision.sql": "d82891a8941a294bab114069297e931cf8ad6cd0cc7d8a8a7e2f06e736bd4ce2",
+    "server/src/main/resources/db/migration/V178_11__warehouse_count_draft_revision.sql": "e204ad6c111a45e60610cf5338e218b8514fa06d54f3af3d243458c07570dce7",
+    "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt": "9a61868e7f7d18efd9a7d321d2e2cf82a06b4f048096a152dc895bd71996f84e",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/MaterialDraftExpiryIT.kt": "2a4f4750740b19289c68bfeb365b3cbf4bfeacae2c9597b9623f9d13babc3ac3",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftIT.kt": "cba0511b9b5c161673aac2e63ba25dc5ba87977a9b5f1af91f1d61832f175557",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt": "430f6e188d2dfffcf091af39157f73c59ae1c4a91680e48098cb677fae76bb16",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt": "ae541a0a0af7efd6020e90fe82787ddc0b59e0a56160deb75714424d66b76e1a",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt": "b20192f4919fe3f4de1e54ca40f975efbeb879d64bdf248e7a6dd004e5ae020c",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt": "a0d856484d14fb004facc6a75a63ca833b0d153d573cf4f8d316b4b3c633c21d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryApprovalIT.kt": "be4ff05f91c965b9121143428e410e2d8fe77ebc24dc29162f22ac0880f8d61f",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAssetIT.kt": "8067cfd14f68a036978552831622152672f0d3353d4aeae1ae009a6f45210319",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt": "a5771584b7d72100e67fd6bc7ca1aa7c1019058621331cab6ebcb0d9627771cb",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDocumentIT.kt": "ce25e06c621915906b2aa69460c4b7dfc90b789161e3ea6a61d75a7a4cca4a8a",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryFacts.kt": "0818dfbf5dab245e7a2e624b1a5d3e769f0b4358c73aa57cae88de5e139ccf54",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryReceiptIT.kt": "5a93d5c95286cb843e1cb863f8a01a716479465af009b9730030d613c2e0c25f",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryRepairIT.kt": "45404097233a0b94f6a7581978d3e46991613fd8b07f6ca96ab17a11af69dca2",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt": "7db0e304b661e5c7a6fe2cd0d5cc40ec4b6cac1e24be9fa6026cff21970f1da5",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt": "421cfa2817d1698c12f21bb84ac7dc54e71094e53d38ba9058eaeb1ec3da516a",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftSchemaStartupIT.kt": "fe4425924b1a4359a2a06954e566b454ed952fa21cb407ba4c12b9db3694ae37",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt": "f0ea9a23be070dd42ebf81b75991d096e6e7050edfced1f9a15ab95a50cc152c",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseLegacyReadScopeIT.kt": "7ae27f983ade5fb9db40bc5cbe82435d436ef1456efa73d94e5c28b38cb1ac2f",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseLegacyReservationIT.kt": "9a72c525c781bbeabf0a979cf28e00ace81a1807c138e4b16849c1061d4d66b5",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt": "4dde1f3e7f432b585ff5e2499c3d4a72e725a87d1d9eee95a722755fb050302d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt": "7c7d5775be5873544e1c0d711b7cffa440f2f8a569089a3b5199da53626d7f9c",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftIT.kt": "5e0558a3c8907ac2754e414d02403a93a7eb63248d03bef2d923f99f5b2d0eb5",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt": "ae4b06529ad090a993f86fba0253afa1aad2cacd214b928ba0dbda3d05e42538",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferListIT.kt": "c24ace761e7fef8b5a7f1b4d190e216e8f870804a5b89391d9dc81aaebec6586",
+    "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt": "c7fc23137b7399e4bb2c999fc91aa895023faebc6bdbbdf4cb53e26467cdcda7",
+    "web/DESIGN.md": "48b7d88fbd8cc7336c3236bf25eb68c83c65aaa210ef3c5d3f3edd1d7303ba2e",
+    "web/e2e/warehouse/approvals.ts": "7ec854e8df92cfb5ae9ed63165a7a020bfe3b880377bdb99e17c98407bbd9a68",
+    "web/e2e/warehouse/asset-exception-journey.ts": "dd73d8701491a74238b3d87953bd254703bb60747d23c557169fe4f252b14364",
+    "web/e2e/warehouse/count-journey.ts": "92626c27ea0ffa291368085679d401f020360c4bb9e010e8509d05a697d582dd",
+    "web/e2e/warehouse/customer-assets.spec.ts": "6eb9636ed009601d3900ffb7cfd1c9fed957d33f20662eef9d4f4c381b39e615",
+    "web/e2e/warehouse/draft-expiry.spec.ts": "1430d1314c67ce4ddd9bd4749c7d07f580ec9791bd1bb90a0b22ac1f6ad1da23",
+    "web/e2e/warehouse/fulfillment.ts": "d4dffa1636f130daf3dc8cb0108350d1f7e3a4f4efa24bb3236e15602a6388a4",
+    "web/e2e/warehouse/loan-reuse-scenario.ts": "fd902cdcf15ad36f167f55b1fdbddf9536863c9d271790f343e11b607867793c",
+    "web/e2e/warehouse/numeric-journey.ts": "09fa6913e7e95dc393d71b04e9aaf4975bac2547617ef5908d3c33ae0c4d7474",
+    "web/e2e/warehouse/returns.spec.ts": "e3e8ed5d57764db2c9a4123eaffa8eb51c82acc3e89807af727cead0a6221142",
+    "web/src/api/warehouse/approvalReads.ts": "e39ca0c9c80408cd2aebce0d689f5247abd0f71c2381e012b0b7b06f5bf7f031",
+    "web/src/api/warehouse/counts.ts": "696dbe550e56703b7387cfa0e4915df411c72427cc6a4744171cd6f03ded3542",
+    "web/src/api/warehouse/customerAssetExceptions.ts": "c9605d03a5d7496a0dd90f0d3da619306a285b653bb5b03f603709a1db2d7954",
+    "web/src/api/warehouse/dispositions.ts": "21d494ef1050ab254b4b59664f955f3627d3299fef0112d154b4fdaa9db40823",
+    "web/src/api/warehouse/draftExpiry.test.ts": "cc1766725a1cdfabd3f6e1eeb75fa284599c49ade99a5ac7ce64d14e0772f3f8",
+    "web/src/api/warehouse/draftExpiry.ts": "f0d6cab27a6d893e67ad2ed479745856b8b2f3fe4bb3b5fde732bb8fdbcb6299",
+    "web/src/api/warehouse/errors.ts": "61a72843f2af5870723a4a9cfb77690205a1a2640d3804f387d0e055d2f3bd1f",
+    "web/src/api/warehouse/materialModels.ts": "67c019bdc802eedcc43b4fbf2c9d13a085e531862c79c7c9d91231b66c55c9f9",
+    "web/src/api/warehouse/provenanceModels.ts": "d78ddda420a71d6d6e5e334fb013f8f07ba155a229529ef04bd832e3127fe933",
+    "web/src/api/warehouse/receipts.ts": "35c0ebaa76e1354765dd3bebe745f5115190265b208b43b52c929f8de27d1426",
+    "web/src/api/warehouse/returns.ts": "4ce180224295e4fb94e1f9d9fa4f7a0584115a08710a1daef4bcc5b78c5575e9",
+    "web/src/api/warehouse/transfers.ts": "95b92d57312adc01da537b8b735874ac3cabe2486b114c51031d73ff6068ef2d",
+    "web/src/components/organisms/customer/CustomerAssetException.test.tsx": "64d2478d1ebda60ab6d00b45b530bd2c030c55af3bff4eb96ea9b68cffc5e7d0",
+    "web/src/components/organisms/customer/CustomerAssetException.tsx": "69ac25e1d6dbba42da94b5b8422bdfbd0024b5c5ba731974ada4c7ca1104ab42",
+    "web/src/components/organisms/customer/CustomerAssetPanel.tsx": "e62d365c14e62ad5aa4e258afee6d20434cd80baa99b0d4394f08159a4bd9f5d",
+    "web/src/components/organisms/warehouse/WarehouseDraftExpired.tsx": "0a161ea7171f3bc190af9b5f3755ba14e14552d9460251d856299b3dcc08b6b1",
+    "web/src/components/organisms/workorder/WorkOrderMaterialPlanning.tsx": "bc1e723126431ad35a7e90e9e939a45ed3dd8c0056f4e37d069e4f5eed6ea339",
+    "web/src/pages/warehouse/WarehouseApprovalsPage.tsx": "35216a7642fb16fe21f191fde423d72225722c40dde9b67de40386570741c6b7",
+    "web/src/pages/warehouse/WarehouseCountEdit.tsx": "189b9c167640f1547b03cf0e4f01efd40df8fad87d4ad8d5539c734fd7f61202",
+    "web/src/pages/warehouse/WarehouseCountEditor.tsx": "7d8a9813b8b60a30ab73a8cb2ed22fd9fd9c7f219a44e0c52ae50e255ad1cf31",
+    "web/src/pages/warehouse/WarehouseCountsPage.test.tsx": "989f2b036e89ed36a00706a8aa4270bf2da3b758225c13bca8400c6a7e6b1583",
+    "web/src/pages/warehouse/WarehouseCountsPage.tsx": "ea3a4e021315426b123223120d9b7c0fe908c230e8b71f8be563c6f26459468b",
+    "web/src/pages/warehouse/WarehouseProvenanceOpening.tsx": "6766a3bbfb4ac86c120c0c7c13cf1fa2afdd0d6b655fb31a9f23415a36a2db90",
+    "web/src/pages/warehouse/WarehouseReceiptEditor.tsx": "1b974ef23b0a2d18d7ef1603bcd1d8581d1394fa1e1157281d378539b7917dea",
+    "web/src/pages/warehouse/WarehouseReceiptEvidence.tsx": "3a9e33d68dca62191f317442e196532e37482f705984189bc723ca9972797eaf",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx": "032f12e5e28145f748f898cd07ac76a9599809267e97adaaf3b36452d6427e0f",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.tsx": "4c2a7d3f34d2fdd39c96acb939ca84cd017f8d857d0e7cba150cbca53fc59281",
+    "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx": "267776dfc0af28ea9681e0cc481b4452b71685fb16ebff58e4345358d19d575a",
+    "web/src/pages/warehouse/WarehouseRequestsPage.tsx": "76efcb97bf5507043af55d906c5929ab8200cab8323c3d3ca5772fa5c157c88f",
+    "web/src/pages/warehouse/WarehouseReturnDispositions.test.tsx": "48c052c617e8cd2142e84964bd10a9e8db6c0d3b1eb323e64e7b9532e74cc7dd",
+    "web/src/pages/warehouse/WarehouseReturnDispositions.tsx": "eb1caef2b99db60361f8c264c61ec06fbc328b1b62304269612b1a076293682c",
+    "web/src/pages/warehouse/WarehouseReturnReacquisition.test.tsx": "427824f457fa6e238eab92c2f9bc250dacfa8420519e105a74d1d6513b11b724",
+    "web/src/pages/warehouse/WarehouseReturnReacquisition.tsx": "42e948dac452ec503fed97e437043c3396e265fe8ea385330332c4c61cb30a9b",
+    "web/src/pages/warehouse/WarehouseSupplierReplacement.test.tsx": "339c316ebbeb17ea03d18b74ff6daadce0d945363fb82f2eeff1026ec85b8953",
+    "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx": "63ba790236607e859f657e8edae2dde1439aa8ab8a6897b697a92f40c94229e2",
+    "web/src/pages/warehouse/WarehouseTransferEdit.tsx": "7d3071e6b8acc15142009483c440c3157e354f935e30b8feae747098393ef584",
+    "web/src/pages/warehouse/WarehouseTransferEditor.tsx": "d5a41333e3ce66c4f945f5fdfb3a01dbc93422a579e22043f8cffe874debbe78",
+    "web/src/pages/warehouse/WarehouseTransferFilters.tsx": "8641d26c6912e1896137ec475dc3785a465923f1881dcad9bd3e3098d5ea5d5f",
+    "web/src/pages/warehouse/WarehouseTransfersPage.test.tsx": "d5cb39cfea8869fb6d1613f87f1e190147c453e75a7e14f6f93316b4675aaaa7",
+    "web/src/pages/warehouse/WarehouseTransfersPage.tsx": "47362f7411b4e3222c50d32c84a22e62478fdb6a8800d854fa90d793b71cd541",
+    "web/src/pages/warehouse/approvalPresentation.ts": "5175a8bc745f622e627830633e48c68051caba2dbddb2e19cb0e9e453819c671",
+    "web/src/pages/warehouse/countPresentation.ts": "697e3633a3767dd010e02321113cd82e5825d7944cfedcf6c329e0c3ae56e76a",
+    "web/src/test/warehouseReceiptFixture.ts": "5eaa796c96a93d195128652612cc5b53c339c48a37a00fffb16912def2ba9c19",
+    "web/src/test/warehouseTransferFixture.ts": "c151fa51027e0fcc272cbd499a84ebd62fc29617bdeed09d636336c6982cd97a"
+  },
+  "manualRead": {
+    "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+    "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
+    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt": "836df5b52e87817457833f70b974b93ef999395ea49db9cc8d93ce5baf7245c8",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseQueryService.kt": "aab05ad0db33698d4dd848201b86abbc7705094c7fc11c77aa2e5824774f91a6",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseLegacyQueries.kt": "9cae5c81e349e529b3e429c9b8682bc986da39e32c646b2227b8ed24064d680b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryController.kt": "6e5ced7598e9c20874207683c971eccedc55544cd0594254a28f40685e1e53f5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryQueryController.kt": "94a2becceeaf0bd6089606cbba5b1393966a6d34d06359a5aa6525d2e1125d50",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt": "d00dbc91068435ba1de6abf753bfab5715932705ef397a4d3baeda4966eb14c7",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDraftExpiryService.kt": "5e82db7114b5e19ee60d2d579a889ab893955b1b0d32d6f3e3044e6aadae8356",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt": "a6d40b78167b010da08d54a5f4564b846c582bd724ec37a5520883c01cb656a1",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt": "51a5515ebff4f41d8fb6d08f66969910c12e2165ddf4c3e46f6db7c34228cf4b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt": "0bb6d174a17010ee829b3e3bb86bc6bdda531cc4246294246247db559ae1830d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryApprovalIT.kt": "be4ff05f91c965b9121143428e410e2d8fe77ebc24dc29162f22ac0880f8d61f",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt": "7db0e304b661e5c7a6fe2cd0d5cc40ec4b6cac1e24be9fa6026cff21970f1da5",
+    "docs/warehouse-draft-expiry.md": "a2a6ed1b0473881c15df3876f43ca2163822d7d4d67acab0320e356e5a3b9c46"
+  },
+  "deltaRead": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt": "9980e080e6450327f2d49af17e56193df7526040e6a3daf5fad5a05532798413",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt": "1fd68bff1ea29caf2e0363801670b47f3a5e873753c4cfe76eb9f03413d758cd",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt": "888185c5b704f79540288398d695b6059e76cea2318acc0a714dabc2d67b4942",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptTransitionService.kt": "00e85091cf5da3b63a0258dd2c5fd13e99ff1fb9b41cee227b43ca8a5fabd583",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt": "8ff776a477d6ff6ee8dfc0081fec9400dea15330c4d328969befa2a7841af1f6",
+    "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt": "c7fc23137b7399e4bb2c999fc91aa895023faebc6bdbbdf4cb53e26467cdcda7"
+  },
+  "QAExecuted": false,
+  "finalApproval": false
+}

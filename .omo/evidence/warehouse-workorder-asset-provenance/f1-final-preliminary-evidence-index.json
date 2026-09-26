@@ -347,7 +347,21 @@
       "focusedEvidenceIds": [],
       "safeExistingReferences": [],
       "finalStatus": "PENDING_CURRENT_AGGREGATE_GATES",
-      "openEvidenceGate": "Task23 current source-bound offline GPON parser/protocol execution and durable task48 CI dependency; old claimed SNMP25/collector22 counts have no verified retained matching reports."
+      "offlineEvidenceClosure": {
+        "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+        "proofReference": "task46/f1-offline-protocol-executed-verification.json",
+        "proofSha256": "bf4632c0a5a0a0642877b7b3a8cf3d5bcb3b0f86f4e27d1595090ed6bb7d5d96",
+        "tests": 197,
+        "suites": 35,
+        "modules": {
+          "contract": 2,
+          "snmp": 25,
+          "collector": 170
+        },
+        "documentedProfileTests": 8,
+        "all130InputsMatch": true,
+        "hardwareValidated": false
+      }
     },
     {
       "task": 24,
@@ -1728,7 +1742,7 @@
         }
       ],
       "finalStatus": "PENDING_CURRENT_AGGREGATE_GATES",
-      "relatedOpenEvidenceGate": "Task23 current source-bound offline GPON parser/protocol execution and durable task48 CI dependency; old claimed SNMP25/collector22 counts have no verified retained matching reports."
+      "relatedOpenEvidenceGate": "Current aggregate required CI/release gate pending; local offline task23 execution now authenticated at 6bfb1337."
     }
   ]
 }

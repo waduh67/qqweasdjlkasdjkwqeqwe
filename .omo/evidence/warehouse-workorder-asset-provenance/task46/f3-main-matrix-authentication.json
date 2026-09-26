@@ -1,0 +1,116 @@
+{
+  "authenticatedAtUtc": "2026-09-26T18:07:57.577960+00:00",
+  "scope": "Independent main browser matrix only; extra/restart/legacy required before final F3",
+  "originalProductHead": "9d540107fc2fd47a3b02312371c9e65df75acb83",
+  "metadataHead": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+  "metadataDeltaFiles": [
+    ".github/workflows/warehouse.yml",
+    ".omo/evidence/warehouse-workorder-asset-provenance/f1-final-preliminary-evidence-index.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/f1-final-preliminary-matrix.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/f1-final-preliminary-source-evidence.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-protocol-ci-source-review.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-protocol-ci-workflow-r1.json",
+    ".omo/notepads/warehouse-workorder-asset-provenance/handoff.md",
+    "docs/warehouse-ci.md",
+    "docs/warehouse-review.md"
+  ],
+  "capturedInputCount": 2486,
+  "capturedInputsUnchanged": true,
+  "actualCases": 24,
+  "projects": {
+    "warehouse-desktop": 12,
+    "warehouse-mobile": 12
+  },
+  "specs": [
+    {
+      "spec": "setup",
+      "attempt": "main-r1",
+      "caseCount": 4,
+      "reportSha256": "1911eff6340bc0c9383b00c6c255cf37d543aa43b488781a76229a4ad1df0261",
+      "verificationSha256": "33354ac5bb6199a8f2cf3b2d9f4497d2e7084254b9e85f30b33f468c29c2729f",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "receiving",
+      "attempt": "main-r1",
+      "caseCount": 2,
+      "reportSha256": "46935c35adec3781c8e9d6730a447474454d17311e7dc71a7ae3a8aedab84ec7",
+      "verificationSha256": "2903c3cf920d92dc93e83715656514006eaac7311984e24e33b0b06302b64def",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "provenance",
+      "attempt": "main-r1",
+      "caseCount": 2,
+      "reportSha256": "3a02d24e807f1a6f41778fa0719d627d43cc57f3a2a7325572806afc9a1e113d",
+      "verificationSha256": "d99d3c8504b7d95e0cdf9fc351599e2f55931d1bb275eebe002d801670b29638",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "issue",
+      "attempt": "main-r1",
+      "caseCount": 2,
+      "reportSha256": "3d820b6ddc3fad12f0bc1c1f416f454b4b93f3cd4f3ed8e7bf5e96efd980b7aa",
+      "verificationSha256": "f0619df83f9c8be3ca7c3c1ab389d5170a32172a8e7489b58942988d0734c60d",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "returns",
+      "attempt": "main-r1",
+      "caseCount": 4,
+      "reportSha256": "25e2f3e4ee071900dcafcbbc623fb99e1dad72e45c47c892b886a6d138642abe",
+      "verificationSha256": "02678ab7f7efaae7b1bed737202657c9bfc137754f76d2847eb25da01048f991",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "exceptions",
+      "attempt": "main-r1",
+      "caseCount": 2,
+      "reportSha256": "f02d9c8331b42c2dcefc487e044651bcad6d1db2e303d0fb0ba3285bf61d118c",
+      "verificationSha256": "5088a63567e4012a8a3a0f9b56c32de698bdb23b8ec96f251755d48f50255d57",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "warehouse-empty-tenant",
+      "attempt": "main-r1",
+      "caseCount": 2,
+      "reportSha256": "a82eda356863b2bcfedcf00f7bd628b1fcc57425cc3e3335192414be5c442bf9",
+      "verificationSha256": "4bdb4d19ee95b894d2a9b262743e8fc23d250ade5e9677665884047a1b197b7d",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "customer-assets",
+      "attempt": "remaining-r1",
+      "caseCount": 4,
+      "reportSha256": "a0877235761076b3f66d5d3f2c92b94ba53666e784bd1fa2cfacbe32661e24ea",
+      "verificationSha256": "4e09d5200be228564cab88fed3ef194c70ec94d94bb9b1510887dd90ca704cca",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    },
+    {
+      "spec": "draft-expiry",
+      "attempt": "remaining-r1",
+      "caseCount": 2,
+      "reportSha256": "f67a95540fa51de7b6f8a45b0090e4291f66d190ec9f49742348452a94c10c2a",
+      "verificationSha256": "5056c6881b5c437187d48740ff30c5ff9c11893220a6deaf8ce44d3d51fa2ef5",
+      "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+    }
+  ],
+  "interruption": {
+    "attempt": "main-r1",
+    "signalExit": 143,
+    "stage": "customer-assets build before browser launch",
+    "browserCasesAtInterruptedStage": 0,
+    "reportAbsent": true,
+    "ownedRecoveryStopExit": 0,
+    "ownedRecoveryDownExit": 0,
+    "reason": "Unknown outer-session termination; no product assertion failed"
+  },
+  "continuation": {
+    "attempt": "remaining-r1",
+    "cases": 6,
+    "runnerExit": 0,
+    "stopExit": 0,
+    "downExit": 0
+  },
+  "physicalGponCertification": "Deferred; browser monitoring is UNKNOWN, no device/OLT calls made"
+}
