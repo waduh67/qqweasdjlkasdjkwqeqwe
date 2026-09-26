@@ -1,0 +1,59 @@
+{
+  "allExtractedFilesMatchArchive": true,
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "archiveBytes": 418677,
+  "archiveSha256": "212f78b9f5813bfd235b70ef012df7724a74a5e26f6a2fa8a58f46a2e0f8ec37",
+  "authenticatedRegularFiles": 13,
+  "cleanupExitCode": 0,
+  "containerLogSha256": "554c47ed92599b0f3c85c80b85ab3382a90004ef822bd72e502ffdad00288970",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "dumpBytes": 3143243,
+  "dumpCustomFormatHeaderVerified": true,
+  "dumpSha256": "8a59f67a200acaddf7bcb278050b96eba7950d6ab8feeabb255e6f415ee19375",
+  "exitCodeFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+  "exitCodeFileValue": 0,
+  "finalF4Approval": false,
+  "journalSha256": "1d4c4f0f0fb131716597118ba94c2abcc545b3c6ec6987d3ce5f97620cac5b9c",
+  "journalSuccessfulDeactivation": true,
+  "limitations": [
+    "Drill covers a platform-only isolated fixture, not populated production/legacy recovery",
+    "Dump bytes/header and executed restore logs authenticated; reviewer did not rerun pg_restore or query a database",
+    "Detailed ownership/ACL query outputs are represented by executed source assertions and captured receipt, not separate SQL-output files"
+  ],
+  "privateFileManifestSha256": "c837402ef51c7cf013eb51e987978abf5e6ecaaac84205205ebf7b20a0bf1480",
+  "productionDatabaseTouched": false,
+  "rawRestoreErrorMarkers": 0,
+  "receiptSha256": "3fa6cc820687b6767e7b164be142173f4bd1fe6a3123fa639a48acc0a5c30708",
+  "replaceModeUsed": false,
+  "restoredCounts": {
+    "customers": 0,
+    "migrations": 367,
+    "policy": 0,
+    "tenant": 1,
+    "users": 1
+  },
+  "restoredDatabaseIsNewQaDatabase": true,
+  "restoredRuntimeRoleAndRestrictedClockAcls": true,
+  "reviewedAtUtc": "2026-09-26T21:10:41.249422+00:00",
+  "reviewerExecutedQa": false,
+  "reviewerRanDocker": false,
+  "reviewerUsedSsh": false,
+  "runnerLogSha256": "f1e33aec6d38671e5af77ec8e6bb1567d384526bb2f92bd64d654c2dc49670d7",
+  "sourceCounts": {
+    "customers": 0,
+    "migrations": 367,
+    "policy": 0,
+    "tenant": 1,
+    "users": 1
+  },
+  "sourceDatabaseUnchanged": true,
+  "sourceSha256": {
+    "backup/backup.sh": "6e9a90515ec94bf9a7d7f104676ef46347bb68245b937d29d2560a30965903fa",
+    "backup/restore.sh": "6ff2ee903786d0148b6d81e869f843c15aa2d3d084c0c7f5302b1ae26a029df2",
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "setup-private/backup-restore-probe.py": "9391000605f0ad9d8a11779ce43a39354877ba9141f5b606e5f0e7b38c298763"
+  },
+  "sourceUnchanged": true,
+  "status": "SHIPPED_BACKUP_NONREPLACING_RESTORE_DRILL_PASS_AUTHENTICATED",
+  "volumesAndDrillRetained": true
+}

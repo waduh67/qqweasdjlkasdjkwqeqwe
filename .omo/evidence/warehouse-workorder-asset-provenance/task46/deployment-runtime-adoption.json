@@ -1,0 +1,47 @@
+{
+  "atUtc": "2026-09-26T21:18:10.158795+00:00",
+  "status": "BOUNDED_DEPLOYMENT_RUNTIME_AND_SOURCE_EVIDENCE_ADOPTED",
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentConfigCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "currentCiRun": 36265279847,
+  "fullCiStillPending": true,
+  "productionInfrastructureServices": 8,
+  "productionApplicationActivated": false,
+  "vpnConfigured": false,
+  "sourceChangedByThisCheckpoint": false,
+  "evidenceSha256": {
+    "f4-destination-images-1306b65c-authentication.md": "0e6f0c19e0c62e8b07b05d47f8ae87d981b813b517daf8610389818fefb66d2c",
+    "f4-destination-images-1306b65c-authentication.json": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+    "f4-network-r1-r2-r3-authentication.md": "e9d672ac127cfc3650062050879d19c0d95e0f433fba1fde5ead809fd6a57d30",
+    "f4-network-r1-r2-r3-authentication.json": "46e5ab137f69e80f1eb6564651969c14e88f4a8009e78df7979eece128651cfe",
+    "f4-backup-drill-r1-authentication.md": "58639de6bc2c913ae2c4aed06dc5a40554e12b7d03a694fe7f3d678112265ad2",
+    "f4-backup-drill-r1-authentication.json": "543bac2d15e46038d66368904c4ae42bf1db4c374d7157e6542de92c6be963f7",
+    "f4-activation-source-review-r1.md": "c2fb81a69f3d7dbd0e9271fc1964e2f2d5ee4ce5f188156a27c8a25454652baf",
+    "f4-activation-source-review-r1.json": "17ac741075566545823c48a3e93f46478163b6734e44a9e83cfb726a2453de6c",
+    "f4-activation-source-review-r2.md": "fb20626d995dddc3e9f9a6bc8ba24e0e889c48eec01c563a09b0b137f56b92e6",
+    "f4-activation-source-review-r2.json": "69ff7a7fbcd3c47431a44fbb1e1157cbe16cc65c0c5d2de9a77b4473b114bc73",
+    "f1-deployment-db09c3c2-addendum.md": "0ea554d5437364b4318361dc5444467af47283426fcf6b101b91a0f70e16063b",
+    "f1-deployment-db09c3c2-addendum.json": "b1b74b17ac93551a41be643a4023e71c0eead1800f2c6607d3f5f3cbbdab31d2",
+    "f2-deployment-db09c3c2-addendum.md": "7fc525d92eaca5901058c73ce96d635b68fdb878f40688c54e91278773f973f6",
+    "f2-deployment-db09c3c2-source-authentication.json": "6af475387c2cc4f8e0ef549aeeca9b39275be82468b84d3ec59e1df95a429b49",
+    "deployment-network-r1.json": "25ebceaee00305cfeacb75edbd750f5864fd75e43404620b8e7e8022aa3709be",
+    "deployment-network-r2.json": "4fcea3a6ee9f4b2ec43e184cabf5de93850979ba129438363f5a5ab992002cad",
+    "deployment-network-r3.json": "31df7d257fd5aa3f0ba7ec8aa4a3682838ea12585847782ad76c6648d1e77720",
+    "deployment-backup-restore-r1.json": "3fa6cc820687b6767e7b164be142173f4bd1fe6a3123fa639a48acc0a5c30708",
+    "deployment-activation-fault-injection-r3.json": "1162ef65316598a555f4ad71b6283ab36f93f14d91044813333448c7d36275ec"
+  },
+  "acceptedScopes": [
+    "Destination OCI config and all19ordered layers independently equal to authenticated CI images",
+    "Isolated shared gateway/login/S3 round trip/ACS Digest challenge/private NBI/RADIUS config validated in R3; R1/R2 failures preserved",
+    "Actual production infrastructure only: eight services, private backends, RADIUS foreground without debug",
+    "Shipped backup and non-replacing restore on separate platform-only QA database:367migrations/1tenant/1user/0customer and restricted clock ACLs preserved",
+    "Private activation helper source findings closed;14synthetic local gate/proxy/signal tests, no production activation claim"
+  ],
+  "limitations": [
+    "Full current server/fresh/historical CI and final F1/F2/F4 pending",
+    "No populated production disaster recovery proof from empty fixture",
+    "No live RADIUS subscriber or physical MikroTik/GPON validation",
+    "SMTP delivery unconfigured",
+    "Actual activation, public authenticated login, VPN and initial production backups pending"
+  ]
+}

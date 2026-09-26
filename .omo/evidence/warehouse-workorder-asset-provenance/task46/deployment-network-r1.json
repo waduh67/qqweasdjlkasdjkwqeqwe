@@ -1,0 +1,23 @@
+{
+  "status": "FAIL",
+  "startedAtUtc": "2026-09-26T20:43:17.953989+00:00",
+  "project": "ftth-bootstrap-49a78a1d8ef2",
+  "previousEvidence": "/opt/ftth/setup-private/bootstrap-49a78a1d8ef2",
+  "evidence": "/opt/ftth/setup-private/network-31d7eed04167",
+  "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "hostPortsPublished": false,
+  "volumesRetained": true,
+  "sourceSha256": {
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "setup-private/network-storage-probe.py": "63138e256b2d934b9bc5d5c1679157ad45a0bc8b0fcb64347a00da2ea2e15147"
+  },
+  "edgeCidr": "172.19.0.0/16",
+  "onlyGatewayOnEdge": true,
+  "failureType": "AssertionError",
+  "failure": "['/']",
+  "cleanupExitCode": 0,
+  "edgeNetworkCleanupExitCode": 0,
+  "finishedAtUtc": "2026-09-26T20:44:25.760600+00:00"
+}

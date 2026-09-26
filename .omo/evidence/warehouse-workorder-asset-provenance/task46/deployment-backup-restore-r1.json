@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-26T21:00:37.842988+00:00",
+  "project": "ftth-bootstrap-49a78a1d8ef2",
+  "sourceDatabase": "ftth_bootstrap_probe",
+  "restoredDatabase": "ftth_drill_a0f74f4593926a37",
+  "productionDatabaseTouched": false,
+  "volumesAndDrillRetained": true,
+  "sourceSha256": {
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "backup/backup.sh": "6e9a90515ec94bf9a7d7f104676ef46347bb68245b937d29d2560a30965903fa",
+    "backup/restore.sh": "6ff2ee903786d0148b6d81e869f843c15aa2d3d084c0c7f5302b1ae26a029df2",
+    "setup-private/backup-restore-probe.py": "9391000605f0ad9d8a11779ce43a39354877ba9141f5b606e5f0e7b38c298763"
+  },
+  "sourceCounts": {
+    "tenant": 1,
+    "users": 1,
+    "customers": 0,
+    "policy": 0,
+    "migrations": 367
+  },
+  "dumpSha256": "8a59f67a200acaddf7bcb278050b96eba7950d6ab8feeabb255e6f415ee19375",
+  "dumpBytes": 3143243,
+  "restoredCounts": {
+    "tenant": 1,
+    "users": 1,
+    "customers": 0,
+    "policy": 0,
+    "migrations": 367
+  },
+  "restoredRuntimeRoleAndRestrictedClockAcls": true,
+  "sourceDatabaseUnchanged": true,
+  "sourceUnchanged": true,
+  "cleanupExitCode": 0,
+  "finishedAtUtc": "2026-09-26T21:01:11.020334+00:00"
+}

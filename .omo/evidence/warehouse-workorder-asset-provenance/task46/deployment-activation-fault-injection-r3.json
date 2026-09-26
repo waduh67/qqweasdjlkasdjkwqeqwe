@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "tests": 14,
+  "scope": "Local synthetic gate/proxy/signal fault injection; no host/Docker/SSH/production execution",
+  "atUtc": "2026-09-26T21:16:18.858794+00:00",
+  "helperSha256": "87f7e0f55c82bad649b3d5ed615b7e5b18227992bfe664ecd649095d5c0c3ed7",
+  "testSha256": "1cf358f7963ac2b6a83e0ba3a25643668655a01287be70bf6bf0a4e78ccc66f6",
+  "logSha256": "dc536e3d03af86281aa76818e123b9df9bb71a0069e4ffa9c20526037e96ef42"
+}

@@ -1,0 +1,69 @@
+{
+  "sourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "baseTrackedInputs": 3693,
+  "unchangedTrackedInputs": 3688,
+  "changedTrackedInputs": [
+    "deploy/.env.example",
+    "deploy/DEPLOY.md",
+    "deploy/docker-compose.prod.yml",
+    "deploy/postgres-init/10-init-app-db.sh",
+    "docs/backup.md"
+  ],
+  "missing": [],
+  "deploymentHashes": {
+    "deploy/.env.example": "31f09a7eeab9ba35020b8c3a1481caca62e03bafadfda945980779a78335abfd",
+    "deploy/Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "deploy/DEPLOY.md": "bf3910ce28ad78d1d17bffe428484dc197f393fee1c9d610189081c9a03704e8",
+    "deploy/SHARED-PROXY.md": "502f0efbb5cf9505cf6e0a7350e57d173db4847b0dfc74c4d8e1011aa4d56fde",
+    "deploy/docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "deploy/docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "deploy/postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "docs/backup.md": "051f0034e763ba24526361a6bb903e9c6fa8b3e657efe5480f5d37aaab692595"
+  },
+  "unchangedMigrations": 367,
+  "bootstrapReceiptHashes": {
+    "deployment-production-bootstrap-r1.json": "2e1df768b7e907fbcb98fd8c8c6d897eff1a43c5c57fdd2d71c00021191cbf9a",
+    "deployment-production-bootstrap-r2.json": "389e41fa100d85beaa337a3fa5563500a0f02cc1cf3811c679b0a0a26f3600a4"
+  },
+  "bootstrapF4Sha256": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+  "adoptionHashChainMatches": true,
+  "r1": "FAIL_PRESERVED",
+  "r2": "PASS_BY_F4_AUTHENTICATION",
+  "finalF2Approval": false,
+  "QAExecuted": false,
+  "SSHExecuted": false,
+  "networkProofPending": true,
+  "destinationImagesF4Authentication": {
+    "sha256": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+    "evidenceName": "f4-destination-images-1306b65c-authentication.json",
+    "status": "DESTINATION_SERVER_AND_WEB_RAW_CONTENT_MATCH_AUTHENTICATED_CI",
+    "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "deploymentConfigCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+    "embeddedJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+    "migrationCount": 367,
+    "linkedBootstrapAndCiProofHashesMatch": true,
+    "currentDeploymentHashesMatch": true,
+    "rawDestinationRehashByF4": true,
+    "rawDestinationRehashByF2": false
+  },
+  "reviewedAtUtc": "2026-09-26T20:55:20.407495+00:00",
+  "radiusLoggingItem": {
+    "baseFile": "deploy/docker-compose.prod.yml",
+    "line": 77,
+    "preexistingCommand": [
+      "radiusd",
+      "-X"
+    ],
+    "actualSubscriberCredentialLeakObserved": false,
+    "R3RadiusScopeByF4": "configuration validation only, no Access-Request/accounting",
+    "hostCommandReportedByRoot": [
+      "freeradius",
+      "-f"
+    ],
+    "hostOverrideReceiptAuthenticatedByF2": false,
+    "remaining": "Effective host overlay/container-command receipt"
+  },
+  "newBlockingFindings": [],
+  "hostActivationAuthenticatedByF2": false
+}

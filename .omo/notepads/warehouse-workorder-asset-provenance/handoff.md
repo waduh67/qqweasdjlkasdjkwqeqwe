@@ -8,9 +8,10 @@ commit and push recoverable checkpoints. No main merge or registry publication.
 - Edit worktree: `.omo/runtime/warehouse-regression-validation`, branch
   `work/warehouse-regression-fixtures`; push to `origin/work/warehouse-draft-lifecycle`.
   Application/build/test/workflow/migration inputs remain at
-  `1306b65c34167b2d48f4817ce72990fed3b85aa3`. This checkpoint adds five tracked
+  `1306b65c34167b2d48f4817ce72990fed3b85aa3`. Prior checkpoint `db09c3c2` adds five
   deployment/docs changes and three shared-proxy files; it is no longer a whole
   3693-input equivalent checkout. The other 3688 recorded inputs remain unchanged.
+  This checkpoint adopts bounded deployment runtime/review evidence only.
 - Preserve CI `36265279847`: all14nonserver jobs/artifacts and focused compatibility
   passed; fullserver/fresh/historical has run since19:40:01UTC. Authenticate its actual
   final artifacts before final approval. Do not count duplicate/cancelled runs as passes.
@@ -32,20 +33,35 @@ commit and push recoverable checkpoints. No main merge or registry publication.
 - The pre-existing site's Caddy owns80/443. Its configuration/site remain intact;
   FTTH TLS is valid through Cloudflare and directly at origin, serving maintenance503.
   Shared-proxy overlay will publish only the optional8880 gateway port. App/DB/NBI
-  ports remain internal. Actual production FTTH stack is not yet activated.
-- Remote network/storage/ACS/RADIUS smoke is the next active QA under the outerfd8
-  lease, using the cleaned isolated R2 project and retained volumes. Read the private
-  original-checkout `.omo/runtime/ACTIVE-WAREHOUSE-RUN.json` and
-  `.omo/runtime/azure-ftth-setup` for current unit/session, host, key and evidence.
-  Never stop/down unrelated applications or remove volumes.
+  ports remain internal. Eight production infrastructure services are running with
+  restart0; production backend/web/gateway are not yet activated. Existing Drive is200.
+- Isolated network/storage R3 PASS: real gateway/login,137-byte S3 put/get/delete,
+  CWMP401Digest/zero devices, private NBI200, FreeRADIUS configuration accepted.
+  R1/R2 private fixture failures remain preserved. Cleanup0, no QA containers remain.
+  Shipped backup/non-replacing restore drill PASS on separate retained QA database:
+  367migrations,1tenant/1user/0customers and clock ACLs preserved. This is not a
+  populated production recovery claim. Independent raw authentication is adopted in
+  `task46/deployment-runtime-adoption.json`; source/runtime limitations remain explicit.
+- Private activation helper now requires exact host configuration, complete current CI
+  and source-bound independent readiness receipts. It restores/reloads only FTTH's
+  managed proxy block if activation fails after switching, including TERM/INT, while
+  preserving current unrelated site bytes and database history. F4 source findings
+  closed;14 local synthetic fault-injection tests passed. No activation execution yet.
+  Read private original-checkout `.omo/runtime/ACTIVE-WAREHOUSE-RUN.json` and
+  `.omo/runtime/azure-ftth-setup` for exact helper, host, key and evidence. Never print
+  private files, stop/down unrelated applications, or remove volumes.
 - User supplied the production admin email and approved a random password because
   the supplied password did not meet the existing16-character production minimum.
-  The environment and credentials are saved root-only0600 on the VPS; no production
-  service is started yet. Use the host ftth-compose wrapper so both proxy and pinned
-  image overlays are always applied. Next: finish affected runtime checks/review,
-  preserve current full CI, configure authorized production and VPN,
+  The environment and credentials are saved root-only0600 on the VPS. Use the host
+  ftth-compose wrapper so both proxy and pinned image overlays are always applied.
+  Next: authenticate current full CI, obtain independent activation readiness,
+  activate authorized production and configure VPN1194/TCP on unused10.8.0.0/24,
   verify HTTPS/login/backups/listeners and existing site, finish F1/F2/F4, close46–48,
   integrate validated feature descendants, then present concrete owner acceptance.
+- Old `work/warehouse-task29` was integrated by prior cherry-picks/adaptations and is
+  not an ancestor of the current branch. Do not merge it again or force-update it.
+  Validated descendants can later fast-forward original `work/warehouse-completion`
+  and `origin/feat/warehouse-workorder` from40cbd34f after rechecking refs.
 - Migration178.12 is applied and immutable; next178.13. Reject tenant deletion with
   protected history; use Suspend. Physical GPON certification is deferred, while
   offline documentation/MIB coverage remains required.
