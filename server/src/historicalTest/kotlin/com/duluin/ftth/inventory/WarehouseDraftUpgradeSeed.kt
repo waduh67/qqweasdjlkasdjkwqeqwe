@@ -22,7 +22,7 @@ object WarehouseDraftUpgradeSeed {
         val output = Path.of(args[0])
         val url = args[1]
         require(url.matches(Regex("jdbc:postgresql://127\\.0\\.0\\.1:25432/warehouse_fixture_[a-f0-9]{32}")))
-        require(args[2] in setOf("178.9", "178.10"))
+        require(args[2] in setOf("178.9", "178.10", "178.11"))
         SpringApplicationBuilder(FtthApplication::class.java).profiles("test").run(
             "--server.address=127.0.0.1", "--server.port=0", "--spring.datasource.url=$url", "--spring.flyway.url=$url",
             "--spring.flyway.schemas=public", "--spring.flyway.default-schema=public", "--spring.flyway.target=${args[2]}",
@@ -36,7 +36,7 @@ object WarehouseDraftUpgradeSeed {
                 }
             }
             val client = SeedClient(context)
-            val seed = when (args[3]) { "transfer" -> client.transferSeed(); "count" -> client.countSeed(); else -> error("Unknown seed family") }
+            val seed = when (args[3]) { "transfer" -> client.transferSeed(); "count" -> client.countSeed(); "expiry" -> client.expirySeed(); else -> error("Unknown seed family") }
             Files.createFile(output, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
             Files.writeString(output, jacksonObjectMapper().writeValueAsString(seed))
         }
@@ -57,12 +57,41 @@ object WarehouseDraftUpgradeSeed {
             val id = mapper.readTree(original.contentAsString).path("id").asString()
             val shippedStock = transferStock()
             val shippedId = transfer(shippedStock).path("id").asString()
-            val shipped = transferAction(shippedStock, shippedId, "dispatch", """{"expectedRevision":0}""", "pre-upgrade-dispatch")
+            val dispatched = request("POST", "/api/v1/warehouse/transfers/$shippedId/dispatch", shippedStock.setup.token,
+                """{"expectedRevision":0}""", "pre-upgrade-dispatch")
+            assertThat(dispatched.status).withFailMessage(dispatched.contentAsString).isEqualTo(200)
+            val shipped = mapper.readTree(dispatched.contentAsString)
             val before = durableFacts(admin, id)
             val postedBefore = durableFacts(shippedStock.setup.token, shippedId)
             return mapOf("stock" to stock, "original" to original.contentAsString, "id" to id,
                 "shippedStock" to shippedStock, "shippedId" to shippedId, "shipped" to shipped,
-                "before" to before, "postedBefore" to postedBefore)
+                "shippedBody" to dispatched.contentAsString, "before" to before, "postedBefore" to postedBefore)
+        }
+        fun expirySeed(): Map<String, Any> {
+            val stock = transferStock()
+            val token = stock.setup.token
+            val body = transferBody(stock)
+            val documents = (0..5).map { index ->
+                val result = request("POST", "/api/v1/warehouse/transfers", token, body, "legacy-expiry-$index")
+                assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(201)
+                mapOf("id" to mapper.readTree(result.contentAsString).path("id").asString(),
+                    "key" to "legacy-expiry-$index", "body" to body, "original" to result.contentAsString)
+            }
+            val plans = (0..5).map { index ->
+                val work = request("POST", "/api/work-orders", token,
+                    """{"type":"PREVENTIVE","title":"Legacy inspection $index","areaId":"${area(token)}"}""")
+                assertThat(work.status).withFailMessage(work.contentAsString).isEqualTo(201)
+                val workId = mapper.readTree(work.contentAsString).path("id").asString()
+                val summary = request("GET", "/api/work-orders/$workId/materials", token)
+                assertThat(summary.status).isEqualTo(200)
+                val workRevision = mapper.readTree(summary.contentAsString).path("revisions").path("workOrderRevision").asLong()
+                val input = """{"expectedRevision":0,"workOrderRevision":$workRevision,"materialMode":"NONE","reason":"Inspection only","lines":[]}"""
+                val saved = request("PUT", "/api/work-orders/$workId/materials/plan", token, input, "legacy-plan-$index")
+                assertThat(saved.status).withFailMessage(saved.contentAsString).isEqualTo(200)
+                mapOf("id" to mapper.readTree(saved.contentAsString).path("id").asString(), "workOrderId" to workId,
+                    "workOrderRevision" to workRevision, "key" to "legacy-plan-$index", "body" to input, "original" to saved.contentAsString)
+            }
+            return mapOf("token" to token, "documents" to documents, "plans" to plans)
         }
         fun countSeed(): Map<String, Any> {
             val stock = transferStock()

@@ -100,6 +100,10 @@ Kedua gate wajib berhasil; focused `qa.sh server --tests ...` hanya menjalankan 
 pada source set server terbaru. Dua tes upgrade draft transfer/count menyiapkan
 perintah HTTP dengan proses aplikasi lama yang dipatok, menutup proses itu,
 kemudian memigrasikan dan membuka database yang sama dengan aplikasi sekarang.
+Tes backfill terpisah memakai proses lama pada schema 178.11 untuk membuat draft
+transfer dan rencana material dengan tanggal lama, mendatang, dan nonfinite.
+Tes itu memeriksa batas tenggat, penantian kunci tabel sebelum migrasi, data sumber
+yang tetap utuh, dan replay respons asli setelah aplikasi sekarang dibuka.
 
 Spec `draft-expiry` membuat draft lewat UI dan membuka editornya sebelum tenggat.
 Fixture QA menetapkan kebijakan singkat lewat role pemilik database, lalu menunggu
@@ -140,7 +144,7 @@ dan `REVIEW_SKU` dari tenant/SKU yang benar-benar sedang diperiksa:
 ```bash
 psql -X -v ON_ERROR_STOP=1 \
   -v "tenant_id=$REVIEW_TENANT" -v "sku_id=$REVIEW_SKU" \
-  -v expected_version=178.11 -v expected_cutover=ENFORCED -v expected_unit=MM \
+  -v expected_version=178.12 -v expected_cutover=ENFORCED -v expected_unit=MM \
   -f scripts/warehouse/preflight.sql
 ```
 

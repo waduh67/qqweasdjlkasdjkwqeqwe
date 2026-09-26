@@ -112,6 +112,22 @@ class DeleteTenantIT {
             }!!
         }
 
+    private fun configureDraftPolicy(tenantId: UUID) {
+        check(System.getenv("WAREHOUSE_QA") == "true")
+        val url = System.getenv("SPRING_DATASOURCE_URL")
+        check(url == "jdbc:postgresql://127.0.0.1:25432/warehouse_test")
+        java.sql.DriverManager.getConnection(url, System.getenv("SPRING_FLYWAY_USER"), System.getenv("SPRING_FLYWAY_PASSWORD")).use { connection ->
+            connection.autoCommit = false
+            connection.prepareStatement("SELECT set_config('app.tenant_id', ?, true)").use {
+                it.setString(1, tenantId.toString()); it.execute()
+            }
+            connection.prepareStatement("INSERT INTO inventory_draft_policy(tenant_id,version,ttl_seconds) VALUES (?,1,604800)").use {
+                it.setObject(1, tenantId); it.executeUpdate()
+            }
+            connection.commit()
+        }
+    }
+
     /**
      * Semai satu ONU yang TERPASANG di ODP (odp_id & odp_port_number terisi) untuk [tenantId].
      * Ini kunci reproduksi bug: `DELETE FROM odp` akan men-`SET NULL` `onu.odp_id` (FK ON DELETE
@@ -207,6 +223,8 @@ class DeleteTenantIT {
             OnboardTenantCommand(slug, "ONU ISP", admin, "Admin", pass),
         ).tenant
         seedAttachedOnu(victim.id, login(slug, admin))
+        configureDraftPolicy(victim.id)
+        assertThat(countFor("inventory_draft_policy", victim.id)).isEqualTo(1)
 
         // Prasyarat reproduksi: ONU benar-benar terpasang (odp_id terisi). Menghapus `odp`
         // sebelum `onu` akan men-SET NULL odp_id & melanggar ck_onu_attachment (dulu → 500).
@@ -227,6 +245,26 @@ class DeleteTenantIT {
         tables.forEach { table ->
             assertThat(countFor(table, victim.id)).describedAs(table).isEqualTo(before[table])
         }
+    }
+
+    @Test
+    fun `tenant tanpa transaksi tetap dapat dihapus setelah kebijakan masa draf dikonfigurasi`() {
+        val slug = "policy${uniq()}"
+        val victim = onboarding.onboard(OnboardTenantCommand(slug, "Policy ISP", "admin@$slug.test", "Admin", pass)).tenant
+        configureDraftPolicy(victim.id)
+        assertThat(countFor("inventory_draft_policy", victim.id)).isEqualTo(1)
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            TenantContext.runAs(victim.id) { tx.executeWithoutResult {
+                em.createNativeQuery("DELETE FROM inventory_draft_policy WHERE tenant_id=:tenant")
+                    .setParameter("tenant", victim.id).executeUpdate()
+            } }
+        }.hasRootCauseInstanceOf(java.sql.SQLException::class.java)
+        val root = login("platform", "root@ftth.local", "rootadmin123")
+        mockMvc.perform(delete("/api/platform/tenants/${victim.id}").header("Authorization", "Bearer $root"))
+            .andExpect(status().isNoContent)
+        mockMvc.perform(get("/api/platform/tenants/${victim.id}").header("Authorization", "Bearer $root"))
+            .andExpect(status().isNotFound)
+        tenantScopedTables().forEach { table -> assertThat(countFor(table, victim.id)).describedAs(table).isZero() }
     }
 
     @Test

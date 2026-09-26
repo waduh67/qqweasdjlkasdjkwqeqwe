@@ -15,6 +15,13 @@ The server job compiles current tests first and runs the repaired compatibility
 fixtures before its unfiltered regression. Their reports are archived separately
 and removed from the active XML directory before the full run, so an interrupted
 full run cannot reuse a successful focused report. Both stages must pass.
+The current suite also runs transfer/count draft upgrades and the 178.11 draft
+deadline backfill using a separate pinned pre-expiry application process for HTTP
+setup. That process closes before migration and startup of the current application
+on the same fixture database. These remain current-suite tests; they do not change
+the seven historical upgrades or the separate projection test. Their private
+bootstrap manifests, response handoffs and process logs are encrypted with the
+other server evidence.
 
 The image job builds server and web once, runs their exact image IDs against a
 separate QA database, and verifies readiness through both the backend and a staging

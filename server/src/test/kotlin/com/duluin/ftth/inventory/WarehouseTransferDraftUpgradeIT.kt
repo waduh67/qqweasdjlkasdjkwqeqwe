@@ -43,6 +43,8 @@ class WarehouseTransferDraftUpgradeIT {
                 .isEqualTo(original)
             assertThat(transferAction(shippedStock, shippedId, "dispatch", """{"expectedRevision":0}""", "pre-upgrade-dispatch"))
                 .isEqualTo(shipped)
+            assertThat(request("POST", "/api/v1/warehouse/transfers/$shippedId/dispatch", shippedStock.setup.token,
+                """{"expectedRevision":0}""", "pre-upgrade-dispatch").contentAsString).isEqualTo(seed.path("shippedBody").asString())
             fixture(admin).transaction {
                 assertThat(scalar("SELECT provenance FROM inventory_document_draft_activity WHERE document_id='$id'")).isEqualTo("LEGACY_BASELINE")
                 assertThat(scalar("SELECT (deadline>clock_timestamp())::text FROM inventory_document_draft_activity WHERE document_id='$id'")).isEqualTo("true")

@@ -1,0 +1,36 @@
+{
+  "reviewedAtUtc": "2026-09-26T17:27:22.325656+00:00",
+  "workspace": "/home/fajar/ftth/qqweasdjlkasdjkwqeqwe/.omo/runtime/warehouse-regression-validation",
+  "head": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "reviewedSourceSha256": {
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt": "421cfa2817d1698c12f21bb84ac7dc54e71094e53d38ba9058eaeb1ec3da516a",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt": "caa35731c166717c35c770315528e162fdf59861dd66d701da25e493d33f595b",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt": "7db0e304b661e5c7a6fe2cd0d5cc40ec4b6cac1e24be9fa6026cff21970f1da5",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt": "ae4b06529ad090a993f86fba0253afa1aad2cacd214b928ba0dbda3d05e42538",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt": "f0ea9a23be070dd42ebf81b75991d096e6e7050edfced1f9a15ab95a50cc152c",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+    "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+    "scripts/warehouse/draft-upgrade-bootstrap.sh": "76da710737f9f860f0e9af693bb1f8efea9fab4da48ca85d9f5f96aba5a68b6b",
+    "scripts/warehouse/draft-upgrade-classpath.gradle": "52fdd4d3bc2121352ece2750bce6973a6d4903d75fb53e95a11a1a2098239e38",
+    "scripts/warehouse/qa.sh": "f1b6536b7e7f614af828dd4c440b147ccb771ca955853ced4ebfdaaca138bc87",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt": "b20192f4919fe3f4de1e54ca40f975efbeb879d64bdf248e7a6dd004e5ae020c",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryFacts.kt": "0818dfbf5dab245e7a2e624b1a5d3e769f0b4358c73aa57cae88de5e139ccf54",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt": "a5771584b7d72100e67fd6bc7ca1aa7c1019058621331cab6ebcb0d9627771cb",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryRepairIT.kt": "45404097233a0b94f6a7581978d3e46991613fd8b07f6ca96ab17a11af69dca2",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAssetIT.kt": "8067cfd14f68a036978552831622152672f0d3353d4aeae1ae009a6f45210319",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt": "a0d856484d14fb004facc6a75a63ca833b0d153d573cf4f8d316b4b3c633c21d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt": "4dde1f3e7f432b585ff5e2499c3d4a72e725a87d1d9eee95a722755fb050302d",
+    "web/e2e/warehouse/draft-expiry.spec.ts": "1430d1314c67ce4ddd9bd4749c7d07f580ec9791bd1bb90a0b22ac1f6ad1da23",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.tsx": "4c2a7d3f34d2fdd39c96acb939ca84cd017f8d857d0e7cba150cbca53fc59281",
+    "scripts/warehouse/draft-clock-fixture.sh": "d46aaf55fb089ee54885efbf902e3f000a760d0bd08d87774b70e5628a27f3ed"
+  },
+  "r2InputManifestSha256": "652be05f7fc27760b73810265ce2909e81ea3ce24a5add3fa4804f7b8cb1d2da",
+  "r2CapturedReviewedSourceCount": 17,
+  "r2CapturedReviewedSourcesMatch": true,
+  "r2NotCapturedReviewedSources": [
+    "web/e2e/warehouse/draft-expiry.spec.ts",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.tsx",
+    "scripts/warehouse/draft-clock-fixture.sh"
+  ],
+  "notice": "Source review only; R2 was active at assignment and its completed runner/cleanup result is not authenticated here."
+}

@@ -106,6 +106,15 @@ Isi dan kunci transaksi dipertahankan agar hasil committed dapat ditemukan kemba
 Untuk konflik revisi yang sudah diketahui, muat ulang dan tinjau data terbaru sebelum
 membuat transaksi baru. Status offline tidak berarti perubahan sudah tersimpan.
 
+Draft yang tidak dilanjutkan mempunyai tenggat, dengan masa berlaku bawaan tujuh
+hari. Setelah kedaluwarsa, rincian dan riwayatnya tetap dapat dibaca, tetapi draft
+tidak dapat disimpan, diajukan, atau dibukukan lagi. Buat draft atau usulan baru
+dari sumber yang sesuai. Membuka halaman atau mencoba ulang transaksi lama tidak
+memperpanjang tenggat. Menyimpan perubahan yang diterima pada draft penerimaan,
+transfer, atau stock opname sebelum hitung dimulai memperbarui tenggatnya.
+Transaksi yang sudah masuk proses fisik tidak dibatalkan oleh kedaluwarsa draft.
+Lihat [masa berlaku draft](warehouse-draft-expiry.md) untuk rincian tiap alur.
+
 Pembatalan WO meminta unpick bila perlu. Reassign tidak memindahkan custody.
 Teknisi lama masih mempunyai kewajiban atas barang yang dipegangnya dan harus
 mengembalikan atau menyerahkannya melalui alur resmi. Menolak QA tidak menambah stok.
@@ -119,7 +128,7 @@ Kasus riwayat saja dan saldo awal nol tidak boleh membuat unit atau biaya fiktif
 ID pelanggan/ONU, serial mentah, dan sejarah lama tetap dipertahankan.
 
 Versi migrasi dan aturan checksum ada pada [manifest migrasi](warehouse-migrations.md).
-Versi tertinggi saat panduan ini ditulis adalah **178.11**. File yang sudah diterapkan
+Versi tertinggi saat panduan ini ditulis adalah **178.12**. File yang sudah diterapkan
 tidak boleh diedit. Ambil cadangan database dan object storage yang konsisten,
 verifikasi latihan restore pada lingkungan terisolasi, lalu catat identitas image
 dan hasil preflight sebelum rilis. Migrasi membutuhkan role pemilik; aplikasi
@@ -137,8 +146,9 @@ riwayat terlindungi. Dokumen gudang, identitas legacy, dan catatan permanen tida
 dihapus lewat aksi ini; server menolak sebelum menghapus data apa pun. Gunakan
 **Suspend** untuk menghentikan tenant sambil mempertahankan riwayatnya. Tenant kosong
 tetap dapat dihapus, meskipun tenant lain mempunyai riwayat pada tabel yang sama.
-Baris kontrol otorisasi dan cutover yang dibuat saat onboarding ikut hilang hanya
-ketika baris tenant dihapus; baris kontrol tenant aktif tidak dapat dihapus langsung.
+Konfigurasi masa berlaku draft saja tidak menghalangi penghapusan tenant kosong.
+Konfigurasi itu serta baris kontrol otorisasi dan cutover ikut hilang hanya ketika
+baris tenant dihapus; baris kontrol tenant aktif tidak dapat dihapus langsung.
 
 Bukti foto, tanda tangan, dan file pemeriksaan bersifat privat. Gunakan unduhan
 yang memeriksa izin dan integritas. Pertahankan aturan retensi dan legal hold;
@@ -148,5 +158,3 @@ Berbagi laporan QA cukup dengan hitungan, hash sumber, dan screenshot yang diper
 Kode GPON mempunyai [bukti dokumentasi dan fixture offline](gpon-profile-evidence.md).
 Itu tidak menyatakan sertifikasi perangkat fisik. Kontrak material KMP dan kompilasi
 iOS juga tidak menyatakan aplikasi native telah diuji pada perangkat atau dirilis.
-
-Idle draft deadlines and retained history are described in [warehouse-draft-expiry.md](warehouse-draft-expiry.md).

@@ -1,0 +1,48 @@
+{
+  "review": "f1-c7-policy-tenant-deletion-review.md",
+  "source_head": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "status": "NO_ACTIONABLE_PRODUCT_FINDING_IN_BOUNDED_REVIEW",
+  "qa_executed_by_reviewer": false,
+  "final_f1": false,
+  "scope": "Policy-only control exemption in TenantEraser; no SQL changes.",
+  "known_pending_test_fixture": "Owner policy INSERT requires explicit target tenant GUC; reviewed source is before that correction and no passing test result is claimed.",
+  "required_executed_followup": "Corrected DeleteTenantIT with nonzero policy-only cleanup, direct policy delete denial, protected history rejection, other-tenant preservation and platform deletion rejection.",
+  "inputs": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
+      "sha256": "836df5b52e87817457833f70b974b93ef999395ea49db9cc8d93ce5baf7245c8",
+      "head_sha256": "6afc61b6ef138e08245284ac7580b7f08655dda7b2531b819dc919ac3f21e1e4",
+      "differs_from_head": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt",
+      "sha256": "c0399b36afb31757efe76675cc4f548795f1883bd21ea5be2bd1cbffe8f439a1",
+      "head_sha256": "fb1671eb338c15682e02a72f6dda877264cdbb216f1d78137bca1e8321509ee6",
+      "differs_from_head": true
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql",
+      "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "head_sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "differs_from_head": false
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql",
+      "sha256": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
+      "head_sha256": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
+      "differs_from_head": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/tenancy/adapter/inbound/web/TenantController.kt",
+      "sha256": "9e507f4d6d80227c81332e7d0f6ffb585d7fd97054199cc0bf3190d0ae7bbe17",
+      "head_sha256": "9e507f4d6d80227c81332e7d0f6ffb585d7fd97054199cc0bf3190d0ae7bbe17",
+      "differs_from_head": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/tenancy/application/service/TenantService.kt",
+      "sha256": "30c64268ccfab88a9fd9bd94621a149a40f279b2eac8a601232d46fa111e2378",
+      "head_sha256": "30c64268ccfab88a9fd9bd94621a149a40f279b2eac8a601232d46fa111e2378",
+      "differs_from_head": false
+    }
+  ]
+}

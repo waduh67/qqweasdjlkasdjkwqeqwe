@@ -1,0 +1,119 @@
+{
+  "verifiedAtUtc": "2026-09-26T17:32:01.623820+00:00",
+  "head": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "proofs": {
+    "draft-expiry-backfill-r2": {
+      "countsSha256": "9587e1826d3f2dd7b860313336da71feb282c934575c667e6470be4d4086469e",
+      "inputManifestSha256": "652be05f7fc27760b73810265ce2909e81ea3ce24a5add3fa4804f7b8cb1d2da",
+      "capturedFiles": 2625,
+      "xml": [
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "sha256": "a961810d94f567f600162d5b61e7d7ff1fa8e63195483e6ee010469eb70e8718",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+          "sha256": "273ad7f093666daf5aaf8c7e40b9b2800fb4676d8641fca8ac95b3be44929179",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryScopeIT",
+          "sha256": "cd0563192c2118efa13ebea8c4e2ea0b53dfa7c0e9864c00538d50dcc1ca3ec8",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
+          "sha256": "993c99e2ab4b0cfe7fffa5d189d2944819c662c6794c302b21b403efcb3a6119",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+          "sha256": "e7d60e623012366a3439b5235195a24cab5f0569bc4a7601d1bc40f2e38f07e9",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+          "sha256": "435c3e4527fb8baefa9c6d58bf9963cb16c06142604e04ea7ebcddd48c2eb65d",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+          "sha256": "dfc7aa352147157fe77c8151188f6493c7d686e762194aa02573731879c0ea1d",
+          "tests": 4,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "totals": {
+        "tests": 13,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "changedSinceCapture": [
+        "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+      ],
+      "missingSinceCapture": []
+    },
+    "draft-expiry-tenant-r1": {
+      "countsSha256": "c2c078de6fd063473459baad1fc7a8f64309613d442337717213b5ef270c6962",
+      "inputManifestSha256": "ef334311d524bcc40b4674baa396c89937c96abdc0e9a8f63bafe1f02ecb72e7",
+      "capturedFiles": 2625,
+      "xml": [
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "sha256": "dee699969c4350f9eb5113f39bb0fc62d1326c46c5de458e1e0f7da67f138202",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+          "sha256": "5a2b7a4ded9203c02ff1087952ece14a4c926fced0abaa003cecda728fa5a8d5",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "totals": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "changedSinceCapture": [],
+      "missingSinceCapture": []
+    }
+  },
+  "currentTenantTest": {
+    "path": "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt",
+    "sha256": "c7fc23137b7399e4bb2c999fc91aa895023faebc6bdbbdf4cb53e26467cdcda7"
+  },
+  "bounds": [
+    "These are separate runs: R2 was not all green. Tenant R1 resolves its fixture failure at a later test-source identity.",
+    "No runner/cleanup log, full current regression, final F2/F3 verdict, or hardware execution is authenticated by this addendum.",
+    "Only aggregate counts, source paths and hashes are retained; raw XML, credentials, responses and logs remain private."
+  ]
+}

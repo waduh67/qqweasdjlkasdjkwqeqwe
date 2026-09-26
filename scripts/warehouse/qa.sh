@@ -71,7 +71,7 @@ case "$MODE" in
         draft_upgrade_needed=false
         [[ " ${args[*]} " == *' --tests '* ]] || draft_upgrade_needed=true
         for selector in "${args[@]}"; do
-            for upgrade_class in com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT; do
+            for upgrade_class in com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT; do
                 if [[ $upgrade_class == $selector || ${upgrade_class##*.} == $selector ||
                     $upgrade_class == ${selector%.*} || ${upgrade_class##*.} == ${selector%.*} ]]; then
                     draft_upgrade_needed=true

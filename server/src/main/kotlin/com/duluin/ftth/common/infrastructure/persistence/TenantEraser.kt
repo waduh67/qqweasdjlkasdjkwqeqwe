@@ -56,8 +56,9 @@ class TenantEraser(txManager: PlatformTransactionManager) {
                         }
                     }
                     val tables = tenantScopedTables(conn)
-                    requireDeletableHistory(conn, tables, tenantId)
-                    deleteAll(conn, tables.filterNot { it in CASCADE_ONLY_CONTROL_TABLES }, tenantId)
+                    val businessTables = tables.filterNot { it in CASCADE_ONLY_CONTROL_TABLES }
+                    requireDeletableHistory(conn, businessTables, tenantId)
+                    deleteAll(conn, businessTables, tenantId)
                     deleteTenantRow(conn, tenantId)
                 }
             }
@@ -173,7 +174,7 @@ class TenantEraser(txManager: PlatformTransactionManager) {
     private companion object {
         // Their guards forbid direct deletion/epoch reset while the tenant exists.
         // They disappear only through the final tenant-row FK cascade.
-        val CASCADE_ONLY_CONTROL_TABLES = setOf("inventory_tenant_cutover", "iam_authorization_epoch")
+        val CASCADE_ONLY_CONTROL_TABLES = setOf("inventory_tenant_cutover", "iam_authorization_epoch", "inventory_draft_policy")
 
         /**
          * Kelas SQLState `23` = integrity_constraint_violation (FK 23503, CHECK 23514, dst).
