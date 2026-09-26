@@ -11,8 +11,9 @@ its real V172 upgrade, with two positive and six wrong-version/unit/cutover prob
 KMP tests, native iOS compilation, and smoke tests of the actual Docker images
 also have to succeed.
 
-The server job compiles current tests first and runs the repaired compatibility
-fixtures before its unfiltered regression. Their reports are archived separately
+The server job compiles current server tests before running historical applications
+and checks the repaired compatibility fixtures before its unfiltered regression.
+Their reports are archived separately
 and removed from the active XML directory before the full run, so an interrupted
 full run cannot reuse a successful focused report. Both stages must pass.
 The current suite also runs transfer/count draft upgrades and the 178.11 draft
@@ -22,6 +23,14 @@ on the same fixture database. These remain current-suite tests; they do not chan
 the seven historical upgrades or the separate projection test. Their private
 bootstrap manifests, response handoffs and process logs are encrypted with the
 other server evidence.
+
+Before the server regression, the same required job executes all tests in
+`contract`, `snmp` and `collector`, forcing execution without cached task results.
+Each module must produce nonzero successful
+JUnit results. This includes the documentation-backed GPON parser fixtures and
+wire/retry compatibility; compiling those libraries as server dependencies does
+not execute their tests. Raw module reports and logs use the same encrypted
+server archive. These are offline fixtures and do not certify physical devices.
 
 The image job builds server and web once, runs their exact image IDs against a
 separate QA database, and verifies readiness through both the backend and a staging

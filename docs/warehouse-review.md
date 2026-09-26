@@ -70,6 +70,7 @@ cleanup() {
 }
 trap cleanup EXIT
 scripts/warehouse/test-environment.sh check
+./gradlew :contract:test :snmp:test :collector:test --rerun-tasks --no-build-cache --no-daemon --no-parallel --max-workers=2
 scripts/warehouse/qa.sh server
 scripts/warehouse/qa.sh web-check
 scripts/warehouse/qa.sh kmp

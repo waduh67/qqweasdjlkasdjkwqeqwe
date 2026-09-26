@@ -30,6 +30,19 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/warehouse-setup
+      - name: Offline GPON profiles, wire contracts and collector regression
+        run: |
+          set -euo pipefail
+          ./gradlew :contract:test :snmp:test :collector:test --rerun-tasks --no-build-cache --no-daemon --no-parallel --max-workers=2 \
+            > .omo/runtime/ci/protocols.log 2>&1
+      - name: Verify each offline protocol module executed tests
+        if: always()
+        run: |
+          set -euo pipefail
+          for module in contract snmp collector; do
+            python3 scripts/warehouse/ci-results.py junit --source "$module/build/test-results/test" \
+              --output ".omo/runtime/ci/protocols-$module.json" --commit "$GITHUB_SHA"
+          done
       - name: Compile current server tests before running historical applications
         run: ./gradlew :server:compileTestKotlin --no-daemon --no-parallel --max-workers=2
       - name: Check repaired compatibility fixtures before the full regression
@@ -136,6 +149,9 @@ jobs:
         run: |
           set -euo pipefail
           raw=(server/build/test-results/test .omo/runtime/ci/server.log)
+          for evidence in .omo/runtime/ci/protocols.log contract/build/test-results/test snmp/build/test-results/test collector/build/test-results/test; do
+            [[ ! -e "$evidence" ]] || raw+=("$evidence")
+          done
           for evidence in .omo/runtime/ci/compatibility.log .omo/runtime/ci/compatibility-results; do
             [[ ! -e "$evidence" ]] || raw+=("$evidence")
           done
