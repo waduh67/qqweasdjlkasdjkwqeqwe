@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "task": 48,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": ".github/workflows/warehouse.yml",
+      "line": 1,
+      "sha256": "3037ccfddecf452380ff4036ed50d3ec0d7368a971900a300f96496ce78c3de5"
+    },
+    {
+      "path": ".github/workflows/deploy.yml",
+      "line": 1,
+      "sha256": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20"
+    },
+    {
+      "path": "scripts/warehouse/ci-results.py",
+      "line": 12,
+      "sha256": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912"
+    },
+    {
+      "path": "scripts/warehouse/ci-artifacts.py",
+      "line": 1,
+      "sha256": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f"
+    },
+    {
+      "path": "scripts/warehouse/publish-images.py",
+      "line": 1,
+      "sha256": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e"
+    },
+    {
+      "path": "scripts/warehouse/image-smoke.sh",
+      "line": 1,
+      "sha256": "0b3eb2c7e58ecd62c79d8649043b0abfddc563ca00ffb861812a9fc21a2474ed"
+    }
+  ],
+  "requiredSelectors": [],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/47",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/ci-foundation-verification.json",
+      "sha256": "66b40cba573ef469ec14fcea0ba4a0d71a077bba32388737fbefb87ee8f16f51",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/current-release-guard-verification.json",
+      "sha256": "268897c49d16ca0ccc0342a2fc21597d087407d94a1ed80ffaf2b6ff732f8ac4",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/docker-image-smoke-verification.json",
+      "sha256": "7c678450de2b466f43ea4e45fb5ee005bfb3914db61a8e984812247c5b2138d5",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/interrupted-gradle-evidence-verification.json",
+      "sha256": "869fda78b5d492d95e78bac6bc9ac29ea69860046ebe59ad7162f3f64c90e571",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/minio-source-verification.json",
+      "sha256": "f731372718b4075617e4e4cac394f8c8c1834c0c1c4cca379419442c6cb96514",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

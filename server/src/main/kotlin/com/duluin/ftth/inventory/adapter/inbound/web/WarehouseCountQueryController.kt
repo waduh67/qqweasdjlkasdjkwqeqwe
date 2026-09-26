@@ -19,6 +19,7 @@ class WarehouseCountQueryController(private val queries: InventoryCountQueryApi)
         return privateResponse(queries.counters(locationId, WarehousePageRequest(filter.page, filter.size), filter.query))
     }
     @GetMapping("/{id}/details") fun details(@PathVariable id: UUID) = privateResponse(queries.details(id))
+    @GetMapping("/{id}/draft") fun draft(@PathVariable id: UUID) = privateResponse(queries.draft(id))
     @GetMapping("/{id}/review/details") fun review(@PathVariable id: UUID) = privateResponse(queries.review(id))
     @GetMapping("/{id}/history/page")
     fun history(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>): ResponseEntity<WarehousePage<WarehouseCountHistoryEntry>> {

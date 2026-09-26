@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "task": 43,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+      "line": 15,
+      "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+      "line": 26,
+      "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+      "line": 15,
+      "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseProvenancePage.tsx",
+      "line": 21,
+      "sha256": "a25a884e59dac45191c8289ccd2fc076b50e2fe5e8cf23586202cdffc888b8f1"
+    },
+    {
+      "path": "docs/warehouse-migrations.md",
+      "line": 1,
+      "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V177__warehouse_legacy_preservation.sql",
+      "line": 1,
+      "sha256": "dcfa14774e95a35af8d86135889fe03dd2085500f704f23f3189a7eed519cb88"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178__warehouse_tenant_finalization.sql",
+      "line": 1,
+      "sha256": "f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseMigrationIT)",
+    "W(WarehouseProvenancePage)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/42",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/cancellation-final-verification.json",
+      "sha256": "79244c2c20f0737c3b84cbe57bed4fcabaa5652995ef4e0746e5397f9efdf09e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/cancellation-regression-verification.json",
+      "sha256": "90ba472bee38b8163a030b16815db1aad73bec3163c6c626ca4a5824bcbc1cde",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/current-cutoff-verification.json",
+      "sha256": "c97ffb7aac70488fdd63b0f6123ad9b41432352ba9c1494eff2195c7653f0bad",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/current-identity-verification.json",
+      "sha256": "873bbbe3dacd77fd5889f8ecacf5420d12c2f263d4e7c012d80a240f800a1f06",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/finalization-verification.json",
+      "sha256": "814daae9ce3d1f7f13a19983b6a9b7047d9da4418756bf865ee4f1932642fc7b",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/legacy-closure-verification.json",
+      "sha256": "12306c2bdc17f5da242c1de7b20eb5f9bdf4f622d3165cced01a65d988f3004d",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/legacy-fulfillment-verification.json",
+      "sha256": "03111268147afb5b11955bf59b530f6e85651289058e5a7aae9841d14fa0094b",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/migration-evidence-verification.json",
+      "sha256": "54aca96e2756fa3bcefc2160b415557cc17bb3df303e0d17942715c139147169",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/migration-resolution-verification.json",
+      "sha256": "873ddea452c4571c207a6089d7a2175de0bafd3b463376ca92f591b242f65c64",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-admission-verification.json",
+      "sha256": "5482419004684e783b16e47ab2cf550392cca7e762de7a96750f8ad4661b55db",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-directory-verification.json",
+      "sha256": "5aa6324a04f790f3b3edda7ba513d0eeae76cdfcf1dd9899298776647c82abe0",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-policy-verification.json",
+      "sha256": "4bd7f1e1f4125b43f97d2ec29f25f901a8c8ac48ebf3f46df5b397c70800727e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-review-verification.json",
+      "sha256": "574812921b9115acf0bec01bc7d4fc97d47172244c8ab011aa7d0a7e4955c8a2",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-web-verification.json",
+      "sha256": "cb7822dee1386fa40265a88653cc4e6925c28469c4e2d2ffc24609e8dbaa121e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/preservation-migration-verification.json",
+      "sha256": "17dcd56f700865408cd19f2c620b0ee1fb75e9c8b4a9cd7bcdb213fcd8372ee9",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/provenance-query-batch-verification.json",
+      "sha256": "510ca5ce9b7c9c8f9dededc097f5ff0b0c4741473d94d547c0348bfc2cbd945c",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui-verification.json",
+      "sha256": "3f03b2d1e412cb115a744dda23cdc0427a718d0caf6e6ac0e2171875d104cf9e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseMigrationIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 4
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

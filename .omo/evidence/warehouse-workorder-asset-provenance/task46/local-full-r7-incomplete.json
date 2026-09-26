@@ -1,0 +1,16 @@
+{
+  "status": "INCOMPLETE_TIMEOUT",
+  "sourceCommit": "40cbd34f31b967268fb3766b246c613a4af7026f",
+  "exitCode": 124,
+  "observedPassedLines": 2930,
+  "observedFailedLines": 0,
+  "completeModernXmlReports": 0,
+  "logSha256": "9dc38d5c53e024ac8218a87f95bfa239c2df57b8d0cae30d1e338578ba5c5fc7",
+  "archivedBinaryFiles": {
+    "counts.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "gradle-test-results/binary/in-progress-results-generic17501217800917584359.bin": "69e99fa84e21aa76e032f055711ac14f865d5e870613cec30ebf3be8b26fb470",
+    "gradle-test-results/binary/output-events.bin": "d9ecf1cbd9b58efc9827cdb5a7bae17d1d598c322563866b0b699e3f583f9f91"
+  },
+  "cleanup": "Owned containers/network stopped; volumes retained. No active QA process remained on resume.",
+  "limitation": "Passed console lines are observations, not complete executed full-regression XML evidence. CI full-suite result must be independently revalidated."
+}

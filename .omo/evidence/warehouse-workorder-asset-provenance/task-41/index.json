@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "task": 41,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+      "line": 14,
+      "sha256": "c87460823e4e39fc97a583ba0251cecc9ad8a766b3db8ab014a7446081f69f72"
+    },
+    {
+      "path": "web/src/pages/CustomerDetailPage.tsx",
+      "line": 103,
+      "sha256": "3d1259fd85b2830e7e450d2ce6b21442cb0a650f77bb495b9b0af2c82bdb26ac"
+    },
+    {
+      "path": "web/src/components/organisms/DiscoveredOnuInbox.tsx",
+      "line": 59,
+      "sha256": "3f7a3925b66dbde13f64147b2a73898d64b5f9c0cd9e7822355ae52bbabb7774"
+    },
+    {
+      "path": "web/src/portal/portalAssets.ts",
+      "line": 6,
+      "sha256": "1419208bcf229e3338b5c409607b84f3a5135faf622338a95098e6f627b75230"
+    }
+  ],
+  "requiredSelectors": [
+    "W(CustomerAssetPanel)",
+    "B(customer-assets.spec.ts)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/40",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/customer-asset-core-verification.json",
+      "sha256": "4786ccdafd59c1bf496e76da2856cb3fa03dfe651fbd61c4b44d146ee5deb63a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/customer-asset-read-verification.json",
+      "sha256": "d0f2c537981f6ccc4733fbf6072cc076d86bc39fc900f878ab8b47cf9df97708",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/my-materials-rma-verification.json",
+      "sha256": "b3a352e712fcec97b4e62fd27ee3445aaf35af858c69ae5ae278eb4139a6dabd",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

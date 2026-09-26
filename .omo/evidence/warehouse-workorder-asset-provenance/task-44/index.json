@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "task": 44,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+      "line": 16,
+      "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+      "line": 1,
+      "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseRecoveryIT)",
+    "G(WarehouseConcurrentLifecycleIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/43",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/mixed-material-verification.json",
+      "sha256": "0dfc026eecc0004a41606c0472779605b9e382dd0da67a129caa22ec6f567f53",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/numeric-recovery-verification.json",
+      "sha256": "8866e53d9a875e04155473ab76e7d1e5e2076fe3c594079252bca956295646c1",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/numeric-temporal-verification.json",
+      "sha256": "8a38d3598f50c8354a452ade9e82abac46e4fc7cc5003fbe939aa5aef6870486",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/reassignment-settlement-verification.json",
+      "sha256": "37098d713e3631ac03a9d2ee6cd2681437d147b4aa8429440d653cc0cd8acaf6",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/serial-settlement-verification.json",
+      "sha256": "64fb21e6953561a8bb3d1c003b36707bf6a34cc58edb7b443b0927e746d26f60",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/usage-order-verification.json",
+      "sha256": "bf07df9e70225e06b70b8355e74fa5ee413ec89162dc59d2610ec33ab4ba49b0",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseRecoveryIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 2
+      },
+      {
+        "selector": "G(WarehouseConcurrentLifecycleIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 4
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

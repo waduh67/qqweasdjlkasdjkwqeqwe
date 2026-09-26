@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "task": 29,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReplenishmentService.kt",
+      "line": 16,
+      "sha256": "fe8dc468d10121ee16a5c2382cbb1bc681ee634533d7560d0f03bd4c8fededa7"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReplenishmentQueryService.kt",
+      "line": 19,
+      "sha256": "f1dd9b097717e7d9ca632207823c4156c56802d5ffc1439ea7fcf5cf8034b270"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseReplenishmentIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/28",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task-29/resume-result.json",
+      "sha256": "60b44f1166edf57d0b4aef39b9711a8045d5eddd425ff0918b851477e3499505",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task-29/resume-source-manifest.json",
+      "sha256": "c29a5a5b8bbeef18fa52c5792e3b7d1b1ac8e1a8497ac5754f1f1922b57cc970",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseReplenishmentIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentIT",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITAtomicity",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITCommands",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITFormula",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITInbound",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITLiveSeed",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITTimeout",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITUpgrade",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 18
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

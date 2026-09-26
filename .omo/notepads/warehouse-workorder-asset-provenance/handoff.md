@@ -1,4 +1,4 @@
-# Warehouse continuation — 2026-09-25
+# Warehouse continuation — 2026-09-26
 
 Continue to completion after each checkpoint. User requested a long run with coherent
 commits pushed for recovery by another agent. This note supersedes older runtime
@@ -6,40 +6,52 @@ instructions; task46 remains in progress,47/48 and final F1–F4 are not approve
 
 ## Current product checkpoint
 
-This commit adds revisioned PUT/edit UI for saved operational transfer drafts and
-V178.10. Original create/update response bytes remain in immutable operation history.
-New edits authorize original sender and old/new location scopes, validate the new
-receiver/positions, replace lines at the next revision and never post/reserve stock.
-Drafts with disabled receivers remain discoverable/repairable. Prior create/edit
-replay checks current authority and old/current scopes without rerunning receiver
-execution eligibility. Posted transfer bindings remain immutable.
+This checkpoint extends6c6195ae transfer draft editing/V178.10 with COUNT editing and
+V178.11. Push target is `work/warehouse-draft-lifecycle`; local edit branch is
+`work/warehouse-regression-fixtures`. Do not assume its same-named remote is current.
+Original/feature branch remains40cbd34f; R7 has ended, so the original freeze is over.
 
-GET obtains topology before reading the record; detail references bind exact line IDs.
-History filters each original snapshot's locations before counting/paging. SQL rejects
-all-null binding removal, missing command revisions and unrecorded reason changes.
-Six new HTTP tests cover full replacement, replay/scope, raw SQL, disabled receiver,
-PUT/PUT and PUT/dispatch races, and a controlled PUT/details race. A separate upgrade
-test seeds real draft/dispatched commands in178.9 and checks preservation/replay plus
-edit after178.10. Three added web tests and the real browser returns scenario exercise
-edit. Workflow now selects45focused classes including all transfer regression groups.
+COUNT adds revisioned PUT and requester-only bounded GET draft, shared
+current counter eligibility, full UI hydration/edit/conflict handling and V178.11.
+COUNT round/evidence/result rows remain immutable; old create/update response bytes
+stay unchanged and replay rechecks old/current scope. No book quantities in the form.
+Docs/current schema references now178.11, next178.12; workflow adds5count classes.
+The real browser helper edits the saved draft before starting round2.
 
-Validation so far is SOURCE ONLY:28Python guard tests, actionlint and diff check PASS;
-364prior migration files are unchanged. Kotlin compilation, SQL/HTTP/upgrade tests,
-web lint/build/unit and current browser/full regression remain pending. See
-`task46/transfer-draft-source-checks.json`. Independent reviewer found no remaining
-critical/high or migration source blocker after fixes; this is not final F4 approval.
+Local corrected focused checks passed. Initial r1completed67tests/19suites with
+65pass/2test expectation failures. R2reran the two corrected test classes14/14PASS.
+Exactly those two test sources changed; all2601server inputs compared. Thus53unchanged
+passing cases plus14rerun cases give67combined passing cases, including both migration
+upgrade fixtures. Proof: task46/local-count-transfer-focused-r2.json, with failedr1
+retained. This is combined focused evidence, not an unfiltered full pass.
 
-Save/push this checkpoint to `work/warehouse-draft-lifecycle` so its CI can run without
-replacing the still-running legacy/report/feature jobs. Local edit branch remains
-`work/warehouse-regression-fixtures`; do not assume its same-named remote is current.
-The previous remote `work/warehouse-legacy-read-scope` is149ecfb2, report remote
-`work/warehouse-report-scope` is a1d4eb19, feature remote is40cbd34f.
+Web r4passed9/9, warehouse E2E typecheck, lint(exit0,99warnings) and production build.
+The editor renders25rows per page and preserves all100 in state and exactPUT. The
+100-assignment test passes in1.845s. Earlier unpaged/label-query failed iterations are
+retained as safe metadata. Proof: task46/local-count-web-r4.json. Runtime migration
+V178.11 is now applied locally and immutable; all365prior migration bytes unchanged.
+
+Browser exceptions desktop/mobile completed2/2PASS, no failures/skips/flakes/retries.
+It edits drafts before starting round2, then exercises blind counts, independent
+rejection, moving stock and append-only recount. Raw report/traces are privately
+archived at original runtime/count-browser-r1-report.json and count-browser-r1-artifacts.
+Safe source-bound proof: task46/local-count-browser-r1.json. Cleanup completed; no
+local QA remains active. Other browser scenarios/current full CI remain required.
+
+Independent F2parsed the actual server/web reports and current source hashes; safe
+note task46/f2-count-transfer-executed-verification.md/json confirms the67combined
+and9web results, preserving r1failure and precise gate limits. Earlier source notes
+remain dated historical witnesses. This does not grant final F2approval.
+
+All48safe task-N/index.json files are saved with exact old source/proof identities.
+Two old safe task29receipts were recovered from the original checkout with exact
+reviewed hashes; all historical references resolve. No early evidence was invented.
+Asset-exception UI design: task46/f1-asset-exception-ui-design.md.
 
 ## Outstanding implementation and review
 
-- F1 COUNT saved-draft PUT + visible edit, preserving blind counts, original requester,
-  immutable rounds/facts/results, old/current replay scope and current counter eligibility.
-  Detailed source design: task46/f1-count-draft-design.md. Next migration is178.11.
+- Push this coherent COUNT/transfer correction checkpoint, capture its CI run and keep
+  implementing C7/C8 while full current regression runs. V178.11 is applied and immutable.
 - C7 idle expiry for operational receipt/material-plan/transfer/count drafts AND retained
   unapproved immutable proposals. Prefer append-only terminal decisions plus SQL liveness
   guards/current read overlays; do not mutate sealed source bodies or post stock.
@@ -48,40 +60,34 @@ The previous remote `work/warehouse-legacy-read-scope` is149ecfb2, report remote
   can comply; no blanket PUT on sealed LOSS/TITLE/etc requests is required. Still fix
   unusable TITLE_CORRECTION rework, supplier replacement's false generic edit action,
   and assess missing ASSET_LOSS/TITLE_CORRECTION creation UI callers against plan scope.
-- Finish48safe task-N evidence indexes (current draft mapping saved; don't invent missing
-  early historical runs), current complete regression, independent F1/F2/F3/F4, runbook
+- Complete current regression, independently review the48safe task-N evidence indexes, F1/F2/F3/F4, runbook
   and release closure. F3 real browser/manual independent review has not started. F4
   independent positive/negative SQL preflight remains pending host availability.
 
-## Active validation and known results
+## Validation and known results
 
-Original checkout `/home/fajar/ftth/qqweasdjlkasdjkwqeqwe`, branch work/warehouse-completion,
-remains FROZEN at40cbd34f while local full-server-R7/session39048 runs. Projection1 and
-historical7 PASS; modern tests last observed2800PASS/0FAIL, not a complete result.
-Safe monitor: original `.omo/runtime/safe-test-progress.py .omo/runtime/full-server-r7.log`.
-Original `.omo/runtime/ACTIVE-WAREHOUSE-RUN.json` records live process pointers.
-Archive/validate complete R7 output before touching original or starting other host QA.
+- CI36149519466 at149ecfb2 COMPLETE SUCCESS. Root and separate F4 reviewer authenticated
+  actual artifacts:3792modern tests/612suites,266focused,7historical+1projection,376source
+  inputs, all15jobsPASS. Safe proofs task46/ci-149ecfb2-complete-server-verification.json
+  and f4-ci-149ecfb2-server-recheck.md/json. Proves149only, not transfer/count changes.
+- CI36160896348 at6c6195ae COMPLETE FAILURE at compileTestKotlin (five AssertJ Consumer
+  overloads in TransferDraftIT); no server tests ran. Application build/migration and
+  all nonserver jobs passed. Root actual web artifact revalidation confirms579tests
+  (task46/ci-6c6195ae-web-verification.json). Other6cnonserver report contents await
+  direct revalidation; successful job labels alone are not artifact verification.
+- Local full-server-R7 at40 timed out exit124,2930observedPASS/0observedFAIL and no
+  complete modern XML. Historical7+projection1 passed. Safe proof task46/local-full-r7-incomplete.json.
+  Cleanup completed; volumes retained. Never mark incomplete run successful.
+- CI36137258991 at e178,36135632377 at40,36147421484 at a1d4 all completedSUCCESS.
+  e178actual nonserver proof is task46/ci-e1782718-nonserver-verification.json.
+- CI36148238334 atd8failed test compilation;149fullpass supersedes it for that source.
+- Older2c1fullserver proof3783tests/609suites,241focused,7+1,375inputs/all15jobsPASS is
+  task46/ci-2c1d8e08-complete-server-verification.json. Keep actual historical identities.
 
-- CI36131581036 at2c1d8e08 COMPLETE SUCCESS: actual3783modern tests/609suites,
-  241focused/23suites,7historical+1projection,375sourceinputhashes,all15jobsPASS.
-  Proof task46/ci-2c1d8e08-complete-server-verification.json. It proves that old commit only.
-- CI36137258991 ate1782718: compile and30-class focused stepPASS, full server still
-  running last check; actual complete nonserver reports revalidated (22browser,6legacy,
-  576web,44shared,2native compile tasks,image/restart,8preflights). Source report fix
-  moves direct work_order reads to owner API with ordered FOR SHARE area/tenant scope.
-- CI36135632377 at40: full server still running last check.
-- CI36148238334 atd8a4ae29: COMPLETE FAILURE from test-only Jackson collection overload
-  compile errors; server tests never ran. Every nonserver job completed success (not yet
-  independently revalidated here).149ecfb2 fixes explicit list mapping without weakening
-  assertions. CI36149519466 at149: compilePASS,focused currently running; nonserver running.
-- Queued36147421484 ata1d4 may remain pending behind reportCI.3624 duplicate36134311367
-  was cancelled before any job only after exact product/test/migration/runner equality to40;
-  safe cancellation receipt is saved. Never cancel active useful validation.
-
-Private original-runtime helpers download/decrypt/revalidate CI evidence without printing
-raw output: download-ci-evidence.py, download-native-evidence.py, revalidate-nonserver.py,
-revalidate-server.py. Adapt hardcoded expected web counts to current actual source/report
-when new tests are added; never relabel old evidence. Keep honest failed/incomplete runs.
+Private original-runtime helpers download/decrypt/revalidate CI evidence without raw
+output: download-ci-evidence.py, download-native-evidence.py, revalidate-nonserver.py,
+revalidate-server.py. Adapt old hardcoded expected web counts to actual source/report;
+never relabel old evidence. Actual current full CI/browser validation remains required.
 
 ## Isolation, recoverability and user decisions
 

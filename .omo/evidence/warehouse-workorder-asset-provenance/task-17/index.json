@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "task": 17,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentContracts.kt",
+      "line": 6,
+      "sha256": "c6b2fb84209398cce97b8d4f70ff41b94c8a938d30d85cf4bd81c5c37d0099f7"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentEventListeners.kt",
+      "line": 15,
+      "sha256": "b196b7e76be6b9f084cfecc2f250a295a95415b6f8902c26d5e0484b37f9f579"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialConsumptionService.kt",
+      "line": 13,
+      "sha256": "503e5205358ada33a7abbd83c86a77d258319451343bfe2fefaca53450bb8a7e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySettlementApi.kt",
+      "line": 1,
+      "sha256": "978be5445ba9cf740fcac7b32ded725a098133db3af7ed275deda83e18777a94"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt",
+      "line": 1,
+      "sha256": "34805ef237b772dde31ce1cb93057578880ed5e53fdb6b64851ef117fa176eed"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseFulfillmentIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/16",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseFulfillmentIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+            "tests": 24,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngExactSet",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineage",
+            "tests": 19,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageRace",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITConcurrency",
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITScope",
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITUpgrade",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 82
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

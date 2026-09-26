@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "task": 1,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "scripts/warehouse/test-environment.sh",
+      "line": 1,
+      "sha256": "165e7a1055c1048dc6f03e61d06b11887ae14fc3f20c79f2090d879f55025e2a"
+    },
+    {
+      "path": "scripts/warehouse/qa.sh",
+      "line": 1,
+      "sha256": "a49f51b1f2b9133c3b5560ca0a32473497e01f08b4503c1fb50b6d02faa6d60e"
+    },
+    {
+      "path": "deploy/docker-compose.warehouse-test.yml",
+      "line": 1,
+      "sha256": "5c3c7fe6e49c84187ae60134341264c745056670e2439b2db9cb8fef11c0fec3"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseEnvironmentIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/0",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseEnvironmentIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 7
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

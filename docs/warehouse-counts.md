@@ -10,7 +10,12 @@ lengkap dan tanggal diterapkan sebelum paginasi.
 1. Pilih satu lokasi, alasan, posisi barang dan penghitung aktif untuk setiap posisi.
    Satu posisi hanya boleh muncul sekali; maksimal 100 posisi. Dokumen selalu
    mencakup sebagian lokasi sesuai posisi yang dipilih.
-2. Pembuat menyimpan draft lalu **Mulai penghitungan**. Draft belum mengubah stok.
+2. Pembuat menyimpan draft lalu dapat memilih **Ubah draft stock opname** untuk
+   mengganti alasan, lokasi, posisi dan penghitung sebelum **Mulai penghitungan**.
+   Draft belum mengubah stok. Posisi atau penghitung yang sudah tidak memenuhi syarat
+   harus dipilih ulang. Semua posisi tersimpan dimuat, hingga 100, termasuk yang berada
+   di luar halaman pertama pilihan. Editor menampilkan 25 posisi per halaman; semua
+   halaman tetap disimpan bersama. Setelah penghitungan dimulai, draft tidak bisa diedit.
 3. Setiap penghitung mencatat hasil fisik posisi yang ditugaskan, keterangan, dan
    referensi lembar hitung. Meter menerima maksimal tiga desimal; unit berupa
    bilangan bulat. Nol diperbolehkan. Tidak ada jumlah awal yang diisi otomatis.
@@ -38,6 +43,7 @@ Pembacaan baru pada `/api/v1/warehouse/counts`:
 - `GET /workbench`: daftar bernama, filter `page,size,state,locationId,skuId,serial,query,from,until`.
 - `GET /positions`: pilihan tanpa jumlah; `locationId` wajib, dengan `page,size,skuId,serial,query`.
 - `GET /locations/{locationId}/counters`: penghitung aktif yang memiliki izin dan cakupan, `page,size,query`.
+- `GET /{id}/draft`: formulir tersimpan khusus pembuat, dengan posisi tanpa jumlah dan penghitung yang masih memenuhi syarat.
 - `GET /{id}/details`: identitas posisi dan nama petugas tanpa jumlah pembanding.
 - `GET /{id}/review/details`: perbandingan pengajuan, khusus izin persetujuan.
 - `GET /{id}/history/page`: hasil tetap terbaru, pembatasan penghitung sebelum jumlah total/paginasi.
@@ -45,4 +51,11 @@ Pembacaan baru pada `/api/v1/warehouse/counts`:
 Halaman default 25, maksimal 100; filter tidak dikenal, berulang atau kosong ditolak.
 Tanggal awal/akhir harus diisi bersama, berurutan, maksimal 366 hari. Semua respons
 baru memakai `Cache-Control: no-store`. Riwayat lama `GET /{id}/history` tetap berupa
-array urutan awal, kini dibatasi default 25/maksimal 100. Kontrak mutasi tetap sama.
+array urutan awal, kini dibatasi default 25/maksimal 100.
+
+`PUT /{id}` menerima `{expectedRevision,draft}` dan kunci idempotensi yang baru untuk
+setiap edit. Bentuk `draft` sama dengan pembuatan (`locationId,partialLocation,reason,entries`);
+`partialLocation` harus `true`. Konfirmasi menampilkan revisi tersimpan. Edit menambah
+revisi satu kali; kunci dan isi yang sama mengembalikan respons asli selama izin,
+cakupan awal dan cakupan saat ini masih berlaku. Riwayat respons lama tetap tersimpan.
+Konflik memerlukan muat ulang sebelum meninjau perubahan berikutnya.

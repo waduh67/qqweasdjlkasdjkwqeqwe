@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "task": 46,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/build.gradle.kts",
+      "line": 1,
+      "sha256": "ca149a31652e646b184eb4f292b3959af0a973bf5235c71a5c6b019856b08de7"
+    },
+    {
+      "path": "scripts/warehouse/qa.sh",
+      "line": 1,
+      "sha256": "a49f51b1f2b9133c3b5560ca0a32473497e01f08b4503c1fb50b6d02faa6d60e"
+    },
+    {
+      "path": "scripts/warehouse/historical-upgrades.sh",
+      "line": 1,
+      "sha256": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/WorkOrderIT.kt",
+      "line": 36,
+      "sha256": "4d7934d192473964b02fc55a7df41e6ba2cf3e21850eed307959764265f7414d"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt",
+      "line": 29,
+      "sha256": "7ac39bfa5a5077506a5526e54e004f7a095dc98702de184e80bd98b6fe02b015"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseCompatibilityIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/45",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-2c1d8e08-nonserver-verification.json",
+      "sha256": "60561fddaa38ebb803aa55ed299b7c146e79a75ca447fa8b0e147ed2e49e04b0",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-64e50573-nonserver-verification.json",
+      "sha256": "7a9462ef3ce81d12c5d13c4371dad65abeee675f7fe4cdfa2ab6f9b572df2921",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-b360-historical-failure.json",
+      "sha256": "90ea6800b62b628174b3f6ee5c1fb0cf4f1e182b786bbdc47a085bcac669002a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-browser-web-shared-r2.json",
+      "sha256": "25955b740a8dbdc00303b7bc5b4c4a7b7fcce3e59fe12ddc2bccf4be737a6501",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-native-legacy-r2.json",
+      "sha256": "586dc7b33cbbb786ca9ad2696803f788e12f811af87d8ab62194978a36db78b6",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-r2-complete-server-failure.json",
+      "sha256": "0dacfeef5a602bf76a76d85cf7855a5323ddc85c9d1a10119ddebf779b205bac",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-r4-monitoring-fixture-correction.json",
+      "sha256": "b575db1cfce4e760d0b9fb5b78fe00b0d7dc91ddcb4afc1bbf363dd2a619f094",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-web-shared-native-r1.json",
+      "sha256": "0dc4267607afe6a3b27f570400c0e53d7f6fcb3a87c0635681b2633501cc96a1",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/database-isolation-verification.json",
+      "sha256": "1e1111c4d50bcaffad4a134a05476dff609b60c0040635e5cde103337483c8c4",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/fixture-compile-correction.json",
+      "sha256": "e33d831fc182995b1188c6630c7583e33984bb0c18ec614f021f1391d72ed9b2",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/fixture-validation-checkpoint.json",
+      "sha256": "fada7b2eeb57f703d39a0dbca5dd8e5b25bc614f2ca1d98a0927fc5bc9a8427d",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/focused-r3-empty-tenant-failure.json",
+      "sha256": "04041e22cd765ba1d424992bef87bfc51a8aad4c799b3c92154d28c8ed377c4d",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/full-server-r3-incomplete-verification.json",
+      "sha256": "94e74ed3cb5ba43c0c88d4d402787772a2de223a50b00816535040496fa14e82",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/full-server-r3-progress.json",
+      "sha256": "f2487b8f8a6427c47a4e581b80322fe4e228f28a84c73d5a90069911ae72462b",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/historical-overlay-reuse-verification.json",
+      "sha256": "74f52e2d2dc39974c632afd6ff8ba688da07910dbe4dac16fa23e84a0f18d48a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/historical-projection-upgrade-verification.json",
+      "sha256": "b184d094e19d654da0f189506f2922e0b8915a36d118838f1dfb5fef597cf018",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/late-regression-corrections-pending.json",
+      "sha256": "183026a5f9360a498ed66296f42b9ba69e754fde69cab558530b73d106248941",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-focused-r2-verification.json",
+      "sha256": "cb01df87a68ad87c79ead9dd5efa4620211f4ab2973dc13a573ad985e0992c7a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-focused-r4-verification.json",
+      "sha256": "4d6b0d1a908c9308b1df12128f7acbeb4c3b54b8d51a39b3fefb005ca1c21915",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-historical-r2-failure.json",
+      "sha256": "e1e0ae95e86e7abd8881bea8fc4b5e32550cdfe0341b423a2163bf54e0dfb024",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-historical-r5-verification.json",
+      "sha256": "37bf5c7ef790066e71817c9b3374e2deeca756cd8fac6e2d3d388b0c8727b68a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/native-source-equivalence.json",
+      "sha256": "c692670d0e2b47804e2faff7c23a68f33cd8b8dc78fbaa77c24e85a669f28a7f",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-browser-reassignment.json",
+      "sha256": "9ab6a51dcdf770cb63ade72f75082743295b6929fc1c4ffb90d19a8babbdf9c0",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-deployment-orphan.json",
+      "sha256": "6860f4a304271747c6868eb65d6274348b280a4e9c9eaa049f86fa02ff7115e1",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-episode-upgrade.json",
+      "sha256": "aea25b1fcff89b5110cc8b0fbb6773c6fd76d342f41f56562de21d133139ea40",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-handover-source-denial.json",
+      "sha256": "7fc8bc5086581759ba9857fb99a396579e68b8f9fa5e5a158a9c6f38c057396d",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-historical-upgrades.json",
+      "sha256": "d068c19ec16c949498f2c42fac31193ddb54513bd809329a5019bdbf5059eece",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-legacy-preflight.json",
+      "sha256": "e8d482f0503c24186fd2ca0a773cce77268120fad211c9ca088a95aaddacb52a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-network-fixtures.json",
+      "sha256": "afc7f63a3479dd3b8954f3d565209bbe522cd1dee49c93e3f58fe7efa7523663",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-patch-manifest.json",
+      "sha256": "8054d80c75b79cfb93465915dfaacce1b66ccaa3b39efd4645e4512736ecdd26",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-template-action.json",
+      "sha256": "e6140fa60cb213fa4676a6da6ac8213e1f71fc1e44fbced26df909ed1feb69b6",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/plan-qa-source-inventory.json",
+      "sha256": "17cc4bb1a12a76985e7297c8940b7add9193bbcca39df584146949b557e26f5b",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/portal-contact-verification.json",
+      "sha256": "3e9e06ed7dd1baf7f53c9bd117db4e05a5226b39968e92354a68b33b43b9828d",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/qa-function-recovery-verification.json",
+      "sha256": "f1da53f8f12dd64de9bab9ff51be6d4d96ac0b73d4017c9b4e21d5a047d15385",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/return-state-contract-correction.json",
+      "sha256": "9da14591915ae2833adc8b91b1766fca71f7f344acfa9222e4033d37fa772c4e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseCompatibilityIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityIT",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITAreaScope",
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITCsv",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITMaterials",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITProjection",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITSourceGate",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITSubscriber",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 20
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

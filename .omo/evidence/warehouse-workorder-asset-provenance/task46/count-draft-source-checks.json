@@ -1,0 +1,13 @@
+{
+  "status": "PASSED_MIGRATION_IMMUTABILITY_CHECK",
+  "baseCommit": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+  "unchangedAppliedMigrationFiles": 365,
+  "addedMigrationSha256": {
+    "server/src/main/resources/db/migration/V178_11__warehouse_count_draft_revision.sql": "e204ad6c111a45e60610cf5338e218b8514fa06d54f3af3d243458c07570dce7"
+  },
+  "highestPackagedVersion": "178.11",
+  "nextAvailableVersion": "178.12",
+  "runtimeEvidence": "local-count-transfer-focused-r2.json",
+  "webEvidence": "local-count-web-r4.json",
+  "limitation": "Local focused verification; current full CI/browser/release gates remain outstanding."
+}

@@ -13,6 +13,9 @@ class WarehouseCountController(private val counts: InventoryCountApi) {
     @PostMapping
     fun create(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         response(counts.create(WarehouseReceiptJson.decode(body, WarehouseCountDraft::class.java), key))
+    @PutMapping("/{id}")
+    fun update(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        response(counts.update(id, WarehouseReceiptJson.decode(body, WarehouseCountUpdate::class.java), key))
     @PostMapping("/{id}/start")
     fun start(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         response(counts.start(id, WarehouseReceiptJson.decode(body, WarehouseCountRevision::class.java), key))

@@ -16,32 +16,37 @@ import java.util.UUID
 class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehousePolicyAccess, private val masters: WarehouseMasterStore,
     private val store: WarehouseCountStore, private val receipts: WarehouseCountReceipts, private val operations: WarehouseOperationStore,
-    private val query: WarehouseCountQuery) : InventoryCountApi {
+    private val query: WarehouseCountQuery, private val counters: WarehouseCountCounters) : InventoryCountApi {
     private val mapper = jacksonObjectMapper()
 
     override fun create(input: WarehouseCountDraft, key: String): WarehouseOperationReceipt {
         validateKey(key)
-        if (!input.partialLocation || input.reason.isBlank() || input.reason.length > 500 || input.entries.size !in 1..100 ||
-            input.entries.map { it.balanceId }.distinct().size != input.entries.size) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        validateDraft(input)
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         access.permission(current, "inventory.count.manage")
+        access.permission(current, "inventory.count.view")
         masters.lockTopology()
         access.location(input.locationId, current)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
         replay("create", key, canonical.hash, current, cutover.snapshot.epoch)?.let { return it }
-        val directory = access.directory(current)
-        if (input.entries.any { entry -> directory.users.none { it.id == entry.counterId && "inventory.count.manage" in it.permissions } })
-            masterFailure(WarehouseErrorCode.FORBIDDEN, "Assign an active counter with count permission")
-        val positions = input.entries.sortedBy { it.balanceId.toString() }.associate { entry ->
-            val position = store.position(entry.balanceId)
-            if (position.dimension.locationId != input.locationId) masterFailure(WarehouseErrorCode.NOT_FOUND)
-            entry.balanceId to position
-        }
+        val positions = positions(input, current)
         val id = UUID.randomUUID()
         store.create(id, input, current.fence.identity.userId, current.fence.epoch, cutover.snapshot.epoch, positions)
         return receipts.record(id, 0, "create", key, canonical.hash, canonical.json, current, cutover.snapshot.epoch, 201,
             mapper.writeValueAsString(store.get(id).view))
+    }
+
+    override fun update(id: UUID, input: WarehouseCountUpdate, key: String): WarehouseOperationReceipt {
+        validateDraft(input.draft)
+        return mutate(id, input, input.expectedRevision, "update", key) { session, current ->
+            requester(session, current)
+            state(session, WarehouseCountState.DRAFT)
+            if (session.view.roundRevision != null || store.facts(id).isNotEmpty()) masterFailure(WarehouseErrorCode.STALE_REVISION)
+            val positions = positions(input.draft, current)
+            store.replaceDraft(id, input.expectedRevision, input.draft, positions)
+            null
+        }
     }
 
     override fun start(id: UUID, input: WarehouseCountRevision, key: String) = mutate(id, input, input.expectedRevision, "start", key) { session, current ->
@@ -171,7 +176,27 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
         if (prior.actorId != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
         if (prior.hash != hash) masterFailure(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
         if (prior.cutoverEpoch != epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
+        if (action in setOf("create", "update")) {
+            val original = mapper.readValue(prior.receipt.originalBody, WarehouseCountView::class.java)
+            access.location(original.locationId, current)
+        }
         return prior.receipt
+    }
+
+    private fun validateDraft(input: WarehouseCountDraft) {
+        if (!input.partialLocation || input.reason.isBlank() || input.reason.length > 500 || input.entries.size !in 1..100 ||
+            input.entries.map { it.balanceId }.distinct().size != input.entries.size) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+    }
+    private fun positions(input: WarehouseCountDraft, current: CurrentAuthority): Map<UUID, CountPosition> {
+        access.location(input.locationId, current)
+        val eligible = counters.eligible(input.locationId, current).map { it.id }.toSet()
+        if (input.entries.any { it.counterId !in eligible })
+            masterFailure(WarehouseErrorCode.FORBIDDEN, "Assign an active counter with count permission and location access")
+        return input.entries.sortedBy { it.balanceId.toString() }.associate { entry ->
+            val position = store.position(entry.balanceId)
+            if (position.dimension.locationId != input.locationId) masterFailure(WarehouseErrorCode.NOT_FOUND)
+            entry.balanceId to position
+        }
     }
 
     private fun authorize(session: CountSession, current: CurrentAuthority) {

@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "task": 4,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
+      "line": 22,
+      "sha256": "e3e73ce6cd9883d81503bc19a62e02a04acb909c99a7443c56c24cea0fdf59da"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V173__warehouse_masters_identity_and_cutover.sql",
+      "line": 1,
+      "sha256": "738e9ff3feea697cf96ffa8c8d72585203b1b3916c7b33d481cbb3f3f23ec578"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V174__warehouse_documents_and_balances.sql",
+      "line": 1,
+      "sha256": "b72dc30f5b0c5ccacbc7555c31fadf22201811461d72b67c58636eac4492fb71"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseSchemaIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/3",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseSchemaIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaIT",
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITConstraints",
+            "tests": 12,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITDeferredScope",
+            "tests": 10,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITLotCapacity",
+            "tests": 10,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+            "tests": 11,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+            "tests": 13,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITReceiptEvidence",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITRestart",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseSchemaITUpgrade",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 129
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

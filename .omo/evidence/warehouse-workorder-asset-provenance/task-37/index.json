@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "task": 37,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "web/src/pages/warehouse/WarehouseCountsPage.tsx",
+      "line": 26,
+      "sha256": "783f6d3b67494ab2826f7bdfb69dfcb534485f8c7f4259e4a1e4b55f4b6dfbc2"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+      "line": 26,
+      "sha256": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseDispositionForm.tsx",
+      "line": 13,
+      "sha256": "7deffe53dbc451df7c0f06c62977cdec6c13f88d491c04416073fe7f8963e41e"
+    }
+  ],
+  "requiredSelectors": [
+    "W(WarehouseCountsPage)",
+    "W(WarehouseApprovalsPage)",
+    "B(returns.spec.ts)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/36",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/approval-verification.json",
+      "sha256": "9d9192b7975d58d9e6271346da1e56a5d5dd55624007c6faba2059594c3915c0",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/count-verification.json",
+      "sha256": "e63eddec456294ff1aaa3fb2bee6ede27624c7ee33752c23a35b6eb2a1d537c3",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/discrepancy-browser-verification.json",
+      "sha256": "cf72a4d6753fffc2689c375c7a82693aea234df319ea745a64996bf5ae16b2f8",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/disposition-workbench-verification.json",
+      "sha256": "abfe06df336cf871ba6e799f1fa7b4fa2855ea80317e47475a0968b3f588a20e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/evidence-verification.json",
+      "sha256": "e9cda4382d9aab47ef381e17d926d0e52e8f4a62e9d7215ec2679675f07c63a0",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/transfer-recovery-verification.json",
+      "sha256": "faf6228c03e2076a5a864a19bcf0d71b3bd728172ef7e91c5b4f5ba5b0e1fad5",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/web-verification.json",
+      "sha256": "547bdb3e3d67b2bb47dd8a8a338df2c99f3856f21c4aa7b11cf7c0908bdbb907",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

@@ -33,7 +33,7 @@ class WarehouseCountQuery(private val jdbc: WarehouseCommandJdbc) {
             filter.page, filter.size, result.path("totalElements").asLong())
     }
 
-    fun positions(filter: WarehouseCountFilter, access: WarehouseQueryAccess): WarehousePage<WarehouseCountPositionOption> = jdbc.execute { sql ->
+    fun positions(filter: WarehouseCountFilter, access: WarehouseQueryAccess, selectedIds: List<UUID>? = null): WarehousePage<WarehouseCountPositionOption> = jdbc.execute { sql ->
         val query = WarehouseQuerySql(sql, filter.queryFilter().copy(sort = "name", direction = "asc"), access)
         val rows = """SELECT balance.id,sku.name, jsonb_build_object('id',balance.id,'stockIdentityId',balance.stock_identity_id,
                 'baseUnit',balance.base_unit,'item',${itemJson("sku.id")},
@@ -49,10 +49,12 @@ class WarehouseCountQuery(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN inventory_lot lot ON lot.tenant_id=balance.tenant_id AND lot.id=balance.lot_id,request
             WHERE balance.tenant_id=request.tenant AND balance.warehouse_admission='VERIFIED'
                 AND balance.location_id=request.location
+                AND (?::uuid[] IS NULL OR balance.id=ANY(?::uuid[]))
                 AND (request.sku IS NULL OR balance.sku_id=request.sku)
                 AND (request.serial IS NULL OR asset.canonical_serial=request.serial)
                 AND (?::text IS NULL OR position(lower(?::text) IN lower(concat_ws(' ',sku.code,sku.name,asset.serial_number,lot.code)))>0)"""
-        val result = mapper.readTree(query.result(query.page(rows, "body", "name"), filter.query, filter.query))
+        val selected = selectedIds?.let { sql.connection.createArrayOf("uuid", it.toTypedArray()) }
+        val result = mapper.readTree(query.result(query.page(rows, "body", "name"), selected, selected, filter.query, filter.query))
         WarehousePage(result.path("items").asSequence().map { mapper.treeToValue(it, WarehouseCountPositionOption::class.java) }.toList(),
             filter.page, filter.size, result.path("totalElements").asLong())
     }

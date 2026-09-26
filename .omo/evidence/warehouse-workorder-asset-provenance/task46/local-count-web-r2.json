@@ -1,0 +1,16 @@
+{
+  "status": "FAILED",
+  "counts": {
+    "tests": 9,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reportSha256": "28dd3fad6f4fb3b1c690f9f4e62b1b50fcad0126d812082eb204926c47be5804",
+  "logSha256": "54f308dbf987f7fb6637b819181f036da6182b6a4ba84eb3000ebfdc6b36a59c",
+  "scope": "Earlier uncommitted COUNT draft test iteration; retained for audit, superseded by successful r4",
+  "findings": [
+    "Large100-row DOM exceeded test deadline; r2 exact label matching also failed.",
+    "Final correction pages editor25rows while retaining all100 assignments and scopes semantic test queries to visible rows."
+  ]
+}

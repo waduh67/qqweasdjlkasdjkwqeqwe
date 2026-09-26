@@ -1,0 +1,78 @@
+{
+  "sourceHead": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+  "sourceState": "uncommitted COUNT draft source reviewed before COUNT-01/COUNT-02 corrections",
+  "recordedAtUtc": "2026-09-25T16:38:29.617928+00:00",
+  "runtimeRunByReviewer": false,
+  "files": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountApi.kt",
+      "sha256": "49a5f42cd24b5e81c91309fba1faa541de26949fc8712a7c82988c03a3b46a5b",
+      "bytes": 2389
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountQueryApi.kt",
+      "sha256": "e85c4835c64a7c4125193ee237770db634a458ea57d62b0efcd5cecf80fbb20e",
+      "bytes": 2651
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt",
+      "sha256": "f967ae6c90df54701bd5b118d993d35006c3fa141d58039ffa989a0066379d63",
+      "bytes": 2840
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountQueryController.kt",
+      "sha256": "8132d2c9e2a1f090e97cf2e6ad3825af7d08bc4d023b1d164f08f4b8c0ccd4d8",
+      "bytes": 2025
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountQuery.kt",
+      "sha256": "be14ae305698536e5314f6876489b72f1ab64cb7a9746dd0c7bb14a0c697cfa8",
+      "bytes": 9505
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt",
+      "sha256": "1627a10ae977bf51d5ffdcad5f0a5e1eabb31a4c00fbe91aa37ce9bef7a91aea",
+      "bytes": 10261
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+      "sha256": "5dc7d30d8a3b3ef4fe236f5dc4c1cf7a8704bd79dc32ed3199e38fe6956294c6",
+      "bytes": 6291
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+      "sha256": "1f1f135015cb1df324c3f52989c024534382c1372693e625d4ee0173f2f653a2",
+      "bytes": 13041
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountCounters.kt",
+      "sha256": "ecce6889a78149d912819ddeb9e40b96d75acc2d53e7a99806f32c117a53aa5a",
+      "bytes": 1184
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178_11__warehouse_count_draft_revision.sql",
+      "sha256": "35d14dcd24048a0fcdecbfca64c568d8c407f0ab9ca8d4afd257aaa4baf88dba",
+      "bytes": 11837
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftIT.kt",
+      "sha256": "72d48e1cd3a57a889c84918c460b1c743b11c811b9d43f16805af18e7305b2e9",
+      "bytes": 14895
+    },
+    {
+      "path": "web/src/api/warehouse/counts.ts",
+      "sha256": "68e2b4faa9972d4ccc3ff9e69961b7fe3375b9470c8f02a7094f5fd928f96900",
+      "bytes": 10318
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseCountEditor.tsx",
+      "sha256": "1dcfca4804c470679a37215e6e316c56a572856c543d779fd8a4ffd6e6f06e89",
+      "bytes": 7460
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseCountEdit.tsx",
+      "sha256": "189b9c167640f1547b03cf0e4f01efd40df8fad87d4ad8d5539c734fd7f61202",
+      "bytes": 1615
+    }
+  ]
+}

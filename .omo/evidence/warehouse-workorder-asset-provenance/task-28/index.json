@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "task": 28,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+      "line": 17,
+      "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+      "line": 16,
+      "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "line": 18,
+      "sha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseDispositionIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/27",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/active-loan-loss-verification.json",
+      "sha256": "14751301bd46c2f9cc628fce283603e385959f00276314dbec08679cee8fac3d",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/asset-compensation-verification.json",
+      "sha256": "f282003e9606669b7972f56c595490b921bb7558d8179f192c0003b8a2ea9f96",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-verification.json",
+      "sha256": "40b285f604f849a5b6f3da150d191e8d96924ddd503b9046c8837e34fac346df",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/existing-flow-regression-verification.json",
+      "sha256": "3450428f1c4ac7f907216f558da90444719985b5f8c6745deee25ff06171a649",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/return-disposition-verification.json",
+      "sha256": "6e45a7be305cf81ef24c9abc1dd00aba370e1d13d2430d320e9b0adf27b1b131",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseDispositionIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 2
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

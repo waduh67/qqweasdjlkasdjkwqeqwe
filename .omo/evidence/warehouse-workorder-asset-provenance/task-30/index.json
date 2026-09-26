@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "task": 30,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportService.kt",
+      "line": 17,
+      "sha256": "3877da2a0853a700a0d2113ae4784f2cd2803417564632436fc0043b5e160888"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
+      "line": 9,
+      "sha256": "367e9e939c4293474de2c636b21506ebd69128dd18ec1e2d346bd2e0078e6b7b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
+      "line": 8,
+      "sha256": "945858cfcd5f8b9afba04503df8ad83b58d44f274cbd55ab2235f08d964e402c"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportCsv.kt",
+      "line": 1,
+      "sha256": "26ca2be6eeba505022491f83d3e943d8341a5b019dfc7b34ee8bb0f23e1b5d5f"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderReadPort.kt",
+      "line": 7,
+      "sha256": "1bee78b31af3de2ecc06e50179205984534e5d138ebfb9e68239619d3b03b81e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
+      "line": 15,
+      "sha256": "fc5020f89e9320a0a97d8c44c5ab5c737ce1df5de9e6466d4c6dcd0db5362375"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseReportIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/29",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task30/verification.json",
+      "sha256": "b34f3e26be3b365207058b9cb81604956d3cce2620ecdab365060103b6ac70d3",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseReportIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 4
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

@@ -132,7 +132,7 @@ dan `REVIEW_SKU` dari tenant/SKU yang benar-benar sedang diperiksa:
 ```bash
 psql -X -v ON_ERROR_STOP=1 \
   -v "tenant_id=$REVIEW_TENANT" -v "sku_id=$REVIEW_SKU" \
-  -v expected_version=178.10 -v expected_cutover=ENFORCED -v expected_unit=MM \
+  -v expected_version=178.11 -v expected_cutover=ENFORCED -v expected_unit=MM \
   -f scripts/warehouse/preflight.sql
 ```
 

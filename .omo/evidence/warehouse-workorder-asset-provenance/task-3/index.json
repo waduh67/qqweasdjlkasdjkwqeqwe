@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "task": 3,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+      "line": 6,
+      "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockUnitDefinition.kt",
+      "line": 5,
+      "sha256": "fb48645faa7988972e3e899b3adb80db00461bd455688a3ca1283fbc818d5d5e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/common/domain/identity/DeviceIdentity.kt",
+      "line": 6,
+      "sha256": "1a002445614de81f28b1433871f9a8393f90b86e340fe11fea23ea2535c2e202"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+      "line": 1,
+      "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseQuantityTest)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/2",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseQuantityTest)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+            "tests": 55,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+            "tests": 28,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 102
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "task": 21,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetHandoverService.kt",
+      "line": 17,
+      "sha256": "6d1877832e88cad8e04b8e964f3412c9315841486ce549726b6d45234bacbe59"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+      "line": 15,
+      "sha256": "0f88052f0b10822ea8c8174360c8865b7ccae5b874cefdbce122f179ea291bca"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+      "line": 8,
+      "sha256": "5cf6f8412b73b0cc73837b072f5c2b8dd3ec14b7ada91c300111b903fcadb2eb"
+    }
+  ],
+  "requiredSelectors": [
+    "G(CustomerAssetOwnershipIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/20",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(CustomerAssetOwnershipIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+            "tests": 72,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 72
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

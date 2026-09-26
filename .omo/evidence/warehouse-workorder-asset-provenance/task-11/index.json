@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "task": 11,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyService.kt",
+      "line": 12,
+      "sha256": "b23762a3b0b652e5fe24b00936209bb54a258a3357cd22b4125eb7581b771b09"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDelegationService.kt",
+      "line": 14,
+      "sha256": "9f21e17db268b1d34eb4ba43d3c728132e219c75b8a625377ff5cc2c843b204f"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/iam/domain/catalog/PermissionCatalog.kt",
+      "line": 13,
+      "sha256": "5843d163672973f850c303ae31ea0d5c2f69147ad2b54596e8ff0a622da04bdf"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWarehouseScopeApi.kt",
+      "line": 6,
+      "sha256": "1d5bda19ded8bb0eb53dc46fb851b45e61b72f953807a164059b98ea471f0bac"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V175__warehouse_policy_foundations.sql",
+      "line": 1,
+      "sha256": "2d97d88e5a98721586b2e2f5a742cf4ae84612ce8d0abe84360da0f93e0929ce"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehousePolicyIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/10",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehousePolicyIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthority",
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthorityRestart",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITEvaluation",
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITRestart",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITSchema",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITViewContract",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.inventory.WarehousePolicyITVisibility",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 27
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

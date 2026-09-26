@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "task": 20,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+      "line": 6,
+      "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+      "line": 18,
+      "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+      "line": 16,
+      "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+      "line": 15,
+      "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+      "line": 20,
+      "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
+    }
+  ],
+  "requiredSelectors": [
+    "G(CustomerWarehouseProvenanceIT)",
+    "G(ModularityTests)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/19",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(CustomerWarehouseProvenanceIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+            "tests": 31,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 31
+      },
+      {
+        "selector": "G(ModularityTests)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.ModularityTests",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 3
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

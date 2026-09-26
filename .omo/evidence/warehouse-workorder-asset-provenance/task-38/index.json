@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "task": 38,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "web/src/pages/warehouse/WarehouseOverviewPage.tsx",
+      "line": 23,
+      "sha256": "4f031caeb7f67aae574fbac79ed8776ffe4ab740277110d3c9b18880b1a994c4"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReplenishmentPage.tsx",
+      "line": 17,
+      "sha256": "bc7cd678471859ade0fa1e73b72179e83e86ebc6d717c22704fc7dbc3060a2ea"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReportsPage.tsx",
+      "line": 18,
+      "sha256": "c5def9dadd5149114973b2152d5f700dc6165825e1d584354d1186f32a05b4c9"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseSettingsPage.tsx",
+      "line": 20,
+      "sha256": "42d23cc87820215e963573536b9ec08bb2923b2f119424be0b5c85f2e1aad211"
+    },
+    {
+      "path": "web/src/pages/WarehouseOperationsPage.tsx",
+      "line": 1,
+      "sha256": "7517de2711818dbea3342ee27dd53a303eb823e4d7d24118367b4a2b7f9680db"
+    }
+  ],
+  "requiredSelectors": [
+    "W(WarehouseOverviewPage)",
+    "W(WarehouseReportsPage)",
+    "W(WarehouseSettingsPage)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/37",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/overview-verification.json",
+      "sha256": "4c4baec220a2a7be2a314e2ae2fce672bc020d1f28ddb52fde1d09d041d75196",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/policy-workbench-verification.json",
+      "sha256": "0e42a96b1cd7d12be19ebaece067af4836183543114cfedb0396c024728063b4",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/replenishment-workbench-verification.json",
+      "sha256": "e2002773411b2695efeadd08ae0a5ee0cc026d899f68a2dfed3d94c7fd99a6e5",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/reports-workbench-verification.json",
+      "sha256": "56db6a019edae147992edfa318c42bd5d81738342c6f69e70fa22f50a9c43c2a",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/settings-workbench-verification.json",
+      "sha256": "ad0f1f5903cc306d3d3c88672998fc7d37a2e78d13e04f3e70c1525287800fb4",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

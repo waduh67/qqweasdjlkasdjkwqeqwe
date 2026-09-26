@@ -134,3 +134,79 @@ it('starts an empty draft without inventing a current revision and pages immutab
   await within(history).findByText('Bukti: LEMBAR-BARU'); fireEvent.click(within(history).getByRole('button', { name: 'Berikutnya' }))
   await within(history).findByText('Bukti: LEMBAR-LAMA'); expect(historyPage).toBe(1)
 })
+
+it('hydrates all 100 saved assignments beyond picker pages and reviews one exact revisioned PUT without reading stock quantities', async () => {
+  mocks.permissions.add('inventory.location.view')
+  const key = (number: number) => `70000000-0000-4000-8000-${number.toString().padStart(12, '0')}`
+  const positions = Array.from({ length: 100 }, (_, index) => ({ ...countPositionFixture(), id: key(index + 1000), stockIdentityId: key(index + 2000) }))
+  let details = countDetailsFixture({ ...countFixture('DRAFT', 4), entries: positions.map(position => ({ balanceId: position.id, counterId: id.counter,
+    stockIdentityId: position.stockIdentityId, skuId: position.item.skuId, baseUnit: position.baseUnit })) })
+  details.references.lines = positions.map(position => ({ balanceId: position.id, item: position.item, custodianId: position.custodianId,
+    custodianKind: position.custodianKind, condition: position.condition, legalOwner: position.legalOwner }))
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') {
+      const input = JSON.parse(String(init.body))
+      details = { ...details, count: { ...details.count, revision: 5 }, references: { ...details.references, reason: input.draft.reason } }
+      return response(details.count)
+    }
+    if (path.endsWith('/draft')) return response({ details, positions, eligibleAssignedCounterIds: [id.counter] })
+    if (path.endsWith('/details')) return response(details)
+    if (path === `/api/v1/warehouse/locations/${id.location}`) return response(countLocation)
+    if (path.includes('/positions?') || path.includes('/counters?') || path.includes('/locations?')) return response(page([]))
+    return read(path, details.count)
+  }); vi.stubGlobal('fetch', fetch); show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft stock opname' }))
+  const firstRow = (await screen.findByText('Posisi hitung 1', { selector: 'legend' })).closest('fieldset')!
+  expect(within(firstRow).getByRole('combobox', { name: 'Barang dihitung 1' })).toHaveProperty('value', positions[0].id)
+  expect(screen.queryByText('Posisi hitung 100', { selector: 'legend' })).toBeNull()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Halaman posisi hitung' }), { target: { value: '3' } })
+  const lastRow = (await screen.findByText('Posisi hitung 100', { selector: 'legend' })).closest('fieldset')!
+  expect(within(lastRow).getByRole('combobox', { name: 'Barang dihitung 100' })).toHaveProperty('value', positions[99].id)
+  expect(within(lastRow).getByRole('combobox', { name: 'Penghitung 100' })).toHaveProperty('value', id.counter)
+  const reasonInput = screen.getByRole('textbox', { name: 'Alasan stock opname', hidden: true })
+  expect(reasonInput).toHaveProperty('value', 'Pemeriksaan akhir bulan')
+  fireEvent.change(reasonInput, { target: { value: 'Perubahan jadwal penghitungan' } })
+  fireEvent.click(screen.getByText('Tinjau stock opname', { selector: 'button' }))
+  const confirmation = await screen.findByRole('dialog', { name: 'Simpan draft stock opname' })
+  expect(confirmation.textContent).toContain('Revisi 4')
+  expect(fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+  fireEvent.click(within(confirmation).getByRole('button', { name: 'Simpan stock opname' }))
+  await screen.findByRole('heading', { name: 'CNT-001' })
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
+  expect(writes).toHaveLength(1)
+  const input = JSON.parse(String(writes[0][1]?.body))
+  expect(input).toEqual({ expectedRevision: 4, draft: { locationId: id.location, partialLocation: true, reason: 'Perubahan jadwal penghitungan',
+    entries: positions.map(position => ({ balanceId: position.id, counterId: id.counter })) } })
+  expect(fetch.mock.calls.some(([path, init]) => path.includes('/stock') || path.includes('/lots') || path.startsWith('/api/users') || init?.method === 'POST')).toBe(false)
+}, 15000)
+
+it('requires reselection for unavailable saved positions or counters and reloads a conflict before another edit', async () => {
+  mocks.permissions.add('inventory.location.view')
+  let current = countFixture(), missing = true
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') { current = countFixture('DRAFT', 2); missing = false; return response({ code: 'STALE_REVISION', message: 'STALE_REVISION' }, 409) }
+    if (path.endsWith('/draft')) return response({ details: countDetailsFixture(current), positions: missing ? [] : [countPositionFixture()], eligibleAssignedCounterIds: missing ? [] : [id.counter] })
+    if (path === `/api/v1/warehouse/locations/${id.location}`) return response(countLocation)
+    if (path.includes('/locations?')) return response(page([countLocation]))
+    if (path.includes('/positions?')) return response(page([countPositionFixture()]))
+    if (path.includes('/counters?')) return response(page([{ id: id.counter, name: 'Penghitung A' }]))
+    return read(path, current)
+  }); vi.stubGlobal('fetch', fetch); show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft stock opname' }))
+  await screen.findByText(/Posisi tersimpan .* tidak lagi tersedia/)
+  expect(screen.getByText(/Penghitung tersimpan tidak lagi memenuhi syarat/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau stock opname' }))
+  expect((screen.getByRole('combobox', { name: 'Barang dihitung 1' }) as HTMLSelectElement).checkValidity()).toBe(false)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang dihitung 1' })).not.toHaveProperty('disabled', true))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Barang dihitung 1' }), { target: { value: id.balance } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Penghitung 1' }), { target: { value: id.counter } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tinjau stock opname' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Simpan stock opname' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Muat ulang dokumen' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft stock opname' }))
+  await screen.findByText(/Revisi 2\. Perubahan hanya tersedia/)
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
+  expect(writes).toHaveLength(1)
+  expect(JSON.parse(String(writes[0][1]?.body)).expectedRevision).toBe(0)
+})

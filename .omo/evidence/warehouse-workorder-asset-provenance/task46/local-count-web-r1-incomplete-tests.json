@@ -1,0 +1,13 @@
+{
+  "status": "FAILED_TEST_FIXTURES",
+  "tests": 9,
+  "passed": 7,
+  "failed": 2,
+  "logSha256": "73a992fddb582fdde33e577a581aac1d2f89c500d71488d1c3d929a1d2d7b6bb",
+  "scope": "Uncommitted COUNT UI tests on6c6195ae",
+  "findings": [
+    "100-assignment test exceeded15s while using expensive whole-form accessible-role queries; use labelled controls and scoped confirmation queries.",
+    "Native required-select validation blocks empty position submission before custom handler; assert invalid control, retained warnings and no write."
+  ],
+  "limitation": "Failed run retained. Corrected run pending; no implementation pass claimed."
+}

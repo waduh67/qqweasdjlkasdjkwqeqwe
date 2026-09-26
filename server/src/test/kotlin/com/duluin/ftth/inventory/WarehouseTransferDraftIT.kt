@@ -88,34 +88,34 @@ class WarehouseTransferDraftIT : WarehouseTransferFixture() {
         assertThat(request("PUT", "/api/v1/warehouse/transfers/$id", other.first, input.replace(stock.destination, hidden)).status).isEqualTo(404)
         val fixture = fixture(admin)
         assertThatThrownBy { fixture.transaction { sql("UPDATE inventory_document SET reason='unrecorded edit' WHERE id='$id'") } }
-            .satisfies { failure ->
+            .satisfies(java.util.function.Consumer<Throwable> { failure ->
                 assertThat(generateSequence(failure) { it.cause }.filterIsInstance<java.sql.SQLException>().map { it.sqlState }.toList())
-                    .contains("23514")
-            }
+                    .contains("40001")
+            })
         assertThatThrownBy { fixture.transaction { sql("""UPDATE inventory_document SET transfer_source_location_id=NULL,
             transfer_destination_location_id=NULL,transfer_transit_location_id=NULL,transfer_receiver_id=NULL,
             revision=revision+1 WHERE id='$id'""") } }
-            .satisfies { failure ->
+            .satisfies(java.util.function.Consumer<Throwable> { failure ->
                 assertThat(generateSequence(failure) { it.cause }.filterIsInstance<java.sql.SQLException>().map { it.sqlState }.toList())
                     .contains("23514")
-            }
+            })
         assertThatThrownBy { fixture.transaction { sql("UPDATE inventory_document SET reason='unrecorded edit',revision=revision+1 WHERE id='$id'") } }
-            .satisfies { failure ->
+            .satisfies(java.util.function.Consumer<Throwable> { failure ->
                 assertThat(generateSequence(failure) { it.cause }.filterIsInstance<java.sql.SQLException>().map { it.sqlState }.toList())
                     .contains("23514")
-            }
+            })
         assertThatThrownBy { fixture.transaction { sql("UPDATE inventory_operation SET original_body='{}' WHERE document_id='$id'") } }
-            .satisfies { failure ->
+            .satisfies(java.util.function.Consumer<Throwable> { failure ->
                 assertThat(generateSequence(failure) { it.cause }.filterIsInstance<java.sql.SQLException>().map { it.sqlState }.toList())
                     .contains("23514")
-            }
+            })
         assertThat(physical(stock)).isEqualTo(before)
         transferAction(stock, id, "dispatch", """{"expectedRevision":0}""")
         assertThatThrownBy { fixture.transaction { sql("UPDATE inventory_document SET reason='posted edit',revision=revision+1 WHERE id='$id'") } }
-            .satisfies { failure ->
+            .satisfies(java.util.function.Consumer<Throwable> { failure ->
                 assertThat(generateSequence(failure) { it.cause }.filterIsInstance<java.sql.SQLException>().map { it.sqlState }.toList())
                     .contains("23514")
-            }
+            })
         balances(stock, "0", "100000", "0")
     }
 
@@ -225,8 +225,10 @@ class WarehouseTransferDraftIT : WarehouseTransferFixture() {
         val viewer = user(admin, setOf("inventory.transfer.view"))
         grantAreas(admin, viewer.second)
         for (location in listOf(stock.setup.bin, stock.destination, stock.transit)) grantScope(admin, viewer.second, location)
+        val privateWarehouse = create("locations", admin,
+            """{"code":"PRIVATE_WAREHOUSE","name":"Private warehouse","kind":"WAREHOUSE"}""").path("id").asString()
         val hidden = create("locations", admin,
-            """{"code":"PRIVATE_SOURCE","name":"Private source","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+            """{"code":"PRIVATE_SOURCE","name":"Private source","kind":"BIN","parentLocationId":"$privateWarehouse","issueEligible":true}""").path("id").asString()
         val incoming = draft(stock.setup, """{"skuId":"${stock.setup.cable}","quantityBase":"100000","lotCode":"PRIVATE_REEL"}""")
         val incomingId = incoming.path("id").asString()
         transition(stock.setup, incomingId, "receive", """{"expectedRevision":0}""")

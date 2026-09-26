@@ -26,9 +26,18 @@ export async function startBlindCount(page: Page, location: { id: string; label:
   expect(count).toMatchObject({ partialLocation: true, locationId: location.id, state: 'DRAFT' })
   expect(count.entries).toHaveLength(1)
   expect(count.entries[0]).not.toHaveProperty('quantityBase')
+  await page.getByRole('button', { name: 'Ubah draft stock opname', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Alasan stock opname', exact: true })).toHaveValue('Hitung fisik kabel tanpa melihat saldo buku')
+  await expect(page.getByRole('combobox', { name: 'Barang dihitung 1', exact: true })).toHaveValue(count.entries[0].balanceId)
+  await page.getByRole('textbox', { name: 'Alasan stock opname', exact: true }).fill('Hitung ulang jadwal fisik sebelum sesi dimulai')
+  await page.getByRole('button', { name: 'Tinjau stock opname', exact: true }).click()
+  const edited = await confirmOperation(page, `/api/v1/warehouse/counts/${count.id}`, 'Simpan stock opname', 'PUT')
+  expect(edited).toMatchObject({ ...count, revision: 1 })
+  expect(JSON.stringify(edited)).not.toMatch(/bookQuantity|expectedQuantity|availableQuantity/)
   await page.getByRole('button', { name: 'Mulai penghitungan', exact: true }).click()
-  await confirmOperation(page, `/api/v1/warehouse/counts/${count.id}/start`, 'Konfirmasi stock opname')
-  return count
+  const started = await confirmOperation(page, `/api/v1/warehouse/counts/${count.id}/start`, 'Konfirmasi stock opname')
+  expect(started).toMatchObject({ id: count.id, state: 'COUNTING', revision: 2, roundRevision: 2 })
+  return started
 }
 
 export async function recordBlindCount(page: Page, counter: { email: string; password: string }, count: { id: string }, quantity: string) {

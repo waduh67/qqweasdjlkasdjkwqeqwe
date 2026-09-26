@@ -109,6 +109,12 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   quantities and destinations. Accepted stock remains quarantined until placement.
   Private evidence has named type/date labels, pagination, download and a visible
   stale-intake state. Success reloads the durable document and revision.
+- A saved blind count draft has an explicit edit action for its original requester.
+  Hydrate all saved positions and named assignments through the bounded draft read;
+  never load stock quantities or infer missing rows from the first picker page.
+  Render at most25 assignment rows per editor page while retaining the complete plan.
+  Invalid saved positions/counters require reselection. Confirm the saved revision
+  before PUT and reload conflicts. Once a count starts, its scope and rounds are fixed.
 - A saved transfer draft has an explicit edit action for its sender. Prefill the
   persisted route, receiver, reason and exact quantities; resolve saved positions
   through the scoped stock API. Missing historical positions require reselection.

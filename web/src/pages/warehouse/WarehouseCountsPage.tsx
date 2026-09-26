@@ -18,6 +18,7 @@ import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehous
 import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatus'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { WarehouseCountEditor } from './WarehouseCountEditor'
+import { WarehouseCountEdit } from './WarehouseCountEdit'
 import { WarehouseCountFilters } from './WarehouseCountFilters'
 import { countCounterLabel, countLineLabel, countPersonLabel } from './countPresentation'
 import { locationLabel } from './receiptChoices'
@@ -60,21 +61,26 @@ function CountDetail({ id }: { id: string }) {
 function CountBody({ details, recent, reload }: { details: CountDetails; recent: CountFact[]; reload: () => void }) {
   const { can } = useCan(), { user } = useAuth(), { count, references } = details
   const [observing, setObserving] = useState<string | null>(null), [reviewing, setReviewing] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [operation, setOperation] = useState<{ command: WarehouseCommand<WarehouseCount>; title: string; summary: ReactNode } | null>(null)
   const owner = user?.id === references.requester.id, manage = can('inventory.count.manage')
   const observed = recent.filter(fact => fact.roundRevision === count.roundRevision)
   const complete = count.entries.every(entry => observed.some(fact => fact.balanceId === entry.balanceId))
+  if (editing && count.state === 'DRAFT' && owner && manage && can('inventory.location.view'))
+    return <WarehouseCountEdit id={count.id} onSaved={() => { setEditing(false); reload() }} onClose={() => setEditing(false)} onReload={() => { setEditing(false); reload() }} />
   if (observing) return <CountObservation details={details} balanceId={observing} onDone={reload} onClose={() => setObserving(null)} />
   return <><section className="card stack" aria-label="Detail stock opname"><h2>{references.code}</h2>
     <p><WarehouseStatus status={count.state} /> · Revisi {count.revision} · <WarehouseTime value={references.createdAt} /></p>
     <p>{locationLabel(references.location)} · Pembuat: {countPersonLabel(references.requester)}</p><p>{references.reason}</p>
     <p>Hanya posisi yang ditugaskan pada dokumen ini yang dihitung. Angka stok buku tidak ditampilkan selama penghitungan.</p>
     <div className="row wrap"><Button onClick={reload}>Muat ulang stock opname</Button>
+      {manage && owner && count.state === 'DRAFT' && <Button disabled={!can('inventory.location.view')} onClick={() => setEditing(true)}>Ubah draft stock opname</Button>}
       {manage && owner && count.state === 'DRAFT' && <Button variant="primary" onClick={() => setOperation({ command: startCount(count.id, count.revision), title: 'Mulai penghitungan', summary: <p>Petugas mulai menghitung {count.entries.length} posisi di {locationLabel(references.location)}. Catat hasil fisik setiap posisi sesuai penugasan.</p> })}>Mulai penghitungan</Button>}
       {manage && owner && count.state === 'COUNTING' && <Button variant="primary" disabled={!complete} onClick={() => setOperation({ command: submitCount(count.id, count.revision), title: 'Ajukan hasil hitung', summary: <p>Semua hasil putaran ini akan diperiksa terhadap stok saat penghitungan. Selisih membutuhkan persetujuan independen; perubahan stok selama penghitungan mewajibkan hitung ulang.</p> })}>Ajukan hasil hitung</Button>}
       {manage && owner && count.state === 'RECOUNT_REQUIRED' && <Button variant="primary" onClick={() => setOperation({ command: recount(count.id, count.revision), title: 'Mulai hitung ulang', summary: <p>Buka putaran baru untuk seluruh posisi. Hasil sebelumnya tetap tersimpan di riwayat dan tidak diubah.</p> })}>Mulai hitung ulang</Button>}
     </div>
     {!manage && <p className="muted">Akses baca saja. Pencatatan memerlukan izin kelola stock opname.</p>}
+    {manage && owner && count.state === 'DRAFT' && !can('inventory.location.view') && <p className="muted">Perubahan draft memerlukan izin lihat lokasi.</p>}
     {!owner && <p className="muted">Pembuat dokumen memulai, mengajukan, dan membuka hitung ulang. Anda hanya dapat mencatat posisi yang ditugaskan kepada Anda.</p>}
     {owner && count.state === 'COUNTING' && !complete && <p role="status">Tunggu hasil hitung seluruh posisi sebelum mengajukan.</p>}
     {count.state === 'RECOUNT_REQUIRED' && <p role="alert">Dokumen memerlukan hitung ulang. Mulai putaran baru dan catat kembali hasil fisik seluruh posisi.</p>}

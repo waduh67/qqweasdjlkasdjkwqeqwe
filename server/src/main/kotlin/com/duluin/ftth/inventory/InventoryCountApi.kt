@@ -4,6 +4,7 @@ import java.util.UUID
 
 interface InventoryCountApi {
     fun create(input: WarehouseCountDraft, key: String): WarehouseOperationReceipt
+    fun update(id: UUID, input: WarehouseCountUpdate, key: String): WarehouseOperationReceipt
     fun start(id: UUID, input: WarehouseCountRevision, key: String): WarehouseOperationReceipt
     fun observe(id: UUID, input: WarehouseCountObservation, key: String): WarehouseOperationReceipt
     fun submit(id: UUID, input: WarehouseCountRevision, key: String): WarehouseOperationReceipt
@@ -17,6 +18,7 @@ interface InventoryCountApi {
 data class WarehouseCountAssignment(val balanceId: UUID, val counterId: UUID)
 data class WarehouseCountDraft(val locationId: UUID, val partialLocation: Boolean, val reason: String,
     val entries: List<WarehouseCountAssignment>)
+data class WarehouseCountUpdate(val expectedRevision: Long, val draft: WarehouseCountDraft)
 data class WarehouseCountRevision(val expectedRevision: Long)
 data class WarehouseCountObservation(val expectedRevision: Long, val balanceId: UUID, val quantityBase: String,
     val reason: String, val documentReference: String)

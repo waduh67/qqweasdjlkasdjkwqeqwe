@@ -47,13 +47,28 @@ class WarehouseCountStore(private val jdbc: WarehouseCommandJdbc) {
         sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,reason,cutover_epoch,authority_epoch)
             VALUES (?,?,?,'COUNT',?,?,?,?)""", id, sql.tenant, "COUNT-$id", actor, input.reason, cutover, authority)
         sql.update("INSERT INTO inventory_count_scope(id,tenant_id,location_id,partial_location) VALUES (?,?,?,?)", id, sql.tenant, input.locationId, input.partialLocation)
+        entries(sql, id, 0, input, positions)
+    }
+
+    fun replaceDraft(id: UUID, revision: Long, input: WarehouseCountDraft, positions: Map<UUID, CountPosition>) = jdbc.execute { sql ->
+        sql.update("DELETE FROM inventory_count_entry WHERE tenant_id=? AND document_id=?", sql.tenant, id)
+        sql.update("DELETE FROM inventory_document_line WHERE tenant_id=? AND document_id=?", sql.tenant, id)
+        if (sql.update("""UPDATE inventory_document SET reason=?,revision=revision+1,updated_at=clock_timestamp()
+            WHERE tenant_id=? AND id=? AND kind='COUNT' AND state='DRAFT' AND revision=?""", input.reason, sql.tenant, id, revision) != 1)
+            sql.fail(WarehouseErrorCode.STALE_REVISION)
+        sql.update("UPDATE inventory_count_scope SET location_id=?,partial_location=? WHERE tenant_id=? AND id=?",
+            input.locationId, input.partialLocation, sql.tenant, id)
+        entries(sql, id, revision + 1, input, positions)
+    }
+
+    private fun entries(sql: PostingSql, id: UUID, revision: Long, input: WarehouseCountDraft, positions: Map<UUID, CountPosition>) {
         input.entries.forEachIndexed { index, entry ->
             val position = positions.getValue(entry.balanceId)
             val dimension = position.dimension
             val line = UUID.randomUUID()
             sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,stock_identity_id,
                 lot_id,base_unit,tracking,quantity_base,location_id,custodian_id,custodian_kind,condition,legal_owner)
-                VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?)""", line, sql.tenant, id, index + 1, dimension.skuId, dimension.stockIdentityId,
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", line, sql.tenant, id, index + 1, revision, dimension.skuId, dimension.stockIdentityId,
                 dimension.lotId, position.unit, position.tracking, position.capacity,
                 dimension.locationId, dimension.custodianId, dimension.custodianKind, dimension.condition, dimension.legalOwner)
             sql.update("INSERT INTO inventory_count_entry(id,tenant_id,document_id,balance_id,counter_id) VALUES (?,?,?,?,?)",

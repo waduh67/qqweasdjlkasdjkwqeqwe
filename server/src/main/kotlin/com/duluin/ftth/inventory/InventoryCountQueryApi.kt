@@ -6,6 +6,7 @@ import java.util.UUID
 interface InventoryCountQueryApi {
     fun list(filter: WarehouseCountFilter): WarehousePage<WarehouseCountDetails>
     fun details(id: UUID): WarehouseCountDetails
+    fun draft(id: UUID): WarehouseCountDraftEdit
     fun review(id: UUID): WarehouseCountReviewDetails
     fun positions(filter: WarehouseCountFilter): WarehousePage<WarehouseCountPositionOption>
     fun counters(locationId: UUID, page: WarehousePageRequest, query: String?): WarehousePage<WarehouseCountPersonRef>
@@ -25,6 +26,8 @@ data class WarehouseCountReferences(val code: String, val reason: String, val cr
     val location: WarehouseCountLocationRef, val requester: WarehouseCountPersonRef, val counters: List<WarehouseCountPersonRef>,
     val lines: List<WarehouseCountLineRef>)
 data class WarehouseCountDetails(val count: WarehouseCountView, val references: WarehouseCountReferences)
+data class WarehouseCountDraftEdit(val details: WarehouseCountDetails, val positions: List<WarehouseCountPositionOption>,
+    val eligibleAssignedCounterIds: Set<UUID>)
 data class WarehouseCountReviewDetails(val review: WarehouseCountReview, val references: WarehouseCountReferences)
 /** Intentionally excludes physical, reserved, expected and capacity quantities. */
 data class WarehouseCountPositionOption(val id: UUID, val stockIdentityId: UUID, val item: WarehouseCountItemRef,

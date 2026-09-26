@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "task": 16,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialUsageService.kt",
+      "line": 21,
+      "sha256": "4ba8dd8637a582974ba104bd651031cbacc13072b5be17d502fbe95557d236fa"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialUsageService.kt",
+      "line": 21,
+      "sha256": "c9f9f939a67a9850daea7f7f68348da9251fd91fb72ffa5ac5322e5ab489692f"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialUsageDeltaService.kt",
+      "line": 17,
+      "sha256": "b8954c6012974320eab6632b25d0198505eb2bb89efec0df371c98bc00532808"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialFacts.kt",
+      "line": 16,
+      "sha256": "7416ba18bd21fee9bdd44d9bbc81e237eab4d7e515393a509e1c980c70cfb83c"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WorkOrderMaterialUsageIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/15",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WorkOrderMaterialUsageIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+            "tests": 38,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+            "tests": 5,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITIsolation",
+            "tests": 28,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITLifecycle",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITPostingClosure",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjection",
+            "tests": 12,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionRace",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionScope",
+            "tests": 18,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+            "tests": 10,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 120
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "task": 40,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "web/src/pages/MyMaterialsPage.tsx",
+      "line": 27,
+      "sha256": "8d6d23f3b54b09a7c275d025141869cbc60e8fc28618452f6b823a6f25f03ce3"
+    },
+    {
+      "path": "web/src/api/warehouse/myMaterials.ts",
+      "line": 8,
+      "sha256": "8027b1ebaa379648b4d6b1b0971bae4039a8328ce4643e3710016e0e1c13f378"
+    }
+  ],
+  "requiredSelectors": [
+    "W(MyMaterialsPage)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/39",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/material-handover-verification.json",
+      "sha256": "e43768aa93119d9123d931d6cf7e47899f4f222c43af04f750953dc87d16e17c",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/my-materials-core-verification.json",
+      "sha256": "142ce10b642a0b4af30145c61367f2d7041ea5969b82bc56c692c4c4a2e2e4bd",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/my-materials-read-verification.json",
+      "sha256": "3e426695a271391c049618b1415768dc0052798771bca8c2032df884bc73c6e6",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/my-materials-serial-return-verification.json",
+      "sha256": "0b485a1c7804daafc8b35032c776a423e37b0064066c3e554c88e932e594848e",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

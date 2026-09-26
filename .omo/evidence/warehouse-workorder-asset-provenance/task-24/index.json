@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "task": 24,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/onboarding/application/service/ExpressOnboardingService.kt",
+      "line": 26,
+      "sha256": "53e2fd26771b9230c35b37e0609d1b849d26de6ea5fd1e791d4e9ae51567c4de"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/onboarding/application/service/ImportCustomersService.kt",
+      "line": 42,
+      "sha256": "62212d1b33f136754f742a1a11262475364dc85ff3a1d991d408d54646922ccc"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+      "line": 20,
+      "sha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/subscriber360/application/service/Subscriber360Service.kt",
+      "line": 31,
+      "sha256": "f6ec080ae25f1f5910911eb9daa752fcc3a8f52027f1ad61974f08b83c38a65c"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialConsumptionApiV2.kt",
+      "line": 6,
+      "sha256": "cccf5e2aa53e25cd031e110003d02bf439d9dd1173d3854dcbea7af8bf262bbf"
+    }
+  ],
+  "requiredSelectors": [
+    "G(WarehouseCompatibilityIT)"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/23",
+  "historicalEvidence": [],
+  "historicalTaskDirectoryWasMissing": true,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": [
+      {
+        "selector": "G(WarehouseCompatibilityIT)",
+        "status": "MATCHED_COMPLETED_XML",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityIT",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITAreaScope",
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITCsv",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITMaterials",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITProjection",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITSourceGate",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITSubscriber",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "tests": 20
+      }
+    ]
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

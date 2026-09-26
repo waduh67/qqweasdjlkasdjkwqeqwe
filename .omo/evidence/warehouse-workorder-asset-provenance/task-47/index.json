@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "task": 47,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "docs/warehouse.md",
+      "line": 1,
+      "sha256": "d515cd3cb3d38955c03ccea64630bc46bf93c9bf9f32907d66fbe7fa55cc09dc"
+    },
+    {
+      "path": "docs/warehouse-review.md",
+      "line": 1,
+      "sha256": "070aa20fa40417ee5f2d5c10317e5e7a768b6130f1ae425a02afbb2a608c66c9"
+    },
+    {
+      "path": "docs/warehouse-migrations.md",
+      "line": 1,
+      "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+    },
+    {
+      "path": "docs/work-order.md",
+      "line": 1,
+      "sha256": "ce742ca72f391fb6fecacf3493185b1eabe2ab467d9c7384924cfab44705bb34"
+    },
+    {
+      "path": "docs/mobile.md",
+      "line": 1,
+      "sha256": "fc1872cebc4a7842183ba38b8bffb1eafccbdf02e3d4bf91a0c5916eca5ff807"
+    },
+    {
+      "path": "deploy/DEPLOY.md",
+      "line": 1158,
+      "sha256": "465d96303300c1c003483b0513b1e5bd5780bb688d26a02624d0d970be3e10d9"
+    },
+    {
+      "path": "scripts/warehouse/preflight.sql",
+      "line": 1,
+      "sha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338"
+    }
+  ],
+  "requiredSelectors": [],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/46",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/ci-r3-upgraded-preflight-verification.json",
+      "sha256": "e8c37fb4e1e696a5934cab92609addf55e60e4362f00fc35d6c5034c4b15cbb5",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/current-runbook-verification.json",
+      "sha256": "0ac543ebf151366fe925a2099ecc4198c9a0ba09ec16e24b09f7b367a42677cc",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/local-preflight-r3-verification.json",
+      "sha256": "a3cc97a3c40818b34c56af8dd8d8c9179f184a0a20cee70319d259c4d0864ea5",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

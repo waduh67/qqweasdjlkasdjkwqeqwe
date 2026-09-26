@@ -20,7 +20,7 @@ class WarehouseCountQueryService(private val counts: InventoryCountApi, private 
     private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val access: WarehousePolicyAccess, private val scopes: InventoryWarehouseScopeApi,
     private val masters: WarehouseMasterStore, private val sites: SiteReferenceApi,
-    private val users: IamApi, private val policy: WarehousePolicyPersistence) : InventoryCountQueryApi {
+    private val users: IamApi, private val eligibleCounters: WarehouseCountCounters) : InventoryCountQueryApi {
 
     override fun list(filter: WarehouseCountFilter): WarehousePage<WarehouseCountDetails> {
         validateCountFilter(filter)
@@ -34,6 +34,19 @@ class WarehouseCountQueryService(private val counts: InventoryCountApi, private 
     override fun details(id: UUID): WarehouseCountDetails {
         val view = counts.get(id)
         return WarehouseCountDetails(view, query.references(view, names(listOf(view))))
+    }
+
+    override fun draft(id: UUID): WarehouseCountDraftEdit {
+        val current = current("inventory.count.view", "inventory.count.manage")
+        val view = counts.get(id)
+        if (query.requester(id) != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
+        if (view.state != WarehouseCountState.DRAFT) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        val details = WarehouseCountDetails(view, query.references(view, names(listOf(view))))
+        val selected = query.positions(WarehouseCountFilter(size = 100, locationId = view.locationId), visibility(current),
+            view.entries.map { it.balanceId }).items
+        val assigned = view.entries.map { it.counterId }.toSet()
+        val eligible = eligibleCounters.eligible(view.locationId, current).map { it.id }.filter { it in assigned }.toSet()
+        return WarehouseCountDraftEdit(details, selected, eligible)
     }
 
     override fun review(id: UUID): WarehouseCountReviewDetails {
@@ -53,13 +66,7 @@ class WarehouseCountQueryService(private val counts: InventoryCountApi, private 
     override fun counters(locationId: UUID, page: WarehousePageRequest, query: String?): WarehousePage<WarehouseCountPersonRef> {
         validateCountFilter(WarehouseCountFilter(page.page, page.size, query = query))
         val current = current("inventory.count.view", "inventory.count.manage")
-        val location = access.location(locationId, current)
-        val actor = current.fence.identity.userId
-        val eligible = access.directory(current).users.filter { person ->
-            setOf("inventory.count.view", "inventory.count.manage").all { it in person.permissions } &&
-                (person.id == actor || locationId in policy.locationsFor(person.id) && location.areaId in person.areaIds)
-        }.map { it.id }.toSet()
-        val people = users.usersByIds(eligible).filter { it.active && (query == null || it.name.contains(query, ignoreCase = true)) }
+        val people = eligibleCounters.eligible(locationId, current).filter { query == null || it.name.contains(query, ignoreCase = true) }
             .sortedWith(compareBy({ it.name.lowercase(java.util.Locale.ROOT) }, { it.id.toString() }))
         val offset = page.page.toLong() * page.size
         val selected = if (offset >= people.size) emptyList() else people.drop(offset.toInt()).take(page.size)

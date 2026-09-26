@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "task": 42,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "implementationSource": [
+    {
+      "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+      "line": 6,
+      "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
+    },
+    {
+      "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+      "line": 16,
+      "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
+    },
+    {
+      "path": "mobile/feature/materials",
+      "directory": true
+    },
+    {
+      "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+      "line": 31,
+      "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
+    },
+    {
+      "path": "settings.gradle.kts",
+      "line": 1,
+      "sha256": "dc313390fb86876fe4e50dd869d85580569cd3eb611eb0b3b1e8a3cf77a71926"
+    }
+  ],
+  "requiredSelectors": [
+    "K"
+  ],
+  "independentMapping": "f1-compliance-source-evidence.json#tasks/41",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-feature-verification.json",
+      "sha256": "21ee4c494bb8eaed61172e4368e7554837f55cca6e281de65444dc914a3ed4d8",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-ios-local-verification.json",
+      "sha256": "6c42bbea60df4609eb13743320c7a6207962315c37af26306b10f6e8f0dc69e7",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-ios-macos-verification.json",
+      "sha256": "0626f0057b571a46155b381c3cc6df18ae9abbca5d5623bfcfb726295ac94838",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-outbox-foundation.json",
+      "sha256": "6883c72f0904480b92af0247b8d55a41fae7a94198363a3f47924136788364b1",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+    "Missing original task-time evidence was not reconstructed or invented.",
+    "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+  ]
+}

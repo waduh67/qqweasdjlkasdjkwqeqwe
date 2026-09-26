@@ -81,6 +81,17 @@ export function countDetails(value: unknown, path = 'details') {
   return { count, references: countReferences(row.references, count, path) }
 }
 export type CountDetails = ReturnType<typeof countDetails>
+export function countDraftEdit(value: unknown, path = 'draft') {
+  const row = record(value, path), details = countDetails(row.details, path)
+  const positions = array(row.positions, countPosition, path, 100)
+  const eligibleAssignedCounterIds = array(row.eligibleAssignedCounterIds, uuid, path, 100)
+  if (details.count.state !== 'DRAFT' || new Set(positions.map(position => position.id)).size !== positions.length ||
+    positions.some(position => position.location.id !== details.count.locationId || !details.count.entries.some(entry =>
+      entry.balanceId === position.id && entry.stockIdentityId === position.stockIdentityId && entry.skuId === position.item.skuId && entry.baseUnit === position.baseUnit)) ||
+    new Set(eligibleAssignedCounterIds).size !== eligibleAssignedCounterIds.length ||
+    eligibleAssignedCounterIds.some(id => !details.count.entries.some(entry => entry.counterId === id))) throw new WarehouseDataError(path)
+  return { details, positions, eligibleAssignedCounterIds }
+}
 export function countReviewDetails(value: unknown, path = 'details') {
   const row = record(value, path), review = countReview(row.review, path)
   return { review, references: countReferences(row.references, review.count, path) }
@@ -93,6 +104,7 @@ export interface CountFilter { page?: number; size?: number; state?: WarehouseCo
 const root = '/api/v1/warehouse/counts'
 export const countWorkbench = (filter: CountFilter = {}) => query(`${root}/workbench${parameters({ ...filter })}`, pageOf(countDetails))
 export const getCountDetails = (id: string) => query(`${root}/${uuid(id)}/details`, countDetails)
+export const getCountDraft = (id: string) => query(`${root}/${uuid(id)}/draft`, countDraftEdit)
 export const getCountReviewDetails = (id: string) => query(`${root}/${uuid(id)}/review/details`, countReviewDetails)
 export const countPositions = (filter: Pick<CountFilter, 'locationId' | 'skuId' | 'serial' | 'query' | 'page' | 'size'>) => query(`${root}/positions${parameters({ ...filter })}`, pageOf(countPosition))
 export const countCounters = (locationId: string, search: string, page: number) => query(`${root}/locations/${uuid(locationId)}/counters${parameters({ query: search.trim() || undefined, page })}`, pageOf(countPerson))
@@ -101,6 +113,7 @@ export const listCounts = (filter: { page?: number; size?: number } = {}) => que
 export const getCount = (id: string) => query(`${root}/${uuid(id)}`, countView)
 export const getCountReview = (id: string) => query(`${root}/${uuid(id)}/review`, countReview)
 export const createCount = (input: CountDraft) => command(root, 'POST', input, countView)
+export const updateCount = (id: string, expectedRevision: number, draft: CountDraft) => command(`${root}/${uuid(id)}`, 'PUT', { expectedRevision, draft }, countView)
 export const startCount = (id: string, expectedRevision: number) => command(`${root}/${uuid(id)}/start`, 'POST', { expectedRevision }, countView)
 export const observeCount = (id: string, input: CountObservation) => command(`${root}/${uuid(id)}/observe`, 'POST', input, countView)
 export const submitCount = (id: string, expectedRevision: number) => command(`${root}/${uuid(id)}/submit`, 'POST', { expectedRevision }, countView)

@@ -1,7 +1,7 @@
 # Warehouse migration and cutover manifest
 
-The current highest packaged version is **178.10**; the next available version is
-**178.11**. Applied migrations are immutable. Historical sections below record the
+The current highest packaged version is **178.11**; the next available version is
+**178.12**. Applied migrations are immutable. Historical sections below record the
 version reservations at their original checkpoints, not the current next version.
 Operational steps are in [the warehouse runbook](warehouse.md), with an application
 role read-only preflight in [the review guide](warehouse-review.md).
@@ -19,6 +19,30 @@ After cutover, remediation is forward-only, or a coordinated restore during main
 Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
 the new records, or disable guards to make an old fixture boot.
 
+## V178.11: revise a blind count before its first round
+
+`V178_11__warehouse_count_draft_revision.sql` permits complete replacement of a
+never-started COUNT draft at the next revision. Scope, line dimensions, assignments,
+reason and the immutable create/update command must agree. The database binds each
+command to its canonical SHA-256 hash and requires an uninterrupted draft revision
+history. It rejects in-place line edits, unrecorded header changes and mutation of
+counting rounds, observations and completed results. No draft edit moves stock.
+
+The requester can edit the saved location, reason, positions and active counters.
+The bounded edit read hydrates up to 100 assigned positions without returning book
+quantities or using stock-list access. Current counter eligibility is shared by
+pickers and commands. Immutable replay checks both the original response location
+and the current location. Existing counting and completed sessions remain readable;
+only drafts can change. A separate 178.10 upgrade fixture preserves DRAFT, COUNTING
+and POSTED records, receipts and evidence before testing the new edit operation.
+Local HTTP/SQL and178.10→178.11 upgrade checks passed, including immutable old receipts,
+concurrent edits/start, canonical hash negatives and the independently approved edited
+BULK/EA variance. The source-equivalent focused result is67tests in19suites across
+an initial run and corrected two-class rerun; the nine web tests and build also pass.
+Proofs: `task46/local-count-transfer-focused-r2.json` and `task46/local-count-web-r4.json`.
+Desktop/mobile exceptions browser checks also passed2/2 (`task46/local-count-browser-r1.json`).
+Current full CI and the final independent audits remain required.
+
 ## V178.10: revise an unposted transfer draft
 
 `V178_10__warehouse_transfer_draft_revision.sql` permits DRAFT-to-DRAFT transfer
@@ -33,8 +57,10 @@ The corresponding HTTP/UI edit checks current sender authority, old and proposed
 scopes, receiver eligibility and physical positions. Old disabled receivers can be
 replaced without hiding the unposted draft. Tests cover replay, SQL bypasses,
 competing edits/dispatch, scope changes, concurrent details and a separate 178.9
-upgrade database with pre-existing draft/dispatched commands. Runtime validation
-for this migration is pending; source checks do not constitute a migration pass.
+upgrade database with pre-existing draft/dispatched commands. These local HTTP/SQL,
+concurrency and upgrade cases passed in the corrected focused evidence above. Current
+full CI remains required; the earlier6c6195ae CI stopped at a now-corrected test compile
+error, while its actual web artifact passed579tests.
 
 ## V178.9: remove control rows only with their deleted empty tenant
 
