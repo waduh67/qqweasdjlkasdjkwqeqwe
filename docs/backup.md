@@ -69,9 +69,11 @@ cara mencegahnya adalah **menolak di depan**, bukan berdoa. Karena itu container
 menyambung sebagai superuser `postgres` (`POSTGRES_SUPER_PASSWORD`), bukan sebagai role
 aplikasi.
 
-Pasangannya: `BACKUP_DB_OWNER` disetel ke role **aplikasi**. Yang mendump superuser, tapi
-yang memiliki objek saat dipulihkan tetap `ftth` — kalau tidak, database hasil pemulihan
-akan dimiliki `postgres` dan RLS-nya berperilaku lain dari produksi.
+Pasangannya: `BACKUP_DB_OWNER` disetel ke `FTTH_DB_OWNER_USER`, yaitu role pemilik
+migrasi (`warehouse_owner` pada konfigurasi baru). Runtime `warehouse_app` tetap
+non-owner, tanpa `BYPASSRLS` maupun membership role pemilik. Arsip mempertahankan
+pemilik objek dan ACL; periksa kembali pemisahan role serta pembatasan tabel setelah
+restore. Mengganti pemilik database saja tidak memindahkan pemilik objek lama.
 
 ---
 
@@ -234,7 +236,7 @@ sembarangan.
 | `BACKUP_RETENTION_DAYS` | `14` | lebih tua dari ini dibuang |
 | `BACKUP_STALE_HOURS` | `26` | ambang "ketinggalan" saat container start |
 | `POSTGRES_SUPER_PASSWORD` | — | **wajib**; dump harus kebal RLS |
-| `BACKUP_DB_OWNER` | `FTTH_DB_USER` | pemilik objek saat dipulihkan |
+| `BACKUP_DB_OWNER` | `FTTH_DB_OWNER_USER` | pemilik database hasil pemulihan; pemilik objek dan ACL berasal dari arsip |
 
 `BACKUP_AT` yang tak berbentuk `HH:MM` **tidak** menggagalkan container — ia dicatat ke log
 lalu jatuh ke `02:30`. Setelan salah tak boleh berarti tak ada cadangan sama sekali.

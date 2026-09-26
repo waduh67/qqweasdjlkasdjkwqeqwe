@@ -1,0 +1,52 @@
+{
+  "status": "BOOTSTRAP_R2_PASS_NETWORK_AND_FINAL_RELEASE_PENDING",
+  "atUtc": "2026-09-26T20:43:48.997118+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "sourceHeadBeforeCommit": "f276fd0c6e8fb0d880487606872f3899b1363c0d",
+  "currentCiRun": 36265279847,
+  "currentFullCiComplete": false,
+  "applicationBuildTestWorkflowMigrationInputsUnchanged": true,
+  "unchangedPriorInputs": 3688,
+  "changedTrackedInputs": [
+    "deploy/.env.example",
+    "deploy/DEPLOY.md",
+    "deploy/docker-compose.prod.yml",
+    "deploy/postgres-init/10-init-app-db.sh",
+    "docs/backup.md"
+  ],
+  "deploymentInputSha256": {
+    "deploy/.env.example": "31f09a7eeab9ba35020b8c3a1481caca62e03bafadfda945980779a78335abfd",
+    "deploy/Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "deploy/DEPLOY.md": "bf3910ce28ad78d1d17bffe428484dc197f393fee1c9d610189081c9a03704e8",
+    "deploy/SHARED-PROXY.md": "502f0efbb5cf9505cf6e0a7350e57d173db4847b0dfc74c4d8e1011aa4d56fde",
+    "deploy/docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "deploy/docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "deploy/postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "docs/backup.md": "051f0034e763ba24526361a6bb903e9c6fa8b3e657efe5480f5d37aaab692595"
+  },
+  "adoptedFiles": {
+    "f4-deployment-foundation-source-review.md": "8086df7d88d44b0c81a7a5d7dd3e1a8f6adc15a2174cc3f5e5b4ccb4e7df05a9",
+    "f4-deployment-foundation-source-review.json": "d4c17019315c5147d420da6d9dbf020c2b660f414066188c489b9123e6472325",
+    "f4-deployment-candidate-source-recheck.md": "9b975072adf5890c6c672d42ce351fce0d8a6342819c9a5aedcf0f788241c565",
+    "f4-deployment-candidate-source-recheck.json": "ec86a97f2243592ada15746f754aab137e7d640ba67b92697335d11a795d641f",
+    "f4-deployment-mail-health-source-review.md": "43feabf4fbe5a12158104e74a617ac9f497e76d724fa85884aefc0a0007c1f71",
+    "f4-deployment-mail-health-source-review.json": "8efb33b7cc91b29fd3a792adcb53721dd90d07df0d354d33258af214112fc295",
+    "deployment-production-bootstrap-r1.json": "2e1df768b7e907fbcb98fd8c8c6d897eff1a43c5c57fdd2d71c00021191cbf9a",
+    "deployment-production-bootstrap-r2.json": "389e41fa100d85beaa337a3fa5563500a0f02cc1cf3811c679b0a0a26f3600a4"
+  },
+  "privateArchiveSha256": {
+    "r1": "78f8ce1a48b0815f3e1ba003d9e2b4a4789af21417d68d3be62aa8d2ebf71145",
+    "r2": "1377ccbcfee4a8f5cc15600a1f4439c1c21584da7e8849404eaeea38dd174118"
+  },
+  "r1Preserved": "Missing-secret guard passed; aggregate readiness timed out because optional SMTP absent; cleanup0. Not a pass.",
+  "r2": "Actual production=true/noQA, missing-secret rejection, readinessUP,367migrations178.12,nonownerrole/schema/clock guards,login/same-image restart,cleanup0; retained volumes.",
+  "imageIdentity": "Original CI config bytes and ordered uncompressed layers verified after remote re-export; Docker29 OCI manifest IDs differ from classic config IDs.",
+  "pending": [
+    "Network/proxy/storage/ACS/RADIUS smoke",
+    "Actual full current server/historical CI and final F1/F2/F4",
+    "Production rollout with privately prepared approved admin credentials",
+    "VPN listener/callback/firewall verification"
+  ],
+  "productionRolloutComplete": false,
+  "smtpDeliveryConfigured": false
+}

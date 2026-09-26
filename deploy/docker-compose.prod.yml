@@ -14,7 +14,7 @@ name: ftth
 services:
   # --- Database: satu image sudah include PostGIS + TimescaleDB ---
   postgres:
-    image: timescale/timescaledb-ha:pg17
+    image: ${FTTH_POSTGRES_IMAGE:-timescale/timescaledb-ha:pg17}
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -23,11 +23,13 @@ services:
       FTTH_DB_USER: ${FTTH_DB_USER}
       FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
       FTTH_DB_NAME: ${FTTH_DB_NAME}
+      FTTH_DB_OWNER_USER: ${FTTH_DB_OWNER_USER:?wajib diisi di .env}
+      FTTH_DB_OWNER_PASSWORD: ${FTTH_DB_OWNER_PASSWORD:?wajib diisi di .env}
     volumes:
       - pgdata:/home/postgres/pgdata/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -45,7 +47,7 @@ services:
       - radiusdata:/var/lib/postgresql/data
       - ./radius/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${RADIUS_DB_USER:-radius}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${RADIUS_DB_USER:-radius} -d ${RADIUS_DB_NAME:-radius}"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -149,7 +151,7 @@ services:
 
   # --- Object storage bukti pengerjaan work order (internal saja) ---
   minio:
-    image: minio/minio
+    image: ${FTTH_MINIO_IMAGE:-minio/minio}
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -175,6 +177,10 @@ services:
       FTTH_DB_URL: jdbc:postgresql://postgres:5432/${FTTH_DB_NAME}
       FTTH_DB_USER: ${FTTH_DB_USER}
       FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
+      # Migrasi memakai role pemilik; koneksi aplikasi tetap non-owner/NOBYPASSRLS.
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/${FTTH_DB_NAME}
+      SPRING_FLYWAY_USER: ${FTTH_DB_OWNER_USER:?wajib diisi di .env}
+      SPRING_FLYWAY_PASSWORD: ${FTTH_DB_OWNER_PASSWORD:?wajib diisi di .env}
       # radius-db platform (RADIUS-as-a-service): server menulis otorisasi
       # (radcheck/radusergroup/radgroupreply), membaca radacct, dan mendaftarkan klien
       # `nas` langsung ke sini via JDBC. Kredensial = rahasia platform (bukan input
@@ -211,6 +217,9 @@ services:
       FTTH_MAIL_PASSWORD: ${FTTH_MAIL_PASSWORD:-}
       FTTH_MAIL_FROM: ${FTTH_MAIL_FROM:-}
       FTTH_MAIL_FROM_NAME: ${FTTH_MAIL_FROM_NAME:-NetOps Console}
+      # SMTP opsional dan dapat diatur lewat UI. Health bawaan Spring hanya
+      # memeriksa SMTP dari environment; aktifkan jika fallback ini sudah siap.
+      MANAGEMENT_HEALTH_MAIL_ENABLED: ${FTTH_MAIL_HEALTH_ENABLED:-false}
       # URL absolut aplikasi untuk merangkai <img src> logo di badan email. Kosong = email
       # tetap terkirim, hanya tanpa logo (klien email tak mengerti path relatif). Biasanya
       # sama dengan domain aplikasi, mis. https://app.contoh.net.
@@ -227,6 +236,9 @@ services:
       FTTH_VPN_REMOTE_PORT_MAX: ${FTTH_VPN_REMOTE_PORT_MAX:-40000}
       FTTH_PLATFORM_ADMIN_EMAIL: ${FTTH_PLATFORM_ADMIN_EMAIL}
       FTTH_PLATFORM_ADMIN_PASSWORD: ${FTTH_PLATFORM_ADMIN_PASSWORD}
+      # Nama environment Spring untuk ftth.bootstrap.demo-admin-password.
+      # Validator tetap memeriksa secret ini walaupun seed demo dimatikan.
+      FTTH_BOOTSTRAP_DEMOADMINPASSWORD: ${FTTH_DEMO_ADMIN_PASSWORD:?wajib diisi di .env}
       FTTH_SEED_DEMO: ${FTTH_SEED_DEMO:-false}
       FTTH_S3_ENDPOINT: http://minio:9000
       FTTH_S3_ACCESS_KEY: ${FTTH_S3_ACCESS_KEY}
@@ -278,7 +290,7 @@ services:
   # `user: root` supaya berkasnya bisa ditulis apa pun kepemilikan foldernya — isinya
   # seluruh basis data, jadi memang sepantasnya cuma root yang boleh baca (chmod 600).
   backup:
-    image: timescale/timescaledb-ha:pg17
+    image: ${FTTH_POSTGRES_IMAGE:-timescale/timescaledb-ha:pg17}
     restart: unless-stopped
     user: root
     entrypoint: ["/bin/sh", "/opt/backup/entrypoint.sh"]
@@ -290,8 +302,8 @@ services:
       BACKUP_AT: ${BACKUP_AT:-02:30}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
       BACKUP_STALE_HOURS: ${BACKUP_STALE_HOURS:-26}
-      # Pemilik database saat dipulihkan — role aplikasi, bukan superuser yang mendump.
-      BACKUP_DB_OWNER: ${FTTH_DB_USER}
+      # Pemulihan mempertahankan pemisahan role pemilik dan koneksi aplikasi.
+      BACKUP_DB_OWNER: ${FTTH_DB_OWNER_USER:?wajib diisi di .env}
       TZ: ${BACKUP_TZ:-UTC}
       PGHOST: postgres
       # WAJIB superuser: tabel ber-tenant memakai FORCE ROW LEVEL SECURITY, jadi dump

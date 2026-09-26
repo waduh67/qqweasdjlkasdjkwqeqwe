@@ -136,17 +136,34 @@ openssl rand -base64 48    # jalankan beberapa kali untuk JWT, ENCRYPTION, passw
 Yang WAJIB kamu ganti di `.env`:
 - `FTTH_SITE_ADDRESS` → domain kamu (mis. `app.contoh.com`) **atau** `:80` kalau belum punya domain.
 - `IMAGE_PREFIX` → `ghcr.io/<username-github-kamu>` (mis. `ghcr.io/fajarxfce`).
-- `FTTH_DB_PASSWORD`, `POSTGRES_SUPER_PASSWORD` → password kuat (huruf+angka aja).
+- `FTTH_DB_PASSWORD`, `FTTH_DB_OWNER_PASSWORD`, `POSTGRES_SUPER_PASSWORD` → password
+  kuat yang berbeda. Runtime memakai `warehouse_app`; Flyway memakai pemilik
+  `warehouse_owner`. Pertahankan nama runtime ini karena grant migrasi gudang
+  merujuk kepadanya; runtime tidak boleh mempunyai membership role pemilik.
 - `FTTH_JWT_SECRET`, `FTTH_ENCRYPTION_SECRET` → dua hasil `openssl` yang BERBEDA.
 - `FTTH_PLATFORM_ADMIN_EMAIL` / `FTTH_PLATFORM_ADMIN_PASSWORD` → akun login pertamamu.
-- `FTTH_S3_SECRET_KEY` → password MinIO (min. 8 karakter).
+- `FTTH_DEMO_ADMIN_PASSWORD` → secret acak terpisah, tetap diwajibkan validator
+  walaupun `FTTH_SEED_DEMO=false`; ini tidak membuat akun demo. Compose memetakannya
+  ke nama binding Spring `FTTH_BOOTSTRAP_DEMOADMINPASSWORD`.
+- `FTTH_S3_ACCESS_KEY` dan `FTTH_S3_SECRET_KEY` → masing-masing minimal 16 karakter,
+  bukan nilai contoh/development. Nilai `ftth` ditolak validator produksi.
 - `FTTH_CORS_ORIGINS` → `https://domainkamu` (atau `http://<IP>` kalau mode `:80`).
 
 > `.env` ini cuma ada di VPS dan tidak pernah masuk Git. Jaga baik-baik.
 
+Inisialisasi role terpisah di atas hanya berjalan untuk volume PostgreSQL baru.
+Untuk instalasi lama yang memakai akun aplikasi sebagai pemilik, lakukan peninjauan
+dan migrasi kepemilikan tersendiri dengan cadangan terverifikasi; mengganti `.env`
+tidak mengubah role maupun pemilik tabel yang sudah ada. Jangan menjalankan grant
+massal setelah Flyway karena migrasi gudang sengaja membatasi hak tabel tertentu.
+
 ---
 
 ## Bagian E — Domain & HTTPS (boleh dilewati dulu)
+
+Jika VPS sudah memakai reverse proxy untuk aplikasi lain, gunakan
+[panduan proxy bersama](SHARED-PROXY.md). Overlay tersebut menghindari perebutan
+port 80/443 dan menjaga database FTTH tetap di jaringan internalnya sendiri.
 
 **Punya domain?** Di panel DNS domain kamu, bikin **A record**:
 `app.contoh.com  →  20.11.22.33` (IP VPS). Tunggu beberapa menit sampai nyambung.
@@ -1107,8 +1124,9 @@ pemantauanmu (dibatasi firewall) atau lewat terowongan SSH, dengan header
 - **Isi `FTTH_ALERT_EMAIL`** (Bagian N). Pekerjaan latar gagal dengan cara paling jahat:
   diam. Tanpa alamat ini, tagihan yang berhenti terbit baru ketahuan dari keluhan
   pelanggan, berhari-hari kemudian.
-- **Test job di CI** butuh Postgres+Timescale; kalau rewel, bisa longgarin dengan hapus
-  `needs: test` di job `build-and-push` (`.github/workflows/deploy.yml`).
+- **Gate `warehouse-verification` wajib lulus sebelum publikasi/deploy.** Perbaiki
+  dependency atau tes yang gagal dan jalankan kembali gate yang terdampak.
+  Pertahankan rantai `needs` pada workflow deploy.
 
 ---
 

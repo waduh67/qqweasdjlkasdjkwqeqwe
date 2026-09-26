@@ -1,0 +1,20 @@
+# Overlay for a host whose existing reverse proxy already owns ports 80/443.
+# Compose >=2.24.4 is required for !override. Use with docker-compose.prod.yml.
+services:
+  caddy:
+    environment:
+      FTTH_SITE_ADDRESS: ":80"
+      FTTH_EDGE_PROXY_CIDR: ${FTTH_EDGE_PROXY_CIDR:?set the existing proxy network CIDR}
+    ports: !override
+      - "${FTTH_ISOLIR_PORT:-8880}:8880"
+    volumes:
+      - ./Caddyfile.shared-proxy:/etc/caddy/Caddyfile:ro
+    networks:
+      default:
+      edge_proxy:
+        aliases: [ftth-gateway]
+
+networks:
+  edge_proxy:
+    external: true
+    name: ${FTTH_EDGE_PROXY_NETWORK:?set the existing proxy network name}

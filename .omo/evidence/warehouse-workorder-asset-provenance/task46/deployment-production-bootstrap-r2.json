@@ -1,0 +1,65 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-26T20:39:19.276959+00:00",
+  "project": "ftth-bootstrap-49a78a1d8ef2",
+  "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "imageIds": {
+    "server": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+    "web": "sha256:ffdf1809281b559bbb3f9021fad2cd829ae5f1220e09e0b376bc35da733063e8",
+    "minio": "sha256:9513906814091e436ea84f4db1a031bc726f71a2be419c3e5fcf061c237eb35a"
+  },
+  "productionEndpointOpened": false,
+  "databaseRetained": true,
+  "sourceSha256": {
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "setup-private/production-bootstrap-probe.py": "8350f8ffec6432f360a75a5dcdbb32774fa263114885a75c68d00ed3412cc570"
+  },
+  "stage": "same image restart passed",
+  "negativeOnlyRemovesCanonicalDemoBinding": true,
+  "missingProductionSecretRejected": true,
+  "productionModeWithoutQaProfile": true,
+  "optionalEnvironmentSmtpHealthDisabled": true,
+  "databaseHealthNotDisabled": true,
+  "runtimeRole": {
+    "app": "warehouse_app",
+    "super": false,
+    "bypass": false,
+    "createRole": false,
+    "createDb": false,
+    "ownerMembership": false,
+    "databaseOwner": "warehouse_owner",
+    "schemaCreate": false,
+    "ownsRelations": false
+  },
+  "migrations": {
+    "count": 367,
+    "failed": 0,
+    "latest": "178.12"
+  },
+  "restrictedDraftClockTables": [
+    "inventory_draft_policy",
+    "inventory_document_draft_activity",
+    "inventory_plan_draft_activity",
+    "inventory_document_draft_expiry",
+    "inventory_plan_draft_expiry"
+  ],
+  "executedPermissionDenials": [
+    "schema CREATE",
+    "draft policy DELETE"
+  ],
+  "platformLoginPassed": true,
+  "noDemoOrBusinessFixtures": {
+    "customers": 0,
+    "stockPositions": 0,
+    "demoTenants": 0
+  },
+  "sameImageRestartAndLoginPassed": true,
+  "backendStarts": [
+    "2026-09-26T20:40:21.245603999Z",
+    "2026-09-26T20:41:03.073612045Z"
+  ],
+  "sourceUnchanged": true,
+  "cleanupExitCode": 0,
+  "finishedAtUtc": "2026-09-26T20:41:44.292464+00:00"
+}

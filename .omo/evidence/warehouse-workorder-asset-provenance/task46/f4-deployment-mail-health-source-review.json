@@ -1,0 +1,50 @@
+{
+  "applicationBuildTestsWorkflowsMigrationsUnchanged": true,
+  "candidateSha256": {
+    "deploy/.env.example": "31f09a7eeab9ba35020b8c3a1481caca62e03bafadfda945980779a78335abfd",
+    "deploy/Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "deploy/DEPLOY.md": "bf3910ce28ad78d1d17bffe428484dc197f393fee1c9d610189081c9a03704e8",
+    "deploy/SHARED-PROXY.md": "502f0efbb5cf9505cf6e0a7350e57d173db4847b0dfc74c4d8e1011aa4d56fde",
+    "deploy/docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "deploy/docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "deploy/postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "docs/backup.md": "051f0034e763ba24526361a6bb903e9c6fa8b3e657efe5480f5d37aaab692595"
+  },
+  "changedSincePriorCandidate": [
+    "deploy/.env.example",
+    "deploy/SHARED-PROXY.md",
+    "deploy/docker-compose.prod.yml"
+  ],
+  "finalF4Approval": false,
+  "gitDiffCheckExitCode": 0,
+  "inspectedApplicationSourceSha256": {
+    "server/src/main/kotlin/com/duluin/ftth/notification/adapter/outbound/messaging/SmtpEmailDispatcher.kt": "dabfbfe8007e207f41987084a6159bbfb5c859a7734e3aae41fdd8dcf5a0b145",
+    "server/src/main/kotlin/com/duluin/ftth/notification/adapter/outbound/messaging/SmtpSenderFactory.kt": "6dd4724f515aa7df8c0a6392e8a3471167d0d2f3d78328e621f43db4bde07516",
+    "server/src/main/kotlin/com/duluin/ftth/notification/application/service/PlatformEmailSettingsService.kt": "2f32ac1f99e1819e1ae96d79214ce05959d16eddabd1d07254c4343a0b96dbfa",
+    "server/src/main/resources/application.yml": "3438a4227c8bbcf21633f27d13a1652b53f726414561662233ed1c116d07b19b"
+  },
+  "mapping": "MANAGEMENT_HEALTH_MAIL_ENABLED=${FTTH_MAIL_HEALTH_ENABLED:-false}",
+  "productionValidatorAndDatabaseHealthNotDisabled": true,
+  "r1FailureAssessment": "Parent reports missing-secret guard passed and positive app startup occurred but aggregate readiness failed due to optional mail health; raw R1 not independently authenticated in this source review",
+  "recommendedRuntimeReceipt": [
+    "Preserve failed or timed-out R1 unchanged; do not relabel as pass",
+    "Run new isolated R2 with current deployment hashes and identical authenticated application images",
+    "Assert production=true, no QA profile, mail-only health disable and no DB/defaults health disable",
+    "Authenticate expected missing-secret failure, actual JSON readiness, role/schema/clock checks, login/restart and owned cleanup",
+    "State SMTP delivery remains unconfigured; test actual delivery separately when configured"
+  ],
+  "reviewedAtUtc": "2026-09-26T20:37:40.278869+00:00",
+  "reviewerExecutedQa": false,
+  "reviewerSsh": false,
+  "scope": "Only the optional Spring mail health indicator for the fixed environment fallback sender",
+  "sourceInterpretation": {
+    "blankFallbackSenderFiltered": true,
+    "blankSmtpSupported": true,
+    "mailHealthDoesNotTestUiDatabaseSender": true,
+    "positiveHealthDoesNotProveEmailDelivery": true,
+    "uiDatabaseSenderTakesPriority": true,
+    "unconfiguredMailLogsInsteadOfDelivering": true
+  },
+  "status": "MAIL_HEALTH_DEPLOYMENT_DELTA_SOURCE_REVIEWED_RUNTIME_PENDING",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3"
+}

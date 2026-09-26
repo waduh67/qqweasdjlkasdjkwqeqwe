@@ -1,31 +1,54 @@
-# Active continuation — final review preparation at code1306b65c
+# Active continuation — authorized server setup and final warehouse review
 
-Read this block first; the dated sections below are historical checkpoints and retain
-their original outcomes. Continue the user's long run through final acceptance.
+Read this block first. Dated sections below are historical checkpoints, including
+older statements about deployment permission. The user has now explicitly authorized
+setting up their Azure VPS and domain. Continue the long run through completion;
+commit and push recoverable checkpoints. No main merge or registry publication.
 
-- Edit worktree: `.omo/runtime/warehouse-regression-validation`, local branch
-  `work/warehouse-regression-fixtures`; pushed recovery branch
-  `origin/work/warehouse-draft-lifecycle`. Product/build/test/workflow inputs are
-  frozen at `1306b65c34167b2d48f4817ce72990fed3b85aa3`. Later commits contain evidence
-  and handoff only; verify that equivalence before reusing the current CI results.
-- Active complete CI: `36265279847`. All14nonserver jobs and actual artifacts pass;
-  focused compatibility passed; fullserver/fresh/historical running since19:40:01UTC.
-  Preserve this run. Pending evidence-only runs are not additional passes.
-- Independent F3 is PASS:36intended browser cases and8preflight probes, with failed
-  and interrupted attempts preserved. F1/F2/F4 still require current fullserver.
-- Latest saved evidence: `task46/f4-ci-1306b65c-nonserver-recheck.{md,json}` and its
-  source inventory/adoption receipt; all3693source hashes match the edit checkout.
-- No local QA is active. Raw reports, runner identities and the recovery pointer
-  stay private in the original checkout's `.omo/runtime`. All local QA uses the
-  established outerfd8 lease; stop/down only task-owned services and retain volumes.
-- Migration178.12 is already applied and immutable; next migration178.13. Reject
-  deleting tenants with protected history and use Suspend. Hardware GPON work is
-  deferred; offline documentation/MIB coverage remains required.
-- Next: authenticate current complete server/historical CI; finish independent
-  F1/F2/F4; close tasks46–48 using actual proof; checkpoint and integrate validated
-  descendants into original feature branch40cbd34f. Present the completed review
-  guide/results to the owner for acceptance. No main merge, image publication or
-  deployment is authorized.
+- Edit worktree: `.omo/runtime/warehouse-regression-validation`, branch
+  `work/warehouse-regression-fixtures`; push to `origin/work/warehouse-draft-lifecycle`.
+  Application/build/test/workflow/migration inputs remain at
+  `1306b65c34167b2d48f4817ce72990fed3b85aa3`. This checkpoint adds five tracked
+  deployment/docs changes and three shared-proxy files; it is no longer a whole
+  3693-input equivalent checkout. The other 3688 recorded inputs remain unchanged.
+- Preserve CI `36265279847`: all14nonserver jobs/artifacts and focused compatibility
+  passed; fullserver/fresh/historical has run since19:40:01UTC. Authenticate its actual
+  final artifacts before final approval. Do not count duplicate/cancelled runs as passes.
+- F3 is PASS (36intended browser cases +8preflight; prior failed/interrupted attempts
+  retained). F1/F2/F4 still need current fullserver and the new deployment delta.
+- Deployment fixes: separate `warehouse_owner` Flyway credentials from non-owner
+  `warehouse_app`; preserve restricted clock grants; correct canonical Spring demo
+  secret binding, storage key requirements, optional environment-only SMTP health,
+  and shared existing-proxy operation. Mandatory CI gate remains intact.
+- Actual private production bootstrap R2 PASS:367migrations through178.12, strict
+  missing-secret rejection, production=true/noQA, readinessUP, runtime role flags,
+  real schema CREATE/policy DELETE denials, login and same-image restart; cleanup0.
+  R1's SMTP-related readiness timeout is preserved, not relabelled. Safe receipts:
+  `task46/deployment-production-bootstrap-r{1,2}.json` and
+  `task46/deployment-bootstrap-adoption.json`. SMTP delivery remains unconfigured.
+- Exact CI server/web archives are loaded on the VPS. Config bytes and every ordered
+  uncompressed layer match after re-export. Docker29 reports OCI manifest IDs, unlike
+  the classic Docker config IDs; retain both identities. No application rebuild.
+- The pre-existing site's Caddy owns80/443. Its configuration/site remain intact;
+  FTTH TLS is valid through Cloudflare and directly at origin, serving maintenance503.
+  Shared-proxy overlay will publish only the optional8880 gateway port. App/DB/NBI
+  ports remain internal. Actual production FTTH stack is not yet activated.
+- Remote network/storage/ACS/RADIUS smoke is the next active QA under the outerfd8
+  lease, using the cleaned isolated R2 project and retained volumes. Read the private
+  original-checkout `.omo/runtime/ACTIVE-WAREHOUSE-RUN.json` and
+  `.omo/runtime/azure-ftth-setup` for current unit/session, host, key and evidence.
+  Never stop/down unrelated applications or remove volumes.
+- User supplied the production admin email and approved a random password because
+  the supplied password did not meet the existing16-character production minimum.
+  The environment and credentials are saved root-only0600 on the VPS; no production
+  service is started yet. Use the host ftth-compose wrapper so both proxy and pinned
+  image overlays are always applied. Next: finish affected runtime checks/review,
+  preserve current full CI, configure authorized production and VPN,
+  verify HTTPS/login/backups/listeners and existing site, finish F1/F2/F4, close46–48,
+  integrate validated feature descendants, then present concrete owner acceptance.
+- Migration178.12 is applied and immutable; next178.13. Reject tenant deletion with
+  protected history; use Suspend. Physical GPON certification is deferred, while
+  offline documentation/MIB coverage remains required.
 
 # Warehouse continuation — 2026-09-26
 
