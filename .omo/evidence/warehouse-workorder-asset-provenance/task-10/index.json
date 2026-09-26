@@ -3,7 +3,7 @@
   "task": 10,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
@@ -29,7 +29,7 @@
   "requiredSelectors": [
     "G(WarehouseReservationIT)"
   ],
-  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/9",
+  "independentMapping": "f1-1306b65c-source-evidence.json#tasks/9",
   "historicalEvidence": [],
   "historicalTaskDirectoryWasMissing": true,
   "verifiedLaterBackend": {
@@ -116,13 +116,11 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
-    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
-    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
-    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
-    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    "All previous historical and c902 source/evidence blocks are preserved with original identities.",
+    "Exact1306 current nonserver and independent F3 source-bound PASS are available; current1306 full server and final F2/F4/F1 remain pending.",
+    "Old1d full pass, failed6b focused run and cancelledc902 run do not establish current full-CI acceptance."
   ],
-  "priorIndexSha256": "0372e21b1ced4957815298c441bf9e3841938e9fc3db1b5639c430f92547379c",
+  "priorIndexSha256": "6225eeaefe6b18b9b122450cf74bb787b6b019874e3d520b1660242555246223",
   "priorSourceMapping": {
     "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
@@ -161,6 +159,288 @@
     ]
   },
   "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+    "reviewedHead": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+    "mapping": {
+      "path": "f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa"
+    },
+    "status": "SOURCE_CURRENT_NONSERVER_AND_F3_MAPPED_CURRENT_SERVER_PENDING",
+    "literalSelectors": {
+      "G(WarehouseReservationIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITSupplyProjection.kt",
+            "sha256": "e2bfe5c1245886e0e8b1f4daa3a81bc83355c0ba80f55e3379c27a4b45635144",
+            "testAnnotations": 3
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITRestart.kt",
+            "sha256": "b52576c59524bee409d83fddcd1859d7e049257738da86bc6249ce88ed08aea4",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITPlanBinding.kt",
+            "sha256": "e7d8069c94f152a154ae2798e578e7e0d066b0b9521bb6314aa4096f8cf62f70",
+            "testAnnotations": 6
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLifecycle.kt",
+            "sha256": "0d72c7d61e913a32ddbf352bba38461e2230ff1958730c16766c1a01d02a1efb",
+            "testAnnotations": 5
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLargeSupply.kt",
+            "sha256": "29f12747325ef95cb7a253b14c5117da775dbde290863ee88a0b0a17211e34b4",
+            "testAnnotations": 1
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCompatibility.kt",
+            "sha256": "47710bba6afdef0d382beb2bd55ef9f97933c0f55fb53efb66e7484f6eef8c0f",
+            "testAnnotations": 2
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCandidatePlanning.kt",
+            "sha256": "bc9c8971b3951002176c756e41156ce3bd11a850323b4ba3c61653ea63e7ca07",
+            "testAnnotations": 3
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITAuthority.kt",
+            "sha256": "aa41795d73027c4bb17bb363ab413e2078d57ca5ff4b68c564d147a9c40c9581",
+            "testAnnotations": 4
+          },
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationIT.kt",
+            "sha256": "37d293d34e3e87c14dfeafcfecdb42a99446eb6154276f0e926621f31c82af58",
+            "testAnnotations": 1
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 26,
+          "counts": {
+            "tests": 26,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a3566a3341a804f04f23a0b42ce1d38668a592f86a71eb8a2aa96ecd460fa62d",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "9a89ce0006153a763548988d29c8117cfe6348961a4c073a1abc81d48fa48d64",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITAuthority.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "57668f54237a16f7b5938f343cf671aadbe40fcba7c520e53a598b8d0d8708c4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "0ccab8c2ab9a96c9ace3dceea71ac821385fc131e7c7cc18f89fff5c2553fb1b",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCompatibility.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1172def4233b35868b72d2d545318fd9c6076cfd2ae2fd60bf0d2d77845fc1cf",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLargeSupply.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "c921b3d9f99d9b56d163f7fb9b3a5ebb20b572c3494fae824d4849589d9ebca4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLifecycle.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "65ead5fb5bdd84261500dd8fd5076b04d4389476324ab70d20b9072667bdfd2a",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITPlanBinding.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "61ca210adddfb059976ad0494eb81fffe6985e52c8cafd873f42584d6afe22b0",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITRestart.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "5bd91b100d45d6a840c696721c0acdce40f1d41cb5326f3cd966037712ef5f54",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_1306_CI_36265279847_CURRENT_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 26,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "eb2ca9f59e1c9dc6af627b83e729a7523a429263fc33545621e33dffc0aef9a0",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationIT.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+              "tests": 4,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "07cd27ddd65a863d41a9c45b235876e2795878cc5f4ea6bda2ce9b09e82a7fdc",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITAuthority.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3c67e678a28374f48dd20106d8b1115a522666e83ef9b9f2ef1baddb8e4b55b1",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "e9a63c2a475995b035161772fc56e0d0b5bbaf7df99c4ac58d26c954d858f7b4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCompatibility.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "b9e9eb24e9f60ba5f1ad8be98376471991de82021bfff1739a626f0f1ef5ec28",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLargeSupply.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+              "tests": 5,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3b5e59540667ec88bc61597a832565540cb48ec48b6a99bed29079296ece3999",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLifecycle.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+              "tests": 6,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "a3daebe4d7d4d64112c7df1e5159dc2fa1b47ab269562734bf99bb0ef3ed098c",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITPlanBinding.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "3a61ab7a5fabaf0ae67f80ee5b2ac6fddc20d9abe0af7124f1338651f6348071",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITRestart.xml"
+            },
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "b0b865fee6692d6d28269d33834c4d9874ea662b7c6a19852203d77aaa5a832e",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f1-1306b65c-evidence-preparation.json",
+        "sha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f"
+      },
+      {
+        "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+        "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+      },
+      {
+        "path": "task46/f3-final-verdict.json",
+        "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+      }
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(WarehouseReservationIT)` reserves final serial concurrently, partial100m/available60m, expires only unpicked balance; two10m segments fail continuous15m demand, reserve/pick encumbrance counted once, foreign/over-reservation409. Save E(10). Commit: `feat(warehouse): reservasi stok per kebutuhan WO`.",
+    "finalAcceptance": false
+  },
+  "priorCurrentEvidenceC902": {
     "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
     "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "mapping": {
@@ -456,5 +736,38 @@
       "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
     },
     "finalAcceptance": false
+  },
+  "priorSourceMappingC902": {
+    "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
+        "sha256": "1698d6e3b3f371719f4d744c86b51e91b9a0ab8af381233f4370b7413db0669c"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
+        "sha256": "06f08914e2d28711875ab373ea65aa1cfb51c66a3b94591bda50717d8b2d2ded"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
+        "sha256": "ceb9a73a9311582f326ac3f973f74602f3ab0f99976d2c585572242a6c7e71b0"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
+        "sha256": "72e1f1a4b6035a238cb2b2e766cd466856ff26841dc48056ff26bcbf5933d273"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+        "sha256": "8889a17cbe57d2871c4ee5b52125eee4effa538bd415ed6f5ead6f82ee53601e"
+      }
+    ],
+    "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/9",
+    "limitations": [
+      "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+      "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+      "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+      "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+      "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    ]
   }
 }

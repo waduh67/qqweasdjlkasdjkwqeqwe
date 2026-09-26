@@ -1,0 +1,213 @@
+{
+  "status": "FINAL_F2_PREPARATION_NO_ADDITIONAL_BLOCKER_FINAL_APPROVAL_PENDING",
+  "reviewedAtUtc": "2026-09-26T19:43:22.178880+00:00",
+  "head": "7785fcff091899c684d1dde37ac8254139058f74",
+  "testedSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "priorSourceReviewCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+  "worktreeAtCapture": "M .omo/notepads/warehouse-workorder-asset-provenance/handoff.md",
+  "nonEvidenceDelta": {
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt": "e9d1177f32385d9a457e1b411b894ae1381d083146c94f051103f49483d912da",
+    "web/src/components/organisms/warehouse/WarehouseStatus.tsx": "cd9672029475e959cda42d7ddf9e7606aabccb7420eeb46803cf6b7a3cc88755",
+    "web/src/pages/MyMaterialsPage.tsx": "2c54f6ccd89007068bf12c74a9cad28dc4af982532ea2cff5eb4c71a21b34610"
+  },
+  "metadataOnlyAfterSourceCommit": [
+    ".omo/evidence/warehouse-workorder-asset-provenance/f3-workflow.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f3-copy-source-review.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f3-copy-web-authentication.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f3-final-verdict.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-1306b65c-preparation-source-input-hashes.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-nonserver-adoption.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-nonserver-incremental-r1.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-nonserver-recheck.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-nonserver-recheck.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-source-input-hashes.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-c90250d2-cancellation-recheck.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-c90250d2-cancellation-recheck.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-c90250d2-source-equivalence.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-current-local-preflight-recheck.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-current-release-guard-recheck.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-release-1306b65c-preparation.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-release-1306b65c-preparation.md",
+    ".omo/notepads/warehouse-workorder-asset-provenance/handoff.md"
+  ],
+  "contractDelta": {
+    "exactExpectedLiteralReplacements": 4,
+    "exactEnumEqualityAndSerializationAssertionsRetained": true,
+    "exactErrorMembershipAndHttpStatusAssertionsRetained": true,
+    "productionEnumAndHttpStatusSourceRead": true
+  },
+  "copyDelta": [
+    {
+      "path": "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
+      "beforeSha256": "c271e42fedc79d53a487a302711104de5fa7cc9eb0abdbd5ee064c3242106d3a",
+      "afterSha256": "cd9672029475e959cda42d7ddf9e7606aabccb7420eeb46803cf6b7a3cc88755",
+      "exactSingleLiteralReplacement": true
+    },
+    {
+      "path": "web/src/pages/MyMaterialsPage.tsx",
+      "beforeSha256": "8d6d23f3b54b09a7c275d025141869cbc60e8fc28618452f6b823a6f25f03ce3",
+      "afterSha256": "2c54f6ccd89007068bf12c74a9cad28dc4af982532ea2cff5eb4c71a21b34610",
+      "exactSingleLiteralReplacement": true
+    }
+  ],
+  "priorManuallyReviewedHashesRecheck": {
+    "inputCount": 137,
+    "missing": [],
+    "changed": []
+  },
+  "currentSourceManifest": {
+    "name": "f4-ci-1306b65c-source-input-hashes.json",
+    "sha256": "4ea854e322b08078177fb1e6678f46a4d21af42f6c84686dfa62a15983f940cb",
+    "inputCount": 3693,
+    "missing": [],
+    "changed": []
+  },
+  "focusedContractAuthentication": {
+    "actualSuites": [
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "sources": {
+      "inputCount": 3693,
+      "missing": [],
+      "changed": [
+        "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
+        "web/src/pages/MyMaterialsPage.tsx"
+      ]
+    },
+    "beforeAfterIdentical": true,
+    "expectedLaterChangesAreTwoUiLiteralsOnly": true,
+    "runnerHashMatched": true,
+    "helperHashMatched": true,
+    "logHashMatched": true,
+    "actualTaskLines": [
+      "> Task :server:test"
+    ],
+    "buildSuccessful": true,
+    "retainedExitCode": 0,
+    "fullServerResult": false
+  },
+  "webAuthentication": {
+    "actualAssertions": 607,
+    "actualFiles": 117,
+    "statuses": {
+      "passed": 607
+    },
+    "sources": {
+      "inputCount": 523,
+      "missing": [],
+      "changed": []
+    },
+    "entireCurrentWebSourceTreeMatches": true,
+    "reportSha256": "22db81abb82a319766c6326600ed8bec4d4c5901f7d84d451c190ff168a9079b",
+    "runnerHashMatched": true,
+    "logHashMatched": true,
+    "runnerFailFast": true,
+    "typecheckLintBuildSequencePresent": true,
+    "retainedExitCode": 0
+  },
+  "f3Assessment": {
+    "verdict": "PASS",
+    "independentReviewerRole": "F3",
+    "F2IndependentlyReranOrParsedRawBrowserTraces": false,
+    "adoptedVerdictSha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd",
+    "actualCaseCountReportedByOwner": 36,
+    "expectedPreflightProbesReportedByOwner": 8,
+    "adoptedEvidenceHashChain": [
+      {
+        "sourceName": "f3-execution-verdict.json",
+        "adoptedName": "f3-independent-execution-verdict.json",
+        "sha256": "043efba90c9d1d9e331fe7d667bb19811358734adafa359140dcb51f0c4ad499"
+      },
+      {
+        "sourceName": "main-matrix-authentication.json",
+        "adoptedName": "f3-main-matrix-authentication.json",
+        "sha256": "e98ef0ad1c616c64daca6c38c12162bd940ed23e7dffa42281bae2c9603e4bca"
+      },
+      {
+        "sourceName": "asset-wire-authentication.json",
+        "adoptedName": "f3-asset-wire-authentication.json",
+        "sha256": "b91bc29bcab0ebd2c34216ae4d916fc8c5be6784195e825a8c114ed0bbe58850"
+      },
+      {
+        "sourceName": "extra-restart-authentication.json",
+        "adoptedName": "f3-extra-restart-authentication.json",
+        "sha256": "fe2f7bc8a2a2fe29f8cfd285ccbba853a5ad0cd79fbd59f7690bc192302cdcd6"
+      },
+      {
+        "sourceName": "legacy-authentication.json",
+        "adoptedName": "f3-legacy-authentication.json",
+        "sha256": "0bde7fd5d7ea6581beea841a43560707cbfb0943bfdc96c4f3dd56ff002add9f"
+      },
+      {
+        "sourceName": "supplemental-visual-review.json",
+        "adoptedName": "f3-supplemental-visual-review.json",
+        "sha256": "eae4ef49ddb324fa0036b91254787ea065c1e239c78c817cab5209d927dce6c5"
+      },
+      {
+        "sourceName": "f3-copy-source-review.json",
+        "adoptedName": "f3-copy-source-review.json",
+        "sha256": "8f5b515f72834ea365138d334acac5009d175f68dcadd3931d350113f03ec591"
+      },
+      {
+        "sourceName": "f3-copy-web-authentication.json",
+        "adoptedName": "f3-copy-web-authentication.json",
+        "sha256": "b2556f8e0d807fd632e0b4c75032bb657bc9224619e40a4d97040cb9805be501"
+      }
+    ],
+    "priorVisualReviewHashNotReparsedByF2": "dd9f754db985d4d5c75b44d85a7dab0c71e662d46c409938212618c272933338",
+    "attemptBoundariesPreserved": true,
+    "copyOnlyDeltaBoundedSeparately": true,
+    "capturedJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+  },
+  "f4Assessment": {
+    "verdict": "VERIFIED_NONSERVER_AT_TESTED_COMMIT",
+    "independentReviewerRole": "F4",
+    "F2IndependentlyDownloadedOrParsedRawCiArchives": false,
+    "adoptedReportSha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "sourceManifestExactlyMatchesCurrent": true,
+    "adoptionProofHashesMatch": true,
+    "ciRun": 36265279847,
+    "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "nonserverJobsSucceeded": 14,
+    "archiveCountReportedByOwner": 15,
+    "authenticatedEncryptedArchivesReportedByOwner": 13,
+    "actualCountsReportedByOwner": {
+      "browser": 24,
+      "browserSpecs": 9,
+      "browserProjectExecutions": 18,
+      "legacyBrowser": 6,
+      "web": 607,
+      "shared": 44,
+      "nativeCompileTasks": 2
+    },
+    "imageJarEqualsF3CapturedJar": true,
+    "nativeRuntimeOrRelease": false,
+    "aggregateCiPass": false,
+    "finalF4Approval": false
+  },
+  "remainingFinalEvidence": [
+    "Current successful unfiltered server process, actual nonzero ModularityTests and source-bound raw reports",
+    "Current focused, historical, projection and pinned-old JVM handoff archive authentication by F4",
+    "Current aggregate CI and final F4; source/evidence recheck if any later inputs change"
+  ],
+  "newBlockingFindings": [],
+  "physicalGponCertificationDeferred": true,
+  "localQaExecuted": false,
+  "productEdits": false,
+  "finalF2Approval": false
+}

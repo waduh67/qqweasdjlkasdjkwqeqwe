@@ -1,0 +1,30 @@
+{
+  "status": "ADOPTED_EXACT_REVIEWER_BYTES_AFTER_CANONICAL_REFERENCE_CORRECTION",
+  "atUtc": "2026-09-26T19:46:50.791712+00:00",
+  "productCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "reviewer": "/root/compliance_review",
+  "indexes": 48,
+  "historicalBlockComparisons": 192,
+  "priorCurrentEvidenceBlocksPreserved": 48,
+  "currentImplementationFilesVerified": 298,
+  "proofSha256": {
+    "f1-1306b65c-compliance-draft.md": "506b0bf74d70820131a7690212b22a4882a58a94dce90c1ab286ed9160a371d7",
+    "f1-1306b65c-source-evidence.json": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa",
+    "task46/f1-1306b65c-source-delta.json": "bfe812a1ccf6620e384d05774a6cf1b5eab93517a1a40961a15cc12f5da32ef5",
+    "task46/f1-1306b65c-evidence-preparation.json": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f",
+    "task46/f1-prior-matrix-c90250d2.json": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d",
+    "task46/f1-index-refresh-1306b65c-manifest.json": "cdff3006e39aa5aaf860a8a64dffa85a754c0670b3c7fb0858c6933f6ab428a8",
+    "task46/f1-index-refresh-1306b65c-integrity.json": "0e611e4fa6df55d15b9078f3160fcd7b427d0b70fe7d6b4251bf47772ec7ab4a",
+    "task46/f1-1306b65c-proof-reference-correction.json": "f02efa4b30326838de3455429ddc8689a6cae0bd39b4d6fdad5f98a782c1660c"
+  },
+  "currentReferenceHashesVerified": {
+    "f1-1306b65c-source-evidence.json": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa",
+    "task46/f1-1306b65c-evidence-preparation.json": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f",
+    "task46/f4-ci-1306b65c-nonserver-recheck.json": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "task46/f3-final-verdict.json": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+  },
+  "candidatePaths": "Manifest candidate paths remain in the private reviewer worktree; committed canonical targets contain exact candidate bytes.",
+  "rawReportsCopied": false,
+  "finalF1Approval": false,
+  "currentFullServerPending": true
+}

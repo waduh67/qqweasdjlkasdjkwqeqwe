@@ -3,7 +3,7 @@
   "task": 28,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
@@ -21,7 +21,7 @@
   "requiredSelectors": [
     "G(WarehouseDispositionIT)"
   ],
-  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/27",
+  "independentMapping": "f1-1306b65c-source-evidence.json#tasks/27",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/active-loan-loss-verification.json",
@@ -83,13 +83,11 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
-    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
-    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
-    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
-    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    "All previous historical and c902 source/evidence blocks are preserved with original identities.",
+    "Exact1306 current nonserver and independent F3 source-bound PASS are available; current1306 full server and final F2/F4/F1 remain pending.",
+    "Old1d full pass, failed6b focused run and cancelledc902 run do not establish current full-CI acceptance."
   ],
-  "priorIndexSha256": "fd602471d7a7d36d0cb51ce86568b81be02a92408b09c2cac0166d8a9d05a413",
+  "priorIndexSha256": "7439aa8b56b4db887515319d6150fd8a204f6cc27c4045821dab996f985a860a",
   "priorSourceMapping": {
     "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
@@ -118,6 +116,104 @@
     ]
   },
   "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+    "reviewedHead": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+    "mapping": {
+      "path": "f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa"
+    },
+    "status": "SOURCE_CURRENT_NONSERVER_AND_F3_MAPPED_CURRENT_SERVER_PENDING",
+    "literalSelectors": {
+      "G(WarehouseDispositionIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDispositionIT.kt",
+            "sha256": "e582d46502f1bce35984fe54eeaa905c3ac578aaa2794640a4e3e7c7293368a3",
+            "testAnnotations": 1
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 2,
+          "counts": {
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "767b9494d9f6d879f508ae1817aa2d73dc4bfdf85fddd3d981c970b9cb8d8b83",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseDispositionIT.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_1306_CI_36265279847_CURRENT_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 2,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+              "tests": 2,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "eb6e136273ae471f799e047aea41f6c253e357cc4564c95276c46f4f69d50498",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseDispositionIT.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f1-1306b65c-evidence-preparation.json",
+        "sha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f"
+      },
+      {
+        "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+        "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+      },
+      {
+        "path": "task46/f3-final-verdict.json",
+        "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+      }
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(WarehouseDispositionIT)` damaged remainder writeoff closes exact obligation with audit; requester/delegate self-approve, negative balance and compensation of already reused asset denied. Save E(28). Commit: `feat(warehouse): kendalikan kehilangan dan koreksi stok`.",
+    "finalAcceptance": false
+  },
+  "priorCurrentEvidenceC902": {
     "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
     "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "mapping": {
@@ -231,5 +327,30 @@
       "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
     },
     "finalAcceptance": false
+  },
+  "priorSourceMappingC902": {
+    "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+        "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+        "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+        "sha256": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23"
+      }
+    ],
+    "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/27",
+    "limitations": [
+      "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+      "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+      "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+      "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+      "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    ]
   }
 }

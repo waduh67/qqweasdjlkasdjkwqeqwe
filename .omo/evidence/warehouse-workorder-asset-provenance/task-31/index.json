@@ -3,7 +3,7 @@
   "task": 31,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
       "path": "web/src/api/warehouse",
@@ -282,13 +282,17 @@
     {
       "path": "web/DESIGN.md",
       "sha256": "48b7d88fbd8cc7336c3236bf25eb68c83c65aaa210ef3c5d3f3edd1d7303ba2e"
+    },
+    {
+      "path": "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
+      "sha256": "cd9672029475e959cda42d7ddf9e7606aabccb7420eeb46803cf6b7a3cc88755"
     }
   ],
   "requiredSelectors": [
     "W(src/api/warehouse)",
     "B(setup.spec.ts)"
   ],
-  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/30",
+  "independentMapping": "f1-1306b65c-source-evidence.json#tasks/30",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task31/api-verification.json",
@@ -329,13 +333,11 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
-    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
-    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
-    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
-    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    "All previous historical and c902 source/evidence blocks are preserved with original identities.",
+    "Exact1306 current nonserver and independent F3 source-bound PASS are available; current1306 full server and final F2/F4/F1 remain pending.",
+    "Old1d full pass, failed6b focused run and cancelledc902 run do not establish current full-CI acceptance."
   ],
-  "priorIndexSha256": "6b7db9afb4245476c06d315be4c5938f4e7959411da1096c0646e634bd1277b5",
+  "priorIndexSha256": "923b1a0a775b9feef192d5dbafba0d8e1f840770b9e2d5bd4f641801d170f349",
   "priorSourceMapping": {
     "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
@@ -373,6 +375,701 @@
     ]
   },
   "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+    "reviewedHead": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+    "mapping": {
+      "path": "f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa"
+    },
+    "status": "SOURCE_CURRENT_NONSERVER_AND_F3_MAPPED_CURRENT_SERVER_PENDING",
+    "literalSelectors": {
+      "W(src/api/warehouse)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/api/warehouse/draftExpiry.test.ts",
+            "sha256": "cc1766725a1cdfabd3f6e1eeb75fa284599c49ade99a5ac7ce64d14e0772f3f8"
+          },
+          {
+            "path": "web/src/api/warehouse/transport.test.ts",
+            "sha256": "2f9934a1780cb8abfca6715c89b8088d42893d5604b7e08f4b23a2ec6d1bacfe"
+          },
+          {
+            "path": "web/src/api/warehouse/transfers.test.ts",
+            "sha256": "d724650b8fdc109bc2563987f26b3d7b5bced772c9d4a8116b2c9eb8d6161a1f"
+          },
+          {
+            "path": "web/src/api/warehouse/stock.test.ts",
+            "sha256": "dae860e753ebc60bc0cc05a4c6bb0959a55aeb8c2b51cd7708501f03c533ef14"
+          },
+          {
+            "path": "web/src/api/warehouse/setup.test.ts",
+            "sha256": "3c2bbbe684d1a7a8cf7eb36e44b298cee3c8729fef9a43b38107072c59df20e5"
+          },
+          {
+            "path": "web/src/api/warehouse/settings.test.ts",
+            "sha256": "c6f727430e3469937980562004b71338fbd6e5d643cc1061306357b9c3703a63"
+          },
+          {
+            "path": "web/src/api/warehouse/returns.test.ts",
+            "sha256": "6c0f30c660c5ec28aee64ebce49c753d24389057aebcb93571c7440da099d9aa"
+          },
+          {
+            "path": "web/src/api/warehouse/reports.test.ts",
+            "sha256": "87e942a6a62db8021e82c7d7106f776ee87fba0a71781a01a54f7153b33ae98d"
+          },
+          {
+            "path": "web/src/api/warehouse/replenishment.test.ts",
+            "sha256": "430d8345c3076b25181819b2e7bef00d1384f9c1bf5973d7a9f2e9c0a1748376"
+          },
+          {
+            "path": "web/src/api/warehouse/receipts.test.ts",
+            "sha256": "c9c69879ef08e56468051a229167b215a2db9ed7b827c7d841a8bb2c2d5997ef"
+          },
+          {
+            "path": "web/src/api/warehouse/quantity.test.ts",
+            "sha256": "99834150f68f62fac2c946115ae186e4acb9c3b9003547bae9711130192db249"
+          },
+          {
+            "path": "web/src/api/warehouse/provenance.test.ts",
+            "sha256": "d1bb0a3998bd4119b8f5279fbf2256de2dedc424026926b04c0a639408924470"
+          },
+          {
+            "path": "web/src/api/warehouse/policy.test.ts",
+            "sha256": "e8e35fd955648adb350b3abec044857196c04e69cd58dc4f0d610dfbd5263ce5"
+          },
+          {
+            "path": "web/src/api/warehouse/overview.test.ts",
+            "sha256": "1da0c246900d13145b1c5f980765051200f99f4b6137ce3d08a339849955d100"
+          },
+          {
+            "path": "web/src/api/warehouse/myMaterials.test.ts",
+            "sha256": "99339f31977efa2cb6813644dbdfbac84a90c13a6728d97783eb4b8e050e6171"
+          },
+          {
+            "path": "web/src/api/warehouse/myMaterialRma.test.ts",
+            "sha256": "51b346f5dc3d3d4d2b72eaee2abe42af4bd4c8b196b78c9fde00c154b2cf044b"
+          },
+          {
+            "path": "web/src/api/warehouse/migrationReview.test.ts",
+            "sha256": "3345734771f297fd4e6b2deee050373c6a1d983f0f08de4f10cf9218eeed1207"
+          },
+          {
+            "path": "web/src/api/warehouse/materialReview.test.ts",
+            "sha256": "10ee2bbfbff3e60a111ba2d18733cf98479d976763040b3a3dbe6960a9d254a9"
+          },
+          {
+            "path": "web/src/api/warehouse/materialModels.test.ts",
+            "sha256": "989d47dde044c8c401696f985f5ca4456c852b0877d40dd1030f330eb6f123ec"
+          },
+          {
+            "path": "web/src/api/warehouse/materialHandover.test.ts",
+            "sha256": "f03ebf0ad2c256bbe780e29385fbd9763ea116f3e26aa21afac789f9c24a2404"
+          },
+          {
+            "path": "web/src/api/warehouse/materialExecution.test.ts",
+            "sha256": "a6474fcdd65eddcdc7f994fc98673976a0ae3b73ecc094846f34cec4790a9d7f"
+          },
+          {
+            "path": "web/src/api/warehouse/customerAssets.test.ts",
+            "sha256": "852ceb80c1dde08f5bca839139bcd46e985d96d41f29ea4d9f545bd6326c1a88"
+          },
+          {
+            "path": "web/src/api/warehouse/counts.test.ts",
+            "sha256": "f3e58bb6d5d92d3e4542980235fd68212a3a510f54bb9df1fae097615babf107"
+          },
+          {
+            "path": "web/src/api/warehouse/codec.test.ts",
+            "sha256": "38f3275809b7c1505ae2b304c61b9f842f778f0831d7de903a7db74866f2be5e"
+          },
+          {
+            "path": "web/src/api/warehouse/approvalReads.test.ts",
+            "sha256": "a7ef47e3a33e3b22146511fe6e4e94fbc257173096998ced685fd438a92f6542"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 131,
+          "files": [
+            {
+              "path": "web/src/api/warehouse/approvalReads.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/codec.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/counts.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/customerAssets.test.ts",
+              "tests": 13
+            },
+            {
+              "path": "web/src/api/warehouse/materialExecution.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/materialHandover.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/materialModels.test.ts",
+              "tests": 9
+            },
+            {
+              "path": "web/src/api/warehouse/materialReview.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/migrationReview.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterialRma.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterials.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/overview.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/policy.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/provenance.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/quantity.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/receipts.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/replenishment.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/reports.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/returns.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/settings.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/setup.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/stock.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/transfers.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/transport.test.ts",
+              "tests": 4
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+          "sourceRelation": "EXACT_1306_CURRENT_INPUTS",
+          "tests": 137,
+          "files": [
+            {
+              "path": "web/src/api/warehouse/approvalReads.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/codec.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/counts.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/customerAssets.test.ts",
+              "tests": 13
+            },
+            {
+              "path": "web/src/api/warehouse/draftExpiry.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/materialExecution.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/materialHandover.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/materialModels.test.ts",
+              "tests": 9
+            },
+            {
+              "path": "web/src/api/warehouse/materialReview.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/migrationReview.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterialRma.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterials.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/overview.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/policy.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/provenance.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/quantity.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/receipts.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/replenishment.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/reports.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/returns.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/settings.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/setup.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/stock.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/transfers.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/transport.test.ts",
+              "tests": 4
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+            "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+          }
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 137,
+          "files": [
+            {
+              "path": "web/src/api/warehouse/approvalReads.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/codec.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/counts.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/customerAssets.test.ts",
+              "tests": 13
+            },
+            {
+              "path": "web/src/api/warehouse/draftExpiry.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/materialExecution.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/materialHandover.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/materialModels.test.ts",
+              "tests": 9
+            },
+            {
+              "path": "web/src/api/warehouse/materialReview.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/migrationReview.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterialRma.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterials.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/overview.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/policy.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/provenance.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/quantity.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/receipts.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/replenishment.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/reports.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/returns.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/settings.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/setup.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/stock.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/transfers.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/transport.test.ts",
+              "tests": 4
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        },
+        "priorExecutedCurrentC902": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 137,
+          "files": [
+            {
+              "path": "web/src/api/warehouse/approvalReads.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/codec.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/counts.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/customerAssets.test.ts",
+              "tests": 13
+            },
+            {
+              "path": "web/src/api/warehouse/draftExpiry.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/materialExecution.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/materialHandover.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/materialModels.test.ts",
+              "tests": 9
+            },
+            {
+              "path": "web/src/api/warehouse/materialReview.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/migrationReview.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterialRma.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/myMaterials.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/overview.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/policy.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/provenance.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/quantity.test.ts",
+              "tests": 20
+            },
+            {
+              "path": "web/src/api/warehouse/receipts.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "web/src/api/warehouse/replenishment.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/reports.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/returns.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/settings.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "web/src/api/warehouse/setup.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/stock.test.ts",
+              "tests": 6
+            },
+            {
+              "path": "web/src/api/warehouse/transfers.test.ts",
+              "tests": 3
+            },
+            {
+              "path": "web/src/api/warehouse/transport.test.ts",
+              "tests": 4
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        }
+      },
+      "B(setup.spec.ts)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/e2e/warehouse/setup.spec.ts",
+            "sha256": "125afdd4bcf2cc90b240ca08d62f34051902d93f881e0bb7742b01457d0c8ca0"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "0fc0cd2e5a324226a59ea71d5a25d393106723902e62bacd1acd2a3a05deaa44"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "0fc0cd2e5a324226a59ea71d5a25d393106723902e62bacd1acd2a3a05deaa44"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "0fc0cd2e5a324226a59ea71d5a25d393106723902e62bacd1acd2a3a05deaa44"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "0fc0cd2e5a324226a59ea71d5a25d393106723902e62bacd1acd2a3a05deaa44"
+            }
+          ]
+        },
+        "executedCurrent": {
+          "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+          "sourceRelation": "EXACT_1306_CURRENT_INPUTS",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "999ba873db8dbbc72e25e0fc72719b8bc50526a4d90747449cdd785a56e29dec",
+              "artifact": "warehouse-browser-setup-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "999ba873db8dbbc72e25e0fc72719b8bc50526a4d90747449cdd785a56e29dec",
+              "artifact": "warehouse-browser-setup-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "999ba873db8dbbc72e25e0fc72719b8bc50526a4d90747449cdd785a56e29dec",
+              "artifact": "warehouse-browser-setup-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "999ba873db8dbbc72e25e0fc72719b8bc50526a4d90747449cdd785a56e29dec",
+              "artifact": "warehouse-browser-setup-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+            "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+          }
+        },
+        "priorExecutedCurrentC902": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "PRODUCTION_BROWSER_BUILD_AND_WORKFLOW_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "fe764cf7b0e0297d9e573df6cd0a240ccfeda8476a6094134fcea575c3d0be9d",
+              "artifact": "warehouse-browser-setup-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "fe764cf7b0e0297d9e573df6cd0a240ccfeda8476a6094134fcea575c3d0be9d",
+              "artifact": "warehouse-browser-setup-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "fe764cf7b0e0297d9e573df6cd0a240ccfeda8476a6094134fcea575c3d0be9d",
+              "artifact": "warehouse-browser-setup-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "setup.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "fe764cf7b0e0297d9e573df6cd0a240ccfeda8476a6094134fcea575c3d0be9d",
+              "artifact": "warehouse-browser-setup-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "independentF3Claim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f1-1306b65c-evidence-preparation.json",
+        "sha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f"
+      },
+      {
+        "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+        "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+      },
+      {
+        "path": "task46/f3-final-verdict.json",
+        "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+      }
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `W(src/api/warehouse)` malformed DTO/decimal/retry tests; `B(setup.spec.ts)` signup/readiness and approver-only navigation; unsupported route fails explicitly instead of rendering empty success. Save E(31). Commit: `feat(web): pisahkan navigasi gudang dan fondasi transaksi`.",
+    "finalAcceptance": false
+  },
+  "priorCurrentEvidenceC902": {
     "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
     "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "mapping": {
@@ -930,5 +1627,296 @@
       "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
     },
     "finalAcceptance": false
+  },
+  "priorSourceMappingC902": {
+    "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "implementationSource": [
+      {
+        "path": "web/src/api/warehouse",
+        "kind": "directory",
+        "files": [
+          {
+            "path": "web/src/api/warehouse/draftExpiry.test.ts",
+            "sha256": "cc1766725a1cdfabd3f6e1eeb75fa284599c49ade99a5ac7ce64d14e0772f3f8"
+          },
+          {
+            "path": "web/src/api/warehouse/draftExpiry.ts",
+            "sha256": "f0d6cab27a6d893e67ad2ed479745856b8b2f3fe4bb3b5fde732bb8fdbcb6299"
+          },
+          {
+            "path": "web/src/api/warehouse/customerAssetExceptions.ts",
+            "sha256": "c9605d03a5d7496a0dd90f0d3da619306a285b653bb5b03f603709a1db2d7954"
+          },
+          {
+            "path": "web/src/api/warehouse/workOrders.ts",
+            "sha256": "b1e907ba623f4b490e67b37e94c5061ebf4374a21e6e81e7ce9a895c1d28fa06"
+          },
+          {
+            "path": "web/src/api/warehouse/transport.ts",
+            "sha256": "0741eafe46b07d802aa2bad419322d38c637699ea77da8075c56fe947bd2a8d7"
+          },
+          {
+            "path": "web/src/api/warehouse/transport.test.ts",
+            "sha256": "2f9934a1780cb8abfca6715c89b8088d42893d5604b7e08f4b23a2ec6d1bacfe"
+          },
+          {
+            "path": "web/src/api/warehouse/transfers.ts",
+            "sha256": "95b92d57312adc01da537b8b735874ac3cabe2486b114c51031d73ff6068ef2d"
+          },
+          {
+            "path": "web/src/api/warehouse/transfers.test.ts",
+            "sha256": "d724650b8fdc109bc2563987f26b3d7b5bced772c9d4a8116b2c9eb8d6161a1f"
+          },
+          {
+            "path": "web/src/api/warehouse/stock.ts",
+            "sha256": "e5aa1c8daf74a50565ac493fdc488a76def0984e7aec5571d3f7db15b2d74b2e"
+          },
+          {
+            "path": "web/src/api/warehouse/stock.test.ts",
+            "sha256": "dae860e753ebc60bc0cc05a4c6bb0959a55aeb8c2b51cd7708501f03c533ef14"
+          },
+          {
+            "path": "web/src/api/warehouse/setup.ts",
+            "sha256": "8b26aba5c75b14b9819a3e2c69d95e554dd93204720811c0fe90a12d1f53dbab"
+          },
+          {
+            "path": "web/src/api/warehouse/setup.test.ts",
+            "sha256": "3c2bbbe684d1a7a8cf7eb36e44b298cee3c8729fef9a43b38107072c59df20e5"
+          },
+          {
+            "path": "web/src/api/warehouse/settings.ts",
+            "sha256": "4af322e32a9cec7d335d83215c38053a4306a8b8b0e582e33abdf3084404f7c9"
+          },
+          {
+            "path": "web/src/api/warehouse/settings.test.ts",
+            "sha256": "c6f727430e3469937980562004b71338fbd6e5d643cc1061306357b9c3703a63"
+          },
+          {
+            "path": "web/src/api/warehouse/serialIdentity.ts",
+            "sha256": "6dd3292c323280289ccc3b8563d543edec88f8caa9eea3e3533224d6df8ba3d8"
+          },
+          {
+            "path": "web/src/api/warehouse/returns.ts",
+            "sha256": "4ce180224295e4fb94e1f9d9fa4f7a0584115a08710a1daef4bcc5b78c5575e9"
+          },
+          {
+            "path": "web/src/api/warehouse/returns.test.ts",
+            "sha256": "6c0f30c660c5ec28aee64ebce49c753d24389057aebcb93571c7440da099d9aa"
+          },
+          {
+            "path": "web/src/api/warehouse/reservations.ts",
+            "sha256": "455a15d0b09ccce7a51adb272a05769684aefd0d4779c839e553146c0d3289e6"
+          },
+          {
+            "path": "web/src/api/warehouse/reports.ts",
+            "sha256": "cdcc0fd23732452c0e21a9eeddb4b8f698c6ee04d22fc33e3e3eeebb4cf78176"
+          },
+          {
+            "path": "web/src/api/warehouse/reports.test.ts",
+            "sha256": "87e942a6a62db8021e82c7d7106f776ee87fba0a71781a01a54f7153b33ae98d"
+          },
+          {
+            "path": "web/src/api/warehouse/reportModels.ts",
+            "sha256": "b0fa90ce08a91ed77e7c1efc5290fb1d2dbe1df46036db3ecf282e935d1557ab"
+          },
+          {
+            "path": "web/src/api/warehouse/replenishment.ts",
+            "sha256": "725117823c6e8ba72869537be098697e36166be4d2609fdf7e8835e239570c48"
+          },
+          {
+            "path": "web/src/api/warehouse/replenishment.test.ts",
+            "sha256": "430d8345c3076b25181819b2e7bef00d1384f9c1bf5973d7a9f2e9c0a1748376"
+          },
+          {
+            "path": "web/src/api/warehouse/receipts.ts",
+            "sha256": "35c0ebaa76e1354765dd3bebe745f5115190265b208b43b52c929f8de27d1426"
+          },
+          {
+            "path": "web/src/api/warehouse/receipts.test.ts",
+            "sha256": "c9c69879ef08e56468051a229167b215a2db9ed7b827c7d841a8bb2c2d5997ef"
+          },
+          {
+            "path": "web/src/api/warehouse/quantity.ts",
+            "sha256": "086bfde898eae2e243be68462bd1a80e6cdba6e909510184d68d38cb357828b7"
+          },
+          {
+            "path": "web/src/api/warehouse/quantity.test.ts",
+            "sha256": "99834150f68f62fac2c946115ae186e4acb9c3b9003547bae9711130192db249"
+          },
+          {
+            "path": "web/src/api/warehouse/provenanceModels.ts",
+            "sha256": "d78ddda420a71d6d6e5e334fb013f8f07ba155a229529ef04bd832e3127fe933"
+          },
+          {
+            "path": "web/src/api/warehouse/provenance.ts",
+            "sha256": "d05483ede955c5dff4614e40c2c8aa29b39214fcd23f5c9ec2a80ac6031be6b4"
+          },
+          {
+            "path": "web/src/api/warehouse/provenance.test.ts",
+            "sha256": "d1bb0a3998bd4119b8f5279fbf2256de2dedc424026926b04c0a639408924470"
+          },
+          {
+            "path": "web/src/api/warehouse/policy.ts",
+            "sha256": "af0630a81484581ab7ac14fa70e0eff34a1f78069fdf8c24da3b45574a9ce1c8"
+          },
+          {
+            "path": "web/src/api/warehouse/policy.test.ts",
+            "sha256": "e8e35fd955648adb350b3abec044857196c04e69cd58dc4f0d610dfbd5263ce5"
+          },
+          {
+            "path": "web/src/api/warehouse/overview.ts",
+            "sha256": "7670f438c9715903e49fa3d2836a0f380cb8b5727201b0c62d0f271bcb126e99"
+          },
+          {
+            "path": "web/src/api/warehouse/overview.test.ts",
+            "sha256": "1da0c246900d13145b1c5f980765051200f99f4b6137ce3d08a339849955d100"
+          },
+          {
+            "path": "web/src/api/warehouse/myMaterials.ts",
+            "sha256": "8027b1ebaa379648b4d6b1b0971bae4039a8328ce4643e3710016e0e1c13f378"
+          },
+          {
+            "path": "web/src/api/warehouse/myMaterials.test.ts",
+            "sha256": "99339f31977efa2cb6813644dbdfbac84a90c13a6728d97783eb4b8e050e6171"
+          },
+          {
+            "path": "web/src/api/warehouse/myMaterialRma.ts",
+            "sha256": "3bfc038edacb1b287626dda75ae5fabdaa6628bd11fc0a3a9d2d990566c77616"
+          },
+          {
+            "path": "web/src/api/warehouse/myMaterialRma.test.ts",
+            "sha256": "51b346f5dc3d3d4d2b72eaee2abe42af4bd4c8b196b78c9fde00c154b2cf044b"
+          },
+          {
+            "path": "web/src/api/warehouse/models.ts",
+            "sha256": "db2c6c45465dd227e1fa698aa88ae33f037095a0faf53abd934ecb0ad0e24baa"
+          },
+          {
+            "path": "web/src/api/warehouse/migrationReview.ts",
+            "sha256": "1ff4ed00ccb4558bba3cd599f886499c6f9d2856cd4cd5228eea9cca784dd54b"
+          },
+          {
+            "path": "web/src/api/warehouse/migrationReview.test.ts",
+            "sha256": "3345734771f297fd4e6b2deee050373c6a1d983f0f08de4f10cf9218eeed1207"
+          },
+          {
+            "path": "web/src/api/warehouse/materials.ts",
+            "sha256": "f3c5d44fc04355b1350e557d6cd87f69116b2bee168f4ebacd9625182e6933c7"
+          },
+          {
+            "path": "web/src/api/warehouse/materialReview.ts",
+            "sha256": "c758d7444f866a1efef3cd3b9a716631eba1a6f5c72956a67a2ec2726f989a11"
+          },
+          {
+            "path": "web/src/api/warehouse/materialReview.test.ts",
+            "sha256": "10ee2bbfbff3e60a111ba2d18733cf98479d976763040b3a3dbe6960a9d254a9"
+          },
+          {
+            "path": "web/src/api/warehouse/materialModels.ts",
+            "sha256": "67c019bdc802eedcc43b4fbf2c9d13a085e531862c79c7c9d91231b66c55c9f9"
+          },
+          {
+            "path": "web/src/api/warehouse/materialModels.test.ts",
+            "sha256": "989d47dde044c8c401696f985f5ca4456c852b0877d40dd1030f330eb6f123ec"
+          },
+          {
+            "path": "web/src/api/warehouse/materialHandover.ts",
+            "sha256": "7d150d9ba1e80c89d236274d8077dd33478776a7432a533598a569964b17d752"
+          },
+          {
+            "path": "web/src/api/warehouse/materialHandover.test.ts",
+            "sha256": "f03ebf0ad2c256bbe780e29385fbd9763ea116f3e26aa21afac789f9c24a2404"
+          },
+          {
+            "path": "web/src/api/warehouse/materialExecution.ts",
+            "sha256": "0ec53e9b9a749ed59c9813a9d49f6b321ada471a9076fcd07af1514a07294741"
+          },
+          {
+            "path": "web/src/api/warehouse/materialExecution.test.ts",
+            "sha256": "a6474fcdd65eddcdc7f994fc98673976a0ae3b73ecc094846f34cec4790a9d7f"
+          },
+          {
+            "path": "web/src/api/warehouse/masters.ts",
+            "sha256": "5aeb7e8c10e281ae8c6ca139421c252f4e79b7ae5bb399b78e2a02264a2639b8"
+          },
+          {
+            "path": "web/src/api/warehouse/issueModels.ts",
+            "sha256": "808e3d7c486f86f42f642a70ef3ed95f622280d9fb9e94bfd9d010641215fe81"
+          },
+          {
+            "path": "web/src/api/warehouse/evidence.ts",
+            "sha256": "d818f46f5388068104c2318934fcc5f9d4b21289f795c31b9cba587272f293c8"
+          },
+          {
+            "path": "web/src/api/warehouse/errors.ts",
+            "sha256": "61a72843f2af5870723a4a9cfb77690205a1a2640d3804f387d0e055d2f3bd1f"
+          },
+          {
+            "path": "web/src/api/warehouse/dispositions.ts",
+            "sha256": "21d494ef1050ab254b4b59664f955f3627d3299fef0112d154b4fdaa9db40823"
+          },
+          {
+            "path": "web/src/api/warehouse/customerAssets.ts",
+            "sha256": "49fdea08459716d9d296a46b19a6613b509f1d9f5ada576efcfc00fa66b17199"
+          },
+          {
+            "path": "web/src/api/warehouse/customerAssets.test.ts",
+            "sha256": "852ceb80c1dde08f5bca839139bcd46e985d96d41f29ea4d9f545bd6326c1a88"
+          },
+          {
+            "path": "web/src/api/warehouse/counts.ts",
+            "sha256": "696dbe550e56703b7387cfa0e4915df411c72427cc6a4744171cd6f03ded3542"
+          },
+          {
+            "path": "web/src/api/warehouse/counts.test.ts",
+            "sha256": "f3e58bb6d5d92d3e4542980235fd68212a3a510f54bb9df1fae097615babf107"
+          },
+          {
+            "path": "web/src/api/warehouse/codec.ts",
+            "sha256": "268c7dc6d1cb8048b7ddae831bbd371ef6cb9326120e65082698f2a6b64f3952"
+          },
+          {
+            "path": "web/src/api/warehouse/codec.test.ts",
+            "sha256": "38f3275809b7c1505ae2b304c61b9f842f778f0831d7de903a7db74866f2be5e"
+          },
+          {
+            "path": "web/src/api/warehouse/approvals.ts",
+            "sha256": "1754c50372fb8f09a0557fdd2c860e90a7c5afaf26bb68b74ef072a8da02b96a"
+          },
+          {
+            "path": "web/src/api/warehouse/approvalReads.ts",
+            "sha256": "e39ca0c9c80408cd2aebce0d689f5247abd0f71c2381e012b0b7b06f5bf7f031"
+          },
+          {
+            "path": "web/src/api/warehouse/approvalReads.test.ts",
+            "sha256": "a7ef47e3a33e3b22146511fe6e4e94fbc257173096998ced685fd438a92f6542"
+          }
+        ]
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseRoutes.tsx",
+        "sha256": "8c58448f5bdfed1e49f0f5ac2695f97f3ed226608119867cec8e0a1aa4796477"
+      },
+      {
+        "path": "web/src/pages/warehouse/navigation.ts",
+        "sha256": "e7b6f41668f3897f0f3b71c3e822065d4570c37b66ceb1e511d2a23861df710a"
+      },
+      {
+        "path": "web/playwright.warehouse.config.ts",
+        "sha256": "1a0af0400df8c916fd7a28a87777254b7f8851005af0a44bc350b7a4d30b90ce"
+      },
+      {
+        "path": "web/DESIGN.md",
+        "sha256": "48b7d88fbd8cc7336c3236bf25eb68c83c65aaa210ef3c5d3f3edd1d7303ba2e"
+      }
+    ],
+    "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/30",
+    "limitations": [
+      "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+      "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+      "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+      "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+      "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    ]
   }
 }

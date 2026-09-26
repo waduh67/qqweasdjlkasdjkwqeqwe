@@ -1,0 +1,357 @@
+{
+  "status": "CURRENT_SOURCE_NONSERVER_AND_F3_AUTHENTICATED_SERVER_PENDING",
+  "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+  "productCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+  "sourceInputCount": 3693,
+  "allCapturedInputsMatch": true,
+  "sourceManifest": {
+    "path": "task46/f4-ci-1306b65c-source-input-hashes.json",
+    "sha256": "4ea854e322b08078177fb1e6678f46a4d21af42f6c84686dfa62a15983f940cb"
+  },
+  "sourceDelta": {
+    "path": "task46/f1-1306b65c-source-delta.json",
+    "sha256": "bfe812a1ccf6620e384d05774a6cf1b5eab93517a1a40961a15cc12f5da32ef5"
+  },
+  "currentNonserverProof": {
+    "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+    "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+  },
+  "currentNonserverReports": [
+    {
+      "artifact": "warehouse-browser-customer-assets-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 4,
+      "reportSha256": [
+        "d0708e9aea0dbd9ba7faa4087064afbf4e03fd581e7addb85c780efe6621cad3"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-draft-expiry-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "d27ea0ef52654752ca761aa692ecdf51261b6320962286a33d80d81bb5c3b213"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-exceptions-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "c7bbf36ea23c938d29b24bf002ecb768737d0739755f98aae04b9611dd54ed05"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-issue-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "3c60d3574b19c538f790f04e6b27bfd078325b0b319d9250fd1ef9b3322c77a4"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-provenance-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "6a060ee4a50a797f7d3162bee19098b02bbb28c206e0436c8cfd169cbc010750"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-receiving-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "61fd4386a0bcb46a2ff061ff55c2526e3b049f9eee267fdf6a6bb788b1d39b2c"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-returns-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 4,
+      "reportSha256": [
+        "1deb1fa3877a202d7a26f362b8fcec15f8fc149ce2a4994b0ae355ab353f79dd"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-setup-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 4,
+      "reportSha256": [
+        "999ba873db8dbbc72e25e0fc72719b8bc50526a4d90747449cdd785a56e29dec"
+      ]
+    },
+    {
+      "artifact": "warehouse-browser-warehouse-empty-tenant-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "browser.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "90c269ca415829a53029d3a400fc88c8f925252ac7b7ff0e4cf655cfc4b0ad12"
+      ]
+    },
+    {
+      "artifact": "warehouse-legacy-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "legacy-after.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "abb2e41f7bea1fa55e0baa3f41e6ac0d7b841f11f50d641c32a2554357a96cce"
+      ]
+    },
+    {
+      "artifact": "warehouse-legacy-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "legacy-before.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "21293bdf5374de25c35c807f792f0e2ca63095c2acc2309ac430331deb964a03"
+      ]
+    },
+    {
+      "artifact": "warehouse-legacy-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "legacy-restart.json",
+      "kind": "playwright",
+      "tests": 2,
+      "reportSha256": [
+        "f94aa4c6061deb96d2363789eaa6b6c069fec09f2e46a609b25b229a761da6ef"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-app.json",
+      "kind": "junit",
+      "tests": 1,
+      "reportSha256": [
+        "cab157de5057016ff265e5c5cd9429119f8f0296c0d750286083aa04c54e6070"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-core-mvi.json",
+      "kind": "junit",
+      "tests": 6,
+      "reportSha256": [
+        "029af4d54ecd1a78dbe9bfaf643f52763ac2c8128f627f53d34aea80aa7548a7",
+        "4735632a466dbaa33ef8516c4c24e3668bf4c19999be5a4dbf03a426a6b36d7e"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-core-storage.json",
+      "kind": "junit",
+      "tests": 7,
+      "reportSha256": [
+        "d73ef72efe2ba15f3ebe4137f5269c6c54d12f53b5fd6e0162ebaadc8d1672d6"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-data.json",
+      "kind": "junit",
+      "tests": 10,
+      "reportSha256": [
+        "19ef79ee31a2b1170e3fe63a425a899a96c91be3cc2b199c89a0e236d3e19f72",
+        "1f7a5e00486111761e67225613cf42d55c1e23d585ae62dfd49180a9c644d6f3"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-domain.json",
+      "kind": "junit",
+      "tests": 5,
+      "reportSha256": [
+        "c12fe6c117c6e92febd8b1d3c319c9d4af4af6a6ceb783d6e44ff080b08bc115",
+        "2463d27998db89051ea8aace66e76a50a9e66a52cd0481f4c863047c9d6c0a38",
+        "3a88d3e16d381d82c823f70180e4fb6345cb825d84ff5ed02f14b82da0d9c1b8",
+        "7329f7a1f6be77bd5f9213bdf26bf2319fa4c02445d6a0f811408b43e1c39719"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-feature-materials.json",
+      "kind": "junit",
+      "tests": 8,
+      "reportSha256": [
+        "78231bf5c43595f4285b7e40e2d79e464f4c193e8cd922458c33cc4813b334eb",
+        "776e463dd048690d8a78932748893b95a3cfb7e764532ae53e3b889330c534c0"
+      ]
+    },
+    {
+      "artifact": "warehouse-shared-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "shared-feature-workorders.json",
+      "kind": "junit",
+      "tests": 7,
+      "reportSha256": [
+        "28085b6fb521fc2db4d4adfdf8a6333bf1850785c54d6887b3347219b13af588",
+        "8fdc1c4623713073823ed1148f17bb07a079c0b75595edde99113f2c5822e089"
+      ]
+    },
+    {
+      "artifact": "warehouse-web-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "receipt": "web.json",
+      "kind": "vitest",
+      "tests": 607,
+      "reportSha256": [
+        "89cc589bb920dcf0d41f517f70255c53a4edeb7301032fdb866049186305f7e1"
+      ]
+    }
+  ],
+  "counts": {
+    "browser": 24,
+    "browserSpecs": 9,
+    "browserProjectExecutions": 18,
+    "legacyBrowser": 6,
+    "web": 607,
+    "shared": 44,
+    "nativeCompileTasks": 2
+  },
+  "preflightRawHashesMatched": 8,
+  "nativeCompilationLogHashAndActualTaskMarkersMatched": true,
+  "imageStateAndPhaseRawHashesMatched": true,
+  "imageIdentity": {
+    "server": "sha256:fb928f2d384d0397e15e27b12f5eb2e57a9ba14ba0c88aa25e16247f2316b484",
+    "web": "sha256:0d12c624b41070cb3f585bd1b6d751d08e6e79863a4bdc6c437822f49fb5d903"
+  },
+  "serverJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+  "f3FinalVerdict": {
+    "path": "task46/f3-final-verdict.json",
+    "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+  },
+  "f3SupportingReferences": [
+    {
+      "path": "task46/f3-independent-execution-verdict.json",
+      "sha256": "043efba90c9d1d9e331fe7d667bb19811358734adafa359140dcb51f0c4ad499"
+    },
+    {
+      "path": "task46/f3-main-matrix-authentication.json",
+      "sha256": "e98ef0ad1c616c64daca6c38c12162bd940ed23e7dffa42281bae2c9603e4bca"
+    },
+    {
+      "path": "task46/f3-asset-wire-authentication.json",
+      "sha256": "b91bc29bcab0ebd2c34216ae4d916fc8c5be6784195e825a8c114ed0bbe58850"
+    },
+    {
+      "path": "task46/f3-extra-restart-authentication.json",
+      "sha256": "fe2f7bc8a2a2fe29f8cfd285ccbba853a5ad0cd79fbd59f7690bc192302cdcd6"
+    },
+    {
+      "path": "task46/f3-legacy-authentication.json",
+      "sha256": "0bde7fd5d7ea6581beea841a43560707cbfb0943bfdc96c4f3dd56ff002add9f"
+    },
+    {
+      "path": "task46/f3-supplemental-visual-review.json",
+      "sha256": "eae4ef49ddb324fa0036b91254787ea065c1e239c78c817cab5209d927dce6c5"
+    },
+    {
+      "path": "task46/f3-copy-source-review.json",
+      "sha256": "8f5b515f72834ea365138d334acac5009d175f68dcadd3931d350113f03ec591"
+    },
+    {
+      "path": "task46/f3-copy-web-authentication.json",
+      "sha256": "b2556f8e0d807fd632e0b4c75032bb657bc9224619e40a4d97040cb9805be501"
+    }
+  ],
+  "f3ActualReportReparse": [
+    {
+      "scope": "main",
+      "cases": 4,
+      "reportSha256": "1911eff6340bc0c9383b00c6c255cf37d543aa43b488781a76229a4ad1df0261"
+    },
+    {
+      "scope": "main",
+      "cases": 2,
+      "reportSha256": "46935c35adec3781c8e9d6730a447474454d17311e7dc71a7ae3a8aedab84ec7"
+    },
+    {
+      "scope": "main",
+      "cases": 2,
+      "reportSha256": "3a02d24e807f1a6f41778fa0719d627d43cc57f3a2a7325572806afc9a1e113d"
+    },
+    {
+      "scope": "main",
+      "cases": 2,
+      "reportSha256": "3d820b6ddc3fad12f0bc1c1f416f454b4b93f3cd4f3ed8e7bf5e96efd980b7aa"
+    },
+    {
+      "scope": "main",
+      "cases": 4,
+      "reportSha256": "25e2f3e4ee071900dcafcbbc623fb99e1dad72e45c47c892b886a6d138642abe"
+    },
+    {
+      "scope": "main",
+      "cases": 2,
+      "reportSha256": "f02d9c8331b42c2dcefc487e044651bcad6d1db2e303d0fb0ba3285bf61d118c"
+    },
+    {
+      "scope": "main",
+      "cases": 2,
+      "reportSha256": "a82eda356863b2bcfedcf00f7bd628b1fcc57425cc3e3335192414be5c442bf9"
+    },
+    {
+      "scope": "main",
+      "cases": 4,
+      "reportSha256": "a0877235761076b3f66d5d3f2c92b94ba53666e784bd1fa2cfacbe32661e24ea"
+    },
+    {
+      "scope": "main",
+      "cases": 2,
+      "reportSha256": "f67a95540fa51de7b6f8a45b0090e4291f66d190ec9f49742348452a94c10c2a"
+    },
+    {
+      "scope": "extra-restart",
+      "cases": 2,
+      "reportSha256": "1ad356804e81f69045ca9a2bc4a3b881497dd373d1a8119b56a86717f77a805d"
+    },
+    {
+      "scope": "extra-restart",
+      "cases": 4,
+      "reportSha256": "1bd8da40d428867f26cba007e3b7b1a170b067b4ec4bc3932a5ecbd3662bb33a"
+    },
+    {
+      "scope": "legacy",
+      "cases": 2,
+      "reportSha256": "9784d5f8a5ab86ea9f2e3ade49c4a7323d15a3d6dda2815cc3077eaf42644075"
+    },
+    {
+      "scope": "legacy",
+      "cases": 2,
+      "reportSha256": "881bc2da0127c656ab97440451b3662330cefcd5aafd51d61ceb4f762b0eec79"
+    },
+    {
+      "scope": "legacy",
+      "cases": 2,
+      "reportSha256": "acd74687e4f2b32d6498294c4bd58714b5517804759bf88e0c5bf5babb77c465"
+    }
+  ],
+  "f3ActualCases": 36,
+  "f3PreflightRawHashesMatched": 8,
+  "f3CopyDeltaBoundaryPreserved": true,
+  "f3FailedAndInterruptedAttemptsPreserved": true,
+  "currentWorkflowGuard": {
+    "proof": {
+      "path": "task46/local-protocol-ci-workflow-r1.json",
+      "sha256": "1a787f8c4ba6c9f052a4e1a8794635cc81e0bb9b541d0891a97a58d465b6b46f"
+    },
+    "tests": 5,
+    "sourceHashesAndRawLogsMatched": true
+  },
+  "serverEvidence": "PENDING_CURRENT_1306_FOCUSED_FULL_AND_HISTORICAL_REPORTS",
+  "fullCiPass": false,
+  "finalF1Approval": false,
+  "qaExecutedByReviewer": false,
+  "limits": [
+    "Independent F3 owns visual/trace-response interpretation; F1 authenticated its raw successful report counts, preflight hashes, proof chain and exact two-literal source boundary.",
+    "1d server full pass, failed6b focused run and cancelledc902 run retain their original identities; none substitutes for current1306 full server.",
+    "Native compilation and documented/offline GPON behavior do not establish native release or physical device certification."
+  ]
+}

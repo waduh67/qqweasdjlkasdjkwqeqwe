@@ -1,3 +1,32 @@
+# Active continuation — final review preparation at code1306b65c
+
+Read this block first; the dated sections below are historical checkpoints and retain
+their original outcomes. Continue the user's long run through final acceptance.
+
+- Edit worktree: `.omo/runtime/warehouse-regression-validation`, local branch
+  `work/warehouse-regression-fixtures`; pushed recovery branch
+  `origin/work/warehouse-draft-lifecycle`. Product/build/test/workflow inputs are
+  frozen at `1306b65c34167b2d48f4817ce72990fed3b85aa3`. Later commits contain evidence
+  and handoff only; verify that equivalence before reusing the current CI results.
+- Active complete CI: `36265279847`. All14nonserver jobs and actual artifacts pass;
+  focused compatibility passed; fullserver/fresh/historical running since19:40:01UTC.
+  Preserve this run. Pending evidence-only runs are not additional passes.
+- Independent F3 is PASS:36intended browser cases and8preflight probes, with failed
+  and interrupted attempts preserved. F1/F2/F4 still require current fullserver.
+- Latest saved evidence: `task46/f4-ci-1306b65c-nonserver-recheck.{md,json}` and its
+  source inventory/adoption receipt; all3693source hashes match the edit checkout.
+- No local QA is active. Raw reports, runner identities and the recovery pointer
+  stay private in the original checkout's `.omo/runtime`. All local QA uses the
+  established outerfd8 lease; stop/down only task-owned services and retain volumes.
+- Migration178.12 is already applied and immutable; next migration178.13. Reject
+  deleting tenants with protected history and use Suspend. Hardware GPON work is
+  deferred; offline documentation/MIB coverage remains required.
+- Next: authenticate current complete server/historical CI; finish independent
+  F1/F2/F4; close tasks46–48 using actual proof; checkpoint and integrate validated
+  descendants into original feature branch40cbd34f. Present the completed review
+  guide/results to the owner for acceptance. No main merge, image publication or
+  deployment is authorized.
+
 # Warehouse continuation — 2026-09-26
 
 Continue to completion after each checkpoint. User requested a long run with coherent
@@ -282,3 +311,13 @@ Evidence-only checkpoint; product/build/test/workflow inputs stay identical to13
 Actual saved images/configurations and their embedded JAR match the current browser and legacy receipts. The JAR remains d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466. All367migration bytes match tested source. V172→178.12 preserves2customer/ONU pairs and169historical Flyway checksums, with per-tenant customer1/ONU1/movement-header1/position0 and no verified stock. Image smoke verifies real HTTP readiness/read/write/replay before and after restart using unchanged images. Publication/deployment was not performed; native compilation makes no runtime/release claim. Existing five negative workflow-gate tests and actionlint exit0 are independently reauthenticated in f4-current-release-guard-recheck.json, without redundant execution.
 
 Current server remains in the focused compatibility step; unfiltered fullserver and historical checks are pending. Preserve the active code run36265279847 and authenticate its actual complete output. This checkpoint is not aggregateCI/F1/F2/F4 approval. F3 finalPASS remains valid with its recorded source-bound two-string delta. No localQA is active. F1 is refreshing final current mapping; F2 must review the bounded last contract/UI changes and current complete regression once available. Continue until tasks46-48, final reviewer gates and validated feature integration are ready for owner acceptance. No main merge, image publication or deployment.
+
+## 2026-09-27 final source review preparation (parent7785fcff)
+
+The focused compatibility CI step succeeded at19:40:01UTC. The unfiltered fullserver/fresh/historical step started immediately afterward and remains running. Root's read-only watcher is original .omo/runtime/watch-final-warehouse-ci.py, with latest safe metadata in watch-final-warehouse-ci-latest.json; its current tool session is81696. F4's matching server verifier/recovery instructions are durable in the reviewer worktree. Resume F4 after the current server artifact is available, then finalF2 and finalF1. No actual current server counts or final approval are inferred from a successful focused step.
+
+F1 prepared final-source1306 mapping and48canonical index candidates. Initial adoption validation found a stale reference name before any canonical file changed. The independent reviewer corrected it to the committed f4-ci-1306b65c-nonserver-recheck.json and rehashed all dependents; no duplicate alias was created. Root then adopted exact corrected bytes, verified all48candidate/prior hashes,192historical blocks and48prior-c902 current blocks verbatim,298implementation inputs and4current index references. See f1-1306b65c-source-evidence.json, task46/f1-1306b65c-proof-reference-correction.json and f1-index-refresh-1306b65c-adoption.json. The draft remains explicitly pending current fullserver/finalF2/F4.
+
+F2 independently reviewed the last four contract-expectation replacements and two UI display literals,137previous manually reviewed hashes and all3693current source inputs. It reparsed actual local12contract+3Modularity cases and607web assertions/117files with523matching web inputs and successful fail-fast typecheck/lint/build. It reconciled the final F3 proof chain and attributed current nonserver findings to F4. No additional blocker found; finalF2 still needs actual current server/focused/historical/Modularity evidence and finalF4. See task46/f2-final-preparation-1306b65c.{md,json}. No QA repeated.
+
+Root cancelled the redundant evidence-only7785CI36266692136 while pending with zerojobs; captured source diff contains only .omo/evidence and .omo/notepads. GitHub confirms completed/cancelled, zerojobs. Active complete codeCI36265279847 remains untouched. This saves duplicate execution and is not an aggregate pass or bypass of the current code gate. Future evidence-only pushes may create another pending duplicate; retain exact input equality and do not cancel a changed-code regression. All private snapshots/reports remain private. Continue the long run to actual current fullCI, final reviews, task46–48 closure and validated feature integration, then owner acceptance.

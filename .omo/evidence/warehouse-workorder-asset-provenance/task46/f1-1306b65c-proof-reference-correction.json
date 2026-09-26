@@ -1,0 +1,20 @@
+{
+  "status": "CANONICAL_PROOF_REFERENCE_CORRECTED_NOT_FINAL_F1",
+  "oldUnadoptedAlias": "task46/f4-ci-1306b65c-nonserver-complete.json",
+  "canonicalProof": {
+    "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+    "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+  },
+  "canonicalPayloadVerifiedAgainstPreviouslyAuthenticatedCountsReportHashesSourceManifestAndImageIdentity": true,
+  "previousUnadoptedPreparationSha256": "f124e95562c87431d7587b998de14d03bcabcb56bf1b0d1a5ce0f60cf6801122",
+  "previousUnadoptedMappingSha256": "ec3ce7a732a8d61b8b78c7d881b8035d94c4ee9b20d5658ecc856d27778ae5b7",
+  "newPreparationSha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f",
+  "newMappingSha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa",
+  "newCandidateManifestSha256": "cdff3006e39aa5aaf860a8a64dffa85a754c0670b3c7fb0858c6933f6ab428a8",
+  "newIntegritySha256": "0e611e4fa6df55d15b9078f3160fcd7b427d0b70fe7d6b4251bf47772ec7ab4a",
+  "preservedHistoricalBlocks": 192,
+  "preservedC902CurrentBlocks": 48,
+  "candidateCount": 48,
+  "canonicalValidationFilesModified": false,
+  "qaExecuted": false
+}

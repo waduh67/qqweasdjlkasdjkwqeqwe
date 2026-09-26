@@ -3,7 +3,7 @@
   "task": 20,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
       "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
@@ -30,7 +30,7 @@
     "G(CustomerWarehouseProvenanceIT)",
     "G(ModularityTests)"
   ],
-  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/19",
+  "independentMapping": "f1-1306b65c-source-evidence.json#tasks/19",
   "historicalEvidence": [],
   "historicalTaskDirectoryWasMissing": true,
   "verifiedLaterBackend": {
@@ -75,13 +75,11 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
-    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
-    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
-    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
-    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    "All previous historical and c902 source/evidence blocks are preserved with original identities.",
+    "Exact1306 current nonserver and independent F3 source-bound PASS are available; current1306 full server and final F2/F4/F1 remain pending.",
+    "Old1d full pass, failed6b focused run and cancelledc902 run do not establish current full-CI acceptance."
   ],
-  "priorIndexSha256": "02098ccf200bd50b6cc9da2f375838bcecae214a98c836e19765d0d7603b3fc1",
+  "priorIndexSha256": "b0039d90c1eea5653f88f8084ac82bfc90192f720d7b2bdc907d38812ea61931",
   "priorSourceMapping": {
     "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
@@ -120,6 +118,209 @@
     ]
   },
   "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+    "reviewedHead": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+    "mapping": {
+      "path": "f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa"
+    },
+    "status": "SOURCE_CURRENT_NONSERVER_AND_F3_MAPPED_CURRENT_SERVER_PENDING",
+    "literalSelectors": {
+      "G(CustomerWarehouseProvenanceIT)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerWarehouseProvenanceIT.kt",
+            "sha256": "edfca6d1f7eb2ab2cec0a9e0aa7fb4feb6699751543ca70d4ae701c1b3da47ab",
+            "testAnnotations": 10
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 31,
+          "counts": {
+            "tests": 31,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+              "tests": 31,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "27f5c8b95a76fd8a3f68fc8be0ef0398173ea5afd60c7374a8bfff859adea411",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerWarehouseProvenanceIT.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_1306_CI_36265279847_CURRENT_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 31,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+              "tests": 31,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "d267fd18ab373d5625840b3e8c7e9dc28832ac702e583c7c9cc4ffad08e300b4",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerWarehouseProvenanceIT.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": false,
+          "counts": {
+            "tests": 0,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        }
+      },
+      "G(ModularityTests)": {
+        "matchingCurrentSource": [
+          {
+            "path": "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt",
+            "sha256": "b4c97c3e8fee808e638539dcd3c8f3dd2f90bfdf0b1ac6e77f21e05b12e2dfbc",
+            "testAnnotations": 3
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 3,
+          "counts": {
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.ModularityTests",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "03aae0f8819d45efaa2bcb1ef755874a1e2bf60674a81b9f0fa740f421528f52",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+            "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+          }
+        },
+        "currentFullExecution": "PENDING_1306_CI_36265279847_CURRENT_SERVER_AND_UPGRADE_REPORTS",
+        "priorExecutedBeforeRefresh": {
+          "testedCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 3,
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.ModularityTests",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "1b84c43a06b9cdf58f7e1d42b21aa2e3590e68ac4e4eef1adf957c688dd64ca1",
+              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+            }
+          ]
+        },
+        "latestFocusedAt6b": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "scope": "ONLY_SELECTED_CLASSES_IN_FAILED_AGGREGATE_RUN",
+          "matched": true,
+          "counts": {
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.ModularityTests",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "ac36aefabee49d2c2532d9c2efc02e6ee9473b07ac8f370daf3c11426a81fbdc",
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.ModularityTests.xml"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+            "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+          },
+          "currentFullPassClaim": false
+        },
+        "currentLocalCorrection": {
+          "proof": {
+            "path": "task46/local-contract-expiry-r1.json",
+            "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+          },
+          "sourceRelation": "ALL_3693_CAPTURED_INPUTS_MATCH_REVIEWED_HEAD",
+          "counts": {
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "suites": [
+            {
+              "suite": "com.duluin.ftth.ModularityTests",
+              "tests": 3,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
+              "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+            }
+          ],
+          "fullServerPassClaim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f1-1306b65c-evidence-preparation.json",
+        "sha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f"
+      },
+      {
+        "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+        "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+      },
+      {
+        "path": "task46/f3-final-verdict.json",
+        "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+      }
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `G(CustomerWarehouseProvenanceIT)` and `G(ModularityTests)`; mint then revoke/reassign/cancel in another real transaction, consume through DIRECT customer HTTP with originalJWT, assert no writes. Also test orchestration/discovery entrypoints, foreign WO/customer, rawserial, quarantine and concurrent sameasset denial. Save E(20). Commit: `feat(customer): wajibkan asal gudang saat pemasangan`.",
+    "finalAcceptance": false
+  },
+  "priorCurrentEvidenceC902": {
     "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
     "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "mapping": {
@@ -337,5 +538,38 @@
       "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
     },
     "finalAcceptance": false
+  },
+  "priorSourceMappingC902": {
+    "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "implementationSource": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+        "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+        "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+        "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+        "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+        "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
+      }
+    ],
+    "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/19",
+    "limitations": [
+      "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+      "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+      "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+      "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+      "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    ]
   }
 }

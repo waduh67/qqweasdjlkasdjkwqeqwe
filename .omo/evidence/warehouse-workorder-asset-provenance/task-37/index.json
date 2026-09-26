@@ -3,7 +3,7 @@
   "task": 37,
   "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
   "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
-  "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
       "path": "web/src/pages/warehouse/WarehouseCountsPage.tsx",
@@ -27,7 +27,7 @@
     "W(WarehouseApprovalsPage)",
     "B(returns.spec.ts)"
   ],
-  "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/36",
+  "independentMapping": "f1-1306b65c-source-evidence.json#tasks/36",
   "historicalEvidence": [
     {
       "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/approval-verification.json",
@@ -86,13 +86,11 @@
     "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
   },
   "limitations": [
-    "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
-    "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
-    "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
-    "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
-    "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    "All previous historical and c902 source/evidence blocks are preserved with original identities.",
+    "Exact1306 current nonserver and independent F3 source-bound PASS are available; current1306 full server and final F2/F4/F1 remain pending.",
+    "Old1d full pass, failed6b focused run and cancelledc902 run do not establish current full-CI acceptance."
   ],
-  "priorIndexSha256": "95f747c66bbea1a0fa50167fd2b9ed15c3b82c3cc7555f2ab0b4821798a17ab7",
+  "priorIndexSha256": "f799f628b971e69de6730c71d17bd97b2e4e9dc0df9abbccc32397fa2ce82cf6",
   "priorSourceMapping": {
     "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
@@ -121,6 +119,289 @@
     ]
   },
   "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+    "reviewedHead": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+    "mapping": {
+      "path": "f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa"
+    },
+    "status": "SOURCE_CURRENT_NONSERVER_AND_F3_MAPPED_CURRENT_SERVER_PENDING",
+    "literalSelectors": {
+      "W(WarehouseCountsPage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+            "sha256": "989f2b036e89ed36a00706a8aa4270bf2da3b758225c13bca8400c6a7e6b1583"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 9,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+              "tests": 9
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+          "sourceRelation": "EXACT_1306_CURRENT_INPUTS",
+          "tests": 10,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+              "tests": 10
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+            "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+          }
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 10,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+              "tests": 10
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        },
+        "priorExecutedCurrentC902": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 10,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+              "tests": 10
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        }
+      },
+      "W(WarehouseApprovalsPage)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx",
+            "sha256": "7ed357f8c9c2fb47b02d56abd360d2baa28e3a622cb665009357aed8f33ebfb6"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx",
+              "tests": 7
+            }
+          ],
+          "reportSha256": "1e13399b13741620a211383b7484d3565ae705ec75ad1db055c555d7e9612ade"
+        },
+        "executedCurrent": {
+          "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+          "sourceRelation": "EXACT_1306_CURRENT_INPUTS",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx",
+              "tests": 7
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+            "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+          }
+        },
+        "priorExecutedCurrentBeforeRefresh": {
+          "sourceRelation": "EXACT_RECORDED_WEB_SOURCE_INPUTS",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx",
+              "tests": 7
+            }
+          ],
+          "proofId": "C7-web-full-r1",
+          "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d"
+        },
+        "priorExecutedCurrentC902": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "WEB_AND_BUILD_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 7,
+          "files": [
+            {
+              "path": "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx",
+              "tests": 7
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "reportSha256": "a08c2ec62b1dabd146417ba29f7ed69deb13e00d679b4b9cca3c9f2421162a01"
+        }
+      },
+      "B(returns.spec.ts)": {
+        "matchingCurrentSource": [
+          {
+            "path": "web/e2e/warehouse/returns.spec.ts",
+            "sha256": "e3e8ed5d57764db2c9a4123eaffa8eb51c82acc3e89807af727cead0a6221142"
+          }
+        ],
+        "sourceTestsPresent": true,
+        "olderExecuted": {
+          "testedCommit": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+          "sourceRelation": "OLDER_SOURCE_NOT_CURRENT_FULL_PASS",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "b447faa33aea605a7de0fc8fb554a1ff835a1628cfcfc59cf33d4689d77761f2"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "b447faa33aea605a7de0fc8fb554a1ff835a1628cfcfc59cf33d4689d77761f2"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "b447faa33aea605a7de0fc8fb554a1ff835a1628cfcfc59cf33d4689d77761f2"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "b447faa33aea605a7de0fc8fb554a1ff835a1628cfcfc59cf33d4689d77761f2"
+            }
+          ]
+        },
+        "executedCurrent": {
+          "testedCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+          "sourceRelation": "EXACT_1306_CURRENT_INPUTS",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "1deb1fa3877a202d7a26f362b8fcec15f8fc149ce2a4994b0ae355ab353f79dd",
+              "artifact": "warehouse-browser-returns-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "1deb1fa3877a202d7a26f362b8fcec15f8fc149ce2a4994b0ae355ab353f79dd",
+              "artifact": "warehouse-browser-returns-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "1deb1fa3877a202d7a26f362b8fcec15f8fc149ce2a4994b0ae355ab353f79dd",
+              "artifact": "warehouse-browser-returns-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "1deb1fa3877a202d7a26f362b8fcec15f8fc149ce2a4994b0ae355ab353f79dd",
+              "artifact": "warehouse-browser-returns-1306b65c34167b2d48f4817ce72990fed3b85aa3",
+              "receipt": "browser.json"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+            "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+          }
+        },
+        "priorExecutedCurrentC902": {
+          "testedCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+          "sourceRelation": "PRODUCTION_BROWSER_BUILD_AND_WORKFLOW_INPUTS_UNCHANGED_AT_REVIEWED_HEAD",
+          "tests": 4,
+          "cases": [
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "c58dec4d1e965121794bd5801010b3907cdd8397c519b7708f9d4c2aed8c6a0f",
+              "artifact": "warehouse-browser-returns-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-desktop",
+              "passed": true,
+              "reportSha256": "c58dec4d1e965121794bd5801010b3907cdd8397c519b7708f9d4c2aed8c6a0f",
+              "artifact": "warehouse-browser-returns-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "c58dec4d1e965121794bd5801010b3907cdd8397c519b7708f9d4c2aed8c6a0f",
+              "artifact": "warehouse-browser-returns-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            },
+            {
+              "file": "returns.spec.ts",
+              "project": "warehouse-mobile",
+              "passed": true,
+              "reportSha256": "c58dec4d1e965121794bd5801010b3907cdd8397c519b7708f9d4c2aed8c6a0f",
+              "artifact": "warehouse-browser-returns-6bfb13374db245e0f4d192c94ade42fdb07cd613",
+              "receipt": "browser.json"
+            }
+          ],
+          "proof": {
+            "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+            "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+          },
+          "independentF3Claim": false
+        }
+      }
+    },
+    "proofReferences": [
+      {
+        "path": "task46/f1-1306b65c-evidence-preparation.json",
+        "sha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f"
+      },
+      {
+        "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+        "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+      },
+      {
+        "path": "task46/f3-final-verdict.json",
+        "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+      }
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: `W(WarehouseCountsPage)` and `W(WarehouseApprovalsPage)` counter/approver success, hidden quantity, stale409 and own denial; extend `B(returns.spec.ts)` approved discrepancy with separate login. Save E(37). Commit: `feat(web): stock opname dan persetujuan independen`.",
+    "finalAcceptance": false
+  },
+  "priorCurrentEvidenceC902": {
     "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
     "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "mapping": {
@@ -348,5 +629,34 @@
       "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
     },
     "finalAcceptance": false
+  },
+  "priorSourceMappingC902": {
+    "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "implementationSource": [
+      {
+        "path": "web/src/pages/warehouse/WarehouseCountsPage.tsx",
+        "sha256": "ea3a4e021315426b123223120d9b7c0fe908c230e8b71f8be563c6f26459468b"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+        "sha256": "35216a7642fb16fe21f191fde423d72225722c40dde9b67de40386570741c6b7"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseDispositionForm.tsx",
+        "sha256": "7deffe53dbc451df7c0f06c62977cdec6c13f88d491c04416073fe7f8963e41e"
+      },
+      {
+        "path": "web/src/pages/warehouse/WarehouseCountEditor.tsx",
+        "sha256": "7d8a9813b8b60a30ab73a8cb2ed22fd9fd9c7f219a44e0c52ae50e255ad1cf31"
+      }
+    ],
+    "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/36",
+    "limitations": [
+      "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+      "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+      "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+      "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+      "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    ]
   }
 }
