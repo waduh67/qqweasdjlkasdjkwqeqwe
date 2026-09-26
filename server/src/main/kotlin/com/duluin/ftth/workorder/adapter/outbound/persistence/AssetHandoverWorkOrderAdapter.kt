@@ -81,6 +81,21 @@ class AssetHandoverWorkOrderAdapter(private val authorities: CurrentAuthorityApi
 
     private fun fail(code: WarehouseErrorCode): Nothing = throw WarehouseContractException(WarehouseError(code, code.name))
 
+    override fun exceptionContext(workOrderId: UUID, customerId: UUID, authority: AuthorityFence): AssetExceptionWorkOrder {
+        val revision = lockTitle(workOrderId, authority)
+        val code = entityManager.unwrap(Session::class.java).doReturningWork { connection ->
+            connection.prepareStatement("SELECT code FROM work_order WHERE tenant_id=? AND id=? AND customer_id=?").use { query ->
+                query.setObject(1, TenantContext.tenantId()); query.setObject(2, workOrderId); query.setObject(3, customerId)
+                query.executeQuery().use { row -> if (row.next()) row.getString("code") else fail(WarehouseErrorCode.NOT_FOUND) }
+            }
+        }
+        // Reuse the requester's ordinary evidence access and exact current committed
+        // signature validation. The approver-only sealed evidence capability is not used.
+        val proof = evidence.getSignature(workOrderId)?.let { signature(workOrderId, it.revisionId) }
+        return AssetExceptionWorkOrder(workOrderId, code, revision,
+            proof?.let { AssetExceptionSignature(it.id, it.receiverLabel, it.receivedAt) })
+    }
+
     override fun signatureForApproval(workOrderId: UUID, evidenceId: UUID, expectedDigest: String, authority: AuthorityFence): AssetHandoverSignatureContent {
         // Narrow approval capability: current WO area plus the exact sealed signature, not general WO evidence access.
         lockTitle(workOrderId, authority)

@@ -96,3 +96,17 @@ Permintaan ini tidak membuat catatan pembongkaran atau retur fisik.
 `page` dan `size`, dengan scope lokasi sebelum paginasi. DTO publik tidak memuat
 biaya, nama/alamat pelanggan, atau object key bukti. Perangkat SALE milik pelanggan
 ditolak. API kompensasi disposisi retur tidak menerima dokumen ASSET_LOSS.
+
+Pada layar aset pelanggan, **Ajukan kehilangan perangkat** tersedia untuk
+perangkat pinjam pakai milik ISP yang masih terpasang dan sudah diterima melalui
+serah-terima. Pemohon memilih lokasi kehilangan aktif dari daftar dalam cakupannya
+dan menulis alasan; aset, WO asal, revisi dan bukti tanda tangan diambil dari
+konteks terpilih. Lokasi dan konteks diperiksa ulang sebelum konfirmasi.
+Pencatatan usulan belum mengubah stok atau menutup kewajiban pengembalian.
+
+Selain izin pengajuan, alur layar membutuhkan `inventory.location.view` untuk
+memilih tujuan dan `inventory.approval.view` untuk melanjutkan ke persetujuan.
+Hanya pemohon asli yang dapat mengirim usulannya ke pemeriksa independen. Bila
+akses tersebut hilang, berikan kembali kepada pemohon; jangan meminta petugas lain
+mengirim usulan yang sama. Usulan yang ditolak dipertahankan dan koreksi dibuat
+sebagai pengajuan baru dengan bukti serta revisi yang berlaku.

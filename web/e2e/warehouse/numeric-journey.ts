@@ -30,7 +30,7 @@ export async function grantLocations(page: Page, user: { name: string; email: st
 }
 
 /** Empty tenant to actual dispatch: no API fixture writes or stock seeds. */
-export async function prepareNumericJourney(page: Page, options: { serialPrefix?: string; cableCostMinor?: string } = {}) {
+export async function prepareNumericJourney(page: Page, options: { serialPrefix?: string; cableCostMinor?: string; onuCostMinor?: string } = {}) {
   const fixture = await prepareMaterialWorkOrder(page, { customerName: 'Pelanggan perjalanan numerik', ...options })
   const { area, warehouse, quarantine, technician, workOrder, cable, onu } = fixture
   const transit = await addLocation(page, { code: 'WO_TRANSIT', name: 'Pengiriman pekerjaan', area: area.optionLabel, kind: 'TRANSIT' })

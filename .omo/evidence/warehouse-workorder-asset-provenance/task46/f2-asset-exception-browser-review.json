@@ -1,0 +1,319 @@
+{
+  "status": "VERIFIED_FOUR_BROWSER_PASSES_AND_EIGHT_C8_VISUALS_NOT_FINAL_F2_F3",
+  "verifiedAtUtc": "2026-09-26T15:01:46.251031+00:00",
+  "screenshots": [
+    {
+      "relativePrivateArtifact": "customer-assets-loan-swap--84940-al-unit-to-another-customer-warehouse-desktop/loss-office-proposal-created.png",
+      "sha256": "57c06656a67b558de9c10bdf69c31138b3b2120c2c4bf6bbe5e9aa2c93ae56a6",
+      "width": 1280,
+      "height": 900,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r2-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-loan-swap--84940-al-unit-to-another-customer-warehouse-desktop/loss-sealed-proposal-rejected.png",
+      "sha256": "f9fa91b0afa6a3a216837f16c594e025ee85bc19cea638c9f19ec788b9c05ba0",
+      "width": 1280,
+      "height": 1473,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r2-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-sold-mixed-f5e55-t-and-original-customer-RMA-warehouse-desktop/title-office-proposal-created.png",
+      "sha256": "6720daafa67020b403d12814d389b2021e51b47c1e709ffd60a33b954f3f6faa",
+      "width": 1280,
+      "height": 900,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r2-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-sold-mixed-f5e55-t-and-original-customer-RMA-warehouse-desktop/title-sealed-proposal-rejected.png",
+      "sha256": "74703a9e272bbfada9be0a55499f10bb7e36520f76ba4d806513690c8fd48d5c",
+      "width": 1280,
+      "height": 1394,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r2-artifacts"
+    }
+  ],
+  "sourceSha256": {
+    "web/e2e/warehouse/asset-exception-journey.ts": "dd73d8701491a74238b3d87953bd254703bb60747d23c557169fe4f252b14364",
+    "web/e2e/warehouse/customer-assets.spec.ts": "6eb9636ed009601d3900ffb7cfd1c9fed957d33f20662eef9d4f4c381b39e615",
+    "web/e2e/warehouse/loan-reuse-scenario.ts": "fd902cdcf15ad36f167f55b1fdbddf9536863c9d271790f343e11b607867793c",
+    "web/e2e/warehouse/approvals.ts": "7ec854e8df92cfb5ae9ed63165a7a020bfe3b880377bdb99e17c98407bbd9a68"
+  },
+  "observations": [
+    "Desktop proposal success views keep sale/customer or loan/ISP ownership and installed state visible.",
+    "Independent-approval requirement and absence of immediate stock/title/recovery changes are explicit.",
+    "Approval continuation and return-to-history controls are visible and readable.",
+    "Rejected immutable proposal screens show current and captured revisions, retained source, and a source/new-proposal route; no material desktop usability blocker observed."
+  ],
+  "sourceAssertionCoverage": [
+    "Creates separate office requester and checker through real UI, grants actual scope and approval policy.",
+    "Reads selected assignment context; verifies assignment/asset/title revisions and a signature ID.",
+    "POSTs proposal via confirmation, requests approval, checks requester lacks approve control, switches identity and rejects.",
+    "Asserts REWORK_REQUIRED and canRework=false, then exact before/after selected assignment equality.",
+    "Outer sale/RMA and loan/reuse cases execute later continuity assertions and a final no-horizontal-overflow check."
+  ],
+  "limits": [
+    "C8 captures are post-create/post-rejection states, not form/confirmation/opened-signature screenshots.",
+    "Mobile customer drawers are scrolled to success content; top selected-asset headings are outside those captures.",
+    "The helper checks exact selected asset-history DTO equality and later physical journey assertions; it does not directly query DB effects.",
+    "Explicit horizontal-overflow assertions are at the later history pages; C8 screenshot widths were checked visually.",
+    "R2 remains a failed run (two desktop passes, two mobile failures); R1 failures are not reclassified.",
+    "Recorded source map covers server/src/main, web/src and web/e2e; toolchain/build configuration and other modules are outside it.",
+    "C7, full current regression and final F2/F3 remain open."
+  ],
+  "reviewerRanQA": false,
+  "r2ExecutedVerification": {
+    "actualResults": [
+      {
+        "title": "sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA",
+        "project": "warehouse-desktop",
+        "classification": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "durationMs": 102178,
+            "errorCount": 0
+          }
+        ]
+      },
+      {
+        "title": "loan swap returns and resets the original asset before issuing that same physical unit to another customer",
+        "project": "warehouse-desktop",
+        "classification": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "durationMs": 108641,
+            "errorCount": 0
+          }
+        ]
+      },
+      {
+        "title": "sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA",
+        "project": "warehouse-mobile",
+        "classification": "unexpected",
+        "results": [
+          {
+            "status": "failed",
+            "retry": 0,
+            "durationMs": 90371,
+            "errorCount": 1
+          }
+        ]
+      },
+      {
+        "title": "loan swap returns and resets the original asset before issuing that same physical unit to another customer",
+        "project": "warehouse-mobile",
+        "classification": "unexpected",
+        "results": [
+          {
+            "status": "failed",
+            "retry": 0,
+            "durationMs": 87654,
+            "errorCount": 1
+          }
+        ]
+      }
+    ],
+    "stats": {
+      "expected": 2,
+      "unexpected": 2,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "topLevelErrorCount": 0,
+    "artifactsSha256": {
+      "asset-exception-browser-r2-report.json": "ae37281f353055cfe92da17cf23d498c18457f16d7b7c559df25643a215eafa3",
+      "asset-exception-browser-r2-inputs.json": "dea5087d6d56fd8042b7fc01d775cc17ed4a2c30ddd069cfcc9bad6f1d880281",
+      "asset-exception-browser-r2.log": "06843c383ee1b04c07f2afc6c4ccef2ec7a5bb6bca7ffffdd4eb14dbb317fabe",
+      "asset-exception-browser-r2.sh": "11580fa693535b7a5134be9dee6144a9042f373798a88ec48220a2e2b77fc0e9",
+      "asset-exception-browser-r2-artifact.json": "dd85ad84d9ed5e07de8a6b47035c511436a9ddbd7849b498c9008544a9a7172f"
+    },
+    "inputScope": {
+      "serverMain": 1880,
+      "webSrc": 520,
+      "webE2e": 26,
+      "total": 2426
+    },
+    "currentChangedInputs": {
+      "web/e2e/warehouse/asset-exception-journey.ts": {
+        "r2": "5123b1532511ec3cc0eb96e28ffaf9a22ef6c895bfbfcc62726329eda8293728",
+        "current": "dd73d8701491a74238b3d87953bd254703bb60747d23c557169fe4f252b14364"
+      }
+    },
+    "interpretation": "Actual 2 desktop passes and 2 mobile failures, no retries. R2 failed overall. Mobile failed before C8 context because cell-padding click did not activate the actual named Link-as-button; current helper clicks that button explicitly. R3 completion remains required."
+  },
+  "r3Screenshots": [
+    {
+      "relativePrivateArtifact": "customer-assets-loan-swap--84940-al-unit-to-another-customer-warehouse-desktop/loss-office-proposal-created.png",
+      "sha256": "a1a6e41bcd656b8a8c1f7eb90a1587c6ca743487474af1b49990e1be3802b255",
+      "width": 1280,
+      "height": 900,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-loan-swap--84940-al-unit-to-another-customer-warehouse-desktop/loss-sealed-proposal-rejected.png",
+      "sha256": "51bb71b8ac0ec4890b40c3e8a5e3ffab48c94c4b4ea3e1b6c97fe04d70c270db",
+      "width": 1280,
+      "height": 1473,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-loan-swap--84940-al-unit-to-another-customer-warehouse-mobile/loss-office-proposal-created.png",
+      "sha256": "8d093ca677930875a48246a6ea52a4195bb5d5b4cf05a86088153e7e4d3ba711",
+      "width": 984,
+      "height": 2601,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-loan-swap--84940-al-unit-to-another-customer-warehouse-mobile/loss-sealed-proposal-rejected.png",
+      "sha256": "87b85c7a8daa5b2fe823b5ec4775894c17fc02ef395ee6f615625037d2774eaa",
+      "width": 984,
+      "height": 5043,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-sold-mixed-f5e55-t-and-original-customer-RMA-warehouse-desktop/title-office-proposal-created.png",
+      "sha256": "b7ac0ffccb0a37033579ee7c20695277efd1657f7001e36d2b5817938c4bf187",
+      "width": 1280,
+      "height": 900,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-sold-mixed-f5e55-t-and-original-customer-RMA-warehouse-desktop/title-sealed-proposal-rejected.png",
+      "sha256": "f9ae0bd8d8a090fe6824486363d001ddae16a465aa86e4899a1f17fd337a1a93",
+      "width": 1280,
+      "height": 1394,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-sold-mixed-f5e55-t-and-original-customer-RMA-warehouse-mobile/title-office-proposal-created.png",
+      "sha256": "62ea965ef2272c5feacccdb1ec9544711bbb29aa7f7ba682e0231d70c05f5a0b",
+      "width": 984,
+      "height": 2601,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    },
+    {
+      "relativePrivateArtifact": "customer-assets-sold-mixed-f5e55-t-and-original-customer-RMA-warehouse-mobile/title-sealed-proposal-rejected.png",
+      "sha256": "4ee3bb00e72ab00d4a0075f0fb3add0e2caddff799d904693acc0a3fb37a2e08",
+      "width": 984,
+      "height": 4670,
+      "visuallyInspected": true,
+      "privateArchive": "asset-exception-browser-r3-artifacts"
+    }
+  ],
+  "r3VisualObservations": [
+    "No material usability blocker observed in the eight captured post-action views.",
+    "Long document IDs wrap on mobile; approval source tables use vertical label/value rows.",
+    "Unchanged stock/title/recovery notice and continuation/return controls are visible within captured widths.",
+    "Mobile customer drawers are scrolled to success content; the top selected-asset heading is outside these captures."
+  ],
+  "r3ExecutedVerification": {
+    "actualResults": [
+      {
+        "title": "sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA",
+        "project": "warehouse-desktop",
+        "classification": "expected",
+        "expectedStatus": "passed",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "durationMs": 102418,
+            "errorCount": 0
+          }
+        ]
+      },
+      {
+        "title": "loan swap returns and resets the original asset before issuing that same physical unit to another customer",
+        "project": "warehouse-desktop",
+        "classification": "expected",
+        "expectedStatus": "passed",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "durationMs": 97760,
+            "errorCount": 0
+          }
+        ]
+      },
+      {
+        "title": "sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA",
+        "project": "warehouse-mobile",
+        "classification": "expected",
+        "expectedStatus": "passed",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "durationMs": 103263,
+            "errorCount": 0
+          }
+        ]
+      },
+      {
+        "title": "loan swap returns and resets the original asset before issuing that same physical unit to another customer",
+        "project": "warehouse-mobile",
+        "classification": "expected",
+        "expectedStatus": "passed",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "durationMs": 110087,
+            "errorCount": 0
+          }
+        ]
+      }
+    ],
+    "stats": {
+      "expected": 4,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "topLevelErrorCount": 0,
+    "distinctCaseProjectPairs": 4,
+    "singleAttemptEach": true,
+    "artifactsSha256": {
+      "asset-exception-browser-r3-report.json": "1a7a1e6a0478ef45c9f1bf334a9f040730607bf7bbcd07e0db2ebedad8abbd84",
+      "asset-exception-browser-r3-inputs.json": "a6e70d6f15e8c8eae8f68b31180253d2ece1dc609649445cf7cf437093f7a6db",
+      "asset-exception-browser-r3.log": "73ad9ab70d9c10ae71cd0dfbe2e6623410c39d5be410f9431377f2c33e4bc58f",
+      "asset-exception-browser-r3.sh": "a114bb85a79235d80abf29293ebb8f7efb98baeee48a112bd39a6a9eeb38b6d8",
+      "asset-exception-browser-r3-artifact.json": "dd85ad84d9ed5e07de8a6b47035c511436a9ddbd7849b498c9008544a9a7172f"
+    },
+    "inputScope": {
+      "serverMain": 1880,
+      "webSrc": 520,
+      "webE2e": 26,
+      "total": 2426
+    },
+    "allCapturedInputsMatchCurrent": true,
+    "newOrMissingFilesWithinCapturedRoots": [],
+    "r2ToR3ChangedInputs": {
+      "web/e2e/warehouse/asset-exception-journey.ts": {
+        "r2": "5123b1532511ec3cc0eb96e28ffaf9a22ef6c895bfbfcc62726329eda8293728",
+        "r3AndCurrent": "dd73d8701491a74238b3d87953bd254703bb60747d23c557169fe4f252b14364"
+      }
+    },
+    "runtimeJarSha256": "fbadae89b73777da16018bfbee3d3414ba2b3bfe092c48bbd55e375951037590",
+    "sameRuntimeJarAsR2": true,
+    "independentlyObservedLogFourPassedSummary": true,
+    "rootTerminalExitReceipt": "Not available to this reviewer after parent coordinator hit a rate limit. No tool/cleanup exit code is inferred; the completed archived report and log independently prove four passed test executions.",
+    "interpretation": "Two journeys each ran once on desktop and mobile, all four passed. This is focused browser evidence at the captured C8 source, not full regression or final F2/F3 approval."
+  },
+  "finalF2Approval": false,
+  "finalF3Approval": false
+}

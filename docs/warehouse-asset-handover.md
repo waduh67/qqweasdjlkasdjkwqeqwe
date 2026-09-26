@@ -91,6 +91,31 @@ rejected with `409 SOURCE_NOT_VERIFIED`. Create a new correction with current
 ownership, revisions and evidence, then submit it for independent approval.
 Authorized replay of an earlier command still returns its original result.
 
+### Customer asset exception screen
+
+The customer asset row offers **Ajukan koreksi kepemilikan** for an active,
+verified installation with accepted handover. The customer, asset, original WO,
+handover, current revisions and current committed signature are selected by the
+server; the operator enters the reason and reviews the proposed opposite owner.
+Saving records a proposal and links to independent approval. It does not change
+the original LOAN/SALE intent, current title or physical installation.
+
+`GET /api/customers/{customerId}/assets/{assignmentId}/exceptions/context` is a
+bounded read for the selected assignment. It requires customer view, approval
+request and the relevant title/loss role, current customer/WO area and source
+warehouse scope. Customer area is rechecked under its row lock after waiting.
+WO signature access uses ordinary evidence-view permission or the currently
+assigned field technician; it does not use an approver's sealed evidence grant.
+Only signature ID, signer and timestamp are exposed. Missing signature or access
+requires the existing WO evidence workflow before creating a proposal.
+
+The screen is available to authorized office requesters without technician
+assignment permissions. Before confirmation it reloads the selected context;
+changed title, assignment, WO or signature requires another review. A lost command
+response retries the same bytes/key. A denied/stale command requires reload. The
+original requester must have approval view/request permissions to submit their
+proposal for approval; another requester cannot take over that submission.
+
 ## Current ownership and cessation
 
 `GET /api/customers/{customerId}/assets/ownership` requires `customer.onu.view` and

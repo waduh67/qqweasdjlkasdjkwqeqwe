@@ -1,0 +1,44 @@
+{
+  "status": "PASSED_FOCUSED_ADJACENT_READ_FIX",
+  "baseCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "counts": {
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "4a4205139bfe0d71c7ff1b09e0924cd24aedab3588fa995d0b12fa190c26c49c",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetExceptionContextIT",
+      "sha256": "57d4c731bf8e62b684799fc10a9a083692b8a5a5a4688f6c7f630ae6a12b2b65",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "changedSinceR2": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt": "9a61868e7f7d18efd9a7d321d2e2cf82a06b4f048096a152dc895bd71996f84e"
+  },
+  "allServerInputsUnchangedDuringRun": true,
+  "serverInputCount": 2602,
+  "logSha256": "f9f7e9ef7caf54cba07e4cf47628ef687c74eb6c4558f23c84c01352c71d3294",
+  "runnerSha256": "b49ec66b64b4ecdd1d5bcd029c84f15ed180d3db733768215b05cc694999e8ff",
+  "runner": {
+    "sessionId": 68204,
+    "observedExecExitCode": 0,
+    "observedTerminalOutput": "ASSET_EXCEPTION_SERVER_R3_EXIT 0",
+    "applicationRole": "NOSUPERUSER NOBYPASSRLS",
+    "ownedCleanup": "Completed; volumes retained"
+  },
+  "limitation": "13 actual tests after applying the same late customer-area check to legacy ownership reads. The preceding87-case run and this13-case run are separate executions at the documented inputs, not one full regression. Real browser/final F1-F4 still required."
+}

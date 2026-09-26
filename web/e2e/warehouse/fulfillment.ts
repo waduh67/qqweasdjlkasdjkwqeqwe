@@ -20,7 +20,7 @@ export async function confirmOperation(page: Page, path: string, button: string,
 }
 
 /** All business fixtures are created through visible UI, with real server responses. */
-export async function prepareMaterialWorkOrder(page: Page, options: { customerName?: string; serialPrefix?: string; cableCostMinor?: string } = {}) {
+export async function prepareMaterialWorkOrder(page: Page, options: { customerName?: string; serialPrefix?: string; cableCostMinor?: string; onuCostMinor?: string } = {}) {
   const admin = await signup(page)
   const area = await setupOwnArea(page, admin)
   const warehouse = await addLocation(page, { code: 'MAIN', name: 'Gudang utama', area: area.optionLabel })
@@ -49,6 +49,12 @@ export async function prepareMaterialWorkOrder(page: Page, options: { customerNa
   await page.getByRole('textbox', { name: 'Jumlah aktual (unit)', exact: true }).fill('10')
   const serials = Array.from({ length: 10 }, (_, index) => `${options.serialPrefix ?? 'WO-ONU-'}${String(index + 1).padStart(3, '0')}`)
   await page.getByRole('textbox', { name: 'Serial dan MAC', exact: true }).fill(serials.join('\n'))
+  if (options.onuCostMinor) {
+    const line = page.getByRole('group', { name: 'Barang 2', exact: true })
+    await line.getByText('Konversi kemasan dan biaya', { exact: true }).click()
+    await line.getByRole('checkbox', { name: 'Catat biaya kelompok barang', exact: true }).check()
+    await line.getByRole('textbox', { name: 'Total biaya (satuan minor)', exact: true }).fill(options.onuCostMinor)
+  }
   await page.getByRole('button', { name: 'Tinjau draft', exact: true }).click()
   const receipt = await confirmOperation(page, '/api/v1/warehouse/receipts', 'Simpan draft')
   await page.getByRole('button', { name: 'Terima barang', exact: true }).click()

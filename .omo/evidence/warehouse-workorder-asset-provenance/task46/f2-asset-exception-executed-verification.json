@@ -1,0 +1,217 @@
+{
+  "status": "VERIFIED_TARGETED_EXECUTED_EVIDENCE_NOT_FINAL_F2",
+  "verifiedAtUtc": "2026-09-26T11:43:31.467925+00:00",
+  "validationBaseCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "workingTree": "Dirty C8 product and tests at the stated base.",
+  "rootProofSha256": {
+    "local-asset-exception-server-r2.json": "3f47145d0f5539eb527cc3c09b156b8735ff78d9a08a68b235d03f955683aa4c",
+    "local-asset-exception-web-r2.json": "3810e282d1a3118e530ca44e0b6d2bf6179bc12cd561f2319aecba3529262058"
+  },
+  "serverRuns": {
+    "r2": {
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "sha256": "a3fcd1c713bddc4a2f361a7398512025f1e36a11bfb09ecbc59186f824446f8a",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.customer.CustomerAssetExceptionContextIT",
+          "sha256": "44738bfa8d9b88b27916e968bd742debecefab971a5c7ddcf2d649637fc1d6fa",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+          "sha256": "615523f72ff271414baff316204b0908a976bec259aa9570cf30de54220b1299",
+          "tests": 73,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+          "sha256": "2a0862e8c4a924e65337980dfc9805a5a2aba219a0b406c03e715bd8b42f23f7",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "totals": {
+        "tests": 87,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "artifactsSha256": {
+        "asset-exception-server-r2-counts.json": "3d7a0d776f07ac74567b70f8df1b8f756a5b517961ef14f8779c7f0cafcb2a87",
+        "asset-exception-server-r2-inputs.json": "c097de6ba8576f155b90e5fbee3f60d12cb6e405edd0eeaab57cfb1b40007581",
+        "asset-exception-server-r2.log": "067ff7db26a5820370b6c5215332172158048c580139727a060a91ffe653c1a6",
+        "asset-exception-server-r2.sh": "826fd4a31fd56a8ea5e07fa6954dd51a6c057c6e6913f73742ca79dd89fdae92"
+      },
+      "independentlyObservedSourceAndTestKotlinCompilationAndTestTaskExecuted": true,
+      "buildSuccessMarkers": 1,
+      "buildFailureMarkers": 0,
+      "xmlDisplayIdentities": {
+        "com.duluin.ftth.ModularityTests": {
+          "invocations": 3,
+          "distinctXmlDisplayStrings": 3
+        },
+        "com.duluin.ftth.customer.CustomerAssetExceptionContextIT": {
+          "invocations": 9,
+          "distinctXmlDisplayStrings": 9
+        },
+        "com.duluin.ftth.customer.CustomerAssetOwnershipIT": {
+          "invocations": 73,
+          "distinctXmlDisplayStrings": 65
+        },
+        "com.duluin.ftth.inventory.WarehouseAssetLossIT": {
+          "invocations": 2,
+          "distinctXmlDisplayStrings": 2
+        }
+      },
+      "rootRunnerReceipt": {
+        "sessionId": 41735,
+        "observedExecExitCode": 0,
+        "observedTerminalOutput": "ASSET_EXCEPTION_SERVER_R2_EXIT 0",
+        "applicationRole": "NOSUPERUSER NOBYPASSRLS",
+        "ownedCleanup": "Completed; volumes retained"
+      }
+    },
+    "r3": {
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "sha256": "4a4205139bfe0d71c7ff1b09e0924cd24aedab3588fa995d0b12fa190c26c49c",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.customer.CustomerAssetExceptionContextIT",
+          "sha256": "57d4c731bf8e62b684799fc10a9a083692b8a5a5a4688f6c7f630ae6a12b2b65",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "totals": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "artifactsSha256": {
+        "asset-exception-server-r3-counts.json": "76558b92633b21c646172c727f87dd6e998a29447f9d2473ddbf62879abd1cfd",
+        "asset-exception-server-r3-inputs.json": "e57635418a8aa27495cd9256f9f6049c6b06f0577978cd4ebdb63972b20168f4",
+        "asset-exception-server-r3.log": "f9f7e9ef7caf54cba07e4cf47628ef687c74eb6c4558f23c84c01352c71d3294",
+        "asset-exception-server-r3.sh": "b49ec66b64b4ecdd1d5bcd029c84f15ed180d3db733768215b05cc694999e8ff"
+      },
+      "independentlyObservedSourceAndTestKotlinCompilationAndTestTaskExecuted": true,
+      "buildSuccessMarkers": 1,
+      "buildFailureMarkers": 0,
+      "xmlDisplayIdentities": {
+        "com.duluin.ftth.ModularityTests": {
+          "invocations": 3,
+          "distinctXmlDisplayStrings": 3
+        },
+        "com.duluin.ftth.customer.CustomerAssetExceptionContextIT": {
+          "invocations": 10,
+          "distinctXmlDisplayStrings": 10
+        }
+      }
+    }
+  },
+  "serverSourceComparison": {
+    "r2Inputs": 2602,
+    "r3Inputs": 2602,
+    "currentInputs": 2602,
+    "r3EntireServerSrcMatchesCurrent": true,
+    "addedOrMissing": [],
+    "r2ToR3ChangedInputs": {
+      "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt": {
+        "r2": "442358dac2d837caedfc7ef194a647f8161492423696991f1adaa8a2a186b0a5",
+        "r3AndCurrent": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc"
+      },
+      "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt": {
+        "r2": "c513c6a75c53a842775b1813bd7d0222f4a08527ace33c4d5a341ea0fc734226",
+        "r3AndCurrent": "9a61868e7f7d18efd9a7d321d2e2cf82a06b4f048096a152dc895bd71996f84e"
+      }
+    },
+    "scope": "All files under server/src; build configuration, external modules and toolchain are outside this map."
+  },
+  "serverInterpretation": "R2 passed 87 invocations at its captured source. R3 passed 13 at current server source. Production forCustomer changed between runs; do not claim 88 current passes or 100 distinct cases. The broader 73-case ownership suite was not rerun in R3.",
+  "parameterDisplayNameNote": "OwnershipIT has 73 testcase invocations and 65 distinct display strings. Separate inherited methods share four scope values; separate authority-field methods share four field values. These eight collisions are explained by inspected source, and are not evidence of duplicated execution.",
+  "webR2": {
+    "counts": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suiteCounts": {
+      "src/components/organisms/customer/CustomerAssetException.test.tsx": 11,
+      "src/components/organisms/customer/CustomerAssetPanel.test.tsx": 7
+    },
+    "reportSha256": "704485ec746462e59150c9961e6f9d6d6adb539689c3347cd4c589e2f34e3956",
+    "logSha256": "63212d29a288fb1435c94412f8c2335df045480d915336aebc1e31e0e17e966c",
+    "inputManifestSha256": "45623cba7255da247159e5280306e46f735082f30df17b85fff7eaad25d2e624",
+    "recordedSrcFiles": 520,
+    "recordedE2eFiles": 26,
+    "all520SrcFilesMatchCurrent": true,
+    "srcAndE2eFileSetUnchanged": true,
+    "afterRunChanges": {
+      "e2e/warehouse/asset-exception-journey.ts": {
+        "r2": "2bde3c5252528f178c5fa1c7ae5161cabaadfd8cf1b259ff0b08a4ee25e6d67d",
+        "current": "033b5f938903926be3c1604ec67c98273a2f2d2adef88ab1c44d960b1eb18216"
+      }
+    },
+    "rootRunnerReceipt": {
+      "sessionId": 63261,
+      "observedExecExitCode": 0,
+      "observedTerminalOutput": "ASSET_EXCEPTION_WEB_R2_EXIT 0",
+      "failFast": "Sequential unguarded commands in set -euo pipefail subshell; host QA lock held",
+      "commands": [
+        "timeout 180s npm test -- --run src/components/organisms/customer/CustomerAssetException.test.tsx src/components/organisms/customer/CustomerAssetPanel.test.tsx --reporter=default --reporter=junit --outputFile.junit=<private-runtime>/asset-exception-web-r2.xml",
+        "timeout 180s npm run typecheck:warehouse-e2e",
+        "timeout 180s npm run lint",
+        "timeout 240s npm run build"
+      ]
+    },
+    "rootChecks": {
+      "unitTests": "PASSED",
+      "warehouseE2eTypecheck": "PASSED",
+      "lint": "PASSED_WITH_WARNINGS",
+      "productionBuild": "PASSED"
+    },
+    "independentlyObservedLogSignals": {
+      "warehouseE2eTypecheckCommand": true,
+      "productionBuildCommand": true,
+      "productionBuildCompletion": true,
+      "locatedLintWarningLines": 101
+    },
+    "interpretation": "18 mocked HTTP UI cases. Root sequential fail-fast runner receipt session 63261 exit 0 plus inspected log continuity supports all four commands returning zero. The changed browser helper needs fresh validation. This is not browser evidence."
+  },
+  "limitedSourceRecheck": {
+    "customerAreaRace": "Addressed: customer-owned lockForException checks current fenced area under the late customer row lock. Context/ownership reads and title/loss fresh/replay paths invoke it.",
+    "r3Coverage": "LOAN/SALE positive ownership reads plus deterministic CONTEXT/OWNERSHIP late-lock area races and fresh/replay proposal races.",
+    "ownerBoundary": "Workorder resolves named WO and ordinary evidence.getSignature plus exact signature validation; public response excludes storage references."
+  },
+  "remainingGates": [
+    "Complete current full regression and affected-source reruns",
+    "Completed current real-browser evidence",
+    "C7 retained-draft idle expiry",
+    "Final F2 after remaining feature work"
+  ],
+  "privacy": "No raw XML, failure bodies, system-out, credentials, runner content or logs copied.",
+  "reviewerRanQA": false,
+  "finalF2Approval": false
+}

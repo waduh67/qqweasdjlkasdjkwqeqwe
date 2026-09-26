@@ -15,6 +15,16 @@ import java.util.UUID
 class CustomerAssetOwnershipService(private val customers: CustomerRepository, private val titles: InventoryAssetTitleApi,
     private val cutovers: InventoryTenantCutoverApi, private val authorities: CurrentAuthorityApi) : CustomerAssetOwnershipApi {
     override fun current(customerId: UUID): List<CurrentAssetOwnership> {
+        authorize(customerId)
+        return titles.forCustomer(customerId)
+    }
+
+    override fun exceptionContext(customerId: UUID, assignmentId: UUID): AssetExceptionContext {
+        authorize(customerId)
+        return titles.exceptionContext(customerId, assignmentId)
+    }
+
+    private fun authorize(customerId: UUID) {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
         val current = authorities.lockCurrent()
         if (!current.platformAdmin && "customer.onu.view" !in current.permissions)
@@ -22,6 +32,5 @@ class CustomerAssetOwnershipService(private val customers: CustomerRepository, p
         val customer = customers.findById(customerId) ?: throw NotFoundException("Customer not found")
         val scope = current.areaScope
         if (scope is AuthorityScope.Restricted && customer.areaId !in scope.ids) throw NotFoundException("Customer not found")
-        return titles.forCustomer(customerId)
     }
 }

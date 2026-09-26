@@ -12,12 +12,22 @@ import java.util.UUID
 @Repository
 class AssetTitleStore(private val jdbc: WarehouseCommandJdbc) {
     private val mapper = jacksonObjectMapper()
+    fun activeWorkOrder(customerId: UUID, assignmentId: UUID): UUID = jdbc.execute { sql ->
+        sql.value("""SELECT work_order_id FROM inventory_asset_assignment WHERE tenant_id=? AND customer_id=? AND id=?
+            AND warehouse_admission='VERIFIED' AND ended_at IS NULL""", sql.tenant, customerId, assignmentId)
+            ?.let(UUID::fromString) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+    }
     fun handover(id: UUID): AssetHandoverRecord = jdbc.execute { sql ->
         sql.value("SELECT snapshot FROM inventory_asset_acceptance WHERE tenant_id=? AND handover_id=?", sql.tenant, id)
             ?.let { mapper.readValue(it, AssetHandoverRecord::class.java) } ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
     }
     fun lockAssignment(id: UUID) = jdbc.execute { sql ->
         sql.value("SELECT id FROM inventory_asset_assignment WHERE tenant_id=? AND id=? FOR UPDATE", sql.tenant, id)
+            ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
+        Unit
+    }
+    fun lockAsset(id: UUID) = jdbc.execute { sql ->
+        sql.value("SELECT id FROM inventory_serialized_asset WHERE tenant_id=? AND id=? FOR UPDATE", sql.tenant, id)
             ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         Unit
     }

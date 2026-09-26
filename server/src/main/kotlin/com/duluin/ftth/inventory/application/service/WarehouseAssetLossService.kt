@@ -40,6 +40,9 @@ class WarehouseAssetLossService(private val cutovers: InventoryTenantCutoverApi,
         store.replay(metadata.idempotencyKey, canonical.hash, current.fence.identity.userId)?.let {
             authorize(it, current)
             if (it.cutoverEpoch != cutover.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
+            titles.lockAssignment(it.ownership.assignmentId)
+            titles.lockAsset(it.ownership.assetId)
+            customers.lockForException(it.ownership.customerId, it.ownership.assignmentId, current.fence)
             return it.view()
         }
         titles.lockAssignment(input.assignmentId)
@@ -52,7 +55,7 @@ class WarehouseAssetLossService(private val cutovers: InventoryTenantCutoverApi,
         access.location(position.dimension.locationId, current)
         val target = access.location(input.destinationLocationId, current)
         if (target.kind != LocationKind.LOST || target.issueEligible) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        customers.lock(ownership.customerId, ownership.assignmentId)
+        customers.lockForException(ownership.customerId, ownership.assignmentId, current.fence)
         val evidence = workOrders.signature(ownership.workOrderId, input.evidenceId)
         val source = stock.get(ownership.assetId, position.dimension.locationId, dimension = position.dimension)
         val id = UUID.randomUUID()

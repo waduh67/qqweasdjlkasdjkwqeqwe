@@ -5,6 +5,7 @@ import java.util.UUID
 interface InventoryAssetTitleApi {
     fun requestCorrection(request: AssetTitleCorrectionRequest, metadata: WarehouseMutationMetadata): AssetTitleCorrectionRef
     fun forCustomer(customerId: UUID): List<CurrentAssetOwnership>
+    fun exceptionContext(customerId: UUID, assignmentId: UUID): AssetExceptionContext
 }
 
 data class AssetTitleCorrectionRequest(val assignmentId: UUID, val sourceHandoverId: UUID,
@@ -16,3 +17,5 @@ data class CurrentAssetOwnership(val assignmentId: UUID, val assetId: UUID, val 
     val ownershipMode: AssetOwnershipMode, val legalOwner: AssetLegalOwner, val assignmentRevision: Long,
     val titleRevision: Long, val handoverId: UUID?, val latestTransferId: UUID?, val recoveryRequired: Boolean,
     val serviceCeased: Boolean = false, val recoveryDue: Boolean = false, val positionStatus: String = "CUSTOMER_INSTALLED")
+data class AssetExceptionContext(val ownership: CurrentAssetOwnership, val customerLabel: String,
+    val workOrder: AssetExceptionWorkOrder, val canRequestTitleCorrection: Boolean, val canRequestLoss: Boolean)

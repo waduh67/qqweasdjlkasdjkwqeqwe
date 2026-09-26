@@ -1,0 +1,134 @@
+{
+  "kind": "SOURCE_DESIGN_ONLY",
+  "reviewedAtUtc": "2026-09-26T11:46:45.826604+00:00",
+  "sourceWorktree": "/home/fajar/ftth/qqweasdjlkasdjkwqeqwe/.omo/runtime/warehouse-regression-validation",
+  "sourceHead": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "uncommittedC8ChangesPresent": true,
+  "modernOldSchemaCurrentApplicationTests": [
+    {
+      "file": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+      "targetBefore": "178.9",
+      "targetAfter": "latest",
+      "testCount": 1
+    },
+    {
+      "file": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
+      "targetBefore": "178.10",
+      "targetAfter": "latest",
+      "testCount": 1
+    }
+  ],
+  "historicalPinnedApplicationTests": [
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt",
+      "targetBefore": "175.21",
+      "historicalApplication": "c164c4eb4224fb51ebffd669c87caf4fde2af1df",
+      "targetAfter": "175.22"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt",
+      "targetBefore": "175.29",
+      "historicalApplication": "3bfe12331428eb43740c8c0399b61a956c8820a7",
+      "targetAfter": "latest"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt",
+      "targetBefore": "175.34",
+      "historicalApplication": "3bfe12331428eb43740c8c0399b61a956c8820a7",
+      "targetAfter": "latest"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerDeploymentUpgradeIT.kt",
+      "targetBefore": "175.63",
+      "historicalApplication": "fd2cf7c58f02022525e655a8b0884ac2f5df49b0",
+      "targetAfter": "latest"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetTitleUpgradeIT.kt",
+      "targetBefore": "175.69",
+      "historicalApplication": "fd2cf7c58f02022525e655a8b0884ac2f5df49b0",
+      "targetAfter": "latest"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt",
+      "targetBefore": "175.86",
+      "historicalApplication": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb",
+      "targetAfter": "latest"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt",
+      "targetBefore": "175.89",
+      "historicalApplication": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb",
+      "targetAfter": "latest"
+    },
+    {
+      "file": "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt",
+      "targetBefore": "175.109",
+      "historicalApplication": "1580145c27d41a63cb2485f2bfadcba7cc0fb8a3",
+      "targetAfter": "latest"
+    }
+  ],
+  "counts": {
+    "modernAffectedClasses": 2,
+    "modernAffectedTests": 2,
+    "historicalCurrentChainTests": 7,
+    "historicalProjectionOnlyTests": 1,
+    "sharedExplicitTargetHelperFiles": 1
+  },
+  "candidatePreC7Pin": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+  "candidatePinnedSourceByteComparison": {
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt": true,
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt": true,
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferFixture.kt": true,
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt": true
+  },
+  "migrationInventory": {
+    "count": 366,
+    "highestVersion": "178.11",
+    "sha256OfFilenameSpaceSha256NewlineInventory": "14b42de5847cf1f4466bdadc8dead8330d22488d8d8ca6fc674c1a419fb2f47e"
+  },
+  "sourceInputs": {
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt": "94587b91709ddad6a9e601d94171042a4f179004194c1bbef418c7e8fcfd7230",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt": "921dff8ad6c8b35b3c3c10b5002f96d3a4738f60bba7ebe667ba3703518f49ac",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferFixture.kt": "a80ed43f0fe6c709b0b238a17ff62e59739e83edff1d8387cfeba17ad30efd65",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptRestartProcess.kt": "3bbcee20865211609aa2a893129a26f1ecf60a440ec8ba61b109f7a7b987c57b",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITRestart.kt": "3103e4fcca097d4a9b4be8ae7071e7534bfa89d803f829cc9e022d01412555c9",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITBoot.kt": "d5891a10b2ac45e74128a9c41bf39991208007d364391712a6d961abf5b43f51",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt": "1e2b04ecd6c8fa33ed9c4659def41069f6c5e2fe6de69444932e410302de9d45",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt": "7778ff7ca2f9806a33ea892dcbe9eada05a4b161d37460704d4197cbd79aeef2",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt": "ad538ce6085cd89e82f191c351fb3e8ad53101fdc0cd8d5bf7aafea245bd1b4f",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerDeploymentUpgradeIT.kt": "b9739b5352d76ede129ea5b10fb6f9e10212fcaf34863c8d6ccdc4c633fa921e",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetTitleUpgradeIT.kt": "24e1ca5cce7b97524f98ba038b0190b9b07a49c954babed9bda75fb063ddbcac",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt": "fa807a09b01014a9277f1043675ee22a6f86559480aee83e6f3985c1ab0b98ef",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt": "5bed88dc2be06119e49b318f7defdaf0412b249cc2ea89d848faf0e0a20a78ec",
+    "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt": "36d6232af2b81ab26e9fc4999b812e178fc4d5577968dff9f630cd84e25b7639",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseMigrationFulfillmentIT.kt": "5bcfb59342d54a36b99b252a292445b739a323078c11c588664bb5910b001202",
+    "server/src/test/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITUpgrade.kt": "552439c014351bd6315609eefec907b2d70189e629f4e0134e8910f566f5d51b",
+    "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
+    "scripts/warehouse/projection-upgrade.sh": "ad4f2d83efebdc8abbce596bac1eadaf7d30c07b7bc50c7f5db4a6d4ba6c6e8b",
+    "scripts/warehouse/test-historical-overlays.py": "914127aeebd2a6382f162264fae5a005948712ba6fc491a6a17849793d092cdc",
+    "scripts/warehouse/qa.sh": "a49f51b1f2b9133c3b5560ca0a32473497e01f08b4503c1fb50b6d02faa6d60e",
+    "scripts/warehouse/ci-results.py": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912",
+    "scripts/warehouse/preflight.sql": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+    ".github/workflows/warehouse.yml": "63c137270005f24546df60c351855d59ac0c068ed966f996271132ee7308375a",
+    "server/src/main/resources/application.yml": "3438a4227c8bbcf21633f27d13a1652b53f726414561662233ed1c116d07b19b",
+    ".omo/plans/warehouse-workorder-asset-provenance.md": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-draft-expiry-clock-design.md": "71772c1a713ef528837a1c4f5446c2fd0714ef9c65da2d7f0448340f8f7e81db",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-draft-expiry-design.md": "59f3d1037c583e28b56e6485c36f288877118dd6fa640d74369ba027943e8d75",
+    "server/src/main/resources/db/migration/V178_10__warehouse_transfer_draft_revision.sql": "d82891a8941a294bab114069297e931cf8ad6cd0cc7d8a8a7e2f06e736bd4ce2",
+    "server/src/main/resources/db/migration/V178_11__warehouse_count_draft_revision.sql": "e204ad6c111a45e60610cf5338e218b8514fa06d54f3af3d243458c07570dce7"
+  },
+  "noteSha256": "a62f2ee4d47203c24674dc5aa9c46e56789a64a681efa832538c41f42b5857d2",
+  "validation": {
+    "gitDiffCheckCurrentValidationDelta": "PASS",
+    "productEdits": false,
+    "buildOrQaExecuted": false,
+    "databaseProbeExecuted": false,
+    "implementationAcceptance": false,
+    "finalF4Approval": false
+  },
+  "recommendation": "Pinned pre-C7 HTTP setup; complete current migration; fresh current application verification. No missing-schema expiry fallback."
+}

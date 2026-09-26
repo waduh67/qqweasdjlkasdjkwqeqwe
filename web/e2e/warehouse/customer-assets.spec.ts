@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 import { dismantleAsset, repairSoldAsset, returnSoldRma } from './asset-journey'
 import { loanReuseScenario } from './loan-reuse-scenario'
 import { captureAssetHistory } from './asset-screenshots'
+import { rejectAssetException } from './asset-exception-journey'
 import { acceptNumericHandover, acknowledgeNumericJourney, assertNumericStock, completeNumericJourney, consumeAndInstallNumericJourney, prepareNumericJourney, returnNumericRemnant, uploadNumericProof } from './numeric-journey'
 
 test('sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA', async ({ page }, testInfo) => {
@@ -12,6 +13,7 @@ test('sold mixed-case receipt asset keeps customer title through physical remova
   const physical = await consumeAndInstallNumericJourney(page, fixture, 'SALE')
   await uploadNumericProof(page, fixture)
   await acceptNumericHandover(page, fixture)
+  await rejectAssetException(page, fixture, 'title', testInfo)
   await expect(page.getByRole('region', { name: 'Aset perangkat pelanggan', exact: true })).toContainText('Milik pelanggan')
   await returnNumericRemnant(page, fixture)
   await completeNumericJourney(page, fixture)

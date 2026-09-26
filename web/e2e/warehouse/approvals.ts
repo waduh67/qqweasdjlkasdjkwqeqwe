@@ -3,7 +3,7 @@ import { createRole, createUser } from './helpers'
 import { confirmOperation, selectNamed } from './fulfillment'
 
 /** All policy, user and warehouse grants are created through real UI. */
-export async function setupDiscrepancyApprover(page: Page, areaLabel: string, scopes: { id: string; label: string }[], policyLocations: { id: string; label: string }[], operation: 'ADJUSTMENT' | 'COUNT_VARIANCE' | 'OPENING_BALANCE' = 'ADJUSTMENT') {
+export async function setupDiscrepancyApprover(page: Page, areaLabel: string, scopes: { id: string; label: string }[], policyLocations: { id: string; label: string }[], operation: 'ADJUSTMENT' | 'COUNT_VARIANCE' | 'OPENING_BALANCE' | 'TITLE_REACQUISITION' | 'LOSS' = 'ADJUSTMENT') {
   const role = 'Pemeriksa selisih independen'
   await createRole(page, role, ['inventory.approval.view', 'inventory.approval.decide'])
   const checker = await createUser(page, role, { areas: [areaLabel], prefix: 'Pemeriksa' })

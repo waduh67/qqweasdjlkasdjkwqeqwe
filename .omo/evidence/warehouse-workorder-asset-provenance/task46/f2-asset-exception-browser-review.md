@@ -1,0 +1,13 @@
+# F2 C8 browser and visual verification
+
+**Verified: four actual R3 browser passes and eight inspected C8 screenshots. No final F2/F3 approval.** Reviewer ran no QA and changed no product files. Safe exact hashes, result objects and source counts are in the accompanying JSON; screenshots/traces/raw reports remain private.
+
+Independently parsed the completed archived R3 report: two customer-asset journeys each ran once on desktop and mobile. All **4 passed**, with **0 retries, failures, skips, flaky classifications or top-level errors**; the private log also reports four passes. All **2,426 inputs match current source**, with no added/missing files in the captured roots: **1,880 server main + 520 web src + 26 web e2e**. R2 to R3 changes only the helper's customer-name click. The recorded runtime JAR hash is unchanged. The coordinator's terminal/cleanup exit receipt was unavailable after its rate limit; no outer-process exit code is inferred.
+
+All **eight R3 post-create/post-rejection screenshots** were visually inspected and their hashes verified against the private R3 archive. Desktop views keep ownership and installed status clear. Both widths show the independent-approval requirement, explicit absence of immediate stock/title/recovery changes, and useful approval/history/source routes. Long document codes wrap on mobile; approval source details become vertical label/value rows. No material usability blocker was observed in these captured states.
+
+Source assertions use separate office-requester/checker identities and actual UI-created grants/policy. The helper reads and checks the selected assignment context, submits the proposal through confirmation, requests approval, verifies the requester lacks an approve control, switches to the checker and rejects. It asserts `REWORK_REQUIRED`, `canRework=false`, and exact selected asset-history equality before continuing sale/RMA or loan/reuse physical journeys.
+
+Proof limits: screenshots cover post-action states, not entry, confirmation or opened evidence; mobile drawers are scrolled beyond the top asset heading. The helper compares asset-history DTOs, not direct DB inventory effects. Explicit no-horizontal-overflow assertions occur later in the history journeys; the C8 captures were inspected visually. The source manifest excludes build/toolchain configuration and other modules. This remains focused browser evidence.
+
+**Earlier failures are preserved:** R2 independently verified **2 desktop passes / 2 mobile failures**, without retries. DataTable renders the customer action as a button; R3 clicks its exact name instead of gridcell padding. R1's four failures are not reclassified. **C7, full current regression and final F2/F3 remain open.**

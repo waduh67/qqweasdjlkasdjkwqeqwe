@@ -1,0 +1,47 @@
+{
+  "status": "PASSED_FOCUSED",
+  "baseCommit": "99ad992d",
+  "counts": {
+    "tests": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "sourceSha256": {
+    "web/e2e/warehouse/approvals.ts": "7ec854e8df92cfb5ae9ed63165a7a020bfe3b880377bdb99e17c98407bbd9a68",
+    "web/e2e/warehouse/customer-assets.spec.ts": "6eb9636ed009601d3900ffb7cfd1c9fed957d33f20662eef9d4f4c381b39e615",
+    "web/e2e/warehouse/fulfillment.ts": "d4dffa1636f130daf3dc8cb0108350d1f7e3a4f4efa24bb3236e15602a6388a4",
+    "web/e2e/warehouse/loan-reuse-scenario.ts": "fd902cdcf15ad36f167f55b1fdbddf9536863c9d271790f343e11b607867793c",
+    "web/e2e/warehouse/numeric-journey.ts": "09fa6913e7e95dc393d71b04e9aaf4975bac2547617ef5908d3c33ae0c4d7474",
+    "web/src/components/organisms/customer/CustomerAssetPanel.tsx": "e62d365c14e62ad5aa4e258afee6d20434cd80baa99b0d4394f08159a4bd9f5d",
+    "web/e2e/warehouse/asset-exception-journey.ts": "2bde3c5252528f178c5fa1c7ae5161cabaadfd8cf1b259ff0b08a4ee25e6d67d",
+    "web/src/api/warehouse/customerAssetExceptions.ts": "c9605d03a5d7496a0dd90f0d3da619306a285b653bb5b03f603709a1db2d7954",
+    "web/src/components/organisms/customer/CustomerAssetException.test.tsx": "64d2478d1ebda60ab6d00b45b530bd2c030c55af3bff4eb96ea9b68cffc5e7d0",
+    "web/src/components/organisms/customer/CustomerAssetException.tsx": "69ac25e1d6dbba42da94b5b8422bdfbd0024b5c5ba731974ada4c7ca1104ab42"
+  },
+  "allWebSourceInputsUnchangedDuringRun": true,
+  "webSourceInputCount": 520,
+  "reportSha256": "704485ec746462e59150c9961e6f9d6d6adb539689c3347cd4c589e2f34e3956",
+  "logSha256": "63212d29a288fb1435c94412f8c2335df045480d915336aebc1e31e0e17e966c",
+  "checks": {
+    "unitTests": "PASSED",
+    "warehouseE2eTypecheck": "PASSED",
+    "lint": "PASSED_WITH_WARNINGS",
+    "productionBuild": "PASSED"
+  },
+  "runner": {
+    "sessionId": 63261,
+    "observedExecExitCode": 0,
+    "observedTerminalOutput": "ASSET_EXCEPTION_WEB_R2_EXIT 0",
+    "failFast": "Sequential unguarded commands in set -euo pipefail subshell; host QA lock held",
+    "commands": [
+      "timeout 180s npm test -- --run src/components/organisms/customer/CustomerAssetException.test.tsx src/components/organisms/customer/CustomerAssetPanel.test.tsx --reporter=default --reporter=junit --outputFile.junit=<private-runtime>/asset-exception-web-r2.xml",
+      "timeout 180s npm run typecheck:warehouse-e2e",
+      "timeout 180s npm run lint",
+      "timeout 240s npm run build"
+    ]
+  },
+  "limitation": "18 actual mocked HTTP UI tests including missing approval.view and response-loss replay, plus E2E typecheck, lint and production build. Real browser journey is only typechecked in this run, not executed. Backend changes require their own evidence.",
+  "allWebSourceAndE2eInputsUnchangedDuringRun": true,
+  "webSourceAndE2eInputCount": 546
+}

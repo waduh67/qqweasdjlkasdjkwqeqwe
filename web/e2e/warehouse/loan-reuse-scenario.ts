@@ -1,16 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import { expect, type Page, type TestInfo } from '@playwright/test'
 import { captureAssetHistory } from './asset-screenshots'
+import { rejectAssetException } from './asset-exception-journey'
 import { openAssetHistory } from './asset-journey'
 import { reuseLoanForAnotherCustomer, swapLoanAndInspectOldAsset } from './loan-reuse-journey'
 import { acceptNumericHandover, acknowledgeNumericJourney, assertNumericStock, completeNumericJourney, consumeAndInstallNumericJourney, prepareNumericJourney, returnNumericRemnant, switchUser, uploadNumericProof } from './numeric-journey'
 
 export async function loanReuseScenario(page: Page, testInfo: TestInfo) {
-  const fixture = await prepareNumericJourney(page, { serialPrefix: `Loan-${randomUUID().slice(0, 8)}-` })
+  const fixture = await prepareNumericJourney(page, { serialPrefix: `Loan-${randomUUID().slice(0, 8)}-`, onuCostMinor: '2000000' })
   await acknowledgeNumericJourney(page, fixture)
   const physical = await consumeAndInstallNumericJourney(page, fixture)
   await uploadNumericProof(page, fixture)
   await acceptNumericHandover(page, fixture)
+  await rejectAssetException(page, fixture, 'loss', testInfo)
   await returnNumericRemnant(page, fixture)
   await completeNumericJourney(page, fixture)
   await assertNumericStock(page, fixture)
