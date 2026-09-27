@@ -7,13 +7,15 @@ test.use({ serviceWorkers: 'allow' })
 
 test('operator pages remain readable and form controls fit the viewport', async ({ page }, testInfo) => {
   test.setTimeout(360_000)
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
   const admin = await signup(page)
   await page.goto('/customers')
   await page.waitForLoadState('networkidle')
   // A declared family can silently fall back. Verify the actual regular,
   // semibold and bold faces can load before accepting typography screenshots.
   expect(await page.evaluate(async () => {
-    const faces = await Promise.all([400, 600, 700].map(weight => document.fonts.load(`${weight} 13px "Azure UI"`)))
+    const faces = await Promise.all(['400', '600', '700', 'italic 400'].map(face => document.fonts.load(`${face} 13px "Azure UI"`)))
     return faces.every(group => group.length > 0 && group.every(face => face.status === 'loaded'))
   }), 'Azure UI font faces loaded').toBeTruthy()
   await page.screenshot({ path: testInfo.outputPath('customers-empty.png'), fullPage: true, animations: 'disabled' })
@@ -33,8 +35,6 @@ test('operator pages remain readable and form controls fit the viewport', async 
     expect((await response).ok()).toBeTruthy()
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
   }
-  const errors: string[] = []
-  page.on('pageerror', error => errors.push(error.message))
   const routes = ['/', '/customers', '/inventory', '/invoices', '/catalog', '/helpdesk', '/my-work-orders', '/my-materials', '/work-orders', '/warehouse', '/warehouse/catalog', '/warehouse/stock', '/warehouse/receipts', '/warehouse/requests', '/warehouse/transfers', '/warehouse/returns', '/warehouse/counts', '/warehouse/reports', '/monitoring', '/bras', '/acs', '/vpn', '/roles', '/users', '/areas', '/notifications', '/subscription', '/express-psb', '/import-customers', '/import-pppoe', '/hotspot', '/network-provisioning', '/provisioning', '/incidents', '/my-visits', '/audit', '/payment-gateway', '/tax-settings', '/reports', '/account/security', '/warehouse/approvals', '/warehouse/replenishment', '/warehouse/provenance', '/warehouse/settings']
   for (const route of routes) {
     await page.goto(route)
