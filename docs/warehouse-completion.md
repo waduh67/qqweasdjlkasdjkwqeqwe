@@ -67,3 +67,12 @@ within their existing 100% width. The real reassignment regression also checks
 that picker and submit rectangles do not overlap and captures that section before
 clicking. This CSS fix requires a new tested web build and deployment; prior
 production remains the controls release until the fix is verified and activated.
+
+At `0a685bc5`, all 621 frontend cases and the nine main warehouse specs (24 browser
+cases) pass on the corrected product. The extra offline-return test found its old
+background-field locator incompatible with Fluent's accessible modal isolation.
+The test now waits for completed preflight and visible confirmation, checks the
+retained disabled field with hidden elements included, and separately verifies the
+visible 40 m destination summary. All original transaction/replay/stock assertions
+remain. Preserve this failed attempt; rerun only the extra scenario and remaining
+visual/legacy gates. This is a test-only delta; the frozen product remains `0a685bc5`.

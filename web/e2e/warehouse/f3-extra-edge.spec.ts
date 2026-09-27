@@ -34,6 +34,11 @@ test('cancelled reassigned work retains sixty metres while an offline retried fo
   await page.getByRole('textbox', { name: 'Referensi bukti pengembalian', exact: true }).fill('F3 pengembalian parsial terukur 40 m')
   await page.getByRole('textbox', { name: 'Alasan pengembalian', exact: true }).fill('Sebagian kabel dibawa kembali setelah pembatalan; 60 m tetap pada petugas asal')
   await page.getByRole('button', { name: 'Tinjau pengembalian', exact: true }).click()
+  const review = page.getByRole('dialog', { name: 'Konfirmasi pengembalian material', exact: true })
+  await expect(review).toBeVisible()
+  await expect(review).toContainText(`40 m ke ${fixture.quarantine.code} · ${fixture.quarantine.name}.`)
+  // The modal hides its background from accessibility, but must retain the locked draft.
+  const retainedQuantity = page.getByRole('textbox', { name: 'Jumlah dikembalikan (m)', exact: true, includeHidden: true })
   const path = `${fixture.root}/return`
   const attempts: { key: string | undefined; body: string | null }[] = []
   const observe = (request: import('@playwright/test').Request) => {
@@ -42,7 +47,8 @@ test('cancelled reassigned work retains sixty metres while an offline retried fo
   page.on('request', observe)
   await context.setOffline(true)
   await expect(page.getByRole('button', { name: 'Kirim pengembalian', exact: true })).toBeDisabled()
-  await expect(page.getByRole('textbox', { name: 'Jumlah dikembalikan (m)', exact: true })).toHaveValue('40')
+  await expect(retainedQuantity).toHaveValue('40')
+  await expect(retainedQuantity).toBeDisabled()
   expect(attempts).toHaveLength(0)
   await page.screenshot({ path: testInfo.outputPath('offline-partial-return-disabled-retains-command.png'), animations: 'disabled' })
   await context.setOffline(false)
@@ -59,7 +65,9 @@ test('cancelled reassigned work retains sixty metres while an offline retried fo
   await expect(page.getByText('Hasil transaksi belum terkonfirmasi. Coba lagi dengan transaksi yang sama sebelum mengubah isinya.', { exact: true })).toBeVisible()
   expect(committed?.status).toBe(200)
   await expect(page.getByRole('button', { name: 'Coba transaksi yang sama', exact: true })).toBeEnabled()
-  await expect(page.getByRole('textbox', { name: 'Jumlah dikembalikan (m)', exact: true })).toHaveValue('40')
+  await expect(review).toContainText(`40 m ke ${fixture.quarantine.code} · ${fixture.quarantine.name}.`)
+  await expect(retainedQuantity).toHaveValue('40')
+  await expect(retainedQuantity).toBeDisabled()
   await page.screenshot({ path: testInfo.outputPath('lost-reply-partial-return-retains-command.png'), animations: 'disabled' })
   const response = page.waitForResponse(r => new URL(r.url()).pathname === path && r.request().method() === 'POST')
   await page.getByRole('button', { name: 'Coba transaksi yang sama', exact: true }).click()
