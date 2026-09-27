@@ -236,6 +236,7 @@ export function SubscriptionPage() {
 
       {/* Hero: identitas paket + masa aktif + CTA */}
       <div
+        className="subscription-plan"
         style={{
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
@@ -243,7 +244,6 @@ export function SubscriptionPage() {
           boxShadow: 'var(--shadow-md)',
           padding: '1.6rem 1.75rem',
           display: 'grid',
-          gridTemplateColumns: 'minmax(220px, 1fr) minmax(240px, 1.3fr) auto',
           gap: '1.5rem',
           alignItems: 'center',
         }}
@@ -317,7 +317,7 @@ export function SubscriptionPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
             gap: '0.9rem',
           }}
         >
@@ -331,7 +331,7 @@ export function SubscriptionPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
           gap: '1.25rem',
           alignItems: 'start',
         }}

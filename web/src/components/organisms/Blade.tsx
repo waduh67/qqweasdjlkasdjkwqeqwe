@@ -12,18 +12,16 @@ import { useConfirm } from '@/system'
 /**
  * Blade — panel geser-dari-kanan ala Azure Portal, PENGGANTI modal terpusat untuk
  * SEMUA form buat/sunting. Anatomi: header (judul + `X`), body yang bisa di-scroll,
- * dan **footer sticky** (tombol Simpan primary di KIRI, Batal di kanan — konvensi Azure).
+ * dan **footer sticky** (aksi utama di kanan).
  *
  * Ukuran mengikuti kompleksitas form:
  * - `sm`  → form ringkas (<5 field)      → Fluent `medium` (~592px)
  * - `lg`  → form kompleks / banyak seksi  → Fluent `large` (~940px)
  * - `full`→ form sangat lebar / bertab    → Fluent `full` (100%)
  *
- * **Non-modal** (`modalType={footer ? 'modal' : 'non-modal'}`) ala Azure Portal: TAK ada scrim yang
- * menutupi konten — daftar di belakang tetap bisa diklik selagi blade terbuka,
- * sehingga memilih baris lain cukup menukar isi blade (data-driven) tanpa menumpuk.
- * ESC / tombol tutup menutup panel; bila form **kotor** (`dirty`) diminta konfirmasi
- * dulu agar perubahan tak hilang tak sengaja. Panel terkendali penuh lewat `open`.
+ * Form dengan footer memakai modal focus trap. Panel detail tanpa footer tetap
+ * membiarkan daftar di belakangnya dapat dipilih. Form kotor meminta konfirmasi
+ * sebelum ditutup lewat Escape, latar, atau tombol tutup.
  */
 export type BladeSize = 'sm' | 'lg' | 'full'
 
@@ -78,8 +76,6 @@ export function Blade({
       open={open}
       position="end"
       size={FLUENT_SIZE[size]}
-      // Non-modal = tanpa scrim & tanpa focus-trap: konten di belakang tetap
-      // interaktif (pola blade Azure). Memilih baris lain cukup menukar isi blade.
       modalType={footer ? 'modal' : 'non-modal'}
       className={`azure-blade${className ? ` ${className}` : ''}`}
       // Fluent memicu ini untuk ESC (non-modal: tak ada klik-scrim); kita saring

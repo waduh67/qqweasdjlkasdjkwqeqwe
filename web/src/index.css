@@ -3720,7 +3720,7 @@ td.dg-actions {
 .warehouse-mobile-label {
   display: none;
 }
-.warehouse-data-table-card .data-table-grid .fui-DataGridCell > .warehouse-cell-value {
+:is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid .fui-DataGridCell > .warehouse-cell-value {
   min-width: 0;
   white-space: normal;
   overflow: visible;
@@ -3744,20 +3744,20 @@ td.dg-actions {
   margin: 0;
 }
 @media (max-width: 720px) {
-  .warehouse-data-table-card {
+  :is(.warehouse-data-table-card, .mobile-card-table) {
     border: 0;
     box-shadow: none;
     background: transparent;
   }
-  .warehouse-data-table-card .table-wrap {
+  :is(.warehouse-data-table-card, .mobile-card-table) .table-wrap {
     overflow: visible;
   }
-  .warehouse-data-table-card .data-table-grid {
+  :is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid {
     display: block;
     width: 100%;
     min-width: 0;
   }
-  .warehouse-data-table-card .data-table-grid .fui-DataGridHeader {
+  :is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid .fui-DataGridHeader {
     display: block;
     position: absolute;
     width: 1px;
@@ -3766,10 +3766,10 @@ td.dg-actions {
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  .warehouse-data-table-card .data-table-grid .fui-DataGridBody {
+  :is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid .fui-DataGridBody {
     display: block;
   }
-  .warehouse-data-table-card .data-table-grid .fui-DataGridRow {
+  :is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid .fui-DataGridRow {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
@@ -3778,7 +3778,7 @@ td.dg-actions {
     border: 1px solid var(--border);
     background: var(--surface);
   }
-  .warehouse-data-table-card .data-table-grid .fui-DataGridCell {
+  :is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid .fui-DataGridCell {
     display: grid;
     grid-template-columns: minmax(5rem, 35%) minmax(0, 1fr);
     align-items: baseline;
@@ -3789,13 +3789,13 @@ td.dg-actions {
     white-space: normal;
     overflow: visible;
   }
-  .warehouse-data-table-card .warehouse-mobile-label {
+  :is(.warehouse-data-table-card, .mobile-card-table) .warehouse-mobile-label {
     display: block;
     text-align: left;
     color: var(--muted);
     font-size: var(--fontSizeBase200);
   }
-  .warehouse-data-table-card .warehouse-cell-value {
+  :is(.warehouse-data-table-card, .mobile-card-table) .warehouse-cell-value {
     min-width: 0;
     overflow-wrap: anywhere;
   }

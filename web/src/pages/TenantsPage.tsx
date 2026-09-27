@@ -49,16 +49,20 @@ export function TenantsPage() {
   const [notice, setNotice] = useState<string | null>(null)
 
   async function reload() {
+    setLoading(true)
+    setError(null)
     try {
       const page = await api.get<PageResponse<Tenant>>('/api/platform/tenants?size=50')
       setTenants(page.content)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal memuat daftar tenant. Coba segarkan kembali.')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    void reload().catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat tenant'))
+    void reload()
     // Harga default global untuk ditampilkan sebagai acuan saat onboarding (best-effort).
     if (can('platform.billing.view')) {
       void getPlatformBillingSettings()
@@ -151,8 +155,8 @@ export function TenantsPage() {
         }
       />
 
-      {error && <Text as="p" className="error">{error}</Text>}
-      {notice && <Text as="p" className="muted">{notice}</Text>}
+      {error && <div className="card load-error" role="alert"><p>{error}</p><Button onClick={() => void reload()}>Coba lagi</Button></div>}
+      {notice && <p role="status" className="form-note">{notice}</p>}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
@@ -184,7 +188,7 @@ export function TenantsPage() {
         title="Tambah tenant"
         size="sm"
         dirty={dirty}
-        onClose={closeDraft}
+        onClose={() => { if (!saving) closeDraft() }}
         footer={
           <>
             <Button disabled={saving} onClick={closeDraft}>Batal</Button>
@@ -228,7 +232,7 @@ export function TenantsPage() {
               <TextField required label="Password admin" type="password" autoComplete="new-password" value={draft.adminPassword} onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })} />
             </FormSection>
             <FormSection title="Langganan" description="Biaya khusus bersifat opsional. Kosongkan untuk mengikuti harga platform.">
-              <TextField label="Harga bulanan khusus (Rp)" type="number" min={0} step={1000} value={draft.monthlyFee} onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })} placeholder={defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Gunakan harga default'} />
+              <TextField label="Harga bulanan khusus (Rp)" type="number" min={0} step="any" value={draft.monthlyFee} onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })} placeholder={defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Gunakan harga default'} />
             </FormSection>
           </form>
         )}
@@ -257,9 +261,7 @@ export function TenantsPage() {
           }}
           message={
             <Text as="p" style={{ margin: 0 }}>
-              Hapus tenant <Text as="strong" weight="semibold" >{confirmDelete.name}</Text> (<code>{confirmDelete.slug}</code>) beserta
-              <Text as="strong" weight="semibold" > SELURUH datanya</Text> secara permanen? Tindakan ini{' '}
-              <Text as="strong" weight="semibold" >tidak bisa dibatalkan</Text>.
+              Hapus tenant <Text as="strong" weight="semibold">{confirmDelete.name}</Text> (<code>{confirmDelete.slug}</code>) secara permanen? Tenant yang memiliki riwayat transaksi atau aset gudang tidak dapat dihapus; gunakan Suspend. Penghapusan tenant kosong tidak bisa dibatalkan.
             </Text>
           }
         />

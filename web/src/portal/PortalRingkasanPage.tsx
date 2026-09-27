@@ -84,7 +84,7 @@ export function PortalRingkasanPage() {
           tone={session ? (online ? 'good' : 'crit') : undefined}
           note={session ? (session.framedIp ?? session.username) : connection ? 'Belum ada sesi tercatat' : 'Data koneksi gagal dimuat'}
         />
-        <Stat label="Kecepatan paket" value={speed} note={sub ? sub.packageName : 'Belum ada langganan'} />
+        <Stat label="Kecepatan paket" value={speed} note={sub ? sub.packageName : profile ? 'Belum ada langganan' : 'Data langganan belum tersedia'} />
         {due ? (
           <Stat
             label="Jatuh tempo terdekat"
@@ -96,7 +96,7 @@ export function PortalRingkasanPage() {
           <Stat
             label="Terakhir bayar"
             value={fmtDate(billing?.lastPaidAt ?? null)}
-            note={billing?.lastPaidAt ? 'Pembayaran terakhir diterima' : 'Belum ada pembayaran'}
+            note={billing?.lastPaidAt ? 'Pembayaran terakhir diterima' : billing ? 'Belum ada pembayaran' : 'Data pembayaran belum tersedia'}
           />
         )}
       </div>

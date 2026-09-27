@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
+import { useMemo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import {
   Button,
   DataGrid,
@@ -171,6 +171,7 @@ export function DataTable<T>({
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
   const warehousePresentation = presentation === 'warehouse'
+  const mobileCards = warehousePresentation || presentation === 'default'
   const resourcePresentation = presentation === 'resource' || presentation === 'olt' || warehousePresentation
 
   const sorted = useMemo(() => {
@@ -314,11 +315,12 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card')}>
+    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card', mobileCards && 'mobile-card-table')}>
       {!loading && sorted.length > 0 && (
         <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
             className={mergeClasses('data-table-grid', resourcePresentation && 'resource-data-table-grid', styles.grid)}
+            style={{ '--data-grid-min-width': `${columns.length * 168 + leadCols * 52}px` } as CSSProperties}
             aria-label="Tabel data"
             items={sorted}
             columns={dataGridColumns}
@@ -411,7 +413,7 @@ export function DataTable<T>({
                           }
                           style={{ textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
                         >
-                          {warehousePresentation ? <>
+                          {mobileCards ? <>
                             <span className="warehouse-mobile-label" aria-hidden="true">{isActionCell ? 'Tindakan' : column?.header}</span>
                             <div className="warehouse-cell-value">{renderCell(item)}</div>
                           </> : renderCell(item)}

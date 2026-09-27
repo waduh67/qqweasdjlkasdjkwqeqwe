@@ -92,6 +92,7 @@ export function CustomersPage() {
   const [total, setTotal] = useState(0)
   const [loadError, setLoadError] = useState<string | null>(null)
   const requestVersion = useRef(0)
+  const [refreshVersion, setRefreshVersion] = useState(0)
   const setDetailId = (id: string | null) => setParams(previous => { const next = new URLSearchParams(previous); if (id) next.set('customer', id); else next.delete('customer'); return next })
   const setFilter = (key: string, value: string) => setParams(previous => { const next = new URLSearchParams(previous); if (value) next.set(key, value); else next.delete(key); next.delete('page'); return next }, { replace: true })
   const setQuery = (value: string) => setFilter('q', value)
@@ -165,6 +166,16 @@ export function CustomersPage() {
         `/api/customers?size=50&page=${pageIndex}&query=${encodeURIComponent(query)}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ''}`,
       )
       if (version !== requestVersion.current) return
+      const lastPage = Math.max(0, Math.ceil(page.totalElements / 50) - 1)
+      if (pageIndex > lastPage) {
+        setParams(previous => {
+          const next = new URLSearchParams(previous)
+          if (lastPage === 0) next.delete('page')
+          else next.set('page', String(lastPage))
+          return next
+        }, { replace: true })
+        return
+      }
       setCustomers(page.content)
       setTotal(page.totalElements)
     } catch (err) {
@@ -172,11 +183,12 @@ export function CustomersPage() {
     } finally {
       if (version === requestVersion.current) setLoading(false)
     }
-  }, [query, statusFilter, pageIndex])
+  }, [query, statusFilter, pageIndex, setParams])
 
   useEffect(() => {
     void reload()
-  }, [reload])
+    return () => { requestVersion.current += 1 }
+  }, [reload, refreshVersion])
 
   const rows = useMemo(
     () => (statusFilter ? customers.filter((c) => c.status === statusFilter) : customers),
@@ -236,7 +248,9 @@ export function CustomersPage() {
         await api.post('/api/customers', { ...body, planId: draft.planId || null })
       }
       closeDraft()
-      await reload()
+      // Refresh the current URL's query after the mutation, even if navigation
+      // changed while its request was pending.
+      setRefreshVersion(value => value + 1)
       toast.success(draft.id ? 'Data pelanggan diperbarui' : 'Pelanggan ditambahkan')
     } catch (err) {
       const fallback = draft.id ? 'Gagal memperbarui pelanggan' : 'Gagal menambah pelanggan'
@@ -257,7 +271,9 @@ export function CustomersPage() {
         next.delete(c.id)
         return next
       })
-      await reload()
+      // Refresh the current URL's query after the mutation, even if navigation
+      // changed while its request was pending.
+      setRefreshVersion(value => value + 1)
       toast.success('Pelanggan dihapus')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus pelanggan')
@@ -274,7 +290,9 @@ export function CustomersPage() {
     try {
       await Promise.all(ids.map((id) => api.del(`/api/customers/${id}`)))
       setSelected(new Set())
-      await reload()
+      // Refresh the current URL's query after the mutation, even if navigation
+      // changed while its request was pending.
+      setRefreshVersion(value => value + 1)
       toast.success(`${ids.length} pelanggan dihapus`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus pelanggan')

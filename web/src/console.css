@@ -194,3 +194,20 @@
   .command-secondary { display: none; }
   .command-overflow { display: block; }
 }
+
+/* Keep resource columns readable and aligned while their own viewport scrolls. */
+.table-card .data-table-grid { display: block; width: 100%; min-width: var(--data-grid-min-width); }
+.table-card .data-table-grid .fui-DataGridHeader, .table-card .data-table-grid .fui-DataGridBody { display: block; }
+.table-card .data-table-grid .fui-DataGridRow { display: flex; width: 100%; }
+.table-card .data-table-grid .fui-DataGridCell { overflow-wrap: anywhere; white-space: normal; }
+.table-card .data-table-grid .fui-DataGridCell > * { white-space: normal; }
+.subscription-plan { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(190px, auto); }
+@media (max-width: 1100px) { .subscription-plan { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 720px) {
+  .mobile-card-table .data-table-grid { width: 100%; min-width: 0; }
+  .mobile-card-table .data-table-grid .fui-DataGridRow { display: grid; }
+  .mobile-card-table .data-table-grid .fui-DataGridHeader { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .mobile-card-table .data-table-grid .fui-DataGridCell { border-bottom: 0; padding: 8px 12px; }
+  .mobile-card-table .data-table-grid .fui-DataGridRow { border-radius: var(--radius); padding: 8px 0; }
+  .subscription-plan { padding: 20px !important; }
+}

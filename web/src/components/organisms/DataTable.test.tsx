@@ -102,7 +102,7 @@ describe('DataTable', () => {
     const user = userEvent.setup()
     const { container } = renderTable()
     const firstName = () =>
-      Array.from(container.querySelectorAll('[role="row"]'))[1]?.querySelector('[role="gridcell"]')?.textContent
+      Array.from(container.querySelectorAll('[role="row"]'))[1]?.querySelector('[role="gridcell"] .warehouse-cell-value')?.textContent
 
     expect(firstName()).toBe('Siti') // urutan bawaan = urutan data
     await user.click(screen.getByRole('button', { name: /Nama/ }))
