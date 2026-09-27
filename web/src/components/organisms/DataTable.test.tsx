@@ -85,10 +85,10 @@ describe('DataTable', () => {
     expect(Array.from(cells).map((cell) => cell.getAttribute('data-label'))).toEqual(['Nama', 'Tagihan'])
   })
 
-  it('menambahkan hook resource tanpa mengubah kelas tabel bawaan', () => {
+  it('memakai grid resource yang konsisten untuk tabel bawaan dan eksplisit', () => {
       const { container, rerender } = renderTable()
-      expect(container.querySelector('.resource-data-table-card')).toBeNull()
-      expect(container.querySelector('.resource-data-table-grid')).toBeNull()
+      expect(container.querySelector('.resource-data-table-card')).not.toBeNull()
+      expect(container.querySelector('.resource-data-table-grid')).not.toBeNull()
 
       rerender(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} presentation="resource" />)
       expect(container.querySelector('.resource-data-table-card')).not.toBeNull()
@@ -102,7 +102,7 @@ describe('DataTable', () => {
     const user = userEvent.setup()
     const { container } = renderTable()
     const firstName = () =>
-      Array.from(container.querySelectorAll('[role="row"]'))[1]?.querySelector('[role="gridcell"] .warehouse-cell-value')?.textContent
+      Array.from(container.querySelectorAll('[role="row"]'))[1]?.querySelector('[role="gridcell"]')?.textContent
 
     expect(firstName()).toBe('Siti') // urutan bawaan = urutan data
     await user.click(screen.getByRole('button', { name: /Nama/ }))

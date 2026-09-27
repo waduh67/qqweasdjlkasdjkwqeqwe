@@ -9,13 +9,16 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  icon,
 }: {
   title: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
+  icon?: ReactNode
 }) {
   return (
     <div className="page-header">
+      {icon && <span className="page-header-icon" aria-hidden="true">{icon}</span>}
       <div className="page-header-text">
         <h1 className="page-title">{title}</h1>
         {subtitle && <p className="page-sub">{subtitle}</p>}

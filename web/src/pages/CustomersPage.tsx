@@ -8,7 +8,7 @@ import type { CustomerStatus, CustomerView } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
-import { PageHeader } from '@/components/molecules'
+import { FormSection, PageHeader } from '@/components/molecules'
 import { Field } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { LocationPicker } from '@/components/organisms'
@@ -321,24 +321,27 @@ export function CustomersPage() {
     {
       key: 'name',
       header: 'Nama',
+      minWidth: 220,
       sortValue: (c) => c.name,
       cell: (c) => c.name,
       onCellClick: (c) => setDetailId(c.id),
       inlineActions: hasRowActions ? inlineActions : undefined,
     },
-    { key: 'code', header: 'Kode', sortValue: (c) => c.code, cell: (c) => c.code },
-    { key: 'phone', header: 'Telepon', sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
+    { key: 'code', header: 'Kode', minWidth: 135, sortValue: (c) => c.code, cell: (c) => c.code },
+    { key: 'phone', header: 'Telepon', minWidth: 140, sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
     {
       key: 'status',
       header: 'Status',
+      minWidth: 140,
       sortValue: (c) => c.status,
       cell: (c) => `${customerStatusLabel(c.status)}${c.awaitingInstallation ? ' · Menunggu instalasi' : ''}`,
     },
-    { key: 'address', header: 'Alamat', sortValue: (c) => c.address, cell: (c) => c.address },
-    { key: 'onuCount', header: 'ONU', align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
+    { key: 'address', header: 'Alamat', minWidth: 230, sortValue: (c) => c.address, cell: (c) => c.address },
+    { key: 'onuCount', header: 'ONU', minWidth: 64, align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
     {
       key: 'onuLocation',
       header: 'Lokasi ONU',
+      minWidth: 155,
       sortValue: (c) => c.onus.find((o) => o.odpCode)?.odpCode ?? '',
       cell: (c) => {
         const attached = c.onus.find((o) => o.odpCode)
@@ -409,10 +412,11 @@ export function CustomersPage() {
   ])
 
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
+    <div className="stack resource-page customers-page">
       <PageHeader
         title="Pelanggan"
-        subtitle="Data pelanggan, perangkat ONU, dan penempatannya di ODP."
+        icon={<IconCustomers size={32} />}
+        subtitle="Kelola pelanggan, langganan, dan perangkat yang terpasang."
       />
 
       {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
@@ -439,11 +443,12 @@ export function CustomersPage() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : undefined}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan pelanggan pertama atau impor data pelanggan melalui command bar di atas.'}
             icon={<IconCustomers size={32} />}
           />
         }
       />}
+      {!loadError && total > 50 && <p className="resource-sort-note">Pengurutan kolom berlaku untuk halaman ini.</p>}
       {!loadError && <Pagination page={pageIndex} size={50} total={total} busy={loading} onChange={index => setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(index)); return next })} />}
 
       <Blade
@@ -452,20 +457,19 @@ export function CustomersPage() {
         subtitle={draft?.id ? draft.code : undefined}
         size="sm"
         dirty={dirty}
-        onClose={closeDraft}
+        onClose={() => { if (!saving) closeDraft() }}
         footer={
           <>
+            <Button onClick={closeDraft} disabled={saving}>Batal</Button>
             <Button variant="primary" onClick={() => void save()} disabled={saving}>
               {saving ? 'Menyimpan…' : 'Simpan'}
-            </Button>
-            <Button onClick={closeDraft} disabled={saving}>
-              Batal
             </Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
+            <FormSection title="Identitas pelanggan" description="Nama dan alamat wajib diisi. Kontak digunakan untuk komunikasi dan tagihan.">
             <TextField
               label="Nama"
               required
@@ -493,6 +497,8 @@ export function CustomersPage() {
               onChange={(_, data) => setDraft({ ...draft, email: data.value })}
               placeholder="opsional"
             />
+            </FormSection>
+            <FormSection title="Alamat pemasangan" description="Tentukan alamat dan area layanan pelanggan.">
             <TextField
               label="Alamat"
               required
@@ -505,15 +511,20 @@ export function CustomersPage() {
               }}
             />
             <CustomerAreaField value={draft.areaId} onChange={areaId => setDraft({ ...draft, areaId })} />
-            <Field label="Lokasi">
+            <details className="form-disclosure">
+              <summary>Tentukan titik di peta (opsional)</summary>
+              <Field label="Lokasi">
               <LocationPicker
                 longitude={draft.longitude}
                 latitude={draft.latitude}
                 onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
                 onAddress={(address) => setDraft(draft.address.trim() ? draft : { ...draft, address })}
               />
-            </Field>
+              </Field>
+            </details>
+            </FormSection>
             {draft.id == null && (
+              <FormSection title="Layanan internet" description="Paket menentukan kecepatan dan biaya langganan pelanggan.">
               <SelectField
                 label="Paket langganan"
                 required={plans.length > 0}
@@ -523,10 +534,10 @@ export function CustomersPage() {
                 validationMessage={errors.planId}
                 hint={
                   !canPlanView
-                    ? 'Butuh izin lihat paket untuk memilihnya di sini — paketnya bisa ditetapkan menyusul di detail pelanggan.'
+                    ? 'Anda belum memiliki izin melihat paket. Paket dapat ditetapkan kemudian melalui detail pelanggan.'
                     : plans.length === 0
-                      ? 'Belum ada paket aktif — buat dulu di menu Paket Internet, lalu tetapkan paketnya di detail pelanggan.'
-                      : 'Satu pelanggan satu langganan: paketnya ikut lahir di sini, dan nanti diganti di tempat — tak pernah ditambah.'
+                      ? 'Belum ada paket aktif. Buat paket di menu Paket Internet, lalu tetapkan melalui detail pelanggan.'
+                      : 'Paket langsung terhubung saat pelanggan disimpan. Perubahan paket tersedia di detail pelanggan.'
                 }
                 onChange={(_, data) => {
                   setDraft({ ...draft, planId: data.value })
@@ -540,6 +551,7 @@ export function CustomersPage() {
                   </option>
                 ))}
               </SelectField>
+              </FormSection>
             )}
           </div>
         )}

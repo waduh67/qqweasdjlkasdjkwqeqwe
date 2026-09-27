@@ -22,7 +22,7 @@ import {
   type TableColumnDefinition,
 } from '@fluentui/react-components'
 import { ArrowDown, ArrowUp, MoreHorizontal } from 'lucide-react'
-import { EmptyState, SkeletonRows } from '@/components/atoms'
+import { EmptyState, SelectField, SkeletonRows } from '@/components/atoms'
 
 /**
  * Tabel data generik — pengganti tunggal untuk pola "kartu per item" di seluruh
@@ -52,6 +52,8 @@ export type Column<T> = {
   align?: 'left' | 'right' | 'center'
   /** Lebar kolom eksplisit (mis. `'1%'` untuk kolom aksi yang menyusut). */
   width?: string
+  /** Minimum readable column width in the scrolling resource grid. */
+  minWidth?: number
   /** Kelas tambahan pada sel grid. */
   className?: string
   /** Membuka detail dari kontrol tautan pada sel kolom ini. */
@@ -171,8 +173,7 @@ export function DataTable<T>({
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
   const warehousePresentation = presentation === 'warehouse'
-  const mobileCards = warehousePresentation || presentation === 'default'
-  const resourcePresentation = presentation === 'resource' || presentation === 'olt' || warehousePresentation
+  const mobileCards = warehousePresentation
 
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -315,12 +316,26 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card', mobileCards && 'mobile-card-table')}>
+    <div className={mergeClasses('card', 'table-card', 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card', mobileCards && 'mobile-card-table')}>
+      {mobileCards && !loading && sorted.length > 0 && columns.some(column => column.sortValue) && (
+        <div className="mobile-table-sort">
+          <SelectField label="Urutkan tabel" value={sort ? `${sort.key}:${sort.dir}` : ''} onChange={(_, data) => {
+            const [key, dir] = data.value.split(':')
+            setSort(key ? { key, dir: dir as 'asc' | 'desc' } : null)
+            onSortChange?.()
+          }}>
+            <option value="">Urutan awal</option>
+            {columns.filter(column => column.sortValue).flatMap(column => ['asc', 'desc'].map(dir => (
+              <option key={`${column.key}:${dir}`} value={`${column.key}:${dir}`}>{typeof column.header === 'string' ? column.header : column.key} · {dir === 'asc' ? 'naik' : 'turun'}</option>
+            )))}
+          </SelectField>
+        </div>
+      )}
       {!loading && sorted.length > 0 && (
-        <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
+        <div className={mergeClasses('table-wrap', 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
-            className={mergeClasses('data-table-grid', resourcePresentation && 'resource-data-table-grid', styles.grid)}
-            style={{ '--data-grid-min-width': `${columns.length * 168 + leadCols * 52}px` } as CSSProperties}
+            className={mergeClasses('data-table-grid', 'resource-data-table-grid', styles.grid)}
+            style={{ '--data-grid-min-width': `${columns.reduce((width, column) => width + (column.minWidth ?? 168), 0) + leadCols * 52}px` } as CSSProperties}
             aria-label="Tabel data"
             items={sorted}
             columns={dataGridColumns}
@@ -344,7 +359,7 @@ export function DataTable<T>({
                   return (
                     <DataGridHeaderCell
                       className={mergeClasses(styles.headerCell, columnId === ACTIONS_COLUMN_ID && styles.actionCell, column?.align === 'right' && styles.numeric)}
-                      style={{ width: columnId === ACTIONS_COLUMN_ID ? '52px' : column?.width, justifyContent: column?.align === 'right' ? 'flex-end' : undefined, textAlign: column?.align }}
+                      style={{ flex: columnId === ACTIONS_COLUMN_ID ? undefined : `1 1 ${column?.minWidth ?? 168}px`, width: columnId === ACTIONS_COLUMN_ID ? '52px' : column?.width, justifyContent: column?.align === 'right' ? 'flex-end' : undefined, textAlign: column?.align }}
                       aria-sort={sort?.key === columnId ? (sort.dir === 'asc' ? 'ascending' : 'descending') : column?.sortValue ? 'none' : undefined}
                     >
                       {column?.sortValue ? (
@@ -411,7 +426,7 @@ export function DataTable<T>({
                               ? (event) => event.stopPropagation()
                               : undefined
                           }
-                          style={{ textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
+                          style={{ flex: isActionCell ? undefined : `1 1 ${column?.minWidth ?? 168}px`, textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
                         >
                           {mobileCards ? <>
                             <span className="warehouse-mobile-label" aria-hidden="true">{isActionCell ? 'Tindakan' : column?.header}</span>

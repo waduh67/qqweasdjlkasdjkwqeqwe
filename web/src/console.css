@@ -211,3 +211,31 @@
   .mobile-card-table .data-table-grid .fui-DataGridRow { border-radius: var(--radius); padding: 8px 0; }
   .subscription-plan { padding: 20px !important; }
 }
+
+/* Azure resource pages: title, command bar, filters, then a continuous data grid. */
+.content:not(.content-flush) { background: var(--surface); }
+.page-header-icon { display: flex; align-items: center; color: var(--accent); padding-top: 3px; flex: 0 0 auto; }
+.resource-page { gap: 16px; }
+.resource-page .page-header { margin-bottom: 0; }
+.azure-commandbar { min-height: 44px; padding: 4px 0; border-block: 1px solid var(--border); gap: 0; }
+.azure-commandbar .cmd-btn { font-weight: 400; border-radius: 2px; }
+.azure-commandbar .cmd-primary { color: var(--text); background: transparent; }
+.azure-commandbar .cmd-primary .fui-Button__icon { color: var(--accent); }
+.azure-commandbar .cmd-primary:hover { background: var(--accent-soft); }
+.resource-data-table-card:not(.warehouse-data-table-card) { border: 0; border-radius: 0; }
+.resource-data-table-card:not(.warehouse-data-table-card) .table-wrap { border-radius: 0; }
+.resource-data-table-grid .fui-DataGridHeaderCell { background: var(--surface); }
+.data-table-grid .fui-DataGridHeaderCell, .data-table-grid .fui-DataGridCell { padding: 10px 12px; }
+.resource-sort-note { font-size: 12px; color: var(--muted); margin: 0; }
+.resource-page .pagination { border-top: 1px solid var(--border); padding-top: 12px; }
+.form-disclosure { border: 1px solid var(--border); border-radius: 4px; }
+.form-disclosure summary { padding: 12px 16px; cursor: pointer; color: var(--accent); }
+.form-disclosure > .field { padding: 0 16px 16px; }
+.mobile-table-sort { display: none; }
+@media (max-width: 720px) {
+  .mobile-table-sort { display: block; padding-bottom: 12px; }
+  /* The clipped semantic header becomes visible if reached by keyboard. */
+  .mobile-card-table .data-table-grid .fui-DataGridHeader:focus-within { position: static; width: 100%; height: auto; clip-path: none; overflow: auto; }
+  .mobile-card-table .data-table-grid .fui-DataGridHeader:focus-within .fui-DataGridRow { display: flex; width: max-content; min-width: 100%; }
+  .mobile-card-table .data-table-grid .fui-DataGridHeader:focus-within .fui-DataGridHeaderCell { min-width: 130px; }
+}

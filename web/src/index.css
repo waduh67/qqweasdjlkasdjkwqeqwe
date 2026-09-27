@@ -1217,24 +1217,23 @@ td.dg-actions {
   cursor: not-allowed;
 }
 
-/* Aksi utama (mis. `+ Tambah`): CTA biru terisi, tetap setinggi tombol datar lain. */
+/* Azure command bars use flat actions; dialogs retain a filled primary submit. */
 .azure-commandbar .cmd-btn.cmd-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  font-weight: var(--fontWeightSemibold);
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+  font-weight: var(--fontWeightRegular);
 }
 .azure-commandbar .cmd-btn.cmd-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background: var(--accent-soft);
+  border-color: transparent;
 }
 /* Ikon primary ikut warna teks (putih di atas biru), bukan aksen biru. */
 .azure-commandbar .cmd-btn.cmd-primary .cmd-icon {
   color: inherit;
 }
 .azure-commandbar .cmd-btn.cmd-primary:disabled {
-  color: var(--accent-ink);
-  opacity: 0.5;
+  color: var(--muted);
 }
 
 /* Ikon perintah beraksen (biru Azure); menyusut mengikuti teks, meredup saat disabled. */

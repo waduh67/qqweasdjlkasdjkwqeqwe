@@ -48,7 +48,7 @@ function CommandDivider() {
 function CommandButton({ action, primary }: { action: CommandAction; primary?: boolean }) {
   return (
     <Button
-      variant={primary ? 'primary' : 'subtle'}
+      variant="subtle"
       className={primary ? 'cmd-btn cmd-primary' : 'cmd-btn'}
       icon={action.icon}
       onClick={action.onClick}
