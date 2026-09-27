@@ -76,3 +76,9 @@ retained disabled field with hidden elements included, and separately verifies t
 visible 40 m destination summary. All original transaction/replay/stock assertions
 remain. Preserve this failed attempt; rerun only the extra scenario and remaining
 visual/legacy gates. This is a test-only delta; the frozen product remains `0a685bc5`.
+
+The hidden role-name lookup also includes Fluent's required asterisk. A standalone
+Firefox reproduction confirms the exact role name finds zero fields, while the
+anchored label including an optional required marker finds exactly one. The
+retained-draft check now uses that label; quantity, disabled state, visible summary,
+and transaction assertions remain unchanged. The failed `2dfc94a1` attempt is retained.

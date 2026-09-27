@@ -38,7 +38,7 @@ test('cancelled reassigned work retains sixty metres while an offline retried fo
   await expect(review).toBeVisible()
   await expect(review).toContainText(`40 m ke ${fixture.quarantine.code} · ${fixture.quarantine.name}.`)
   // The modal hides its background from accessibility, but must retain the locked draft.
-  const retainedQuantity = page.getByRole('textbox', { name: 'Jumlah dikembalikan (m)', exact: true, includeHidden: true })
+  const retainedQuantity = page.getByLabel(/^Jumlah dikembalikan \(m\)\s*\*?$/)
   const path = `${fixture.root}/return`
   const attempts: { key: string | undefined; body: string | null }[] = []
   const observe = (request: import('@playwright/test').Request) => {
