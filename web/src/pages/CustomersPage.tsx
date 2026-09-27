@@ -321,33 +321,25 @@ export function CustomersPage() {
     {
       key: 'name',
       header: 'Nama',
-      minWidth: 220,
+      minWidth: 240,
       sortValue: (c) => c.name,
       cell: (c) => c.name,
+      description: (c) => c.code,
       onCellClick: (c) => setDetailId(c.id),
       inlineActions: hasRowActions ? inlineActions : undefined,
     },
-    { key: 'code', header: 'Kode', minWidth: 135, sortValue: (c) => c.code, cell: (c) => c.code },
-    { key: 'phone', header: 'Telepon', minWidth: 140, sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
+    { key: 'phone', header: 'Telepon', minWidth: 135, sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
     {
       key: 'status',
       header: 'Status',
-      minWidth: 140,
+      minWidth: 150,
       sortValue: (c) => c.status,
-      cell: (c) => `${customerStatusLabel(c.status)}${c.awaitingInstallation ? ' · Menunggu instalasi' : ''}`,
+      cell: (c) => customerStatusLabel(c.status),
+      description: (c) => c.awaitingInstallation ? 'Menunggu instalasi' : null,
     },
-    { key: 'address', header: 'Alamat', minWidth: 230, sortValue: (c) => c.address, cell: (c) => c.address },
+    { key: 'address', header: 'Alamat', minWidth: 240, sortValue: (c) => c.address, cell: (c) => c.address },
     { key: 'onuCount', header: 'ONU', minWidth: 64, align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
-    {
-      key: 'onuLocation',
-      header: 'Lokasi ONU',
-      minWidth: 155,
-      sortValue: (c) => c.onus.find((o) => o.odpCode)?.odpCode ?? '',
-      cell: (c) => {
-        const attached = c.onus.find((o) => o.odpCode)
-        return attached ? `${attached.odpCode} port ${attached.odpPortNumber}` : <span className="muted">—</span>
-      },
-    },
+
   ]
 
   // CommandBar: primary `+ Tambah` dipatok kiri; sekunder berjajar berkelompok
@@ -443,7 +435,7 @@ export function CustomersPage() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan pelanggan pertama atau impor data pelanggan melalui command bar di atas.'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan pelanggan pertama atau impor data pelanggan melalui menu di atas.'}
             icon={<IconCustomers size={32} />}
           />
         }

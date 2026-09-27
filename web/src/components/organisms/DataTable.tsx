@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import {
   Button,
   DataGrid,
@@ -21,7 +21,7 @@ import {
   tokens,
   type TableColumnDefinition,
 } from '@fluentui/react-components'
-import { ArrowDown, ArrowUp, MoreHorizontal } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, MoreHorizontal } from 'lucide-react'
 import { EmptyState, SelectField, SkeletonRows } from '@/components/atoms'
 
 /**
@@ -42,6 +42,7 @@ export type Column<T> = {
   header: ReactNode
   /** Render isi sel dari satu baris. */
   cell: (row: T) => ReactNode
+  description?: (row: T) => ReactNode
   /**
    * Nilai pembanding untuk pengurutan. Bila diisi, kolom jadi bisa diklik-urut.
    * `null`/kosong selalu ditaruh di bawah, apa pun arah urutnya.
@@ -170,6 +171,17 @@ export function DataTable<T>({
   onSortChange?: () => void
 }) {
   const styles = useStyles()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [scrollable, setScrollable] = useState(false)
+  useEffect(() => {
+    const element = scrollRef.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const measure = () => setScrollable(element.scrollWidth > element.clientWidth + 1)
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    measure()
+    return () => observer.disconnect()
+  }, [loading, rows.length])
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
   const warehousePresentation = presentation === 'warehouse'
@@ -199,6 +211,7 @@ export function DataTable<T>({
           const hasInlineControls = !!column.onCellClick || actions.length > 0
           return (
             <>
+              <div className="table-cell-content">
               {column.onCellClick ? (
                 <Link
                   as="button"
@@ -214,6 +227,8 @@ export function DataTable<T>({
               ) : (
                 column.cell(row)
               )}
+              {column.description && <span className="resource-cell-description">{column.description(row)}</span>}
+              </div>
               {actions.length > 0 && (
                 <TableCellActions visible={hasInlineControls}>
                   <Menu positioning="below-end">
@@ -332,7 +347,7 @@ export function DataTable<T>({
         </div>
       )}
       {!loading && sorted.length > 0 && (
-        <div className={mergeClasses('table-wrap', 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
+        <div ref={scrollRef} className={mergeClasses('table-wrap', 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
             className={mergeClasses('data-table-grid', 'resource-data-table-grid', styles.grid)}
             style={{ '--data-grid-min-width': `${columns.reduce((width, column) => width + (column.minWidth ?? 168), 0) + leadCols * 52}px` } as CSSProperties}
@@ -442,6 +457,7 @@ export function DataTable<T>({
           </DataGrid>
         </div>
       )}
+      {scrollable && !loading && sorted.length > 0 && !mobileCards && <p className="table-scroll-hint"><ArrowLeftRight size={14} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya</p>}
       {loading && (
         <div style={{ padding: '1rem' }}>
           <SkeletonRows rows={5} cols={columns.length + leadCols} />

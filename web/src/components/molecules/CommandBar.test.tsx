@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { CommandBar } from './CommandBar'
@@ -19,6 +20,7 @@ describe('CommandBar', () => {
       'Tambah OLT',
       'Hapus',
       'Segarkan',
+      'Aksi lainnya',
     ])
     expect(screen.getByRole('button', { name: 'Hapus' }).hasAttribute('disabled')).toBe(true)
 
@@ -29,4 +31,17 @@ describe('CommandBar', () => {
       expect(divider.getAttribute('aria-orientation')).toBe('vertical')
     })
   })
+  it('keeps secondary actions and disabled state in the mobile overflow menu', async () => {
+    const refresh = vi.fn()
+    render(<CommandBar actions={[
+      { key: 'delete', label: 'Hapus', disabled: true, onClick: vi.fn() },
+      { key: 'refresh', label: 'Segarkan', onClick: refresh },
+    ]} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Aksi lainnya' }))
+    expect(screen.getByRole('menuitem', { name: 'Hapus' }).getAttribute('aria-disabled')).toBe('true')
+    await user.click(screen.getByRole('menuitem', { name: 'Segarkan' }))
+    expect(refresh).toHaveBeenCalledOnce()
+  })
+
 })

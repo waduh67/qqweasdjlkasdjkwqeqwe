@@ -10,7 +10,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
   const admin = await signup(page)
   await page.goto('/customers')
   await page.waitForLoadState('networkidle')
-  await page.screenshot({ path: testInfo.outputPath('customers-empty.png'), fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('customers-empty.png'), fullPage: true, animations: 'disabled' })
   // Populate through the real form so layout review also covers readable rows
   // and the complete create -> list -> detail interaction, in the owned local tenant.
   for (const [name, phone, address] of [
@@ -51,7 +51,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
       await expect(action).toBeInViewport()
       await grid.evaluate(element => { element.scrollLeft = 0 })
     }
-    await page.screenshot({ path: testInfo.outputPath(`${route === '/' ? 'dashboard' : route.slice(1).replaceAll('/', '-')}.png`), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`${route === '/' ? 'dashboard' : route.slice(1).replaceAll('/', '-')}.png`), fullPage: true, animations: 'disabled' })
   }
   await page.goto('/customers')
   await page.getByRole('button', { name: 'Tambah pelanggan', exact: true }).click()
@@ -63,7 +63,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
     expect(bounds!.x).toBeGreaterThanOrEqual(0)
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1)
   }
-  await page.screenshot({ path: testInfo.outputPath('customer-form.png'), fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('customer-form.png'), fullPage: true, animations: 'disabled' })
   const name = page.getByLabel(/^Nama\s*\*?$/)
   await name.fill('Perubahan belum disimpan')
   await name.press('Escape')
@@ -83,6 +83,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await page.getByRole('button', { name: 'Budi Santoso', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Budi Santoso', exact: true })).toBeVisible()
   await page.waitForLoadState('networkidle')
-  await page.screenshot({ path: testInfo.outputPath('customer-detail.png'), fullPage: true })
+  await page.evaluate(async () => { await Promise.allSettled(document.getAnimations().filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished)) })
+  await page.screenshot({ path: testInfo.outputPath('customer-detail.png'), fullPage: true, animations: 'disabled' })
   expect(errors).toEqual([])
 })
