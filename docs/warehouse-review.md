@@ -87,6 +87,23 @@ dapat memasangnya. Pada Arch, gunakan paket distro untuk library yang dilaporkan
 hilang; VPS pengembangan ini memerlukan `alsa-lib`. Jangan menjalankan pemasang
 dependensi Ubuntu pada Arch.
 
+Untuk audit Firefox, pasang browser Playwright Firefox lalu gunakan
+`WAREHOUSE_E2E_BROWSER=firefox`. Aplikasi V172 langsung membuka peta WebGL;
+Firefox headless di Linux tanpa GPU dapat membuat UI historis blank. Jalankan
+gate historis dengan display Xvfb dan renderer Mesa yang benar-benar mendukung
+WebGL2, tanpa mengubah source aplikasi historis atau mengganti peta dengan mock:
+
+```bash
+xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 WAREHOUSE_E2E_BROWSER=firefox \
+    WAREHOUSE_LEGACY_HEADED=true scripts/warehouse/legacy-browser.sh
+```
+
+Xvfb, `xauth`, dan Mesa harus tersedia. Gate ini tetap menjalankan dua viewport
+pada tiga fase: sebelum migrasi, sesudah migrasi, dan sesudah restart. Main
+warehouse browser cases dapat tetap memakai Firefox headless. Skenario tambahan
+`f3-extra-edge.spec.ts` dan `ui-layout.spec.ts` dijalankan melalui `qa.sh browser`
+dan disimpan terpisah; keduanya berada di luar daftar sembilan spec CI di atas.
+
 `qa.sh server` menjalankan tes historis proyeksi V175.21 → V175.22, kemudian tujuh
 tes upgrade fulfillment/deployment/title/revisi episode/discovery dari schema V175 yang sesuai,
 lalu seluruh tes server terbaru. Ketujuh tes memakai aplikasi historis yang dipatok
