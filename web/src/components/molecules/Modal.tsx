@@ -16,18 +16,23 @@ export function Modal({ title, onClose, children, footer, wide }: {
   const [launcher] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null)
   useEffect(() => () => {
     queueMicrotask(() => {
-      const target = launcher?.isConnected && launcher !== document.body
-        ? launcher
-        : document.querySelector<HTMLElement>('main, #root') ?? document.body.firstElementChild as HTMLElement | null
-      if (!target?.isConnected) return
-      const focused = document.activeElement
-      const activeDialog = focused instanceof HTMLElement ? focused.closest('[role="dialog"]') : null
-      if (activeDialog && !activeDialog.contains(target)) return
-      const previousTabIndex = target.getAttribute('tabindex')
-      if (target.tabIndex < 0) target.setAttribute('tabindex', '-1')
-      target.focus({ preventScroll: true })
-      if (previousTabIndex === null) target.removeAttribute('tabindex')
-      else target.setAttribute('tabindex', previousTabIndex)
+      const anotherDialogHasFocus = () => {
+        const focused = document.activeElement
+        const dialog = focused instanceof HTMLElement ? focused.closest('[role="dialog"]') : null
+        return dialog?.isConnected && !(launcher && dialog.contains(launcher))
+      }
+      const focus = (target: HTMLElement | null) => {
+        if (!target?.isConnected || target.matches(':disabled') || target.closest('[hidden], [inert]')) return false
+        const previousTabIndex = target.getAttribute('tabindex')
+        if (target.tabIndex < 0) target.setAttribute('tabindex', '-1')
+        target.focus({ preventScroll: true })
+        if (previousTabIndex === null) target.removeAttribute('tabindex')
+        else target.setAttribute('tabindex', previousTabIndex)
+        return document.activeElement === target
+      }
+      if (anotherDialogHasFocus()) return
+      if (launcher !== document.body && focus(launcher)) return
+      if (!anotherDialogHasFocus()) focus(document.querySelector<HTMLElement>('main, #root') ?? document.body.firstElementChild as HTMLElement | null)
     })
   }, [launcher])
   return (

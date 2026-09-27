@@ -34,6 +34,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
     await page.goto(route)
     await expect(page.getByRole('button', { name: 'Keluar', exact: true })).toBeVisible()
     await page.waitForLoadState('networkidle')
+    expect(new URL(page.url()).pathname, `${route} reached its own page`).toBe(route)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} page overflow`).toBeTruthy()
     if (route === '/subscription') {
       const renew = page.getByRole('button', { name: /^Perpanjang/ })
