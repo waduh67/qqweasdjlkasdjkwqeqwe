@@ -24,7 +24,7 @@ test('real signup, independent approver navigation and explicit unavailable rout
   await expect(page.getByRole('link', { name: 'Stok & Perangkat', exact: true })).toHaveCount(0)
   await page.getByRole('link', { name: 'Ringkasan Gudang', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Gudang & Logistik', exact: true })).toBeVisible()
-  await expect(page.getByText('0 persetujuan menunggu', { exact: true })).toBeVisible()
+  await expect(page.getByText('Tidak ada persetujuan menunggu dalam cakupan ini.', { exact: true })).toBeVisible()
   const approvalResponse = page.waitForResponse(res => { const url = new URL(res.url()); return res.request().method() === 'GET' && url.pathname === '/api/v1/warehouse/approvals/workbench' && url.searchParams.get('page') === '0' })
   await page.getByRole('link', { name: 'Buka persetujuan gudang', exact: true }).click()
   const response = await approvalResponse
@@ -45,7 +45,7 @@ test('real signup, independent approver navigation and explicit unavailable rout
   await page.goto('/warehouse/missing-page')
   await expect(page.getByText('Halaman gudang tidak tersedia', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Kembali ke ringkasan gudang' }).click()
-  await expect(page.getByText('0 persetujuan menunggu', { exact: true })).toBeVisible()
+  await expect(page.getByText('Tidak ada persetujuan menunggu dalam cakupan ini.', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.screenshot({ path: testInfo.outputPath('approver-navigation.png'), fullPage: true })
 })

@@ -11,7 +11,7 @@ menyelesaikan WO tidak otomatis mengembalikan sisa material atau mengonsumsi bar
    **Pengguna → Aksi baris → Akses**. Operasi gudang memerlukan area eksplisit dan
    cakupan lokasi yang sesuai. Label akses area lama pada halaman pengguna tidak
    menggantikan pemeriksaan cakupan gudang.
-2. Buka **Gudang & Logistik**. Siapkan SKU, pemasok, gudang/bin, lokasi transit,
+2. Buka **Gudang → Ringkasan Gudang**. Siapkan SKU, pemasok, gudang/bin, lokasi transit,
    karantina, dan lokasi teknisi. Pilih kategori **ONU** atau **ONT** untuk perangkat
    yang harus mempunyai catatan ONU jaringan. Pelacakan serial saja tidak menentukan kategori.
 3. Pada pengaturan gudang, beri petugas akses lokasi yang diperlukan dan atur

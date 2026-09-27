@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { tokenStore } from '@/api/client'
 import { myContext } from '@/test/myMaterialsFixture'
@@ -31,6 +32,7 @@ async function open(action = 'Terima perangkat servis') {
   fireEvent.click(await screen.findByRole('button', { name: action }))
 }
 it.each(['ONU-001', 'Onu-001'])('receives and reinstalls original customer serial %s with fresh references and identical lost-response retries', async (serial) => {
+  const user = userEvent.setup()
   let row = rmaDetailsFixture({ ...rmaFixture(), serial }), acknowledgements = 0, installs = 0, installed = false
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (init?.method === 'POST') {
@@ -45,15 +47,16 @@ it.each(['ONU-001', 'Onu-001'])('receives and reinstalls original customer seria
     return page([])
   }); vi.stubGlobal('fetch', fetch); render(tree()); await open()
   scan('WRONG'); fireEvent.change(screen.getByRole('textbox', { name: /Referensi bukti penerimaan servis/ }), { target: { value: 'Bukti terima servis' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Tinjau penerimaan servis' })); await screen.findByText('Cocokkan serial fisik dengan perangkat servis ini.')
+  await user.click(screen.getByRole('button', { name: 'Tinjau penerimaan servis' })); await screen.findByText('Cocokkan serial fisik dengan perangkat servis ini.')
   expect(acknowledgements).toBe(0)
-  scan('ONU-001'); fireEvent.click(screen.getByRole('button', { name: 'Tinjau penerimaan servis' }))
+  scan('ONU-001'); await user.click(screen.getByRole('button', { name: 'Tinjau penerimaan servis' }))
   expect((await screen.findByRole('dialog')).textContent).toContain('Milik pelanggan asal')
   expect(acknowledgements).toBe(0)
-  fireEvent.click(screen.getByRole('button', { name: 'Terima perangkat' })); fireEvent.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))
-  fireEvent.click(await screen.findByRole('button', { name: 'Pasang kembali perangkat' }))
-  scan('ONU-001'); fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemasangan kembali' }))
-  fireEvent.click(await screen.findByRole('button', { name: 'Pasang kembali' })); fireEvent.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))
+  // Real clicks move focus into and out of Fluent's modal focus manager.
+  await user.click(screen.getByRole('button', { name: 'Terima perangkat' })); await user.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))
+  await user.click(await screen.findByRole('button', { name: 'Pasang kembali perangkat' }))
+  scan('ONU-001'); await user.click(screen.getByRole('button', { name: 'Tinjau pemasangan kembali' }))
+  await user.click(await screen.findByRole('button', { name: 'Pasang kembali' })); await user.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))
   await screen.findByText(/Perangkat sudah dipasang kembali/)
   expect(screen.getByRole('link', { name: 'Buka aset pelanggan' }).getAttribute('href')).toBe('/customers')
   expect(screen.queryByRole('button', { name: 'Pasang kembali perangkat' })).toBeNull()
