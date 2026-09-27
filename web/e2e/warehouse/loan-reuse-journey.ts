@@ -101,6 +101,7 @@ export async function reuseLoanForAnotherCustomer(page: Page, fixture: NumericJo
   await page.getByRole('textbox', { name: 'Nama', exact: true }).fill(customerName)
   await page.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Alamat pelanggan kedua setelah reset perangkat')
   await selectNamed(page, 'Area pelanggan', fixture.area.optionLabel)
+  await page.getByText('Tentukan titik di peta (opsional)', { exact: true }).click()
   await page.getByRole('textbox', { name: 'Longitude', exact: true }).fill('106.83')
   await page.getByRole('textbox', { name: 'Latitude', exact: true }).fill('-6.19')
   const customer = await confirmOperation(page, '/api/customers', 'Simpan')

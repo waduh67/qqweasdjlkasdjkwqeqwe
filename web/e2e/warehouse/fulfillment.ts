@@ -75,6 +75,7 @@ export async function prepareMaterialWorkOrder(page: Page, options: { customerNa
     await page.getByRole('textbox', { name: 'Nama', exact: true }).fill(options.customerName)
     await page.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Alamat perjalanan gudang nyata')
     await selectNamed(page, 'Area pelanggan', area.optionLabel)
+    await page.getByText('Tentukan titik di peta (opsional)', { exact: true }).click()
     await page.getByRole('textbox', { name: 'Longitude', exact: true }).fill('106.82')
     await page.getByRole('textbox', { name: 'Latitude', exact: true }).fill('-6.18')
     customer = await confirmOperation(page, '/api/customers', 'Simpan')
