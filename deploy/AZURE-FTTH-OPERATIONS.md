@@ -264,7 +264,7 @@ FTTH/Drive HTTP200, dan 13 container lain tetap sama. Enam tes legacy kini juga
 lolos: dua viewport sebelum migrasi, sesudah migrasi, dan sesudah restart. ID
 pelanggan/ONU serta checksum migrasi lama tetap utuh, tanpa stok fiktif. Kegagalan
 awal disebabkan WebGL aplikasi historis pada Firefox headless; display Xvfb/Mesa
-menyelesaikannya tanpa mengubah aplikasi lama. Persetujuan akhir pemilik masih menunggu.
+menyelesaikannya tanpa mengubah aplikasi lama. Pemilik sudah menerima hasil akhir: “Terima, tandai selesai.”
 
 QA lokal dihentikan dan volume dipertahankan. Proses Gradle proyek lain yang sempat
 dijeda dengan izin pemilik sudah dilanjutkan. Rollback berikut mengembalikan rilis

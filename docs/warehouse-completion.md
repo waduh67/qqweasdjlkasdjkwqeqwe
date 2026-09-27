@@ -1,4 +1,9 @@
-# Warehouse and UI checkpoint — 27 September 2026
+# Warehouse and UI completion — 27 September 2026
+
+**Accepted by the owner:** “Terima, tandai selesai.” All 48 implementation tasks,
+C1–C11 and final independent F1–F4 technical reviews are complete. The owner
+explicitly accepted the deployed result on 27 September 2026. Technical review
+head: `56716344`; the acceptance checkpoint changes documentation only.
 
 The Azure table, field, button and sidebar revision is live at
 https://ftth.karuhundeveloper.com/customers. Current web source:
@@ -68,8 +73,8 @@ checks actual printable content at the OS print boundary, not a physical printer
 
 Do not repeat completed checks without a relevant change. The [review guide](warehouse-review.md)
 contains the numeric demo and historical Firefox command. The original plan
-requires explicit owner acceptance after final independent F1–F4 approval; final
-acceptance remains pending. The original 48-task technical closure at `b38d8eb9`
+required explicit owner acceptance after final independent F1–F4 approval; that
+acceptance has now been received and recorded in `owner-acceptance.json`. The original 48-task technical closure at `b38d8eb9`
 predates the requested Azure UI revision and does not substitute for that reply.
 
 ## Cleanup and recovery
@@ -88,3 +93,9 @@ Proof: `storage/nocow-adjustment.json`. The underlying storage cause is unproven
 Use only isolated QA, never production transaction fixtures. Keep credentials,
 raw browser reports and database snapshots out of Git. The serial host QA lease is
 `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume/.omo/runtime/wave5-host-qa.lock`.
+
+Final technical evidence archive (SHA256 verified on the server):
+`/opt/ftth/setup-private/warehouse-ui-regression-20260927-0a685bc5/evidence.tar.gz`.
+Its `handoff/` directory contains the plan, review index and recovery guide; the
+owner acceptance receipt and final accepted documents are saved separately there
+so the technically reviewed evidence remains immutable.
