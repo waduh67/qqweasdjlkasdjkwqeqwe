@@ -260,9 +260,11 @@ mengikuti kolom form agar tidak menutupi tombol di layar kecil.
 Validasi rilis UI: 621 tes frontend, 26 skenario workflow, dua audit visual Firefox
 masing-masing 44 rute, enam tes rollback, dan 14 berkas statis dengan hash tepat.
 Reviewer independen menyetujui cakupan rilis UI ini. Aktivasi memverifikasi health,
-FTTH/Drive HTTP200, dan 13 container lain tetap sama. Verifikasi warehouse secara
-keseluruhan masih gagal pada selector alamat dalam fase legacy-before; jangan
-menganggap rilis UI ini sebagai penutupan F1–F4 atau persetujuan akhir pemilik.
+FTTH/Drive HTTP200, dan 13 container lain tetap sama. Enam tes legacy kini juga
+lolos: dua viewport sebelum migrasi, sesudah migrasi, dan sesudah restart. ID
+pelanggan/ONU serta checksum migrasi lama tetap utuh, tanpa stok fiktif. Kegagalan
+awal disebabkan WebGL aplikasi historis pada Firefox headless; display Xvfb/Mesa
+menyelesaikannya tanpa mengubah aplikasi lama. Persetujuan akhir pemilik masih menunggu.
 
 QA lokal dihentikan dan volume dipertahankan. Proses Gradle proyek lain yang sempat
 dijeda dengan izin pemilik sudah dilanjutkan. Rollback berikut mengembalikan rilis
@@ -273,4 +275,4 @@ sudo python3 /opt/ftth/setup-private/ui-20260927-warehouse-0a685bc5/deploy-web.p
   rollback /opt/ftth/setup-private/ui-20260927-warehouse-0a685bc5
 ```
 
-Pemeriksaan Firefox setelah deploy: tabel pelanggan, form, lokasi terbuka, mobile dan dark lolos tanpa page error atau overflow halaman; tidak ada data bisnis yang dikirim.
+Lima capture Firefox produksi tidak memiliki page error atau overflow dan tidak mengirim data bisnis. Capture emulasi preferensi dark masih menampilkan tema terang; capture lokasi menunjukkan loading. Bukti tema dark yang aktif dan field koordinat lengkap berasal dari pengujian lokal terkini. Identitas produksi kembali cocok dengan seluruh 14 berkas build dan index publik.

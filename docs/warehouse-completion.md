@@ -26,28 +26,51 @@ See [controls](ui-ux/CONTROLS.md) and [operations](../deploy/AZURE-FTTH-OPERATIO
   Guarded activation verified exact served files, backend health, public FTTH and
   Drive HTTP200, and unchanged identity/state of the other 13 protected containers.
 - Five production Firefox captures (customer table, form, expanded location,
-  mobile and dark) pass without page errors or document overflow; no business
-  data was submitted.
+  mobile and dark-preference emulation) have no page errors or document overflow;
+  no business data was submitted. The emulated-dark capture still shows the app
+  in light mode, and the location capture shows its loading state. Actual dark
+  workflow and completed coordinate-field coverage comes from the local tests.
 - Independent reviewer `/root/current_warehouse_quality_review` explicitly approved
   this scoped web release on the completed evidence. Proof:
   `ui-release-verification.json` and `reviews/scoped-ui-release.md`.
 
-The original broad warehouse verification remains **FAILED** and is preserved in
-`verification.json`; this scoped UI release does not declare F1–F4 or owner
-acceptance complete. The original 48 implementation tasks reached technical
-closure at `b38d8eb9`, before the owner requested the UI revision.
+## Completed original-plan verification
 
-## Remaining original-plan verification
+The current regression is **PASS** in `verification.json`: 621 frontend cases,
+26 warehouse workflow cases, two 44-route visual cases, and six real legacy
+cutover cases. The legacy phases each pass both Firefox viewports with zero
+failed, skipped or flaky tests. They ran at `1dee9f507c567997fec65c8882c66398ad82cb40`
+against the unchanged historical V172 application, then the current application
+on the same isolated database, then a restarted current application.
 
-The historical cutover browser runner fails in both viewports during its before
-phase at `web/e2e/warehouse-legacy/before.spec.ts:14`: exact `Alamat` textbox lookup.
-After/restart phases did not run. Diagnose its current-frontend/historical-backend
-fixture and field labels before changing it. Failed evidence is retained at
-`.omo/runtime/warehouse-legacy-eb215dc66ad8d8a95e61a53fea207a97/`.
-Do not report those cases as passed or repeat the completed 621/28 cases without
-relevant source changes. Final original-plan F1–F4 and explicit owner acceptance
-remain pending. Backend, migration, mobile and protocol inputs are unchanged from
-the previously audited baseline; their retained evidence remains applicable.
+Legacy customer/ONU IDs, records and all applied historical migration checksums
+remain intact. Both tenants create and retain a new catalog SKU after cutover;
+verified stock stays empty. The runbook preflight passes two valid probes and
+rejects all six wrong migration/unit/cutover probes. Current legacy evidence:
+`.omo/runtime/warehouse-legacy-1eb76996bae9da154c3d84e60d06b2fe/`.
+
+The earlier `Alamat` timeout was a downstream symptom of the old application's
+immediate MapLibre mount throwing when Firefox headless lacked WebGL. Trace and
+blank-page screenshot establish this diagnosis. The unchanged selectors and
+historical source pass with headed Firefox under Xvfb and real Mesa WebGL2. No
+map mock, fixture bypass, timeout increase or historical product edit was used.
+The earlier failure remains in `verification-before-headed-legacy.json` and
+`.omo/runtime/warehouse-legacy-eb215dc66ad8d8a95e61a53fea207a97/`; the preactivation
+scoped-release proof still refers to that exact preserved failed snapshot.
+
+All 48 implementation tasks and C1–C11 contracts were remapped to current sources
+and authenticated evidence. Backend, migration, mobile, protocol, build and CI
+inputs remain byte-identical to the audited warehouse baseline. Their retained
+full-suite and four-case backend restart evidence remains valid; it is not
+reported as a new CI or a fresh execution of the old UI. Native shared-code
+compilation does not establish native device runtime delivery. The print test
+checks actual printable content at the OS print boundary, not a physical printer.
+
+Do not repeat completed checks without a relevant change. The [review guide](warehouse-review.md)
+contains the numeric demo and historical Firefox command. The original plan
+requires explicit owner acceptance after final independent F1–F4 approval; final
+acceptance remains pending. The original 48-task technical closure at `b38d8eb9`
+predates the requested Azure UI revision and does not substitute for that reply.
 
 ## Cleanup and recovery
 

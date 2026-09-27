@@ -1,5 +1,7 @@
 # UI/UX correction — September 2026
 
+Current release: Azure controls and the mobile picker correction are live from `0a685bc5`. Current frontend, workflow, visual and six legacy migration cases pass; see [the current completion checkpoint](../warehouse-completion.md) for evidence, recovery and pending owner acceptance. Earlier sections below describe the initial layout release.
+
 User rejected the complete interface after the warehouse release. Passing business regressions does not establish usability or visual acceptance. This revision covers the existing platform, tenant and customer portal interfaces.
 
 Branch: `work/ui-ux-revision`, based on `b38d8eb9`. Edit worktree: `/home/fajar/ftth/ftth-ui-ux`.
