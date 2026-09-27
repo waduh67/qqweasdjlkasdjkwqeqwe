@@ -224,7 +224,7 @@ sudo python3 /opt/ftth/setup-private/ui-20260927-sidebar-97674d0e/deploy-web.py 
 
 ## Rilis tabel dan form Azure — 27 September 2026
 
-**Web aktif** berasal dari commit `329039f21d77839e8421c44b7465fe492b61ab60`, dengan image
+Rilis awal kontrol berasal dari commit `329039f21d77839e8421c44b7465fe492b61ab60`, dengan image
 `sha256:2e198f303fc86b9137c4ebce40a8516b112c4a25adc64b58e3383c614a1229ee`.
 Paket image, proof, receipt, dan rollback: `/opt/ftth/setup-private/ui-20260927-controls-329039f2/`.
 Salinan lokal: `.omo/runtime/ui-ux/controls-20260927/release/`.
@@ -249,3 +249,28 @@ Rollback berikut mengembalikan rilis navigasi sebelumnya:
 sudo python3 /opt/ftth/setup-private/ui-20260927-controls-329039f2/deploy-web.py \
   rollback /opt/ftth/setup-private/ui-20260927-controls-329039f2
 ```
+
+## Koreksi dropdown mobile — 27 September 2026
+
+**Web aktif:** `0a685bc5deef5e397375b5930b4406464cbe0cf8`, image `sha256:7923f38708d7d2e9f8252b033e586f4747c2d8ea6c49ff6e6bb5fbbc69915aa3`. Paket dan receipt:
+`/opt/ftth/setup-private/ui-20260927-warehouse-0a685bc5/`.
+Satu perubahan produk dari rilis kontrol sebelumnya: minimum lebar Combobox
+mengikuti kolom form agar tidak menutupi tombol di layar kecil.
+
+Validasi rilis UI: 621 tes frontend, 26 skenario workflow, dua audit visual Firefox
+masing-masing 44 rute, enam tes rollback, dan 14 berkas statis dengan hash tepat.
+Reviewer independen menyetujui cakupan rilis UI ini. Aktivasi memverifikasi health,
+FTTH/Drive HTTP200, dan 13 container lain tetap sama. Verifikasi warehouse secara
+keseluruhan masih gagal pada selector alamat dalam fase legacy-before; jangan
+menganggap rilis UI ini sebagai penutupan F1–F4 atau persetujuan akhir pemilik.
+
+QA lokal dihentikan dan volume dipertahankan. Proses Gradle proyek lain yang sempat
+dijeda dengan izin pemilik sudah dilanjutkan. Rollback berikut mengembalikan rilis
+kontrol `329039f2` dan memverifikasi web lama serta layanan lain:
+
+```sh
+sudo python3 /opt/ftth/setup-private/ui-20260927-warehouse-0a685bc5/deploy-web.py \
+  rollback /opt/ftth/setup-private/ui-20260927-warehouse-0a685bc5
+```
+
+Pemeriksaan Firefox setelah deploy: tabel pelanggan, form, lokasi terbuka, mobile dan dark lolos tanpa page error atau overflow halaman; tidak ada data bisnis yang dikirim.

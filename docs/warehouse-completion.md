@@ -1,107 +1,67 @@
-# Warehouse completion checkpoint — 27 September 2026
+# Warehouse and UI checkpoint — 27 September 2026
 
-Latest checkpoint: all 621 frontend cases and all 26 warehouse browser cases pass.
-The candidate product remains `0a685bc5`; the final extra scenario executed at
-`18dfeaa1` with only test/documentation differences. The 44-route desktop visual
-case also passes. Its mobile case stopped during tenant signup while the database
-waited on storage; visual and legacy gates remain pending. Production still runs
-the verified `329039f2` controls release. Do not repeat the completed 26 workflow
-cases or frontend suite without a relevant source change.
-
-The isolated development PostgreSQL volume was copied into non-CoW files after
-repeated storage stalls on Btrfs. All 3,872 original files (195,274,394 bytes) match
-the copy by content, mode, ownership and timestamps; volume identity and all
-durability settings are preserved. The original data is retained privately under
-`/var/lib/ftth-qa-recovery/`. This mitigation does not prove the cause of the stalls.
-Private proof: `storage/nocow-adjustment.json` in the runtime directory below.
-The later visual signup failure has timestamped PostgreSQL WAL waits and filesystem
-pressure samples. No source or timeout change is justified by that failure.
-
-Permission to temporarily pause an unrelated `compose-fluent-starter` Gradle writer
-was requested and is pending. Do not pause that process without the owner's reply.
-Continue targeted storage diagnosis; resume only visual/legacy checks once storage
-is stable, then authenticate final evidence, deploy the candidate web, verify the
-public site, back up private evidence and request final owner acceptance.
-
-The original 48 implementation tasks and independent F1–F4 audits reached technical
-closure at `b38d8eb963b7d1e0e1365e37237be1b765ee0697`. The owner subsequently rejected
-the old UI and requested the Azure-style revision. Final owner acceptance remains
-pending; historical technical approval is not owner acceptance of the revised UI.
-
-The current web product is deployed from
-`329039f21d77839e8421c44b7465fe492b61ab60`; see the
-[controls release](ui-ux/CONTROLS.md) and [operations guide](../deploy/AZURE-FTTH-OPERATIONS.md).
-Backend, migrations, shared mobile code, protocol collectors, Gradle and CI inputs
-remain byte-identical to the audited warehouse baseline. Their retained evidence
-remains applicable. Changes to shared frontend components require renewed browser
-and frontend checks.
-
-## Current work
+The Azure table, field, button and sidebar revision is live at
+https://ftth.karuhundeveloper.com/customers. Current web source:
+`0a685bc5deef5e397375b5930b4406464cbe0cf8`, image
+`sha256:7923f38708d7d2e9f8252b033e586f4747c2d8ea6c49ff6e6bb5fbbc69915aa3`.
+The final product change after the verified `329039f2` controls release is one
+`min-width: 0` declaration on shared Fluent Combobox controls. It prevents a
+picker from extending over a neighboring mobile reassignment button.
 
 Worktree: `/home/fajar/ftth/ftth-ui-ux`, branch `work/ui-ux-revision`.
-Private evidence: `.omo/runtime/ui-ux/warehouse-completion-20260927/` in that worktree.
-The first full frontend run passed 620/621 cases; the RMA dialog case passed alone.
-Its click sequence now uses real user-event focus transitions. Two setup-browser
-assertions were also updated to the current empty approval message, preserving the
-real backend count and permission assertions. Failed attempts are retained privately.
+Private evidence: `.omo/runtime/ui-ux/warehouse-completion-20260927/`.
+Release and guarded rollback: `/opt/ftth/setup-private/ui-20260927-warehouse-0a685bc5/`.
+See [controls](ui-ux/CONTROLS.md) and [operations](../deploy/AZURE-FTTH-OPERATIONS.md).
 
-The previously independently executed partial-return/reassignment/count scenario is
-now a portable regression in `web/e2e/warehouse/f3-extra-edge.spec.ts`. It forwards a
-real return command before dropping only the response, checks an identical retry,
-and proves that 60m remains with the original technician while 40m is returned and
-counted independently. Saved evidence omits fixture credentials.
+## Verified UI release
 
-Next: run the full frontend suite, all nine main warehouse browser specs, this extra
-edge spec, and the legacy browser cutover with Firefox under the existing serial
-QA lease. Bind reports to the clean source commit and exact deployed static build;
-preserve failed attempts and successful artifacts separately. Obtain independent
-review of renewed evidence, then present the review guide for final owner acceptance.
-No product deployment is required for these test and documentation changes.
+- All 621 frontend cases pass across 123 test-result files; lint, TypeScript and
+  Vite build pass. Lint retains 108 existing warnings and no errors.
+- All 26 warehouse workflow cases pass in Firefox. Main cases ran at `0a685bc5`;
+  the final extra scenario ran at test/documentation-only `18dfeaa1`.
+- Both visual cases pass: 44 routes and 47 captures per viewport. They ran at
+  documentation-only `d69f14b2`. All 28 browser cases have no failed, skipped or
+  flaky results. Candidate product/build inputs remained identical throughout.
+- Six rollback tests pass. All 14 packaged static files match the tested build.
+  Guarded activation verified exact served files, backend health, public FTTH and
+  Drive HTTP200, and unchanged identity/state of the other 13 protected containers.
+- Five production Firefox captures (customer table, form, expanded location,
+  mobile and dark) pass without page errors or document overflow; no business
+  data was submitted.
+- Independent reviewer `/root/current_warehouse_quality_review` explicitly approved
+  this scoped web release on the completed evidence. Proof:
+  `ui-release-verification.json` and `reviews/scoped-ui-release.md`.
 
-QA uses the isolated environment managed by `scripts/warehouse/test-environment.sh`
-and `scripts/warehouse/qa.sh`; never run transaction fixtures on production. Keep
-credentials, raw reports, database snapshots and `.omo` files out of Git. The outer
-host lease is
+The original broad warehouse verification remains **FAILED** and is preserved in
+`verification.json`; this scoped UI release does not declare F1–F4 or owner
+acceptance complete. The original 48 implementation tasks reached technical
+closure at `b38d8eb9`, before the owner requested the UI revision.
+
+## Remaining original-plan verification
+
+The historical cutover browser runner fails in both viewports during its before
+phase at `web/e2e/warehouse-legacy/before.spec.ts:14`: exact `Alamat` textbox lookup.
+After/restart phases did not run. Diagnose its current-frontend/historical-backend
+fixture and field labels before changing it. Failed evidence is retained at
+`.omo/runtime/warehouse-legacy-eb215dc66ad8d8a95e61a53fea207a97/`.
+Do not report those cases as passed or repeat the completed 621/28 cases without
+relevant source changes. Final original-plan F1–F4 and explicit owner acceptance
+remain pending. Backend, migration, mobile and protocol inputs are unchanged from
+the previously audited baseline; their retained evidence remains applicable.
+
+## Cleanup and recovery
+
+Owned QA processes and containers were stopped; test volumes were retained.
+The unrelated `compose-fluent-starter` Gradle process was paused only after the
+owner's explicit bounded authorization, then **resumed**. Receipt:
+`storage/writer-pause.json`, status `RESUMED`. No process remains intentionally paused.
+
+An isolated development PostgreSQL volume was copied into non-CoW files after
+storage stalls on Btrfs. All 3,872 files (195,274,394 bytes) match original content,
+mode, ownership and timestamps; volume identity and durability settings remain
+unchanged. Original data is retained privately under `/var/lib/ftth-qa-recovery/`.
+Proof: `storage/nocow-adjustment.json`. The underlying storage cause is unproven.
+
+Use only isolated QA, never production transaction fixtures. Keep credentials,
+raw browser reports and database snapshots out of Git. The serial host QA lease is
 `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume/.omo/runtime/wave5-host-qa.lock`.
-The original 48-row source/evidence mapping and all eleven canonical proof hashes
-were checked again on 27 September; no backend or contract gap was found.
-
-The next checkpoint passed all 621 frontend cases across 123 files, four setup
-cases and two receiving cases. Both issue cases reached successful dispatch and
-slip retrieval, then headless Firefox rejected navigation while its native print
-dialog was active. The issue test now captures the actual printable DOM at the
-OS print boundary and verifies slip code, recipient, serial, quantity and state;
-the real server slip request remains required. This validates printable content,
-not a physical printer. Resume issue and remaining browser cases; unchanged
-frontend/setup/receiving evidence remains bound to `79d5ccae`.
-
-Issue now passes in both Firefox viewports at `885a1f34`. Returns passed three
-cases, but its mobile reassignment helper tried to dismiss an open technician
-picker by clicking a heading covered by that picker. The helper now presses Escape
-and requires `aria-expanded=false` before the unchanged real assignment command.
-Only returns and the extra edge scenario import this helper. Resume returns onward;
-preserve the completed issue result and earlier unaffected evidence with their
-actual executed commits. No product code changed.
-
-The follow-up exposed an actual narrow-screen layout defect: Fluent Combobox's
-default 250px minimum width extends beyond its shrinking form column and covers
-the reassignment button. Searchable single/multiple pickers now use `min-width: 0`
-within their existing 100% width. The real reassignment regression also checks
-that picker and submit rectangles do not overlap and captures that section before
-clicking. This CSS fix requires a new tested web build and deployment; prior
-production remains the controls release until the fix is verified and activated.
-
-At `0a685bc5`, all 621 frontend cases and the nine main warehouse specs (24 browser
-cases) pass on the corrected product. The extra offline-return test found its old
-background-field locator incompatible with Fluent's accessible modal isolation.
-The test now waits for completed preflight and visible confirmation, checks the
-retained disabled field with hidden elements included, and separately verifies the
-visible 40 m destination summary. All original transaction/replay/stock assertions
-remain. Preserve this failed attempt; rerun only the extra scenario and remaining
-visual/legacy gates. This is a test-only delta; the frozen product remains `0a685bc5`.
-
-The hidden role-name lookup also includes Fluent's required asterisk. A standalone
-Firefox reproduction confirms the exact role name finds zero fields, while the
-anchored label including an optional required marker finds exactly one. The
-retained-draft check now uses that label; quantity, disabled state, visible summary,
-and transaction assertions remain unchanged. The failed `2dfc94a1` attempt is retained.
