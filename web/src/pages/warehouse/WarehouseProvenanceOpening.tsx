@@ -46,7 +46,7 @@ function OpeningDirectory({ batch, onSelect }: { batch: string; onSelect: (id: s
         { key: 'location', header: 'Lokasi pemeriksaan', cell: row => row.reviewLocation.name || row.reviewLocation.code },
         { key: 'state', header: 'Pembukuan', cell: row => row.state === 'EXPIRED' ? 'Kedaluwarsa' : row.state === 'POSTED' ? 'Sudah dibukukan' : 'Belum dibukukan' },
         { key: 'time', header: 'Disimpan', cell: row => <WarehouseTime value={row.createdAt} /> },
-        
+
       ]} />}
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>
@@ -93,7 +93,7 @@ function ReviewCases({ cases, issues, onCase }: { cases: MigrationReviewCase[]; 
       { key: 'decision', header: 'Keputusan', cell: row => <span>{row.resolution ? resolutionLabels[row.resolution.kind] : row.resolutionRequired ? 'Keputusan diperlukan' : 'Riwayat belum terbukti'}
         {issues.filter(issue => issue.caseId === row.caseId).map(issue => <span key={issue.code} className="error">{' · '}{migrationIssueLabel(issue.code)}</span>)}</span> },
       { key: 'quantity', header: 'Calon saldo', cell: row => row.resolution?.stock ? <WarehouseQuantity value={row.resolution.stock.quantityBase} unit={row.resolution.stock.baseUnit} /> : 'Tidak menjadi stok tersedia' },
-      
+
     ]} />}
     <WarehousePagination page={page} size={25} total={cases.length} onChange={setPage} />
   </div>
@@ -123,9 +123,9 @@ function OpeningForm({ onClose, review, epoch, onSelect, onRefresh }: { onClose:
     <TextareaField label="Alasan pengajuan saldo awal" maxLength={1000} required value={reason} onChange={(_, data) => setReason(data.value)} />
     {migrationTextInvalid(reference + reason) && <p role="alert" className="error">Gunakan satu paragraf tanpa baris baru atau karakter kontrol.</p>}
     {empty && <Checkbox label="Pemeriksaan menyatakan saldo tersedia nol; tidak ada stok fiktif yang dibuat" checked={zero} onChange={(_, data) => setZero(data.checked === true)} />}
-    
+
     {can('inventory.approval.manage') && <Link to="/warehouse/settings">Periksa tingkat persetujuan saldo awal</Link>}
-    
+
   </form></ResourceForm>
 }
 function StockTotals({ totals }: { totals: Record<string, string> }) {

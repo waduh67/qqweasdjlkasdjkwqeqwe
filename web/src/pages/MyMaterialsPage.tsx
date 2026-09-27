@@ -104,7 +104,7 @@ function MaterialCustodyList({ context, enabled, select }: { context: MyMaterial
       { key: 'amount', header: 'Jumlah di tangan', cell: row => <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> },
       { key: 'location', header: 'Lokasi', cell: row => row.location.name ?? row.location.code },
       { key: 'source', header: 'Pengiriman asal', cell: row => row.issueCode },
-      
+
     ]} /><WarehousePagination page={page} size={data.size} total={data.totalElements} onChange={setPage} />
   </>}</WarehouseState></section>
 }

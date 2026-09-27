@@ -105,7 +105,7 @@ function CountBody({ details, recent, reload }: { details: CountDetails; recent:
         const fact = observed.find(fact => fact.balanceId === entry.balanceId)
         return fact ? <WarehouseQuantity value={fact.quantityBase} unit={fact.baseUnit} /> : entry.counterId !== user?.id && !owner ? 'Hasil dibatasi sesuai penugasan' : 'Belum dicatat'
       } },
-      
+
     ]} />
     <CountHistory details={details} />
     {can('inventory.approval.view') && ['SUBMITTED', 'APPROVED', 'POSTED'].includes(count.state) && (reviewing ? <WarehouseCountComparison id={count.id} /> : <Button onClick={() => setReviewing(true)}>Lihat perbandingan setelah pengajuan</Button>)}

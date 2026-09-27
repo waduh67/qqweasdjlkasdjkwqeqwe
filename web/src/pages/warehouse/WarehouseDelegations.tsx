@@ -35,7 +35,7 @@ function Delegations() {
       { key: 'scope', header: 'Lokasi / persetujuan', cell: row => <>{locationLabel(row.location)}{' · '}{approvalOperationLabels[row.delegation.operation]}</> },
       { key: 'until', header: 'Berlaku sampai', cell: row => <WarehouseTime value={row.delegation.validUntil} /> },
       { key: 'state', header: 'Status / revisi', cell: row => <>{labels[row.state]} · Revisi {row.delegation.revision}{row.delegation.revokedAt && <span>{' · '}Dicabut <WarehouseTime value={row.delegation.revokedAt} /></span>}</> },
-      
+
     ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></>}</WarehouseState>
     {operation && <WarehouseCommandDialog title="Konfirmasi pencabutan delegasi" confirmLabel="Konfirmasi cabut" command={operation.command} onDone={refresh} onReload={refresh} onClose={() => setOperation(null)} summary={<><p>{operation.description}</p><p>Kewenangan dari delegasi ini dihentikan. Keputusan yang sudah tercatat tetap menjadi riwayat.</p></>} />}
   </div>

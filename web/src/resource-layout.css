@@ -130,7 +130,7 @@
 .report-filter-group .resource-filters { padding-block: 4px; }
 .report-filter-group .resource-filters .app-field { flex-basis: 180px; }
 .report-filter-group .resource-filters form { align-items: flex-start; }
-.report-filter-group .resource-filters form > .fui-Button { align-self: flex-start; margin-top: 22px; }
+.report-filter-group .resource-filters form > .fui-Button { align-self: flex-start; margin-top: 26px; }
 
 :root { --topbar-h: 40px; }
 .resource-filters form { flex-direction: row; justify-content: flex-start; }
@@ -144,6 +144,6 @@
   .resource-form-content .resource-choice-control { margin-left: 242px; }
 }
 
-.resource-form-backdrop { background: transparent; }
+.fui-DialogSurface__backdrop.resource-form-backdrop { background: transparent; }
 
 .resource-action-contents { display: contents; }

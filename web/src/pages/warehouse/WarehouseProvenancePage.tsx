@@ -90,7 +90,7 @@ function CaseList({ onSelect }: { onSelect: (id: string) => void }) {
           { key: 'location', header: 'Lokasi', cell: row => row.location?.name || row.location?.code || 'Belum terbukti' },
           { key: 'quantity', header: 'Kuantitas lama', cell: row => row.source.legacyQuantity === null ? 'Lihat catatan asli' : row.source.legacyQuantity + ' · ' + (row.source.baseUnit || 'satuan belum terbukti') },
           { key: 'claims', header: 'Identitas', cell: row => !row.claims.length ? 'Lihat bukti sumber' : [...new Set(row.claims.map(claim => claim.state ? claimLabels[claim.state] : 'Format perlu diperiksa'))].join(' · ') },
-          
+
         ]} />
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>

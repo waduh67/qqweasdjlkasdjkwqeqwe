@@ -19,11 +19,11 @@ Requirements: Azure-style warehouse actions and filters; integrated searchable s
 
 ## Verification and checkpoints
 
-Implementation checkpoints: `57ab2347`, `cb81ef65`; this document accompanies the final implementation checkpoint.
+Implementation checkpoints: `57ab2347`, `cb81ef65`, `50d6c171`; this document accompanies the final visual verification checkpoint.
 
 TypeScript and Vite production build passed. Firefox comparisons cover nine warehouse pages, seven forms, desktop 1910 × 921 and mobile 390 × 844. Findings fixed: collapsed filter layout, report reset retaining ownership, hidden mobile headers, missing discard protection, modal focus restoration and accessible failed-save feedback. Independent reviewers checked visual and source/workflow behavior.
 
-Full regression before final feedback changes: 628 passed, one new credential test exposed jsdom's inconsistent `:invalid` selector for an empty optional password. ResourceForm now reads native `willValidate`/`validity.valid`, preserving browser validation. The final full suite and exact-dist Firefox checks are in progress at this checkpoint; record their results before deployment.
+Final full regression: **126 files / 630 tests passed**. TypeScript and Vite build passed. Exact-dist Firefox core, discard and report checks passed. The final CSS-only correction removed a backdrop tint over the global bar and aligned report action baselines; revised screenshots were compared again. See `design-qa.md`. Release-helper rollback/container-preservation tests: **9 passed**.
 
 Firefox exercises actual SKU/customer writes only against owned local QA fixtures, including no-write review, retained Back values, native validation, page accessibility after save, discard confirmation and mobile overflow. Independent visual audit is read-only; populated operational document coverage is limited by available QA data, supplemented by API-contract regression tests.
 
