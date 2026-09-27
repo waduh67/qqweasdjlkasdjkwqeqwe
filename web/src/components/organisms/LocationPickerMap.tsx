@@ -49,6 +49,24 @@ interface NominatimResult {
 /** Enam desimal ≈ presisi 0,1 m — cukup untuk titik rumah pelanggan. */
 const fmt = (n: number): string => n.toFixed(6)
 
+function canInitializeMap(): boolean {
+  // MapLibre retains a global callback before its constructor can throw.
+  // Probe first so unsupported browsers never create that partial instance.
+  const canvas = document.createElement('canvas')
+  const attributes: WebGLContextAttributes = {
+    antialias: false, powerPreference: 'high-performance',
+    alpha: true, depth: true, stencil: true, premultipliedAlpha: true,
+  }
+  try {
+    const gl = canvas.getContext('webgl2', attributes) || canvas.getContext('webgl', attributes)
+    if (!gl) return false
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export default function LocationPickerMap({
   longitude,
   latitude,
@@ -80,6 +98,10 @@ export default function LocationPickerMap({
   // Inisialisasi peta sekali. Klik di mana pun menaruh/menggeser titik.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
+    if (!canInitializeMap()) {
+      setMapUnavailable(true)
+      return
+    }
     let map: MapLibreMap
     try {
       map = new maplibregl.Map({
