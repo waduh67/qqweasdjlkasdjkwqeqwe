@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -37,10 +38,10 @@ it('pages actual document codes and applies approval filters from page zero with
     return response(page([{ approval: details.approval, documentCode: second ? 'RCPT-OLD' : 'RCPT-NEW', operation: 'RECEIPT', requester: details.document.requester, requestedAt: details.requestedAt }], second ? 1 : 0, 1, 2))
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/approvals')
   await screen.findByRole('link', { name: 'RCPT-NEW · Revisi 5' }); fireEvent.click(screen.getByRole('button', { name: 'Berikutnya' }))
-  await screen.findByRole('link', { name: 'RCPT-OLD · Revisi 5' }); fireEvent.click(screen.getByText('Filter persetujuan'))
+  await screen.findByRole('link', { name: 'RCPT-OLD · Revisi 5' }); 
   fireEvent.change(screen.getByRole('textbox', { name: 'Cari kode dokumen persetujuan' }), { target: { value: 'RCPT' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Status persetujuan' }), { target: { value: 'PENDING' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Jenis persetujuan' }), { target: { value: 'RECEIPT' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Status persetujuan' }), { target: { value: 'PENDING' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Jenis persetujuan' }), { target: { value: 'RECEIPT' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial lengkap persetujuan' }), { target: { value: 'ONU-001' } })
   fireEvent.change(screen.getByLabelText('Persetujuan diajukan mulai tanggal'), { target: { value: '2026-09-01' } })
   fireEvent.change(screen.getByLabelText('Persetujuan sampai tanggal'), { target: { value: '2026-09-25' } })
@@ -78,7 +79,7 @@ it('lets an approver without receipt or stock permission decide and displays onl
   fireEvent.click(await screen.findByRole('button', { name: 'Setujui permintaan' }))
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan keputusan / referensi pemeriksaan' }), { target: { value: 'Berita acara diperiksa' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau keputusan' }))
-  expect((await screen.findByRole('dialog', { name: 'Konfirmasi keputusan persetujuan' })).textContent).toContain('Revisi permintaan 2')
+  expect((await screen.findByRole('region', { name: 'Konfirmasi keputusan persetujuan' })).textContent).toContain('Revisi permintaan 2')
   expect(screen.queryByRole('region', { name: 'Hasil persetujuan dibukukan' })).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Simpan keputusan' }))
   const effect = await screen.findByRole('region', { name: 'Hasil persetujuan dibukukan' })
@@ -140,7 +141,7 @@ it('uses actual source revision for rework and retains historical decision names
     return read(path, current)
   }); vi.stubGlobal('fetch', fetch); show()
   fireEvent.click(await screen.findByText('Riwayat keputusan'))
-  const history = screen.getByText('Riwayat keputusan').closest('details')!
+  const history = screen.getByText('Riwayat keputusan').closest<HTMLElement>('.resource-disclosure')!
   await within(history).findByText('Perbaiki bukti'); fireEvent.click(within(history).getByRole('button', { name: 'Berikutnya' }))
   await within(history).findByText('Tahap awal lolos')
   fireEvent.click(screen.getByRole('button', { name: 'Buka perbaikan dokumen' }))

@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { tokenStore } from '@/api/client'
@@ -56,7 +57,7 @@ it('reviews a positive rework delta using actual prior evidence and rejects stal
   render(<WorkOrderMaterialRework context={{ ...fieldContextFixture(), useRevision: 1, latestUsageId: id.evidence }} onDone={onDone} onClose={vi.fn()} />)
   await screen.findByRole('combobox', { name: 'Barang tambahan 1' })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang tambahan 1' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang tambahan 1' }), { target: { value: id.sku } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang tambahan 1' }), { target: { value: id.sku } })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah tambahan 1/ }), { target: { value: '10,001' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Alasan kebutuhan tambahan/ }), { target: { value: 'Tambahan setelah inspeksi' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tambahan rencana' }))

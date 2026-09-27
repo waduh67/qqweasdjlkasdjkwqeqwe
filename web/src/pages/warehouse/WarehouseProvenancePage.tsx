@@ -35,7 +35,7 @@ export function WarehouseProvenancePage() {
   if (!can('inventory.provenance.manage')) return <WarehouseDenied />
   function showCase(id: string | null) { setParams(id ? { caseId: id } : {}) }
   function showOpening(id: string | null) { setParams(id ? { view: 'opening', openingId: id } : { view: 'opening' }) }
-  return <div className="stack"><PageHeader title="Rekonsiliasi Gudang Lama" subtitle="Periksa catatan asli, bukti fisik, dan identitas sebelum mengaktifkan stok pada sistem gudang." />
+  return <div className="stack"><PageHeader title="Rekonsiliasi Gudang Lama" />
     <ProvenanceWorkspace key={user?.id} caseId={caseId} openingId={openingId} view={view} showCase={showCase} showOpening={showOpening} />
   </div>
 }

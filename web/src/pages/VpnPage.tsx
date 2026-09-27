@@ -1,3 +1,6 @@
+import { CommandBar } from '@/components/molecules/CommandBar'
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { Download, DoorOpen, KeyRound, Network, Power, PowerOff, Trash2 } from 'lucide-react'
@@ -131,6 +134,8 @@ export function VpnPage() {
   const confirm = useConfirm()
   const { items: accounts, loading, reload, run } = useResource(listAccounts)
 
+  const [creating, setCreating] = useState(false)
+  const creation = useCreationReview(creating)
   const [label, setLabel] = useState('')
   const [busy, setBusy] = useState(false)
   // Kredensial (dengan password) hanya tampil sekali — setelah generate/rotasi.
@@ -143,12 +148,13 @@ export function VpnPage() {
   const [routesOf, setRoutesOf] = useState<VpnAccountView | null>(null)
 
   const generate = () => {
+    if (creation.beforeSave()) return
     setBusy(true)
     void run(async () => {
       const account = await generateAccount({ label: label.trim() || null })
       setFresh(account)
-      setLabel('')
-    }, 'Akun VPN dibuat — salin kredensial di bawah').finally(() => setBusy(false))
+      setLabel(''); setCreating(false)
+    }, 'Akun VPN dibuat').finally(() => { setBusy(false); creation.finish() })
   }
 
   const toggle = (a: VpnAccountView) =>
@@ -337,23 +343,14 @@ export function VpnPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader title="Akun VPN" />
 
-      {canManage && (
-        <div className="card stack" style={{ gap: '0.75rem' }}>
-          <div className="row" style={{ alignItems: 'flex-end' }}>
-            <TextField
-              label="Label (opsional)"
-              value={label}
-              onChange={(_, data) => setLabel(data.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !busy && generate()}
-              placeholder="mis. Mikrotik Bekasi"
-              style={{ flex: 1 }}
-            />
-            <Button variant="primary" onClick={generate} disabled={busy}>
-              <IconPlus size={15} /> {busy ? 'Membuat…' : 'Generate akun'}
-            </Button>
-          </div>
-        </div>
-      )}
+      <CommandBar primary={canManage ? { key: 'create', label: 'Buat akun VPN', icon: <IconPlus size={16} />, onClick: () => setCreating(true) } : undefined}
+        actions={[{ key: 'refresh', label: 'Segarkan', onClick: () => void reload() }]} />
+      <Blade open={creating} title="Buat akun VPN" onClose={() => !busy && setCreating(false)}
+        creation={{ ...creation, busy, prepare: generate, summary: <CreationSummary rows={[["Label", label || 'Otomatis'], ["Server dan alamat VPN", 'Otomatis']]} /> }}
+        footer={<Button variant="primary" disabled={busy} onClick={generate}>{busy ? 'Membuat…' : 'Buat akun VPN'}</Button>}>
+        <div className="stack"><TextField label="Label" value={label} onChange={(_, data) => setLabel(data.value)} placeholder="Router Bandung" />
+          <p>Server dan alamat VPN dipilih otomatis. Kredensial ditampilkan setelah akun dibuat.</p></div>
+      </Blade>
 
       {fresh && <CredentialCard account={fresh} onDismiss={() => setFresh(null)} />}
 

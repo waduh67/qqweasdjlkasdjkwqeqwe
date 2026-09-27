@@ -1,13 +1,20 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 /** Call beforeSave only after the resource's own validation and before its API write. */
 export function useCreationReview(open: boolean, editing = false) {
   const [reviewing, setReviewing] = useState(false)
-  useEffect(() => { if (!open) setReviewing(false) }, [open])
+  const [busy, setBusy] = useState(false)
+  const active = useRef(false)
+  useEffect(() => { if (!open) { setReviewing(false); setBusy(false); active.current = false } }, [open])
   return {
-    reviewing, editing,
+    reviewing, editing, busy,
     back: () => setReviewing(false),
-    beforeSave: () => { if (reviewing) return false; setReviewing(true); return true },
+    beforeSave: () => {
+      if (active.current) return true
+      if (!reviewing) { setReviewing(true); return true }
+      active.current = true; setBusy(true); return false
+    },
+    finish: () => { active.current = false; setBusy(false) },
   }
 }
 

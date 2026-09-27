@@ -31,9 +31,9 @@ export function MaterialPlanEditor({ summary, onSaved, onClose, onReload }: { su
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rencana material.') }
   }
   return <>
-    <ResourceForm title={<>{summary.plan ? 'Revisi rencana material' : 'Rencana material baru'}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Simpan rencana material" confirmLabel="Simpan rencana" command={review.command} onDone={onSaved} onClose={() => setReview(null)} onReload={onReload}
+    <ResourceForm editing={!!summary.plan} title={<>{summary.plan ? 'Revisi rencana material' : 'Rencana material baru'}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Simpan rencana material" confirmLabel="Simpan rencana" command={review.command} onDone={onSaved} onClose={() => setReview(null)} onReload={onReload}
       summary={<><p>Revisi rencana {review.input.expectedRevision} → {review.input.expectedRevision + 1}</p>{review.input.materialMode === 'NONE' ? <p>Tanpa material: {review.input.reason}</p> : <ul>{review.input.lines?.map((line, index) => <li key={line.skuId}><strong>{rows[index].sku?.name}</strong>: <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} />{line.continuousCut && ' · satu potongan utuh'}{line.substitution && <p>Substitusi {rows[index].previous?.sku.name}: {line.substitution.reason}</p>}</li>)}</ul>}<p>Setelah disimpan, ajukan permintaan untuk mulai mencadangkan stok.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={mode === 'MATERIAL_REQUIRED' && !can('inventory.sku.view')}>Tinjau rencana</Button></>}><form id={resourceFormId} className="stack" onSubmit={prepare} aria-label="Rencana material">
-      
+
       <p className="muted">Revisi rencana {summary.revisions.planRevision} · Menyimpan rencana belum mencadangkan stok.</p>
       <SelectField label="Kebutuhan material" value={mode} onChange={(_, data) => setMode(data.value as MaterialPlanInput['materialMode'])}>
         <option value="MATERIAL_REQUIRED">Membutuhkan material</option><option value="NONE">Tanpa material</option>
@@ -56,6 +56,6 @@ export function MaterialPlanEditor({ summary, onSaved, onClose, onReload }: { su
       {error && <p className="error" role="alert">{error}</p>}
       <div className="row wrap"></div>
     </form></ResourceForm>
-    
+
   </>
 }

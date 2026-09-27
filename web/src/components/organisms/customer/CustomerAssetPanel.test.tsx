@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -47,9 +48,9 @@ const mount = () => render(<MemoryRouter><CustomerAssetPanel customerId={id.cust
 async function selectSource(serial = 'ONU-A1') {
   fireEvent.click(await screen.findByRole('button', { name: 'Pasang perangkat dari gudang' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO pemasangan' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'WO pemasangan' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'WO pemasangan' }), { target: { value: id.source } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Perangkat yang sudah diterima' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Perangkat yang sudah diterima' }), { target: { value: id.piece } })
+  await selectControl(screen.getByRole('combobox', { name: 'Perangkat yang sudah diterima' }), { target: { value: id.piece } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial perangkat' }), { target: { value: serial } })
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Serial perangkat' }), { key: 'Enter' })
 }
@@ -69,7 +70,7 @@ it('blocks mismatched manual serial and revalidates moved stock before allowing 
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemasangan' })); await screen.findByText('Pilih perangkat yang sudah diterima dan cocokkan serial fisiknya.')
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial perangkat' }), { target: { value: 'ONU-A1' } }); fireEvent.keyDown(screen.getByRole('textbox', { name: 'Serial perangkat' }), { key: 'Enter' })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemasangan' })); await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.includes(`/sources/${id.piece}`))).toBe(true))
-  expect(screen.queryByRole('dialog')).toBeNull(); expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true'); expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
 })
 it('shows customer title history and legacy reconciliation without granting assignment actions to read-only viewers', async () => {
   const row = assetHistoryFixture(); row.asset.ownershipMode = 'SALE'; row.asset.legalOwner = 'CUSTOMER'; row.asset.handoverState = 'ACCEPTED'; row.asset.recoveryRequired = false
@@ -81,7 +82,7 @@ it('accepts customer handover with the displayed signature and actual assignment
   const row = assetHistoryFixture(); row.asset.revision = 6; row.asset.titleRevision = 2
   const fetch = transport({ history: [row] }); mount(); fireEvent.click(await screen.findByRole('button', { name: 'Terima serah-terima pelanggan' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO tindakan perangkat' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan' }))
   const dialog = await screen.findByRole('dialog'); expect(dialog.textContent).toContain('Pelanggan Satu')
   fireEvent.click(within(dialog).getByRole('button', { name: 'Terima serah-terima pelanggan' }))
@@ -93,7 +94,7 @@ it('closes a completed removal dialog and reloads retired history from the real 
   const fetch = transport({ history: [assetHistoryFixture()], dismantle: true }); mount()
   fireEvent.click(await screen.findByRole('button', { name: 'Lepas perangkat fisik' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO tindakan perangkat' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan' }))
   const dialog = await screen.findByRole('dialog')
   fireEvent.click(within(dialog).getByRole('button', { name: 'Lepas perangkat fisik' }))
@@ -107,7 +108,7 @@ it('retains offline draft edits and prevents account read-only state from submit
   const fetch = transport(); const view = mount(); await selectSource()
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false); fireEvent(window, new Event('offline'))
   expect(screen.getByRole('button', { name: 'Tinjau pemasangan' })).toHaveProperty('disabled', true)
-  fireEvent.change(screen.getByRole('combobox', { name: 'Kepemilikan perangkat' }), { target: { value: 'SALE' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Kepemilikan perangkat' }), { target: { value: 'SALE' } })
   expect(screen.getByRole('combobox', { name: 'Kepemilikan perangkat' })).toHaveProperty('value', 'SALE')
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   view.unmount(); access.readOnly = true; vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true); mount()

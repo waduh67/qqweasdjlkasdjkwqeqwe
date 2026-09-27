@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -32,7 +33,7 @@ it('directs a serial-only plan to customer assets without offering fictitious me
 })
 async function fillUse(amount: string) {
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang diterima 1' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang diterima 1' }), { target: { value: id.piece } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang diterima 1' }), { target: { value: id.piece } })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah dipakai 1/ }), { target: { value: amount } })
   fireEvent.change(screen.getByRole('textbox', { name: /Referensi bukti pemakaian/ }), { target: { value: 'Foto pengukuran lapangan' } })
 }

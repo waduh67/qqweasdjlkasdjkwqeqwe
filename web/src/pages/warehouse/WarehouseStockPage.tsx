@@ -1,10 +1,11 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { listStock } from '@/api/warehouse/masters'
 import { listAssets, listLots, listPositions, listUnknownStock, STOCK_BUCKETS, type PositionFilter, type StockFilter } from '@/api/warehouse/stock'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState } from '@/components/atoms'
+import { EmptyState } from '@/components/atoms'
 import { PageHeader, Tabs } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehousePagination } from '@/components/organisms/warehouse/WarehousePagination'
@@ -33,7 +34,7 @@ export function WarehouseStockPage() {
   const [params, setParams] = useSearchParams()
   const { can } = useCan()
   const tab = (params.get('tab') ?? 'summary') as StockTab
-  return <div className="stack"><PageHeader title="Stok & Perangkat" subtitle="Telusuri barang, lokasi, reservasi dan asalnya dalam cakupan akses Anda." />
+  return <div className="stack"><PageHeader title="Stok & Perangkat" />
     {!validParams(params) ? <div className="card stack" role="alert"><p>Filter atau alamat stok tidak dikenal.</p><Link to="/warehouse/stock">Buka stok tanpa filter</Link></div>
       : params.has('asset') ? <><Link to={stockLink({ tab: 'assets' })}>Kembali ke perangkat</Link><WarehouseAssetDetail key={params.get('asset')} id={params.get('asset')!} /></>
         : params.has('lot') ? <><Link to={stockLink({ tab: 'lots' })}>Kembali ke lot / reel</Link><WarehouseLotDetail key={params.get('lot')} id={params.get('lot')!} segmentId={params.get('segment') ?? undefined} /></>
@@ -74,8 +75,8 @@ function StockList({ tab, params, setParams }: { tab: StockTab; params: URLSearc
     return `/warehouse/stock?${next}`
   }
   return <>
+    <WarehouseListActions onRefresh={result.reload} onReset={() => setParams(new URLSearchParams({ tab }))} />
     <WarehouseStockFilters filter={filter} buckets={tab === 'summary' || tab === 'positions'} onApply={apply} />
-    <div className="row wrap"><Button onClick={result.reload}>Segarkan stok</Button><Link to={stockLink({ tab })}>Hapus filter</Link></div>
     {tab === 'assets' && <Disclosure className="card" title={<>Cari atau pindai perangkat</>}><WarehouseSerialLookup onSelect={setFound} candidate={found && <Link to={stockLink({ asset: found.assetId })}>Buka perangkat {found.serial}</Link>} /></Disclosure>}
     {tab === 'summary' && <p className="muted">Jumlah tercatat juga mencakup material terpakai. Tersedia sudah dikurangi reservasi; ambang minimum dibandingkan dengan hasil filter dan cakupan saat ini.</p>}
     {tab === 'unknown' && <p className="muted">Data ini belum memenuhi verifikasi asal, satuan atau kepemilikan. Nilainya tidak dihitung sebagai stok tersedia.</p>}

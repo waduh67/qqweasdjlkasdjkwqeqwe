@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import type { MaterialFieldContext } from '@/api/warehouse/materialExecution'
@@ -17,9 +19,10 @@ export function WorkOrderMaterialRework({ context, onDone, onClose }: { context:
   const loader = useCallback(() => getMaterialReworkBasis(context.workOrderId), [context.workOrderId]), result = useWarehouseQuery(loader)
   return <section className="card stack" aria-label="Tambahan rencana pengerjaan ulang"><Button onClick={onClose}>Tutup pengerjaan ulang</Button><WarehouseState {...result}>{basis =>
     basis.previousPlanId !== context.plan?.id || basis.expectedUsageRevision !== context.useRevision ? <div role="alert"><p>Rencana atau pemakaian sudah berubah. Muat ulang sebelum menyusun tambahan.</p><Button onClick={onDone}>Muat ulang material</Button></div> :
-      <ReworkForm context={context} basis={basis} onDone={onDone} />}</WarehouseState></section>
+      <ReworkForm onClose={onClose} context={context} basis={basis} onDone={onDone} />}</WarehouseState></section>
 }
-function ReworkForm({ context, basis, onDone }: { context: MaterialFieldContext; basis: Awaited<ReturnType<typeof getMaterialReworkBasis>>; onDone: () => void }) {
+function ReworkForm({ context, basis, onDone, onClose }: { onClose: () => void; context: MaterialFieldContext; basis: Awaited<ReturnType<typeof getMaterialReworkBasis>>; onDone: () => void }) {
+  const resourceFormId = useResourceFormId()
   const [rows, setRows] = useState([emptyMaterialRow()]), [reason, setReason] = useState(''), [error, setError] = useState<string | null>(null)
   const [review, setReview] = useState<{ input: MaterialReworkInput; command: WarehouseCommand<unknown> } | null>(null)
   function update(key: string, patch: Partial<MaterialDraftRow>) { setRows(previous => previous.map(row => row.key === key ? { ...row, ...patch } : row)) }
@@ -37,7 +40,11 @@ function ReworkForm({ context, basis, onDone }: { context: MaterialFieldContext;
       setReview({ input, command: appendMaterialRework(context.workOrderId, input) }); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa kebutuhan tambahan.') }
   }
-  return <><form className="stack" onSubmit={submit}><h3>Kebutuhan tambahan setelah penolakan QA</h3>
+  return <><ResourceForm title={<>Kebutuhan tambahan setelah penolakan QA</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi tambahan rencana" command={review.command} confirmLabel="Simpan kebutuhan tambahan" onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
+    <p>Rencana {basis.expectedRevision} → {basis.expectedRevision + 1} · WO revisi {basis.workOrderRevision} · Pemakaian sebelumnya {basis.expectedUsageRevision}</p>
+    <p>{review.input.reason}</p><ul>{review.input.deltas.map((line, index) => <li key={line.skuId}>{rows[index].sku?.name}: tambah <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /></li>)}</ul>
+    <p>Rencana tambahan langsung diajukan untuk proses permintaan gudang. Pemakaian lama dan bukti pengajuan sebelumnya tetap terhubung.</p>
+  </>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} variant="primary" type="submit">Tinjau tambahan rencana</Button></>}><form id={resourceFormId} className="stack" onSubmit={submit}>
     <p>Rencana {basis.expectedRevision} dan pemakaian {basis.expectedUsageRevision} tetap tersimpan. Isi kebutuhan tambahan; jumlah lama tidak dikurangi atau diganti.</p>
     <p>{basis.previousEvidenceRevision === basis.evidenceRevision ? 'Bukti masih sama dengan pengajuan sebelumnya.' : 'Bukti pengerjaan sudah berubah dari pengajuan sebelumnya.'} <a href="#work-order-evidence">Tinjau bukti pengerjaan</a> sebelum menyimpan.</p>
     {rows.map((row, index) => <fieldset key={row.key} className="stack" style={{ minWidth: 0 }}><legend>Kebutuhan tambahan {index + 1}</legend>
@@ -48,10 +55,6 @@ function ReworkForm({ context, basis, onDone }: { context: MaterialFieldContext;
     </fieldset>)}
     <Button disabled={rows.length >= 100} onClick={() => setRows(previous => [...previous, emptyMaterialRow()])}>Tambah jenis barang</Button>
     <TextareaField label="Alasan kebutuhan tambahan" required maxLength={1000} value={reason} onChange={(_, value) => setReason(value.value)} />
-    {error && <p role="alert">{error}</p>}<Button variant="primary" type="submit">Tinjau tambahan rencana</Button>
-  </form>{review && <WarehouseCommandDialog title="Konfirmasi tambahan rencana" command={review.command} confirmLabel="Simpan kebutuhan tambahan" onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
-    <p>Rencana {basis.expectedRevision} → {basis.expectedRevision + 1} · WO revisi {basis.workOrderRevision} · Pemakaian sebelumnya {basis.expectedUsageRevision}</p>
-    <p>{review.input.reason}</p><ul>{review.input.deltas.map((line, index) => <li key={line.skuId}>{rows[index].sku?.name}: tambah <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /></li>)}</ul>
-    <p>Rencana tambahan langsung diajukan untuk proses permintaan gudang. Pemakaian lama dan bukti pengajuan sebelumnya tetap terhubung.</p>
-  </>} />}</>
+    {error && <p role="alert">{error}</p>}
+  </form></ResourceForm></>
 }

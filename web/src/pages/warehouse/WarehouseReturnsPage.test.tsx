@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -32,7 +33,7 @@ function dispatched(): WarehouseReturn {
 function input(label: string, value: string) { fireEvent.change(screen.getByRole('textbox', { name: label }), { target: { value } }) }
 async function choose(label: string, value: string) {
   await waitFor(() => expect(screen.getByRole('combobox', { name: label })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: label }), { target: { value } })
+  await selectControl(screen.getByRole('combobox', { name: label }), { target: { value } })
 }
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -62,7 +63,7 @@ it('shows named server pages and applies source and date filters before reloadin
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/returns')
   await screen.findByRole('link', { name: 'RET-FIRST' }); expect(screen.getByText('Sisa kabel drop · REEL-001')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Berikutnya' })); await screen.findByRole('link', { name: 'RET-LAST' })
-  fireEvent.click(screen.getByText('Filter retur'))
+  
   await choose('Asal retur', 'MATERIAL_RESIDUAL')
   input('Cari kode atau barang retur', 'sisa')
   fireEvent.change(screen.getByLabelText('Dibuat mulai tanggal'), { target: { value: '2026-09-01' } })
@@ -88,7 +89,7 @@ it('intakes the selected acknowledged remnant after review without supplying inv
   await screen.findByRole('form', { name: 'Penerimaan retur' })
   input('Referensi bukti penerimaan retur', 'BA-RETUR')
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau penerimaan retur' }))
-  const dialog = await screen.findByRole('dialog', { name: 'Konfirmasi penerimaan retur' })
+  const dialog = await screen.findByRole('region', { name: 'Konfirmasi penerimaan retur' })
   expect(dialog.textContent).toContain('stok fisik tidak ditambahkan lagi')
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Catat retur' })); await screen.findByRole('heading', { name: 'RET-001' })
@@ -110,7 +111,7 @@ it('requires whole measured cable and reloads actual accepted revision after ins
   await choose('Kondisi hasil inspeksi', 'SERVICEABLE'); await choose('Rak barang layak pakai', id.source)
   input('Hasil ukur fisik (m)', '17,501'); input('Referensi bukti tindakan retur', 'ukur-remnant')
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan retur' }))
-  expect(screen.getByRole('alert').textContent).toContain('seluruh potongan'); expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('alert').textContent).toContain('seluruh potongan'); expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true')
   input('Hasil ukur fisik (m)', '17,500'); fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan retur' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Catat tindakan retur' }))
   await waitFor(() => expect(screen.getByRole('region', { name: 'Detail retur' }).textContent).toContain('Lolos pemeriksaan'))
@@ -127,7 +128,7 @@ it('serial Enter does not submit and customer inspection requires reset while re
   await choose('Kondisi hasil inspeksi', 'SERVICEABLE'); await choose('Karantina tujuan', id.inspection)
   input('Hasil ukur fisik (unit)', '1'); input('Serial fisik yang dipindai', 'ONU-001')
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Serial fisik yang dipindai' }), { key: 'Enter' })
-  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true')
   input('Referensi bukti reset', 'reset-pabrik'); input('Referensi bukti tindakan retur', 'cek-unit')
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan retur' }))
   expect(screen.getByRole('alert').textContent).toContain('Konfirmasikan reset')
@@ -201,7 +202,7 @@ it('does not inspect a handed-over customer device and pages immutable history',
   await screen.findByRole('heading', { name: 'RET-001' }); expect(screen.queryByRole('button', { name: 'Periksa retur' })).toBeNull()
   expect(screen.getByText(/Lokasi dokumen retur adalah catatan sebelumnya/)).toBeTruthy()
   fireEvent.click(screen.getByText('Riwayat retur dan servis'))
-  const history = screen.getByText('Riwayat retur dan servis').closest('details')!
+  const history = screen.getByText('Riwayat retur dan servis').closest<HTMLElement>('.resource-disclosure')!
   await within(history).findByRole('heading', { name: /Revisi 2/ })
   fireEvent.click(within(history).getByRole('button', { name: 'Berikutnya' })); await within(history).findByRole('heading', { name: /Revisi 1/ })
   expect(fetch.mock.calls.some(([path]) => path.endsWith('/history/page?page=1&size=25'))).toBe(true)

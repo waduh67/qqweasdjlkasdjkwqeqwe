@@ -1,3 +1,5 @@
+import { useId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
@@ -66,17 +68,17 @@ function NewOpening({ batch, epoch, onSelect, onCase, onRefresh }: { batch: stri
   const [open, setOpen] = useState(false)
   return <section className="card stack"><h2>Susun saldo awal</h2>
     <p>Tinjau keputusan seluruh kasus. Stok yang terbukti disiapkan untuk persetujuan independen; riwayat yang belum terbukti tetap dikecualikan dari stok tersedia.</p>
-    {open ? <OpeningReview batch={batch} epoch={epoch} onSelect={onSelect} onCase={onCase} onRefresh={onRefresh} />
+    {open ? <OpeningReview onClose={() => setOpen(false)} batch={batch} epoch={epoch} onSelect={onSelect} onCase={onCase} onRefresh={onRefresh} />
       : <Button variant="primary" onClick={() => setOpen(true)}>Tinjau hasil pemeriksaan</Button>}
   </section>
 }
-function OpeningReview({ batch, epoch, onSelect, onCase, onRefresh }: { batch: string; epoch: number; onSelect: (id: string) => void; onCase: (id: string) => void; onRefresh: () => void }) {
+function OpeningReview({ onClose, batch, epoch, onSelect, onCase, onRefresh }: { onClose: () => void; batch: string; epoch: number; onSelect: (id: string) => void; onCase: (id: string) => void; onRefresh: () => void }) {
   const result = useWarehouseQuery(useCallback(() => getMigrationReview(batch), [batch]))
   return <WarehouseState {...result}>{review => <>
     <Button onClick={result.reload}>Muat ulang hasil pemeriksaan</Button>
     {!!review.issues.length && <p role="alert">{review.issues.length} kasus memerlukan pemeriksaan lanjutan sebelum saldo awal dapat diajukan.</p>}
     <ReviewCases cases={review.manifest.cases} issues={review.issues} onCase={onCase} />
-    {!review.issues.length && <OpeningForm review={review} epoch={epoch} onSelect={onSelect} onRefresh={onRefresh} />}
+    {!review.issues.length && <OpeningForm onClose={onClose} review={review} epoch={epoch} onSelect={onSelect} onRefresh={onRefresh} />}
   </>}</WarehouseState>
 }
 function ReviewCases({ cases, issues, onCase }: { cases: MigrationReviewCase[]; issues: MigrationReview['issues']; onCase: (id: string) => void }) {
@@ -96,7 +98,8 @@ function ReviewCases({ cases, issues, onCase }: { cases: MigrationReviewCase[]; 
     <WarehousePagination page={page} size={25} total={cases.length} onChange={setPage} />
   </div>
 }
-function OpeningForm({ review, epoch, onSelect, onRefresh }: { review: MigrationReview; epoch: number; onSelect: (id: string) => void; onRefresh: () => void }) {
+function OpeningForm({ onClose, review, epoch, onSelect, onRefresh }: { onClose: () => void; review: MigrationReview; epoch: number; onSelect: (id: string) => void; onRefresh: () => void }) {
+  const formId = useId()
   const { can } = useCan(), [place, setPlace] = useState<WarehouseLocation | null>(null), [reference, setReference] = useState(''), [reason, setReason] = useState('')
   const [zero, setZero] = useState(false), [operation, setOperation] = useState<WarehouseCommand<MigrationOpening> | null>(null)
   const empty = !review.manifest.cases.some(row => row.resolution?.kind === 'BASELINE_STOCK')
@@ -108,7 +111,10 @@ function OpeningForm({ review, epoch, onSelect, onRefresh }: { review: Migration
     setOperation(requestMigrationOpening(review.manifest.batchId, { expectedEpoch: epoch, expectedReviewHash: review.reviewHash,
       reviewLocationId: place.id, expectedReviewLocationRevision: place.revision, migrationReference: reference, reason }))
   }
-  return <form className="stack" onSubmit={submit}>
+  return <ResourceForm title="Simpan usulan saldo awal" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan usulan saldo awal" command={operation} confirmLabel="Simpan usulan"
+      summary={<div className="stack"><p>{reference} · {place?.name || place?.code}</p><p>{reason}</p>
+        {empty && <p>Saldo awal nol, tanpa SKU, lot, atau baris stok tambahan.</p>}<p>Nilai pembelian asal tidak diketahui. Stok tetap menunggu persetujuan independen dan finalisasi.</p></div>}
+      onClose={() => setOperation(null)} onDone={result => onSelect(result.id)} onReload={onRefresh} />} footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary" disabled={!valid}>Tinjau usulan saldo awal</Button></>}><form id={formId} className="stack" onSubmit={submit}>
     <p>Usulan menyimpan pemeriksaan ini tanpa mengaktifkan stok. Seluruh tingkat pemeriksa independen harus menyetujui; pembuat batch dan penyusun buktinya tidak dapat menyetujui sendiri.</p>
     {can('inventory.location.view') ? <WarehousePicker label="Lokasi pemeriksaan saldo awal" load={load} value={place} onChange={setPlace}
       name={value => (value.name || value.code) + ' · ' + value.code} eligible={value => ['WAREHOUSE', 'BIN'].includes(value.kind)} />
@@ -117,13 +123,10 @@ function OpeningForm({ review, epoch, onSelect, onRefresh }: { review: Migration
     <TextareaField label="Alasan pengajuan saldo awal" maxLength={1000} required value={reason} onChange={(_, data) => setReason(data.value)} />
     {migrationTextInvalid(reference + reason) && <p role="alert" className="error">Gunakan satu paragraf tanpa baris baru atau karakter kontrol.</p>}
     {empty && <Checkbox label="Pemeriksaan menyatakan saldo tersedia nol; tidak ada stok fiktif yang dibuat" checked={zero} onChange={(_, data) => setZero(data.checked === true)} />}
-    <Button type="submit" variant="primary" disabled={!valid}>Tinjau usulan saldo awal</Button>
+    
     {can('inventory.approval.manage') && <Link to="/warehouse/settings">Periksa tingkat persetujuan saldo awal</Link>}
-    {operation && <WarehouseCommandDialog title="Simpan usulan saldo awal" command={operation} confirmLabel="Simpan usulan"
-      summary={<div className="stack"><p>{reference} · {place?.name || place?.code}</p><p>{reason}</p>
-        {empty && <p>Saldo awal nol, tanpa SKU, lot, atau baris stok tambahan.</p>}<p>Nilai pembelian asal tidak diketahui. Stok tetap menunggu persetujuan independen dan finalisasi.</p></div>}
-      onClose={() => setOperation(null)} onDone={result => onSelect(result.id)} onReload={onRefresh} />}
-  </form>
+    
+  </form></ResourceForm>
 }
 function StockTotals({ totals }: { totals: Record<string, string> }) {
   return <div className="row wrap">{Object.entries(totals).map(([unit, value]) => <p key={unit}><strong><WarehouseQuantity value={value} unit={unit as 'EA' | 'MM'} /></strong></p>)}</div>

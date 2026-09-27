@@ -1,3 +1,4 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
@@ -36,17 +37,18 @@ export function WarehouseApprovalsPage() {
     if (params.has('sourceDocumentId')) sourceId = uuid(params.get('sourceDocumentId'))
   } catch { return <div className="card stack" role="alert"><p>Alamat persetujuan tidak dikenal.</p><Link to="/warehouse/approvals">Kembali ke daftar persetujuan</Link></div> }
   if (!can('inventory.approval.view')) return <WarehouseDenied />
-  return <div className="stack"><PageHeader title="Persetujuan Gudang" subtitle="Periksa dokumen sumber dan ambil keputusan sesuai tahap serta kewenangan saat ini." />
+  return <div className="stack"><PageHeader title="Persetujuan Gudang" />
     {id ? <><Link to="/warehouse/approvals">Kembali ke daftar persetujuan</Link><ApprovalDetail key={id} id={id} /></>
       : sourceId ? <><Link to="/warehouse/approvals">Kembali ke daftar persetujuan</Link><ApprovalSource key={sourceId} id={sourceId} /></> : <ApprovalList />}
   </div>
 }
 function ApprovalList({ sourceId }: { sourceId?: string }) {
-  const [filter, setFilter] = useState<ApprovalFilter>({}), [page, setPage] = useState(0)
+  const [filter, setFilter] = useState<ApprovalFilter>({}), [page, setPage] = useState(0), [filterVersion, setFilterVersion] = useState(0)
   const loader = useCallback(() => approvalWorkbench({ ...filter, sourceDocumentId: sourceId, page }), [filter, sourceId, page]), result = useWarehouseQuery(loader)
   return <section className="stack" aria-label="Daftar persetujuan">
-    {sourceId ? <h2>Permintaan tersimpan untuk dokumen ini</h2> : <WarehouseApprovalFilters onApply={filter => { setFilter(filter); setPage(0) }} />}
-    <Button onClick={result.reload}>Segarkan persetujuan</Button><WarehouseState {...result}>{data => <>
+    <WarehouseListActions onRefresh={result.reload} onReset={sourceId ? undefined : () => { setFilter({}); setPage(0); setFilterVersion(value => value + 1) }} />
+    {sourceId ? <h2>Permintaan tersimpan untuk dokumen ini</h2> : <WarehouseApprovalFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />}
+    <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.approval.requestId}
         empty={<EmptyState title="Belum ada permintaan persetujuan dalam cakupan Anda" hint="Ajukan dari dokumen sumber yang siap diperiksa. Permintaan lama tetap dapat dibuka untuk melihat keputusannya." />} columns={[
           { key: 'document', header: 'Dokumen', cell: row => <Link to={approvalPath(row.approval.requestId)}>{row.documentCode} · Revisi {row.approval.sourceRevision}</Link> },
@@ -130,7 +132,7 @@ function ApprovalDecision({ details, decision, onClose, reload }: { details: App
     if (!reason.trim() || reason.trim().length > 500) { setError('Isi alasan keputusan atau referensi pemeriksaan, maksimal 500 karakter.'); return }
     setOperation(decideApproval({ requestId: details.approval.requestId, expectedRevision: details.approval.revision, decision, reason: reason.trim() })); setError('')
   }
-  return <><ResourceForm title={<>{decision === 'APPROVE' ? 'Setujui permintaan' : 'Kembalikan untuk perbaikan'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi keputusan persetujuan" confirmLabel="Simpan keputusan" command={operation} onDone={reload} onClose={() => setOperation(null)} onReload={reload}
+  return <><ResourceForm editing title={<>{decision === 'APPROVE' ? 'Setujui permintaan' : 'Kembalikan untuk perbaikan'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi keputusan persetujuan" confirmLabel="Simpan keputusan" command={operation} onDone={reload} onClose={() => setOperation(null)} onReload={reload}
     summary={<><p>{details.document.code} · Revisi permintaan {details.approval.revision}</p><p>{decision === 'APPROVE' ? 'Menyetujui tahap pemeriksaan saat ini.' : 'Mengembalikan permintaan untuk diperbaiki. Tidak ada penyesuaian stok dari penolakan ini.'}</p>
       <p>{reason}</p>{decision === 'APPROVE' && <p>{approvalImpact(details.document.kind)}</p>}</>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau keputusan</Button></>}><form id={resourceFormId} className="stack" aria-label="Keputusan persetujuan" onSubmit={prepare}>
     <p>{details.document.code} · Revisi permintaan {details.approval.revision} · Tahap {details.actions.currentTier}</p>

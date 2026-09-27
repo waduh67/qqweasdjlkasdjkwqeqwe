@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { useCallback, useState } from 'react'
 import { attachReceipt, downloadReceiptEvidence, listReceiptEvidence, type WarehouseReceipt, type ReceiptEvidence } from '@/api/warehouse/receipts'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -14,7 +16,7 @@ import { saveReceiptFile } from './receiptFiles'
 
 export function WarehouseReceiptEvidence({ receipt, onChanged }: { receipt: WarehouseReceipt; onChanged: () => void }) {
   const { can } = useCan()
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(0), [creating, setCreating] = useState(false)
   const loader = useCallback(() => listReceiptEvidence(receipt.id, page), [receipt.id, page])
   const result = useWarehouseQuery(loader)
   const [file, setFile] = useState<File | null>(null)
@@ -33,10 +35,13 @@ export function WarehouseReceiptEvidence({ receipt, onChanged }: { receipt: Ware
     finally { setDownloading(false) }
   }
   return <section className="stack" aria-label="Bukti penerimaan"><h2>Bukti penerimaan</h2>
-    {can('inventory.receipt.manage') && !['CLOSED', 'EXPIRED'].includes(receipt.state) && <div className="card stack">
-      <label className="stack">File bukti (PNG, JPEG, PDF; maksimal 15 MiB)<input type="file" accept="image/png,image/jpeg,application/pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setError(null) }} style={{ maxWidth: '100%' }} /></label>
-      <Button onClick={prepare} disabled={!file}>Tinjau unggahan</Button><p className="muted">Bukti mengikuti isi draft saat diunggah. Pengubahan draft memerlukan bukti baru.</p>
-    </div>}
+    <WarehouseListActions onRefresh={result.reload} create={can('inventory.receipt.manage') && !['CLOSED', 'EXPIRED'].includes(receipt.state) ? { label: 'Tambah bukti', onClick: () => setCreating(true) } : undefined} />
+    {creating && <ResourceForm title="Tambah bukti penerimaan" onClose={() => setCreating(false)} onBack={() => setOperation(null)} onReview={prepare} review={operation && <WarehouseCommandDialog embedded title="Unggah bukti penerimaan" confirmLabel="Unggah bukti" command={operation} onDone={() => { setCreating(false); setOperation(null); setFile(null); onChanged() }} onClose={() => setOperation(null)} onReload={onChanged}
+      summary={<><p>{receipt.externalReference} · Revisi {receipt.revision}</p><p>{file?.name} · {file?.size} byte</p><p>Unggahan menambah bukti dan revisi dokumen. Belum ada perubahan stok.</p></>} />}
+      footer={<><Button onClick={() => setCreating(false)}>Batal</Button><Button variant="primary" onClick={prepare} disabled={!file}>Tinjau unggahan</Button></>}>
+      <div className="stack">      <label className="stack">File bukti (PNG, JPEG, PDF; maksimal 15 MiB)<input type="file" accept="image/png,image/jpeg,application/pdf" onChange={event => { setFile(event.target.files?.[0] ?? null); setError(null) }} style={{ maxWidth: '100%' }} /></label>
+<p>Bukti harus sesuai dengan draft penerimaan saat ini.</p>{error && <p role="alert">{error}</p>}</div>
+    </ResourceForm>}
     {error && <p role="alert" className="error">{error}</p>}
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Belum ada bukti" hint="Unggah hasil pemeriksaan untuk mencatat penerimaan atau penolakan barang." />} columns={[
@@ -46,7 +51,6 @@ export function WarehouseReceiptEvidence({ receipt, onChanged }: { receipt: Ware
       ]} />
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>
-    {operation && <WarehouseCommandDialog title="Unggah bukti penerimaan" confirmLabel="Unggah bukti" command={operation} onDone={onChanged} onClose={() => setOperation(null)} onReload={onChanged}
-      summary={<><p>{receipt.externalReference} · Revisi {receipt.revision}</p><p>{file?.name} · {file?.size} byte</p><p>Unggahan menambah bukti dan revisi dokumen. Belum ada perubahan stok.</p></>} />}
+
   </section>
 }

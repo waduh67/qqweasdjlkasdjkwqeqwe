@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -42,7 +43,7 @@ it('shows scoped delegation paging and state filters to read-only users, and hid
   expect(screen.queryByRole('button', { name: 'Tambah delegasi' })).toBeNull(); expect(screen.queryByRole('button', { name: 'Cabut delegasi' })).toBeNull()
   fireEvent.click(within(list).getByRole('button', { name: 'Berikutnya' }))
   await screen.findByText('Tidak ada delegasi sesuai filter')
-  fireEvent.change(screen.getByRole('combobox', { name: 'Status delegasi' }), { target: { value: 'REVOKED' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Status delegasi' }), { target: { value: 'REVOKED' } })
   await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.includes('page=0&state=REVOKED'))).toBe(true))
   first.unmount(); permissions.clear(); fetch.mockClear(); show()
   expect(screen.queryByRole('button', { name: 'Kelola delegasi pemeriksa' })).toBeNull(); expect(fetch).not.toHaveBeenCalled()
@@ -57,16 +58,16 @@ it('creates a role-bound independent named delegation after review and preserves
   }); vi.stubGlobal('fetch', fetch); show()
   fireEvent.click(await screen.findByRole('button', { name: 'Kelola delegasi pemeriksa' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tambah delegasi' }))
-  fireEvent.change(await screen.findByRole('combobox', { name: 'Lokasi delegasi' }), { target: { value: id.source } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Sumber kewenangan delegasi' }), { target: { value: id.target } })
+  await selectControl(await screen.findByRole('combobox', { name: 'Lokasi delegasi' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'Sumber kewenangan delegasi' }), { target: { value: id.target } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Pemeriksa asal' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Pemeriksa asal' }), { target: { value: id.checker } })
+  await selectControl(screen.getByRole('combobox', { name: 'Pemeriksa asal' }), { target: { value: id.checker } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Penerima delegasi' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Penerima delegasi' }), { target: { value: id.other } })
+  await selectControl(screen.getByRole('combobox', { name: 'Penerima delegasi' }), { target: { value: id.other } })
   const until = new Date(Date.now() + 86400000), local = new Date(until.getTime() - until.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   fireEvent.change(screen.getByLabelText(/Delegasi berlaku sampai/), { target: { value: local } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau delegasi' }))
-  const review = await screen.findByRole('dialog', { name: 'Konfirmasi delegasi pemeriksa' })
+  const review = await screen.findByRole('region', { name: 'Konfirmasi delegasi pemeriksa' })
   expect(review.textContent).toContain('Pemeriksa gudang → Pemeriksa pengganti'); expect(review.textContent).toContain('Role Supervisor gudang'); expect(writes).toBe(0)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan delegasi' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))

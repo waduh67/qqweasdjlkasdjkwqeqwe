@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '@/api/client'
@@ -20,6 +22,7 @@ const failureMessage = (error: unknown) => error instanceof ApiError ? warehouse
 export function CustomerAssetException({ row, kind, enabled, onDone, onClose }: {
   row: AssetHistory; kind: AssetExceptionKind; enabled: boolean; onDone: () => void; onClose: () => void
 }) {
+  const resourceFormId = useResourceFormId()
   const { can } = useCan()
   const load = useCallback(() => getAssetExceptionContext(row), [row])
   const { state, reload } = useWarehouseQuery(load)
@@ -52,8 +55,14 @@ export function CustomerAssetException({ row, kind, enabled, onDone, onClose }: 
       : <p>Pemohon pengajuan ini memerlukan akses lihat persetujuan untuk melanjutkan. Minta pengelola memberikan akses tersebut kepada pemohon; petugas lain tidak dapat mengajukan proposal ini atas namanya.</p>}
     <Button onClick={onDone}>Kembali ke riwayat aset</Button>
   </section>
-  return <><form className="card stack" aria-label={assetExceptionLabel[kind]} onSubmit={event => void prepare(event)}>
-    <h3>{assetExceptionLabel[kind]}</h3><p>{row.asset.sku.name} · {row.asset.serial} · Asal {row.asset.origin?.code ?? 'terverifikasi'}.</p>
+  return <><ResourceForm title={<>{assetExceptionLabel[kind]}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title={assetExceptionLabel[kind]} command={review.command} disabled={!enabled} confirmLabel="Catat pengajuan"
+    onDone={value => { setSaved(value); setReview(null) }} onClose={() => setReview(null)} onReload={onDone} summary={<>
+      <p>{review.context.customerLabel} · {row.asset.sku.name} · {row.asset.serial} · {review.context.workOrder.code}.</p>
+      <p>{kind === 'title' ? `Kepemilikan ${review.context.ownership.legalOwner === 'ISP' ? 'ISP → pelanggan' : 'pelanggan → ISP'}` : `Kehilangan → ${destination && locationName(destination)}`}.</p>
+      <p>Bukti tanda tangan: {review.context.workOrder.signature?.signerName}. Alasan: {reason.trim()}.</p>
+      <p>Persetujuan independen diperlukan. Pencatatan pengajuan belum mengubah stok, kepemilikan, atau kewajiban pengembalian.</p>
+    </>} />} footer={<><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" disabled={disabled || !eligible || !reason.trim() || (kind === 'loss' && !destination)}>Tinjau pengajuan</Button></>}><form id={resourceFormId} className="stack" aria-label={assetExceptionLabel[kind]} onSubmit={event => void prepare(event)}>
+    <p>{row.asset.sku.name} · {row.asset.serial} · Asal {row.asset.origin?.code ?? 'terverifikasi'}.</p>
     <p>Gunakan bukti tanda tangan WO pemasangan yang sudah tersimpan. Akses bukti WO atau penugasan teknisi pada WO tersebut diperlukan.</p>
     {can('workorder.order.view') && <Link to={`/work-orders/${row.asset.workOrderId}#work-order-evidence`}>Buka bukti WO asal</Link>}
     {state.status === 'loading' && <p role="status">Memeriksa aset, kepemilikan, dan bukti…</p>}
@@ -69,13 +78,7 @@ export function CustomerAssetException({ row, kind, enabled, onDone, onClose }: 
       eligible={location => location.state === 'ACTIVE' && location.kind === 'LOST' && !location.issueEligible} disabled={disabled} />}
     <TextareaField label="Alasan pengajuan" value={reason} required maxLength={kind === 'title' ? 500 : 1000} disabled={disabled} onChange={(_, data) => setReason(data.value)} />
     {error && <div role="alert"><p>{error}</p><Button disabled={disabled} onClick={onDone}>Muat ulang riwayat pelanggan</Button></div>}
-    <div className="row wrap"><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button disabled={disabled} onClick={() => { setError(null); reload() }}>Muat ulang pengajuan</Button>
-      <Button type="submit" disabled={disabled || !eligible || !reason.trim() || (kind === 'loss' && !destination)}>Tinjau pengajuan</Button></div>
-  </form>{review && <WarehouseCommandDialog title={assetExceptionLabel[kind]} command={review.command} disabled={!enabled} confirmLabel="Catat pengajuan"
-    onDone={value => { setSaved(value); setReview(null) }} onClose={() => setReview(null)} onReload={onDone} summary={<>
-      <p>{review.context.customerLabel} · {row.asset.sku.name} · {row.asset.serial} · {review.context.workOrder.code}.</p>
-      <p>{kind === 'title' ? `Kepemilikan ${review.context.ownership.legalOwner === 'ISP' ? 'ISP → pelanggan' : 'pelanggan → ISP'}` : `Kehilangan → ${destination && locationName(destination)}`}.</p>
-      <p>Bukti tanda tangan: {review.context.workOrder.signature?.signerName}. Alasan: {reason.trim()}.</p>
-      <p>Persetujuan independen diperlukan. Pencatatan pengajuan belum mengubah stok, kepemilikan, atau kewajiban pengembalian.</p>
-    </>} />}</>
+    <div className="row wrap"><Button disabled={disabled} onClick={() => { setError(null); reload() }}>Muat ulang pengajuan</Button>
+      </div>
+  </form></ResourceForm></>
 }

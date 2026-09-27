@@ -1,6 +1,6 @@
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
-import { useCallback, useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
 import { getLocation } from '@/api/warehouse/masters'
 import type { WarehouseLocation } from '@/api/warehouse/models'
 import { listReturnSources, receiveReturn, type ReturnSource, type WarehouseReturn } from '@/api/warehouse/returns'
@@ -27,18 +27,19 @@ export function WarehouseReturnEditor(props: Props) {
   const { can } = useCan(), [source, setSource] = useState<SourceChoice | null>(null)
   if (!can('inventory.return.manage')) return <WarehouseDenied />
   if (!can('inventory.location.view')) return <div className="card stack" role="alert"><p>Izin lihat lokasi diperlukan untuk memilih karantina penerimaan.</p><Button onClick={props.onClose}>Kembali</Button></div>
-  return <div className="card stack"><h2>Terima retur</h2>
-    <p>Pilih sisa material yang sudah diterima gudang atau perangkat hasil pelepasan yang diserahkan petugas lain. Sumber yang sudah menjadi retur tidak ditawarkan lagi.</p>
-    <WarehousePicker label="Sumber retur" load={sources} value={source} name={returnSourceLabel} onChange={setSource} />
-    {source ? <SelectedSource key={source.id} source={source} {...props} /> : <Button onClick={props.onClose}>Batal</Button>}
-  </div>
+  const picker = <WarehousePicker label="Sumber retur" load={sources} value={source} name={returnSourceLabel} onChange={setSource} />
+  return source ? <SelectedSource key={source.id} source={source} picker={picker} {...props} /> :
+    <ResourceForm title="Terima retur" onClose={props.onClose} onBack={() => {}} footer={<Button onClick={props.onClose}>Batal</Button>}>
+      <div className="stack">{picker}</div>
+    </ResourceForm>
 }
-function SelectedSource({ source, ...props }: Props & { source: ReturnSource }) {
+function SelectedSource({ source, ...props }: Props & { source: ReturnSource; picker: ReactNode }) {
   const loader = useCallback(() => source.quarantineLocationId ? getLocation(source.quarantineLocationId) : Promise.resolve(null), [source.quarantineLocationId])
   const result = useWarehouseQuery(loader)
-  return <WarehouseState {...result}>{location => <IntakeForm source={source} initialLocation={location} {...props} />}</WarehouseState>
+  return result.state.status === 'ready' ? <IntakeForm source={source} initialLocation={result.state.data} {...props} /> :
+    <ResourceForm title="Terima retur" onClose={props.onClose} onBack={() => {}}><WarehouseState {...result}>{() => null}</WarehouseState></ResourceForm>
 }
-function IntakeForm({ source, initialLocation, onSaved, onClose, onReload }: Props & { source: ReturnSource; initialLocation: WarehouseLocation | null }) {
+function IntakeForm({ source, picker, initialLocation, onSaved, onClose, onReload }: Props & { source: ReturnSource; picker: ReactNode; initialLocation: WarehouseLocation | null }) {
   const resourceFormId = useResourceFormId()
   const [destination, setDestination] = useState(initialLocation), [evidence, setEvidence] = useState(''), [error, setError] = useState<string | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseReturn> | null>(null)
@@ -47,11 +48,12 @@ function IntakeForm({ source, initialLocation, onSaved, onClose, onReload }: Pro
     try { setOperation(receiveReturn(buildReturnIntake(source, destination, evidence))); setError(null) }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa sumber retur.') }
   }
-  return <><ResourceForm title="Penerimaan retur" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi penerimaan retur" confirmLabel="Catat retur" command={operation} onDone={onSaved} onReload={onReload} onClose={() => setOperation(null)}
+  return <><ResourceForm title="Terima retur" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi penerimaan retur" confirmLabel="Catat retur" command={operation} onDone={onSaved} onReload={onReload} onClose={() => setOperation(null)}
       summary={<><p>{source.code} · {returnItemLabel(source.item)}</p><p><WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> → {destination && locationLabel(destination)}</p>
         <p>Bukti: {evidence}</p><p>{source.origin === 'MATERIAL_RESIDUAL' ? 'Buka inspeksi atas sisa yang sudah diterima; stok fisik tidak ditambahkan lagi.' : 'Terima perangkat ke karantina dengan identitas dan kepemilikan asal.'}</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau penerimaan retur</Button></>}><form id={resourceFormId} className="stack" aria-label="Penerimaan retur" onSubmit={prepare}>
+    {picker}
     <p>{returnOriginLabels[source.origin]} · {source.code}</p><p><strong>{returnItemLabel(source.item)}</strong> · <WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> · <WarehouseStatus status={source.legalOwner} /></p>
-    {source.origin === 'MATERIAL_RESIDUAL' ? <p>Sudah diterima di {locationLabel(source.location)}. Pencatatan retur membuka pemeriksaan tanpa menambah stok lagi.</p>
+    {source.origin === 'MATERIAL_RESIDUAL' ? <p>Lokasi: {locationLabel(source.location)}. Retur ini perlu diperiksa.</p>
       : <><p>Diterima dari {locationLabel(source.location)}. Perangkat masuk karantina dan masih harus diperiksa.</p>
         <WarehousePicker label="Karantina penerimaan retur" load={receiptLocations} value={destination} name={locationLabel} eligible={row => row.kind === 'QUARANTINE' && !row.issueEligible} onChange={setDestination} /></>}
     {source.legalOwner === 'CUSTOMER' && <p role="status">Perangkat tetap milik pelanggan dan tidak boleh menjadi stok tersedia ISP.</p>}
@@ -59,6 +61,6 @@ function IntakeForm({ source, initialLocation, onSaved, onClose, onReload }: Pro
     {error && <p role="alert" className="error">{error}</p>}
     <div className="row wrap"></div>
   </form></ResourceForm>
-    
+
   </>
 }

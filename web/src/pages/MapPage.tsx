@@ -1216,6 +1216,7 @@ export function MapPage() {
       void refreshImpacted()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : `Gagal menyimpan ${meta.label}`)
+      throw err
     }
   }
 
@@ -1401,6 +1402,7 @@ export function MapPage() {
       void refreshImpacted()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan kabel')
+      throw err
     }
   }
 

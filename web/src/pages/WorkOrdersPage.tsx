@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { Text, ToggleButton } from '@fluentui/react-components'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -94,6 +95,7 @@ export function WorkOrdersPage() {
     setDraft(d)
     setInitialDraft(d)
   }
+  const creation = useCreationReview(draft != null)
   const closeDraft = () => {
     setDraft(null)
     setInitialDraft(null)
@@ -164,25 +166,19 @@ export function WorkOrdersPage() {
     }
   }
 
-  const submitCreate = () =>
+  const submitCreate = () => {
+    if (!draft) return
+    if (!draft.title.trim()) { toast.error('Judul wajib diisi'); return }
+    if (creation.beforeSave()) return
     void run(async () => {
-      if (!draft) return
-      if (!draft.title.trim()) {
-        toast.error('Judul tidak boleh kosong')
-        throw new Error('validasi')
-      }
       await api.post('/api/work-orders', {
-        type: draft.type,
-        title: draft.title.trim(),
-        description: draft.description.trim() || null,
-        priority: draft.priority,
-        customerId: draft.customerId || null,
-        areaId: draft.areaId || null,
-        scheduledAt: toInstant(draft.scheduledAt),
-        assignees: draft.assignees,
+        type: draft.type, title: draft.title.trim(), description: draft.description.trim() || null,
+        priority: draft.priority, customerId: draft.customerId || null, areaId: draft.areaId || null,
+        scheduledAt: toInstant(draft.scheduledAt), assignees: draft.assignees,
       })
       closeDraft()
-    }, 'Work order dibuat')
+    }, 'Work order dibuat').finally(creation.finish)
+  }
 
   const columns: Column<WorkOrderView>[] = [
     {
@@ -298,6 +294,9 @@ export function WorkOrdersPage() {
       </Toolbar>
 
       <WorkOrderForm
+        creation={{ ...creation, prepare: submitCreate, summary: <CreationSummary rows={[
+          ['Judul', draft?.title], ['Pelanggan', draftCustomerLabel], ['Jadwal', draft?.scheduledAt || 'Belum dijadwalkan'],
+        ]} /> }}
         open={draft != null}
         draft={draft}
         dirty={dirty}
@@ -456,7 +455,9 @@ function WorkOrderForm({
   onChange,
   onSubmit,
   onCancel,
+  creation,
 }: {
+  creation: CreationFlow
   open: boolean
   draft: Draft | null
   dirty: boolean
@@ -488,7 +489,7 @@ function WorkOrderForm({
   }
   const areaChoices = user?.platformAdmin ? areas : areas.filter(area => areaIds.has(area.id))
   return (
-    <Blade
+    <Blade creation={creation}
       open={open}
       title="Buat work order"
       size="lg"

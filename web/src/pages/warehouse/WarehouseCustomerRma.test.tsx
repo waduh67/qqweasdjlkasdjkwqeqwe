@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -37,7 +38,7 @@ function mockServer(conflict = false) {
 function show() { render(<MemoryRouter initialEntries={[`/warehouse/returns?returnId=${id.returnCase}`]}><WarehouseReturnsPage /></MemoryRouter>) }
 async function choose(label: string, value: string) {
   await waitFor(() => expect(screen.getByRole('combobox', { name: label })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: label }), { target: { value } })
+  await selectControl(screen.getByRole('combobox', { name: label }), { target: { value } })
 }
 async function prepare() {
   fireEvent.click(await screen.findByRole('button', { name: 'Siapkan serah-terima RMA' }))
@@ -82,7 +83,7 @@ it('dispatches only after current named WO review then reads actual handover rec
   await screen.findByRole('button', { name: 'Siapkan serah-terima RMA' })
   expect(screen.queryByRole('button', { name: 'Periksa retur' })).toBeNull()
   await prepare()
-  const dialog = await screen.findByRole('dialog', { name: 'Konfirmasi pengiriman RMA' })
+  const dialog = await screen.findByRole('region', { name: 'Konfirmasi pengiriman RMA' })
   expect(dialog.textContent).toContain('Revisi WO 17'); expect(dialog.textContent).toContain('Penerima: Teknisi RMA'); expect(dialog.textContent).toContain('belum diterima teknisi')
   expect(server.fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Kirim RMA ke transit' }))

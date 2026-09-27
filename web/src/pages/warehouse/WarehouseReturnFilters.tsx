@@ -35,8 +35,8 @@ export function WarehouseReturnFilters({ onApply }: { onApply: (filter: ReturnFi
       <SelectField label="Status retur" value={state} onChange={(_, data) => setState(data.value as typeof state)}><option value="">Semua status</option>{RETURN_STATES.map(state => <option key={state} value={state}>{returnStateLabels[state]}</option>)}</SelectField>
       <SelectField label="Asal retur" value={origin} onChange={(_, data) => setOrigin(data.value as typeof origin)}><option value="">Semua asal</option>{RETURN_ORIGINS.map(origin => <option key={origin} value={origin}>{returnOriginLabels[origin]}</option>)}</SelectField>
       <SelectField label="Pemilik barang retur" value={owner} onChange={(_, data) => setOwner(data.value as typeof owner)}><option value="">Semua pemilik</option><option value="ISP">Milik ISP</option><option value="CUSTOMER">Milik pelanggan</option><option value="UNKNOWN">Belum diketahui</option></SelectField>
-      {can('inventory.sku.view') && <WarehousePicker label="Barang retur" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} optional />}
-      {can('inventory.location.view') && <WarehousePicker label="Lokasi retur" load={locations} value={location} onChange={setLocation} name={locationLabel} optional />}
+      {can('inventory.sku.view') && <WarehousePicker label="Barang retur" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} placeholder="Semua" optional />}
+      {can('inventory.location.view') && <WarehousePicker label="Lokasi retur" load={locations} value={location} onChange={setLocation} name={locationLabel} placeholder="Semua" optional />}
       <TextField label="Dibuat mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
       <TextField label="Sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     </div>{error && <p role="alert" className="error">{error}</p>}<Button type="submit" variant="primary">Terapkan filter retur</Button>

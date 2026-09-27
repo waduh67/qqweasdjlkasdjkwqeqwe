@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { tokenStore } from '@/api/client'
@@ -14,9 +15,9 @@ beforeEach(() => { identity.id = id.supplier; HTMLDialogElement.prototype.showMo
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 async function fill() {
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang dan pemegang saat ini' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang dan pemegang saat ini' }), { target: { value: id.piece } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang dan pemegang saat ini' }), { target: { value: id.piece } })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah diserahterimakan/ }), { target: { value: '7,500' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Teknisi dan lokasi penerima' }), { target: { value: id.allocation } })
+  await selectControl(screen.getByRole('combobox', { name: 'Teknisi dan lokasi penerima' }), { target: { value: id.allocation } })
   fireEvent.change(screen.getByRole('textbox', { name: /Alasan serah-terima/ }), { target: { value: 'Pergantian teknisi' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Bukti persetujuan serah-terima/ }), { target: { value: 'Instruksi 12' } })
 }
@@ -38,5 +39,5 @@ it('does not let a source holder act as the independent dispatcher even with man
   vi.stubGlobal('fetch', fetch); render(<WorkOrderMaterialHandover context={fieldContextFixture()} onDone={vi.fn()} onClose={vi.fn()} />); await fill()
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau persetujuan' }))
   await screen.findByText('Pilih pemegang dan penerima berbeda. Dispatcher harus independen dari keduanya.')
-  expect(screen.queryByRole('dialog')).toBeNull(); expect(fetch.mock.calls.every(([path]) => !path.endsWith('/authorize'))).toBe(true)
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true'); expect(fetch.mock.calls.every(([path]) => !path.endsWith('/authorize'))).toBe(true)
 })

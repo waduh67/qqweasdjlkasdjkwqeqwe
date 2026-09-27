@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -62,10 +63,12 @@ it('binds accepted demand to a fresh exact receipt line and keeps archive blocke
   }); vi.stubGlobal('fetch', fetch); show()
   expect(await screen.findByRole('button', { name: 'Arsipkan aturan' })).toHaveProperty('disabled', true)
   fireEvent.click(screen.getByRole('button', { name: 'Hubungkan penerimaan' }))
+  fireEvent.click(screen.getByRole('combobox', { name: 'Dokumen penerimaan pengisian' }));
   await screen.findByRole('option', { name: 'SJ-001 · Distributor kabel' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Dokumen penerimaan pengisian' }), { target: { value: id.evidence } })
+  await selectControl(screen.getByRole('combobox', { name: 'Dokumen penerimaan pengisian' }), { target: { value: id.evidence } })
+  fireEvent.click(screen.getByRole('combobox', { name: 'Baris penerimaan pengisian' }));
   await screen.findByRole('option', { name: 'Kabel drop · R1' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Baris penerimaan pengisian' }), { target: { value: id.line } })
+  await selectControl(screen.getByRole('combobox', { name: 'Baris penerimaan pengisian' }), { target: { value: id.line } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau hubungan penerimaan' })); fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hubungkan penerimaan' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(JSON.parse(fetch.mock.calls.find(([, init]) => init.method === 'POST')![1].body as string)).toEqual({ expectedRevision: 3, documentId: id.evidence, documentRevision: 8, lineId: id.line })
@@ -77,7 +80,7 @@ it('uses server state filters before pagination and displays named read-only row
   show('/warehouse/replenishment?state=PENDING')
   const link = await screen.findByRole('link', { name: 'Kabel pengisian · CABLE' }); expect(link.getAttribute('href')).toContain(`requestId=${id.document}`)
   expect(screen.getByText('Rak pengisian')).toBeTruthy(); expect(screen.queryByRole('button', { name: 'Tambah aturan minimum' })).toBeNull()
-  fireEvent.change(screen.getByRole('combobox', { name: 'Status pengisian' }), { target: { value: 'CANCELLED' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Status pengisian' }), { target: { value: 'CANCELLED' } })
   await screen.findByText('Belum ada catatan pengisian sesuai filter'); expect(fetch.mock.calls.at(-1)![0]).toContain('state=CANCELLED')
 })
 it('does not request denied or malformed routes and exposes no read-only mutation buttons', async () => {
@@ -101,10 +104,11 @@ it('creates a named exact-unit rule after validating thresholds and never invent
     return response(reportPage([]))
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/replenishment?view=rules')
   fireEvent.click(await screen.findByRole('button', { name: 'Tambah aturan minimum' }))
+  fireEvent.click(screen.getByRole('combobox', { name: 'Barang untuk pengisian' }));
   await screen.findByRole('option', { name: 'Kabel pengisian · CABLE' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang untuk pengisian' }), { target: { value: id.sku } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang untuk pengisian' }), { target: { value: id.sku } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Gudang tujuan pengisian' })).toHaveProperty('disabled', false))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Gudang tujuan pengisian' }), { target: { value: id.inspection } })
+  await selectControl(screen.getByRole('combobox', { name: 'Gudang tujuan pengisian' }), { target: { value: id.inspection } })
   for (const [label, value] of [['Minimum', '50,500'], ['Target', '25'], ['Maksimum', '100'], ['Kelipatan kemasan', '25']]) fireEvent.change(screen.getByRole('textbox', { name: new RegExp(`^${label} \\(m\\)`) }), { target: { value } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau aturan' })); expect(screen.getByText('Minimum harus ≤ target ≤ maksimum.')).toBeTruthy()
   fireEvent.change(screen.getByRole('textbox', { name: /^Target \(m\)/ }), { target: { value: '100' } })

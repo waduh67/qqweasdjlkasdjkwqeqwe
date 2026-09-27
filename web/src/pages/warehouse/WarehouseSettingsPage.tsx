@@ -21,7 +21,7 @@ import { WarehouseDelegations } from './WarehouseDelegations'
 
 export function WarehouseSettingsPage() {
   const { can } = useCan()
-  return <div className="stack"><PageHeader title="Setelan Gudang" subtitle="Atur pemeriksa independen, batas persetujuan, dan akses lokasi." />
+  return <div className="stack"><PageHeader title="Setelan Gudang" />
     {can('inventory.location.view') && <Link to="/warehouse/catalog?tab=access">Kelola akses pengguna ke gudang</Link>}
     {can('inventory.approval.view') ? <><PolicyPanel /><WarehousePolicyHistory /><WarehouseDelegations /></> : <p role="status">Izin lihat persetujuan diperlukan untuk membaca kebijakan gudang.</p>}
   </div>
@@ -52,7 +52,7 @@ function PolicyEditor({ settings, onClose, onDone }: { settings: PolicyDetails; 
       setReview({ input, command: savePolicy(input) }); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa aturan persetujuan.') }
   }
-  return <><ResourceForm title={<>Draft perubahan kebijakan</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi perubahan kebijakan" confirmLabel="Simpan kebijakan" command={review.command} onDone={onDone} onReload={onDone} onClose={() => setReview(null)}
+  return <><ResourceForm editing title={<>Draft perubahan kebijakan</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi perubahan kebijakan" confirmLabel="Simpan kebijakan" command={review.command} onDone={onDone} onReload={onDone} onClose={() => setReview(null)}
     summary={<><h3>Tersimpan · Versi {review.input.expectedRevision}</h3>{settings.current ? <WarehousePolicyPreview locations={settings.references.locations} rules={policyRulesDraft(settings)} currency={settings.current.currency} expiry={String(settings.current.expiryHours)} /> : <p>Belum ada kebijakan.</p>}
       <h3>Rencana perubahan</h3><WarehousePolicyPreview locations={locations} rules={rules} currency={currency} expiry={expiry} /><p>Simpan hanya setelah cakupan lokasi, pemeriksa, dan batas setiap tahap sudah sesuai.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batalkan perubahan kebijakan</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau kebijakan</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft kebijakan persetujuan" onSubmit={prepare}>
     <p>Berdasarkan versi tersimpan {settings.current?.revision ?? 0}. Perubahan mulai berlaku setelah disimpan. Pengajuan yang sudah ada memakai versi yang dicatat saat diajukan.</p>

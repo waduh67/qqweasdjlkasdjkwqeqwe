@@ -40,8 +40,8 @@ function StockFilterForm({ filter, buckets: showBuckets, history, onApply, initi
   }
   return <form className="stack" onSubmit={submit}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
-      {can('inventory.sku.view') && <WarehousePicker label="Barang" load={stockSkus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}${row.state === 'ARCHIVED' ? ' (arsip)' : ''}`} optional />}
-      {can('inventory.location.view') && <WarehousePicker label="Lokasi stok" load={stockLocations} value={location} onChange={setLocation} name={row => `${locationLabel(row)}${row.state === 'ARCHIVED' ? ' (arsip)' : ''}`} optional />}
+      {can('inventory.sku.view') && <WarehousePicker label="Barang" load={stockSkus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}${row.state === 'ARCHIVED' ? ' (arsip)' : ''}`} placeholder="Semua" optional />}
+      {can('inventory.location.view') && <WarehousePicker label="Lokasi stok" load={stockLocations} value={location} onChange={setLocation} name={row => `${locationLabel(row)}${row.state === 'ARCHIVED' ? ' (arsip)' : ''}`} placeholder="Semua" optional />}
       <TextField label="Serial lengkap" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
       {showBuckets && <SelectField label="Kelompok stok" value={bucket} onChange={(_, data) => setBucket(data.value as typeof bucket)}><option value="">Semua stok</option>{STOCK_BUCKETS.map(value => <option key={value} value={value}>{buckets[value]}</option>)}</SelectField>}
       <SelectField label="Kondisi" value={condition} onChange={(_, data) => setCondition(data.value)}><option value="">Semua kondisi</option>{CONDITIONS.map(value => <option key={value} value={value}>{({ SERVICEABLE: 'Layak pakai', QUARANTINE: 'Karantina', DAMAGED: 'Rusak', SCRAP: 'Tidak dapat dipakai' })[value]}</option>)}</SelectField>

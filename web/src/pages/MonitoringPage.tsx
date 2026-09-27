@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Activity, Check, Trash2, X } from 'lucide-react'
@@ -48,6 +50,8 @@ export function MonitoringPage() {
   const [alarmQuery, setAlarmQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [newKey, setNewKey] = useState<CollectorCreated | null>(null)
+  const [creatingCollector, setCreatingCollector] = useState(false)
+  const creation = useCreationReview(creatingCollector)
   const [draftName, setDraftName] = useState('')
   const [trace, setTrace] = useState<{ label: string; history: OnuHistoryView } | null>(null)
   const [thresholds, setThresholds] = useState(false)
@@ -223,6 +227,14 @@ export function MonitoringPage() {
     },
   ]
 
+  const saveCollector = () => {
+    if (!draftName.trim() || creation.beforeSave()) return
+    void run(async () => {
+      const created = await api.post<CollectorCreated>('/api/monitoring/collectors', { name: draftName.trim(), pollIntervalSeconds: 300 })
+      setNewKey(created); setDraftName(''); setCreatingCollector(false)
+    }).finally(creation.finish)
+  }
+
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       <PageHeader title="Monitoring" />
@@ -241,33 +253,12 @@ export function MonitoringPage() {
         <section className="stack" style={{ gap: '0.85rem' }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: '0.75rem' }}>
             <Text as="h2" weight="semibold" style={{ margin: 0 }}>Collector</Text>
-            {canManageCollector && (
-              <div className="row">
-                <TextField
-                  placeholder="Nama collector baru"
-                  value={draftName}
-                  onChange={(_, data) => setDraftName(data.value)}
-                  style={{ width: 200 }}
-                />
-                <Button
-                  variant="primary"
-                  size="small"
-                  disabled={!draftName.trim()}
-                  onClick={() =>
-                    void run(async () => {
-                      const created = await api.post<CollectorCreated>('/api/monitoring/collectors', {
-                        name: draftName,
-                        pollIntervalSeconds: 300,
-                      })
-                      setNewKey(created)
-                      setDraftName('')
-                    })
-                  }
-                >
-                  <IconPlus size={15} /> Buat
-                </Button>
-              </div>
-            )}
+            {canManageCollector && <Button variant="subtle" icon={<IconPlus size={16} />} onClick={() => setCreatingCollector(true)}>Tambah collector</Button>}
+            <Blade open={creatingCollector} title="Tambah collector" onClose={() => !creation.busy && setCreatingCollector(false)}
+              creation={{ ...creation, prepare: saveCollector, summary: <CreationSummary rows={[["Nama", draftName], ["Interval polling", '5 menit']]} /> }}
+              footer={<Button variant="primary" disabled={creation.busy} onClick={saveCollector}>Simpan</Button>}>
+              <TextField label="Nama collector" required value={draftName} onChange={(_, data) => setDraftName(data.value)} />
+            </Blade>
           </div>
 
           {newKey && (

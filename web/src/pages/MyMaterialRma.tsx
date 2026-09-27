@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { acknowledgeMyRma, getMyMaterialRma, getMyMaterialRmas, reinstallMyRma } from '@/api/warehouse/myMaterialRma'
@@ -44,6 +46,7 @@ function RmaList({ context, actor, enabled, onReload }: { context: MyMaterialCon
   </>
 }
 function RmaAction({ context, row, actor, enabled, onClose, onDone, onReload }: { context: MyMaterialContext; row: RmaDetails; actor: string; enabled: boolean; onClose: () => void; onDone: () => void; onReload: () => void }) {
+  const resourceFormId = useResourceFormId()
   const [observed, setObserved] = useState(''), [reference, setReference] = useState(''), [topology, setTopology] = useState(emptyAssetTopology)
   const [review, setReview] = useState<WarehouseCommand<unknown> | null>(null), [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false), active = useRef(false)
   const receiving = row.handover.state === 'DISPATCHED', disabled = busy || !!review
@@ -60,16 +63,16 @@ function RmaAction({ context, row, actor, enabled, onClose, onDone, onReload }: 
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Perangkat servis belum dapat diperiksa.') }
     finally { active.current = false; setBusy(false) }
   }
-  return <><form className="card stack" aria-label="Tindak lanjut perangkat servis" onSubmit={event => void submit(event)}>
+  return <><ResourceForm title="Tindak lanjut perangkat servis" onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title={receiving ? 'Konfirmasi penerimaan servis' : 'Konfirmasi pemasangan kembali'} command={review} disabled={!enabled} confirmLabel={receiving ? 'Terima perangkat' : 'Pasang kembali'} onDone={onDone} onReload={onReload} onClose={() => setReview(null)} summary={<>
+    <p>{row.workOrderCode} · {row.handover.serial} · Milik pelanggan asal.</p>
+    {receiving ? <p>Bukti: {reference}. Perangkat diterima di tangan Anda.</p> : <><p>{topology.odp ? `${topology.odp.code} port ${topology.port}` : 'Belum ditempel ke port ODP.'}</p><p>Perangkat dipasang kembali pada pelanggan asal. Hak milik tetap pada pelanggan; lengkapi serah-terima setelah pemasangan.</p></>}
+  </>} />} footer={<><Button onClick={onClose} disabled={disabled}>Batal</Button><Button form={resourceFormId} type="submit" disabled={disabled || !enabled}>{busy ? 'Memeriksa perangkat…' : receiving ? 'Tinjau penerimaan servis' : 'Tinjau pemasangan kembali'}</Button></>}><form id={resourceFormId} className="stack" aria-label="Tindak lanjut perangkat servis" onSubmit={event => void submit(event)}>
     <h4>{receiving ? 'Terima' : 'Pasang kembali'} {row.handover.serial}</h4><p>{row.workOrderCode} · {row.workOrderTitle}</p>
     <p>Perangkat tetap milik pelanggan asal. Cocokkan serial fisik sebelum melanjutkan.</p>
     <MaterialScanner disabled={disabled} onScan={value => { setObserved(value.trim().toUpperCase()); setError(null) }} />
     {observed && <p role="status">Serial diperiksa: {observed}{!sameSerialIdentity(observed, row.handover.serial) ? ' — tidak cocok' : ''}</p>}
     {receiving ? <TextField label="Referensi bukti penerimaan servis" value={reference} required maxLength={500} disabled={disabled} onChange={(_, data) => setReference(data.value)} />
       : <CustomerAssetTopology value={topology} onChange={setTopology} disabled={disabled || !enabled} />}
-    {error && <p role="alert">{error}</p>}<div className="row wrap"><Button onClick={onClose} disabled={disabled}>Batal</Button><Button type="submit" disabled={disabled || !enabled}>{busy ? 'Memeriksa perangkat…' : receiving ? 'Tinjau penerimaan servis' : 'Tinjau pemasangan kembali'}</Button></div>
-  </form>{review && <WarehouseCommandDialog title={receiving ? 'Konfirmasi penerimaan servis' : 'Konfirmasi pemasangan kembali'} command={review} disabled={!enabled} confirmLabel={receiving ? 'Terima perangkat' : 'Pasang kembali'} onDone={onDone} onReload={onReload} onClose={() => setReview(null)} summary={<>
-    <p>{row.workOrderCode} · {row.handover.serial} · Milik pelanggan asal.</p>
-    {receiving ? <p>Bukti: {reference}. Perangkat diterima di tangan Anda.</p> : <><p>{topology.odp ? `${topology.odp.code} port ${topology.port}` : 'Belum ditempel ke port ODP.'}</p><p>Perangkat dipasang kembali pada pelanggan asal. Hak milik tetap pada pelanggan; lengkapi serah-terima setelah pemasangan.</p></>}
-  </>} />}</>
+    {error && <p role="alert">{error}</p>}<div className="row wrap"></div>
+  </form></ResourceForm></>
 }

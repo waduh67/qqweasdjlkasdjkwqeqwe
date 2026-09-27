@@ -1,3 +1,4 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
@@ -30,7 +31,7 @@ export function WarehouseReceiptsPage() {
   const [fresh, setFresh] = useState(0)
   const id = params.get('id')
   const newDraft = params.get('new') === '1'
-  return <div className="stack"><PageHeader title="Penerimaan Barang" subtitle="Catat barang pemasok, periksa kondisi, lalu tempatkan barang layak ke bin." />
+  return <div className="stack"><PageHeader title="Penerimaan Barang" />
     {newDraft ? <WarehouseReceiptEditor key={fresh} onClose={() => setParams({})} onReload={() => setFresh(value => value + 1)} onSaved={row => setParams({ id: row.id })} />
       : id ? <ReceiptDetail id={id} /> : <ReceiptList onNew={() => setParams({ new: '1' })} />}
   </div>
@@ -46,12 +47,12 @@ function ReceiptList({ onNew }: { onNew: () => void }) {
   const result = useWarehouseQuery(loader)
   const canDraft = can('inventory.receipt.manage') && can('inventory.sku.view') && can('inventory.location.view')
   return <>
-    <Disclosure className="card" title={<>Persiapan penerimaan</>}><div className="stack"><p>Siapkan pemasok, barang, lokasi transit batas penerimaan, karantina, dan bin tujuan. Pastikan akun Anda memiliki akses ke seluruh lokasi tersebut.</p>
-      <Link to="/warehouse/catalog">Buka katalog dan lokasi</Link>{can('inventory.location.manage') && can('inventory.location.view') && <Button onClick={() => setSourceEditor(true)}>Siapkan batas penerimaan</Button>}
-      <p className="muted">Gunakan batas penerimaan yang sudah tersedia. Tombol ini menyiapkan lokasi baru berkode RECEIPT_SOURCE jika belum ada.</p></div></Disclosure>
-    <div className="row wrap">{can('inventory.receipt.manage') && <Button variant="primary" disabled={!canDraft} onClick={onNew}>Buat penerimaan</Button>}
+    <WarehouseListActions onRefresh={result.reload} onReset={() => { setStatus(''); setSerial(''); setPage(0) }}
+      create={can('inventory.receipt.manage') ? { label: 'Buat penerimaan', disabled: !canDraft, onClick: onNew } : undefined}
+      actions={can('inventory.location.manage') && can('inventory.location.view') ? [{ key: 'source', label: 'Atur batas penerimaan', onClick: () => setSourceEditor(true) }] : []} />
+    <div className="resource-filters row wrap">
       <SelectField label="Status penerimaan" value={status} onChange={(_, data) => { setStatus(data.value); setPage(0) }}><option value="">Semua status</option>{RECEIPT_STATES.map(state => <option key={state} value={state}>{stateLabels[state]}</option>)}</SelectField>
-      <TextField label="Serial barang" value={serial} maxLength={128} onChange={(_, data) => { setSerial(data.value); setPage(0) }} hint="Cari serial lengkap." /><Button onClick={result.reload}>Segarkan</Button>
+      <TextField label="Serial barang" value={serial} maxLength={128} onChange={(_, data) => { setSerial(data.value); setPage(0) }} />
     </div>
     {!can('inventory.receipt.manage') && <p className="muted">Akses baca saja. Izin kelola penerimaan diperlukan untuk mencatat barang dan pemeriksaan.</p>}
     {can('inventory.receipt.manage') && !canDraft && <p className="muted">Pembuatan draft memerlukan izin lihat barang dan lokasi untuk memilih sumber yang benar.</p>}

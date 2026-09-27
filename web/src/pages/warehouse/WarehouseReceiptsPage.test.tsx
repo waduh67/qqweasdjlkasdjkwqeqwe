@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -86,11 +87,12 @@ it('reviews a cable receipt and retries the same draft operation after a lost re
   vi.stubGlobal('fetch', fetch)
   const onSaved = vi.fn()
   render(<MemoryRouter><WarehouseReceiptEditor onSaved={onSaved} onClose={vi.fn()} onReload={vi.fn()} /></MemoryRouter>)
+  fireEvent.click(screen.getByRole('combobox', { name: 'Barang 1' }));
   await screen.findByRole('option', { name: 'Kabel drop · CABLE' })
   fireEvent.change(screen.getByRole('textbox', { name: 'Referensi surat jalan' }), { target: { value: 'SJ-001' } })
   for (const [label, value] of [['Pemasok', id.supplier], ['Batas penerimaan', id.source], ['Lokasi pemeriksaan', id.inspection], ['Barang 1', id.sku]]) {
     await waitFor(() => expect((screen.getByRole('combobox', { name: label }) as HTMLSelectElement).disabled).toBe(false))
-    fireEvent.change(screen.getByRole('combobox', { name: label }), { target: { value } })
+    await selectControl(screen.getByRole('combobox', { name: label }), { target: { value } })
   }
   fireEvent.change(screen.getByRole('textbox', { name: 'Panjang reel aktual (m)' }), { target: { value: '1000,000' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Kode lot / reel' }), { target: { value: 'REEL1' } })

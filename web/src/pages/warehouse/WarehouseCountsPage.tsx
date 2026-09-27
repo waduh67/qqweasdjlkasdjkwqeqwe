@@ -1,3 +1,4 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
@@ -36,16 +37,20 @@ export function WarehouseCountsPage() {
     if (params.has('countId')) id = uuid(params.get('countId'))
   } catch { return <div className="card stack" role="alert"><p>Alamat stock opname tidak dikenal.</p><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link></div> }
   if (!can('inventory.count.view')) return <WarehouseDenied />
-  return <div className="stack"><PageHeader title="Stock Opname" subtitle="Catat hasil hitung fisik sesuai penugasan, lalu ajukan selisih untuk pemeriksaan independen." />
+  return <div className="stack"><PageHeader title="Stock Opname" />
     {creating ? <WarehouseCountEditor onSaved={count => { setCreating(false); navigate(detailPath(count.id)) }} onClose={() => setCreating(false)} />
       : id ? <><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link><CountDetail key={id} id={id} /></>
-      : <>{can('inventory.count.manage') && <Button variant="primary" onClick={() => setCreating(true)}>Buat stock opname</Button>}<CountList /></>}
+      : <><CountList onNew={() => setCreating(true)} /></>}
   </div>
 }
-function CountList() {
+function CountList({ onNew }: { onNew: () => void }) {
+  const { can } = useCan()
+  const [filterVersion, setFilterVersion] = useState(0)
   const [filter, setFilter] = useState<CountFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => countWorkbench({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><WarehouseCountFilters onApply={filter => { setFilter(filter); setPage(0) }} /><Button onClick={result.reload}>Segarkan stock opname</Button>
+  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setFilter({}); setPage(0); setFilterVersion(version => version + 1) }}
+    create={can('inventory.count.manage') ? { label: 'Buat stock opname', onClick: onNew } : undefined} />
+    <WarehouseCountFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.count.id}
       empty={<EmptyState title="Belum ada stock opname untuk Anda" hint="Dokumen terlihat bagi pembuat dan penghitung yang ditugaskan dalam cakupan lokasi saat ini." />} columns={[
         { key: 'code', header: 'Stock opname', cell: row => <Link to={detailPath(row.count.id)}>{row.references.code}</Link> },
@@ -122,7 +127,7 @@ function CountObservation({ details, balanceId, onDone, onClose }: { details: Co
       setOperation(observeCount(details.count.id, { expectedRevision: details.count.revision, balanceId, quantityBase, reason: reason.trim(), documentReference: reference.trim() })); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa hasil hitung.') }
   }
-  return <><ResourceForm title={<>{countLineLabel(details, balanceId)}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan hasil hitung" confirmLabel="Simpan hasil fisik" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+  return <><ResourceForm editing title={<>{countLineLabel(details, balanceId)}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan hasil hitung" confirmLabel="Simpan hasil fisik" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
     summary={<><p>{details.references.code} · Revisi {details.count.revision}</p><p>{countLineLabel(details, balanceId)}: {quantity} {entry.baseUnit === 'MM' ? 'm' : 'unit'}</p>
       <p>{reason} · Bukti: {reference}</p><p>Hasil ini menjadi catatan tetap untuk putaran berjalan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau hasil hitung</Button></>}><form id={resourceFormId} className="stack" aria-label="Catat hasil hitung" onSubmit={prepare}>
     <p>{locationLabel(details.references.location)} · Penghitung: {countCounterLabel(details, entry.counterId)}</p>

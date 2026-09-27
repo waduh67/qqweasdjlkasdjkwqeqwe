@@ -1,3 +1,5 @@
+import { useId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
@@ -66,7 +68,7 @@ function CaseEvidence({ source, batch, epoch, editable, latest, onSaved, onRefre
   return <><section className="card stack" aria-label="Bukti pemeriksaan kasus"><h3>Bukti pemeriksaan</h3>
     <p>Gunakan dokumen atau foto asli yang membuktikan identitas, kuantitas, satuan, dan kepemilikan kasus ini.</p>
     <div className="row wrap"><Button onClick={files.reload}>Muat ulang bukti</Button>{editable && <Button onClick={() => setUpload(!upload)}>{upload ? 'Tutup formulir unggah' : 'Tambah bukti'}</Button>}</div>
-    {editable && upload && <EvidenceUpload source={source} batch={batch} epoch={epoch} onSaved={() => { setUpload(false); setPage(0); files.reload() }} onRefresh={onRefresh} />}
+    {editable && upload && <EvidenceUpload onClose={() => setUpload(false)} source={source} batch={batch} epoch={epoch} onSaved={() => { setUpload(false); setPage(0); files.reload() }} onRefresh={onRefresh} />}
     <WarehouseState {...files}>{data => <>
       {data.items.length === 0 && <p>Belum ada bukti pada halaman ini. Unggah bukti asli sebelum menyimpan keputusan.</p>}
       <ul className="stack">{data.items.map(file => <li key={file.id} className="stack">
@@ -86,7 +88,8 @@ function CaseEvidence({ source, batch, epoch, editable, latest, onSaved, onRefre
     {editable && <ResolutionForm source={source} batch={batch} epoch={epoch} latest={latest} files={selected} onSaved={onSaved} onRefresh={onRefresh} />}
   </>
 }
-function EvidenceUpload({ source, batch, epoch, onSaved, onRefresh }: { source: MigrationCase; batch: string; epoch: number; onSaved: () => void; onRefresh: () => void }) {
+function EvidenceUpload({ onClose, source, batch, epoch, onSaved, onRefresh }: { onClose: () => void; source: MigrationCase; batch: string; epoch: number; onSaved: () => void; onRefresh: () => void }) {
+  const formId = useId()
   const [file, setFile] = useState<File | null>(null), [label, setLabel] = useState(''), [error, setError] = useState<unknown>(null)
   const [operation, setOperation] = useState<WarehouseCommand<MigrationEvidence> | null>(null)
   function submit(event: FormEvent) {
@@ -94,20 +97,22 @@ function EvidenceUpload({ source, batch, epoch, onSaved, onRefresh }: { source: 
     if (!file || !label.trim() || migrationTextInvalid(label)) return
     try { setOperation(uploadMigrationEvidence(batch, source, epoch, label, file)) } catch (caught) { setError(caught) }
   }
-  return <form className="stack" onSubmit={submit}>
+  return <ResourceForm title="Unggah bukti pemeriksaan" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Unggah bukti pemeriksaan" command={operation} confirmLabel="Unggah bukti"
+      summary={<p>{label} · {file?.name} untuk {migrationCaseLabel(source)}. Bukti yang tersimpan menjadi bagian riwayat pemeriksaan.</p>}
+      onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />} footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" disabled={!file || !label.trim() || migrationTextInvalid(label)}>Periksa unggahan</Button></>}><form id={formId} className="stack" onSubmit={submit}>
     <TextField label="Nama bukti" required maxLength={200} value={label} onChange={(_, data) => setLabel(data.value)} />
     <label className="stack">File bukti (PDF, PNG, JPEG; maksimal 15 MiB)
       <input type="file" accept="application/pdf,image/png,image/jpeg" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
-    <Button type="submit" disabled={!file || !label.trim() || migrationTextInvalid(label)}>Periksa unggahan</Button>
+    
     {error !== null && <p role="alert" className="error">{warehouseError(error)}</p>}
-    {operation && <WarehouseCommandDialog title="Unggah bukti pemeriksaan" command={operation} confirmLabel="Unggah bukti"
-      summary={<p>{label} · {file?.name} untuk {migrationCaseLabel(source)}. Bukti yang tersimpan menjadi bagian riwayat pemeriksaan.</p>}
-      onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />}
-  </form>
+    
+  </form></ResourceForm>
 }
 function ResolutionForm({ source, batch, epoch, latest, files, onSaved, onRefresh }: { source: MigrationCase; batch: string; epoch: number;
   latest: MigrationResolution | null; files: MigrationEvidence[]; onSaved: () => void; onRefresh: () => void;
 }) {
+  const formId = useId()
+  const [open, setOpen] = useState(false)
   const { can } = useCan(), pending = migrationPending(source)
   const [kind, setKind] = useState<MigrationResolutionInput['kind']>(pending ? 'CANCEL_PENDING' : 'PROVENANCE_ONLY')
   const [reason, setReason] = useState(''), [sku, setSku] = useState<WarehouseSku | null>(null), [unit, setUnit] = useState(''), [owned, setOwned] = useState(false)
@@ -124,7 +129,13 @@ function ResolutionForm({ source, batch, epoch, latest, files, onSaved, onRefres
       kind, reason, evidenceIds: files.map(file => file.id), stock: kind === 'BASELINE_STOCK' && sku ? { skuId: sku.id, sourceUnit: unit as 'EA' | 'MM' | 'M', legalOwner: 'ISP' } : null,
       duplicateCaseId: kind === 'DUPLICATE' ? duplicate?.id ?? null : null }))
   }
-  return <form className="card stack" onSubmit={submit} aria-label="Keputusan pemeriksaan"><h3>{latest ? 'Tambahkan keputusan pemeriksaan' : 'Catat keputusan pemeriksaan'}</h3>
+  if (!open) return <Button disabled={!files.length} onClick={() => setOpen(true)}>Catat keputusan pemeriksaan</Button>
+  return <ResourceForm title="Simpan keputusan pemeriksaan" onClose={() => setOpen(false)} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan keputusan pemeriksaan" command={operation} confirmLabel="Simpan keputusan"
+      summary={<div className="stack"><p>{resolutionLabels[kind]} untuk {migrationCaseLabel(source)}.</p><p>{reason}</p>
+        {kind === 'BASELINE_STOCK' && <MigrationStockPreview source={source} unit={unit} />}
+        {kind === 'DUPLICATE' && duplicate && <p>Kasus asli: {migrationCaseLabel(duplicate)}</p>}
+        <p>Bukti: {files.map(file => file.label).join(', ')}</p></div>}
+      onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />} footer={<><Button onClick={() => setOpen(false)}>Batal</Button><Button form={formId} type="submit" variant="primary" disabled={!valid}>Tinjau keputusan</Button></>}><form id={formId} className="stack" onSubmit={submit} aria-label="Keputusan pemeriksaan"><h3>{latest ? 'Tambahkan keputusan pemeriksaan' : 'Catat keputusan pemeriksaan'}</h3>
     <p>Keputusan disimpan sebagai usulan berbukti. Saldo tersedia baru dibukukan setelah persetujuan independen.</p>
     {latest && <p>Keputusan terbaru: {resolutionLabels[latest.kind]} · Revisi {latest.revision}. Keputusan sebelumnya tetap tersimpan.</p>}
     <SelectField label="Hasil pemeriksaan" value={kind} onChange={(_, data) => setKind(data.value as MigrationResolutionInput['kind'])}>
@@ -155,14 +166,9 @@ function ResolutionForm({ source, batch, epoch, latest, files, onSaved, onRefres
     <TextareaField label="Alasan dan rujukan bukti" required maxLength={2000} value={reason} onChange={(_, data) => setReason(data.value)} />
     {migrationTextInvalid(reason) && <p className="error" role="alert">Tulis alasan dalam satu paragraf tanpa baris baru atau karakter kontrol.</p>}
     {!files.length && <p>Pilih minimal satu bukti dari daftar di atas.</p>}
-    <Button type="submit" variant="primary" disabled={!valid}>Tinjau keputusan</Button>
-    {operation && <WarehouseCommandDialog title="Simpan keputusan pemeriksaan" command={operation} confirmLabel="Simpan keputusan"
-      summary={<div className="stack"><p>{resolutionLabels[kind]} untuk {migrationCaseLabel(source)}.</p><p>{reason}</p>
-        {kind === 'BASELINE_STOCK' && <MigrationStockPreview source={source} unit={unit} />}
-        {kind === 'DUPLICATE' && duplicate && <p>Kasus asli: {migrationCaseLabel(duplicate)}</p>}
-        <p>Bukti: {files.map(file => file.label).join(', ')}</p></div>}
-      onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />}
-  </form>
+    
+    
+  </form></ResourceForm>
 }
 function ResolutionHistory({ source, batch, first }: { source: MigrationCase; batch: string; first: WarehousePage<MigrationResolution> }) {
   const [page, setPage] = useState(0)

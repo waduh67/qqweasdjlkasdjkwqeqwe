@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -53,13 +54,13 @@ it('creates reviewed assignments using quantity-free positions and current named
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/counts')
   fireEvent.click(screen.getByRole('button', { name: 'Buat stock opname' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Lokasi stock opname' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi stock opname' }), { target: { value: id.location } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi stock opname' }), { target: { value: id.location } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang dihitung 1' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang dihitung 1' }), { target: { value: id.balance } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Penghitung 1' }), { target: { value: id.counter } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang dihitung 1' }), { target: { value: id.balance } })
+  await selectControl(screen.getByRole('combobox', { name: 'Penghitung 1' }), { target: { value: id.counter } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan stock opname' }), { target: { value: 'Pemeriksaan akhir bulan' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau stock opname' }))
-  expect((await screen.findByRole('dialog', { name: 'Simpan draft stock opname' })).textContent).toContain('Penghitung A')
+  expect((await screen.findByRole('region', { name: 'Simpan draft stock opname' })).textContent).toContain('Penghitung A')
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan stock opname' })); await screen.findByRole('heading', { name: 'CNT-001' })
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
@@ -140,7 +141,7 @@ it('starts an empty draft without inventing a current revision and pages immutab
   await screen.findByRole('button', { name: 'Ajukan hasil hitung' })
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ expectedRevision: 0 })
-  fireEvent.click(screen.getByText('Riwayat hasil hitung')); const history = screen.getByText('Riwayat hasil hitung').closest('details')!
+  fireEvent.click(screen.getByText('Riwayat hasil hitung')); const history = screen.getByText('Riwayat hasil hitung').closest<HTMLElement>('.resource-disclosure')!
   await within(history).findByText('Bukti: LEMBAR-BARU'); fireEvent.click(within(history).getByRole('button', { name: 'Berikutnya' }))
   await within(history).findByText('Bukti: LEMBAR-LAMA'); expect(historyPage).toBe(1)
 })
@@ -169,7 +170,7 @@ it('hydrates all 100 saved assignments beyond picker pages and reviews one exact
   const firstRow = (await screen.findByText('Posisi hitung 1', { selector: 'legend' })).closest('fieldset')!
   expect(within(firstRow).getByRole('combobox', { name: 'Barang dihitung 1' })).toHaveProperty('value', positions[0].id)
   expect(screen.queryByText('Posisi hitung 100', { selector: 'legend' })).toBeNull()
-  fireEvent.change(screen.getByRole('combobox', { name: 'Halaman posisi hitung' }), { target: { value: '3' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Halaman posisi hitung' }), { target: { value: '3' } })
   const lastRow = (await screen.findByText('Posisi hitung 100', { selector: 'legend' })).closest('fieldset')!
   expect(within(lastRow).getByRole('combobox', { name: 'Barang dihitung 100' })).toHaveProperty('value', positions[99].id)
   expect(within(lastRow).getByRole('combobox', { name: 'Penghitung 100' })).toHaveProperty('value', id.counter)
@@ -177,7 +178,7 @@ it('hydrates all 100 saved assignments beyond picker pages and reviews one exact
   expect(reasonInput).toHaveProperty('value', 'Pemeriksaan akhir bulan')
   fireEvent.change(reasonInput, { target: { value: 'Perubahan jadwal penghitungan' } })
   fireEvent.click(screen.getByText('Tinjau stock opname', { selector: 'button' }))
-  const confirmation = await screen.findByRole('dialog', { name: 'Simpan draft stock opname' })
+  const confirmation = await screen.findByRole('region', { name: 'Simpan draft stock opname' })
   expect(confirmation.textContent).toContain('Revisi 4')
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
   fireEvent.click(within(confirmation).getByRole('button', { name: 'Simpan stock opname' }))
@@ -207,10 +208,10 @@ it('requires reselection for unavailable saved positions or counters and reloads
   expect(screen.getByText(/Penghitung tersimpan tidak lagi memenuhi syarat/)).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau stock opname' }))
   expect((screen.getByRole('combobox', { name: 'Barang dihitung 1' }) as HTMLSelectElement).checkValidity()).toBe(false)
-  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true')
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang dihitung 1' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang dihitung 1' }), { target: { value: id.balance } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Penghitung 1' }), { target: { value: id.counter } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang dihitung 1' }), { target: { value: id.balance } })
+  await selectControl(screen.getByRole('combobox', { name: 'Penghitung 1' }), { target: { value: id.counter } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau stock opname' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Simpan stock opname' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Muat ulang dokumen' }))

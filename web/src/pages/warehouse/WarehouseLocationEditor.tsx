@@ -87,7 +87,7 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
     <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan lokasi" confirmLabel="Simpan lokasi" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{kinds[kind]} · {areas.find(area => area.id === areaId)?.name ?? (areaId ? 'Area tersimpan' : 'Tanpa area')}</p>
         <p>{parent ? `Induk: ${parent.label}` : 'Lokasi utama'}</p>{custodian && <p>{custodian.label}</p>}<p>{issueEligible ? 'Dapat menjadi sumber pengeluaran' : 'Tidak menjadi sumber pengeluaran'}</p></>} />)} title={readOnly ? 'Detail lokasi' : row ? 'Ubah lokasi' : 'Tambah lokasi'} onClose={onClose} footer={<>
-      <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>Tinjau perubahan</Button>}
+      <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
     </>}>
       <form id={formId} className="stack" onSubmit={prepare}>
         {row && <p className="muted">Tersimpan: {row.name ?? row.code} · Revisi {row.revision}</p>}
@@ -118,6 +118,6 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
         {error && <p role="alert" className="error">{error}</p>}
       </form>
     </ResourceForm>
-    
+
   </>
 }

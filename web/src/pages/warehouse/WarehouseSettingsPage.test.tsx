@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -38,13 +39,13 @@ it('configures an independent named approver from an empty policy with captured 
   }); vi.stubGlobal('fetch', fetch); show()
   fireEvent.click(await screen.findByRole('button', { name: 'Buat kebijakan persetujuan' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Lokasi kebijakan' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi kebijakan' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi kebijakan' }), { target: { value: id.source } })
   fireEvent.click(screen.getByRole('button', { name: 'Tambahkan lokasi kebijakan' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Pemeriksa aturan 1 tahap 1' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Pemeriksa aturan 1 tahap 1' }), { target: { value: id.checker } })
+  await selectControl(screen.getByRole('combobox', { name: 'Pemeriksa aturan 1 tahap 1' }), { target: { value: id.checker } })
   fireEvent.click(screen.getByRole('button', { name: 'Tambah pemeriksa aturan 1 tahap 1' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau kebijakan' }))
-  const dialog = await screen.findByRole('dialog', { name: 'Konfirmasi perubahan kebijakan' })
+  const dialog = await screen.findByRole('region', { name: 'Konfirmasi perubahan kebijakan' })
   expect(dialog.textContent).toContain('Tersimpan · Versi 0'); expect(dialog.textContent).toContain('Rencana perubahan'); expect(dialog.textContent).toContain('Pemeriksa gudang')
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan kebijakan' }))
@@ -80,9 +81,9 @@ it('adds a role-bound second tier but rejects a decreasing threshold before send
   fireEvent.click(await screen.findByRole('button', { name: 'Ubah kebijakan persetujuan' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tambah tahap aturan 1' }))
   fireEvent.change(screen.getByRole('textbox', { name: 'Batas nilai minimum aturan 1 tahap 2' }), { target: { value: '50' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Jenis pemeriksa aturan 1 tahap 2' }), { target: { value: 'ROLE' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Jenis pemeriksa aturan 1 tahap 2' }), { target: { value: 'ROLE' } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Pemeriksa aturan 1 tahap 2' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Pemeriksa aturan 1 tahap 2' }), { target: { value: id.other } })
+  await selectControl(screen.getByRole('combobox', { name: 'Pemeriksa aturan 1 tahap 2' }), { target: { value: id.other } })
   fireEvent.click(screen.getByRole('button', { name: 'Tambah pemeriksa aturan 1 tahap 2' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau kebijakan' }))
   expect(screen.getByRole('alert').textContent).toContain('meningkat')

@@ -18,7 +18,13 @@ User requirements: Azure-style warehouse navigation/actions/filters; integrated 
 - [ ] Focused functional tests, Firefox desktop/mobile and screenshot comparison with reference.
 - [ ] Independent review, coherent commits/push, guarded web deployment and production read-only verification.
 
-Current changes are in progress, not accepted or deployed. Shared components, 15 warehouse flow files, master editors, table line flattening, Fluent disclosures, and initial customer/tenant/plan review steps compile. Focused shared tests: 21 passed. First broad frontend run: 553 passed / 69 failed; most failures reference removed native selects, disclosure DOM or nested review dialogs and require interaction updates plus regression triage. Do not deploy this checkpoint. Firefox preview is running on owned ports 14188 / 17880; screenshot comparison and remaining page coverage are still in progress.
+Current revision is in progress and has not been deployed. The first checkpoint is `57ab2347`.
+
+The shared ResourceForm now keeps Basics mounted during review, preserves captured commands during uncertain retries, and uses a fixed Azure-style footer. Warehouse masters, operational forms, receipt evidence, provenance decisions/openings, and the main nonwarehouse resource editors now use it. Customer, catalog, tenant, IAM, network, hotspot, provisioning, map asset/cable and WhatsApp template editors have explicit review gates before their existing APIs. Searchable picks use one paged combobox; list command bars and table cells are being standardized across the app.
+
+Latest TypeScript + production build passed (`build-provenance.log`). Actual local Firefox SKU/customer create tests passed, including no-write review, retained Back values, native validation and mobile overflow. Regression run 3: 164 passed / 13 failed in the focused 177-test set. Remaining failures mostly reflect changed review/disclosure semantics or labels; finalization and some contextual forms/actions still need coverage. Modal focus lifecycle defects found during QA were fixed, including StrictMode replay and missing/disabled launcher handling. Do not deploy this checkpoint.
+
+Owned Firefox preview remains on ports 14188 / 17880. Continue with the remaining coverage inventory, meaningful regression fixes, final screenshots and independent audit. Private scripts should not be rerun blindly: several are one-time AST/source migrations. Use current files as the source of truth.
 
 ## Recovery
 

@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
@@ -269,6 +270,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     setDraft(next)
     setInitialDraft(next)
   }
+  const creation = useCreationReview(draft != null, !!draft?.id)
   const closeDraft = () => {
     setRevealSecret(false)
     setDraft(null)
@@ -311,13 +313,14 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       areaIds: draft.areaIds,
       collectorId: draft.collectorId,
     }
+    if (creation.beforeSave()) return
     void run(
       async () => {
         await (draft.id ? updateNas(draft.id, body) : createNas(body))
         closeDraft()
       },
       draft.id ? `BRAS ${draft.name} diperbarui` : `BRAS ${draft.name} didaftarkan`,
-    )
+    ).finally(creation.finish)
   }
 
   /**
@@ -444,6 +447,9 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       </div>
 
       <Blade
+        creation={{ ...creation, prepare: save, summary: <CreationSummary rows={[
+          ['Nama', draft?.name], ['Vendor', draft?.vendor], ['Alamat', draft?.address], ['NAS ID', draft?.nasIdentifier], ['Status', draft?.enabled ? 'Aktif' : 'Nonaktif'],
+        ]} /> }}
         open={draft != null}
         title={draft?.id ? 'Ubah router BRAS' : 'Daftarkan router BRAS'}
         subtitle="Identitas router dan akses RADIUS."

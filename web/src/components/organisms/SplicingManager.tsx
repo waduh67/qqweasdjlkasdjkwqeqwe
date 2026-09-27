@@ -979,7 +979,7 @@ export function SplicingManager({
                     mengerjakannya, dan kapan. Sambungan lama (dibuat sebelum ini dicatat)
                     tak punya pelaksana — waktunya pun ikut disembunyikan, sebab yang
                     tersimpan cuma saat kolomnya ditambahkan, bukan saat serat dilas. */}
-                <TableCell ><span className="stack" style={{ gap: '0.15rem' }}>
+                <TableCell ><span className="table-inline-values">
                   {row.workOrderCode ? (
                     <Badge tone="accent">{row.workOrderCode}</Badge>
                   ) : (

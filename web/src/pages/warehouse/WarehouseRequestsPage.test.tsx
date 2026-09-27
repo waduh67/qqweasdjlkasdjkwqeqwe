@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -113,7 +114,7 @@ it('allows an authorized planner to declare NONE without SKU access and requires
     return reader(path, { ...materialSummaryFixture, materialMode: saved ? 'NONE' : 'MATERIAL_REQUIRED', revisions: { ...materialSummaryFixture.revisions, planRevision: saved ? 1 : 0 }, demandState: 'DRAFT', plan: saved ? plan : null, lines: [], demandDocumentId: null, demandRevision: null, noMaterialReason: saved ? plan.reason : null }, [])
   }); vi.stubGlobal('fetch', fetch); show()
   fireEvent.click(await screen.findByRole('button', { name: 'Susun rencana material' }))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Kebutuhan material' }), { target: { value: 'NONE' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Kebutuhan material' }), { target: { value: 'NONE' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan tanpa material' }), { target: { value: plan.reason } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau rencana' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Simpan rencana' }))

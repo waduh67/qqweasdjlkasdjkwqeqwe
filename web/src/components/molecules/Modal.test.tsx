@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { StrictMode, useState } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
@@ -19,8 +19,10 @@ describe('imperative Fluent dialog focus', () => {
     const user = userEvent.setup()
     const launcher = screen.getByRole('button', { name: 'Tinjau perubahan' })
     await user.click(launcher)
+    await waitFor(() => expect(launcher.closest('main')?.closest('[aria-hidden="true"]')).not.toBeNull())
     await user.click(await screen.findByRole('button', { name: 'Selesai' }))
     await waitFor(() => expect(document.activeElement).toBe(launcher))
+    expect(screen.getByRole('main', { name: 'Pengaturan' })).toBeTruthy()
   })
   it('returns focus to the page when saving disables the still-connected launcher', async () => {
     render(<Example disableOnClose />)
@@ -30,4 +32,15 @@ describe('imperative Fluent dialog focus', () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('main', { name: 'Pengaturan' })))
     expect(screen.getByRole('main').hasAttribute('tabindex')).toBe(false)
   })
+  it('keeps the active dialog accessible through StrictMode effect replay', async () => {
+    render(<StrictMode><Example /></StrictMode>)
+    const user = userEvent.setup()
+    const launcher = screen.getByRole('button', { name: 'Tinjau perubahan' })
+    await user.click(launcher)
+    await waitFor(() => expect(launcher.closest('main')?.closest('[aria-hidden="true"]')).not.toBeNull())
+    expect(screen.getByRole('dialog', { name: 'Tinjau perubahan' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Selesai' }))
+    await waitFor(() => expect(screen.getByRole('main', { name: 'Pengaturan' })).toBeTruthy())
+  })
+
 })

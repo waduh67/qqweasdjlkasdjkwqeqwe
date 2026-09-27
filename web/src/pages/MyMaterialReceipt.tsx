@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useRef, useState, type FormEvent } from 'react'
 import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
 import { acknowledgeMyMaterial, getMyMaterialContext, getMyMaterialIssue, type MyMaterialContext, type MyMaterialIssue } from '@/api/warehouse/myMaterials'
@@ -12,6 +14,7 @@ import { myReceiptInput } from './myMaterialDraft'
 export function MyMaterialReceipt({ context, issue, actor, online, onDone, onClose }: {
   context: MyMaterialContext; issue: MyMaterialIssue; actor: string; online: boolean; onDone: () => void; onClose: () => void
 }) {
+  const resourceFormId = useResourceFormId()
   const [lineId, setLineId] = useState(''), [serial, setSerial] = useState<string | null>(null), [accepted, setAccepted] = useState('')
   const [missing, setMissing] = useState('0'), [rejected, setRejected] = useState('0'), [reason, setReason] = useState(''), [reference, setReference] = useState('')
   const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false), [review, setReview] = useState<WarehouseCommand<unknown> | null>(null), active = useRef(false)
@@ -33,8 +36,11 @@ export function MyMaterialReceipt({ context, issue, actor, online, onDone, onClo
     } catch (caught) { setError(caught instanceof Error ? caught.message : warehouseError(caught)) }
     finally { active.current = false; setBusy(false) }
   }
-  return <><form className="card stack" aria-label="Penerimaan material saya" onSubmit={event => void submit(event)}>
-    <h3>Terima {issue.code}</h3><p>Pengirim: {issue.sender.name} · Penerima: {issue.receiver.name} · Revisi {issue.revision}</p>
+  return <><ResourceForm title={<>Terima {issue.code}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi penerimaan material" command={review} disabled={!online} confirmLabel="Terima material" onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
+    <p>{issue.code} · Revisi {issue.revision} · {source?.sku.name} · {source?.serial ?? source?.lotCode}</p>
+    <p>Diterima {accepted}, kurang {missing}, ditolak {rejected} {source?.baseUnit === 'MM' ? 'm' : 'unit'}.</p><p>Bukti: {reference}</p>
+  </>} />} footer={<><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={busy || !!review || !online}>{busy ? 'Memeriksa pengiriman…' : 'Tinjau penerimaan'}</Button></>}><form id={resourceFormId} className="stack" aria-label="Penerimaan material saya" onSubmit={event => void submit(event)}>
+    <p>Pengirim: {issue.sender.name} · Penerima: {issue.receiver.name} · Revisi {issue.revision}</p>
     <p>Draf di tab ini. Stok baru menjadi milik tanggung jawab Anda setelah penerimaan dikonfirmasi server.</p>
     {pending.some(line => line.serial) && <MaterialScanner onScan={scan} disabled={busy || !!review} />}
     <SelectField label="Barang yang diterima" required value={lineId} disabled={busy || !!review} onChange={(_, data) => { setLineId(data.value); setSerial(null); setAccepted('') }}>
@@ -48,9 +54,6 @@ export function MyMaterialReceipt({ context, issue, actor, online, onDone, onClo
       <p>Jumlah kurang atau ditolak tetap tercatat dalam perjalanan untuk ditindaklanjuti petugas. Penerimaan ini memerlukan jumlah diterima lebih dari nol.</p></>}
     <TextareaField label="Alasan selisih" value={reason} maxLength={1000} disabled={busy || !!review} onChange={(_, data) => setReason(data.value)} />
     <TextField label="Referensi bukti penerimaan" required value={reference} maxLength={500} disabled={busy || !!review} onChange={(_, data) => setReference(data.value)} />
-    {error && <p role="alert">{error}</p>}<div className="row wrap"><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button disabled={busy || !!review || !online} onClick={onDone}>Muat ulang dokumen</Button><Button type="submit" variant="primary" disabled={busy || !!review || !online}>{busy ? 'Memeriksa pengiriman…' : 'Tinjau penerimaan'}</Button></div>
-  </form>{review && <WarehouseCommandDialog title="Konfirmasi penerimaan material" command={review} disabled={!online} confirmLabel="Terima material" onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
-    <p>{issue.code} · Revisi {issue.revision} · {source?.sku.name} · {source?.serial ?? source?.lotCode}</p>
-    <p>Diterima {accepted}, kurang {missing}, ditolak {rejected} {source?.baseUnit === 'MM' ? 'm' : 'unit'}.</p><p>Bukti: {reference}</p>
-  </>} />}</>
+    {error && <p role="alert">{error}</p>}<div className="row wrap"><Button disabled={busy || !!review || !online} onClick={onDone}>Muat ulang dokumen</Button></div>
+  </form></ResourceForm></>
 }

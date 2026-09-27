@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
@@ -265,6 +266,7 @@ function SitesTab() {
   const { items, loading, reload, run } = useList<SiteView>('/api/sites')
   const empty = { code: '', name: '', address: '', longitude: '', latitude: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const creation = useCreationReview(draft != null)
   const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
   const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
   const closeDraft = () => { setDraft(null); setInitialDraft(null) }
@@ -349,11 +351,24 @@ function SitesTab() {
     dividerBefore: canDelete,
   })
 
-  return (
+  
+  const saveDraft = () => {
+    if (!draft || creation.beforeSave()) return
+    void run(async () => {
+                  await api.post('/api/sites', {
+                    code: draft!.code,
+                    name: draft!.name,
+                    address: draft!.address || null,
+                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                  })
+                  closeDraft()
+                }).finally(creation.finish)
+  }
+return (
     <div className="stack">
       <CommandBar primary={primary} actions={actions} />
 
-      <Blade
+      <Blade creation={{ ...creation, prepare: saveDraft, summary: <CreationSummary rows={[['Kode', draft?.code], ['Nama', draft?.name], ['Alamat', draft?.address]]} /> }}
         open={draft != null}
         title="Tambah site"
         size="sm"
@@ -363,17 +378,7 @@ function SitesTab() {
           <>
             <Button
               variant="primary"
-              onClick={() =>
-                void run(async () => {
-                  await api.post('/api/sites', {
-                    code: draft!.code,
-                    name: draft!.name,
-                    address: draft!.address || null,
-                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
-                  })
-                  closeDraft()
-                })
-              }
+              onClick={saveDraft} disabled={creation.busy}
             >
               Simpan
             </Button>
@@ -505,6 +510,7 @@ function OltsTab() {
   }
   type OltDraft = typeof empty
   const [draft, setDraft] = useState<OltDraft | null>(null)
+  const creation = useCreationReview(draft != null)
   const [initialDraft, setInitialDraft] = useState<OltDraft | null>(null)
   const openDraft = (d: OltDraft) => { setDraft(d); setInitialDraft(d) }
   const closeDraft = () => { setDraft(null); setInitialDraft(null) }
@@ -662,22 +668,10 @@ function OltsTab() {
     dividerBefore: canDelete,
   })
 
-  return (
-    <div className="stack">
-      <CommandBar primary={primary} actions={actions} />
-
-      <Blade
-        open={draft != null}
-        title="Tambah OLT"
-        size="lg"
-        dirty={dirty}
-        onClose={closeDraft}
-        footer={
-          <>
-            <Button
-              variant="primary"
-              onClick={() =>
-                void run(async () => {
+  
+  const saveDraft = () => {
+    if (!draft || creation.beforeSave()) return
+    void run(async () => {
                   const { longitude, latitude } = draft!
                   await api.post('/api/olts', {
                     siteId: draft!.siteId,
@@ -702,8 +696,23 @@ function OltsTab() {
                         : null,
                   })
                   closeDraft()
-                })
-              }
+                }).finally(creation.finish)
+  }
+return (
+    <div className="stack">
+      <CommandBar primary={primary} actions={actions} />
+
+      <Blade creation={{ ...creation, prepare: saveDraft, summary: <CreationSummary rows={[['Kode', draft?.code], ['Nama', draft?.name], ['Vendor', draft?.vendor], ['Model', draft?.model], ['IP manajemen', draft?.managementIp]]} /> }}
+        open={draft != null}
+        title="Tambah OLT"
+        size="lg"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
+            <Button
+              variant="primary"
+              onClick={saveDraft} disabled={creation.busy}
             >
               Simpan
             </Button>

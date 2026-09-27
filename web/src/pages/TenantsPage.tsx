@@ -221,7 +221,7 @@ export function TenantsPage() {
               closeDraft()
               await reload()
             }).catch(err => setFormError(err instanceof ApiError ? err.message : 'Gagal menyimpan tenant. Periksa data dan coba lagi.'))
-              .finally(() => setSaving(false))
+              .finally(() => { setSaving(false); creation.finish() })
           }}>
             {formError && <p className="error" role="alert">{formError}</p>}
             <FormSection title="Identitas organisasi" description="Nama ditampilkan di aplikasi. Slug dipakai admin saat masuk ke tenant.">

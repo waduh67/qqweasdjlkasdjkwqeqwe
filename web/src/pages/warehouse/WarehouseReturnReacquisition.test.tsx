@@ -79,7 +79,7 @@ it('binds the persisted signature of the original WO and separates applied title
 })
 it('stores a reviewed request and resumes its persisted approval link without changing customer title', async () => {
   const state = server(); show(); await prepare()
-  const dialog = await screen.findByRole('dialog', { name: 'Konfirmasi permintaan alih kepemilikan' })
+  const dialog = await screen.findByRole('region', { name: 'Konfirmasi permintaan alih kepemilikan' })
   expect(dialog.textContent).toContain('Kepemilikan dan stok tersedia belum berubah')
   expect(state.fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan permintaan alih kepemilikan' }))

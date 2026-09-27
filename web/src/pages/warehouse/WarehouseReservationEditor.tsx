@@ -46,7 +46,7 @@ export function WarehouseReservationEditor({ summary, onDone, onClose }: { summa
     {error && <p className="error" role="alert">{error}</p>}
     <div className="row wrap"></div>
   </form></ResourceForm>
-    
+
   </>
 }
 function positionLabel(row: StockPosition) { return `${row.name} · ${row.serial ?? `Potongan ${row.stockIdentityId.slice(0, 8)}`} · ${row.locationName ?? 'Lokasi tanpa nama'} · ${formatBaseQuantity(row.available.quantityBase, row.available.baseUnit)} ${displayUnit(row.available.baseUnit)}` }

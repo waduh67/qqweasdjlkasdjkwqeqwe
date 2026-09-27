@@ -1,3 +1,4 @@
+import { custodianLabels } from './stockPresentation'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
@@ -9,7 +10,7 @@ import { useAuth } from '@/auth/useAuth'
 import { Button, SelectField, TextareaField } from '@/components/atoms'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { WarehousePicker } from '@/components/organisms/warehouse/WarehousePicker'
-import { WarehouseStatus } from '@/components/organisms/warehouse/WarehouseStatus'
+import { WarehouseStatus, warehouseStatusLabel } from '@/components/organisms/warehouse/WarehouseStatus'
 import { WarehouseDenied } from '@/components/organisms/warehouse/WarehouseState'
 import { locationLabel, receiptLocations } from './receiptChoices'
 import { countItemLabel, countPersonLabel } from './countPresentation'
@@ -39,7 +40,7 @@ export function WarehouseCountEditor({ initial, onSaved, onClose, onReload = onC
       setOperation(initial ? updateCount(initial.details.count.id, initial.details.count.revision, draft) : createCount(draft)); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa isian stock opname.') }
   }
-  return <><ResourceForm title={<>{initial ? 'Ubah draft stock opname' : 'Stock opname baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft stock opname" confirmLabel="Simpan stock opname" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+  return <><ResourceForm editing={!!initial} title={<>{initial ? 'Ubah draft stock opname' : 'Stock opname baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft stock opname" confirmLabel="Simpan stock opname" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
     summary={<>{initial && <p>{initial.details.references.code} · Revisi {initial.details.count.revision}</p>}<p>{location && locationLabel(location)}</p><p>{reason}</p><ul>{rows.map(row => <li key={row.key}>{row.position && countItemLabel(row.position.item)} · posisi {row.position?.id} · {row.counter && countPersonLabel(row.counter)}</li>)}</ul><p>Draft belum membuka penghitungan dan belum mengubah stok.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!location}>Tinjau stock opname</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft stock opname" onSubmit={prepare}>
     {initial && <p>Revisi {initial.details.count.revision}. Perubahan hanya tersedia sebelum penghitungan dimulai; riwayat tersimpan tetap utuh.</p>}
     <p>Penghitungan mencakup posisi yang dipilih pada satu lokasi. Petugas mencatat hasil fisik tanpa angka pembanding stok buku.</p>
@@ -63,7 +64,7 @@ function CountEntryEditor({ row, number, locationId, update, remove }: { row: Ro
     {!row.position && row.priorLabel && <p role="status">Posisi tersimpan {row.priorLabel} tidak lagi tersedia untuk dipilih. Pilih kembali posisi yang akan dihitung.</p>}
     {row.counterValid === false && <p role="status">Penghitung tersimpan tidak lagi memenuhi syarat. Pilih penghitung dengan akses lokasi yang aktif.</p>}
     <WarehousePicker label={`Barang dihitung ${number}`} load={positions} value={row.position} onChange={position => update({ position })}
-      name={position => `${countItemLabel(position.item)} · ${position.condition} · ${position.legalOwner} · ${position.custodianKind} · ${position.id}`} />
+      name={position => `${countItemLabel(position.item)} · ${warehouseStatusLabel(position.condition)} · ${warehouseStatusLabel(position.legalOwner)} · ${custodianLabels[position.custodianKind]} · ${position.id.slice(0, 8)}`} />
     {row.position && <><p><WarehouseStatus status={row.position.condition} /> · <WarehouseStatus status={row.position.legalOwner} /> · <WarehouseStatus status={row.position.status} /></p>
       <p className="muted" style={{ overflowWrap: 'anywhere' }}>Identitas: {row.position.stockIdentityId} · Pemegang: {row.position.custodianId}</p></>}
     <WarehousePicker label={`Penghitung ${number}`} load={counters} value={row.counter} onChange={counter => update({ counter, counterValid: true })} name={countPersonLabel} />

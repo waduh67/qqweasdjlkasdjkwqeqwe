@@ -38,7 +38,7 @@ export function WarehouseDispositionForm({ details, original, onClose, onDone, o
       setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa permintaan disposisi.') }
   }
-  return <><ResourceForm title={title} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi permintaan disposisi" confirmLabel="Simpan permintaan disposisi" command={operation} onDone={onDone} onReload={onReload} onClose={() => setOperation(null)}
+  return <><ResourceForm editing title={title} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi permintaan disposisi" confirmLabel="Simpan permintaan disposisi" command={operation} onDone={onDone} onReload={onReload} onClose={() => setOperation(null)}
     summary={<><p>{details.references.code} · Retur revisi {returned.revision}</p><p>{original ? `Koreksi ${original.code} revisi ${original.revision}` : action === 'LOSS' ? 'Kehilangan' : 'Scrap barang rusak'}</p>
       <p>{returnItemLabel(details.references.item)} · <WarehouseQuantity value={returned.quantityBase} unit={returned.baseUnit} /> → {target && locationLabel(target)}</p><p>{reason}</p><p>Bukti: {reference}</p>
       <p>Dokumen diajukan untuk persetujuan independen. Menyimpan permintaan belum membukukan perpindahan barang.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal disposisi</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau permintaan disposisi</Button></>}><form id={resourceFormId} className="stack" aria-label={title} onSubmit={prepare}><h3>{title}</h3>

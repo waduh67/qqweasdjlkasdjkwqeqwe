@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -30,12 +31,12 @@ it('opens suggested customer review without provisioning until an eligible seria
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Terima' }))
   expect(fetch.mock.calls.filter(([, input]) => input?.method === 'POST')).toHaveLength(0)
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO pemasangan' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'WO pemasangan' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'WO pemasangan' }), { target: { value: id.source } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Perangkat yang sudah diterima' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Perangkat yang sudah diterima' }), { target: { value: id.piece } })
+  await selectControl(screen.getByRole('combobox', { name: 'Perangkat yang sudah diterima' }), { target: { value: id.piece } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial perangkat' }), { target: { value: 'ONU-A1' } }); fireEvent.keyDown(screen.getByRole('textbox', { name: 'Serial perangkat' }), { key: 'Enter' })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemasangan' }))
-  const dialog = await screen.findByRole('dialog', { name: 'Konfirmasi provisi perangkat terdeteksi' })
+  const dialog = await screen.findByRole('region', { name: 'Konfirmasi provisi perangkat terdeteksi' })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Pasang perangkat' }))
   await waitFor(() => expect(fetch.mock.calls.filter(([, input]) => input?.method === 'POST')).toHaveLength(2))
   const post = fetch.mock.calls.find(([path]) => path.endsWith('/provision'))!

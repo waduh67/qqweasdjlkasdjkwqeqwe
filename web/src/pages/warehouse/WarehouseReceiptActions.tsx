@@ -1,3 +1,4 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import { inspectReceipt, listReceiptEvidence, putawayReceipt, type ReceiptEvidence, type ReceiptLine, type ReceiptTransition, type WarehouseReceipt } from '@/api/warehouse/receipts'
@@ -5,7 +6,6 @@ import type { WarehouseLocation } from '@/api/warehouse/models'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { formatBaseQuantity, quantityFromInput } from '@/api/warehouse/quantity'
 import { Button, SelectField, TextareaField } from '@/components/atoms'
-import { Modal } from '@/components/molecules/Modal'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { WarehousePicker } from '@/components/organisms/warehouse/WarehousePicker'
 import { WarehouseQuantity, WarehouseQuantityField } from '@/components/organisms/warehouse/WarehouseQuantity'
@@ -54,7 +54,10 @@ export function WarehouseReceiptActions({ receipt, mode, onClose, onChanged }: P
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa jumlah barang.') }
   }
   return <>
-    <Modal title={title} wide onClose={onClose} footer={<><Button onClick={onClose}>Batal</Button><Button variant="primary" type="submit" form={formId}>Tinjau {mode === 'inspect' ? 'pemeriksaan' : 'penempatan'}</Button></>}>
+    <ResourceForm editing onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={title} confirmLabel={mode === 'inspect' ? 'Simpan pemeriksaan' : 'Tempatkan barang'} command={operation} onClose={() => setOperation(null)} onDone={onChanged} onReload={onChanged}
+      summary={<><p>{receipt.externalReference} · Revisi {receipt.revision}</p><p>{mode === 'putaway' ? `Tujuan: ${destination?.name ?? destination?.code}` : proof && evidenceLabel(proof)}</p>
+        <ul>{summary.map(row => <li key={row.line.id}>{row.name}: {mode === 'inspect' ? 'diterima ' : 'ditempatkan '}<WarehouseQuantity value={row.accepted} unit={row.line.baseUnit} />{mode === 'inspect' && <>, ditolak <WarehouseQuantity value={row.rejected} unit={row.line.baseUnit} /></>}</li>)}</ul>
+        <p>{mode === 'inspect' ? 'Stok tersedia belum bertambah. Hasil pemeriksaan tercatat pada bagian yang dipilih.' : 'Jumlah ini berpindah dari karantina menjadi stok tersedia di bin tujuan.'}</p></>} />} title={title} onClose={onClose} footer={<><Button onClick={onClose}>Batal</Button><Button variant="primary" type="submit" form={formId}>Tinjau {mode === 'inspect' ? 'pemeriksaan' : 'penempatan'}</Button></>}>
       <form id={formId} className="stack" onSubmit={prepare}>
         <p>{receipt.externalReference} · Revisi {receipt.revision}</p>
         {mode === 'inspect' ? <><EvidenceChoice id={receipt.id} value={proof} onChange={setProof} />
@@ -84,11 +87,8 @@ export function WarehouseReceiptActions({ receipt, mode, onClose, onChanged }: P
         })}
         {error && <p className="error" role="alert">{error}</p>}
       </form>
-    </Modal>
-    {operation && <WarehouseCommandDialog title={title} confirmLabel={mode === 'inspect' ? 'Simpan pemeriksaan' : 'Tempatkan barang'} command={operation} onClose={() => setOperation(null)} onDone={onChanged} onReload={onChanged}
-      summary={<><p>{receipt.externalReference} · Revisi {receipt.revision}</p><p>{mode === 'putaway' ? `Tujuan: ${destination?.name ?? destination?.code}` : proof && evidenceLabel(proof)}</p>
-        <ul>{summary.map(row => <li key={row.line.id}>{row.name}: {mode === 'inspect' ? 'diterima ' : 'ditempatkan '}<WarehouseQuantity value={row.accepted} unit={row.line.baseUnit} />{mode === 'inspect' && <>, ditolak <WarehouseQuantity value={row.rejected} unit={row.line.baseUnit} /></>}</li>)}</ul>
-        <p>{mode === 'inspect' ? 'Stok tersedia belum bertambah. Hasil pemeriksaan tercatat pada bagian yang dipilih.' : 'Jumlah ini berpindah dari karantina menjadi stok tersedia di bin tujuan.'}</p></>} />}
+    </ResourceForm>
+    
   </>
 }
 

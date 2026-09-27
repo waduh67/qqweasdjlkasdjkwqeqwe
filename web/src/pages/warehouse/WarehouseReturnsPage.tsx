@@ -1,3 +1,4 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -33,17 +34,21 @@ export function WarehouseReturnsPage() {
     if (params.has('returnId')) id = uuid(params.get('returnId'))
   } catch { return <div className="card stack" role="alert"><p>Alamat retur tidak dikenal.</p><Link to="/warehouse/returns">Kembali ke daftar retur</Link></div> }
   if (!can('inventory.return.view')) return <WarehouseDenied />
-  return <div className="stack warehouse-returns"><PageHeader title="Retur & Servis" subtitle="Terima sumber yang sah, periksa kondisi fisik, dan ikuti perangkat selama servis." />
+  return <div className="stack warehouse-returns"><PageHeader title="Retur & Servis" />
     {creating ? <WarehouseReturnEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />
       : id ? <><Link to="/warehouse/returns">Kembali ke daftar retur</Link><ReturnDetail key={id} id={id} /></>
-        : <>{can('inventory.return.manage') && <WarehousePendingMaterialReturns />}{can('inventory.return.manage') && <Button variant="primary" disabled={!can('inventory.location.view')} onClick={() => setCreating(true)}>Terima retur baru</Button>}
-          {can('inventory.return.manage') && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih karantina penerimaan.</p>}<ReturnList /></>}
+        : <>{can('inventory.return.manage') && <WarehousePendingMaterialReturns />}
+          {can('inventory.return.manage') && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih karantina penerimaan.</p>}<ReturnList onNew={() => setCreating(true)} /></>}
   </div>
 }
-function ReturnList() {
+function ReturnList({ onNew }: { onNew: () => void }) {
+  const { can } = useCan()
+  const [filterVersion, setFilterVersion] = useState(0)
   const [filter, setFilter] = useState<ReturnFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => listReturns({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><WarehouseReturnFilters onApply={filter => { setFilter(filter); setPage(0) }} /><Button onClick={result.reload}>Segarkan retur</Button>
+  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setFilter({}); setPage(0); setFilterVersion(version => version + 1) }}
+    create={can('inventory.return.manage') ? { label: 'Terima retur baru', onClick: onNew, disabled: !can('inventory.location.view') } : undefined} />
+    <WarehouseReturnFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.returnCase.id}
       empty={<EmptyState title="Belum ada retur dalam cakupan Anda" hint="Sumber retur berasal dari sisa material yang sudah diterima atau perangkat hasil pelepasan yang sah." />} columns={[
         { key: 'code', header: 'Retur', cell: row => <Link to={detailPath(row.returnCase.id)}>{row.references.code}</Link> },

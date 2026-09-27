@@ -1,4 +1,3 @@
-import { Disclosure } from '@/components/molecules/Disclosure'
 import { Link, useSearchParams } from 'react-router-dom'
 import { archiveLocation, archiveSku, archiveSupplier, listLocations, listSkus, listSuppliers } from '@/api/warehouse/masters'
 import { useAuth } from '@/auth/useAuth'
@@ -24,20 +23,8 @@ export function WarehouseCatalogPage() {
   const [params, setParams] = useSearchParams()
   const visible = tabs.filter(tab => can(tab.permission))
   const selected = visible.find(tab => tab.key === params.get('tab'))?.key ?? visible[0]?.key
-  return <div className="stack"><PageHeader title="Katalog & Lokasi" subtitle="Siapkan barang, lokasi penyimpanan, pemasok dan akses petugas untuk operasi gudang." />
-    <Disclosure className="card" open={!user?.platformAdmin && user?.areaIds.length === 0} title={<>Urutan setup gudang</>}>
-      
-      <ol>
-        <li>Siapkan area dan berikan area itu secara eksplisit kepada administrator serta petugas gudang.
-          {can('iam.area.view') && <> <Link to="/areas">Kelola area</Link>.</>}{can('iam.user.view') && <> <Link to="/users">Atur area pengguna</Link>.</>}</li>
-        <li>Buat gudang utama dan bin pada area yang sesuai melalui tab Lokasi.</li>
-        <li>Buat barang beserta satuan dan pelacakannya, lalu pemasok.</li>
-        <li>Berikan akses lokasi kepada petugas melalui tab Akses gudang.</li>
-        <li>Catat penerimaan dan pemeriksaan untuk menambah stok.{can('inventory.receipt.view') && <> <Link to="/warehouse/receipts">Buka penerimaan</Link>.</>}</li>
-      </ol>
-      {!user?.platformAdmin && user?.areaIds.length === 0 && <p className="error">Akun Anda belum memiliki area gudang. Area kosong berarti tidak memiliki akses gudang.</p>}
-      <p className="muted">Membuat lokasi atau barang tidak menambah stok. Perubahan role dan area dapat memerlukan login ulang.</p>
-    </Disclosure>
+  return <div className="stack"><PageHeader title="Katalog & Lokasi" />
+    {!user?.platformAdmin && user?.areaIds.length === 0 && <p role="status">Belum ada area gudang untuk akun Anda. {can('iam.user.view') && <Link to="/users">Atur area pengguna</Link>}</p>}
     <Tabs tabs={visible.map(({ key, label }) => ({ key, label }))} active={selected ?? 'locations'} onChange={tab => setParams({ tab })} />
     {selected === 'locations' && <WarehouseMasterPanel title="Lokasi" load={listLocations} archive={archiveLocation} canManage={can('inventory.location.manage')}
       emptyHint="Hanya lokasi dalam cakupan gudang dan area Anda yang ditampilkan. Gunakan Tambah lokasi untuk memulai."

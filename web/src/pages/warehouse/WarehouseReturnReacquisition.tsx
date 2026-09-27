@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -42,12 +44,13 @@ function ReacquisitionEditor({ details, onClose, onDone }: { details: ReturnDeta
   const loader = useCallback(() => getWorkOrderSignature(workOrderId), [workOrderId]), result = useWarehouseQuery(loader)
   return <section className="card stack"><h2>Siapkan alih kepemilikan</h2><p>{details.references.code} · {returnItemLabel(details.references.item)}</p>
     <p>Bukti diambil dari WO pemasangan asal perangkat. Pastikan tanda tangan dan referensi persetujuan pelanggan mendukung perubahan kepemilikan ini.</p>
-    <WarehouseState {...result}>{signature => signature ? <ReacquisitionForm details={details} signature={signature} onDone={onDone} />
+    <WarehouseState {...result}>{signature => signature ? <ReacquisitionForm onClose={onClose} details={details} signature={signature} onDone={onDone} />
       : <p role="status">WO pemasangan asal belum memiliki tanda tangan aktif. Lengkapi bukti pada WO tersebut lalu muat ulang.</p>}</WarehouseState>
     <div className="row wrap"><Button onClick={result.reload}>Muat ulang bukti</Button><Button onClick={onClose}>Batal alih kepemilikan</Button></div>
   </section>
 }
-function ReacquisitionForm({ details, signature, onDone }: { details: ReturnDetails; signature: WorkOrderSignature; onDone: () => void }) {
+function ReacquisitionForm({ details, signature, onDone, onClose }: { onClose: () => void; details: ReturnDetails; signature: WorkOrderSignature; onDone: () => void }) {
+  const resourceFormId = useResourceFormId()
   const [reason, setReason] = useState(''), [reference, setReference] = useState(''), [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState(''), [downloading, setDownloading] = useState(false), [operation, setOperation] = useState<WarehouseCommand<ReacquisitionRef> | null>(null)
   async function download() {
@@ -61,17 +64,17 @@ function ReacquisitionForm({ details, signature, onDone }: { details: ReturnDeta
     try { setOperation(requestReacquisition(details.returnCase.id, buildReacquisition(details, signature, reason, reference, confirmed))); setError('') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa permintaan alih kepemilikan.') }
   }
-  return <><form className="stack" aria-label="Permintaan alih kepemilikan" onSubmit={prepare}>
+  return <><ResourceForm title="Permintaan alih kepemilikan" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi permintaan alih kepemilikan" confirmLabel="Simpan permintaan alih kepemilikan" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+      summary={<><p>{details.references.code} · Retur revisi {details.returnCase.revision} · {returnItemLabel(details.references.item)}</p>
+        <p>Alasan: {reason}</p><p>Referensi: {reference}</p><p>Penanda tangan: {signature.signerName} · <WarehouseTime value={signature.signedAt} /></p>
+        <p>Menyimpan dokumen untuk diajukan kepada petugas independen. Kepemilikan dan stok tersedia belum berubah.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} variant="primary" type="submit" disabled={!confirmed || downloading}>Tinjau alih kepemilikan</Button></>}><form id={resourceFormId} className="stack" aria-label="Permintaan alih kepemilikan" onSubmit={prepare}>
     <p>Penanda tangan: {signature.signerName} · <WarehouseTime value={signature.signedAt} /></p><p>Dicatat oleh: {signature.signedByName ?? 'petugas WO'}</p>
     <Button type="button" disabled={downloading} onClick={() => void download()}>{downloading ? 'Mengunduh bukti…' : 'Unduh tanda tangan asal'}</Button>
     <TextField label="Alasan alih kepemilikan" value={reason} required maxLength={500} onChange={(_, data) => setReason(data.value)} />
     <TextField label="Referensi persetujuan alih kepemilikan" value={reference} required maxLength={500} onChange={(_, data) => setReference(data.value)} />
     <Checkbox label="Saya telah memeriksa bukti dan persetujuan pelanggan untuk alih kepemilikan ini" checked={confirmed} onChange={(_, data) => setConfirmed(data.checked === true)} />
-    {error && <p role="alert" className="error">{error}</p>}<Button variant="primary" type="submit" disabled={!confirmed || downloading}>Tinjau alih kepemilikan</Button>
-  </form>
-    {operation && <WarehouseCommandDialog title="Konfirmasi permintaan alih kepemilikan" confirmLabel="Simpan permintaan alih kepemilikan" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
-      summary={<><p>{details.references.code} · Retur revisi {details.returnCase.revision} · {returnItemLabel(details.references.item)}</p>
-        <p>Alasan: {reason}</p><p>Referensi: {reference}</p><p>Penanda tangan: {signature.signerName} · <WarehouseTime value={signature.signedAt} /></p>
-        <p>Menyimpan dokumen untuk diajukan kepada petugas independen. Kepemilikan dan stok tersedia belum berubah.</p></>} />}
+    {error && <p role="alert" className="error">{error}</p>}
+  </form></ResourceForm>
+    
   </>
 }

@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import { appendMaterialUse, getMaterialCustody, reportMaterialUse, type MaterialFieldContext } from '@/api/warehouse/materialExecution'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -11,6 +13,7 @@ export function WorkOrderMaterialUse({ context, onDone, onClose, online = true, 
   context: MaterialFieldContext; onDone: () => void; onClose: () => void; online?: boolean;
   prepare?: (rows: MaterialUseDraft[]) => Promise<void>; evidenceHref?: string | null
 }) {
+  const resourceFormId = useResourceFormId()
   const [rows, setRows] = useState([emptyUseDraft()]), [evidence, setEvidence] = useState(''), [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false), active = useRef(false)
   const [error, setError] = useState<string | null>(null), [review, setReview] = useState<WarehouseCommand<unknown> | null>(null)
@@ -28,7 +31,11 @@ export function WorkOrderMaterialUse({ context, onDone, onClose, online = true, 
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa pemakaian material.') }
     finally { active.current = false; setBusy(false) }
   }
-  return <><form className="card stack" aria-label="Catatan pemakaian material" onSubmit={event => void submit(event)}>
+  return <><ResourceForm title="Catatan pemakaian material" onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi pemakaian material" command={review} disabled={!online} confirmLabel="Catat pemakaian" onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
+    <p>WO revisi {context.workOrderRevision} · Rencana {context.plan?.planRevision} · Pemakaian revisi {context.useRevision}</p>
+    {none ? <p>Tanpa material: {reason}</p> : <ul>{rows.map(row => <li key={row.key}>{row.source?.sku.name} · {row.quantity} {row.source?.baseUnit === 'MM' ? 'm' : 'unit'} · {row.source?.serial ?? row.source?.lotCode}</li>)}</ul>}
+    <p>Bukti: {evidence}</p><p>Jumlah ini dicatat sebagai pemakaian baru. Persetujuan QA berikutnya memakai catatan ini tanpa mengurangi stok lagi.</p>
+  </>} />} footer={<><Button onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!online}>{busy ? 'Memeriksa sumber…' : 'Tinjau pemakaian'}</Button></>}><form id={resourceFormId} className="stack" aria-label="Catatan pemakaian material" onSubmit={event => void submit(event)}>
     <fieldset disabled={busy || !!review} className="stack" style={{ minWidth: 0, border: 0, padding: 0, margin: 0 }}><h3>{none ? 'Deklarasi tanpa material' : correction ? 'Tambahan pemakaian terukur' : 'Pemakaian material terukur'}</h3>
     <p>Rencana {context.plan?.planRevision} · Pemakaian revisi {context.useRevision}. Isi jumlah yang benar-benar digunakan. Catatan yang diterima server tidak dapat ditimpa.</p>
     {none ? <p>Rencana tanpa material: {context.plan?.reason}</p> : <>{rows.map((row, index) => <fieldset key={row.key} className="stack" style={{ minWidth: 0 }}><legend>Pemakaian {index + 1}</legend>
@@ -40,10 +47,6 @@ export function WorkOrderMaterialUse({ context, onDone, onClose, online = true, 
     <TextField label="Referensi bukti pemakaian" required maxLength={500} value={evidence} onChange={(_, value) => setEvidence(value.value)} hint="Nomor catatan pengukuran atau keterangan bukti pada WO ini." />
     {evidenceHref && <a href={evidenceHref}>Lihat atau unggah bukti pengerjaan</a>}
     <TextareaField label={none ? 'Alasan tidak memakai material' : correction ? 'Alasan tambahan pemakaian' : 'Catatan pemakaian'} required={none || correction} maxLength={1000} value={reason} onChange={(_, value) => setReason(value.value)} />
-    {error && <p role="alert">{error}</p>}<div className="row wrap"><Button onClick={onClose}>Batal</Button><Button type="submit" variant="primary" disabled={!online}>{busy ? 'Memeriksa sumber…' : 'Tinjau pemakaian'}</Button></div></fieldset>
-  </form>{review && <WarehouseCommandDialog title="Konfirmasi pemakaian material" command={review} disabled={!online} confirmLabel="Catat pemakaian" onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
-    <p>WO revisi {context.workOrderRevision} · Rencana {context.plan?.planRevision} · Pemakaian revisi {context.useRevision}</p>
-    {none ? <p>Tanpa material: {reason}</p> : <ul>{rows.map(row => <li key={row.key}>{row.source?.sku.name} · {row.quantity} {row.source?.baseUnit === 'MM' ? 'm' : 'unit'} · {row.source?.serial ?? row.source?.lotCode}</li>)}</ul>}
-    <p>Bukti: {evidence}</p><p>Jumlah ini dicatat sebagai pemakaian baru. Persetujuan QA berikutnya memakai catatan ini tanpa mengurangi stok lagi.</p>
-  </>} />}</>
+    {error && <p role="alert">{error}</p>}<div className="row wrap"></div></fieldset>
+  </form></ResourceForm></>
 }

@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -44,8 +45,8 @@ it('applies the reserved bucket on the server and resets paging instead of filte
   const fetch = vi.fn(async (path: string) => response(page(new URL(path, 'http://test').searchParams.get('bucket') === 'RESERVED' ? [cable] : [], 0)))
   vi.stubGlobal('fetch', fetch); show('/warehouse/stock?page=2')
   await screen.findByText('Tidak ada stok yang cocok dalam cakupan Anda')
-  fireEvent.click(screen.getByText('Filter stok', { exact: true }))
-  fireEvent.change(await screen.findByRole('combobox', { name: 'Kelompok stok' }), { target: { value: 'RESERVED' } })
+  
+  await selectControl(await screen.findByRole('combobox', { name: 'Kelompok stok' }), { target: { value: 'RESERVED' } })
   fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter' }))
   await screen.findByRole('link', { name: 'Kabel drop' })
   const request = new URL(fetch.mock.calls.at(-1)![0], 'http://test')
@@ -66,10 +67,11 @@ it('uses named archived masters in historical stock filters without dropping the
     if (path.endsWith(`/skus/${id.sku}`)) return response(sku)
     return response(page([]))
   }); vi.stubGlobal('fetch', fetch); show(`/warehouse/stock?locationId=${id.inspection}`)
-  fireEvent.click(screen.getByText('Filter stok', { exact: true }))
+  
+  fireEvent.click(screen.getByRole('combobox', { name: 'Barang' }));
   await screen.findByRole('option', { name: 'Kabel lama · OLD (arsip)' })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang' })).toHaveProperty('disabled', false))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang' }), { target: { value: id.sku } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang' }), { target: { value: id.sku } })
   fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter' }))
   await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.includes('/stock?') && path.includes(`skuId=${id.sku}`) && path.includes(`locationId=${id.inspection}`))).toBe(true))
   expect(fetch.mock.calls.filter(([path]) => /\/(skus|locations)\?/.test(path)).every(([path]) => !path.includes('state=ACTIVE'))).toBe(true)

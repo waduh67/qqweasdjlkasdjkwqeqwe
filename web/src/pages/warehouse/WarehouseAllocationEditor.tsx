@@ -26,9 +26,9 @@ export function WarehouseAllocationEditor({ summary, allocations, action, onDone
       setOperation(action === 'pick' ? pickMaterials(summary.workOrderId, input as PickInput) : materialRequestAction(summary.demandDocumentId!, 'release', input as ReservationCommand)); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa pilihan alokasi.') }
   }
-  return <><ResourceForm title={<>{action === 'pick' ? 'Siapkan barang dari reservasi' : 'Lepas reservasi yang belum disiapkan'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={action === 'pick' ? 'Konfirmasi persiapan barang' : 'Konfirmasi pelepasan reservasi'} confirmLabel={action === 'pick' ? 'Siapkan pilihan' : 'Lepas pilihan'} command={operation} onDone={onDone} onClose={() => setOperation(null)} onReload={onDone}
+  return <><ResourceForm editing title={<>{action === 'pick' ? 'Siapkan barang dari reservasi' : 'Lepas reservasi yang belum disiapkan'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={action === 'pick' ? 'Konfirmasi persiapan barang' : 'Konfirmasi pelepasan reservasi'} confirmLabel={action === 'pick' ? 'Siapkan pilihan' : 'Lepas pilihan'} command={operation} onDone={onDone} onClose={() => setOperation(null)} onReload={onDone}
       summary={<><p>Revisi permintaan {summary.demandRevision} · Rencana {summary.revisions.planRevision}</p><ul>{drafts.filter(row => row.selected).map(row => <li key={row.allocation.id}>{row.allocation.skuName} · {row.allocation.serial ?? row.allocation.lotCode} · {row.allocation.locationName}: {row.quantity} {row.allocation.baseUnit === 'MM' ? 'm' : 'unit'}</li>)}</ul><p>{action === 'pick' ? 'Barang tetap berada di gudang sampai slip dikirim. Potongan kabel fisik tercatat saat disiapkan.' : reason}</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!drafts.length}>Tinjau pilihan</Button></>}><form id={resourceFormId} className="stack" onSubmit={prepare} aria-label={action === 'pick' ? 'Siapkan barang' : 'Lepas reservasi'}>
-    
+
     <p>{action === 'pick' ? 'Pilih serial / potongan dan jumlah fisik yang disiapkan. Kabel dapat dipotong; batal siapkan tidak menyambung kembali potongannya.' : 'Setiap alokasi yang dipilih dilepas seluruhnya. Untuk mengubah jumlah, lepas lalu cadangkan kembali. Barang yang terikat slip perlu dibatalkan persiapannya melalui slip terlebih dahulu.'}</p>
     {drafts.map(row => <fieldset key={row.allocation.id} className="stack" style={{ minWidth: 0 }}><legend>{row.allocation.skuName ?? 'Barang reservasi'} · {row.allocation.serial ?? row.allocation.lotCode ?? 'Identitas stok'}</legend>
       <p>{row.allocation.locationName ?? 'Lokasi tanpa nama'} · Dicadangkan <WarehouseQuantity value={row.allocation.reservedUnpickedBase} unit={row.allocation.baseUnit} /></p>
@@ -42,6 +42,6 @@ export function WarehouseAllocationEditor({ summary, allocations, action, onDone
     {error && <p className="error" role="alert">{error}</p>}
     <div className="row wrap"></div>
   </form></ResourceForm>
-    
+
   </>
 }

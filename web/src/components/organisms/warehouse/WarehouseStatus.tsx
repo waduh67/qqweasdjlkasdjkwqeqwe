@@ -23,3 +23,5 @@ export function WarehouseStatus({ status }: { status: string }) {
   const [label, tone] = states[status] ?? [status, 'neutral']
   return <StatusBadge status={status} label={label} tone={tone} />
 }
+
+export const warehouseStatusLabel = (status: string) => states[status]?.[0] ?? status

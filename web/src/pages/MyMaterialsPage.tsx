@@ -104,7 +104,7 @@ function MaterialCustodyList({ context, enabled, select }: { context: MyMaterial
       { key: 'amount', header: 'Jumlah di tangan', cell: row => <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> },
       { key: 'location', header: 'Lokasi', cell: row => row.location.name ?? row.location.code },
       { key: 'source', header: 'Pengiriman asal', cell: row => row.issueCode },
-      { key: 'action', header: 'Tindakan', cell: row => <span className="stack"><Button disabled={!enabled} onClick={() => select(row)}>{row.sku.tracking === 'SERIAL' ? 'Kembalikan perangkat' : 'Kembalikan sisa'}</Button>{row.sku.tracking === 'SERIAL' && <span>Pemasangan dilakukan melalui aset pelanggan pada detail WO.</span>}</span> },
+      { key: 'action', header: 'Tindakan', cell: row => <span><Button title={row.sku.tracking === 'SERIAL' ? 'Pemasangan perangkat melalui aset pelanggan pada detail WO.' : undefined} disabled={!enabled} onClick={() => select(row)}>{row.sku.tracking === 'SERIAL' ? 'Kembalikan perangkat' : 'Kembalikan sisa'}</Button></span> },
     ]} /><WarehousePagination page={page} size={data.size} total={data.totalElements} onChange={setPage} />
   </>}</WarehouseState></section>
 }

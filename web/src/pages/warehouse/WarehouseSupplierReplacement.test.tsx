@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { useState } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -52,8 +53,8 @@ it('creates only a draft then reloads its named receipt link while retaining cus
   }); vi.stubGlobal('fetch', fetch); render(<MemoryRouter><Fixture /></MemoryRouter>)
   fireEvent.click(await screen.findByRole('button', { name: 'Siapkan penerimaan pengganti' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Batas penerimaan pengganti' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Batas penerimaan pengganti' }), { target: { value: id.source } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Karantina perangkat pengganti' }), { target: { value: id.inspection } })
+  await selectControl(screen.getByRole('combobox', { name: 'Batas penerimaan pengganti' }), { target: { value: id.source } })
+  await selectControl(screen.getByRole('combobox', { name: 'Karantina perangkat pengganti' }), { target: { value: id.inspection } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial perangkat pengganti' }), { target: { value: 'ONU-BARU' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Referensi surat pengganti' }), { target: { value: 'SJ-PENGGANTI' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Referensi bukti pengganti' }), { target: { value: 'BA-PENGGANTI' } })

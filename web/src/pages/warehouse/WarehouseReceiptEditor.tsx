@@ -45,10 +45,10 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian penerimaan.') }
   }
   return <>
-    <ResourceForm title={<>{receipt ? 'Ubah draft penerimaan' : 'Draft penerimaan baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft penerimaan" confirmLabel="Simpan draft" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    <ResourceForm editing={!!receipt} title={<>{receipt ? 'Ubah draft penerimaan' : 'Draft penerimaan baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft penerimaan" confirmLabel="Simpan draft" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{reference}</strong> · {supplier?.name}{receipt && ` · Revisi ${receipt.revision}`}</p><p>{source?.name ?? source?.code} → {inspection?.name}</p>
         <ul>{rows.map(row => <li key={row.key}>{row.sku?.name}: {row.sku && `${formatBaseQuantity(buildReceiptLines([row], costVisible)[0].quantityBase, row.sku.baseUnit)} ${displayUnit(row.sku.baseUnit)}`}</li>)}</ul><p>Perubahan stok: belum ada. Lanjutkan Terima barang dari detail setelah draft tersimpan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau draft</Button></>}><form id={formId} className="stack" onSubmit={prepare}>
-      
+
       <p className="muted">Menyimpan draft belum menambah stok. Lampiran draft lama perlu diunggah ulang setelah isi draft berubah.</p>
       <div style={grid}>
         <TextField label="Referensi surat jalan" required maxLength={500} value={reference} onChange={(_, data) => setReference(data.value)} />
@@ -62,7 +62,7 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
         </div>
       {error && <p className="error" role="alert">{error}</p>}
     </form></ResourceForm>
-    
+
   </>
 }
 

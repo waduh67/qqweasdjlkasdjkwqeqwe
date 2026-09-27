@@ -32,8 +32,8 @@ export function WarehouseTransferFilters({ onApply }: { onApply: (filter: Transf
       <TextField label="Cari kode transfer" value={search} maxLength={200} onChange={(_, data) => setSearch(data.value)} />
       <TextField label="Serial lengkap transfer" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
       <SelectField label="Status transfer" value={state} onChange={(_, data) => setState(data.value as typeof state)}><option value="">Semua status</option>{TRANSFER_STATES.map(state => <option key={state} value={state}>{stateLabels[state]}</option>)}</SelectField>
-      {can('inventory.sku.view') && <WarehousePicker label="Barang pada transfer" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} optional />}
-      {can('inventory.location.view') && <WarehousePicker label="Lokasi pada transfer" load={locations} value={location} onChange={setLocation} name={locationLabel} optional />}
+      {can('inventory.sku.view') && <WarehousePicker label="Barang pada transfer" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} placeholder="Semua" optional />}
+      {can('inventory.location.view') && <WarehousePicker label="Lokasi pada transfer" load={locations} value={location} onChange={setLocation} name={locationLabel} placeholder="Semua" optional />}
       <TextField label="Transfer dibuat mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
       <TextField label="Transfer sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     </div><p className="muted">Lokasi mencakup asal, transit, tujuan, dan tujuan penanganan selisih. SKU dan serial harus cocok pada barang yang sama.</p>

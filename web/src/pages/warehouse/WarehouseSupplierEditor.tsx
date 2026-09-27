@@ -19,7 +19,7 @@ export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onRel
   return <>
     <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan pemasok" command={operation} confirmLabel="Simpan pemasok" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{contact.trim() || 'Tanpa kontak tambahan'}</p></>} />)} title={readOnly ? 'Detail pemasok' : row ? 'Ubah pemasok' : 'Tambah pemasok'} onClose={onClose} footer={<>
-      <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>Tinjau perubahan</Button>}
+      <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
     </>}>
       <form id={formId} className="stack" onSubmit={prepare}>
         {row && <p className="muted">Tersimpan: {row.name} · Revisi {row.revision}</p>}
@@ -28,6 +28,6 @@ export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onRel
         <TextField label="Kontak / referensi" maxLength={500} value={contact} disabled={readOnly} onChange={(_, data) => setContact(data.value)} />
       </form>
     </ResourceForm>
-    
+
   </>
 }

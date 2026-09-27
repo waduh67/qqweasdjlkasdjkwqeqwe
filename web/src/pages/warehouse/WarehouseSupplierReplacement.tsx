@@ -82,6 +82,6 @@ function ReplacementEditor({ details, onClose, onDone }: { details: ReturnDetail
         <TextField label="Mata uang pengganti" value={currency} maxLength={3} onChange={(_, data) => setCurrency(data.value)} /></> : <p className="muted">Nilai belum diketahui; tidak dianggap nol.</p>}</>}
     {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"></div>
   </form></ResourceForm>
-    
+
   </>
 }

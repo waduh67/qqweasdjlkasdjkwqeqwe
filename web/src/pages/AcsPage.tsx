@@ -435,7 +435,7 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
         header: 'Device info',
         sortValue: (d) => d.serialNumber,
         cell: (d) => (
-          <span className="stack" style={{ gap: '0.15rem' }}>
+          <span className="table-inline-values">
             <strong>{d.serialNumber}</strong>
             <Text as="span" size={300} className="muted" >{[d.customerName, [d.manufacturer, d.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || '—'}</Text>
           </span>
@@ -465,7 +465,7 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
         sortValue: (d) => d.pppoeUsername,
         cell: (d) =>
           d.pppoeUsername ? (
-            <span className="stack" style={{ gap: '0.15rem' }}>
+            <span className="table-inline-values">
               <span>{d.pppoeUsername}</span>
               {d.pppoeOnline != null && (
                 <Text as="span" size={300} className="muted" >{d.pppoeOnline ? 'sesi aktif' : 'tak ada sesi'}</Text>

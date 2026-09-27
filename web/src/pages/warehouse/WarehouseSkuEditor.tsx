@@ -38,30 +38,30 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
     <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan barang" command={operation} confirmLabel="Simpan barang" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{TRACKING_LABELS[tracking]} · {displayUnit(unit)} · Minimum {minimum} {displayUnit(unit)}</p>
         <p>{inspection ? 'Wajib pemeriksaan' : 'Pemeriksaan sesuai penerimaan'} · {ownership.map(mode => mode === 'LOAN' ? 'Pinjaman' : 'Penjualan').join(', ')}</p></>} />)} title={readOnly ? 'Detail barang' : row ? 'Ubah barang' : 'Tambah barang'} onClose={onClose} footer={<>
-      <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>Tinjau perubahan</Button>}
+      <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
     </>}>
       <form id={formId} className="stack" onSubmit={prepare}>
         {row && <p className="muted">Tersimpan: {row.name} · Revisi {row.revision}</p>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
-          <TextField label="Kode barang" required pattern="[A-Z0-9][A-Z0-9._-]{0,63}" maxLength={64} value={code} disabled={readOnly} onChange={(_, data) => setCode(data.value.toUpperCase())} hint="Huruf besar, angka, titik, garis bawah atau tanda hubung." />
+          <TextField label="Kode barang" required pattern="[A-Z0-9][A-Z0-9._-]{0,63}" maxLength={64} value={code} disabled={readOnly} onChange={(_, data) => setCode(data.value.toUpperCase())} hint="Contoh: ONU-001." />
           <TextField label="Nama barang" required maxLength={200} value={name} disabled={readOnly} onChange={(_, data) => setName(data.value)} />
           <SelectField label="Pelacakan" value={tracking} disabled={readOnly} onChange={(_, data) => { const next = data.value as typeof tracking; setTracking(next); if (next === 'SERIAL') { setUnit('EA'); setMinimum('0') } }}>
             {Object.entries(TRACKING_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </SelectField>
           <SelectField label="Satuan" value={unit} disabled={readOnly || tracking === 'SERIAL'} onChange={(_, data) => { setUnit(data.value as typeof unit); setMinimum('0') }}>
-            <option value="EA">Unit</option><option value="MM">Metre (ketelitian 0,001 m)</option>
+            <option value="EA">Unit</option><option value="MM">Meter (0,001 m)</option>
           </SelectField>
           <TextField label="Kategori" maxLength={100} value={category} disabled={readOnly} onChange={(_, data) => setCategory(data.value)} />
           <TextField label="Model" maxLength={200} value={model} disabled={readOnly} onChange={(_, data) => setModel(data.value)} />
           <WarehouseQuantityField label="Stok minimum" value={minimum} unit={unit} allowZero disabled={readOnly} onChange={setMinimum} />
         </div>
-        <fieldset disabled={readOnly}><legend>Cara penyerahan yang diizinkan</legend>{(['LOAN', 'SALE'] as const).map(mode => <Checkbox key={mode} label={mode === 'LOAN' ? 'Pinjaman (milik ISP)' : 'Penjualan (milik pelanggan)'} checked={ownership.includes(mode)}
+        <fieldset disabled={readOnly}><legend>Kepemilikan</legend>{(['LOAN', 'SALE'] as const).map(mode => <Checkbox key={mode} label={mode === 'LOAN' ? 'Pinjaman (milik ISP)' : 'Penjualan (milik pelanggan)'} checked={ownership.includes(mode)}
           onChange={(_, data) => setOwnership(current => data.checked === true ? [...current, mode] : current.filter(item => item !== mode))} />)}</fieldset>
         <Checkbox label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />
-        <p className="muted">Satuan dan pelacakan barang yang sudah memiliki stok atau riwayat tidak dapat diubah.</p>
+        {row && <p className="muted">Satuan dan pelacakan tidak dapat diubah setelah barang memiliki riwayat.</p>}
         {error && <p role="alert" className="error">{error}</p>}
       </form>
     </ResourceForm>
-    
+
   </>
 }

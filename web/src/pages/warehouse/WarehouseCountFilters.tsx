@@ -29,8 +29,8 @@ export function WarehouseCountFilters({ onApply }: { onApply: (filter: CountFilt
     <TextField label="Cari kode stock opname" value={query} maxLength={200} onChange={(_, data) => setQuery(data.value)} />
     <SelectField label="Status stock opname" value={state} onChange={(_, data) => setState(data.value as typeof state)}><option value="">Semua status</option>{COUNT_STATES.map(state => <option key={state} value={state}>{countStateLabels[state]}</option>)}</SelectField>
     <TextField label="Serial lengkap stock opname" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
-    {can('inventory.location.view') && <WarehousePicker label="Lokasi pada stock opname" load={locations} value={location} onChange={setLocation} name={locationLabel} optional />}
-    {can('inventory.sku.view') && <WarehousePicker label="Barang pada stock opname" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} optional />}
+    {can('inventory.location.view') && <WarehousePicker label="Lokasi pada stock opname" load={locations} value={location} onChange={setLocation} name={locationLabel} placeholder="Semua" optional />}
+    {can('inventory.sku.view') && <WarehousePicker label="Barang pada stock opname" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} placeholder="Semua" optional />}
     <TextField label="Stock opname dibuat mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
     <TextField label="Stock opname sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     {error && <p className="error" role="alert">{error}</p>}<Button type="submit" variant="primary">Terapkan filter stock opname</Button>

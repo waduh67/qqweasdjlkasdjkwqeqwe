@@ -1,3 +1,5 @@
+import { useId as useResourceFormId } from 'react'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { MaterialCustody } from '@/api/warehouse/materialExecution'
 import { sameSerialIdentity } from '@/api/warehouse/serialIdentity'
@@ -14,6 +16,7 @@ import { myReturnInput } from './myMaterialDraft'
 export function MyMaterialReturn({ context, source, online, onDone, onClose }: {
   context: MyMaterialContext; source: MaterialCustody; online: boolean; onDone: () => void; onClose: () => void
 }) {
+  const resourceFormId = useResourceFormId()
   const [quantity, setQuantity] = useState(''), [target, setTarget] = useState<ReturnType<typeof myMaterialLocation> | null>(null)
   const [serial, setSerial] = useState<string | null>(null)
   const [reason, setReason] = useState(''), [reference, setReference] = useState(''), [error, setError] = useState<string | null>(null)
@@ -32,8 +35,11 @@ export function MyMaterialReturn({ context, source, online, onDone, onClose }: {
     } catch (caught) { setError(caught instanceof Error ? caught.message : warehouseError(caught)) }
     finally { active.current = false; setBusy(false) }
   }
-  return <><form className="card stack" aria-label="Pengembalian material saya" onSubmit={event => void submit(event)}>
-    <h3>Kembalikan {source.sku.name}</h3><p>{source.serial ?? source.lotCode ?? source.issueCode} · <WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> · {source.location.name ?? source.location.code}</p>
+  return <><ResourceForm title={<>Kembalikan {source.sku.name}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi pengembalian material" command={review} confirmLabel="Kirim pengembalian" disabled={!online} onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
+    <p>{context.code} · WO revisi {context.workOrderRevision} · {source.sku.name} · {source.serial ?? source.lotCode}</p><p>{quantity} {source.baseUnit === 'MM' ? 'm' : 'unit'} ke {target?.code} · {target?.name}.</p>
+    <p>Petugas gudang masih perlu mengakui penerimaan dan memeriksa barang. Bukti: {reference}</p>
+  </>} />} footer={<><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={busy || !!review || !online}>{busy ? 'Memeriksa sisa…' : 'Tinjau pengembalian'}</Button></>}><form id={resourceFormId} className="stack" aria-label="Pengembalian material saya" onSubmit={event => void submit(event)}>
+    <p>{source.serial ?? source.lotCode ?? source.issueCode} · <WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> · {source.location.name ?? source.location.code}</p>
     <p>Draf di tab ini. Sisa tetap dapat dikembalikan setelah penugasan berubah. Barang yang dikirim belum menjadi stok gudang tersedia.</p>
     {source.serial && <><MaterialScanner disabled={busy || !!review} onScan={value => {
       if (!sameSerialIdentity(value, source.serial)) { setSerial(null); setError('Serial tidak cocok dengan perangkat yang akan dikembalikan.'); return }
@@ -43,9 +49,6 @@ export function MyMaterialReturn({ context, source, online, onDone, onClose }: {
     <WarehousePicker label="Karantina tujuan" searchable={false} load={load} value={target} onChange={setTarget} name={row => `${row.code} · ${row.name}`} disabled={busy || !!review || !online} />
     <TextField label="Referensi bukti pengembalian" required value={reference} maxLength={500} disabled={busy || !!review} onChange={(_, data) => setReference(data.value)} />
     <TextareaField label="Alasan pengembalian" required value={reason} maxLength={1000} disabled={busy || !!review} onChange={(_, data) => setReason(data.value)} />
-    {error && <p role="alert">{error}</p>}<div className="row wrap"><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button disabled={busy || !!review || !online} onClick={onDone}>Muat ulang material</Button><Button type="submit" variant="primary" disabled={busy || !!review || !online}>{busy ? 'Memeriksa sisa…' : 'Tinjau pengembalian'}</Button></div>
-  </form>{review && <WarehouseCommandDialog title="Konfirmasi pengembalian material" command={review} confirmLabel="Kirim pengembalian" disabled={!online} onDone={onDone} onReload={onDone} onClose={() => setReview(null)} summary={<>
-    <p>{context.code} · WO revisi {context.workOrderRevision} · {source.sku.name} · {source.serial ?? source.lotCode}</p><p>{quantity} {source.baseUnit === 'MM' ? 'm' : 'unit'} ke {target?.code} · {target?.name}.</p>
-    <p>Petugas gudang masih perlu mengakui penerimaan dan memeriksa barang. Bukti: {reference}</p>
-  </>} />}</>
+    {error && <p role="alert">{error}</p>}<div className="row wrap"><Button disabled={busy || !!review || !online} onClick={onDone}>Muat ulang material</Button></div>
+  </form></ResourceForm></>
 }

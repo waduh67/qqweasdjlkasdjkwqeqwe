@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -30,7 +31,7 @@ it('keeps device-only work actionable without a measured-use form', async () => 
 })
 async function fillReceipt() {
   fireEvent.click(await screen.findByRole('button', { name: 'Terima barang' }))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang yang diterima' }), { target: { value: id.line } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang yang diterima' }), { target: { value: id.line } })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah diterima/ }), { target: { value: '60' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah kurang/ }), { target: { value: '40' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan selisih' }), { target: { value: 'Sisa belum dikirim' } })
@@ -71,7 +72,7 @@ it('keeps offline edits as draft and rejects a revoked assignment when reconnect
   expect(screen.getByRole('textbox', { name: /Jumlah diterima/ })).toHaveProperty('value', '59')
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau penerimaan' }))
   await screen.findByText('Penerimaan hanya untuk penerima yang masih ditugaskan pada WO aktif.')
-  expect(screen.queryByRole('dialog')).toBeNull(); expect(fetch.mock.calls.every(([path]) => !path.endsWith('/acknowledge'))).toBe(true)
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true'); expect(fetch.mock.calls.every(([path]) => !path.endsWith('/acknowledge'))).toBe(true)
 })
 it('returns 17.5 metres after reassignment using the refreshed physical source and work order revision', async () => {
   const context = { ...myContext(), currentAssignee: false, field: null, workOrderRevision: 9 }, source = { ...custodyFixture(), quantityBase: '17500', sourceUsageId: id.evidence, initialUseSource: false }
@@ -87,7 +88,7 @@ it('returns 17.5 metres after reassignment using the refreshed physical source a
   fireEvent.click(await screen.findByRole('button', { name: 'Kembalikan sisa' })); expect(screen.queryByRole('button', { name: 'Catat pemakaian' })).toBeNull()
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah dikembalikan/ }), { target: { value: '17,500' } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Karantina tujuan' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Karantina tujuan' }), { target: { value: id.allocation } })
+  await selectControl(screen.getByRole('combobox', { name: 'Karantina tujuan' }), { target: { value: id.allocation } })
   fireEvent.change(screen.getByRole('textbox', { name: /Referensi bukti pengembalian/ }), { target: { value: 'Surat kembali' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Alasan pengembalian/ }), { target: { value: 'Sisa selesai dikerjakan' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pengembalian' })); fireEvent.click(await screen.findByRole('button', { name: 'Kirim pengembalian' }))
@@ -103,7 +104,7 @@ it('revalidates actual custody before reporting 82.5 metres and sends no serial 
   }); vi.stubGlobal('fetch', fetch); render(tree())
   fireEvent.click(await screen.findByRole('button', { name: 'Catat pemakaian' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang diterima 1' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Barang diterima 1' }), { target: { value: id.piece } })
+  await selectControl(screen.getByRole('combobox', { name: 'Barang diterima 1' }), { target: { value: id.piece } })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah dipakai 1/ }), { target: { value: '82,500' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Referensi bukti pemakaian/ }), { target: { value: 'Ukuran lapangan' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pemakaian' }))
@@ -140,7 +141,7 @@ it('requires a matching keyboard scan before returning one unused serialized dev
   fireEvent.change(serial, { target: { value: 'ONU-01' } }); fireEvent.keyDown(serial, { key: 'Enter' })
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah dikembalikan/ }), { target: { value: '1' } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Karantina tujuan' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Karantina tujuan' }), { target: { value: id.allocation } })
+  await selectControl(screen.getByRole('combobox', { name: 'Karantina tujuan' }), { target: { value: id.allocation } })
   fireEvent.change(screen.getByRole('textbox', { name: /Referensi bukti pengembalian/ }), { target: { value: 'ONU tidak jadi dipasang' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Alasan pengembalian/ }), { target: { value: 'Perangkat tidak dipakai' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pengembalian' }))

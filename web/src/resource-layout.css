@@ -86,3 +86,37 @@
 .table-cell-content :is(ul, li), .fui-TableCell :is(ul, li) { display: inline; padding: 0; margin: 0; list-style: none; white-space: nowrap; }
 .table-cell-content li + li::before, .fui-TableCell li + li::before { content: ' · '; }
 .table-cell-content span, .fui-TableCell span { white-space: nowrap; }
+.resource-form-content > div > .stack, .resource-form-content .form-section-fields { max-width: 700px; gap: 20px; }
+.resource-form-content .form-section { padding: 0; border: 0; }
+.resource-form-content .form-section-title { margin: 0 0 16px; }
+.resource-form-content .form-section-desc { margin: 0 0 16px; }
+.resource-form-content .row:has(.app-field) { flex-direction: column; align-items: stretch; gap: 20px; }
+.resource-form-content .row:has(.app-field) > * { flex: auto !important; width: 100%; }
+.resource-summary { max-width: 700px; margin: 0; display: grid; gap: 16px; }
+.resource-summary > div { display: grid; grid-template-columns: 250px minmax(0, 450px); gap: 0; }
+.resource-summary dt { font-weight: 400; padding-right: 20px; }
+.resource-summary dd { margin: 0; overflow-wrap: anywhere; }
+.resource-filters.row { align-items: flex-end; gap: 12px; }
+.resource-filters.row > .app-field { flex: 0 1 200px; }
+.resource-form-content .form-disclosure .app-field { display: flex; flex-direction: column; }
+@media (max-width: 819px) {
+  .resource-summary > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .resource-form-dialog.resource-form-dialog { padding: 16px 16px 0; }
+  .resource-form-dialog .console-dialog-heading { min-height: 64px; }
+}
+.resource-form-tabs { margin-left: 8px; }
+.resource-form-content { padding-left: 8px; }
+.resource-form-dialog .console-dialog-heading { min-height: 82px; }
+.resource-form-content .card { padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.resource-form-dialog :is(.fui-DialogActions, .resource-form-review-footer) .app-button-primary { order: 10; }
+.resource-review-content:focus { outline: none; }
+@media (max-width: 819px) { .resource-form-content { padding-left: 0; } .resource-form-tabs { margin-left: 0; } }
+
+.resource-command-row { display: flex; align-items: center; flex-wrap: wrap; border-block: 1px solid var(--border); gap: 8px; }
+.resource-command-row .command-bar { border: 0; flex: 0 1 auto; }
+.resource-export { display: flex; align-items: center; gap: 12px; }
+.resource-export .row { margin: 0; }
+
+.table-inline-values > * + *::before { content: ' · '; }
+
+.table-cell-content .badge.accent:not(:has(.dot)), .fui-TableCell .badge.accent:not(:has(.dot)) { background: transparent; border: 0; padding: 0; }

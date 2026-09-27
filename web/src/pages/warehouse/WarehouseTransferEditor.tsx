@@ -49,7 +49,7 @@ export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }:
       setOperation(initial ? updateTransfer(initial.transfer.id, initial.transfer.revision, draft) : createTransfer(draft)); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian transfer.') }
   }
-  return <><ResourceForm title={<>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft transfer" confirmLabel="Simpan transfer" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+  return <><ResourceForm editing={!!initial} title={<>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft transfer" confirmLabel="Simpan transfer" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p>{source && locationLabel(source)} → {transit && locationLabel(transit)} → {destination && locationLabel(destination)}</p><p>Pengirim: {actor.name} · Penerima: {receiver?.name}</p>
         <ul>{rows.map(row => <li key={row.key}>{row.position?.name} · {row.position?.serial ?? row.position?.stockIdentityId}: {row.quantity} {row.position?.physical.baseUnit === 'MM' ? 'm' : 'unit'}</li>)}</ul>
         <p>{reason}</p><p>Stok belum berpindah. Kondisi dan kepemilikan barang tetap mengikuti sumbernya.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!source}>Tinjau transfer</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft transfer" onSubmit={prepare}>
@@ -74,7 +74,7 @@ export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }:
       </div>
     {error && <p className="error" role="alert">{error}</p>}
   </form></ResourceForm>
-    
+
   </>
 }
 

@@ -108,9 +108,9 @@ export function DashboardPage() {
                     <TableRow key={alarm.id}>
                       <TableCell style={{ width: '1%' }}><StatusBadge status={alarm.severity} /></TableCell>
                       <TableCell>
-                        <Text as="span" size={300} style={{ display: 'block' }}>{alarm.entityLabel}</Text>
-                        <Text as="span" className="muted" size={200} style={{ display: 'block' }}>
-                          {alarm.kindDescription}
+                        <Text as="span" size={300} >{alarm.entityLabel}</Text>
+                        <Text as="span" className="muted" size={200} >
+                          {' · '}{alarm.kindDescription}
                         </Text>
                       </TableCell>
                       <TableCell className="muted" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -188,8 +188,8 @@ function QuickLink({
         <Icon size={17} />
       </span>
       <span>
-        <Text as="span" weight="semibold" size={300} style={{ display: 'block' }}>{label}</Text>
-        <Text as="span" className="muted" size={200} style={{ display: 'block' }}>
+        <Text as="span" weight="semibold" size={300} >{label}</Text>
+        <Text as="span" className="muted" size={200} >
           {hint}
         </Text>
       </span>

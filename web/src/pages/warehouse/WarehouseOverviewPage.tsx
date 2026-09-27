@@ -24,7 +24,7 @@ import { WarehouseReportTable } from './WarehouseReportTable'
 export function WarehouseOverviewPage() {
   const { can } = useCan()
   if (!WAREHOUSE_VIEW_PERMISSIONS.some(can)) return <WarehouseDenied />
-  return <div className="stack warehouse-overview"><PageHeader title="Gudang & Logistik" subtitle="Prioritas pekerjaan dan stok dalam cakupan gudang Anda saat ini." />
+  return <div className="stack warehouse-overview"><PageHeader title="Gudang & Logistik" />
     <nav className="warehouse-workflows" aria-label="Pekerjaan gudang">{WAREHOUSE_PAGES.filter(page => ['receipts', 'requests', 'stock', 'catalog'].includes(page.path) && page.permissions.some(can)).map(page => <Link className="card" key={page.path} to={`/warehouse/${page.path}`}><page.icon size={21} strokeWidth={1.75} aria-hidden /><span>{page.label}</span></Link>)}</nav>
     <div className="warehouse-queues">
     {can('inventory.item.view') && <Shortages />}

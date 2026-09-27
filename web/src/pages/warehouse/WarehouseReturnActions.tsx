@@ -33,7 +33,7 @@ export function WarehouseReturnActions({ details, action, onDone, onClose }: { d
       setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian retur.') }
   }
-  return <><ResourceForm title={<>{labels[action]}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={`Konfirmasi ${labels[action].toLowerCase()}`} confirmLabel="Catat tindakan retur" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+  return <><ResourceForm editing title={<>{labels[action]}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={`Konfirmasi ${labels[action].toLowerCase()}`} confirmLabel="Catat tindakan retur" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
       summary={<><p>{refs.code} · Revisi {view.revision} · {returnItemLabel(refs.item)}</p><p><WarehouseQuantity value={view.quantityBase} unit={view.baseUnit} /> → {destination && locationLabel(destination)}</p>
         {action === 'inspect' ? <p>Hasil ukur: {measured} {view.baseUnit === 'MM' ? 'm' : 'unit'} · {condition === 'SERVICEABLE' ? 'Layak pakai' : condition === 'DAMAGED' ? 'Rusak' : 'Karantina'}. {reset && `Reset dikonfirmasi: ${resetProof}.`}</p>
           : <p>{action === 'repair-dispatch' ? vendor?.name : refs.vendor?.name} · {vendorReference} {action === 'repair-receive' && `· ${result === 'REPAIRED' ? 'Diperbaiki' : 'Belum diperbaiki'}`}</p>}
@@ -64,6 +64,6 @@ export function WarehouseReturnActions({ details, action, onDone, onClose }: { d
     {error && <p role="alert" className="error">{error}</p>}
     <div className="row wrap"></div>
   </form></ResourceForm>
-    
+
   </>
 }

@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -76,7 +77,7 @@ it('lets an office requester review named ownership context and retry the same s
 it('submits loss using the selected current assignment, original work order revision and revalidated LOST destination', async () => {
   const fetch = transport(); mount(); await open('loss')
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Lokasi kehilangan' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi kehilangan' }), { target: { value: id.inspection } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi kehilangan' }), { target: { value: id.inspection } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pengajuan' }))
   const dialog = await screen.findByRole('dialog'); expect(dialog.textContent).toContain('Perangkat hilang')
   fireEvent.click(within(dialog).getByRole('button', { name: 'Catat pengajuan' }))
@@ -116,7 +117,7 @@ it('stops review when the original work order revision changes and requires a fr
   const fetch = transport({ stale: true }); const view = mount(); await open()
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pengajuan' }))
   await screen.findByText(/Kepemilikan, WO, izin, atau bukti berubah/)
-  expect(screen.queryByRole('dialog')).toBeNull(); expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true'); expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   view.unmount(); const denied = transport({ denied: true }); mount(); await open()
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pengajuan' }))
   fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Catat pengajuan' }))

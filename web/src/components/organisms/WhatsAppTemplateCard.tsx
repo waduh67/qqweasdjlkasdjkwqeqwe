@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { typographyStyles } from '@fluentui/react-components'
@@ -22,7 +24,7 @@ import {
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, EmptyState, SelectField, TextField, TextareaField, Toolbar } from '@/components/atoms'
 import { IconAlert } from '@/components/atoms/icons'
-import { ConfirmDialog, Modal } from '@/components/molecules'
+import { ConfirmDialog } from '@/components/molecules'
 import { useToast } from '@/system'
 import { DataTable, type Column, type RowAction } from './DataTable'
 
@@ -98,6 +100,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
     }
   }
 
+  const creation = useCreationReview(draft !== null, !!draft?.id)
   const saveDraft = async () => {
     if (!draft) return
     // Divalidasi di sini juga (server tetap penentu) supaya kesalahan ketik ketahuan
@@ -107,6 +110,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       toast.error(problem)
       return
     }
+    if (creation.beforeSave()) return
     const ok = draft.id
       ? await run(
           () => updateTemplate(draft.id as string, { category: draft.category, bodyText: draft.bodyText.trim() }),
@@ -122,6 +126,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
             }),
           `Template diajukan ke ${provider}; statusnya menunggu tinjauan sampai disetujui.`,
         )
+    creation.finish()
     if (ok) setDraft(null)
   }
 
@@ -165,7 +170,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       key: 'name',
       header: 'Nama',
       cell: (t) => (
-        <span className="stack" style={{ gap: '0.15rem' }}>
+        <span className="table-inline-values">
           <code>{t.name}</code>
           {t.bodyText && (
             <span className="muted" style={{ ...typographyStyles.caption1 }}>
@@ -352,7 +357,9 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       )}
 
       {draft && (
-        <Modal
+        <Blade open creation={{ ...creation, busy, prepare: () => void saveDraft(), summary: <><CreationSummary rows={[
+            ['Nama template', draft.name], ['Bahasa', draft.language || 'id'], ['Kategori', TEMPLATE_CATEGORY_LABEL[draft.category]], ['Isi pesan', draft.bodyText],
+          ]} /><p>Template akan dikirim ke {provider} untuk ditinjau.</p></> }}
           title={draft.id ? 'Ubah isi template' : `Ajukan template baru ke ${provider}`}
           onClose={() => !busy && setDraft(null)}
           footer={
@@ -379,7 +386,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               disabled={!!draft.id}
               hint={
                 draft.id
-                  ? `Nama tak bisa diubah setelah template diajukan — begitu aturan ${provider}. Ganti nama = hapus lalu ajukan baru.`
+                  ? 'Nama template yang sudah diajukan tidak dapat diubah.'
                   : 'Huruf kecil, angka, dan garis bawah saja.'
               }
             />
@@ -410,7 +417,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               rows={4}
               validationState={draft.bodyText.trim() && bodyProblem(draft.bodyText) ? 'error' : 'none'}
               validationMessage={draft.bodyText.trim() ? (bodyProblem(draft.bodyText) ?? undefined) : undefined}
-              hint={`Wajib memuat tepat satu variabel {{1}} — variabel itulah yang diisi seluruh isi notifikasi saat pesan dikirim. Maks ${MAX_BODY} karakter.`}
+              hint={`Gunakan satu variabel {{1}} untuk isi notifikasi. Maksimal ${MAX_BODY} karakter.`}
             />
             <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
               {draft.id
@@ -418,7 +425,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
                 : `Template dikirim ke ${provider} untuk ditinjau. Sampai disetujui, statusnya “menunggu tinjauan” dan belum bisa dipakai mengirim.`}
             </p>
           </div>
-        </Modal>
+        </Blade>
       )}
 
       {pendingDelete && (

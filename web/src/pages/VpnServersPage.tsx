@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
@@ -88,6 +90,7 @@ export function VpnServersPage() {
   const { items: servers, loading, run } = useResource(listServers)
 
   const [draft, setDraft] = useState<ServerDraft | null>(null)
+  const creation = useCreationReview(draft != null, !!draft?.id)
   // Token node + perintah pasang hanya tampil sekali (setelah buat/rotasi).
   const [secret, setSecret] = useState<VpnServerView | null>(null)
   const [query, setQuery] = useState('')
@@ -127,7 +130,7 @@ export function VpnServersPage() {
     })
 
   const save = () => {
-    if (!draft) return
+    if (!draft || creation.beforeSave()) return
     void run(async () => {
       if (draft.id) {
         const body: UpdateVpnServerRequest = {
@@ -148,7 +151,7 @@ export function VpnServersPage() {
         setSecret(await createServer(body))
       }
       setDraft(null)
-    }, draft.id ? 'Server diperbarui' : 'Server dibuat — jalankan perintah pasang di VPS')
+    }, draft.id ? 'Server diperbarui' : 'Server dibuat').finally(creation.finish)
   }
 
   const regenerate = (server: VpnServerView) => {
@@ -195,7 +198,7 @@ export function VpnServersPage() {
       header: 'Titik dial',
       sortValue: (s) => s.host,
       cell: (s) => (
-        <span className="stack" style={{ gap: '0.15rem' }}>
+        <span className="table-inline-values">
           <span>
             {s.host}:{s.port}
           </span>
@@ -210,7 +213,7 @@ export function VpnServersPage() {
       header: 'Subnet overlay',
       sortValue: (s) => s.tunnelCidr,
       cell: (s) => (
-        <span className="stack" style={{ gap: '0.15rem' }}>
+        <span className="table-inline-values">
           <span>{s.tunnelCidr}</span>
           <Text as="span" className="muted" size={200}>server {s.serverAddress}</Text>
         </span>
@@ -242,7 +245,9 @@ export function VpnServersPage() {
 
       {secret && <InstallSecretCard server={secret} onDismiss={() => setSecret(null)} />}
 
-      {draft && <ServerForm draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setDraft(null)} />}
+      {draft && <ServerForm creation={{ ...creation, prepare: save, summary: <CreationSummary rows={[
+        ['Nama hub', draft.name], ['Host', draft.host], ['Port', draft.port], ['Protokol', draft.protocol], ['Subnet tunnel', draft.tunnelCidr || 'Otomatis'],
+      ]} /> }} draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setDraft(null)} />}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, titik dial, atau subnet…" />
@@ -280,18 +285,22 @@ export function VpnServersPage() {
 /* ---------- Form hub ---------- */
 
 function ServerForm({
+  creation,
   draft,
   setDraft,
   onSave,
   onCancel,
 }: {
+  creation: CreationFlow
   draft: ServerDraft
   setDraft: (d: ServerDraft) => void
   onSave: () => void
   onCancel: () => void
 }) {
   return (
-    <form className="card stack settings-page" onSubmit={event => { event.preventDefault(); onSave() }}>
+    <Blade open title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} onClose={onCancel} creation={creation}
+      footer={<Button variant="primary" disabled={creation.busy} onClick={onSave}>Simpan</Button>}>
+    <form className="stack" onSubmit={event => { event.preventDefault(); onSave() }}>
       <FormSection title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} description="Tentukan alamat publik dan koneksi yang dipakai router.">
       <div className="form-grid">
         <TextField
@@ -355,13 +364,7 @@ function ServerForm({
         </Text>
       )}
 
-      <div className="form-actions">
-        <Button type="button" onClick={onCancel}>Batal</Button>
-        <Button variant="primary" type="submit">
-          Simpan
-        </Button>
-      </div>
-    </form>
+    </form></Blade>
   )
 }
 

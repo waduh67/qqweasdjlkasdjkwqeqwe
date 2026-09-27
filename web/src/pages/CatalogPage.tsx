@@ -233,7 +233,7 @@ export function CatalogPage() {
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan paket')
     } finally {
-      setSaving(false)
+      setSaving(false); creation.finish()
     }
   }
 

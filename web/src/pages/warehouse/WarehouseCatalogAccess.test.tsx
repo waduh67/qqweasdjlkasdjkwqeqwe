@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -44,9 +45,10 @@ it('selecting a named bin parent uses its real area and requires review before c
   render(<MemoryRouter><WarehouseLocationEditor row={null} readOnly={false} onClose={vi.fn()} onSaved={onSaved} onReload={vi.fn()} /></MemoryRouter>)
   fireEvent.change(await screen.findByRole('textbox', { name: 'Kode lokasi' }), { target: { value: 'BIN-A' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Nama lokasi' }), { target: { value: 'Rak A' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Jenis lokasi' }), { target: { value: 'BIN' } })
+  await selectControl(screen.getByRole('combobox', { name: 'Jenis lokasi' }), { target: { value: 'BIN' } })
+  fireEvent.click(screen.getByRole('combobox', { name: 'Lokasi induk' }));
   await screen.findByRole('option', { name: 'Gudang utama · MAIN' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi induk' }), { target: { value: id } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi induk' }), { target: { value: id } })
   expect((screen.getByRole('combobox', { name: 'Area lokasi' }) as HTMLSelectElement).value).toBe(areaId)
   fireEvent.submit(document.querySelector('form')!)
   expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(0)
@@ -60,8 +62,9 @@ it('an existing revoked grant is reactivated using its actual revision instead o
   const fetch = vi.fn(async (path: string, init: RequestInit) => init.method === 'PUT' ? response({ ...grant, active: true, revision: 6 }) : directory(path))
   vi.stubGlobal('fetch', fetch)
   render(<MemoryRouter><WarehouseScopePanel /></MemoryRouter>)
+  fireEvent.click(screen.getByRole('combobox', { name: 'Lokasi' }));
   await screen.findByRole('option', { name: 'Gudang utama · MAIN' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi' }), { target: { value: id } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi' }), { target: { value: id } })
   await screen.findByText('Pemberian akses langsung: dicabut · Revisi 5')
   fireEvent.click(screen.getByRole('button', { name: 'Berikan akses langsung' }))
   fireEvent.click(screen.getByRole('button', { name: /^Berikan akses$/ }))
@@ -75,8 +78,9 @@ it('an inaccessible scope list never becomes an empty grant list or enables a gu
   const fetch = vi.fn(async (path: string) => path.includes('/settings/scopes/') ? response({ code: 'NOT_FOUND', message: 'NOT_FOUND' }, 404) : directory(path))
   vi.stubGlobal('fetch', fetch)
   render(<MemoryRouter><WarehouseScopePanel /></MemoryRouter>)
+  fireEvent.click(screen.getByRole('combobox', { name: 'Lokasi' }));
   await screen.findByRole('option', { name: 'Gudang utama · MAIN' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi' }), { target: { value: id } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi' }), { target: { value: id } })
   await screen.findByText('Data tidak ditemukan dalam cakupan gudang Anda.')
   expect(screen.queryByRole('button', { name: 'Berikan akses langsung' })).toBeNull()
   expect(screen.queryByText('Belum ada pemberian akses langsung untuk lokasi ini.')).toBeNull()
@@ -92,8 +96,9 @@ it('scope conflict reloads the current grant and does not silently resubmit agai
   })
   vi.stubGlobal('fetch', fetch)
   render(<MemoryRouter><WarehouseScopePanel /></MemoryRouter>)
+  fireEvent.click(screen.getByRole('combobox', { name: 'Lokasi' }));
   await screen.findByRole('option', { name: 'Gudang utama · MAIN' })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi' }), { target: { value: id } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi' }), { target: { value: id } })
   fireEvent.click(await screen.findByRole('button', { name: 'Berikan akses langsung' }))
   fireEvent.click(screen.getByRole('button', { name: /^Berikan akses$/ }))
   fireEvent.click(await screen.findByRole('button', { name: 'Muat ulang dokumen' }))

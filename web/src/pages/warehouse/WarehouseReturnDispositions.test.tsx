@@ -1,3 +1,4 @@
+import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -32,7 +33,7 @@ it('shows expired disposition history and keeps fresh source proposal creation a
 })
 async function fill(target: string) {
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Lokasi tujuan disposisi' })).not.toHaveProperty('disabled', true))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Lokasi tujuan disposisi' }), { target: { value: target } })
+  await selectControl(screen.getByRole('combobox', { name: 'Lokasi tujuan disposisi' }), { target: { value: target } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan disposisi / koreksi' }), { target: { value: disposition.reason } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Referensi bukti disposisi' }), { target: { value: disposition.evidenceReference } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau permintaan disposisi' }))
@@ -48,7 +49,7 @@ it('creates a reviewed source-bound loss request without claiming a physical pos
   fireEvent.click(screen.getByRole('button', { name: 'Ajukan kehilangan / scrap' }))
   expect(screen.getByRole('option', { name: 'Scrap barang rusak' })).toHaveProperty('disabled', true)
   await fill(lost.id)
-  const dialog = await screen.findByRole('dialog', { name: 'Konfirmasi permintaan disposisi' })
+  const dialog = await screen.findByRole('region', { name: 'Konfirmasi permintaan disposisi' })
   expect(dialog.textContent).toContain('17,500 m'); expect(dialog.textContent).toContain('Retur revisi 0')
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan permintaan disposisi' }))

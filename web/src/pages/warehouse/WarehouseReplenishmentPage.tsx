@@ -1,9 +1,10 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { uuid, oneOf, integer } from '@/api/warehouse/codec'
 import { listReplenishmentRequests, listReplenishmentRules, REPLENISHMENT_STATES, type ReplenishmentFilter } from '@/api/warehouse/replenishment'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState, SelectField } from '@/components/atoms'
+import { EmptyState, SelectField } from '@/components/atoms'
 import { PageHeader, Tabs } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
@@ -33,7 +34,7 @@ export function WarehouseReplenishmentPage() {
   let parsed: ReturnType<typeof parse>
   try { parsed = parse(params) } catch { return <div role="alert" className="card stack"><p>Alamat pengisian stok tidak dikenal.</p><Link to="/warehouse/replenishment">Buka pengisian stok</Link></div> }
   function apply(values: Record<string, string>) { const next = new URLSearchParams(params); next.delete('page'); for (const [key, value] of Object.entries(values)) if (value) next.set(key, value); else next.delete(key); setParams(next) }
-  return <div className="stack"><PageHeader title="Pengisian Stok" subtitle="Atur batas stok dan tindak lanjuti kebutuhan pengisian per lokasi." />
+  return <div className="stack"><PageHeader title="Pengisian Stok" />
     {parsed.ruleId || parsed.requestId ? <><Link to="/warehouse/replenishment">Kembali ke pengisian stok</Link><WarehouseReplenishmentDetail key={params.toString()} kind={parsed.ruleId ? 'rules' : 'requests'} id={(parsed.ruleId ?? parsed.requestId)!} /></> : <>
       <Tabs active={parsed.view} tabs={[{ key: 'requests', label: 'Kebutuhan pengisian' }, { key: 'rules', label: 'Aturan minimum' }]} onChange={view => apply({ view, state: view === 'requests' ? 'PENDING' : '', active: view === 'rules' ? 'true' : '' })} />
       <ReplenishmentList key={params.toString()} parsed={parsed} apply={apply} page={page => { const next = new URLSearchParams(params); next.set('page', String(page)); setParams(next) }} />
@@ -47,9 +48,12 @@ function ReplenishmentList({ parsed, apply, page }: { parsed: ReturnType<typeof 
   const result = useWarehouseQuery(loader), create = can('inventory.request.manage') && can('inventory.sku.view') && can('inventory.location.view')
   const empty = <EmptyState title="Belum ada catatan pengisian sesuai filter" hint="Atur batas minimum per barang dan gudang, lalu hitung ulang kebutuhan." />
   return <>
+    <WarehouseListActions onRefresh={result.reload} onReset={() => apply({ skuId: '', locationId: '', state: '', active: '' })} create={create ? { label: 'Tambah aturan minimum', onClick: () => setCreating(true) } : undefined} />
+    <section className="resource-filters row">
     {view === 'rules' ? <SelectField label="Keaktifan aturan" value={active ?? ''} onChange={(_, value) => apply({ active: value.value })}><option value="">Semua aturan</option><option value="true">Aktif</option><option value="false">Diarsipkan</option></SelectField> :
       <SelectField label="Status pengisian" value={state ?? ''} onChange={(_, value) => apply({ state: value.value })}><option value="">Semua status</option>{REPLENISHMENT_STATES.map(value => <option key={value} value={value}>{replenishmentLabels[value]}</option>)}</SelectField>}
-    <div className="row wrap"><Button onClick={result.reload}>Muat ulang daftar pengisian</Button>{create && <Button variant="primary" onClick={() => setCreating(true)}>Tambah aturan minimum</Button>}<Link to={replenishmentLink({ view })}>Hapus filter pengisian</Link></div>
+
+    </section>
     {creating && create && <WarehouseReplenishmentRuleForm onClose={() => setCreating(false)} reload={() => { setCreating(false); result.reload() }} onDone={rule => apply({ ruleId: rule.id })} />}
     <WarehouseState {...result}>{data => <>
       {data.view === 'rules' ? <DataTable presentation="warehouse" rows={data.data.items} rowKey={row => row.rule.id} empty={empty} columns={[

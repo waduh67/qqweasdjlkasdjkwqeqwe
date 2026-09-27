@@ -32,8 +32,8 @@ export function WarehouseApprovalFilters({ onApply }: { onApply: (filter: Approv
     <SelectField label="Status persetujuan" value={status} onChange={(_, data) => setStatus(data.value as typeof status)}><option value="">Semua status</option>{APPROVAL_STATES.map(status => <option key={status} value={status}>{statuses[status]}</option>)}</SelectField>
     <SelectField label="Jenis persetujuan" value={operation} onChange={(_, data) => setOperation(data.value as typeof operation)}><option value="">Semua jenis</option>{POLICY_OPERATIONS.map(operation => <option key={operation} value={operation}>{approvalOperationLabels[operation]}</option>)}</SelectField>
     <TextField label="Serial lengkap persetujuan" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
-    {can('inventory.location.view') && <WarehousePicker label="Lokasi persetujuan" load={locations} value={location} onChange={setLocation} name={locationLabel} optional />}
-    {can('inventory.sku.view') && <WarehousePicker label="Barang persetujuan" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} optional />}
+    {can('inventory.location.view') && <WarehousePicker label="Lokasi persetujuan" load={locations} value={location} onChange={setLocation} name={locationLabel} placeholder="Semua" optional />}
+    {can('inventory.sku.view') && <WarehousePicker label="Barang persetujuan" load={skus} value={sku} onChange={setSku} name={row => `${row.name} · ${row.code}`} placeholder="Semua" optional />}
     <TextField label="Persetujuan diajukan mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
     <TextField label="Persetujuan sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     {error && <p className="error" role="alert">{error}</p>}<Button type="submit" variant="primary">Terapkan filter persetujuan</Button>

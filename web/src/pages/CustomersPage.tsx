@@ -257,7 +257,7 @@ export function CustomersPage() {
       const fallback = draft.id ? 'Gagal memperbarui pelanggan' : 'Gagal menambah pelanggan'
       toast.error(err instanceof ApiError ? err.message : fallback)
     } finally {
-      setSaving(false)
+      setSaving(false); creation.finish()
     }
   }
 
@@ -464,7 +464,7 @@ export function CustomersPage() {
       >
         {draft && (
           <div className="stack azure-resource-form">
-            <FormSection title="Identitas pelanggan" description="Nama dan alamat wajib diisi. Kontak digunakan untuk komunikasi dan tagihan.">
+            <FormSection title="Identitas pelanggan">
             <TextField
               label="Nama"
               required
@@ -487,7 +487,7 @@ export function CustomersPage() {
               placeholder="opsional"
             />
             </FormSection>
-            <FormSection title="Alamat pemasangan" description="Tentukan alamat dan area layanan pelanggan.">
+            <FormSection title="Alamat pemasangan">
             <TextField
               label="Alamat"
               required
@@ -513,7 +513,7 @@ export function CustomersPage() {
             </Disclosure>
             </FormSection>
             {draft.id == null && (
-              <FormSection title="Layanan internet" description="Paket menentukan kecepatan dan biaya langganan pelanggan.">
+              <FormSection title="Layanan internet">
               <SelectField
                 label="Paket langganan"
                 required={plans.length > 0}

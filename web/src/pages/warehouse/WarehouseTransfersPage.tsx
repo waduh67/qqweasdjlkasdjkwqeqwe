@@ -1,3 +1,4 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
@@ -33,16 +34,20 @@ export function WarehouseTransfersPage() {
     if (params.has('transferId')) id = uuid(params.get('transferId'))
   } catch { return <div className="card stack" role="alert"><p>Alamat transfer tidak dikenal.</p><Link to="/warehouse/transfers">Kembali ke daftar transfer</Link></div> }
   if (!can('inventory.transfer.view')) return <WarehouseDenied />
-  return <div className="stack warehouse-transfers"><PageHeader title="Transfer" subtitle="Lacak pengiriman antar lokasi, penerimaan fisik, dan sisa dalam perjalanan." />
+  return <div className="stack warehouse-transfers"><PageHeader title="Transfer" />
     {creating ? <WarehouseTransferEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />
       : id ? <><Link to="/warehouse/transfers">Kembali ke daftar transfer</Link><TransferDetail key={id} id={id} /></>
-      : <>{can('inventory.transfer.manage') && <Button variant="primary" onClick={() => setCreating(true)}>Buat transfer</Button>}<TransferList /></>}
+      : <><TransferList onNew={() => setCreating(true)} /></>}
   </div>
 }
-function TransferList() {
+function TransferList({ onNew }: { onNew: () => void }) {
+  const { can } = useCan()
+  const [filterVersion, setFilterVersion] = useState(0)
   const [filter, setFilter] = useState<TransferFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => listTransfers({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><WarehouseTransferFilters onApply={filter => { setFilter(filter); setPage(0) }} /><Button onClick={result.reload}>Segarkan transfer</Button>
+  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setFilter({}); setPage(0); setFilterVersion(version => version + 1) }}
+    create={can('inventory.transfer.manage') ? { label: 'Buat transfer', onClick: onNew } : undefined} />
+    <WarehouseTransferFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.transfer.id} empty={<EmptyState title="Belum ada transfer dalam cakupan Anda" hint="Buat transfer dari stok fisik yang sudah diterima dan belum terikat pengeluaran WO." />} columns={[
       { key: 'code', header: 'Transfer', cell: row => <Link to={detailPath(row.transfer.id)}>{row.transfer.code}</Link> },
       { key: 'route', header: 'Asal → Tujuan', cell: row => <span>{transferLocationLabel(row, row.transfer.sourceLocationId)} → {transferLocationLabel(row, row.transfer.destinationLocationId)}</span> },

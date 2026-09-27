@@ -56,7 +56,7 @@ function RmaForm({ details, order, onClose, onDone }: { details: ReturnDetails; 
     }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa serah-terima RMA.') }
   }
-  return <><ResourceForm title="Serah-terima RMA" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi pengiriman RMA" confirmLabel="Kirim RMA ke transit" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+  return <><ResourceForm editing title="Serah-terima RMA" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi pengiriman RMA" confirmLabel="Kirim RMA ke transit" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
       summary={<><p>{order.code} · Revisi WO {order.revision} · Retur revisi {details.returnCase.revision}</p><p>{returnItemLabel(details.references.item)} · 1 unit · Serial {serial}</p>
         <p>Penerima: {order.technicians.find(row => row.id === technician)?.name}</p><p>{transit && locationLabel(transit)} → {field && locationLabel(field)}</p>
         <p>Bukti: {evidence}</p><p>Barang tetap milik pelanggan dan belum diterima teknisi. Tidak menambah stok tersedia ISP.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} variant="primary" type="submit" disabled={!technician}>Tinjau pengiriman RMA</Button></>}><form id={resourceFormId} className="stack" aria-label="Serah-terima RMA" onSubmit={prepare}>
@@ -71,7 +71,7 @@ function RmaForm({ details, order, onClose, onDone }: { details: ReturnDetails; 
     <TextField label="Referensi bukti RMA" value={evidence} required maxLength={500} onChange={(_, data) => setEvidence(data.value)} />
     {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"></div>
   </form></ResourceForm>
-    
+
   </>
 }
 function RmaReceipt({ id }: { id: string }) {
