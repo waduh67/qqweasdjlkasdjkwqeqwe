@@ -16,8 +16,8 @@
 }
 .nav-toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 4px 8px 16px; flex-shrink: 0; }
 .nav-search { flex: 1; min-width: 0; max-width: 186px; }
-.nav-search .fui-Input { width: 100%; min-height: 24px; height: 24px; padding: 0 6px; gap: 4px; border: 1px solid var(--muted); border-radius: 0; background: var(--sidebar-bg); }
-.nav-search .fui-Input::after { border-radius: 0; }
+.nav-search .fui-Input { width: 100%; min-height: 24px; height: 24px; padding: 0 6px; gap: 4px; border: 1px solid #8a8886; border-radius: 2px; background: var(--sidebar-bg); }
+.nav-search .fui-Input::after { border-radius: 2px; }
 .nav-search .fui-Input__input { padding: 0; font-size: 13px; line-height: 20px; }
 .nav-search .fui-Input__contentBefore { color: var(--accent); }
 .sidebar .nav-collapse { min-width: 24px; width: 24px; min-height: 24px; height: 24px; padding: 0; margin-left: auto; border: 0; border-radius: 0; color: var(--sidebar-muted); }
