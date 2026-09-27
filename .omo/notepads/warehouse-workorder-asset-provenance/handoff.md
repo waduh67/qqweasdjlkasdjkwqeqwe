@@ -12,11 +12,18 @@ commit and push recoverable checkpoints. No main merge or registry publication.
   deployment/docs changes and three shared-proxy files; it is no longer a whole
   3693-input equivalent checkout. The other 3688 recorded inputs remain unchanged.
   This checkpoint adopts bounded deployment runtime/review evidence only.
-- Preserve CI `36265279847`: all14nonserver jobs/artifacts and focused compatibility
-  passed; fullserver/fresh/historical has run since19:40:01UTC. Authenticate its actual
-  final artifacts before final approval. Do not count duplicate/cancelled runs as passes.
+- CI `36265279847` is COMPLETE SUCCESS,16/16jobs. Actual current archive was directly
+  authenticated by F2 using the source-reviewed F4 helper; F1 independently reparsed
+  all721XML. Results:3850modern tests/628suites,326focused/50separate suites,
+  7historical+1projection,197offline protocol tests and3ModularityTests. All761raw
+  members authenticated. Canonical proof `task46/f4-ci-1306b65c-server-recheck.json`
+  retains its historical helper filename; new execution is explicitly attributed toF2.
+  Do not count duplicate/cancelled metadata runs as passes or relabel older failures.
 - F3 is PASS (36intended browser cases +8preflight; prior failed/interrupted attempts
-  retained). F1/F2/F4 still need current fullserver and the new deployment delta.
+  retained). F1/F2 code/readiness review now passes; actual host acceptance and final
+  closure still follow activation. Old F4 thread could not resume due to tool thread
+  limits, so the existing workflow reviewer carries F3 and takes over F4 closure,
+  explicitly as two audit roles held by one reviewer independent of implementing root.
 - Deployment fixes: separate `warehouse_owner` Flyway credentials from non-owner
   `warehouse_app`; preserve restricted clock grants; correct canonical Spring demo
   secret binding, storage key requirements, optional environment-only SMTP health,
@@ -54,7 +61,7 @@ commit and push recoverable checkpoints. No main merge or registry publication.
   the supplied password did not meet the existing16-character production minimum.
   The environment and credentials are saved root-only0600 on the VPS. Use the host
   ftth-compose wrapper so both proxy and pinned image overlays are always applied.
-  Next: authenticate current full CI, obtain independent activation readiness,
+  Next: finish binding all four independent audit readiness receipts,
   activate authorized production and configure VPN1194/TCP on unused10.8.0.0/24,
   verify HTTPS/login/backups/listeners and existing site, finish F1/F2/F4, close46–48,
   integrate validated feature descendants, then present concrete owner acceptance.

@@ -1,0 +1,138 @@
+{
+  "status": "F2_CODE_REVIEW_PASS_CURRENT_FULL_CI_AUTHENTICATED_ACTIVATION_BINDING_PENDING",
+  "reviewer": "f2",
+  "recordedAtUtc": "2026-09-26T21:59:29.161302+00:00",
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "reviewHead": "f50bdd762db1d09c0dec0aa4b09fc967d73f3665",
+  "ciRun": 36265279847,
+  "serverArtifactProof": {
+    "file": "f4-ci-1306b65c-server-recheck.json",
+    "sha256": "4374abfa2aea7a4ad3ae1308055d9991f96e277c440b129d1bf228488a0d1dbc",
+    "artifactId": 10917020607,
+    "zipBytes": 5132214,
+    "archiveDigest": "sha256:1e0b4bb20e870aaec74b8f9aec597b76386d4fae5f3ab2e00e661251fe5396af",
+    "authenticatedRawMembers": 761,
+    "xmlReportsParsed": 721,
+    "modernTests": 3850,
+    "modernSuites": 628,
+    "focusedTests": 326,
+    "focusedSuites": 50,
+    "historicalTests": 7,
+    "projectionTests": 1,
+    "modularity": {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "protocols": {
+      "contract": {
+        "tests": 2,
+        "suites": 1
+      },
+      "snmp": {
+        "tests": 25,
+        "suites": 3
+      },
+      "collector": {
+        "tests": 170,
+        "suites": 31
+      }
+    },
+    "protocolActionableTasks": {
+      "total": 25,
+      "freshExecuted": 25
+    },
+    "fullSuiteReportsDistinctFromFocused": true,
+    "oldPinnedSourceInputs": 2595,
+    "handoffCounts": {
+      "transfer": 2,
+      "count": 2,
+      "expiry": 1
+    },
+    "freshMigrationCounts": [
+      367,
+      169,
+      198
+    ],
+    "allCiJobsSuccess": 16,
+    "downloadAndParserExecutedBy": "F2 reviewer using source-reviewed prepared F4 helpers",
+    "downloaderSha256": "e7b4bbd9556e44968af1cab4370f4d131ddb8b8ac9f8e7e2b9569cdb2469cde2",
+    "parserSha256": "6371e51ed20d0e48ca45c0561ceb6152a7cac6d966d7843d46eec6b0a8378039",
+    "parserExitCode": 0
+  },
+  "currentSourceReconciliation": {
+    "capturedInputs": 3693,
+    "changedTrackedInputs": [
+      "deploy/.env.example",
+      "deploy/DEPLOY.md",
+      "deploy/docker-compose.prod.yml",
+      "deploy/postgres-init/10-init-app-db.sh",
+      "docs/backup.md"
+    ],
+    "unchangedInputs": 3688,
+    "unchangedMigrations": 367,
+    "newDeploymentFiles": [
+      "deploy/Caddyfile.shared-proxy",
+      "deploy/SHARED-PROXY.md",
+      "deploy/docker-compose.shared-proxy.yml"
+    ],
+    "postDeploymentDeltaEvidenceOnly": true
+  },
+  "existingProofHashesMatched": {
+    "nonserver": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "images": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+    "bootstrap": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+    "network": "46e5ab137f69e80f1eb6564651969c14e88f4a8009e78df7979eece128651cfe",
+    "backup": "543bac2d15e46038d66368904c4ae42bf1db4c374d7157e6542de92c6be963f7"
+  },
+  "networkAssessment": {
+    "status": "NETWORK_R3_RUNTIME_PASS_AUTHENTICATED_R1_R2_FAILURES_PRESERVED",
+    "sourceBoundF4ReviewRead": true,
+    "radiusLoggingItemClosedForActualHostByF4": true,
+    "tlsForwardedSchemeDriveActivationClaim": false,
+    "F2ReparsedRaw": false
+  },
+  "backupAssessment": {
+    "status": "SHIPPED_BACKUP_NONREPLACING_RESTORE_DRILL_PASS_AUTHENTICATED",
+    "sourceBoundF4ReviewRead": true,
+    "scope": "isolated platform-only non-replacing restore; no populated production disaster-recovery claim",
+    "F2ReparsedRaw": false
+  },
+  "activationHelperSha256": "87f7e0f55c82bad649b3d5ed615b7e5b18227992bfe664ecd649095d5c0c3ed7",
+  "activationHelperSourceReadByF2": true,
+  "vpnHelperSourcesReadByF2": {
+    "prepare-production-vpn.py": "7bfc97148da992c1a9be5d2cc8f0923eda85f058cace40bd7c3f47ab305cf0d4",
+    "install-production-vpn.py": "9e9ce97c67b030d8a3b4b011fae9f82aca0b8403826862ca0870523490892f7c",
+    "patch-vpn-installer.py": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e"
+  },
+  "hostCandidateAtCapture": {
+    "sha256": "60a39506ecf1b41352c97ce55826c9c111ce86c3b5f9b274cc848c54e0eef023",
+    "hostFileCount": 13,
+    "proofKinds": [
+      "nonserver",
+      "images",
+      "bootstrap",
+      "network",
+      "backup"
+    ],
+    "independentReviewCount": 0,
+    "notAnApproval": true
+  },
+  "blockingFindings": [],
+  "remainingBeforeReadyBinding": "Root adopts the authenticated server proof into the exact six-proof candidate and requests a separate F2 READY_FOR_ACTIVATION receipt bound to its host/helper/proof hashes",
+  "remainingAfterActivation": [
+    "Actual public HTTPS/login and unrelated Drive preservation",
+    "Final effective configuration and runtime role/ACL/image identities",
+    "Actual initial backups and final host restart/readiness checks",
+    "Separate rendered VPN installer/hash decision and actual VPN evidence if pursued; no physical-device certification"
+  ],
+  "localQaExecuted": false,
+  "SSHExecuted": false,
+  "DockerExecuted": false,
+  "productEdits": false,
+  "productionActivationApproved": false,
+  "finalHostAcceptance": false
+}
