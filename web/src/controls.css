@@ -29,12 +29,12 @@
 .azure-resource-form .field-label { font-size: 13px; font-weight: 400; }
 .blade-customer-form .azure-blade-foot { justify-content: flex-start; }
 @media (min-width: 820px) {
-  .azure-resource-form .app-field:has(> .fui-Field__label) {
+  .azure-resource-form .app-field:where(:not(.form-disclosure *)):has(> .fui-Field__label) {
     grid-template-columns: 250px minmax(0, 450px);
     grid-template-rows: auto;
   }
-  .azure-resource-form .app-field > .fui-Field__label { grid-column: 1; grid-row: 1 / span 3; padding: 2px 20px 2px 0; margin: 0; }
-  .azure-resource-form .app-field > :not(.fui-Field__label) { grid-column: 2; }
+  .azure-resource-form .app-field:where(:not(.form-disclosure *)) > .fui-Field__label { grid-column: 1; grid-row: 1 / span 3; padding: 2px 20px 2px 0; margin: 0; }
+  .azure-resource-form .app-field:where(:not(.form-disclosure *)) > :not(.fui-Field__label) { grid-column: 2; }
   .azure-resource-form .form-disclosure { margin-left: 250px; }
 }
 

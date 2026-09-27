@@ -46,7 +46,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await selectAll.check()
   for (const checkbox of await page.getByRole('checkbox', { name: 'Pilih baris', exact: true }).all()) await expect(checkbox).toBeChecked()
   await selectAll.uncheck()
-  await page.getByRole('button', { name: 'Aksi baris', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Aksi sel', exact: true }).first().click()
   await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   const routes = ['/', '/customers', '/inventory', '/invoices', '/catalog', '/helpdesk', '/my-work-orders', '/my-materials', '/work-orders', '/warehouse', '/warehouse/catalog', '/warehouse/stock', '/warehouse/receipts', '/warehouse/requests', '/warehouse/transfers', '/warehouse/returns', '/warehouse/counts', '/warehouse/reports', '/monitoring', '/bras', '/acs', '/vpn', '/roles', '/users', '/areas', '/notifications', '/subscription', '/express-psb', '/import-customers', '/import-pppoe', '/hotspot', '/network-provisioning', '/provisioning', '/incidents', '/my-visits', '/audit', '/payment-gateway', '/tax-settings', '/reports', '/account/security', '/warehouse/approvals', '/warehouse/replenishment', '/warehouse/provenance', '/warehouse/settings']
@@ -82,6 +82,12 @@ test('operator pages remain readable and form controls fit the viewport', async 
     const bounds = await control.boundingBox()
     expect(bounds!.height).toBe(24)
     expect(bounds!.width).toBe(450)
+  }
+  await page.getByText('Tentukan titik di peta (opsional)', { exact: true }).click()
+  await expect(page.getByLabel('Longitude', { exact: true })).toBeVisible()
+  for (const label of ['Longitude', 'Latitude']) {
+    const bounds = await page.getByLabel(label, { exact: true }).boundingBox()
+    expect(bounds!.width, `${label} remains readable in the nested location form`).toBeGreaterThan(140)
   }
   for (const field of await page.locator('.azure-blade input:visible, .azure-blade select:visible, .azure-blade textarea:visible').all()) {
     await field.scrollIntoViewIfNeeded()
