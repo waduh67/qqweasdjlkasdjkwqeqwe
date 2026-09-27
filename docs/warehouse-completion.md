@@ -51,3 +51,11 @@ OS print boundary and verifies slip code, recipient, serial, quantity and state;
 the real server slip request remains required. This validates printable content,
 not a physical printer. Resume issue and remaining browser cases; unchanged
 frontend/setup/receiving evidence remains bound to `79d5ccae`.
+
+Issue now passes in both Firefox viewports at `885a1f34`. Returns passed three
+cases, but its mobile reassignment helper tried to dismiss an open technician
+picker by clicking a heading covered by that picker. The helper now presses Escape
+and requires `aria-expanded=false` before the unchanged real assignment command.
+Only returns and the extra edge scenario import this helper. Resume returns onward;
+preserve the completed issue result and earlier unaffected evidence with their
+actual executed commits. No product code changed.
