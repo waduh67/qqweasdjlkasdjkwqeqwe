@@ -1,0 +1,122 @@
+{
+  "reviewer": "f4",
+  "reviewerAgent": "/root/workflow_final_review",
+  "reviewedAtUtc": "2026-09-27T09:15:32.571956+00:00",
+  "decision": "INSTALL_AUTHORIZED_HUB",
+  "blockingFindings": [],
+  "scope": "EXACT_RENDERED_VPN_INSTALLER_BEFORE_INSTALLATION",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "reviewerHandoff": {
+    "sameIndependentAgentCovers": [
+      "f3",
+      "f4"
+    ],
+    "independentOfImplementingRoot": true,
+    "fourDistinctLiveReviewersClaimed": false,
+    "priorSeparateF4HelperReviewRetained": true
+  },
+  "hubId": "01a0e224-1c3b-7dda-83e5-b83a23d616fa",
+  "target": {
+    "name": "Azure FTTH",
+    "host": "70.153.16.143",
+    "port": 1194,
+    "protocol": "TCP",
+    "tunnelCidr": "10.8.0.0/24"
+  },
+  "installerSha256": "c98248b475b6447a43dc6f34c749026e4cd3dc0d2ff31c7bc195348154f35f96",
+  "originalInstallerSha256": "46790869259b2cc0d9a2dade18c2e175b770e049191f219c4577b8f8b941547b",
+  "patchSha256": "a85ad28770f6e8f7532d2ec6c23332a355050c0bc42de1abb67c6a74fc80f382",
+  "preparationReceiptSha256": "dec8973bf044d403eb072be2e42629fc8e2cb39c8ca273a17c03d7a63dff862f",
+  "helperSha256": "9e9ce97c67b030d8a3b4b011fae9f82aca0b8403826862ca0870523490892f7c",
+  "prepareHelperSha256": "7bfc97148da992c1a9be5d2cc8f0923eda85f058cace40bd7c3f47ab305cf0d4",
+  "patcherSha256": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e",
+  "preparationArchiveSha256": "a5dea4309b2a1d34fb4b73b2e56a1ed1372ad401b9a6cd2b03b6bd367ccf47b8",
+  "archiveRegularFilesAuthenticated": 21,
+  "privateArtifactSha256": {
+    "hub-create.request": "60e385931e60bd7d2e56a09500b3ad15ca8771eac03eab280356baee80737f9a",
+    "installer.curl": "e321bf70335215537244e0d01bc63f10abcc3acc617737d3e52d1ca858e4f887",
+    "hub-create.response": "68b5d9bfb140d147329b6a352585c453b71c1adb5c3c8432b663d14a5973d3d7",
+    "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "install.sh": "c98248b475b6447a43dc6f34c749026e4cd3dc0d2ff31c7bc195348154f35f96",
+    "ca.crt": "8cacce5f1612dc685bf606a583c8dfe1e15469ae09355876f10ce2655da945af",
+    "server.key": "99cc202d14724a57c13385ce378b79557507e2f2c4abb186a290ca81fcddec69",
+    "install.original.sh": "46790869259b2cc0d9a2dade18c2e175b770e049191f219c4577b8f8b941547b",
+    "server.crt": "90dc45abea89eb8648f18a89a226c78bd99a9aa0e99956d48917de2e406df15c",
+    "hub-create.curl": "1e5b249329dd355559f8269d187056b5b1c7b0fc794655596e21c48dd2b13d7f",
+    "hub-list.curl": "0688aa7115fec4724134b925ebfe33b8b3edb4e8d0ab14f12d9036e02242e3f8",
+    "verification.json": "dec8973bf044d403eb072be2e42629fc8e2cb39c8ca273a17c03d7a63dff862f",
+    "routes-before.json": "f12b4d30bac558912bff5dd0ce8ddff717bb8b715b975af79d898322fc2ec183",
+    "iptables-before.txt": "a6dc63e0265c61e5489d8c5c8b8b45ac71883646350e934b8ef9bf9232265de7",
+    "runner.log": "ca38f0c2a8c9f435bbf78b96e425a44f58baf6bbaa94189f31dabb6a15c244ab",
+    "admin-login.curl": "07d4f557067979fc431059d9bcfda0aa3d7d49d9163164f49deaf6298ca10a1b",
+    "installer.response": "46790869259b2cc0d9a2dade18c2e175b770e049191f219c4577b8f8b941547b",
+    "admin-login.request": "0e1c5e9cf74d2f57223911e4a2bd02fa7d5cd32a57c6f049b35a0b6e27441fe4",
+    "install.patch": "a85ad28770f6e8f7532d2ec6c23332a355050c0bc42de1abb67c6a74fc80f382",
+    "admin-login.response": "905b0afcbb4ed50e151bab472e65450320bb96a62bd5c51e7eab9c8a5466aa28",
+    "hub-list.response": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "sourceAuthentication": {
+    "templateSha256": "468eb859ded93670ae39d8792913ee4bf79d1d1af275d239dda21c432ea13123",
+    "rendererSha256": "7b9352d4e5301a177f4d6afdab43c7c0f492957530344bd6daec4dba90f128db",
+    "bothMatchTestedCommit": true,
+    "originalExactlyReconstructedFromCommittedTemplateAndRecordedHubPki": true,
+    "singleReviewedCleanupBlockOnly": true,
+    "reversiblePatchMatchesSavedUnifiedDiff": true,
+    "rawInstallerResponseMatchesOriginal": true,
+    "callbackDomain": "https://ftth.karuhundeveloper.com",
+    "serverProtocol": "tcp",
+    "port": 1194,
+    "tunnelSubnet": "10.8.0.0/24",
+    "clientAuth": "HTTPS username/password callback; no client certificate required"
+  },
+  "certificateAuthentication": {
+    "embeddedAndSeparatePemBytesMatch": true,
+    "caBasicConstraints": "CA:TRUE",
+    "serverSubject": "CN=server",
+    "issuer": "CN=FTTH VPN CA Azure FTTH",
+    "notBeforeUtc": "2026-09-26T09:13:33Z",
+    "notAfterUtc": "2036-09-24T09:13:33Z",
+    "serverAuthPurposeAndChainValid": true,
+    "validBeyondNext24Hours": true,
+    "privateKeyCheckPassed": true,
+    "privateKeyMatchesServerPublicKey": true
+  },
+  "preparationAuthentication": {
+    "exitCode": 0,
+    "hubListInitiallyEmpty": true,
+    "oneNewHubRegistered": true,
+    "peerCount": 0,
+    "pkiReady": true,
+    "storedRoutesDoNotOverlap": true,
+    "storedFirewallHasNoFtthOrTunnelMarkers": true,
+    "helperAssertsOtherOwnedPathsAndPortFree": true,
+    "allExtractedPrivateFilesOwnerOnly": true
+  },
+  "activationPrecondition": {
+    "status": "PASS",
+    "archiveSha256": "b02acf69c54f41f25c61f20e593173e33f4c4646a72b61aaf6491a6bcd3df332",
+    "receiptSha256": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+    "archiveRegularFilesAuthenticated": 10,
+    "actualExitCode": 0,
+    "fullActivationRuntimeReviewContinuesSeparately": true
+  },
+  "staticCommandsExecuted": [
+    "bash -n (syntax only)",
+    "openssl verify -purpose sslserver",
+    "openssl x509 validity and public key checks",
+    "openssl pkey -check and public key comparison"
+  ],
+  "realInstallerExecutedByReviewer": false,
+  "sshOrDockerExecutedByReviewer": false,
+  "testSuitesRerun": false,
+  "productEdits": false,
+  "finalHostAcceptance": false,
+  "limits": [
+    "This approves only the exact patched installer for the registered Azure FTTH hub; installation and final runtime acceptance have not occurred in this review.",
+    "Installation helper must repeat its existing conflict checks immediately before mutation and preserve runtime evidence and failed attempts.",
+    "The generic 1306 application installer remains unchanged with its known empty-match cleanup defect; only the reviewed host patch is approved.",
+    "OpenVPN server certificate uses CN=server and chains to the hub CA; the HTTPS callback domain is separately rendered as ftth.karuhundeveloper.com. No certificate hostname claim for that web domain is made.",
+    "No physical MikroTik or GPON/OLT device, successful peer authentication, reboot or full disaster-recovery claim is made.",
+    "Actual installation, HTTPS callbacks, firewall idempotence, existing Drive preservation and same-image restart persistence remain to be authenticated."
+  ]
+}

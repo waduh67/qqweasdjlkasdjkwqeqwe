@@ -1,0 +1,121 @@
+{
+  "reviewerAgent": "/root/workflow_final_review",
+  "roles": [
+    "f3",
+    "f4"
+  ],
+  "independentOfImplementingRoot": true,
+  "fourDistinctLiveReviewersClaimed": false,
+  "reviewedAtUtc": "2026-09-27T09:16:37.127494+00:00",
+  "decision": "ACTIVATION_AND_PUBLIC_BROWSER_EVIDENCE_AUTHENTICATED",
+  "blockingFindings": [],
+  "scope": "Actual application activation and subsequent public platform smoke only; final composed host acceptance awaits VPN and persistence evidence.",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "activation": {
+    "archiveSha256": "b02acf69c54f41f25c61f20e593173e33f4c4646a72b61aaf6491a6bcd3df332",
+    "receiptSha256": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+    "releaseGateSha256": "19193de06da5c170950d29edbb319f099be84e3b2eb92b9cb3a12ed8c80aa2cf",
+    "activationHelperSha256": "87f7e0f55c82bad649b3d5ed615b7e5b18227992bfe664ecd649095d5c0c3ed7",
+    "regularArchiveFilesAuthenticated": 10,
+    "actualExitCode": 0,
+    "startedAtUtc": "2026-09-27T09:10:57.115230+00:00",
+    "finishedAtUtc": "2026-09-27T09:11:48.271299+00:00",
+    "reportedRuntimeRole": {
+      "app": "warehouse_app",
+      "super": false,
+      "bypass": false,
+      "ownerMembership": false,
+      "databaseOwner": "warehouse_owner",
+      "schemaCreate": false
+    },
+    "reportedMigrations": {
+      "count": 367,
+      "failed": 0,
+      "latest": "178.12"
+    },
+    "reportedRestrictedClockAcls": true,
+    "publicLoginBodyConfirmsExpectedPlatformAdmin": true,
+    "ftthBodyIsHtml": true,
+    "managedEdgeBeforeAndAfterHashesMatch": true,
+    "unrelatedEdgeBytesIdentical": true,
+    "driveHtmlBeforeAndAfterIdentical": true,
+    "driveHttpStatusAssertedByHelper": 200,
+    "appBackupBytesRecordedInRunnerLog": 3142445,
+    "radiusBackupBytesRecordedInRunnerLog": 21306,
+    "privateArtifactSha256": {
+      "ftth-after.json": "796077bee376640710b4aaf73553f127a29b0a07574ebfd1b1ea72a96f5088ef",
+      "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "edge-candidate.Caddyfile": "347ac78d7990687218ea9ccddbfad2b5236d327608f4c7a2537c6ab4cfcaf0d6",
+      "drive-after.json": "b9545f886d1525b8bb7c48301ba6b05e1d3244171beeceafe7d6200b3d30577a",
+      "edge-before.Caddyfile": "323ecbb46f25b825bb75ac159f3593d5d02b28de288a917b5035fcffb603ccc6",
+      "drive-before.json": "b9545f886d1525b8bb7c48301ba6b05e1d3244171beeceafe7d6200b3d30577a",
+      "verification.json": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+      "public-login.json": "5c94e5fd6dcd4c47227f33ce46b4db5803cc7ce75aea007cddce34cd226719c2",
+      "runner.log": "6c76a32e845721e6fe253ba3a78699dbd5ac85dc78d7afbb587db0a8d7faa1bf",
+      "progress.json": "0dabb1ae88412b1ca9577570b09c918d832bbe9d000073e6f3aeb6c44dfc6a88"
+    }
+  },
+  "publicBrowser": {
+    "attempt": "public-browser-55d703b096a4",
+    "sourceSha256": "f9c2b942cc258420331738fbab49a43a1fe6ebd5b94f24df573005bfda244171",
+    "receiptSha256": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6",
+    "actualExitCode": 0,
+    "status": "PASS",
+    "viewports": [
+      1280,
+      390
+    ],
+    "desktopLoginAndDashboard": true,
+    "reloadAndSessionRefresh": true,
+    "mobileDrawerOpenClose": true,
+    "mobileRender": true,
+    "logout": true,
+    "pageErrors": 0,
+    "authenticatedApiErrors": 0,
+    "businessMutationRequests": 0,
+    "personallyInspectedScreenshots": 2,
+    "visualObservations": [
+      "Desktop platform dashboard renders zero-tenant state, navigation, summary cards and quick links without visible overlap.",
+      "Mobile settled drawer is closed; header controls, two-column summary cards, empty tenant message and stacked quick links fit the 390px capture without horizontal clipping."
+    ],
+    "artifactSha256": {
+      "platform-desktop.png": "01f8d71b13f82c9c2c902c37e2771bda8b239cd846d59e2e7caa827fbf2b7f11",
+      "platform-mobile.png": "62f950ef6ac51c1536b344a5728174f5b14e1de2f95d76466a3d701f4aa6f648",
+      "page-errors.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "post-login-api-errors.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "business-mutation-requests.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "verification.json": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6",
+      "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    "attemptBoundaries": {
+      "r1": {
+        "status": "FAIL",
+        "receiptSha256": "d37e645bf640b3f6604c15a97f7aea1a97958a276d2de58f51ed2f24eccc9213",
+        "sourceSha256": "52ea76310a9e9113052c1d5464ffdfb22c1ef3a66cf4ca90c4acdee184737dfb",
+        "observation": "Private locator timed out waiting for exact Email; no successful login claimed for this attempt."
+      },
+      "r2": {
+        "status": "PASS",
+        "receiptSha256": "a532edf91c2d574ce95c07dd57cb3d6623cb8eee09fa470b8fb437f117b5225b",
+        "sourceSha256": "5592efeda3aef28cafdcf34c21d7792caf85e478bfc75db5e5250b35baa51929",
+        "scope": "Successful prior source; final mobile drawer observation uses separate R3 receipt, not a relabel of R2."
+      },
+      "r3": {
+        "status": "PASS",
+        "receiptSha256": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6",
+        "sourceSha256": "f9c2b942cc258420331738fbab49a43a1fe6ebd5b94f24df573005bfda244171"
+      }
+    }
+  },
+  "limits": [
+    "Raw SQL query and Docker inspect outputs were not separately persisted in this activation archive; role, schema, ACL and private binding findings rely on the reviewed helper assertions and its authenticated receipt.",
+    "Public response body files use .json suffixes for saved HTML; they were inspected as HTML, not misrepresented as parsed JSON.",
+    "Browser evidence contains bound source, actual exit/summary files, error lists and screenshots; it does not include a full network trace or video.",
+    "Initial shipped backups completed with recorded sizes; this activation review does not prove restoring those production dumps. The separate earlier fixture restore drill retains its existing limits.",
+    "VPN installation, callback/firewall runtime, same-image backend restart persistence and final host acceptance remain pending.",
+    "Original F3 36-case/eight-probe local browser PASS and its two-copy boundary are unchanged; these public smoke artifacts are additional bounded evidence."
+  ],
+  "reviewerExecutedInstallerSshDockerOrBrowser": false,
+  "productEdits": false,
+  "finalHostAcceptance": false
+}

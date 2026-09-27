@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-27T09:10:57.115230+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "releaseGateSha256": "19193de06da5c170950d29edbb319f099be84e3b2eb92b9cb3a12ed8c80aa2cf",
+  "schemaExpected": "178.12",
+  "otherSite": "drive.karuhundeveloper.com",
+  "backendReady": true,
+  "stage": "public HTTPS and login passed",
+  "runtimeRole": {
+    "app": "warehouse_app",
+    "super": false,
+    "bypass": false,
+    "ownerMembership": false,
+    "databaseOwner": "warehouse_owner",
+    "schemaCreate": false
+  },
+  "migrations": {
+    "count": 367,
+    "failed": 0,
+    "latest": "178.12"
+  },
+  "restrictedClockAcls": true,
+  "privateLoginPassed": true,
+  "gatewayAndPrivateBindingsPassed": true,
+  "edgeSwitchAttempted": true,
+  "edgeGracefullyReloaded": true,
+  "otherProxyBytesPreserved": true,
+  "edgeBeforeSha256": "323ecbb46f25b825bb75ac159f3593d5d02b28de288a917b5035fcffb603ccc6",
+  "edgeAfterSha256": "347ac78d7990687218ea9ccddbfad2b5236d327608f4c7a2537c6ab4cfcaf0d6",
+  "publicHttpsAndLoginPassed": true,
+  "existingSiteHttpStatus": 200,
+  "initialAppAndRadiusBackupsPassed": true,
+  "finishedAtUtc": "2026-09-27T09:11:48.271299+00:00"
+}

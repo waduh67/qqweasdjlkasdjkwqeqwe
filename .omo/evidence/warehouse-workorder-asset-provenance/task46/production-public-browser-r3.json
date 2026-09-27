@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-27T09:14:21.046Z",
+  "domain": "ftth.karuhundeveloper.com",
+  "viewports": [
+    1280,
+    390
+  ],
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "testScope": "Real public UI login, dashboard, browser reload/session refresh, responsive rendering and logout",
+  "desktopLoginAndDashboardPassed": true,
+  "browserReloadAndSessionRefreshPassed": true,
+  "mobileDrawerOpenClosePassed": true,
+  "mobileRenderPassed": true,
+  "logoutPassed": true,
+  "businessMutationRequests": 0,
+  "pageErrorCount": 0,
+  "authenticatedApiErrorCount": 0,
+  "finishedAtUtc": "2026-09-27T09:14:22.916Z",
+  "sourceSha256": "f9c2b942cc258420331738fbab49a43a1fe6ebd5b94f24df573005bfda244171"
+}

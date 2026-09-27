@@ -1,3 +1,22 @@
+# Live production checkpoint — 2026-09-27
+
+FTTH is live at https://ftth.karuhundeveloper.com. Actual production activation,
+public browser desktop/mobile login-refresh-logout, 367 migrations to178.12,
+VPN1194/TCP, real external TLS1.3/negative authentication, same-container/image
+backend restart and new app/RADIUS backups all PASS. Existing Drive HTTPS and
+unrelated proxy bytes remain intact. Read deploy/AZURE-FTTH-OPERATIONS.md for
+ports, private credential retrieval, recovery and the host-only VPN installer patch.
+
+All13containers running and configured to restart; VPN/sync/firewall enabled.
+No customer tenant/peer/stock was seeded. Private recovery bundle copied off the
+VPS with matched SHA; NEVER commit its raw secrets or other runtime archives.
+See task46/actual-production-deployment-adoption.json and its exact safe receipts.
+Application/build/migrations remain1306b65c; deployment config remainsdb09c3c2.
+Final F1/F2/F3/F4 host audits are now running. Tasks46–48/final checkboxes and
+owner acceptance remain open until their actual verdicts are adopted. No main merge.
+
+--- Historical handoff follows ---
+
 # Active continuation — authorized server setup and final warehouse review
 
 Read this block first. Dated sections below are historical checkpoints, including

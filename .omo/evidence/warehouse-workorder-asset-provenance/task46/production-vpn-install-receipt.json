@@ -1,0 +1,38 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-27T09:15:55.725490+00:00",
+  "hubId": "01a0e224-1c3b-7dda-83e5-b83a23d616fa",
+  "installerSha256": "c98248b475b6447a43dc6f34c749026e4cd3dc0d2ff31c7bc195348154f35f96",
+  "helperSha256": "9e9ce97c67b030d8a3b4b011fae9f82aca0b8403826862ca0870523490892f7c",
+  "peerCount": 0,
+  "physicalMikrotikTested": false,
+  "freshInstallPreflight": {
+    "serverDirectoryAbsentOrEmpty": true,
+    "legacyConfigurationsAbsent": true,
+    "port1194FreeTcpAndUdp": true,
+    "ownedPathsAbsent": [
+      "/usr/local/sbin/ftth-vpn-firewall",
+      "/etc/sysctl.d/99-ftth-vpn.conf",
+      "/etc/systemd/system/openvpn-server@server.service.d",
+      "/etc/systemd/system/ftth-vpn-sync.service",
+      "/etc/systemd/system/ftth-vpn-sync.timer",
+      "/etc/systemd/system/ftth-vpn-firewall.service"
+    ],
+    "subnetAndFirewallConflictChecksPassed": true
+  },
+  "installerExitedSuccessfully": true,
+  "tunnelDevice": "tun0",
+  "persistedTunnelFirewallAndIdempotencePassed": true,
+  "httpsCallbacksAndInvalidCredentialsRejectionPassed": true,
+  "privateKeyAndNodeTokenMode": "0600",
+  "runtimeConfigurationSha256": {
+    "/usr/local/sbin/ftth-vpn-firewall": "162da7418aae5c50b06eec65b371a7742f1e2a6c3b0b204ff4a1b33b687c95ff",
+    "/etc/systemd/system/ftth-vpn-firewall.service": "c30f3952644e6534fa9cb8b4dc2489d16dcc130b101c07c71aff629bac7ad642",
+    "/etc/systemd/system/openvpn-server@server.service.d/ftth-firewall.conf": "a21ea96d64362dcc3fe7ae36b37a4c785e5edd428c6906595ff40fcd1084fe41",
+    "/etc/openvpn/server/server.conf": "89bcbd09d89af35cef0666cacfe12d40cfeba486bddba0c21d70991f778bb11c",
+    "/etc/openvpn/server/ftth-sync.sh": "10c06c8ee5a70b59d338fd22a3364b49b56501180f3557d18c007b82f635f878"
+  },
+  "finalVpnReadinessAfterFirewallRestartPassed": true,
+  "ftthAndExistingDriveHttpsStatus": 200,
+  "finishedAtUtc": "2026-09-27T09:16:04.178864+00:00"
+}

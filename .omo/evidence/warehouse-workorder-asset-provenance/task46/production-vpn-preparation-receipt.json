@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-27T09:13:31.857731+00:00",
+  "host": "70.153.16.143",
+  "port": 1194,
+  "protocol": "TCP",
+  "tunnelCidr": "10.8.0.0/24",
+  "installerExecuted": false,
+  "emptyVpnAndSubnetPreflightPassed": true,
+  "reusedSavedRegistration": false,
+  "hubId": "01a0e224-1c3b-7dda-83e5-b83a23d616fa",
+  "pkiReady": true,
+  "peerCount": 0,
+  "originalInstallerSha256": "46790869259b2cc0d9a2dade18c2e175b770e049191f219c4577b8f8b941547b",
+  "patcherSha256": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e",
+  "hostOnlyCorrection": "Empty legacy DNAT cleanup succeeds; actual PREROUTING listing failures still abort. Generic application installer unchanged.",
+  "installerSha256": "c98248b475b6447a43dc6f34c749026e4cd3dc0d2ff31c7bc195348154f35f96",
+  "installerSyntaxAndCertificateChainPassed": true,
+  "finishedAtUtc": "2026-09-27T09:13:33.948417+00:00"
+}
