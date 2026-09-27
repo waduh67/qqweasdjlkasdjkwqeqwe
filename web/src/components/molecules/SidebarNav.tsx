@@ -68,7 +68,7 @@ export function SidebarNav({ groups, can, storageKey, compact = false, onToggle,
         <div className="nav-search">
           <Input size="small" aria-label="Cari menu" placeholder="Cari menu" contentBefore={<Search12Regular aria-hidden />} value={query} onChange={(_, data) => setQuery(data.value)} />
         </div>
-        {onToggle && <Button variant="subtle" className="nav-collapse" onClick={onToggle}
+        {onToggle && <Button size="medium" variant="subtle" className="nav-collapse" onClick={onToggle}
           aria-label={expanded ? 'Ciutkan navigasi' : 'Lebarkan navigasi'} title={expanded ? 'Ciutkan navigasi' : 'Lebarkan navigasi'} aria-expanded={expanded}
           icon={expanded ? <ChevronDoubleLeft16Regular /> : <ChevronDoubleRight16Regular />} />}
       </div>
@@ -79,7 +79,7 @@ export function SidebarNav({ groups, can, storageKey, compact = false, onToggle,
         return (
           <div key={group.label ?? 'main'} className={`nav-group${group.label ? ' nav-group--labeled' : ''}${isClosed ? ' collapsed' : ''}`}>
             {group.label && (
-              <Button variant="subtle" className="nav-label nav-group-toggle" onClick={() => toggle(group.label!)} aria-expanded={!isClosed} aria-controls={sectionId}>
+              <Button size="medium" variant="subtle" className="nav-label nav-group-toggle" onClick={() => toggle(group.label!)} aria-expanded={!isClosed} aria-controls={sectionId}>
                 <ChevronDown12Regular className="nav-group-chevron" aria-hidden />
                 <span>{group.label}</span>
               </Button>

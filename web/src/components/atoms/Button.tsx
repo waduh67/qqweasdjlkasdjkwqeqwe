@@ -9,8 +9,8 @@ import {
 } from '@fluentui/react-components'
 
 /**
- * Tombol standar aplikasi — pembungkus tipis Fluent `Button` supaya SEMUA tombol
- * bergaya dari TEMA Fluent (lihat [azureTheme]), bukan CSS per-elemen. Konvensi kita
+ * Tombol standar aplikasi — Fluent `Button` dengan ukuran small secara default,
+ * tema Azure dan densitas di controls.css. Konvensi kita
  * dipetakan ke `appearance` Fluent lewat prop `variant`:
  *
  * - `default`  → `secondary` (outline netral)  — tombol biasa
@@ -53,7 +53,7 @@ type WithVariant<T> = T extends unknown ? Omit<T, 'appearance'> & { variant?: Bu
 export type AppButtonProps = WithVariant<ButtonProps>
 
 export const Button: ForwardRefComponent<AppButtonProps> = forwardRef(
-  ({ variant = 'default', className, ...rest }, ref) => {
+  ({ variant = 'default', size = 'small', className, ...rest }, ref) => {
     const styles = useStyles()
     // `ButtonProps` Fluent polimorfik (`as: 'a' | 'button'`), jadi hasil destrukturisasi
     // `...rest` melebarkan handler (onCopy/onChange dll.) menjadi union lintas-elemen yang
@@ -61,8 +61,9 @@ export const Button: ForwardRefComponent<AppButtonProps> = forwardRef(
     // mengembalikannya ke union bersih yang diterima Fluent — API publik tetap terketik.
     const fluentProps = {
       ...rest,
+      size,
       appearance: VARIANT_APPEARANCE[variant],
-      className: mergeClasses(styles.regularLabel, variant === 'danger' && styles.danger, className),
+      className: mergeClasses('app-button', size === 'small' && 'app-button-compact', !rest.children && 'app-button-icon', variant === 'default' && 'app-button-default', styles.regularLabel, variant === 'danger' && styles.danger, className),
     } as ButtonProps
     return <FluentButton ref={ref} {...fluentProps} />
   },

@@ -18,7 +18,7 @@ export function FormSection({
     <section className="form-section">
       {title && <h3 className="form-section-title">{title}</h3>}
       {description && <p className="form-section-desc">{description}</p>}
-      <div className="stack" style={{ gap: '0.75rem' }}>
+      <div className="stack form-section-fields">
         {children}
       </div>
     </section>

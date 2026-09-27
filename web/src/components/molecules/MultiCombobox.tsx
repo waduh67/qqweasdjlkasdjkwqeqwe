@@ -132,6 +132,8 @@ export function MultiCombobox<T>({
   return (
     <div ref={containerRef} className="multi-combobox">
       <Combobox
+        size="small"
+        className="app-control app-control-compact"
         multiselect
         listbox={{ ref: popupRef }}
         disabled={disabled}

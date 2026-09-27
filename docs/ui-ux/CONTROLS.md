@@ -1,0 +1,9 @@
+# Azure tables and form controls — 27 September 2026
+
+The user requested tables, textfields and buttons matching the supplied Azure Portal screenshots. Form reference: Create a virtual machine (`https://gcdnb.pbrd.co/images/ygITrCZm4dmZ.png`, 1910×921). Table reference: the previously supplied Compute infrastructure / Virtual machines screenshot. Fresh Firefox production captures and local comparison evidence are stored privately under `.omo/runtime/ui-ux/controls-20260927/`.
+
+Reference measurements: single-line controls and footer buttons are 24px tall, body text is 13px Segoe UI, control corners are 2px and neutral borders are #8a8886. The wide form has a 250px label track and 450px input track, with 20px between simple fields. The table uses 20px checkboxes, compact single-line records, neutral horizontal rules and semibold column headings.
+
+Implementation centralizes density in `controls.css`, removes conflicting 38px field / oversized grid padding rules, and uses Fluent small controls while preserving explicit medium/large sizing. Existing shell controls retain medium sizing and their accepted navigation styles. Touch controls retain larger targets. Customer create/edit uses aligned labels on wide screens and stacked fields on narrow screens. Customer codes have their own sortable column; descriptions and long values remain visible, allowing rows to grow. Command actions use blue icons and compact flat buttons; footer buttons retain primary/secondary semantics.
+
+Status: implementation and visual calibration in progress. Initial six focused suites pass 24/24. Independent review found three regressions during iteration (header size defaults, selection width accounting, unrelated map-search border); all are corrected before final QA. Final browser audit and deployment are pending.

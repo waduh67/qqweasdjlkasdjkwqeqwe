@@ -137,6 +137,7 @@ export function Layout() {
           {/* Satu tombol, dua arti: menciutkan sidebar di layar lebar, membuka laci nav
               di ponsel (lihat useAppShellNav) — sesuai yang dilihat pengguna di layarnya. */}
           <Button
+            size="medium"
             variant="subtle"
             icon={<Navigation16Regular />}
             onClick={toggleNav}
@@ -184,6 +185,7 @@ export function Layout() {
             )}
           </Link>
           <Button
+            size="medium"
             variant="subtle"
             icon={<IconLogout size={18} />}
             onClick={() => void logout()}

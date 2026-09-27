@@ -350,7 +350,8 @@ export function DataTable<T>({
         <div ref={scrollRef} className={mergeClasses('table-wrap', 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
             className={mergeClasses('data-table-grid', 'resource-data-table-grid', styles.grid)}
-            style={{ '--data-grid-min-width': `${columns.reduce((width, column) => width + (column.minWidth ?? 168), 0) + leadCols * 52}px` } as CSSProperties}
+            style={{ '--data-grid-min-width': `${columns.reduce((width, column) => width + (column.minWidth ?? 168), 0) + (selection ? 40 : 0) + (rowActions ? 52 : 0)}px` } as CSSProperties}
+            size="small"
             aria-label="Tabel data"
             items={sorted}
             columns={dataGridColumns}
@@ -365,7 +366,7 @@ export function DataTable<T>({
               <DataGridRow
                 selectionCell={
                   selection
-                    ? { checkboxIndicator: { 'aria-label': 'Pilih semua baris' } }
+                    ? { checkboxIndicator: { size: 'large', 'aria-label': 'Pilih semua baris' } }
                     : undefined
                 }
               >
@@ -380,6 +381,7 @@ export function DataTable<T>({
                       {column?.sortValue ? (
                         <Button
                           appearance="transparent"
+                          size="small"
                           className={styles.headerSortButton}
                           title={column.sortHint}
                           onClick={() => toggleSort(column)}
@@ -419,7 +421,7 @@ export function DataTable<T>({
                     }
                     onKeyDown={clickable ? onKeyDown : undefined}
                     selectionCell={
-                      selection ? { checkboxIndicator: { 'aria-label': 'Pilih baris' } } : undefined
+                      selection ? { checkboxIndicator: { size: 'large', 'aria-label': 'Pilih baris' } } : undefined
                     }
                   >
                     {({ renderCell, columnId }) => {

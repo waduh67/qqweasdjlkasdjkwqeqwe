@@ -321,10 +321,10 @@ export function CustomersPage() {
       minWidth: 240,
       sortValue: (c) => c.name,
       cell: (c) => c.name,
-      description: (c) => c.code,
       onCellClick: (c) => setDetailId(c.id),
       inlineActions: hasRowActions ? inlineActions : undefined,
     },
+    { key: 'code', header: 'Kode', minWidth: 150, sortValue: (c) => c.code, cell: (c) => c.code },
     { key: 'phone', header: 'Telepon', minWidth: 135, sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
     {
       key: 'status',
@@ -444,7 +444,8 @@ export function CustomersPage() {
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
         subtitle={draft?.id ? draft.code : undefined}
-        size="sm"
+        size="lg"
+        className="blade-customer-form"
         dirty={dirty}
         onClose={() => { if (!saving) closeDraft() }}
         footer={
@@ -457,7 +458,7 @@ export function CustomersPage() {
         }
       >
         {draft && (
-          <div className="stack">
+          <div className="stack azure-resource-form">
             <FormSection title="Identitas pelanggan" description="Nama dan alamat wajib diisi. Kontak digunakan untuk komunikasi dan tagihan.">
             <TextField
               label="Nama"
@@ -471,14 +472,8 @@ export function CustomersPage() {
               }}
               autoFocus
             />
-            <div className="form-grid">
-              <div>
-                <TextField label="Telepon" value={draft.phone} onChange={(_, data) => setDraft({ ...draft, phone: data.value })} placeholder="08123456789" />
-              </div>
-              <div>
-                <TextField label="NIK / No. identitas" value={draft.idCardNumber} onChange={(_, data) => setDraft({ ...draft, idCardNumber: data.value })} placeholder="opsional" />
-              </div>
-            </div>
+            <TextField label="Telepon" value={draft.phone} onChange={(_, data) => setDraft({ ...draft, phone: data.value })} placeholder="08123456789" />
+            <TextField label="NIK / No. identitas" value={draft.idCardNumber} onChange={(_, data) => setDraft({ ...draft, idCardNumber: data.value })} placeholder="opsional" />
             <TextField
               label="Email"
               type="email"

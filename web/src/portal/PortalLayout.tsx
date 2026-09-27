@@ -107,6 +107,7 @@ export function PortalLayout() {
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
           <Button
+            size="medium"
             variant="subtle"
             icon={<Navigation16Regular />}
             onClick={toggleNav}
@@ -130,6 +131,7 @@ export function PortalLayout() {
             </div>
           </span>
           <Button
+            size="medium"
             variant="subtle"
             icon={<IconLogout size={18} />}
             onClick={() => void logout()}

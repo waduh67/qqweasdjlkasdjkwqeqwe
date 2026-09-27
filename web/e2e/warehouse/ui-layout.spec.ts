@@ -35,6 +35,20 @@ test('operator pages remain readable and form controls fit the viewport', async 
     expect((await response).ok()).toBeTruthy()
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
   }
+  // Compact resource rows must retain sorting, selection, and their action menus.
+  const grid = page.getByRole('grid', { name: 'Tabel data' })
+  await expect(grid.getByRole('columnheader', { name: 'Kode' })).toBeVisible()
+  await grid.getByRole('button', { name: 'Kode', exact: true }).click()
+  await expect(grid.getByRole('columnheader', { name: 'Kode' })).toHaveAttribute('aria-sort', 'ascending')
+  await grid.getByRole('button', { name: 'Kode', exact: true }).click()
+  await expect(grid.getByRole('columnheader', { name: 'Kode' })).toHaveAttribute('aria-sort', 'descending')
+  const selectAll = page.getByRole('checkbox', { name: 'Pilih semua baris' })
+  await selectAll.check()
+  for (const checkbox of await page.getByRole('checkbox', { name: 'Pilih baris', exact: true }).all()) await expect(checkbox).toBeChecked()
+  await selectAll.uncheck()
+  await page.getByRole('button', { name: 'Aksi baris', exact: true }).first().click()
+  await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
   const routes = ['/', '/customers', '/inventory', '/invoices', '/catalog', '/helpdesk', '/my-work-orders', '/my-materials', '/work-orders', '/warehouse', '/warehouse/catalog', '/warehouse/stock', '/warehouse/receipts', '/warehouse/requests', '/warehouse/transfers', '/warehouse/returns', '/warehouse/counts', '/warehouse/reports', '/monitoring', '/bras', '/acs', '/vpn', '/roles', '/users', '/areas', '/notifications', '/subscription', '/express-psb', '/import-customers', '/import-pppoe', '/hotspot', '/network-provisioning', '/provisioning', '/incidents', '/my-visits', '/audit', '/payment-gateway', '/tax-settings', '/reports', '/account/security', '/warehouse/approvals', '/warehouse/replenishment', '/warehouse/provenance', '/warehouse/settings']
   for (const route of routes) {
     await page.goto(route)
@@ -63,6 +77,12 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await page.goto('/customers')
   await page.getByRole('button', { name: 'Tambah pelanggan', exact: true }).click()
   await expect(page.getByLabel(/^Nama\s*\*?$/)).toBeVisible()
+  if (page.viewportSize()!.width >= 820) {
+    const control = page.locator('.blade-customer-form .app-control').first()
+    const bounds = await control.boundingBox()
+    expect(bounds!.height).toBe(24)
+    expect(bounds!.width).toBe(450)
+  }
   for (const field of await page.locator('.azure-blade input:visible, .azure-blade select:visible, .azure-blade textarea:visible').all()) {
     await field.scrollIntoViewIfNeeded()
     const bounds = await field.boundingBox()

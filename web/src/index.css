@@ -685,14 +685,8 @@ td.dg-actions {
   align-items: center;
   gap: 0.4rem;
   padding: 0 0.5rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
+  border-radius: 2px;
   background: var(--surface);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
-}
-.cb-field:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 .cb-field > svg {
   color: var(--muted);
@@ -705,7 +699,7 @@ td.dg-actions {
   color: var(--text);
   border: none;
   background: none;
-  padding: 0.5rem 0;
+  padding: 1px 0;
 }
 .cb-field input::placeholder {
   color: var(--muted);
@@ -1189,7 +1183,7 @@ td.dg-actions {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.6rem;
+  padding: 0 8px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;

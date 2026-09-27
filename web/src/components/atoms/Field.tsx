@@ -12,8 +12,8 @@ import {
 /**
  * Kontrol form standar — pembungkus tipis `Field` + `Input`/`Select`/`Textarea`
  * Fluent, menggantikan pola `<label><span/>…<input/></label>` buatan tangan. Dengan
- * ini label, jarak, pesan bantuan/eror, dan gaya fokus semuanya datang dari TEMA
- * Fluent (bukan CSS per-elemen di index.css). `hint` = teks bantuan di bawah kontrol;
+ * ini label dan pesan bantuan/eror memakai semantik Fluent. Ukuran small dipadukan
+ * dengan controls.css untuk densitas Azure. `hint` = teks bantuan di bawah kontrol;
  * `validationMessage`/`validationState` untuk eror.
  */
 type FieldExtras = {
@@ -30,18 +30,21 @@ export function TextField({
   validationMessage,
   validationState,
   required,
+  size = 'small',
+  className,
   ...props
 }: FieldExtras & InputProps) {
   return (
     <Field
       className="app-field"
+      size={size}
       label={label}
       hint={hint}
       validationMessage={validationMessage}
       validationState={validationState}
       required={required}
     >
-      <Input {...props} />
+      <Input size={size} className={`app-control${size === 'small' ? ' app-control-compact' : ''}${className ? ` ${className}` : ''}`} {...props} />
     </Field>
   )
 }
@@ -52,19 +55,22 @@ export function SelectField({
   validationMessage,
   validationState,
   required,
+  size = 'small',
+  className,
   children,
   ...props
 }: FieldExtras & SelectProps) {
   return (
     <Field
       className="app-field"
+      size={size}
       label={label}
       hint={hint}
       validationMessage={validationMessage}
       validationState={validationState}
       required={required}
     >
-      <Select {...props}>{children}</Select>
+      <Select size={size} className={`app-control${size === 'small' ? ' app-control-compact' : ''}${className ? ` ${className}` : ''}`} {...props}>{children}</Select>
     </Field>
   )
 }
@@ -75,18 +81,21 @@ export function TextareaField({
   validationMessage,
   validationState,
   required,
+  size = 'small',
+  className,
   ...props
 }: FieldExtras & TextareaProps) {
   return (
     <Field
       className="app-field"
+      size={size}
       label={label}
       hint={hint}
       validationMessage={validationMessage}
       validationState={validationState}
       required={required}
     >
-      <Textarea {...props} />
+      <Textarea size={size} className={`app-control${size === 'small' ? ' app-control-compact' : ''}${className ? ` ${className}` : ''}`} {...props} />
     </Field>
   )
 }

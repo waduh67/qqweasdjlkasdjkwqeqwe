@@ -27,7 +27,7 @@ export function CommandBar({
         {primary && actions.length > 0 && <CommandDivider />}
         {actions.map((action) => <CommandActionItem key={action.key} action={action} />)}
       </div>
-      {actions.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton appearance="subtle" icon={<MoreHorizontal size={18} />}>Aksi lainnya</MenuButton></MenuTrigger><MenuPopover><MenuList>{actions.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
+      {actions.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton size="small" appearance="subtle" icon={<MoreHorizontal size={18} />}>Aksi lainnya</MenuButton></MenuTrigger><MenuPopover><MenuList>{actions.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
     </Toolbar>
   )
 }

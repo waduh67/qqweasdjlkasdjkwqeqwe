@@ -152,7 +152,8 @@ export function Combobox<T>({
   return (
     <div ref={containerRef} className={`combobox${disabled ? ' is-disabled' : ''}`}>
       <FluentCombobox
-        className="cb-field"
+        size="small"
+        className="cb-field app-control app-control-compact"
         open={open}
         value={open ? term : label}
         selectedOptions={value ? [value] : []}
