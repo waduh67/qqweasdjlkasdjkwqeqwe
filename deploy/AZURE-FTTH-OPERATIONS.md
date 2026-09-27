@@ -165,7 +165,7 @@ dari container runtime sebelum aktivasi. Receipt percobaan gagal tetap disimpan.
 
 ## Rilis tipografi Azure — 27 September 2026
 
-**Web aktif** berasal dari commit `3ce5993dc0812d0f3319b8c67fd329c0ded186af`, dipin ke
+Rilis tipografi berasal dari commit `3ce5993dc0812d0f3319b8c67fd329c0ded186af`, dipin ke
 `sha256:1547355578d16eace408ec8418885c6af9de075b8db03ae7e59e2e800546bd58`.
 Paket image, proof, receipt aktivasi, dan helper pemulihan:
 `/opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081/`.
@@ -190,4 +190,34 @@ Rollback tipografi mempertahankan revisi layout Azure sebelumnya:
 ```sh
 sudo python3 /opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081/deploy-web.py \
   rollback /opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081
+```
+
+## Rilis navigasi Azure — 27 September 2026
+
+**Web aktif** berasal dari commit `97674d0e69618f70990a72fd9d35e108fce158ca`, dengan image
+`sha256:69a96121fade5e06873742134f2220a8d20b1dd94fec7e9e74b67772af7199bc`.
+Paket dan receipt: `/opt/ftth/setup-private/ui-20260927-sidebar-97674d0e/`.
+Salinan lokal: `.omo/runtime/ui-ux/sidebar-20260927/release/`.
+
+Sidebar mengikuti referensi Azure: baris32px rata penuh, pilihan abu-abu dengan
+garis biru2px di kiri, ikon Fluent16px, grup dengan chevron kiri dan indentasi anak,
+serta pencarian24px. Identitas aplikasi dan pemilih konteks berada di header.
+Perangkat sentuh mendapat target40px; pilihan pengurangan animasi tetap dihormati.
+Aturan navigasi dikumpulkan dalam `web/src/navigation.css`.
+
+Validasi:10 tes terarah, audit alur navigasi dan44 halaman masing-masing pada dua
+ukuran Firefox, build/typecheck, lint, dan review independen. Audit fungsional
+lolos pada01535e83; delta terakhir hanya warna/sudut garis pencarian yang dicocokkan
+dengan piksel referensi dan diverifikasi kembali secara visual. Nginx menyajikan
+seluruh14 aset dengan hash yang sama dengan build akhir. Setelah aktivasi,14
+tampilan produksi serta perpindahan konteks/fokus mobile lolos. Screenshot sidebar
+produksi identik byte-per-byte dengan preview akhir pada browser/viewport yang sama.
+
+Aktivasi hanya mengganti web;13 container lain yang dipantau tidak berubah. QA
+lokal dihentikan dengan volume dipertahankan. Rollback berikut mengembalikan versi
+tipografi sebelumnya, sehingga perbaikan font tetap ada:
+
+```sh
+sudo python3 /opt/ftth/setup-private/ui-20260927-sidebar-97674d0e/deploy-web.py \
+  rollback /opt/ftth/setup-private/ui-20260927-sidebar-97674d0e
 ```
