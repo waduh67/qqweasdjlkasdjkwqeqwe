@@ -32,7 +32,10 @@ export function Modal({ title, onClose, children, footer, wide }: {
       }
       if (anotherDialogHasFocus()) return
       if (launcher !== document.body && focus(launcher)) return
-      if (!anotherDialogHasFocus()) focus(document.querySelector<HTMLElement>('main, #root') ?? document.body.firstElementChild as HTMLElement | null)
+      // A surviving parent dialog may have selected a new control while saving.
+      const current = document.activeElement
+      if (current instanceof HTMLElement && current.closest('[role="dialog"]')?.isConnected) return
+      focus(document.querySelector<HTMLElement>('main, #root') ?? document.body.firstElementChild as HTMLElement | null)
     })
   }, [launcher])
   return (
