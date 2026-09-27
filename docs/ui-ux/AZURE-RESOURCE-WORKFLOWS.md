@@ -35,6 +35,6 @@ Owned QA preview uses ports 14188 / 17880 and PID/start-time/marker-guarded clea
 
 Preserve warehouse idempotency keys and captured commands after uncertain responses. No backend/schema changes belong to this revision.
 
-Production remains at `0a685bc5` until the release receipt is added. The new private deployment helper checks fresh image/pins, deploys web only, verifies exact served files and public HTTP, preserves every existing unrelated container (including both Drive services), and records guarded rollback state. Do not run the historical helper with stale preflight pins.
+Production now serves `af658039` after guarded activation and authenticated Firefox verification. See `AZURE-RESOURCE-WORKFLOWS-RELEASE.md`. The new private deployment helper checks fresh image/pins, deploys web only, verifies exact served files and public HTTP, preserves every existing unrelated container (including both Drive services), and records guarded rollback state. Do not run the historical helper with stale preflight pins.
 
 Commit/push recovery notes and final release receipt. Previous warehouse owner-acceptance receipts remain historical and must not be overwritten.

@@ -37,3 +37,5 @@ Independent visual audit covered nine warehouse lists and seven forms; independe
 - Firefox production-build core/discard/report checks: passed.
 - Guarded release helper: 9 tests passed, including rollback and preservation of both Drive containers.
 - No remaining actionable P0/P1/P2 findings in the reviewed scope.
+
+Production verification: `af6580398d4c77aff4f928082c5a88a17b9711f6` is live; 15 authenticated Firefox captures passed with review/Back/discard and mobile checks, zero page errors and zero business-write attempts. Private evidence: `production-browser.json`, `production-*.png`.
