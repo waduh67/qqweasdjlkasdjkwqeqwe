@@ -10,7 +10,7 @@ import type {
   NeighborView,
   SubscriberNeighbors,
 } from '../api/network'
-import { onuStatusLabel } from '../api/network'
+import { customerStatusLabel, hasCustomerLocation, onuStatusLabel } from '../api/network'
 import { DOWN_CAUSE_LABEL, type OnuHistoryView, type OnuMetricView } from '../api/monitoring'
 import {
   CPE_ACTION_LABEL,
@@ -307,8 +307,10 @@ export function CustomerDetailPage({
     {
       key: 'map',
       label: 'Lihat di peta',
+      disabled: !hasCustomerLocation(customer.location),
       icon: <IconMap size={16} />,
       onClick: () => {
+        if (!hasCustomerLocation(customer.location)) return
         const focus = mapFocusState('customer', id, customer.location)
         if (onShowOnMap) onShowOnMap(focus)
         else navigate('/map', focus)
@@ -322,7 +324,7 @@ export function CustomerDetailPage({
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <h1 className="page-title" style={{ margin: 0 }}>{customer.name}</h1>
         <span className="badge">{customer.code}</span>
-        <StatusBadge status={customer.status} />
+        <StatusBadge status={customer.status} label={customerStatusLabel(customer.status)} />
         {customer.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
       </div>
 
@@ -419,7 +421,7 @@ function EssentialsBlock({
         <span className="chev" aria-hidden>
           <IconChevronDown size={14} />
         </span>
-        Essentials
+        Informasi utama
       </Button>
 
       {open && (
@@ -429,7 +431,7 @@ function EssentialsBlock({
               <span className="tnum">{customer.code}</span>
             </Ess>
             <Ess label="Status">
-              <StatusBadge status={customer.status} />
+              <StatusBadge status={customer.status} label={customerStatusLabel(customer.status)} />
             </Ess>
             <Ess label="Alamat">{customer.address}</Ess>
             <Ess label="Telepon">{customer.phone}</Ess>
@@ -437,7 +439,7 @@ function EssentialsBlock({
             <Ess label="NIK / identitas">{customer.idCardNumber}</Ess>
             <Ess label="Koordinat">
               <span className="tnum">
-                {customer.location.latitude}, {customer.location.longitude}
+                {hasCustomerLocation(customer.location) ? `${customer.location.latitude}, ${customer.location.longitude}` : 'Belum ditentukan'}
               </span>
             </Ess>
           </dl>
@@ -761,7 +763,7 @@ function OnuManager({ customer, run }: {
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   return <>
-    <CustomerAssetPanel customerId={customer.id} onChanged={() => void run(async () => undefined, 'Data perangkat diperbarui')} />
+    <CustomerAssetPanel customerId={customer.id} areaId={customer.areaId} onChanged={() => void run(async () => undefined, 'Data perangkat diperbarui')} />
     <div className="card stack" style={{ gap: '0.5rem' }}>
       <SectionHead icon={<IconInventory size={16} />} title="Pemantauan ONU" />
       {customer.onus.length === 0 && <p className="muted">Tidak ada ONU terdaftar.</p>}

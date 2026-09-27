@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { CustomerStatus, CustomerView } from '../api/network'
+import { customerStatusLabel, type CustomerStatus, type CustomerView } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
@@ -67,9 +67,6 @@ const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: 'TERMINATED', label: 'Berhenti' },
 ]
 
-function customerStatusLabel(status: CustomerStatus): string {
-  return STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
-}
 
 /**
  * Daftar pelanggan — tabel padat bisa-urut dengan pencarian & filter status di atasnya.

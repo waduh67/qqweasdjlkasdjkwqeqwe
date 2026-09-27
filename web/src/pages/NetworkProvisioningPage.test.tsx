@@ -220,8 +220,8 @@ describe('NetworkProvisioningPage', () => {
   it('mengirim enum topologi persis seperti kontrak server', async () => {
     render(<ProvisioningEditorModal editor="topology" profiles={[]} defaultPoolId="" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
     await screen.findByText('Tambah node topologi')
-    const input = document.querySelector<HTMLInputElement>('.modal input')
-    const role = document.querySelector<HTMLSelectElement>('.modal select')
+    const input = screen.getByRole('dialog').querySelector<HTMLInputElement>('input')
+    const role = screen.getByRole('dialog').querySelector<HTMLSelectElement>('select')
     expect(input).not.toBeNull()
     expect(role).not.toBeNull()
     if (!input || !role) return

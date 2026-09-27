@@ -6,7 +6,7 @@ import { signup } from './helpers'
 test.use({ serviceWorkers: 'allow' })
 
 test('operator pages remain readable and form controls fit the viewport', async ({ page }, testInfo) => {
-  test.setTimeout(240_000)
+  test.setTimeout(360_000)
   const admin = await signup(page)
   await page.goto('/customers')
   await page.waitForLoadState('networkidle')
@@ -29,7 +29,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
   }
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
-  const routes = ['/', '/customers', '/inventory', '/invoices', '/catalog', '/helpdesk', '/my-work-orders', '/my-materials', '/work-orders', '/warehouse', '/warehouse/catalog', '/warehouse/stock', '/warehouse/receipts', '/warehouse/requests', '/warehouse/transfers', '/warehouse/returns', '/warehouse/counts', '/warehouse/reports', '/monitoring', '/bras', '/acs', '/vpn', '/roles', '/users', '/areas', '/notifications', '/subscription']
+  const routes = ['/', '/customers', '/inventory', '/invoices', '/catalog', '/helpdesk', '/my-work-orders', '/my-materials', '/work-orders', '/warehouse', '/warehouse/catalog', '/warehouse/stock', '/warehouse/receipts', '/warehouse/requests', '/warehouse/transfers', '/warehouse/returns', '/warehouse/counts', '/warehouse/reports', '/monitoring', '/bras', '/acs', '/vpn', '/roles', '/users', '/areas', '/notifications', '/subscription', '/express-psb', '/import-customers', '/import-pppoe', '/hotspot', '/network-provisioning', '/provisioning', '/incidents', '/my-visits', '/audit', '/payment-gateway', '/tax-settings', '/reports', '/account/security', '/warehouse/approvals', '/warehouse/replenishment', '/warehouse/provenance', '/warehouse/settings']
   for (const route of routes) {
     await page.goto(route)
     await expect(page.getByRole('button', { name: 'Keluar', exact: true })).toBeVisible()
@@ -74,7 +74,6 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await expect(cancel).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(confirmation).not.toBeVisible()
-  await name.focus()
   await expect(name).toBeFocused()
   await expect(name).toHaveValue('Perubahan belum disimpan')
   await name.press('Escape')
@@ -83,6 +82,10 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await page.getByRole('button', { name: 'Budi Santoso', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Budi Santoso', exact: true })).toBeVisible()
   await page.waitForLoadState('networkidle')
+  await expect(page.getByText('Belum ditentukan', { exact: true })).toBeVisible()
+  if (page.viewportSize()!.width < 820) await page.locator('.azure-blade').getByRole('button', { name: 'Aksi lainnya' }).click()
+  await expect(page.getByRole(page.viewportSize()!.width < 820 ? 'menuitem' : 'button', { name: 'Lihat di peta', exact: true })).toBeDisabled()
+  if (page.viewportSize()!.width < 820) await page.keyboard.press('Escape')
   await page.evaluate(async () => { await Promise.allSettled(document.getAnimations().filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished)) })
   await page.screenshot({ path: testInfo.outputPath('customer-detail.png'), fullPage: true, animations: 'disabled' })
   expect(errors).toEqual([])

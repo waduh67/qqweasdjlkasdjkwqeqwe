@@ -1,3 +1,4 @@
+import { ApiError } from '@/api/client'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAssetHistory, getAssetWorkspace, type AssetHistory } from '@/api/warehouse/customerAssets'
@@ -13,12 +14,12 @@ import { CustomerAssetInstallation } from './CustomerAssetInstallation'
 import { CustomerAssetException, assetExceptionLabel } from './CustomerAssetException'
 import type { AssetExceptionKind } from '@/api/warehouse/customerAssetExceptions'
 
-export function CustomerAssetPanel({ customerId, onChanged }: { customerId: string; onChanged: () => void }) {
+export function CustomerAssetPanel({ customerId, areaId, onChanged }: { customerId: string; areaId?: string | null; onChanged: () => void }) {
   const { user, readOnly } = useAuth(), { can } = useCan()
   if (!user || !can('customer.onu.view')) return null
-  return <Assets key={`${user.tenantId}:${user.id}:${customerId}`} customerId={customerId} onChanged={onChanged} readOnly={readOnly} />
+  return <Assets key={`${user.tenantId}:${user.id}:${customerId}`} customerId={customerId} areaId={areaId} onChanged={onChanged} readOnly={readOnly} />
 }
-function Assets({ customerId, onChanged, readOnly }: { customerId: string; onChanged: () => void; readOnly: boolean }) {
+function Assets({ customerId, areaId, onChanged, readOnly }: { customerId: string; areaId?: string | null; onChanged: () => void; readOnly: boolean }) {
   const [page, setPage] = useState(0), [install, setInstall] = useState(false)
   const [action, setAction] = useState<{ row: AssetHistory; kind: CustomerAssetActionKind | 'replace' } | null>(null)
   const [exception, setException] = useState<{ row: AssetHistory; kind: AssetExceptionKind } | null>(null)
@@ -31,6 +32,7 @@ function Assets({ customerId, onChanged, readOnly }: { customerId: string; onCha
   return <section className="card stack" id="customer-assets" aria-label="Aset perangkat pelanggan"><h2>Aset perangkat pelanggan</h2>
     <p>Riwayat pemasangan, asal barang, dan pemilik perangkat. Status koneksi jaringan tetap ditampilkan pada pemantauan.</p>
     {!online && <p role="status">Offline: data terakhir belum diperbarui; tindakan perangkat membutuhkan koneksi.</p>}
+    {areaId === null && result.state.status === 'error' && result.state.error instanceof ApiError && result.state.error.status === 404 && <p className="form-note">Area pelanggan belum ditentukan. Isi Area pelanggan pada form Edit, lalu periksa cakupan akses petugas untuk melihat riwayat perangkat.</p>}
     <WarehouseState {...result}>{({ context, history }) => <>
       {context.unresolvedDevices > 0 && <div role="status"><p>{context.unresolvedDevices} perangkat lama belum memiliki asal gudang yang terverifikasi. Rekonsiliasi diperlukan sebelum dipakai untuk transaksi stok.</p>
         {can('inventory.provenance.manage') && <Link to="/warehouse/provenance">Rekonsiliasi perangkat lama</Link>}</div>}
