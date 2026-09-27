@@ -1,8 +1,9 @@
 # Operasi FTTH di Azure
 
 Host: `fajar@70.153.16.143`, web: <https://ftth.karuhundeveloper.com>.
-Instalasi ini memakai image CI aplikasi `1306b65c34167b2d48f4817ce72990fed3b85aa3`
+Backend memakai image CI `1306b65c34167b2d48f4817ce72990fed3b85aa3`
 dan konfigurasi deployment `db09c3c2b37ad29b07464b05cd02895265f99a0d`.
+Web sudah diperbarui ke revisi Fluent/Azure `2ebe059271db9a214ee88431e9aeb473fa4fb9e4`.
 Database sudah menjalankan 367 migrasi sampai `178.12`. Jangan mengubah migrasi
 yang sudah diterapkan; migrasi berikutnya adalah `178.13`.
 
@@ -123,3 +124,40 @@ pada boot tanpa menyimpan atau mengganti seluruh aturan Docker/UFW.
 
 Pengujian GPON memakai dokumentasi/MIB dan fixture offline. Sertifikasi perangkat
 GPON/MikroTik fisik dan distribusi aplikasi native tidak termasuk hasil instalasi ini.
+
+## Rilis UI Azure — 27 September 2026
+
+Halaman pelanggan memakai command bar, filter, tabel resource, dan panel detail/form
+Fluent. Pola navigasi dan formulir juga diterapkan pada modul platform, jaringan,
+gudang, teknisi, dan portal. Branch pemulihan: `work/ui-ux-revision`.
+
+Web aktif dipin ke image
+`sha256:efbb7692e4a36e28233a31f6002ce2e2beee1b886731d336a6fde9b0f0d56f5a`.
+Paket/receipt dan helper rollback berada di
+`/opt/ftth/setup-private/ui-20260927-2ebe059271db-r3/`. Paket ini melengkapi arsip
+pemulihan awal di atas; arsip awal belum memuat UI baru. Image dan proof juga
+disimpan di mesin kerja pada `.omo/runtime/ui-ux/release-runtime-fixed/`.
+
+Aktivasi mengganti service `web` saja. Dua belas container FTTH lainnya dan Caddy
+Drive mempertahankan ID, waktu mulai, image, serta restart count yang sama.
+Backend, schema, data pelanggan, konfigurasi ACS/VPN/RADIUS tidak diubah.
+
+Verifikasi: 44 halaman pada desktop/HP, perjalanan gudang–teknisi pada kedua ukuran,
+616 tes frontend dan 25 tes perubahan akhir, build/typecheck, serta lint lolos
+(lint masih memiliki peringatan lama). Pemeriksaan Nginx memastikan route pelanggan
+dan seluruh 14 berkas statis menyajikan byte hasil build yang diuji. Login dan
+13 tampilan publik lolos setelah aktivasi; data contoh hanya dibuat di lingkungan uji.
+
+Bila perlu mengembalikan web sebelum revisi UI ini, helper memeriksa pin/image agar
+tidak menimpa rilis lain, lalu hanya mengganti web:
+
+```sh
+sudo python3 /opt/ftth/setup-private/ui-20260927-2ebe059271db-r3/deploy-web.py \
+  rollback /opt/ftth/setup-private/ui-20260927-2ebe059271db-r3
+```
+
+Dua percobaan awal dipulihkan otomatis dan terverifikasi. Penyebabnya berkas build
+uji bermode `0600`, sehingga worker Nginx mendapat HTTP 403. Image akhir memberi
+izin baca file dan akses direktori kepada Nginx tanpa mengubah isinya. Saat mengemas
+build dari lingkungan QA ber-umask ketat, pertahankan koreksi izin ini dan uji HTTP
+dari container runtime sebelum aktivasi. Receipt percobaan gagal tetap disimpan.
