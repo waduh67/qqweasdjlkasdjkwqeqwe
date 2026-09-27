@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Table,
@@ -704,8 +706,12 @@ export function SplicingManager({
     onChanged?.()
   }
 
+  const [connecting, setConnecting] = useState(false)
+  const connectionCreation = useCreationReview(connecting)
   const connect = async () => {
-    if (!leftPick || !rightPick || busy) return
+    if (!leftPick || !rightPick || busy || sameCable || pairWarning != null) return
+    setConnecting(true)
+    if (connectionCreation.beforeSave()) return
     setBusy(true)
     try {
       await api.post('/api/fiber-connections', {
@@ -718,11 +724,11 @@ export function SplicingManager({
         workOrderId: workOrderId || null,
       })
       toast.success(`${leftPick.label} ↔ ${rightPick.label} tersambung`)
-      await afterChange()
+      await afterChange(); setConnecting(false)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyambung')
     } finally {
-      setBusy(false)
+      setBusy(false); connectionCreation.finish()
     }
   }
 
@@ -895,6 +901,15 @@ export function SplicingManager({
             </Text>
           )}
 
+          <Blade open={connecting} title="Sambungkan serat" onClose={() => setConnecting(false)}
+            creation={{ ...connectionCreation, busy, prepare: () => void connect(), summary: <CreationSummary rows={[
+              ['Ujung A', leftPick?.label], ['Ujung B', rightPick?.label], ['Metode', SPLICE_METHOD_LABEL[method]], ['Rugi (dB)', lossDb || 'Belum diukur'],
+            ]} /> }} footer={<><Button disabled={busy} onClick={() => setConnecting(false)}>Batal</Button><Button variant="primary" disabled={busy} onClick={() => void connect()}>Sambungkan</Button></>}>
+            <div className="stack"><CreationSummary rows={[["Ujung A", leftPick?.label], ["Ujung B", rightPick?.label]]} />
+              <SelectField label="Metode" value={method} onChange={(_, data) => setMethod(data.value as SpliceMethod)}>{METHODS.map(item => <option key={item} value={item}>{SPLICE_METHOD_LABEL[item]}</option>)}</SelectField>
+              <TextField label="Rugi (dB)" value={lossDb} onChange={(_, data) => setLossDb(data.value)} placeholder="Belum diukur" />
+            </div>
+          </Blade>
           {canManage && (
             <div className="splice-actions">
               <SelectField

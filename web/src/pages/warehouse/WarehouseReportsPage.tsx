@@ -1,5 +1,5 @@
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { exportReport, historyReport, listReport, REPORT_KINDS, reportParams, type ReportFilter, type ReportKind } from '@/api/warehouse/reports'
 import { warehouseError } from '@/api/warehouse/errors'
@@ -30,23 +30,24 @@ export function WarehouseReportsPage() {
     setParams(next)
   }
   return <div className="stack"><PageHeader title="Laporan Gudang" />
-    <div className="resource-filters row"><SelectField label="Jenis laporan" value={parsed.kind} onChange={(_, data) => {
+
+    {parsed.print ? <WarehouseReportPrint key={`${parsed.print.id}:${parsed.print.revision}`} {...parsed.print} onClose={() => apply({ documentId: '', revision: '' })} /> :
+      <ReportList key={params.toString()} selector={<SelectField label="Jenis laporan" value={parsed.kind} onChange={(_, data) => {
       const next = new URLSearchParams(params); next.set('kind', data.value); next.delete('page'); next.delete('sort'); next.delete('documentId'); next.delete('revision')
       if (data.value !== 'work-order-costs') next.delete('workOrderId')
       setParams(next)
-    }}>{REPORT_KINDS.filter(kind => (kind !== 'work-order-costs' || can('inventory.cost.view')) && (kind !== 'unknown-stock' || can('inventory.provenance.view'))).map(kind => <option key={kind} value={kind}>{reportLabels[kind]}</option>)}</SelectField></div>
-    {parsed.print ? <WarehouseReportPrint key={`${parsed.print.id}:${parsed.print.revision}`} {...parsed.print} onClose={() => apply({ documentId: '', revision: '' })} /> :
-      <ReportList key={params.toString()} kind={parsed.kind} filter={parsed.filter} apply={apply} page={number => { const next = new URLSearchParams(params); next.set('page', String(number)); setParams(next) }} />}
+    }}>{REPORT_KINDS.filter(kind => (kind !== 'work-order-costs' || can('inventory.cost.view')) && (kind !== 'unknown-stock' || can('inventory.provenance.view'))).map(kind => <option key={kind} value={kind}>{reportLabels[kind]}</option>)}</SelectField>} kind={parsed.kind} filter={parsed.filter} apply={apply} page={number => { const next = new URLSearchParams(params); next.set('page', String(number)); setParams(next) }} />}
   </div>
 }
-function ReportList({ kind, filter, apply, page }: { kind: ReportKind; filter: ReportFilter; apply: (values: Record<string, string>) => void; page: (number: number) => void }) {
+function ReportList({ kind, filter, apply, page, selector }: { selector: ReactNode; kind: ReportKind; filter: ReportFilter; apply: (values: Record<string, string>) => void; page: (number: number) => void }) {
   const loader = useCallback(() => listReport(kind, filter), [kind, filter]), result = useWarehouseQuery(loader)
   return <>
-    <div className="resource-command-row"><WarehouseListActions onRefresh={result.reload} onReset={() => apply({ locationId: '', skuId: '', serial: '', from: '', until: '', workOrderId: '', bucket: '', ownership: '', condition: '', query: '' })} />
+    <div className="resource-command-row"><WarehouseListActions onRefresh={result.reload} onReset={() => apply({ locationId: '', skuId: '', serial: '', from: '', until: '', workOrderId: '', bucket: '', owner: '', condition: '', sort: '', direction: '' })} />
       {result.state.status === 'ready' && <ReportExport kind={kind} filter={filter} total={result.state.data.page.totalElements} />}
     </div>
+    <div className="report-filter-group"><div className="resource-filters row">{selector}</div>
     <WarehouseStockFilters filter={filter} history={historyReport(kind)} buckets={false} label="Filter laporan" onApply={apply} />
-    <ReportPeriod kind={kind} filter={filter} apply={apply} />
+    <ReportPeriod kind={kind} filter={filter} apply={apply} /></div>
     {kind === 'stock-card' && <p>Saldo awal mencakup pergerakan sebelum rentang tanggal. Setiap saldo dihitung per barang, lokasi, dan satuan.</p>}
     {kind === 'unknown-stock' && <p>Catatan belum terverifikasi tidak dihitung sebagai stok tersedia.</p>}
     <WarehouseState {...result}>{data => <>

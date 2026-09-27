@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import { useEffect, useState } from 'react'
 import { ApiError } from '@/api/client'
@@ -120,6 +121,7 @@ export function TenantSubscriptionModal({
     }
   }
 
+  const creation = useCreationReview(true, !!sub)
   const saveFee = () => {
     // Kosong ≠ 0: tanpa guard ini `Number('')` jadi 0 → langganan gratis tak sengaja.
     if (fee.trim() === '') {
@@ -142,6 +144,7 @@ export function TenantSubscriptionModal({
       toast.error('Masa tenggang harus bilangan 0–90 hari')
       return
     }
+    if (creation.beforeSave()) return
     void run(
       () =>
         configureTenantSubscription(tenantId, {
@@ -150,7 +153,7 @@ export function TenantSubscriptionModal({
           graceDays: graceDaysVal,
         }),
       sub ? 'Langganan diperbarui' : 'Langganan dibuat',
-    )
+    ).finally(creation.finish)
   }
 
   const payInvoice = async (inv: SubscriptionInvoiceView) => {
@@ -208,6 +211,10 @@ export function TenantSubscriptionModal({
 
   return (
     <Blade
+      creation={manage ? { ...creation, busy, prepare: saveFee, summary: <CreationSummary rows={[
+        ['Tenant', tenantName], ['Biaya bulanan', fmtIdr(Number(fee))], ['Tanggal tagih', billingDay || 'Ikuti pengaturan'], ['Masa tenggang (hari)', graceDays || 'Ikuti pengaturan'],
+      ]} /> } : undefined}
+      layout="resource"
       open
       title={`Langganan — ${tenantName}`}
       subtitle="Atur biaya bulanan flat, terbitkan/void tagihan, dan kelola status langganan tenant."

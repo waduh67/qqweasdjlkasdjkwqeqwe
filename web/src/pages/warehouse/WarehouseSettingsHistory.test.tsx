@@ -1,3 +1,4 @@
+import { clickRowAction } from '@/test/rowAction'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -27,6 +28,7 @@ it('loads named history only on demand with real server pages and no broad IAM r
   expect(fetch.mock.calls).toHaveLength(1)
   fireEvent.click(screen.getByRole('button', { name: 'Lihat riwayat kebijakan' }))
   const history = screen.getByRole('region', { name: 'Riwayat kebijakan' })
+  fireEvent.click(await within(history).findByRole('button', { name: /Versi 7/ }))
   await waitFor(() => expect(history.textContent).toContain('Disimpan oleh Pengatur kebijakan'))
   expect(history.textContent).toContain('Versi 7'); expect(history.textContent).toContain('Supervisor gudang')
   fireEvent.click(within(history).getByRole('button', { name: 'Berikutnya' }))
@@ -86,7 +88,7 @@ it('revokes the displayed revision, then reloads a conflict without inventing an
     return response(delegationPolicyFixture())
   }); vi.stubGlobal('fetch', fetch); show()
   fireEvent.click(await screen.findByRole('button', { name: 'Kelola delegasi pemeriksa' }))
-  fireEvent.click(await screen.findByRole('button', { name: 'Cabut delegasi' }))
+  await clickRowAction('Cabut delegasi')
   expect((await screen.findByRole('dialog')).textContent).toContain('Revisi 17')
   fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi cabut' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Muat ulang dokumen' }))

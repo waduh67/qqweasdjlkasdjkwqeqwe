@@ -1081,6 +1081,7 @@ export function MapPage() {
       )
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mencatat uji OTDR')
+      throw err
     }
   }
 
@@ -1883,7 +1884,7 @@ export function MapPage() {
             canViewOtdr={can('network.otdr.view')}
             canRecordOtdr={can('network.otdr.record')}
             otdrTests={otdrTests}
-            onRecordOtdr={(form) => void recordOtdr(cable.id, form)}
+            onRecordOtdr={(form) => recordOtdr(cable.id, form)}
             onDeleteOtdr={(testId) => void deleteOtdr(cable.id, testId)}
             onFocusOtdr={focusOtdr}
             onEdit={() => startEdit(cable)}

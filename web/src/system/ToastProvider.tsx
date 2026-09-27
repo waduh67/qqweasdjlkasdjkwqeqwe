@@ -1,64 +1,41 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { Text } from '@fluentui/react-components'
-import { IconAlert } from '@/components/atoms/icons'
-
-// ---------- Toast ----------
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react'
+import { AriaLiveAnnouncer, Toast, ToastTitle, Toaster, useAnnounce, useId, useToastController, type ToasterProps } from '@fluentui/react-components'
 
 type ToastKind = 'success' | 'error' | 'info'
-interface Toast {
-  id: number
-  kind: ToastKind
-  message: string
-}
 interface ToastApi {
   success: (message: string) => void
   error: (message: string) => void
   info: (message: string) => void
 }
-
 const ToastContext = createContext<ToastApi | null>(null)
 
-/**
- * Umpan balik aksi lewat toast, bukan teks error inline: aksi (simpan, hapus,
- * akui alarm) sering memindahkan fokus atau memuat ulang daftar, sehingga pesan
- * di tempat lama mudah terlewat. Toast muncul di tempat yang konsisten.
- */
+/** Fluent announces feedback even while a resource form owns the modal focus. */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  return <AriaLiveAnnouncer><ToastService>{children}</ToastService></AriaLiveAnnouncer>
+}
 
+function ToastService({ children }: { children: ReactNode }) {
+  const { announce } = useAnnounce()
+  const announceToast = useCallback<NonNullable<ToasterProps['announce']>>((message, { politeness }) => {
+    announce(message, { polite: politeness === 'polite', priority: politeness === 'assertive' ? 1 : 0 })
+  }, [announce])
+  const toasterId = useId('app-notifications')
+  const { dispatchToast } = useToastController(toasterId)
   const push = useCallback((kind: ToastKind, message: string) => {
-    const id = Date.now() + Math.random()
-    setToasts((prev) => [...prev, { id, kind, message }])
-    // Auto-hilang; galat bertahan sedikit lebih lama karena lebih penting dibaca.
-    window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), kind === 'error' ? 6000 : 3500)
-  }, [])
-
-  // Di-memo agar identitas `api` stabil (push sudah stabil): tanpa ini, tiap toast membuat
-  // nilai context baru → `useEffect` ber-dep `[toast]` fetch-ulang tak sengaja (mis. metode
-  // pembayaran di /payment-gateway ke-reset ke Manual saat ada toast).
-  const api = useMemo<ToastApi>(
-    () => ({
-      success: (m) => push('success', m),
-      error: (m) => push('error', m),
-      info: (m) => push('info', m),
-    }),
-    [push],
-  )
-
-  return (
-    <ToastContext.Provider value={api}>
-      {children}
-      <div className="toast-host">
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`toast ${toast.kind}`}>
-            <span className="bar" />
-            {toast.kind === 'error' && <IconAlert size={17} style={{ color: 'var(--critical)', flex: 'none' }} />}
-            <Text as="span" size={300}>{toast.message}</Text>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  )
+    dispatchToast(<Toast><ToastTitle>{message}</ToastTitle></Toast>, {
+      intent: kind, timeout: kind === 'error' ? 6000 : 3500,
+      politeness: kind === 'error' ? 'assertive' : 'polite',
+    })
+  }, [dispatchToast])
+  const api = useMemo<ToastApi>(() => ({
+    success: message => push('success', message),
+    error: message => push('error', message),
+    info: message => push('info', message),
+  }), [push])
+  return <ToastContext.Provider value={api}>
+    {children}
+    <Toaster toasterId={toasterId} position="bottom-end" announce={announceToast} />
+  </ToastContext.Provider>
 }
 
 export function useToast(): ToastApi {

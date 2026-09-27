@@ -79,7 +79,7 @@ it('uses server state filters before pagination and displays named read-only row
   const fetch = vi.fn(async (path: string) => response(reportPage(path.includes('state=CANCELLED') ? [] : [{ request: data.request, sku: data.sku, location: data.location }]))); vi.stubGlobal('fetch', fetch)
   show('/warehouse/replenishment?state=PENDING')
   const link = await screen.findByRole('link', { name: 'Kabel pengisian · CABLE' }); expect(link.getAttribute('href')).toContain(`requestId=${id.document}`)
-  expect(screen.getByText('Rak pengisian')).toBeTruthy(); expect(screen.queryByRole('button', { name: 'Tambah aturan minimum' })).toBeNull()
+  expect(screen.getByText(/Rak pengisian/, { selector: '.table-cell-content' })).toBeTruthy(); expect(screen.queryByRole('button', { name: 'Tambah aturan minimum' })).toBeNull()
   await selectControl(screen.getByRole('combobox', { name: 'Status pengisian' }), { target: { value: 'CANCELLED' } })
   await screen.findByText('Belum ada catatan pengisian sesuai filter'); expect(fetch.mock.calls.at(-1)![0]).toContain('state=CANCELLED')
 })

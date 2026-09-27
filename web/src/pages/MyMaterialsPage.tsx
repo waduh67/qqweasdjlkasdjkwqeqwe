@@ -99,12 +99,12 @@ function MaterialIssues({ context, enabled, select }: { context: MyMaterialConte
 function MaterialCustodyList({ context, enabled, select }: { context: MyMaterialContext; enabled: boolean; select: (row: MaterialCustody) => void }) {
   const [page, setPage] = useState(0), load = useCallback(() => getMyMaterialCustody(context.id, page), [context.id, page]), result = useWarehouseQuery(load)
   return <section className="stack" aria-label="Barang di tangan saya"><h3>Barang di tangan saya</h3><WarehouseState {...result}>{data => <>
-    <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada sisa di tangan Anda" hint="Barang dalam perjalanan baru tercatat di sini setelah penerimaan." />} columns={[
+    <DataTable rowActions={row => [{ key: 'action', label: <>{row.sku.tracking === 'SERIAL' ? 'Kembalikan perangkat' : 'Kembalikan sisa'}</>, onClick: () => select(row), disabled: !enabled }]} presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada sisa di tangan Anda" hint="Barang dalam perjalanan baru tercatat di sini setelah penerimaan." />} columns={[
       { key: 'sku', header: 'Barang', cell: row => <span>{row.sku.name}{' · '}{row.serial ?? row.lotCode}</span> },
       { key: 'amount', header: 'Jumlah di tangan', cell: row => <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> },
       { key: 'location', header: 'Lokasi', cell: row => row.location.name ?? row.location.code },
       { key: 'source', header: 'Pengiriman asal', cell: row => row.issueCode },
-      { key: 'action', header: 'Tindakan', cell: row => <span><Button title={row.sku.tracking === 'SERIAL' ? 'Pemasangan perangkat melalui aset pelanggan pada detail WO.' : undefined} disabled={!enabled} onClick={() => select(row)}>{row.sku.tracking === 'SERIAL' ? 'Kembalikan perangkat' : 'Kembalikan sisa'}</Button></span> },
+      
     ]} /><WarehousePagination page={page} size={data.size} total={data.totalElements} onChange={setPage} />
   </>}</WarehouseState></section>
 }

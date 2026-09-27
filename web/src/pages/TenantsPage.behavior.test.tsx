@@ -24,6 +24,8 @@ describe('tenant onboarding submission', () => {
     const fee = screen.getByLabelText('Harga bulanan khusus (Rp)') as HTMLInputElement
     await user.type(fee, '149500')
     expect(fee.checkValidity()).toBe(true)
+    await user.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+    expect(fixtures.post).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Simpan' }))
     expect((await screen.findByRole('alert')).textContent).toContain('Gagal memuat daftar tenant')
     expect(screen.getByText(/Admin bisa langsung masuk/)).toBeTruthy()

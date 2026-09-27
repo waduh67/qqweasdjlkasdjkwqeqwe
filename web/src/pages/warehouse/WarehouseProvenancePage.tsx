@@ -84,13 +84,13 @@ function CaseList({ onSelect }: { onSelect: (id: string) => void }) {
     <SelectField label="Jenis catatan" value={kind} onChange={(_, data) => { setKind(data.value as typeof kind); setPage(0) }}><option value="">Semua sumber</option>
       {MIGRATION_SOURCES.map(source => <option key={source} value={source}>{migrationSourceLabels[source]}</option>)}</SelectField>
     <WarehouseState {...result}>{data => <>
-      <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id}
+      <DataTable rowActions={row => [{ key: 'action', label: <>Periksa {migrationCaseLabel(row)}</>, onClick: () => onSelect(row.id) }]} presentation="warehouse" rows={data.items} rowKey={row => row.id}
         empty={<EmptyState title="Tidak ada kasus pada halaman ini" hint="Ubah jenis catatan atau lanjutkan pemeriksaan saldo awal jika seluruh sumber memang kosong." />} columns={[
           { key: 'identity', header: 'Catatan asli', cell: row => <span style={{ overflowWrap: 'anywhere' }}>{migrationCaseLabel(row)}<span className="muted">{' · '}{migrationSourceLabels[row.sourceTable]}</span></span> },
           { key: 'location', header: 'Lokasi', cell: row => row.location?.name || row.location?.code || 'Belum terbukti' },
           { key: 'quantity', header: 'Kuantitas lama', cell: row => row.source.legacyQuantity === null ? 'Lihat catatan asli' : row.source.legacyQuantity + ' · ' + (row.source.baseUnit || 'satuan belum terbukti') },
           { key: 'claims', header: 'Identitas', cell: row => !row.claims.length ? 'Lihat bukti sumber' : [...new Set(row.claims.map(claim => claim.state ? claimLabels[claim.state] : 'Format perlu diperiksa'))].join(' · ') },
-          { key: 'action', header: 'Pemeriksaan', cell: row => <Button onClick={() => onSelect(row.id)}>Periksa {migrationCaseLabel(row)}</Button> },
+          
         ]} />
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>

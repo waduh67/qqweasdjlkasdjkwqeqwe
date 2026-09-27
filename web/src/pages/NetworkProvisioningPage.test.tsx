@@ -12,7 +12,7 @@ import { NetworkProvisioningPage } from './NetworkProvisioningPage'
 
 vi.mock('@/hooks/useProvisioningPermissions', () => ({ useProvisioningPermissions: vi.fn() }))
 const toast = { success: vi.fn(), error: vi.fn(), info: vi.fn() }
-vi.mock('@/system', () => ({ useToast: () => toast }))
+vi.mock('@/system', () => ({ useConfirm: () => vi.fn(), useToast: () => toast }))
 
 const mockedPermissions = vi.mocked(useProvisioningPermissions)
 
@@ -212,7 +212,8 @@ describe('NetworkProvisioningPage', () => {
     fireEvent.change(screen.getByLabelText(/Port PON/), { target: { value: 'pon-1' } })
     fireEvent.change(screen.getByLabelText(/ID ONU/), { target: { value: 'onu-1' } })
     fireEvent.change(screen.getByLabelText(/Profil segmen/), { target: { value: 'profile-shared' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
 
     await waitFor(() => expect(provisioningApi.createServiceIntent).toHaveBeenCalledWith({ subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, accessOltId: 'olt-device-1', accessPonPortId: 'pon-port-1', accessOnuId: 'onu-1' }))
   })
@@ -227,7 +228,8 @@ describe('NetworkProvisioningPage', () => {
     if (!input || !role) return
     fireEvent.change(input, { target: { value: 'OLT Baru' } })
     fireEvent.change(role, { target: { value: 'OLT' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
 
     await waitFor(() => expect(provisioningApi.createTopologyNode).toHaveBeenCalledWith({
       name: 'OLT Baru', role: 'OLT', status: 'ENABLED',

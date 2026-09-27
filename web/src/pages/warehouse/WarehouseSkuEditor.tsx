@@ -55,9 +55,9 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
           <TextField label="Model" maxLength={200} value={model} disabled={readOnly} onChange={(_, data) => setModel(data.value)} />
           <WarehouseQuantityField label="Stok minimum" value={minimum} unit={unit} allowZero disabled={readOnly} onChange={setMinimum} />
         </div>
-        <fieldset disabled={readOnly}><legend>Kepemilikan</legend>{(['LOAN', 'SALE'] as const).map(mode => <Checkbox key={mode} label={mode === 'LOAN' ? 'Pinjaman (milik ISP)' : 'Penjualan (milik pelanggan)'} checked={ownership.includes(mode)}
-          onChange={(_, data) => setOwnership(current => data.checked === true ? [...current, mode] : current.filter(item => item !== mode))} />)}</fieldset>
-        <Checkbox label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />
+        <fieldset className="resource-choice-group" disabled={readOnly}><legend>Kepemilikan</legend><div>{(['LOAN', 'SALE'] as const).map(mode => <Checkbox key={mode} label={mode === 'LOAN' ? 'Pinjaman (milik ISP)' : 'Penjualan (milik pelanggan)'} checked={ownership.includes(mode)}
+          onChange={(_, data) => setOwnership(current => data.checked === true ? [...current, mode] : current.filter(item => item !== mode))} />)}</div></fieldset>
+        <Checkbox className="resource-choice-control" label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />
         {row && <p className="muted">Satuan dan pelacakan tidak dapat diubah setelah barang memiliki riwayat.</p>}
         {error && <p role="alert" className="error">{error}</p>}
       </form>

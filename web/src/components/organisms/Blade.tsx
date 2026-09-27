@@ -12,18 +12,8 @@ import { ResourceForm } from './ResourceForm'
 import type { CreationFlow } from './CreationReview'
 
 /**
- * Blade — panel geser-dari-kanan ala Azure Portal, PENGGANTI modal terpusat untuk
- * SEMUA form buat/sunting. Anatomi: header (judul + `X`), body yang bisa di-scroll,
- * dan **footer sticky** (aksi utama di kanan).
- *
- * Ukuran mengikuti kompleksitas form:
- * - `sm`  → form ringkas (<5 field)      → Fluent `medium` (~592px)
- * - `lg`  → form kompleks / banyak seksi  → Fluent `large` (~940px)
- * - `full`→ form sangat lebar / bertab    → Fluent `full` (100%)
- *
- * Form dengan footer memakai modal focus trap. Panel detail tanpa footer tetap
- * membiarkan daftar di belakangnya dapat dipilih. Form kotor meminta konfirmasi
- * sebelum ditutup lewat Escape, latar, atau tombol tutup.
+ * Resource creation uses the full-page Basics/review flow. Other details remain
+ * in a side drawer; both surfaces protect drafts marked dirty by their owner.
  */
 export type BladeSize = 'sm' | 'lg' | 'full'
 
@@ -81,7 +71,7 @@ export function Blade({
     if (!open) return null
     const reviewing = creation?.reviewing
     const prepare = () => creation?.prepare()
-    return <ResourceForm title={title} className={className} onClose={requestClose}
+    return <ResourceForm title={title} className={className} onClose={onClose} dirty={dirty}
       readOnly={!creation} editing={creation?.editing} busy={creation?.busy} onReview={prepare} reviewAction={!!creation}
       onBack={() => creation?.back()} review={reviewing ? creation.summary : undefined}
       footer={footer}

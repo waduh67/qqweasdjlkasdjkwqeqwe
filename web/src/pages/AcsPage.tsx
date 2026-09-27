@@ -558,7 +558,7 @@ function SignalCell({ rx, tx }: { rx: number | null; tx: number | null }) {
       <span style={{ color,  }}>
         {rx != null ? `${rx} dBm` : '—'}
       </span>
-      <Text as="span" size={300} className="muted" >TX {tx != null ? `${tx} dBm` : '—'}</Text>
+      <Text as="span" size={300} className="muted" > · TX {tx != null ? `${tx} dBm` : '—'}</Text>
     </div>
   )
 }

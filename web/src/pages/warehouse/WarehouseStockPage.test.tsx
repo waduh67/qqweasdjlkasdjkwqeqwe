@@ -68,7 +68,7 @@ it('uses named archived masters in historical stock filters without dropping the
     return response(page([]))
   }); vi.stubGlobal('fetch', fetch); show(`/warehouse/stock?locationId=${id.inspection}`)
   
-  fireEvent.click(screen.getByRole('combobox', { name: 'Barang' }));
+  fireEvent.click(await screen.findByRole('combobox', { name: 'Barang' }));
   await screen.findByRole('option', { name: 'Kabel lama · OLD (arsip)' })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Barang' })).toHaveProperty('disabled', false))
   await selectControl(screen.getByRole('combobox', { name: 'Barang' }), { target: { value: id.sku } })

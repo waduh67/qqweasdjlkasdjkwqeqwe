@@ -41,12 +41,12 @@ function OpeningDirectory({ batch, onSelect }: { batch: string; onSelect: (id: s
   const result = useWarehouseQuery(useCallback(() => listMigrationOpenings(batch, page), [batch, page]))
   return <section className="card stack"><h2>Usulan saldo awal tersimpan</h2><p>Lanjutkan usulan yang sudah dibuat setelah memuat ulang halaman. Periksa status persetujuannya sebelum membuat usulan pengganti.</p>
     <WarehouseState {...result}>{data => <>
-      {!data.items.length ? <p>Belum ada usulan dalam cakupan lokasi Anda. Tinjau hasil pemeriksaan untuk membuat usulan.</p> : <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} columns={[
+      {!data.items.length ? <p>Belum ada usulan dalam cakupan lokasi Anda. Tinjau hasil pemeriksaan untuk membuat usulan.</p> : <DataTable rowActions={row => [{ key: 'action', label: <>Buka {row.code}</>, onClick: () => onSelect(row.id) }]} presentation="warehouse" rows={data.items} rowKey={row => row.id} columns={[
         { key: 'name', header: 'Usulan', cell: row => <span>{row.code}<span className="muted">{' · '}{row.migrationReference}</span></span> },
         { key: 'location', header: 'Lokasi pemeriksaan', cell: row => row.reviewLocation.name || row.reviewLocation.code },
         { key: 'state', header: 'Pembukuan', cell: row => row.state === 'EXPIRED' ? 'Kedaluwarsa' : row.state === 'POSTED' ? 'Sudah dibukukan' : 'Belum dibukukan' },
         { key: 'time', header: 'Disimpan', cell: row => <WarehouseTime value={row.createdAt} /> },
-        { key: 'action', header: 'Tindakan', cell: row => <Button onClick={() => onSelect(row.id)}>Buka {row.code}</Button> },
+        
       ]} />}
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>
@@ -87,13 +87,13 @@ function ReviewCases({ cases, issues, onCase }: { cases: MigrationReviewCase[]; 
   return <div className="stack"><p>{cases.length} sumber · {stock.length} calon posisi stok · {cases.filter(row => !row.resolution).length} catatan tanpa keputusan</p>
     {stock.length ? <StockTotals totals={Object.fromEntries(Object.entries(totals).map(([unit, amount]) => [unit, amount.toString()]))} />
       : <p>Saldo tersedia nihil: tidak ada baris stok yang diajukan.</p>}
-    {!!cases.length && <DataTable presentation="warehouse" rows={cases.slice(page * 25, (page + 1) * 25)} rowKey={row => row.caseId} columns={[
+    {!!cases.length && <DataTable rowActions={row => [{ key: 'action', label: <>Buka kasus</>, onClick: () => onCase(row.caseId) }]} presentation="warehouse" rows={cases.slice(page * 25, (page + 1) * 25)} rowKey={row => row.caseId} columns={[
       { key: 'source', header: 'Catatan asli', cell: row => <span>{row.source.serial === '' ? 'Serial kosong' : row.source.serial ?? row.source.model ?? migrationSourceLabels[row.sourceTable]}
         <span className="muted">{' · '}{migrationSourceLabels[row.sourceTable]}</span></span> },
       { key: 'decision', header: 'Keputusan', cell: row => <span>{row.resolution ? resolutionLabels[row.resolution.kind] : row.resolutionRequired ? 'Keputusan diperlukan' : 'Riwayat belum terbukti'}
         {issues.filter(issue => issue.caseId === row.caseId).map(issue => <span key={issue.code} className="error">{' · '}{migrationIssueLabel(issue.code)}</span>)}</span> },
       { key: 'quantity', header: 'Calon saldo', cell: row => row.resolution?.stock ? <WarehouseQuantity value={row.resolution.stock.quantityBase} unit={row.resolution.stock.baseUnit} /> : 'Tidak menjadi stok tersedia' },
-      { key: 'action', header: 'Pemeriksaan', cell: row => <Button onClick={() => onCase(row.caseId)}>Buka kasus</Button> },
+      
     ]} />}
     <WarehousePagination page={page} size={25} total={cases.length} onChange={setPage} />
   </div>
@@ -133,28 +133,33 @@ function StockTotals({ totals }: { totals: Record<string, string> }) {
 }
 function FinalizationForm({ value, onRefresh }: { value: MigrationFinalizationReview; onRefresh: () => void }) {
   const { can } = useCan(), [reason, setReason] = useState(''), [operation, setOperation] = useState<WarehouseCommand<MigrationFinalization> | null>(null)
+  const formId = useId(), [open, setOpen] = useState(false)
   const ready = value.cutover.state === 'VALIDATING' && value.issues.length === 0 && value.openingDocumentId && value.reviewHash
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!ready || !value.openingDocumentId || !value.reviewHash || !reason.trim() || migrationTextInvalid(reason)) return
     setOperation(finalizeMigration(value.batchId, { expectedEpoch: value.cutover.epoch, openingDocumentId: value.openingDocumentId, expectedReviewHash: value.reviewHash, reason }))
   }
-  return <section className="card stack"><h2>Aktivasi operasi gudang</h2>
-    {ready ? <><p>Saldo awal sudah dibukukan melalui persetujuan independen. Periksa ringkasan sebelum mengaktifkan transaksi gudang.</p>
-      <StockTotals totals={value.baselineTotals} />{value.baselineCount === 0 && <p>Saldo tersedia nihil, tanpa baris stok.</p>}
-      <p>{value.cancellationCount} efek lama dibatalkan · {value.retainedIdentityCount} identitas lama tetap dicadangkan · {value.unresolvedHistoricalCount} catatan historis tanpa keputusan stok.</p>
-      <form className="stack" onSubmit={submit}><TextareaField label="Catatan finalisasi" required maxLength={2000} value={reason} onChange={(_, data) => setReason(data.value)} />
-        {migrationTextInvalid(reason) && <p role="alert" className="error">Gunakan satu paragraf tanpa baris baru atau karakter kontrol.</p>}
-        <Button type="submit" variant="primary" disabled={!reason.trim() || migrationTextInvalid(reason)}>Tinjau aktivasi gudang</Button>
-      </form></> : <><p>Aktivasi menunggu saldo awal yang disetujui dan pemeriksaan bukti selesai.</p><ul>{value.issues.map(issue => <li key={issue}>{migrationIssueLabel(issue)}</li>)}</ul></>}
+  return <section className="stack"><h2>Aktivasi operasi gudang</h2>
+    {ready ? <Button onClick={() => setOpen(true)}>Aktifkan operasi gudang</Button> : <><p>Aktivasi menunggu persetujuan saldo awal dan pemeriksaan bukti.</p><ul>{value.issues.map(issue => <li key={issue}>{migrationIssueLabel(issue)}</li>)}</ul></>}
     {value.approvalId && can('inventory.approval.view') && <Link to={'/warehouse/approvals?approvalId=' + encodeURIComponent(value.approvalId)}>Lihat keputusan persetujuan saldo awal</Link>}
-    <Button onClick={onRefresh}>Muat ulang status pemeriksaan</Button>
-    {operation && <WarehouseCommandDialog title="Aktifkan operasi gudang" command={operation} confirmLabel="Aktifkan gudang"
-      summary={<div className="stack"><StockTotals totals={value.baselineTotals} />{value.baselineCount === 0 && <p>Saldo tersedia nol.</p>}<p>{reason}</p>
-        <p>Transaksi gudang baru akan diaktifkan. Data lama tetap tersimpan; identitas historis yang belum terbukti tetap dicadangkan.</p></div>}
-      onClose={() => setOperation(null)} onDone={onRefresh} onReload={onRefresh} />}
+    <Button onClick={onRefresh}>Segarkan</Button>
+    {open && ready && <ResourceForm title="Aktifkan operasi gudang" editing onClose={() => setOpen(false)} onBack={() => setOperation(null)}
+      footer={<><Button onClick={() => setOpen(false)}>Batal</Button><Button form={formId} type="submit" variant="primary" disabled={!reason.trim() || migrationTextInvalid(reason)}>Tinjau aktivasi gudang</Button></>}
+      review={operation && <WarehouseCommandDialog embedded title="Aktifkan operasi gudang" command={operation} confirmLabel="Aktifkan gudang"
+        summary={<div className="stack"><StockTotals totals={value.baselineTotals} />{value.baselineCount === 0 && <p>Saldo tersedia nol.</p>}<p>{reason}</p>
+          <p>Transaksi gudang akan diaktifkan. Riwayat lama tetap tersimpan.</p></div>}
+        onClose={() => setOperation(null)} onDone={onRefresh} onReload={onRefresh} />}>
+      <form id={formId} className="stack" onSubmit={submit}>
+        <StockTotals totals={value.baselineTotals} />{value.baselineCount === 0 && <p>Saldo tersedia nol.</p>}
+        <p>{value.cancellationCount} efek lama dibatalkan · {value.retainedIdentityCount} identitas dicadangkan · {value.unresolvedHistoricalCount} catatan historis belum terverifikasi.</p>
+        <TextareaField label="Catatan finalisasi" required maxLength={2000} value={reason} onChange={(_, data) => setReason(data.value)} />
+        {migrationTextInvalid(reason) && <p role="alert" className="error">Gunakan satu paragraf tanpa baris baru.</p>}
+      </form>
+    </ResourceForm>}
   </section>
 }
+
 function FinalizedReceipt({ value }: { value: MigrationFinalization }) {
   const { can } = useCan()
   return <section className="card stack" aria-label="Bukti finalisasi gudang"><h2>Operasi gudang aktif</h2><p role="status">Finalisasi tercatat pada <WarehouseTime value={value.finalizedAt} />.</p><p>{value.reason}</p>

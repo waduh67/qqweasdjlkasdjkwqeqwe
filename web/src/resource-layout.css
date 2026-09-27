@@ -113,10 +113,37 @@
 @media (max-width: 819px) { .resource-form-content { padding-left: 0; } .resource-form-tabs { margin-left: 0; } }
 
 .resource-command-row { display: flex; align-items: center; flex-wrap: wrap; border-block: 1px solid var(--border); gap: 8px; }
-.resource-command-row .command-bar { border: 0; flex: 0 1 auto; }
+.resource-command-row .azure-commandbar { border: 0; flex: 0 1 auto; }
 .resource-export { display: flex; align-items: center; gap: 12px; }
 .resource-export .row { margin: 0; }
 
 .table-inline-values > * + *::before { content: ' · '; }
 
 .table-cell-content .badge.accent:not(:has(.dot)), .fui-TableCell .badge.accent:not(:has(.dot)) { background: transparent; border: 0; padding: 0; }
+
+.public-form-fields { gap: 20px; }
+.public-form-fields[hidden] { display: none; }
+.public-creation-review .resource-summary > div { grid-template-columns: minmax(110px, 1fr) minmax(0, 2fr); gap: 12px; }
+.public-creation-review { display: grid; gap: 20px; }
+
+.report-filter-group { display: grid; gap: 0; }
+.report-filter-group .resource-filters { padding-block: 4px; }
+.report-filter-group .resource-filters .app-field { flex-basis: 180px; }
+.report-filter-group .resource-filters form { align-items: flex-start; }
+.report-filter-group .resource-filters form > .fui-Button { align-self: flex-start; margin-top: 22px; }
+
+:root { --topbar-h: 40px; }
+.resource-filters form { flex-direction: row; justify-content: flex-start; }
+.resource-filters form > div[style*='grid-template-columns'] { display: contents !important; }
+.resource-form-tabs .fui-Tab::after { left: 0; right: 0; border-radius: 0; }
+.resource-form-tabs .fui-Tab::before { left: 0; right: 0; border-radius: 0; }
+@media (min-width: 820px) {
+  .resource-form-content .resource-choice-group { padding: 0; }
+  .resource-choice-group legend { float: left; width: 250px; padding-right: 20px; font-weight: 400 !important; }
+  .resource-choice-group > div { margin-left: 250px; display: flex; flex-direction: column; gap: 8px; }
+  .resource-form-content .resource-choice-control { margin-left: 242px; }
+}
+
+.resource-form-backdrop { background: transparent; }
+
+.resource-action-contents { display: contents; }

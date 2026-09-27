@@ -44,10 +44,10 @@ export function WarehouseReceiptEvidence({ receipt, onChanged }: { receipt: Ware
     </ResourceForm>}
     {error && <p role="alert" className="error">{error}</p>}
     <WarehouseState {...result}>{data => <>
-      <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Belum ada bukti" hint="Unggah hasil pemeriksaan untuk mencatat penerimaan atau penolakan barang." />} columns={[
+      <DataTable rowActions={row => [{ key: 'action', label: <>Unduh bukti</>, onClick: () => void download(row), disabled: downloading }]} presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Belum ada bukti" hint="Unggah hasil pemeriksaan untuk mencatat penerimaan atau penolakan barang." />} columns={[
         { key: 'file', header: 'Bukti', cell: row => <span>{row.contentType} · {row.sizeBytes} byte{' · '}<WarehouseTime value={row.createdAt} />{' · '}<span className="muted">{row.id.slice(0, 8)}</span></span> },
         { key: 'binding', header: 'Isi dokumen', cell: row => row.matchesCurrentIntake ? 'Sesuai draft saat ini' : 'Bukti draft lama — unggah ulang untuk inspeksi' },
-        { key: 'download', header: 'Unduh', cell: row => <Button disabled={downloading} onClick={() => void download(row)}>Unduh bukti</Button> },
+        
       ]} />
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>

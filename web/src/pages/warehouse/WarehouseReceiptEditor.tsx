@@ -87,7 +87,7 @@ function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { r
           <p className="muted">Jumlah kemasan × pembilang ÷ penyebut harus tepat sama dengan jumlah aktual, tanpa pembulatan.</p>
         </div>}
         {costVisible ? <><Checkbox label="Catat biaya kelompok barang" checked={row.useCost} onChange={(_, data) => onChange({ useCost: data.checked === true })} />
-          {row.useCost && <div style={grid}><TextField label="Total biaya (satuan minor)" required value={row.totalMinor} onChange={(_, data) => onChange({ totalMinor: data.value })} hint="Bilangan bulat dalam satuan minor mata uang; bukan harga per unit." />
+          {row.useCost && <div style={grid}><TextField label="Total biaya (satuan terkecil)" required value={row.totalMinor} onChange={(_, data) => onChange({ totalMinor: data.value })} hint="Total biaya seluruh baris, dalam satuan terkecil mata uang." />
             <TextField label="Mata uang" required maxLength={3} value={row.currency} onChange={(_, data) => onChange({ currency: data.value.toUpperCase() })} /></div>}
         </> : <p className="muted">Rincian biaya memerlukan izin lihat biaya.</p>}
       </div></Disclosure>

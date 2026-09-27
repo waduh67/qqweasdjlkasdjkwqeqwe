@@ -1,3 +1,4 @@
+import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { useCallback, useState } from 'react'
 import { DELEGATION_STATES, listDelegations, revokeDelegation, type WarehouseDelegation } from '@/api/warehouse/settings'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -23,16 +24,18 @@ function Delegations() {
   const [operation, setOperation] = useState<{ command: WarehouseCommand<WarehouseDelegation>; description: string } | null>(null)
   const loader = useCallback(() => listDelegations({ page, state: state || undefined }), [page, state]), result = useWarehouseQuery(loader)
   function refresh() { setCreating(false); setOperation(null); result.reload() }
-  return <div className="stack"><h2>Delegasi pemeriksa</h2><p>Hanya delegasi pada lokasi yang dapat Anda akses saat ini.</p>
-    <SelectField label="Status delegasi" value={state} onChange={(_, value) => { setState(value.value as typeof state); setPage(0) }}><option value="">Semua status</option>{DELEGATION_STATES.map(value => <option key={value} value={value}>{labels[value]}</option>)}</SelectField>
-    <div className="row wrap"><Button onClick={refresh}>Muat ulang delegasi</Button>{can('inventory.approval.manage') && <Button onClick={() => setCreating(true)}>Tambah delegasi</Button>}</div>
+  return <div className="stack"><h2>Delegasi pemeriksa</h2>
+    <WarehouseListActions onRefresh={refresh} onReset={() => { setState(''); setPage(0) }} create={can('inventory.approval.manage') ? { label: 'Tambah delegasi', onClick: () => setCreating(true) } : undefined} />
+    <section className="resource-filters row">
+    <SelectField label="Status delegasi" value={state} onChange={(_, value) => { setState(value.value as typeof state); setPage(0) }}><option value="">Semua status</option>{DELEGATION_STATES.map(value => <option key={value} value={value}>{labels[value]}</option>)}</SelectField></section>
+
     {creating && can('inventory.approval.manage') && <WarehouseDelegationForm onDone={refresh} onClose={() => setCreating(false)} />}
-    <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.delegation.id} empty={<EmptyState title="Tidak ada delegasi sesuai filter" hint="Pemeriksa dapat bertindak sesuai kebijakan dan kewenangannya sendiri." />} columns={[
+    <WarehouseState {...result}>{data => <><DataTable rowActions={row => can('inventory.approval.manage') && !row.delegation.revokedAt ? [{ key: 'action', label: <>Cabut delegasi</>, onClick: () => setOperation({ command: revokeDelegation(row.delegation), description: `${row.approver?.name ?? 'Pemeriksa asal'} → ${row.delegate?.name ?? 'Penerima delegasi'} · ${locationLabel(row.location)} · Revisi ${row.delegation.revision}` }) }] : []} presentation="warehouse" rows={data.items} rowKey={row => row.delegation.id} empty={<EmptyState title="Tidak ada delegasi sesuai filter" hint="Pemeriksa dapat bertindak sesuai kebijakan dan kewenangannya sendiri." />} columns={[
       { key: 'people', header: 'Pemeriksa asal → pengganti', cell: row => <>{row.approver?.name ?? 'Nama tidak tersedia'} → {row.delegate?.name ?? 'Nama tidak tersedia'}<span>{' · '}{row.delegation.sourceRoleId ? `Melalui role ${row.sourceRole?.name ?? 'yang namanya tidak tersedia'}` : 'Penunjukan pengguna langsung'}</span></> },
       { key: 'scope', header: 'Lokasi / persetujuan', cell: row => <>{locationLabel(row.location)}{' · '}{approvalOperationLabels[row.delegation.operation]}</> },
       { key: 'until', header: 'Berlaku sampai', cell: row => <WarehouseTime value={row.delegation.validUntil} /> },
       { key: 'state', header: 'Status / revisi', cell: row => <>{labels[row.state]} · Revisi {row.delegation.revision}{row.delegation.revokedAt && <span>{' · '}Dicabut <WarehouseTime value={row.delegation.revokedAt} /></span>}</> },
-      { key: 'action', header: 'Tindakan', cell: row => can('inventory.approval.manage') && !row.delegation.revokedAt ? <Button onClick={() => setOperation({ command: revokeDelegation(row.delegation), description: `${row.approver?.name ?? 'Pemeriksa asal'} → ${row.delegate?.name ?? 'Penerima delegasi'} · ${locationLabel(row.location)} · Revisi ${row.delegation.revision}` })}>Cabut delegasi</Button> : 'Baca saja' },
+      
     ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></>}</WarehouseState>
     {operation && <WarehouseCommandDialog title="Konfirmasi pencabutan delegasi" confirmLabel="Konfirmasi cabut" command={operation.command} onDone={refresh} onReload={refresh} onClose={() => setOperation(null)} summary={<><p>{operation.description}</p><p>Kewenangan dari delegasi ini dihentikan. Keputusan yang sudah tercatat tetap menjadi riwayat.</p></>} />}
   </div>

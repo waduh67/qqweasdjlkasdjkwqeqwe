@@ -54,7 +54,7 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
   }, [launcher])
   return (
     <Dialog open onOpenChange={(_, data) => { if (!data.open) onClose() }}>
-      <DialogSurface ref={surface} className={`console-dialog ${className}${wide ? ' console-dialog-wide' : ''}${layout === 'resource' ? ' resource-form-dialog' : ''}`}>
+      <DialogSurface backdrop={layout === 'resource' ? { className: 'resource-form-backdrop' } : undefined} ref={surface} className={`console-dialog ${className}${wide ? ' console-dialog-wide' : ''}${layout === 'resource' ? ' resource-form-dialog' : ''}`}>
         <DialogBody>
           <div className="console-dialog-heading">
             <DialogTitle>{title}</DialogTitle>

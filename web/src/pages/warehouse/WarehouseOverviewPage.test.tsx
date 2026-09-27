@@ -45,7 +45,7 @@ it('connects pending replenishments returns and transit aging without requiring 
   expect((await screen.findByRole('link', { name: 'Kabel pengisian' })).getAttribute('href')).toContain(`requestId=${id.document}`)
   const returns = await screen.findByRole('region', { name: 'Retur menunggu pemeriksaan' })
   expect((await within(returns).findByRole('link', { name: `${returned.references.code} · ${returned.references.item.name}` })).getAttribute('href')).toContain(`returnId=${returned.returnCase.id}`)
-  expect(await screen.findByText('3 hari')).toBeTruthy()
+  expect(await screen.findByText(/3 hari/, { selector: '.table-cell-content' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Laporan perjalanan barang' }).getAttribute('href')).toContain('sort=createdAt')
   expect(fetch.mock.calls.some(([path]) => path.includes('/replenishments/') && path.includes('state=PENDING'))).toBe(true)
   expect(fetch.mock.calls.some(([path]) => path.includes('/stock'))).toBe(false)

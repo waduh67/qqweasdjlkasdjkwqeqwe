@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
@@ -576,7 +577,6 @@ function SubscriptionManager({
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   const { can } = useCan()
-  const confirm = useConfirm()
   const canManage = can('customer.subscription.update')
   const [plans, setPlans] = useState<PlanView[]>([])
   const [planId, setPlanId] = useState('')
@@ -606,6 +606,8 @@ function SubscriptionManager({
     setPriceOverride('')
   }, [live?.id, live?.planId])
 
+  const [editingForm, setEditingForm] = useState(false)
+  const creation = useCreationReview(editingForm, sub !== null)
   const selected = plans.find((p) => p.id === planId) ?? null
   const override = priceOverride.trim()
   // Tak ada yang berubah → tombol mati, biar tak ada perintah kosong yang mengantre
@@ -620,44 +622,14 @@ function SubscriptionManager({
   const submit = async () => {
     if (!planId || unchanged) return
     const body = { planId, monthlyFeeOverride: override === '' ? null : Number(override) }
-    if (live) {
-      const ok = await confirm({
-        title: 'Ganti paket langganan',
-        message: (
-          <>
-            {live.packageName} ({live.bandwidthMbps} Mbps) → {selected?.name ?? '—'} (
-            {selected ? `${selected.downMbps} Mbps` : '—'})
-            {override !== '' && ` · harga negosiasi Rp ${override}`}
-            <br />
-            Kecepatan, QoS, dan tagihan periode berikutnya mengikuti paket baru.
-          </>
-        ),
-        confirmLabel: 'Ganti paket',
-      })
-      if (!ok) return
-    } else if (ended) {
-      const ok = await confirm({
-        title: 'Berlangganan lagi',
-        message: (
-          <>
-            Langganan {customer.name} dihidupkan kembali dengan paket {selected?.name ?? '—'}
-            {override !== '' && ` · harga negosiasi Rp ${override}`}.
-            <br />
-            Statusnya kembali menunggu instalasi, akun PPPoE lamanya dipakai lagi, dan penagihan
-            berjalan lagi mulai periode berikutnya.
-          </>
-        ),
-        confirmLabel: 'Berlangganan lagi',
-      })
-      if (!ok) return
-    }
+    if (override && (!Number.isFinite(Number(override)) || Number(override) < 0)) return
+    if (creation.beforeSave()) return
     setSaving(true)
     await run(
-      () => api.put(`/api/customers/${customer.id}/subscription`, body),
+      async () => { await api.put(`/api/customers/${customer.id}/subscription`, body); setEditingForm(false); setPriceOverride('') },
       live ? 'Paket langganan diganti' : ended ? 'Langganan dihidupkan kembali' : 'Paket ditetapkan',
     )
-    setSaving(false)
-    setPriceOverride('')
+    setSaving(false); creation.finish()
   }
 
   return (
@@ -677,7 +649,13 @@ function SubscriptionManager({
       )}
 
       {canManage && (
-        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+        <><Button onClick={() => setEditingForm(true)}>{actionLabel}</Button>
+        <Blade open={editingForm} title={actionLabel} onClose={() => setEditingForm(false)}
+          creation={{ ...creation, busy: saving, prepare: () => void submit(), summary: <><CreationSummary rows={[
+            ['Pelanggan', customer.name], ['Paket', selected?.name], ['Biaya bulanan', fmtRupiah(override ? Number(override) : selected?.price ?? 0)],
+          ]} /><p>{ended ? 'Langganan akan diaktifkan kembali dengan akun dan riwayat sebelumnya.' : 'Paket dan tagihan periode berikutnya mengikuti pilihan ini.'}</p></> }}
+          footer={<><Button disabled={saving} onClick={() => setEditingForm(false)}>Batal</Button><Button variant="primary" disabled={!planId || unchanged || saving} onClick={() => void submit()}>{actionLabel}</Button></>}>
+        <div className="stack">
           {plans.length === 0 ? (
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Tidak ada paket aktif.
@@ -707,9 +685,7 @@ function SubscriptionManager({
                   placeholder={selected ? String(selected.price) : 'ikut paket'}
                   style={{ flex: '1 1 140px' }}
                 />
-                <Button variant="primary" disabled={!planId || unchanged || saving} onClick={() => void submit()}>
-                  {actionLabel}
-                </Button>
+
               </div>
               {selected && (
                 <p className="muted tnum" style={{ margin: 0,  }}>
@@ -722,7 +698,7 @@ function SubscriptionManager({
                 : 'Satu pelanggan memiliki satu langganan; ganti paket tidak menambah langganan. Layanan kedua di lokasi lain memerlukan pelanggan baru.'}</Text>
             </>
           )}
-        </div>
+        </div></Blade></>
       )}
     </div>
   )
@@ -1399,7 +1375,9 @@ function SubscriptionAccessCard({
     setForm('reset')
   }
 
-  const submitProvision = () =>
+  const accessCreation = useCreationReview(form === 'provision')
+  const submitProvision = () => {
+    if (provisionInvalid || accessCreation.beforeSave()) return
     void run(async () => {
       await provisionAccess({
         subscriptionId: sub.id,
@@ -1412,7 +1390,8 @@ function SubscriptionAccessCard({
         framedIp: macBased ? framedIp || null : null,
       })
       close()
-    }, 'Akun jaringan dibuat')
+    }, 'Akun jaringan dibuat').finally(accessCreation.finish)
+  }
 
   // Validasi form provisi per-tipe: login butuh username+password; MAC butuh MAC (+ IP
   // wajib untuk Static). Paket wajib dipilih di semua kasus.
@@ -1569,7 +1548,11 @@ function SubscriptionAccessCard({
           Belum ada akun jaringan. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
         </Text>
       ) : form === 'provision' ? (
-        <div className="stack" style={{ gap: '0.5rem' }}>
+        <Blade open title="Buat akun jaringan" onClose={close}
+          creation={{ ...accessCreation, prepare: submitProvision, summary: <CreationSummary rows={[
+            ['Username', username], ['Layanan', SERVICE_TYPE_LABEL[authType]], ['Paket', plans.find(plan => plan.id === planId)?.name], ['IP reservasi', framedIp],
+          ]} /> }} footer={<><Button disabled={accessCreation.busy} onClick={close}>Batal</Button><Button variant="primary" onClick={submitProvision} disabled={provisionInvalid || accessCreation.busy}>Provisi</Button></>}>
+        <div className="stack">
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <PlanField plans={plans} value={planId} onChange={changeProvisionPlan} />
             <SelectField
@@ -1626,15 +1609,12 @@ function SubscriptionAccessCard({
 
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-            <Button variant="primary" onClick={submitProvision} disabled={provisionInvalid}>
-              Provisi
-            </Button>
-            <Button onClick={close}>Batal</Button>
+
           </div>
           <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{macBased
             ? 'DHCP/Static memakai MAC sebagai identitas. Static memerlukan IP reservasi.'
             : 'Kata sandi disimpan terenkripsi dan hanya dapat di-reset.'}</Text>
-        </div>
+        </div></Blade>
       ) : (
         <div className="spread" style={{ alignItems: 'center' }}>
           <Text as="span" size={300} className="muted" >Belum ada akun jaringan untuk langganan ini.</Text>

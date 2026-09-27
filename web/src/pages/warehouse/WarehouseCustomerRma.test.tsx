@@ -48,7 +48,7 @@ async function prepare() {
   await choose('Transit RMA', id.transit); await choose('Lokasi teknisi RMA', id.field)
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial fisik RMA' }), { target: { value: 'ONU-001' } })
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Serial fisik RMA' }), { key: 'Enter' })
-  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('tab', { name: 'Dasar' }).getAttribute('aria-selected')).toBe('true')
   fireEvent.change(screen.getByRole('textbox', { name: 'Referensi bukti RMA' }), { target: { value: 'BA-RMA' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau pengiriman RMA' }))
 }

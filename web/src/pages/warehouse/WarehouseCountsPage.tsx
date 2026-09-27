@@ -98,15 +98,14 @@ function CountBody({ details, recent, reload }: { details: CountDetails; recent:
       {can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(count.id)}`}>Buka persetujuan stock opname</Link>}</>}
     {count.state === 'POSTED' && <p role="status">Hasil penghitungan sudah dibukukan. Lihat keputusan persetujuan untuk selisih yang memerlukan penyesuaian.</p>}
   </section>
-    <DataTable presentation="warehouse" rows={count.entries} rowKey={entry => entry.balanceId} columns={[
+    <DataTable rowActions={entry => manage && count.state === 'COUNTING' && entry.counterId === user?.id && !observed.some(fact => fact.balanceId === entry.balanceId) ? [{ key: 'action', label: <>Catat hasil {countLineLabel(details, entry.balanceId)}</>, onClick: () => setObserving(entry.balanceId) }] : []} presentation="warehouse" rows={count.entries} rowKey={entry => entry.balanceId} columns={[
       { key: 'item', header: 'Posisi barang', cell: entry => <span>{countLineLabel(details, entry.balanceId)}<span className="muted" style={{ overflowWrap: 'anywhere' }}>{' · '}Posisi: {entry.balanceId}</span></span> },
       { key: 'person', header: 'Penghitung', cell: entry => countCounterLabel(details, entry.counterId) },
       { key: 'result', header: 'Hasil putaran ini', cell: entry => {
         const fact = observed.find(fact => fact.balanceId === entry.balanceId)
         return fact ? <WarehouseQuantity value={fact.quantityBase} unit={fact.baseUnit} /> : entry.counterId !== user?.id && !owner ? 'Hasil dibatasi sesuai penugasan' : 'Belum dicatat'
       } },
-      { key: 'action', header: 'Tindakan', cell: entry => manage && count.state === 'COUNTING' && entry.counterId === user?.id && !observed.some(fact => fact.balanceId === entry.balanceId)
-        ? <Button onClick={() => setObserving(entry.balanceId)}>Catat hasil {countLineLabel(details, entry.balanceId)}</Button> : '—' },
+      
     ]} />
     <CountHistory details={details} />
     {can('inventory.approval.view') && ['SUBMITTED', 'APPROVED', 'POSTED'].includes(count.state) && (reviewing ? <WarehouseCountComparison id={count.id} /> : <Button onClick={() => setReviewing(true)}>Lihat perbandingan setelah pengajuan</Button>)}

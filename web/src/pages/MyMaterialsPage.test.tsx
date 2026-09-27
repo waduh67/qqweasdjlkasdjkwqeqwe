@@ -1,3 +1,4 @@
+import { clickRowAction } from '@/test/rowAction'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -85,7 +86,7 @@ it('returns 17.5 metres after reassignment using the refreshed physical source a
     if (path.includes('/custody?')) return page([source])
     return page([])
   }); vi.stubGlobal('fetch', fetch); render(tree())
-  fireEvent.click(await screen.findByRole('button', { name: 'Kembalikan sisa' })); expect(screen.queryByRole('button', { name: 'Catat pemakaian' })).toBeNull()
+  await clickRowAction('Kembalikan sisa'); expect(screen.queryByRole('button', { name: 'Catat pemakaian' })).toBeNull()
   fireEvent.change(screen.getByRole('textbox', { name: /Jumlah dikembalikan/ }), { target: { value: '17,500' } })
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Karantina tujuan' })).not.toHaveProperty('disabled', true))
   await selectControl(screen.getByRole('combobox', { name: 'Karantina tujuan' }), { target: { value: id.allocation } })
@@ -133,7 +134,7 @@ it('requires a matching keyboard scan before returning one unused serialized dev
     if (path.includes('/custody?')) return page([source])
     return page([])
   }); vi.stubGlobal('fetch', fetch); render(tree())
-  fireEvent.click(await screen.findByRole('button', { name: 'Kembalikan perangkat' }))
+  await clickRowAction('Kembalikan perangkat')
   const serial = screen.getByRole('textbox', { name: 'Serial perangkat' })
   fireEvent.change(serial, { target: { value: 'ONU-02' } }); fireEvent.keyDown(serial, { key: 'Enter' })
   expect(screen.getByText('Serial tidak cocok dengan perangkat yang akan dikembalikan.')).toBeTruthy()

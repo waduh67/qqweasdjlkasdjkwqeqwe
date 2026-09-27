@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -451,18 +452,20 @@ function PonPortTab({
     void load()
   }, [load])
 
+  const [creating, setCreating] = useState(false)
+  const creation = useCreationReview(creating)
   const add = async () => {
-    if (!label.trim()) return
+    if (!label.trim() || creation.beforeSave()) return
     setBusy(true)
     try {
       await api.post(`/api/olts/${oltId}/pon-ports`, { label: label.trim() })
-      setLabel('')
+      setLabel(''); setCreating(false)
       await load()
       onChanged()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menambah PON port')
     } finally {
-      setBusy(false)
+      setBusy(false); creation.finish()
     }
   }
 
@@ -482,17 +485,12 @@ function PonPortTab({
       <div className="spread" style={{ gap: '0.75rem', alignItems: 'center' }}>
         <Text as="h3" weight="semibold" style={{ margin: 0 }}>PON Port</Text>
         {canUpdate && (
-          <div className="row" style={{ gap: '0.35rem' }}>
-            <TextField
-              style={{ width: '7rem' }}
-              placeholder="1/2/3"
-              value={label}
-              onChange={(_, data) => setLabel(data.value)}
-            />
-            <Button variant="primary" disabled={busy || !label.trim()} onClick={() => void add()}>
-              <IconPlus size={14} /> Tambah
-            </Button>
-          </div>
+          <><Button onClick={() => setCreating(true)} icon={<IconPlus size={14} />}>Tambah PON port</Button>
+          <Blade open={creating} title="Tambah PON port" onClose={() => setCreating(false)}
+            creation={{ ...creation, busy, prepare: () => void add(), summary: <CreationSummary rows={[["Label port", label]]} /> }}
+            footer={<><Button disabled={busy} onClick={() => setCreating(false)}>Batal</Button><Button variant="primary" disabled={busy || !label.trim()} onClick={() => void add()}>Tambah</Button></>}>
+            <TextField label="Label port" required placeholder="1/2/3" value={label} onChange={(_, data) => setLabel(data.value)} />
+          </Blade></>
         )}
       </div>
       {ports == null ? (

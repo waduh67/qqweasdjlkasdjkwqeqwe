@@ -66,7 +66,7 @@ export type Column<T> = {
 /** Satu operasi baris di menu aksi kiri (`…`). */
 export type RowAction = {
   key: string
-  label: string
+  label: ReactNode
   icon?: ReactElement
   onClick: () => void
   disabled?: boolean

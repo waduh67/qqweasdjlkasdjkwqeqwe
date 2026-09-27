@@ -1,5 +1,5 @@
 import { StrictMode, useState } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { Modal } from './Modal'
@@ -41,6 +41,19 @@ describe('imperative Fluent dialog focus', () => {
     expect(screen.getByRole('dialog', { name: 'Tinjau perubahan' })).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Selesai' }))
     await waitFor(() => expect(screen.getByRole('main', { name: 'Pengaturan' })).toBeTruthy())
+  })
+
+  it('restores an unlabelled page when the dialog was opened without a focused launcher', async () => {
+    function Page() {
+      const [open, setOpen] = useState(false)
+      return <div><button onClick={() => setOpen(true)}>Buka</button>{open && <Modal title="Dokumen" onClose={() => setOpen(false)}><button onClick={() => setOpen(false)}>Simpan</button></Modal>}</div>
+    }
+    const { container } = render(<Page />)
+    fireEvent.click(screen.getByRole('button', { name: 'Buka' }))
+    await waitFor(() => expect(container.closest('[aria-hidden="true"]')).not.toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Buka' })).toBeTruthy())
+    expect(document.activeElement?.hasAttribute('data-tabster-dummy')).toBe(false)
   })
 
 })

@@ -98,7 +98,7 @@ function EvidenceUpload({ onClose, source, batch, epoch, onSaved, onRefresh }: {
     try { setOperation(uploadMigrationEvidence(batch, source, epoch, label, file)) } catch (caught) { setError(caught) }
   }
   return <ResourceForm title="Unggah bukti pemeriksaan" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Unggah bukti pemeriksaan" command={operation} confirmLabel="Unggah bukti"
-      summary={<p>{label} · {file?.name} untuk {migrationCaseLabel(source)}. Bukti yang tersimpan menjadi bagian riwayat pemeriksaan.</p>}
+      summary={<p>{label} · {file?.name} untuk {migrationCaseLabel(source)}. Bukti akan disimpan pada riwayat pemeriksaan.</p>}
       onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />} footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" disabled={!file || !label.trim() || migrationTextInvalid(label)}>Periksa unggahan</Button></>}><form id={formId} className="stack" onSubmit={submit}>
     <TextField label="Nama bukti" required maxLength={200} value={label} onChange={(_, data) => setLabel(data.value)} />
     <label className="stack">File bukti (PDF, PNG, JPEG; maksimal 15 MiB)
@@ -136,7 +136,7 @@ function ResolutionForm({ source, batch, epoch, latest, files, onSaved, onRefres
         {kind === 'DUPLICATE' && duplicate && <p>Kasus asli: {migrationCaseLabel(duplicate)}</p>}
         <p>Bukti: {files.map(file => file.label).join(', ')}</p></div>}
       onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />} footer={<><Button onClick={() => setOpen(false)}>Batal</Button><Button form={formId} type="submit" variant="primary" disabled={!valid}>Tinjau keputusan</Button></>}><form id={formId} className="stack" onSubmit={submit} aria-label="Keputusan pemeriksaan"><h3>{latest ? 'Tambahkan keputusan pemeriksaan' : 'Catat keputusan pemeriksaan'}</h3>
-    <p>Keputusan disimpan sebagai usulan berbukti. Saldo tersedia baru dibukukan setelah persetujuan independen.</p>
+    <p>Saldo awal memerlukan persetujuan terpisah.</p>
     {latest && <p>Keputusan terbaru: {resolutionLabels[latest.kind]} · Revisi {latest.revision}. Keputusan sebelumnya tetap tersimpan.</p>}
     <SelectField label="Hasil pemeriksaan" value={kind} onChange={(_, data) => setKind(data.value as MigrationResolutionInput['kind'])}>
       {pending ? <option value="CANCEL_PENDING">Batalkan efek tertunda</option> : <>

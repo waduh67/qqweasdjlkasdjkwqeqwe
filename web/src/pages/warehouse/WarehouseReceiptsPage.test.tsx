@@ -118,6 +118,7 @@ it('retains edited draft after stale revision and explicitly reloads without sub
   fireEvent.click(screen.getByRole('button', { name: 'Simpan draft' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Muat ulang dokumen' }))
   expect(reload).toHaveBeenCalledOnce()
+  fireEvent.click(screen.getByRole('button', { name: 'Sebelumnya' }))
   expect(screen.getByRole('textbox', { name: 'Referensi surat jalan' })).toHaveProperty('value', 'SJ-EDIT')
   const mutations = fetch.mock.calls.filter(([, init]) => init.method === 'PUT')
   expect(mutations).toHaveLength(1)

@@ -2,7 +2,7 @@ import { CommandBar } from '@/components/molecules/CommandBar'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
+import { Table, TableBody, TableCell, TableRow, Text } from '@fluentui/react-components'
 import { Download, DoorOpen, KeyRound, Network, Power, PowerOff, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
@@ -28,7 +28,7 @@ import {
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
-import { Modal, SearchInput } from '@/components/molecules'
+import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconAlert, IconPlus } from '@/components/atoms/icons'
@@ -424,6 +424,8 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
     null,
   )
 
+  const [creating, setCreating] = useState(false)
+  const creation = useCreationReview(creating || editing !== null, editing !== null)
   const apply = (action: () => Promise<VpnAccountView>, ok: string, after?: () => void) => {
     setBusy(true)
     action()
@@ -433,7 +435,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
         toast.success(ok)
       })
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Operasi gagal'))
-      .finally(() => setBusy(false))
+      .finally(() => { setBusy(false); creation.finish() })
   }
 
   const parsePort = (raw: string): number | null => {
@@ -447,7 +449,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
 
   const add = () => {
     const port = parsePort(addDraft.devicePort)
-    if (port === null) return
+    if (port === null || creation.beforeSave()) return
     apply(
       () =>
         addAccountForward(acct.id, {
@@ -455,15 +457,15 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
           protocol: addDraft.protocol,
           label: addDraft.label.trim() || null,
         }),
-      'Pintu ditambahkan',
-      () => setAddDraft({ devicePort: '8291', protocol: 'TCP', label: '' }),
+      'Penerusan port ditambahkan',
+      () => { setAddDraft({ devicePort: '8291', protocol: 'TCP', label: '' }); setCreating(false) },
     )
   }
 
   const saveEdit = () => {
     if (!editing) return
     const port = parsePort(editing.devicePort)
-    if (port === null) return
+    if (port === null || creation.beforeSave()) return
     apply(
       () =>
         retargetAccountForward(acct.id, editing.id, {
@@ -471,7 +473,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
           protocol: editing.protocol,
           label: editing.label.trim() || null,
         }),
-      'Pintu diarahkan ulang',
+      'Penerusan port diperbarui',
       () => setEditing(null),
     )
   }
@@ -501,123 +503,38 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
 
   const full = acct.forwards.length >= MAX_FORWARDS
 
-  return (
-    <Modal title={`Port remote “${acct.label}”`} onClose={onClose} wide>
-      <Table ><TableHeader><TableRow ><TableHeaderCell >Layanan</TableHeaderCell>
-      <TableHeaderCell >Alamat publik</TableHeaderCell>
-      <TableHeaderCell >Port di perangkat</TableHeaderCell>
-      <TableHeaderCell style={{ width: '9rem' }} /></TableRow></TableHeader>
-      <TableBody>{acct.forwards.length === 0 && (
-        <TableRow ><TableCell colSpan={4} className="muted">
-          Belum ada pintu — perangkat hanya terjangkau dari dalam tunnel.
-        </TableCell></TableRow>
-      )}
-      {acct.forwards.map((f) =>
-        editing?.id === f.id ? (
-          <TableRow key={f.id}><TableCell ><TextField
-            value={editing.label}
-            onChange={(_, data) => setEditing({ ...editing, label: data.value })}
-            placeholder="otomatis"
-          /></TableCell>
-          <TableCell className="tnum muted">{f.address}</TableCell>
-          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
-            <TextField
-              value={editing.devicePort}
-              onChange={(_, data) => setEditing({ ...editing, devicePort: data.value })}
-              style={{ width: '6rem' }}
-            />
-            <SelectField
-              value={editing.protocol}
-              onChange={(_, data) => setEditing({ ...editing, protocol: data.value as VpnForwardProtocol })}
-            >
-              <option value="TCP">TCP</option>
-              <option value="UDP">UDP</option>
-            </SelectField>
-          </span></TableCell>
-          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
-            <Button variant="primary" size="small" onClick={saveEdit} disabled={busy}>
-              Simpan
-            </Button>
-            <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
-              Batal
-            </Button>
-          </span></TableCell></TableRow>
-        ) : (
-          <TableRow key={f.id}><TableCell ><strong>{f.label}</strong></TableCell>
-          <TableCell ><span className="tnum">{f.address}</span>{' '}
-          <Button variant="subtle" size="small" onClick={() => copy(f.address)}>
-            Salin
-          </Button></TableCell>
-          <TableCell className="tnum">{f.devicePort} <span className="muted">{f.protocol}</span></TableCell>
-          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
-            <Button
-              variant="subtle"
-              size="small"
-              disabled={busy}
-              onClick={() =>
-                setEditing({
-                  id: f.id,
-                  devicePort: String(f.devicePort),
-                  protocol: f.protocol,
-                  label: f.label,
-                })
-              }
-            >
-              Ubah
-            </Button>
-            <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(f)}>
-              Cabut
-            </Button>
-          </span></TableCell></TableRow>
-        ),
-      )}</TableBody></Table>
-
-      <div className="stack" style={{ gap: '0.4rem', marginTop: '1rem' }}>
-        <Text as="strong" size={300}  >Tambah pintu</Text>
-        <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <SelectField label="Layanan" value={addDraft.devicePort} onChange={(_, data) => applyPreset(data.value)}>
-            {!SERVICE_PRESETS.some((p) => String(p.devicePort) === addDraft.devicePort) && (
-              <option value={addDraft.devicePort}>Lainnya</option>
-            )}
-            {SERVICE_PRESETS.map((p) => (
-              <option key={p.devicePort} value={p.devicePort}>
-                {p.label} ({p.devicePort})
-              </option>
-            ))}
-          </SelectField>
-          <TextField
-            label="Port di perangkat"
-            value={addDraft.devicePort}
-            onChange={(_, data) => setAddDraft({ ...addDraft, devicePort: data.value })}
-            style={{ width: '9rem' }}
-          />
-          <SelectField
-            label="Protokol"
-            value={addDraft.protocol}
-            onChange={(_, data) => setAddDraft({ ...addDraft, protocol: data.value as VpnForwardProtocol })}
-          >
-            <option value="TCP">TCP</option>
-            <option value="UDP">UDP</option>
-          </SelectField>
-          <TextField
-            label="Nama (opsional)"
-            value={addDraft.label}
-            onChange={(_, data) => setAddDraft({ ...addDraft, label: data.value })}
-            placeholder="otomatis dari port"
-            style={{ flex: 1, minWidth: '10rem' }}
-          />
-          <Button variant="primary" onClick={add} disabled={busy || full}>
-            <IconPlus size={15} /> Tambah
-          </Button>
-        </div>
-        {full && (
-          <Text as="span" size={300} className="muted">
-            Sudah {MAX_FORWARDS} pintu — cabut salah satu dulu.
-          </Text>
-        )}
-      </div>
-    </Modal>
-  )
+  const value = editing ?? addDraft
+  const update = (patch: Partial<typeof addDraft>) => editing ? setEditing({ ...editing, ...patch }) : setAddDraft({ ...addDraft, ...patch })
+  const save = editing ? saveEdit : add
+  const closeEditor = () => { setCreating(false); setEditing(null) }
+  if (creating || editing) return <Blade open title={editing ? 'Ubah penerusan port' : 'Tambah penerusan port'} onClose={closeEditor}
+    creation={{ ...creation, busy, prepare: save, summary: <CreationSummary rows={[
+      ['Akun VPN', acct.label], ['Nama layanan', value.label || 'Otomatis'], ['Port perangkat', value.devicePort], ['Protokol', value.protocol],
+    ]} /> }} footer={<><Button disabled={busy} onClick={closeEditor}>Batal</Button><Button variant="primary" disabled={busy} onClick={save}>Simpan</Button></>}>
+    <div className="stack">
+      {!editing && <SelectField label="Layanan" value={addDraft.devicePort} onChange={(_, data) => applyPreset(data.value)}>
+        {!SERVICE_PRESETS.some(p => String(p.devicePort) === addDraft.devicePort) && <option value={addDraft.devicePort}>Lainnya</option>}
+        {SERVICE_PRESETS.map(p => <option key={p.devicePort} value={p.devicePort}>{p.label} ({p.devicePort})</option>)}
+      </SelectField>}
+      <TextField label="Port di perangkat" type="number" required min={1} max={65535} value={value.devicePort} onChange={(_, data) => update({ devicePort: data.value })} />
+      <SelectField label="Protokol" value={value.protocol} onChange={(_, data) => update({ protocol: data.value as VpnForwardProtocol })}><option value="TCP">TCP</option><option value="UDP">UDP</option></SelectField>
+      <TextField label="Nama layanan" value={value.label} onChange={(_, data) => update({ label: data.value })} placeholder="Otomatis dari port" />
+    </div>
+  </Blade>
+  return <Blade open layout="resource" title={`Port remote · ${acct.label}`} onClose={onClose}>
+    <CommandBar primary={{ key: 'create', label: 'Tambah penerusan port', icon: <IconPlus size={16} />, onClick: () => setCreating(true), disabled: busy || full }} />
+    <DataTable rows={acct.forwards} rowKey={row => row.id} columns={[
+      { key: 'name', header: 'Layanan', cell: row => row.label },
+      { key: 'address', header: 'Alamat publik', cell: row => row.address },
+      { key: 'port', header: 'Port perangkat', cell: row => row.devicePort },
+      { key: 'protocol', header: 'Protokol', cell: row => row.protocol },
+    ]} rowActions={row => [
+      { key: 'copy', label: 'Salin alamat', onClick: () => copy(row.address) },
+      { key: 'edit', label: 'Ubah', disabled: busy, onClick: () => setEditing({ id: row.id, devicePort: String(row.devicePort), protocol: row.protocol, label: row.label }) },
+      { key: 'remove', label: 'Cabut', disabled: busy, onClick: () => remove(row) },
+    ]} />
+    {full && <p>Maksimal {MAX_FORWARDS} penerusan port per akun.</p>}
+  </Blade>
 }
 
 /* ---------- Panel blok pelanggan: jalan dari server ke perangkat DI BELAKANG tunnel ---------- */
@@ -643,6 +560,8 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
   const [draft, setDraft] = useState({ cidr: '', label: '' })
   const [editing, setEditing] = useState<{ id: string; label: string } | null>(null)
 
+  const [creating, setCreating] = useState(false)
+  const creation = useCreationReview(creating || editing !== null, editing !== null)
   const apply = (action: () => Promise<VpnAccountView>, ok: string, after?: () => void) => {
     setBusy(true)
     action()
@@ -652,18 +571,20 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
         toast.success(ok)
       })
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Operasi gagal'))
-      .finally(() => setBusy(false))
+      .finally(() => { setBusy(false); creation.finish() })
   }
 
-  const add = () =>
+  const add = () => {
+    if (!isCidrLike(draft.cidr) || creation.beforeSave()) return
     apply(
       () => addAccountRoute(acct.id, { cidr: draft.cidr.trim(), label: draft.label.trim() || null }),
-      'Blok didaftarkan — hub memasang rutenya paling lama ~1 menit',
-      () => setDraft({ cidr: '', label: '' }),
+      'Blok didaftarkan. Rute akan aktif dalam satu menit.',
+      () => { setDraft({ cidr: '', label: '' }); setCreating(false) },
     )
+  }
 
   const saveEdit = () => {
-    if (!editing) return
+    if (!editing || creation.beforeSave()) return
     apply(() => renameAccountRoute(acct.id, editing.id, editing.label.trim()), 'Nama blok diubah', () =>
       setEditing(null),
     )
@@ -696,85 +617,28 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
 
   const full = acct.routes.length >= MAX_ROUTES
 
-  return (
-    <Modal title={`Blok pelanggan “${acct.label}”`} onClose={onClose} wide>
-      <p className="muted" style={{ margin: '0 0 0.75rem',  }}>
-        Daftarkan CIDR pelanggan agar server dapat menghubungi perangkat di belakang peer. Satu CIDR hanya boleh
-        terdaftar pada satu akun per server.
-      </p>
-
-      <Table ><TableHeader><TableRow ><TableHeaderCell >Nama</TableHeaderCell>
-      <TableHeaderCell >Blok</TableHeaderCell>
-      <TableHeaderCell style={{ width: '9rem' }} /></TableRow></TableHeader>
-      <TableBody>{acct.routes.length === 0 && (
-        <TableRow ><TableCell colSpan={3} className="muted">
-          Belum ada blok — server hanya bisa menghubungi perangkatnya, bukan pelanggan di belakangnya.
-        </TableCell></TableRow>
-      )}
-      {acct.routes.map((r) =>
-        editing?.id === r.id ? (
-          <TableRow key={r.id}><TableCell ><TextField
-            value={editing.label}
-            onChange={(_, data) => setEditing({ ...editing, label: data.value })}
-            placeholder="mis. Kolam PPPoE"
-          /></TableCell>
-          <TableCell className="tnum muted">{r.cidr}</TableCell>
-          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
-            <Button variant="primary" size="small" onClick={saveEdit} disabled={busy || !editing.label.trim()}>
-              Simpan
-            </Button>
-            <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
-              Batal
-            </Button>
-          </span></TableCell></TableRow>
-        ) : (
-          <TableRow key={r.id}><TableCell ><strong>{r.label}</strong></TableCell>
-          <TableCell className="tnum">{r.cidr}</TableCell>
-          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
-            <Button
-              variant="subtle"
-              size="small"
-              disabled={busy}
-              onClick={() => setEditing({ id: r.id, label: r.label })}
-            >
-              Ubah nama
-            </Button>
-            <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(r)}>
-              Cabut
-            </Button>
-          </span></TableCell></TableRow>
-        ),
-      )}</TableBody></Table>
-
-      <div className="stack" style={{ gap: '0.4rem', margin: '1rem 0' }}>
-        <Text as="strong" size={300}  >Tambah blok</Text>
-        <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <TextField
-            label="Blok (CIDR)"
-            value={draft.cidr}
-            onChange={(_, data) => setDraft({ ...draft, cidr: data.value })}
-            onKeyDown={(e) => e.key === 'Enter' && !busy && !full && isCidrLike(draft.cidr) && add()}
-            placeholder="10.20.0.0/16"
-            style={{ width: '12rem' }}
-          />
-          <TextField
-            label="Nama (opsional)"
-            value={draft.label}
-            onChange={(_, data) => setDraft({ ...draft, label: data.value })}
-            placeholder="otomatis dari blok"
-            style={{ flex: 1, minWidth: '10rem' }}
-          />
-          <Button variant="primary" onClick={add} disabled={busy || full || !isCidrLike(draft.cidr)}>
-            <IconPlus size={15} /> Tambah
-          </Button>
-        </div>
-        {full && (
-          <Text as="span" size={300} className="muted">
-            Sudah {MAX_ROUTES} blok — cabut salah satu dulu.
-          </Text>
-        )}
-      </div>
-
+  const value = editing ?? draft
+  const cidr = editing ? acct.routes.find(row => row.id === editing.id)?.cidr ?? '' : draft.cidr
+  const save = editing ? saveEdit : add
+  const closeEditor = () => { setCreating(false); setEditing(null) }
+  if (creating || editing) return <Blade open title={editing ? 'Ubah blok pelanggan' : 'Tambah blok pelanggan'} onClose={closeEditor}
+    creation={{ ...creation, busy, prepare: save, summary: <CreationSummary rows={[
+      ['Akun VPN', acct.label], ['CIDR', cidr], ['Nama blok', value.label],
+    ]} /> }} footer={<><Button disabled={busy} onClick={closeEditor}>Batal</Button><Button variant="primary" disabled={busy || !isCidrLike(cidr)} onClick={save}>Simpan</Button></>}>
+    <div className="stack"><TextField label="CIDR" required disabled={!!editing} value={cidr} onChange={(_, data) => setDraft({ ...draft, cidr: data.value })} placeholder="10.20.0.0/24" />
+      <TextField label="Nama blok" value={value.label} onChange={(_, data) => editing ? setEditing({ ...editing, label: data.value }) : setDraft({ ...draft, label: data.value })} />
+    </div>
+  </Blade>
+  return <Blade open layout="resource" title={`Blok pelanggan · ${acct.label}`} onClose={onClose}>
+    <CommandBar primary={{ key: 'create', label: 'Tambah blok pelanggan', icon: <IconPlus size={16} />, onClick: () => setCreating(true), disabled: busy || full }} />
+    <DataTable rows={acct.routes} rowKey={row => row.id} columns={[
+      { key: 'name', header: 'Nama', cell: row => row.label },
+      { key: 'cidr', header: 'CIDR', cell: row => row.cidr },
+    ]} rowActions={row => [
+      { key: 'edit', label: 'Ubah', disabled: busy, onClick: () => setEditing({ id: row.id, label: row.label }) },
+      { key: 'remove', label: 'Cabut', disabled: busy, onClick: () => remove(row) },
+    ]} />
+    {full && <p>Maksimal {MAX_ROUTES} blok per akun.</p>}
       {script && (
         <>
           <div className="row" style={{ alignItems: 'flex-end', marginBottom: '0.5rem' }}>
@@ -799,8 +663,7 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
           />
         </>
       )}
-    </Modal>
-  )
+  </Blade>
 }
 
 /* ---------- Kartu kredensial sekali-tampil ---------- */
@@ -974,9 +837,9 @@ function LiveIndicator({ online, lastHandshakeAt }: { online: boolean; lastHands
         className="badge"
         style={{ color: online ? 'var(--good-ink)' : 'var(--muted)',  }}
       >
-        {online ? '● online' : '○ offline'}
+        {online ? 'Online' : 'Offline'}
       </span>
-      <Text as="span" size={300} className="muted" >{sub}</Text>
+      <Text as="span" size={300} className="muted" > · {sub}</Text>
     </div>
   )
 }

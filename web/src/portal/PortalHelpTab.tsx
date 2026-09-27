@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Text } from '@fluentui/react-components'
 import { PortalApiError } from './portalClient'
@@ -160,8 +161,10 @@ function NewTicketForm({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const creation = useCreationReview(true)
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
+    if (creation.beforeSave()) return
     setError(null)
     setBusy(true)
     try {
@@ -169,14 +172,14 @@ function NewTicketForm({
     } catch (err) {
       setError(err instanceof PortalApiError ? err.message : 'Laporan gagal dikirim')
     } finally {
-      setBusy(false)
+      setBusy(false); creation.finish()
     }
   }
 
   return (
     <form className="card stack" style={{ gap: '0.6rem' }} onSubmit={onSubmit}>
       <Text as="h2" size={400} weight="semibold">Laporan baru</Text>
-      <SelectField label="Jenis gangguan" value={category} onChange={(_, data) => setCategory(data.value)}>
+      <div className="public-form-fields stack" hidden={creation.reviewing} inert={creation.reviewing ? true : undefined}>      <SelectField label="Jenis gangguan" value={category} onChange={(_, data) => setCategory(data.value)}>
         {Object.entries(REPORTABLE_CATEGORY).map(([value, label]) => (
           <option key={value} value={value}>{label}</option>
         ))}
@@ -198,10 +201,15 @@ function NewTicketForm({
         required
         placeholder="Sejak kapan, lampu modem warna apa, sudah dicoba restart atau belum…"
       />
+</div>
+      {creation.reviewing && <div className="public-creation-review"><CreationSummary rows={[
+        ['Jenis gangguan', REPORTABLE_CATEGORY[category]], ['Judul', subject], ['Deskripsi', description],
+      ]} /></div>}
       {error && <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>}
       <div className="row" style={{ gap: '0.5rem' }}>
+        {creation.reviewing && <Button type="button" disabled={busy} onClick={creation.back}>Sebelumnya</Button>}
         <Button variant="primary" type="submit" disabled={busy}>
-          {busy ? 'Mengirim…' : 'Kirim laporan'}
+          {busy ? 'Mengirim…' : creation.reviewing ? 'Kirim laporan' : 'Tinjau laporan'}
         </Button>
         <Button variant="subtle" type="button" onClick={onCancel} disabled={busy}>
           Batal

@@ -47,7 +47,7 @@ it('keeps an editable supplier draft after server validation rejects duplicate d
   fireEvent.submit(document.querySelector('form')!)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan pemasok' }))
   await screen.findByText('Sumber belum memenuhi syarat atau kode/serial sudah digunakan. Periksa barang, status dan referensinya.')
-  fireEvent.click(screen.getByRole('button', { name: 'Kembali' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Sebelumnya' }))
   expect((screen.getByRole('textbox', { name: 'Nama pemasok' }) as HTMLInputElement).value).toBe('Pemasok kabel')
   expect(onSaved).not.toHaveBeenCalled()
   expect(fetch).toHaveBeenCalledOnce()

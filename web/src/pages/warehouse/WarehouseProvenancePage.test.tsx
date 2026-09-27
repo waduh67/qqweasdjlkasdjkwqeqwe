@@ -1,3 +1,4 @@
+import { clickRowAction } from '@/test/rowAction'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -93,6 +94,7 @@ it('selects original evidence and explicit units without allowing a client-suppl
   })
   show('/warehouse/provenance?caseId=' + id.line)
   fireEvent.click(await screen.findByRole('checkbox', { name: 'Berita acara pemeriksaan kabel' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Catat keputusan pemeriksaan' }))
   await selectControl(screen.getByRole('combobox', { name: 'Hasil pemeriksaan' }), { target: { value: 'BASELINE_STOCK' } })
   fireEvent.click(screen.getByRole('combobox', { name: 'SKU saldo awal' }));
   await screen.findByRole('option', { name: 'Kabel drop lama · DROP' })
@@ -113,7 +115,7 @@ it('selects original evidence and explicit units without allowing a client-suppl
 })
 it('rediscovers a saved opening and links its frozen document to independent approval', async () => {
   const fetch = transport(); show('/warehouse/provenance?view=opening')
-  fireEvent.click(await screen.findByRole('button', { name: 'Buka OPEN-LEGACY' }))
+  await clickRowAction('Buka OPEN-LEGACY')
   const link = await screen.findByRole('link', { name: 'Buka persetujuan saldo awal' })
   expect(link.getAttribute('href')).toBe('/warehouse/approvals?sourceDocumentId=' + id.document)
   expect(screen.getByText(/Nilai pembelian dan biaya asal tidak diketahui/)).toBeTruthy()
@@ -130,7 +132,7 @@ it('requires an explicit reviewed zero and actual review location before creatin
   })
   show('/warehouse/provenance?view=opening')
   fireEvent.click(await screen.findByRole('button', { name: 'Tinjau hasil pemeriksaan' }))
-  fireEvent.click(screen.getByRole('combobox', { name: 'Lokasi pemeriksaan saldo awal' }));
+  fireEvent.click(await screen.findByRole('combobox', { name: 'Lokasi pemeriksaan saldo awal' }));
   await screen.findByRole('option', { name: 'Gudang lama · WH' })
   await selectControl(screen.getByRole('combobox', { name: 'Lokasi pemeriksaan saldo awal' }), { target: { value: id.source } })
   fireEvent.change(screen.getByLabelText(/Referensi migrasi/), { target: { value: 'Pemeriksaan gudang kosong' } })
@@ -149,7 +151,7 @@ it('blocks opening creation for unresolved cases and keeps post-admission cases 
   const fetch = transport(path => path === batch + '/review' ? json({ ...provenanceReviewFixture(), issues: [{ caseId: id.line, code: 'RESOLUTION_REQUIRED' }] }) : undefined)
   let view = show('/warehouse/provenance?view=opening')
   fireEvent.click(await screen.findByRole('button', { name: 'Tinjau hasil pemeriksaan' }))
-  await screen.findByText('Kasus ini masih memerlukan keputusan berbukti.')
+  await screen.findByText(/Kasus ini masih memerlukan keputusan berbukti\./)
   expect(screen.queryByRole('button', { name: 'Tinjau usulan saldo awal' })).toBeNull(); view.unmount()
   transport(path => path === batch + '/finalization' ? json(provenanceFinalizationReviewFixture()) : undefined)
   view = show('/warehouse/provenance?caseId=' + id.line)
@@ -166,6 +168,7 @@ it('finalizes only the approved reviewed baseline and displays its durable resul
     if (path === batch + '/finalization') return json(completed ? { ...provenanceFinalizationFixture(), issues: ['CUTOVER_NOT_VALIDATING'], finalization: provenanceFinalizationFixture() } : provenanceFinalizationReviewFixture())
   })
   show('/warehouse/provenance?view=opening')
+  fireEvent.click(await screen.findByRole('button', { name: 'Aktifkan operasi gudang' }))
   fireEvent.change(await screen.findByLabelText(/Catatan finalisasi/), { target: { value: 'Pemeriksaan independen selesai' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau aktivasi gudang' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Aktifkan gudang' }))
