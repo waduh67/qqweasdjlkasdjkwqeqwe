@@ -59,7 +59,7 @@ The earlier failure remains in `verification-before-headed-legacy.json` and
 scoped-release proof still refers to that exact preserved failed snapshot.
 
 All 48 implementation tasks and C1–C11 contracts were remapped to current sources
-and authenticated evidence. Backend, migration, mobile, protocol, build and CI
+and authenticated evidence. Backend, migration, mobile, protocol, backend/Gradle build and CI
 inputs remain byte-identical to the audited warehouse baseline. Their retained
 full-suite and four-case backend restart evidence remains valid; it is not
 reported as a new CI or a fresh execution of the old UI. Native shared-code
