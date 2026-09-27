@@ -131,7 +131,7 @@ Halaman pelanggan memakai command bar, filter, tabel resource, dan panel detail/
 Fluent. Pola navigasi dan formulir juga diterapkan pada modul platform, jaringan,
 gudang, teknisi, dan portal. Branch pemulihan: `work/ui-ux-revision`.
 
-Web aktif dipin ke image
+Rilis layout ini menggunakan image
 `sha256:efbb7692e4a36e28233a31f6002ce2e2beee1b886731d336a6fde9b0f0d56f5a`.
 Paket/receipt dan helper rollback berada di
 `/opt/ftth/setup-private/ui-20260927-2ebe059271db-r3/`. Paket ini melengkapi arsip
@@ -149,7 +149,8 @@ dan seluruh 14 berkas statis menyajikan byte hasil build yang diuji. Login dan
 13 tampilan publik lolos setelah aktivasi; data contoh hanya dibuat di lingkungan uji.
 
 Bila perlu mengembalikan web sebelum revisi UI ini, helper memeriksa pin/image agar
-tidak menimpa rilis lain, lalu hanya mengganti web:
+tidak menimpa rilis lain, lalu hanya mengganti web. Untuk rilis tipografi yang lebih
+baru, gunakan rollback di bagian berikut terlebih dahulu:
 
 ```sh
 sudo python3 /opt/ftth/setup-private/ui-20260927-2ebe059271db-r3/deploy-web.py \
@@ -161,3 +162,32 @@ uji bermode `0600`, sehingga worker Nginx mendapat HTTP 403. Image akhir memberi
 izin baca file dan akses direktori kepada Nginx tanpa mengubah isinya. Saat mengemas
 build dari lingkungan QA ber-umask ketat, pertahankan koreksi izin ini dan uji HTTP
 dari container runtime sebelum aktivasi. Receipt percobaan gagal tetap disimpan.
+
+## Rilis tipografi Azure — 27 September 2026
+
+**Web aktif** berasal dari commit `3ce5993dc0812d0f3319b8c67fd329c0ded186af`, dipin ke
+`sha256:1547355578d16eace408ec8418885c6af9de075b8db03ae7e59e2e800546bd58`.
+Paket image, proof, receipt aktivasi, dan helper pemulihan:
+`/opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081/`.
+Salinan lokal: `.omo/runtime/ui-ux/typography-20260927/release/`.
+
+Font mengikuti screenshot Firefox Azure Portal: Segoe UI5.32 regular400,
+semibold600, bold700, ditambah italic400. CSS mengutamakan font yang terpasang,
+lalu mengambil WOFF2 versi tersebut dari Microsoft Learn. Jika font eksternal
+tidak tersedia, teks tetap memakai font cadangan. Ukuran teks konsol13px,
+judul28px/600 dengan jarak huruf normal. Form pemilih lokasi tetap dapat digunakan
+bila browser tidak mendukung peta; pencarian alamat dan koordinat manual tersedia.
+
+Validasi rilis:25 tes terarah, build/typecheck, lint, review independen,44 halaman
+pada kedua ukuran Firefox, serta HTTP Nginx untuk seluruh14 berkas statis lolos.
+Setelah aktivasi, login dan14 tampilan produksi lolos tanpa error halaman atau
+overflow; keempat font mendapat HTTP200. Tidak ada data bisnis produksi yang
+dibuat oleh audit. Dua belas container FTTH selain web dan Caddy Drive tetap sama.
+Lingkungan QA lokal sudah dihentikan dengan volume uji dipertahankan.
+
+Rollback tipografi mempertahankan revisi layout Azure sebelumnya:
+
+```sh
+sudo python3 /opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081/deploy-web.py \
+  rollback /opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081
+```
