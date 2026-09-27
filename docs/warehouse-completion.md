@@ -1,5 +1,28 @@
 # Warehouse completion checkpoint — 27 September 2026
 
+Latest checkpoint: all 621 frontend cases and all 26 warehouse browser cases pass.
+The candidate product remains `0a685bc5`; the final extra scenario executed at
+`18dfeaa1` with only test/documentation differences. The 44-route desktop visual
+case also passes. Its mobile case stopped during tenant signup while the database
+waited on storage; visual and legacy gates remain pending. Production still runs
+the verified `329039f2` controls release. Do not repeat the completed 26 workflow
+cases or frontend suite without a relevant source change.
+
+The isolated development PostgreSQL volume was copied into non-CoW files after
+repeated storage stalls on Btrfs. All 3,872 original files (195,274,394 bytes) match
+the copy by content, mode, ownership and timestamps; volume identity and all
+durability settings are preserved. The original data is retained privately under
+`/var/lib/ftth-qa-recovery/`. This mitigation does not prove the cause of the stalls.
+Private proof: `storage/nocow-adjustment.json` in the runtime directory below.
+The later visual signup failure has timestamped PostgreSQL WAL waits and filesystem
+pressure samples. No source or timeout change is justified by that failure.
+
+Permission to temporarily pause an unrelated `compose-fluent-starter` Gradle writer
+was requested and is pending. Do not pause that process without the owner's reply.
+Continue targeted storage diagnosis; resume only visual/legacy checks once storage
+is stable, then authenticate final evidence, deploy the candidate web, verify the
+public site, back up private evidence and request final owner acceptance.
+
 The original 48 implementation tasks and independent F1–F4 audits reached technical
 closure at `b38d8eb963b7d1e0e1365e37237be1b765ee0697`. The owner subsequently rejected
 the old UI and requested the Azure-style revision. Final owner acceptance remains
