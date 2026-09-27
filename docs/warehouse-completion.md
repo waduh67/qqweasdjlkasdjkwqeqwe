@@ -42,3 +42,12 @@ host lease is
 `/home/fajar/ftth/warehouse-workorder-asset-provenance-resume/.omo/runtime/wave5-host-qa.lock`.
 The original 48-row source/evidence mapping and all eleven canonical proof hashes
 were checked again on 27 September; no backend or contract gap was found.
+
+The next checkpoint passed all 621 frontend cases across 123 files, four setup
+cases and two receiving cases. Both issue cases reached successful dispatch and
+slip retrieval, then headless Firefox rejected navigation while its native print
+dialog was active. The issue test now captures the actual printable DOM at the
+OS print boundary and verifies slip code, recipient, serial, quantity and state;
+the real server slip request remains required. This validates printable content,
+not a physical printer. Resume issue and remaining browser cases; unchanged
+frontend/setup/receiving evidence remains bound to `79d5ccae`.

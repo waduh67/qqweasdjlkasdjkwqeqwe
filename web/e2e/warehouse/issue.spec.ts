@@ -106,9 +106,22 @@ test('warehouse reserves partial demand, picks and unpicks actual pieces, then d
   await page.getByRole('button', { name: second.code, exact: true }).click()
   await expect(page.getByRole('region', { name: 'Detail slip pengeluaran', exact: true })).toContainText('Dikirim')
   await expect(page.getByRole('button', { name: 'Kirim barang', exact: true })).toHaveCount(0)
+  // Observe the real printable document at the OS print boundary. Opening the
+  // native printer dialog blocks subsequent navigation in headless Firefox.
+  await page.evaluate(() => {
+    window.print = () => {
+      document.documentElement.dataset.printedIssueSlip = document.querySelector('.warehouse-issue-print')?.textContent ?? ''
+    }
+  })
   const slipRead = page.waitForResponse(res => new URL(res.url()).pathname === `${root}/issues/${second.issueId}/slip`)
   await page.getByRole('button', { name: 'Cetak slip', exact: true }).click()
   expect((await slipRead).status()).toBe(200)
+  await expect.poll(() => page.locator('html').getAttribute('data-printed-issue-slip')).toContain(second.code)
+  const printedSlip = await page.locator('html').getAttribute('data-printed-issue-slip')
+  expect(printedSlip).toContain(technician.name)
+  expect(printedSlip).toContain('60,000 m')
+  expect(printedSlip).toContain(dispatched.lines.find((line: { serial: string | null }) => line.serial).serial)
+  expect(printedSlip).toContain('Dikirim')
   await page.evaluate(() => window.scrollTo(0, 0))
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.screenshot({ path: testInfo.outputPath('issue-dispatched.png'), fullPage: true })
