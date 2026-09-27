@@ -21,7 +21,7 @@ import {
   tokens,
   type TableColumnDefinition,
 } from '@fluentui/react-components'
-import { MoreHorizontal } from 'lucide-react'
+import { ArrowDown, ArrowUp, MoreHorizontal } from 'lucide-react'
 import { EmptyState, SkeletonRows } from '@/components/atoms'
 
 /**
@@ -96,6 +96,8 @@ const useStyles = makeStyles({
     textAlign: 'left',
   },
   headerSortButton: {
+    minWidth: '0',
+    padding: '0',
     justifyContent: 'flex-start',
     textAlign: 'left',
   },
@@ -110,7 +112,9 @@ const useStyles = makeStyles({
     cursor: 'pointer',
   },
   actionCell: {
-    width: '1%',
+    flex: '0 0 52px',
+    width: '52px',
+    justifyContent: 'center',
   },
   cellLink: {
     color: tokens.colorBrandForegroundLink,
@@ -249,6 +253,7 @@ export function DataTable<T>({
     if (!rowActions) return contentColumns
 
     return [
+      ...contentColumns,
       createTableColumn<T>({
         columnId: ACTIONS_COLUMN_ID,
         renderHeaderCell: () => 'Aksi',
@@ -283,7 +288,6 @@ export function DataTable<T>({
           )
         },
       }),
-      ...contentColumns,
     ]
   }, [columns, rowActions, styles.cellLink])
 
@@ -312,7 +316,7 @@ export function DataTable<T>({
   return (
     <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card')}>
       {!loading && (
-        <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')}>
+        <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
             className={mergeClasses('data-table-grid', resourcePresentation && 'resource-data-table-grid', styles.grid)}
             aria-label="Tabel data"
@@ -337,8 +341,9 @@ export function DataTable<T>({
                   const column = columns.find((candidate) => candidate.key === columnId)
                   return (
                     <DataGridHeaderCell
-                      className={mergeClasses(styles.headerCell, column?.align === 'right' && styles.numeric)}
-                      style={{ width: columnId === ACTIONS_COLUMN_ID ? '1%' : column?.width, textAlign: column?.align }}
+                      className={mergeClasses(styles.headerCell, columnId === ACTIONS_COLUMN_ID && styles.actionCell, column?.align === 'right' && styles.numeric)}
+                      style={{ width: columnId === ACTIONS_COLUMN_ID ? '52px' : column?.width, justifyContent: column?.align === 'right' ? 'flex-end' : undefined, textAlign: column?.align }}
+                      aria-sort={sort?.key === columnId ? (sort.dir === 'asc' ? 'ascending' : 'descending') : column?.sortValue ? 'none' : undefined}
                     >
                       {column?.sortValue ? (
                         <Button
@@ -348,6 +353,7 @@ export function DataTable<T>({
                           onClick={() => toggleSort(column)}
                         >
                           {renderHeaderCell()}
+                          {sort?.key === columnId && (sort.dir === 'asc' ? <ArrowUp size={14} aria-hidden /> : <ArrowDown size={14} aria-hidden />)}
                         </Button>
                       ) : (
                         renderHeaderCell()
@@ -403,7 +409,7 @@ export function DataTable<T>({
                               ? (event) => event.stopPropagation()
                               : undefined
                           }
-                          style={{ textAlign: column?.align }}
+                          style={{ textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
                         >
                           {warehousePresentation ? <>
                             <span className="warehouse-mobile-label" aria-hidden="true">{isActionCell ? 'Tindakan' : column?.header}</span>

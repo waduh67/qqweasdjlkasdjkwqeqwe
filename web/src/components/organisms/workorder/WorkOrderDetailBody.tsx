@@ -171,20 +171,6 @@ export function WorkOrderDetailBody({
           </div>
         )}
 
-        {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
-        {canComplete && wo.status === 'IN_PROGRESS' && (
-          <section className="stack" style={{ gap: '0.4rem' }}>
-            <TextareaField
-              label="Catatan penyelesaian (opsional)"
-              rows={2}
-              maxLength={2000}
-              value={note}
-              onChange={(_, data) => setNote(data.value)}
-            />
-            <ProofOfWorkCompletion key={proofVersion} workOrderId={id} type={wo.type} note={note} onAct={onAct} />
-          </section>
-        )}
-
         {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
         {canApprove && awaitingApproval && (
           <section className="stack" style={{ gap: '0.5rem' }}>
@@ -244,6 +230,22 @@ export function WorkOrderDetailBody({
           {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} approved={wo.approvalStatus === 'APPROVED'} onChanged={() => setProofVersion(value => value + 1)} />}
         </div>
       )}
+
+        {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
+        {canComplete && wo.status === 'IN_PROGRESS' && (
+          <section className="card stack" id="work-order-completion">
+            <h2 className="settings-section-title">Selesaikan pekerjaan</h2>
+            <p className="muted">Periksa material, pengukuran, dan bukti sebelum mengirim hasil.</p>
+            <TextareaField
+              label="Catatan penyelesaian (opsional)"
+              rows={2}
+              maxLength={2000}
+              value={note}
+              onChange={(_, data) => setNote(data.value)}
+            />
+            <ProofOfWorkCompletion key={proofVersion} workOrderId={id} type={wo.type} note={note} onAct={onAct} />
+          </section>
+        )}
 
       {/* Kerja serat yang dibukukan ke tiket ini — kartunya menampilkan diri sendiri
           hanya bila ada isinya (lihat komponennya). */}

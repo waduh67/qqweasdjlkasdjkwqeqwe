@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { CreditCard, Pause, Play, Trash2 } from 'lucide-react'
@@ -9,7 +10,7 @@ import { Blade } from '@/components/organisms'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { ConfirmDialog, SearchInput } from '@/components/molecules'
-import { PageHeader } from '@/components/molecules'
+import { FormSection, PageHeader } from '@/components/molecules'
 import { IconBuilding, IconPlus } from '@/components/atoms/icons'
 import { TenantSubscriptionModal } from '@/components/organisms/TenantSubscriptionModal'
 
@@ -31,6 +32,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 /** Halaman platform admin: daftar tenant + onboarding tenant baru beserta admin awalnya. */
 export function TenantsPage() {
   const { can } = useCan()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -41,6 +43,8 @@ export function TenantsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [defaultFee, setDefaultFee] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -75,6 +79,7 @@ export function TenantsPage() {
 
   // Buka/tutup Blade form dengan snapshot untuk deteksi perubahan (dirty).
   const openDraft = (d: typeof EMPTY) => {
+    setFormError(null)
     setDraft(d)
     setInitialDraft(d)
   }
@@ -82,6 +87,12 @@ export function TenantsPage() {
     setDraft(null)
     setInitialDraft(null)
   }
+  useEffect(() => {
+    if (searchParams.get('onboard') === '1' && can('platform.tenant.create')) {
+      openDraft({ ...EMPTY })
+      setSearchParams(previous => { const next = new URLSearchParams(previous); next.delete('onboard'); return next }, { replace: true })
+    }
+  }, [searchParams, can, setSearchParams])
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   const rows = useMemo(() => {
@@ -130,6 +141,7 @@ export function TenantsPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="Tenant"
+        subtitle="Kelola organisasi pelanggan, akses admin, dan status langganannya."
         actions={
           can('platform.tenant.create') && (
             <Button variant="primary" onClick={() => openDraft({ ...EMPTY })}>
@@ -144,7 +156,7 @@ export function TenantsPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
-        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
+        <SelectField aria-label="Filter status tenant" value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -175,74 +187,50 @@ export function TenantsPage() {
         onClose={closeDraft}
         footer={
           <>
+            <Button disabled={saving} onClick={closeDraft}>Batal</Button>
             <Button
               variant="primary"
-              onClick={() =>
-                void run(async () => {
-                  const { monthlyFee, ...rest } = draft!
-                  await api.post('/api/platform/tenants', {
-                    ...rest,
-                    monthlyFee: monthlyFee.trim() === '' ? undefined : Number(monthlyFee),
-                  })
-                  setNotice(`Tenant "${draft!.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
-                  closeDraft()
-                })
-              }
+              type="submit"
+              form="tenant-onboarding"
+              disabled={saving}
             >
-              Simpan
+              {saving ? 'Menyimpan…' : 'Simpan'}
             </Button>
-            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
-          <div className="stack">
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <TextField label="Slug" value={draft.slug} onChange={(_, data) => setDraft({ ...draft, slug: data.value })} placeholder="pt-fiber" />
+          <form id="tenant-onboarding" className="stack" onSubmit={event => {
+            event.preventDefault()
+            if (saving) return
+            setSaving(true)
+            setFormError(null)
+            const { monthlyFee, ...rest } = draft
+            void api.post('/api/platform/tenants', {
+              ...rest, monthlyFee: monthlyFee.trim() === '' ? undefined : Number(monthlyFee),
+            }).then(async () => {
+              setNotice(`Tenant "${draft.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
+              closeDraft()
+              await reload()
+            }).catch(err => setFormError(err instanceof ApiError ? err.message : 'Gagal menyimpan tenant. Periksa data dan coba lagi.'))
+              .finally(() => setSaving(false))
+          }}>
+            {formError && <p className="error" role="alert">{formError}</p>}
+            <FormSection title="Identitas organisasi" description="Nama ditampilkan di aplikasi. Slug dipakai admin saat masuk ke tenant.">
+              <div className="form-grid">
+                <TextField required label="Nama" autoComplete="organization" value={draft.name} onChange={(_, data) => setDraft({ ...draft, name: data.value })} placeholder="PT Fiber Nusantara" />
+                <TextField required label="Slug" hint="Huruf kecil, angka, dan tanda hubung." value={draft.slug} onChange={(_, data) => setDraft({ ...draft, slug: data.value })} placeholder="pt-fiber" />
               </div>
-              <div style={{ flex: 2 }}>
-                <TextField label="Nama" value={draft.name} onChange={(_, data) => setDraft({ ...draft, name: data.value })} />
-              </div>
-            </div>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <TextField label="Nama admin" value={draft.adminName} onChange={(_, data) => setDraft({ ...draft, adminName: data.value })} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Email admin"
-                  type="email"
-                  value={draft.adminEmail}
-                  onChange={(_, data) => setDraft({ ...draft, adminEmail: data.value })}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Password admin"
-                  type="password"
-                  value={draft.adminPassword}
-                  onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })}
-                />
-              </div>
-            </div>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Harga bulanan khusus (Rp)"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={draft.monthlyFee}
-                  onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })}
-                  placeholder={
-                    defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
-                  }
-                />
-              </div>
-              <div style={{ flex: 1 }} />
-            </div>
-          </div>
+            </FormSection>
+            <FormSection title="Admin pertama" description="Akun ini akan mengelola pengguna dan operasional tenant.">
+              <TextField required label="Nama admin" autoComplete="name" value={draft.adminName} onChange={(_, data) => setDraft({ ...draft, adminName: data.value })} />
+              <TextField required label="Email admin" type="email" autoComplete="email" value={draft.adminEmail} onChange={(_, data) => setDraft({ ...draft, adminEmail: data.value })} />
+              <TextField required label="Password admin" type="password" autoComplete="new-password" value={draft.adminPassword} onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })} />
+            </FormSection>
+            <FormSection title="Langganan" description="Biaya khusus bersifat opsional. Kosongkan untuk mengikuti harga platform.">
+              <TextField label="Harga bulanan khusus (Rp)" type="number" min={0} step={1000} value={draft.monthlyFee} onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })} placeholder={defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Gunakan harga default'} />
+            </FormSection>
+          </form>
         )}
       </Blade>
 

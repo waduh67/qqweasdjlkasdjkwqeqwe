@@ -26,7 +26,7 @@ export type ButtonVariant = 'default' | 'primary' | 'subtle' | 'danger'
 
 const useStyles = makeStyles({
   regularLabel: {
-    fontWeight: tokens.fontWeightRegular,
+    fontWeight: tokens.fontWeightSemibold,
   },
   danger: {
     color: tokens.colorPaletteRedForeground1,

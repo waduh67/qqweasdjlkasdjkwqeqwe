@@ -1,3 +1,4 @@
+import { Cable, CreditCard, HardDrive, PackageCheck, CalendarCheck, Workflow } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -19,7 +20,6 @@ import {
   IconDashboard,
   IconGauge,
   IconInbox,
-  IconInventory,
   IconLogout,
   IconMap,
   IconMonitor,
@@ -47,31 +47,30 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/', label: 'Dashboard', permission: null, icon: IconDashboard, end: true },
       { to: '/reports', label: 'Laporan', permission: 'reporting.report.view', icon: IconChart },
-      { to: '/subscription', label: 'Langganan Aplikasi', permission: 'billing.subscription.view', icon: IconGauge },
     ],
   },
   {
     label: 'Jaringan',
     items: [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
-      { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
+      { to: '/inventory', label: 'Aset jaringan', permission: 'network.odp.view', icon: HardDrive },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
       { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
-      { to: '/network-provisioning', label: 'Provisioning Jaringan', permission: 'provisioning.segment.view', icon: IconRoute },
-      { to: '/provisioning', label: 'Provisioning', permission: 'monitoring.provisioning.view', icon: IconInbox },
+      { to: '/network-provisioning', label: 'Segmen jaringan', permission: 'provisioning.segment.view', icon: Cable },
+      { to: '/provisioning', label: 'Provisioning perangkat', permission: 'monitoring.provisioning.view', icon: Workflow },
     ],
   },
   {
-    label: 'Gudang & Logistik',
+    label: 'Gudang',
     items: [
-      { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: IconInventory, end: true },
-      ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: IconPackage })),
+      { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: PackageCheck, end: true },
+      ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: page.icon })),
     ],
   },
   {
-    label: 'Layanan Pelanggan',
+    label: 'Pelanggan & layanan',
     items: [
       { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: IconPlus },
       // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
@@ -94,19 +93,20 @@ const GROUPS: NavGroup[] = [
       // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
       { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: IconWorkOrder },
       { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: IconInbox },
-      { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', icon: IconInbox },
-      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: IconWorkOrder },
+      { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', icon: PackageCheck },
+      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: CalendarCheck },
     ],
   },
   {
     label: 'Administrasi',
     items: [
+      { to: '/subscription', label: 'Langganan aplikasi', permission: 'billing.subscription.view', icon: CreditCard },
       { to: '/users', label: 'Pengguna', permission: 'iam.user.view', icon: IconUsers },
       { to: '/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: IconShield },
       { to: '/areas', label: 'Area', permission: 'iam.area.view', icon: IconArea },
       { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
       { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
-      { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: IconPackage },
+      { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: CreditCard },
       { to: '/tax-settings', label: 'Pajak & BHP/USO', permission: 'billing.tax.view', icon: IconReceipt },
     ],
   },
@@ -123,7 +123,7 @@ export function Layout() {
   const { can, isPlatformAdmin } = useCan()
   const location = useLocation()
   const navigate = useNavigate()
-  const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
+  const { navLabel, navExpanded, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
 
   const flush = FLUSH_ROUTES.has(location.pathname)
 
@@ -161,9 +161,9 @@ export function Layout() {
             variant="subtle"
             icon={<IconSidebar size={18} />}
             onClick={toggleNav}
-            aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            aria-expanded={navOpen}
+            aria-label={navLabel}
+            title={navLabel}
+            aria-expanded={navExpanded}
           />
           <Text as="span" className="badge accent" size={200} weight="semibold">{user?.tenantSlug}</Text>
           {user?.platformAdmin && <Text as="span" className="badge" size={200} weight="semibold">platform admin</Text>}

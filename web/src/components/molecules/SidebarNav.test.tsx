@@ -21,7 +21,7 @@ const groups = [
 
 describe('SidebarNav hotspot', () => {
   it('menampilkan menu untuk pengguna yang punya kebijakan view hotspot', () => {
-    localStorage.setItem('hotspot-authorized.v2', JSON.stringify(['Layanan Pelanggan']))
+    localStorage.removeItem('hotspot-authorized.v3.closed')
 
     render(
       <MemoryRouter>
@@ -32,8 +32,6 @@ describe('SidebarNav hotspot', () => {
         />
       </MemoryRouter>,
     )
-
-    screen.getByRole('button', { name: 'Layanan Pelanggan' }).click()
 
     expect(screen.getByRole('link', { name: 'Hotspot & Voucher' }).getAttribute('href')).toBe('/hotspot')
   })
@@ -46,5 +44,14 @@ describe('SidebarNav hotspot', () => {
     )
 
     expect(screen.queryByRole('link', { name: 'Hotspot & Voucher' })).toBeNull()
+  })
+})
+
+ describe('SidebarNav discovery', () => {
+  it('reveals the active section even when previously collapsed', () => {
+    localStorage.setItem('nav-active.v3.closed', JSON.stringify(['Layanan Pelanggan']))
+    render(<MemoryRouter initialEntries={['/hotspot/vouchers']}><SidebarNav groups={groups} can={() => true} storageKey="nav-active" /></MemoryRouter>)
+    expect(screen.getByRole('button', { name: 'Layanan Pelanggan' }).getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByRole('link', { name: 'Hotspot & Voucher' }).getAttribute('aria-current')).toBe('page')
   })
 })

@@ -32,16 +32,13 @@ import {
 const GROUPS: NavGroup[] = [
   {
     label: null,
-    items: [{ to: '/platform', label: 'Dashboard', permission: null, icon: IconDashboard, end: true }],
-  },
-  {
-    label: 'Tenant',
     items: [
+      { to: '/platform', label: 'Dashboard', permission: null, icon: IconDashboard, end: true },
       { to: '/platform/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
     ],
   },
   {
-    label: 'Billing Langganan',
+    label: 'Langganan',
     items: [
       { to: '/platform/billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: IconGauge },
       {
@@ -60,7 +57,7 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Administrasi Platform',
+    label: 'Administrasi',
     items: [
       { to: '/platform/email', label: 'Setelan Email', permission: 'platform.email.view', icon: IconMail },
       { to: '/platform/users', label: 'Pengguna', permission: 'iam.user.view', icon: IconUsers },
@@ -73,7 +70,7 @@ const GROUPS: NavGroup[] = [
 export function PlatformLayout() {
   const { user, logout } = useAuth()
   const { can } = useCan()
-  const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
+  const { navLabel, navExpanded, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
 
   const initials = (user?.name ?? '?')
     .split(' ')
@@ -91,9 +88,9 @@ export function PlatformLayout() {
             variant="subtle"
             icon={<IconSidebar size={18} />}
             onClick={toggleNav}
-            aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            aria-expanded={navOpen}
+            aria-label={navLabel}
+            title={navLabel}
+            aria-expanded={navExpanded}
           />
           <Text as="span" className="badge accent" size={200} weight="semibold">platform admin</Text>
         </div>

@@ -34,6 +34,7 @@ export function TextField({
 }: FieldExtras & InputProps) {
   return (
     <Field
+      className="app-field"
       label={label}
       hint={hint}
       validationMessage={validationMessage}
@@ -56,6 +57,7 @@ export function SelectField({
 }: FieldExtras & SelectProps) {
   return (
     <Field
+      className="app-field"
       label={label}
       hint={hint}
       validationMessage={validationMessage}
@@ -77,6 +79,7 @@ export function TextareaField({
 }: FieldExtras & TextareaProps) {
   return (
     <Field
+      className="app-field"
       label={label}
       hint={hint}
       validationMessage={validationMessage}
