@@ -1,0 +1,164 @@
+{
+  "review": "F2 quality and security",
+  "reviewer": "f2",
+  "decision": "APPROVE",
+  "status": "FINAL_F2_APPROVE_WITH_BOUNDED_EVIDENCE_AND_NONBLOCKING_FOLLOWUPS",
+  "reviewedAtUtc": "2026-09-27T09:24:40.700339+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "ciRun": 36265279847,
+  "sourceMetadataHeadAtReview": "13849768623c7cb6ad652d6c4c0e720b741b66d4",
+  "correctedOperationsDocSha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+  "operationsDocUncommittedCorrectionAtCapture": true,
+  "hostConfigurationSha256": {
+    ".env": "1436e9eed0e2b7bb1fd0c3da38efdf21f3336b0c8c6b3cae8a656b6c97fa1dbc",
+    "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "backup/backup.sh": "6e9a90515ec94bf9a7d7f104676ef46347bb68245b937d29d2560a30965903fa",
+    "backup/entrypoint.sh": "cc42d4f098c5756e4069e5132b2979a635f07ee2b6668f1de054421c91890df3",
+    "backup/restore.sh": "6ff2ee903786d0148b6d81e869f843c15aa2d3d084c0c7f5302b1ae26a029df2",
+    "docker-compose.images.json": "95cfddcd991710f1c962ec9e38db9f20d90cb24bdf48351e3cb4147cf177faea",
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "ftth-compose": "d8a9862f43e08e0b2d81277d0ae28440ab536ddd1f0d5f3eed84dd7f1d3d8135",
+    "postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "radius/freeradius/clients.conf": "e091fd4f86797cd10ee749f1da81433ec9359836bb0ae355201b447c5fa7eeef",
+    "radius/freeradius/mods-enabled/sql": "8b44ff313c4fe64002cbe1bb0ef871dd83f2fa28180d36003b5f47c7f94a1993",
+    "setup-private/loaded-image-identities.json": "13f516643df96885be75bf374ee4dc36ae9979b4058f8aadeb5ebca969b87668"
+  },
+  "activationHelperSha256": "87f7e0f55c82bad649b3d5ed615b7e5b18227992bfe664ecd649095d5c0c3ed7",
+  "releaseProofSha256": {
+    "nonserver": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "images": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+    "bootstrap": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+    "network": "46e5ab137f69e80f1eb6564651969c14e88f4a8009e78df7979eece128651cfe",
+    "backup": "543bac2d15e46038d66368904c4ae42bf1db4c374d7157e6542de92c6be963f7",
+    "server": "4374abfa2aea7a4ad3ae1308055d9991f96e277c440b129d1bf228488a0d1dbc"
+  },
+  "finalHostSnapshotSha256": "e51e21325daed3d9484f929dd46be5208a5612e077a5515ab1e9329925ef59f5",
+  "evidenceSha256": {
+    "f2-source-review-6bfb1337.md": "4f638ec3f5d1ebbc75c1d760524fecfb0f20c43cf24358d938c794b38fba3fea",
+    "f2-source-review-6bfb1337.json": "39dd716133bf22bb80cabc36bd1e0a3c2b54a7ccd469188f738574f0bd214df5",
+    "f2-final-preparation-1306b65c.md": "0cbda1d4cc60944981472224a05b3a7ba2599fbe8b07f19a2ab12820f6e8a097",
+    "f2-deployment-db09c3c2-addendum.md": "7fc525d92eaca5901058c73ce96d635b68fdb878f40688c54e91278773f973f6",
+    "f2-current-ci-and-readiness-preparation.json": "e1bd273f659d148634f4025d72f9971399b86dabc4d38cd306495c9735fdb384",
+    "f2-activation-public-browser-authentication.json": "a5fa4c4ae0a5a9e3dbd069635efeeed198b8765a8cfd97bd56822dbad14f1960",
+    "f2-production-final-authentication.json": "286f78225e38fc9729c26576e5bb1ccd35033aa9bc5f53ca87d23489e2699c27",
+    "f4-ci-1306b65c-server-recheck.json": "4374abfa2aea7a4ad3ae1308055d9991f96e277c440b129d1bf228488a0d1dbc",
+    "f4-ci-1306b65c-nonserver-recheck.json": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "f3-final-verdict.json": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd",
+    "release-approved.json": "19193de06da5c170950d29edbb319f099be84e3b2eb92b9cb3a12ed8c80aa2cf",
+    "production-host-final.json": "e51e21325daed3d9484f929dd46be5208a5612e077a5515ab1e9329925ef59f5",
+    "external-vpn-tls-r1/verification.json": "bbdc5314b2b061a31cf6a26bc7f920552ea429dd157eaf68c27970504a7bd819",
+    "server-recovery-receipt.json": "7a66f5e1632057101e119a78c9a70da5f74c2c8a33dcfc70a5fedfed18e17977"
+  },
+  "blockingFindings": [],
+  "scope": [
+    "Canonical warehouse posting/exact quantities/current authorization and tenant/warehouse/assignment/customer privacy",
+    "Immutable replay/maker-checker/same-asset reuse/concurrency/expiry/recovery and protected history",
+    "Source-matched complete current CI, independently reviewed browser workflow and current native/shared/image evidence",
+    "Authorized Azure host composition, activation/public browser/VPN installation/persistence/backup-copy checks"
+  ],
+  "sourceConclusions": {
+    "priorLegacyReaderFindingsClosed": true,
+    "noAdditionalSourceBlocker": true,
+    "applicationBuildTestWorkflowAnd367MigrationsUnchangedFrom1306": true,
+    "coreEightDeploymentFilesUnchangedFromDb09": true,
+    "laterDeltaOnlyEvidenceAndReviewedOperationsDoc": true
+  },
+  "executionEvidence": {
+    "currentCiJobs": 16,
+    "fullModernTests": 3850,
+    "fullModernSuites": 628,
+    "separateFocusedTests": 326,
+    "separateFocusedSuites": 50,
+    "historicalTests": 7,
+    "projectionTests": 1,
+    "modularityTests": 3,
+    "protocolTests": {
+      "contract": 2,
+      "snmp": 25,
+      "collector": 170
+    },
+    "protocolFreshTasks": 25,
+    "ciNonserver": {
+      "browser": 24,
+      "legacyBrowser": 6,
+      "webAssertions": 607,
+      "webFiles": 117,
+      "sharedTests": 44,
+      "nativeCompileTasks": 2
+    },
+    "independentF3WorkflowBrowserCases": 36,
+    "independentF3ExpectedPreflights": 8,
+    "publicBrowserAttempts": {
+      "r1": "FAIL_PRESERVED",
+      "r2": "PASS",
+      "r3": "PASS_WITH_SETTLED_DRAWER_AND_NO_OVERFLOW"
+    },
+    "productionPersistenceSeconds": 40.758322,
+    "finalRunningContainers": 13,
+    "vpnControlChannelTls": "TLSv1.3, hub CA and server CN verified; actual AUTH_FAILED for invalid credentials",
+    "successfulPeerAuthenticated": false,
+    "recoveryFilesAuthenticated": 66,
+    "recoveryBackupFiles": 12,
+    "recoveryCustomFormatDumps": 5
+  },
+  "closedFindings": [
+    {
+      "id": "F2-OPS-01",
+      "severity": "low",
+      "file": "deploy/AZURE-FTTH-OPERATIONS.md",
+      "line": 90,
+      "scenario": "Runbook said UTC while actual configured backup timezone is Asia/Jakarta",
+      "status": "CORRECTED_SOURCE_BEFORE_FINAL_VERDICT",
+      "beforeSha256": "a190a66005e426f7cf94a98c59261223d3ee93515fda6847018a24cfa258878f",
+      "afterSha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+      "actualSchedule": "Application02:30 and RADIUS03:00 WIB (UTC+7), retention14days",
+      "initialRecoveryArchivePreserved": true
+    }
+  ],
+  "nonblockingFollowups": [
+    {
+      "id": "F2-DEBT-01",
+      "subject": "Generic VPN installer cleanup defect",
+      "detail": "Existing generic template can exit on a clean host when grep matches no legacy DNAT rules. This actual host uses the independently reviewed exact one-block correction. Forward-fix the generic template before using it on another new host; retain this host installer and patch evidence."
+    },
+    {
+      "id": "F2-OPS-02",
+      "subject": "SMTP not configured",
+      "detail": "Email delivery, recovery messages and email alerts need real platform SMTP settings and an actual delivery check. UP health is not a delivery proof."
+    },
+    {
+      "id": "F2-OPS-03",
+      "subject": "Backup coverage and operation",
+      "detail": "Local scheduled app/RADIUS backups and an authenticated initial off-host recovery copy exist. Scheduled off-host automation and whole-host/populated-production restoration are not established. Recovery copy excludes MinIO object content, Mongo volume, Docker image payload and unrelated Drive data."
+    },
+    {
+      "id": "F2-OPS-04",
+      "subject": "Network/device onboarding",
+      "detail": "Keep the documented source restrictions for SSH/NAS/CPE and verify relevant Azure NSG/UDP/forwarding paths when real peers or subscribers are onboarded. No Azure account NSG change or authenticated subscriber data-plane/RADIUS accounting test is claimed."
+    }
+  ],
+  "validationLimits": [
+    "No physical GPON/OLT/MikroTik certification; offline protocol fixtures and real OpenVPN negative control-channel test are distinct",
+    "No successful production peer session, client forwarding, subscriber RADIUS accounting or data-plane certification",
+    "No entire-host reboot; same-container/same-image backend restart, active/enabled services and idempotent firewall evidence are verified",
+    "No native runtime/distribution certification; two native compile tasks passed",
+    "No full populated production disaster recovery; isolated platform-only non-replacing drill and exact recovery-copy hashes are verified",
+    "Some role/schema/systemctl/iptables outcomes are supported by source-reviewed executed assertions and safe receipts, not separately retained raw command outputs"
+  ],
+  "reviewAttribution": {
+    "freshCurrentServerArtifact": "Independently downloaded/authenticated/reparsed by F2 using source-reviewed prepared F4 helpers after original F4 could not resume",
+    "productionActivationPublicBrowserVpnPersistenceTlsRecovery": "F2 independently read source, authenticated retained archives/receipts/hashes, parsed retained response bodies/log markers and inspected R3 screenshots",
+    "earlierNonserverImageNetworkBackupAndRenderedPki": "Independent F4 evidence adopted with explicit scope and hash binding",
+    "laterF3F4Roles": "Workflow reviewer covered both F3/F4 roles after original F4 limits; four distinct live final reviewer agents are not claimed"
+  },
+  "historicalEvidencePreserved": true,
+  "failedOrInterruptedAttemptsRelabeledAsPass": false,
+  "qaRerunByF2": false,
+  "sshByF2": false,
+  "dockerByF2": false,
+  "productEditsByF2": false,
+  "mainMergeOrRegistryPublicationApproval": false,
+  "userAcceptanceStillSeparate": true
+}

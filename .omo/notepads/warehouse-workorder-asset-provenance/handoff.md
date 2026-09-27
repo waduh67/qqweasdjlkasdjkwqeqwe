@@ -1,3 +1,38 @@
+# Final technical handoff — owner acceptance pending
+
+All48 implementation tasks and F1/F2/F3/F4 audits are complete with APPROVE and no
+blocking findings. Seven remaining plan checkboxes were changed only after exact
+final reviewer reports were adopted. The original acceptance clauses and all48
+historical task evidence indexes are unchanged. Final mapping/proof hashes are in
+`.omo/evidence/warehouse-workorder-asset-provenance/final-acceptance.json`.
+
+Application/build/tests/workflows/367migrations are frozen at1306b65c; CI36265279847
+passed all16 jobs (3850modern,326separatefocused,607web,197offlineprotocol,44shared,
+24currentbrowser+6legacy). IndependentF3 adds36cases+8preflight with retained failures.
+Deployment config isdb09c3c2. Later files are evidence and an operations guide.
+
+Authorized server setup is complete: https://ftth.karuhundeveloper.com, admin email
+admin@karuhundeveloper.com, password private onVPS at setup-private/admin-credentials.txt.
+Read deploy/AZURE-FTTH-OPERATIONS.md or /opt/ftth/OPERATIONS.md for Azureports, services,
+private credentials, initial recovery copy and limitations. Backend sameimage restart,
+VPN1194/TCP externalTLS/negativeauth, realpublicbrowser, backups and Drivepreservation pass.
+Backup schedule is02:30/03:00 WIB,retention14days. Initialimmutable recoveryarchive has an
+olderrunbook sentence; actual.env alwaysAsia/Jakarta and active/repositoryguide iscorrect.
+
+Recovery source branches: origin/work/warehouse-draft-lifecycle and
+origin/feat/warehouse-workorder (validated fast-forward synchronization at closing).
+Originalwork/warehouse-completion is the local continuation target. Oldtask29 was
+already integrated through equivalent/adapted patches; do not merge it again or rewrite it.
+No main merge or registry publication. No activeQA. Private artifacts/secrets stay outsideGit.
+
+Only explicit owner acceptance remains under the plan's final clause. Present the concrete
+URL, credentials retrieval, ports, tests and limits, then obtain that finalokay. Do not
+restart reviews or fullregression for evidence/doc-only checkpoints; new changes/failures
+can invalidate their affected evidence. F3/F4 finalroles were held by oneindependentreviewer
+after threadlimits; do not claim fourdistinctfinalrevieweragents.
+
+--- Preserved historical handoff follows ---
+
 # Live production checkpoint — 2026-09-27
 
 FTTH is live at https://ftth.karuhundeveloper.com. Actual production activation,

@@ -1,15 +1,48 @@
-F3 PASS. No blocking browser/UI finding remains in this review scope.
+F3 workflow review — APPROVE
 
-The independent evidence covers 36 intended browser cases: 24 main cases, two extra return/reassignment/cancellation/partial-count cases, four actual backend-restart readbacks, and six historical V172-to-178.12 upgrade/restart cases. Both desktop and mobile projects are represented. Eight read-only preflight probes passed their expected outcomes: two positive and six negative.
+Reviewed 2026-09-27T09:26:15.755393+00:00. The original independent F3 PASS remains unchanged for application
+`1306b65c34167b2d48f4817ce72990fed3b85aa3`. The 2,486 final F3 source inputs still match.
+This approval is independent review sign-off; owner acceptance of the overall
+warehouse task remains pending.
 
-The completed numeric tenant retained 917500 mm of cable, nine available ONUs and one accepted active ISP-owned loan installation after restart. Technician custody was empty and the work was DONE/APPROVED. The separate cancelled/reassigned journey retained 60000 mm and one original ONU with the original technician. Its single 40000 mm return replay used the same key/body and original reply bytes after a real backend commit with only the browser reply interrupted. The accepted returned piece was the only partial-count entry; its posted count preserved 940000 mm and nine available ONUs.
+The reviewer `/root/workflow_final_review` now covers F3 and F4 independently of
+the implementing root. F4 was handed over after its original separate reviewer
+could not resume and a replacement could not be spawned. Four distinct live
+reviewers are not claimed. Existing separate F4 work and all prior F3 evidence
+are preserved.
 
-Historical customer and ONU identities, and applied migration checksums, survived upgrade and restart. Independent zero-opening approval produced no invented stock. The upgraded tenants could create an MM catalog SKU. All probe outputs, actual browser reports and trace response resources were read directly; raw authentication and fixtures remain private.
+The original execution covers 36 intended browser cases: 24 main cases, two extra
+return/reassign/cancel/partial-count cases, four real same-JAR restart cases and
+six historical V172-to-178.12 upgrade/restart cases. Eight read-only preflight
+probes contain two positives and six expected negatives. Desktop and touch
+projects executed; supplemental 768px dark captures were inspected. Restart
+readback retained 917500 mm cable, nine available ONUs and one active accepted
+ISP-owned loan installation. A real 40000 mm return with a dropped response
+replayed the same command and left 60000 mm plus one ONU with the original
+technician after reassignment/cancellation. The returned piece was the sole
+partial-count entry, preserving 940000 mm and nine available ONUs.
 
-An observed receipt-level wording problem was corrected after browser execution in exactly two display strings: MyMaterialsPage.tsx now directs availability to the return inspection outcome, and WarehouseStatus.tsx labels the handover event as received for inspection. Comparison of all 2486 captured inputs found only these two changes; DOM, conditions, state keys, quantities and tone are unchanged. Current full web verification independently read 607/607 passing assertions, no failed/pending tests, successful typecheck/lint/build, and 523 stable source inputs. Prior browser reports retain their original source identity; no new browser execution is claimed for the two copy changes.
+The two subsequent display-only receipt strings were separately reviewed, with
+607 web assertions and typecheck/lint/build passing. Prior raw browser captures
+were not relabeled and no local browser rerun is claimed for those strings.
+Failed and interrupted main/extra attempts remain identified in
+[the original verdict](task46/f3-final-verdict.json); the final pass does not erase
+them.
 
-Failed/interrupted attempts are preserved: main R1 stopped after 18 passing cases before the next browser launch and was completed by six continuation cases; extra R1 had private offline-submit fixture failures; extra R2 had one completed post-observation assertion failure and an interrupted duplicate archived spec; extra R3 had two edge passes and restart 2 pass/2 fail caused by immediate second navigation interrupting session refresh. Corrected restart-only R4 passed all four cases, referencing the existing two R3 edge cases without reexecuting them. These earlier attempts are not relabeled as passes.
+Actual public-host R3 smoke adds HTTPS login, platform dashboard, browser reload
+and session refresh, mobile drawer open/close, responsive rendering and logout.
+The reviewed source uses real responses and TLS verification. Its exit is zero,
+error/business-mutation lists are empty, and I personally inspected the 1280px
+desktop and 390px mobile screenshots. R1's exact-Email locator timeout remains
+a failed private-fixture attempt; R2 and R3 retain separate source/report hashes.
+This public smoke does not repeat the warehouse business matrix on production.
 
-All current-application browser phases used current JAR SHA256 d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466. Owned cleanup succeeded, QA ports closed and the exclusive lease was released. Physical GPON/OLT certification remains deferred; this review makes no full-CI or other reviewer-role claim.
+No blocking workflow finding remains. Physical GPON/OLT/MikroTik certification,
+successful production VPN-peer traffic and native runtime/distribution remain
+outside the verified scope. The current CI, actual deployment, external TLS
+negative-authentication test and same-image persistence are covered separately
+by [F4](f4-release.md). Raw credentials, traces and screenshots remain private.
 
-The JSON verdict and linked SHA256 manifests carry the exact evidence identities and copy-delta boundary.
+Safe evidence: [final authentication](task46/f3-f4-final-host-authentication.json)
+SHA256 `e09930b0ec09da14345614900dc723c4641b70c188792a2fea61a9bb9ace4a01`; original F3 verdict SHA256
+`023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd`.

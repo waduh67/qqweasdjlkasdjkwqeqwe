@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "syncedAtUtc": "2026-09-27T09:24:12.812487+00:00",
+  "repositoryPath": "deploy/AZURE-FTTH-OPERATIONS.md",
+  "hostPath": "/opt/ftth/OPERATIONS.md",
+  "sha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+  "actualBackupTimezone": "Asia/Jakarta",
+  "appBackupLocalTime": "02:30",
+  "radiusBackupLocalTime": "03:00",
+  "retentionDays": 14,
+  "correction": "F2 found initial runbook UTC description incorrect for actual host. Active and repository runbooks corrected to WIB(UTC+7); no runtime settings changed.",
+  "immutableHistoricalRecoveryArchive": "server-recovery-20260927.tar.gz retains earlier runbook copy; actual .env inside has correct Asia/Jakarta settings. Use active corrected OPERATIONS.md or repository document."
+}

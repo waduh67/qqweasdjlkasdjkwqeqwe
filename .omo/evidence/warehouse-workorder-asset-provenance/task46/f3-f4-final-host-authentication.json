@@ -1,0 +1,243 @@
+{
+  "reviewedAtUtc": "2026-09-27T09:26:15.755393+00:00",
+  "decision": "APPROVE",
+  "roleDecisions": {
+    "f3": "APPROVE",
+    "f4": "APPROVE"
+  },
+  "blockingFindings": [],
+  "scope": "Final F3 workflow approval plus F4 composed release and actual authorized host acceptance at the authenticated snapshots.",
+  "ownerAcceptancePending": true,
+  "reviewerHandoff": {
+    "reviewerAgent": "/root/workflow_final_review",
+    "rolesCovered": [
+      "f3",
+      "f4"
+    ],
+    "independentOfImplementingRoot": true,
+    "fourDistinctLiveReviewersClaimed": false,
+    "handoff": "Existing F3 reviewer took over F4 after the original separate F4 thread could not resume and replacement spawning reached the agent limit. Prior separate F4 source/artifact reviews were preserved, then assessed with fresh F2/F1 server authentication and this reviewer's raw artifact checks."
+  },
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentConfigurationCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "ciRun": 36265279847,
+  "sourceCheckpointAtReview": "13849768623c7cb6ad652d6c4c0e720b741b66d4",
+  "sourceBoundary": {
+    "applicationBuildTestsWorkflowsAnd367MigrationsFrozen": true,
+    "finalF3InputsMatch": 2486,
+    "nonEvidenceDeltaFromTestedCode": [
+      "deploy/.env.example",
+      "deploy/AZURE-FTTH-OPERATIONS.md",
+      "deploy/Caddyfile.shared-proxy",
+      "deploy/DEPLOY.md",
+      "deploy/SHARED-PROXY.md",
+      "deploy/docker-compose.prod.yml",
+      "deploy/docker-compose.shared-proxy.yml",
+      "deploy/postgres-init/10-init-app-db.sh",
+      "docs/backup.md"
+    ],
+    "operationsDocumentSha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+    "operationsDocumentHostSyncReceiptSha256": "06d98ff413fd6caad6749906b0d3d4d4f2e82d594054e36be45aa4e40ee28147",
+    "operationsDocumentRuntimeSettingsChanged": false
+  },
+  "releaseGateSha256": "19193de06da5c170950d29edbb319f099be84e3b2eb92b9cb3a12ed8c80aa2cf",
+  "proofSha256": {
+    "nonserver": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "images": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+    "bootstrap": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+    "network": "46e5ab137f69e80f1eb6564651969c14e88f4a8009e78df7979eece128651cfe",
+    "backup": "543bac2d15e46038d66368904c4ae42bf1db4c374d7157e6542de92c6be963f7",
+    "server": "4374abfa2aea7a4ad3ae1308055d9991f96e277c440b129d1bf228488a0d1dbc"
+  },
+  "independentReadinessReceiptSha256": {
+    "f1": "3e3b2e8668ca799db04ca4d430c2db1a321e9ee42cedcd56952287c1d91c3e2c",
+    "f2": "9e1a2da5168d3e4923f79c6a364c2266961a1428c151605643946cbaa5b6c166",
+    "f3": "1a93d54369a6c8fb396f39a3c8b33f87e4c50be94989d01206ef3cb51e4b0d71",
+    "f4": "ab280fb1f335e5cc0d72b2e0fcbd3229bc7b376352d880c766f3366e64e1c0dd"
+  },
+  "independentEvidenceBasis": {
+    ".omo/runtime/azure-ftth-setup/f3-f4-activation-readiness-review.json": "d955e3a10e5759800002563c54dabf4d73e0baef678dca847768eb4c5765f65c",
+    ".omo/runtime/azure-ftth-setup/f4-rendered-vpn-install-review.json": "89c05227899e34bd9f7bf492d654dc2d20d5653a06a6fcdd1185dedfbc0592d7",
+    ".omo/runtime/azure-ftth-setup/f4-activation-browser-runtime-review.json": "2a72b3b08b5ca448f7d1b2f40cc8b336b0de5e6b6c59bde8b63c19a1b2229f3f",
+    ".omo/runtime/azure-ftth-setup/production-activation-local.json": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+    ".omo/runtime/azure-ftth-setup/production-vpn-preparation-local.json": "dec8973bf044d403eb072be2e42629fc8e2cb39c8ca273a17c03d7a63dff862f",
+    ".omo/runtime/azure-ftth-setup/production-vpn-install-local.json": "739d22aff4dd41d5ff8781ace238053f44a580dfc3dabc659551ef6a59138f00",
+    ".omo/runtime/azure-ftth-setup/production-persistence-local.json": "20cc09894c49fa32bf619d5b2b8124bde2c648f74a5deed1e858213b2715a648",
+    ".omo/runtime/azure-ftth-setup/production-host-final.json": "e51e21325daed3d9484f929dd46be5208a5612e077a5515ab1e9329925ef59f5",
+    ".omo/runtime/azure-ftth-setup/snapshot-production-host.py": "e753bfb7b77539517e5281eb9131a45110350c6b1a3c7e9512582785c8903101",
+    ".omo/runtime/azure-ftth-setup/verify-production-persistence.py": "6a56202f1b64adccd6af231797ebfa030a75a74c9a3220b0509cbb63b11e939d",
+    ".omo/runtime/azure-ftth-setup/external-vpn-tls-r1/verification.json": "bbdc5314b2b061a31cf6a26bc7f920552ea429dd157eaf68c27970504a7bd819",
+    ".omo/runtime/azure-ftth-setup/server-recovery-receipt.json": "7a66f5e1632057101e119a78c9a70da5f74c2c8a33dcfc70a5fedfed18e17977",
+    ".omo/runtime/azure-ftth-setup/production-operations-doc-sync.json": "06d98ff413fd6caad6749906b0d3d4d4f2e82d594054e36be45aa4e40ee28147",
+    ".omo/runtime/task46-expiry-quality-review/f3/f3-final-verdict.json": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd",
+    ".omo/runtime/task46-expiry-quality-review/f3/f3-copy-source-review.json": "8f5b515f72834ea365138d334acac5009d175f68dcadd3931d350113f03ec591",
+    ".omo/runtime/task46-expiry-quality-review/f3/f3-copy-web-authentication.json": "b2556f8e0d807fd632e0b4c75032bb657bc9224619e40a4d97040cb9805be501"
+  },
+  "f3": {
+    "originalVerdictSha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd",
+    "originalVerdictUnchanged": "PASS",
+    "intendedLocalBrowserCases": 36,
+    "mainCases": 24,
+    "extraEdgeCases": 2,
+    "sameJarRestartCases": 4,
+    "legacyUpgradeRestartCases": 6,
+    "preflightProbes": 8,
+    "positivePreflight": 2,
+    "expectedNegativePreflight": 6,
+    "displayCopyDeltaFiles": 2,
+    "separateWebAssertions": 607,
+    "newLocalBrowserExecution": false,
+    "priorRawReportsRelabeled": false,
+    "publicSmoke": "Existing parent-executed R3 actual public HTTPS/login/dashboard/refresh/mobile drawer/logout authenticated; two screenshots personally inspected.",
+    "publicViewports": [
+      1280,
+      390
+    ],
+    "publicSmokeReceiptSha256": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6",
+    "priorAttemptBoundariesPreserved": true
+  },
+  "currentCi": {
+    "status": "completed",
+    "conclusion": "success",
+    "successfulJobs": 16,
+    "serverXmlReportsIndependentlyAuthenticated": 721,
+    "serverArchiveRegularFilesAuthenticated": 761,
+    "modern": {
+      "tests": 3850,
+      "suites": 628
+    },
+    "focused": {
+      "tests": 326,
+      "suites": 50
+    },
+    "historical": {
+      "tests": 7,
+      "suites": 7
+    },
+    "projection": {
+      "tests": 1,
+      "suites": 1
+    },
+    "protocol": {
+      "tests": 197,
+      "suites": 35
+    },
+    "modularityTestsIncludedInModern": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "countsDoNotClaimUniqueCasesAcrossFocusedAndFullRuns": true
+  },
+  "actualHost": {
+    "snapshotAtUtc": "2026-09-27T09:18:57.754389+00:00",
+    "snapshotSha256": "e51e21325daed3d9484f929dd46be5208a5612e077a5515ab1e9329925ef59f5",
+    "runtimeContainers": 13,
+    "allContainerImagesMatchBoundIdentities": true,
+    "allContainersRunningAndUnlessStopped": true,
+    "healthyWhenHealthcheckPresent": true,
+    "releaseFilesStillMatch": 13,
+    "installedVpnFilesMatchRecoveryAndApprovedRendering": 15,
+    "privateKeyAndNodeEnvironmentModes": "0600",
+    "fourRecordedSystemdServicesEnabledAndActive": true,
+    "scopedTunnelFirewallRules": 3,
+    "firewallIdempotenceReportedByReviewedHelper": true,
+    "tunnelCidr": "10.8.0.0/24",
+    "tunnelDevice": "tun0",
+    "ipForward": 1,
+    "unrelatedDriveProxyBytesPreserved": true,
+    "serverAndWebNoPublicHostPortBindings": true,
+    "appRole": "warehouse_app",
+    "migrations": 367,
+    "schemaVersion": "178.12",
+    "nextMigration": "178.13"
+  },
+  "runtimeArchives": {
+    "production-vpn-install": {
+      "archiveSha256": "8493093575b843a92db4b7ef86ca55c4b7bcec6754db0fe784c9699392672e20",
+      "receiptSha256": "739d22aff4dd41d5ff8781ace238053f44a580dfc3dabc659551ef6a59138f00",
+      "regularMembersAuthenticated": 14,
+      "rawManifestSha256": "b41ad2c7ebcd5da0f8202c8e700cf17f0607aaa93e6da6cebaff204061d8420c",
+      "actualExitCode": 0
+    },
+    "production-persistence": {
+      "archiveSha256": "909b707639c11898dfd4846b052773088f52dfb5fb367f44cf61334ef76d2371",
+      "receiptSha256": "20cc09894c49fa32bf619d5b2b8124bde2c648f74a5deed1e858213b2715a648",
+      "regularMembersAuthenticated": 14,
+      "rawManifestSha256": "b360c06f2e33026e0989f4250c2e6060c2abda98a307deb223eb0d12de661d51",
+      "actualExitCode": 0
+    }
+  },
+  "vpnInstallation": {
+    "approvalSha256": "34a64d1fcba219bd986140a1420c3b80bf387d875a4eee64d231b1816b355960",
+    "installerSha256": "c98248b475b6447a43dc6f34c749026e4cd3dc0d2ff31c7bc195348154f35f96",
+    "helperSha256": "9e9ce97c67b030d8a3b4b011fae9f82aca0b8403826862ca0870523490892f7c",
+    "actualForwardsAndRoutesBodiesMatchMarkers": true,
+    "freshConflictPreflightAuthenticated": true,
+    "invalidCredentialsHttpStatusAsserted": 403,
+    "peerCount": 0
+  },
+  "externalVpn": {
+    "receiptSha256": "bbdc5314b2b061a31cf6a26bc7f920552ea429dd157eaf68c27970504a7bd819",
+    "logSha256": "f23c5481f805ce4e4d6428bdd2cf528b252b3eea27db1205d2eb9beff8d528ab",
+    "configSha256": "bce1983b6e8fa4d4c4fada405c7bc7ae0e72ba284390b44ad6a379ce240e2f86",
+    "tlsVersion": "TLSv1.3",
+    "certificateChainPurposeAndServerNameVerifiedInActualLog": true,
+    "authenticationResult": "AUTH_FAILED",
+    "clientExitCode": 0,
+    "exitInterpretation": "OpenVPN 2.7.7 soft auth-failure exits zero; actual verified TLS and AUTH_FAILED log establish this bounded negative test.",
+    "successfulPeerAuthenticated": false,
+    "hostNetworkChangedByClient": false
+  },
+  "persistence": {
+    "sameContainerAndImage": true,
+    "startedAtChanged": true,
+    "beforeAndAfterRawHubResponsesIdentical": true,
+    "beforeAndAfterRawLoginIdentityMatches": true,
+    "hubPkiReady": true,
+    "peerCount": 0,
+    "schemaAfterRestart": {
+      "role": "warehouse_app",
+      "migrations": 367,
+      "failed": 0,
+      "latest": "178.12"
+    },
+    "vpnRemainsActiveAndSyncPassed": true,
+    "ftthAndExistingDriveHttpsStatus": 200,
+    "postVpnAppAndRadiusBackupsPassed": true
+  },
+  "recovery": {
+    "archiveSha256": "ed7cae5b055190d985b39b84fa4f374e36cfa76fce9db1279d731ae534dbe957",
+    "bytes": 921412,
+    "regularMembers": 66,
+    "releaseFilesMatched": 13,
+    "vpnFilesMatched": 15,
+    "backupFilesMatched": 12,
+    "postgresCustomFormatDumps": 5,
+    "postVpnAppDumpBytes": 3149170,
+    "postVpnRadiusDumpBytes": 21306,
+    "archiveOwnerOnly": true,
+    "noSecretsCopiedIntoReview": true,
+    "wholeHostRestoreTested": false,
+    "archiveOperationsDocSha256": "a190a66005e426f7cf94a98c59261223d3ee93515fda6847018a24cfa258878f",
+    "activeOperationsDocSha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+    "activeDocumentSupersedesArchivedTimezoneDescription": true
+  },
+  "reviewerActions": {
+    "newQaSshDockerOrInstallerExecutionForFinalAcceptance": false,
+    "readOnlyArtifactSourceAndImageInspection": true,
+    "productEdits": false,
+    "reviewRecordsWrittenOnlyInF4Worktree": true
+  },
+  "limits": [
+    "Owner acceptance of the overall warehouse task remains pending; these are independent review approvals, not owner sign-off.",
+    "No physical GPON/OLT/MikroTik certification, successful VPN customer-peer authentication, subscriber RADIUS test, forwarding customer traffic or native runtime/distribution is claimed.",
+    "External TCP1194 control-channel TLS and invalid-account rejection passed; no production peer was created and exit0 alone was not treated as success.",
+    "No full host reboot was performed. Enabled services, three scoped firewall rules, idempotence and same-container/image backend restart were verified within the recorded scope.",
+    "The generic application VPN installer remains unchanged with the known empty-match cleanup defect. The exact approved host-only patch and boot firewall helper were installed; other hosts must not assume the generic template was fixed.",
+    "Raw SQL/inspect/HTTP statuses were not all separately persisted. The role/schema/ACL/port/status findings combine authenticated helper assertions and receipts with the raw response bodies, installed files, logs and independent final snapshot that were retained.",
+    "Production app/RADIUS dumps were created and their bytes authenticated. Earlier isolated fixture restore passed; the final production dumps and whole-host recovery package were not restored in this review. The private recovery package omits Docker images, MinIO object contents, Mongo volumes and unrelated Drive data.",
+    "The immutable recovery archive contains an earlier runbook copy with an incorrect UTC schedule description; the actual archived environment is Asia/Jakarta and the active/repository runbook was separately corrected and synchronized to WIB.",
+    "SMTP remains unconfigured, Azure NSG UDP/unused-forwarding ranges are not established by the external TCP test, and no registry publication or main-branch merge is certified by this review.",
+    "Raw credentials, keys, database dumps, traces and rendered installer remain private. Prior failures and interrupted attempts remain preserved."
+  ]
+}

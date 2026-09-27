@@ -1,0 +1,54 @@
+{
+  "status": "IMPLEMENTATION_AND_INDEPENDENT_AUDITS_COMPLETE_OWNER_ACCEPTANCE_PENDING",
+  "recordedAtUtc": "2026-09-27T09:31:31.626431+00:00",
+  "implementationTasksComplete": 48,
+  "implementationTasksTotal": 48,
+  "independentFinalDecisions": {
+    "F1": "APPROVE",
+    "F2": "APPROVE",
+    "F3": "APPROVE",
+    "F4": "APPROVE"
+  },
+  "blockingFindings": [],
+  "ownerAcceptance": "PENDING_EXPLICIT_FINAL_OK",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "ciRun": 36265279847,
+  "ciStatus": "completed",
+  "ciConclusion": "success",
+  "all16CiJobsSucceeded": true,
+  "applicationBuildTestsWorkflowsMigrationsUnchangedAfterTestedCommit": true,
+  "deploymentEightPathsMatchReviewedCommit": [
+    "deploy/docker-compose.prod.yml",
+    "deploy/.env.example",
+    "deploy/postgres-init/10-init-app-db.sh",
+    "deploy/DEPLOY.md",
+    "docs/backup.md",
+    "deploy/docker-compose.shared-proxy.yml",
+    "deploy/Caddyfile.shared-proxy",
+    "deploy/SHARED-PROXY.md"
+  ],
+  "operationsDocumentSha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+  "actualHostDocumentSyncReceiptSha256": "06d98ff413fd6caad6749906b0d3d4d4f2e82d594054e36be45aa4e40ee28147",
+  "finalReviewSha256": {
+    "f1-compliance.md": "3bd0bb7011ce212c67b246930b6a5b37aaf50fe6c0446d076be1cbcc555ae812",
+    "f1-compliance.json": "8c3a3db4da5664a76a2fed67e2cf1c281ade3c974a80e2fce0f2774749f694ba",
+    "f2-quality-security.md": "46305442de91cab998faa57e74e6dff583cce9db8953dcc38e96a49c40209414",
+    "f2-quality-security.json": "b142b4497069f9c4863e3c4d960a1cebb55a2f06623e98c219ea178951eec111",
+    "f3-workflow.md": "334ff479f424f3f78b3c5140ce06c75c86daebca4c9b99d232971dabca847a92",
+    "f4-release.md": "7fd9ab81b205eff106475ed880c78f4b13c2e29c1ff765c27fbd98b9b223fed6",
+    "task46/f3-f4-final-host-authentication.json": "e09930b0ec09da14345614900dc723c4641b70c188792a2fea61a9bb9ace4a01"
+  },
+  "finalPlanSha256": "0aea93306f10211b36c993b10f7f9958d97b2f52c33c4275a9b6c2b11891eb45",
+  "historicalTaskIndexes": "All48 retained unchanged; final source/evidence mapping supersedes historical pending snapshots without retroactive claims.",
+  "reviewerAttribution": "F1 and F2 are separate independent reviewers. Existing independent workflow reviewer covers final F3 and F4 after original F4 thread limits; prior separate F4 work retained.",
+  "actualHostSummary": "HTTPS/admin desktop+mobile/reload/logout,367migrations,13containers,VPN1194TCP externalTLS1.3+negativeauth, sameimagebackend persistence, bothsiteHTTPS and freshapp/RADIUSbackups PASS.",
+  "limits": [
+    "Physical GPON/MikroTik, successful production peer/subscriber traffic, Azure UDP/unused forwarding, wholehostreboot, native delivery, SMTP delivery and wholehost/populatedproduction restore not claimed.",
+    "GenericVPNinstaller old cleanupdefect remains; exacthostonlypatch reviewed/deployed.",
+    "Initialprivateoffhostrecoverycopy exists; no scheduledoffsitebackupservice.",
+    "Initialimmutablearchive retains olderUTCrunbook sentence; active/repositorydoc correctedWIB, actualenv alwaysAsia/Jakarta."
+  ],
+  "mainMerge": false,
+  "registryPublication": false
+}

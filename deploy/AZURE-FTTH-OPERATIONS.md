@@ -87,7 +87,7 @@ untuk perubahan FTTH biasa. Lihat [SHARED-PROXY.md](SHARED-PROXY.md).
 ## Backup dan pemulihan
 
 Backup aplikasi dan RADIUS berada di `/opt/ftth/backups/{app,radius}`. Jadwal
-bawaan masing-masing 02:30 dan 03:00 **UTC**, retensi 14 hari. Backup awal dan
+host ini masing-masing 02:30 dan 03:00 **WIB (UTC+7)**, retensi 14 hari. Backup awal dan
 backup setelah pemasangan VPN/restart berhasil dibuat. Salin backup ke penyimpanan
 di luar VPS; backup lokal saja tidak melindungi dari hilangnya disk VPS.
 

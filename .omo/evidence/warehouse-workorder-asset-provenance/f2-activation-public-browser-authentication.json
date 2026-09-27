@@ -1,0 +1,126 @@
+{
+  "status": "ACTIVATION_AND_PUBLIC_BROWSER_AUTHENTICATED_FINAL_PERSISTENCE_PENDING",
+  "reviewer": "f2",
+  "reviewedAtUtc": "2026-09-27T09:18:55.581881+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "activation": {
+    "status": "PASS",
+    "archiveSha256": "b02acf69c54f41f25c61f20e593173e33f4c4646a72b61aaf6491a6bcd3df332",
+    "archiveBytes": 6692,
+    "authenticatedRegularFiles": 10,
+    "memberSha256": {
+      "activation-4d39a3371380/ftth-after.json": "796077bee376640710b4aaf73553f127a29b0a07574ebfd1b1ea72a96f5088ef",
+      "activation-4d39a3371380/exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "activation-4d39a3371380/edge-candidate.Caddyfile": "347ac78d7990687218ea9ccddbfad2b5236d327608f4c7a2537c6ab4cfcaf0d6",
+      "activation-4d39a3371380/drive-after.json": "b9545f886d1525b8bb7c48301ba6b05e1d3244171beeceafe7d6200b3d30577a",
+      "activation-4d39a3371380/edge-before.Caddyfile": "323ecbb46f25b825bb75ac159f3593d5d02b28de288a917b5035fcffb603ccc6",
+      "activation-4d39a3371380/drive-before.json": "b9545f886d1525b8bb7c48301ba6b05e1d3244171beeceafe7d6200b3d30577a",
+      "activation-4d39a3371380/verification.json": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+      "activation-4d39a3371380/public-login.json": "5c94e5fd6dcd4c47227f33ce46b4db5803cc7ce75aea007cddce34cd226719c2",
+      "activation-4d39a3371380/runner.log": "6c76a32e845721e6fe253ba3a78699dbd5ac85dc78d7afbb587db0a8d7faa1bf",
+      "activation-4d39a3371380/progress.json": "0dabb1ae88412b1ca9577570b09c918d832bbe9d000073e6f3aeb6c44dfc6a88"
+    },
+    "receiptSha256": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+    "retainedExitCode": 0,
+    "releaseGateSha256": "19193de06da5c170950d29edbb319f099be84e3b2eb92b9cb3a12ed8c80aa2cf",
+    "gateVerificationReceiptSha256": "8b73141bfe9765714c4c21aca65c8e421d1b2f25242b43dc459879d65f581b94",
+    "allSixProofAndFourReviewHashesMatched": true,
+    "allReviewBindingsMatched": true,
+    "helperSourceHashMatchesApproval": true,
+    "hostFileHashesBound": 13,
+    "actualRoleSchemaAndClockResults": "Executed helper assertions and safe receipt; standalone raw SQL/inspect outputs not retained",
+    "publicLoginBodyParsedWithoutExposingCredentials": true,
+    "publicHtmlBodyPresent": true,
+    "publicTlsScope": "curl with normal certificate validation to public FTTH/Drive domains; no independent TLS transcript or forwarded-scheme claim",
+    "otherProxyBytesIndependentlyComparedUnchanged": true,
+    "driveBeforeAfterBodiesEqual": true,
+    "rawBackupCompletionMarkers": {
+      "app": 1,
+      "radius": 1
+    }
+  },
+  "publicBrowser": {
+    "attempts": [
+      {
+        "attempt": "r1",
+        "directory": "public-browser-cece2bdc104f",
+        "status": "FAIL",
+        "exitCode": 1,
+        "sourceSha256": "52ea76310a9e9113052c1d5464ffdfb22c1ef3a66cf4ca90c4acdee184737dfb",
+        "receiptSha256": "d37e645bf640b3f6604c15a97f7aea1a97958a276d2de58f51ed2f24eccc9213",
+        "files": {
+          "exit-code.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "private-error.txt": "c30c8474d8b90960ca1a0d7724294f8618a6810bb499e9df1c60d0c39f994d01",
+          "verification.json": "d37e645bf640b3f6604c15a97f7aea1a97958a276d2de58f51ed2f24eccc9213"
+        },
+        "failureClassification": "Private exact accessible-label selector timeout; original attempt remains FAIL"
+      },
+      {
+        "attempt": "r2",
+        "directory": "public-browser-c9d9a2926201",
+        "status": "PASS",
+        "exitCode": 0,
+        "sourceSha256": "5592efeda3aef28cafdcf34c21d7792caf85e478bfc75db5e5250b35baa51929",
+        "receiptSha256": "a532edf91c2d574ce95c07dd57cb3d6623cb8eee09fa470b8fb437f117b5225b",
+        "files": {
+          "business-mutation-requests.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "page-errors.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "platform-desktop.png": "01f8d71b13f82c9c2c902c37e2771bda8b239cd846d59e2e7caa827fbf2b7f11",
+          "platform-mobile.png": "cbe44a43dc210867d09f988f89ad1a8e677a195f2feb9291c98c03599f1034b3",
+          "post-login-api-errors.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "verification.json": "a532edf91c2d574ce95c07dd57cb3d6623cb8eee09fa470b8fb437f117b5225b"
+        },
+        "actualSourceAssertionsPassed": true,
+        "savedErrorAndMutationListsEmpty": true,
+        "mobileDrawerOpenClose": false
+      },
+      {
+        "attempt": "r3",
+        "directory": "public-browser-55d703b096a4",
+        "status": "PASS",
+        "exitCode": 0,
+        "sourceSha256": "f9c2b942cc258420331738fbab49a43a1fe6ebd5b94f24df573005bfda244171",
+        "receiptSha256": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6",
+        "files": {
+          "business-mutation-requests.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "page-errors.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "platform-desktop.png": "01f8d71b13f82c9c2c902c37e2771bda8b239cd846d59e2e7caa827fbf2b7f11",
+          "platform-mobile.png": "62f950ef6ac51c1536b344a5728174f5b14e1de2f95d76466a3d701f4aa6f648",
+          "post-login-api-errors.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "verification.json": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6"
+        },
+        "actualSourceAssertionsPassed": true,
+        "savedErrorAndMutationListsEmpty": true,
+        "mobileDrawerOpenClose": true
+      }
+    ],
+    "r1FailurePreserved": true,
+    "r1ToR2ChangesOnlyAccessibleLabelSelectors": true,
+    "r3AddsSettledDrawerOpenCloseAndNoOverflowAssertions": true,
+    "r3ScreenshotsPersonallyInspected": [
+      "platform-desktop.png",
+      "platform-mobile.png"
+    ],
+    "visualFinding": "Readable platform-only dashboard at desktop and mobile widths; no material visual blocker observed",
+    "evidenceLimit": "Source-bound completed receipts, exit files, empty saved error/mutation lists and actual screenshots; no independent raw browser trace/network-report reparse"
+  },
+  "persistenceHelperSourceReview": {
+    "status": "NO_SUBSTANTIVE_BLOCKER",
+    "sourceSha256": "6a56202f1b64adccd6af231797ebfa030a75a74c9a3220b0509cbb63b11e939d",
+    "scope": "Authorized same-container/same-image backend restart, persisted login/hub/schema, existing VPN sync/readiness, existing-site check and refreshed backups",
+    "executionAuthenticated": false
+  },
+  "remaining": [
+    "Actual VPN install evidence and final source/artifact bindings",
+    "Actual same-image persistence-check result and refreshed backup/Drive/VPN outcomes",
+    "Final composed host F2 acceptance"
+  ],
+  "qaExecutedByReviewer": false,
+  "sshExecutedByReviewer": false,
+  "dockerExecutedByReviewer": false,
+  "productEditsByReviewer": false,
+  "finalF2HostAcceptance": false
+}

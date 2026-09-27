@@ -1,0 +1,155 @@
+{
+  "status": "AUTHENTICATED_BOUNDED_ACTUAL_HOST_EVIDENCE",
+  "archives": {
+    "activation": {
+      "archiveSha256": "b02acf69c54f41f25c61f20e593173e33f4c4646a72b61aaf6491a6bcd3df332",
+      "receiptSha256": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec",
+      "regularFilesAuthenticated": 10,
+      "actualExitCode": 0
+    },
+    "vpnInstall": {
+      "archiveSha256": "8493093575b843a92db4b7ef86ca55c4b7bcec6754db0fe784c9699392672e20",
+      "receiptSha256": "739d22aff4dd41d5ff8781ace238053f44a580dfc3dabc659551ef6a59138f00",
+      "regularFilesAuthenticated": 14,
+      "actualExitCode": 0
+    },
+    "persistence": {
+      "archiveSha256": "909b707639c11898dfd4846b052773088f52dfb5fb367f44cf61334ef76d2371",
+      "receiptSha256": "20cc09894c49fa32bf619d5b2b8124bde2c648f74a5deed1e858213b2715a648",
+      "regularFilesAuthenticated": 14,
+      "actualExitCode": 0
+    }
+  },
+  "sourceHelpersSha256": {
+    "verify-production-persistence.py": "6a56202f1b64adccd6af231797ebfa030a75a74c9a3220b0509cbb63b11e939d",
+    "snapshot-production-host.py": "e753bfb7b77539517e5281eb9131a45110350c6b1a3c7e9512582785c8903101"
+  },
+  "publicActivation": {
+    "productionRoleNonOwner": true,
+    "migrations": 367,
+    "highestMigration": "178.12",
+    "restrictedClockAcls": true,
+    "publicHttpsLogin": true,
+    "unrelatedCaddyBytesPreserved": true,
+    "existingDriveHttpStatus": 200
+  },
+  "publicBrowser": {
+    "viewports": [
+      1280,
+      390
+    ],
+    "loginReloadRefreshDrawerLogout": true,
+    "pageErrors": 0,
+    "authenticatedApiErrors": 0,
+    "businessMutationRequests": 0,
+    "screenshotAuthentication": "F1 matched screenshot hashes; F3/F4 personally inspected both images."
+  },
+  "vpn": {
+    "exactRenderedInstallerApprovedAndMatched": true,
+    "installed": true,
+    "enabledAndActive": true,
+    "firewallIdempotenceAndCallbacks": true,
+    "externalTls": "TLSv1.3",
+    "caAndServerNameVerified": true,
+    "invalidCredentialsRejected": true,
+    "successfulPeerAuthenticated": false,
+    "hostOnlyPatch": true,
+    "genericApplicationTemplateFixed": false,
+    "physicalDeviceTested": false
+  },
+  "persistence": {
+    "sameContainer": true,
+    "sameImage": true,
+    "changedStartedAt": true,
+    "rawLoginAndHubResponsesCompared": true,
+    "persistedAdminAndHubAndPki": true,
+    "peerCount": 0,
+    "schemaAfterRestart": {
+      "role": "warehouse_app",
+      "migrations": 367,
+      "failed": 0,
+      "latest": "178.12"
+    },
+    "vpnActiveAfterBackendRestart": true,
+    "ftthAndDriveHttpStatus": 200,
+    "appAndRadiusBackupsRefreshed": true,
+    "hostRebootTested": false
+  },
+  "finalSnapshot": {
+    "runningContainers": 13,
+    "restartPolicies": "unless-stopped",
+    "releaseHostHashesMatched": 13,
+    "unrelatedProxyBytesPreserved": true,
+    "internalDataServicesWithoutHostPortBindings": true,
+    "privateCredentialFileModes": "0600"
+  },
+  "privateRecoveryArchive": {
+    "sha256": "ed7cae5b055190d985b39b84fa4f374e36cfa76fce9db1279d731ae534dbe957",
+    "bytes": 921412,
+    "offHostBytesMatched": true,
+    "wholeHostRestoreTested": false,
+    "scope": "Initial configuration/PKI/app+RADIUS DB backup snapshot; no Docker image payload, MinIO object content, Mongo volume or unrelated Drive data"
+  },
+  "receiptLimits": [
+    "Raw SQL query and Docker inspect responses are not individually retained in activation/persistence archives; those assertions are bound to reviewed helper source and actual receipts.",
+    "Initial recovery archive omits Docker image payload, MinIO object content, Mongo volume and unrelated Drive; it is not full disaster recovery or recurring offsite backup.",
+    "External OpenVPN exit0 is not success by itself: the retained TLS and AUTH_FAILED log markers establish the bounded result."
+  ],
+  "references": {
+    "production-activation-local.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/production-activation-local.json",
+      "sha256": "24f67fcd4625da442a49674c11a2f10dbc3fb5951732b77c443a40aef639c6ec"
+    },
+    "production-vpn-install-local.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/production-vpn-install-local.json",
+      "sha256": "739d22aff4dd41d5ff8781ace238053f44a580dfc3dabc659551ef6a59138f00"
+    },
+    "production-persistence-local.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/production-persistence-local.json",
+      "sha256": "20cc09894c49fa32bf619d5b2b8124bde2c648f74a5deed1e858213b2715a648"
+    },
+    "production-host-final.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/production-host-final.json",
+      "sha256": "e51e21325daed3d9484f929dd46be5208a5612e077a5515ab1e9329925ef59f5"
+    },
+    "external-vpn-tls-r1/verification.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/external-vpn-tls-r1/verification.json",
+      "sha256": "bbdc5314b2b061a31cf6a26bc7f920552ea429dd157eaf68c27970504a7bd819"
+    },
+    "server-recovery-receipt.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/server-recovery-receipt.json",
+      "sha256": "7a66f5e1632057101e119a78c9a70da5f74c2c8a33dcfc70a5fedfed18e17977"
+    },
+    "f4-activation-browser-runtime-review.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/f4-activation-browser-runtime-review.json",
+      "sha256": "2a72b3b08b5ca448f7d1b2f40cc8b336b0de5e6b6c59bde8b63c19a1b2229f3f"
+    },
+    "f4-rendered-vpn-install-review.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/f4-rendered-vpn-install-review.json",
+      "sha256": "89c05227899e34bd9f7bf492d654dc2d20d5653a06a6fcdd1185dedfbc0592d7"
+    },
+    "public-browser-55d703b096a4/verification.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/public-browser-55d703b096a4/verification.json",
+      "sha256": "d02a1f807cc49ffcd304e00973f712329ca0c1c3e2f4bc6a93afaad0681908b6"
+    },
+    "f3-f4-activation-readiness-review.json": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/f3-f4-activation-readiness-review.json",
+      "sha256": "d955e3a10e5759800002563c54dabf4d73e0baef678dca847768eb4c5765f65c"
+    }
+  },
+  "newQaSshDockerOrBrowserExecutedByReviewer": false,
+  "finalIndependentReview": {
+    "workspaceRelativePath": ".omo/runtime/warehouse-f4-review/.omo/evidence/warehouse-workorder-asset-provenance/task46/f3-f4-final-host-authentication.json",
+    "sha256": "e09930b0ec09da14345614900dc723c4641b70c188792a2fea61a9bb9ace4a01"
+  },
+  "operationsRunbook": {
+    "path": "deploy/AZURE-FTTH-OPERATIONS.md",
+    "sha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+    "actualHostSync": {
+      "workspaceRelativePath": ".omo/runtime/azure-ftth-setup/production-operations-doc-sync.json",
+      "sha256": "06d98ff413fd6caad6749906b0d3d4d4f2e82d594054e36be45aa4e40ee28147"
+    },
+    "schedule": "Application 02:30 and RADIUS 03:00 WIB (UTC+7), retention 14 days",
+    "historicalArchiveBoundary": "Immutable initial recovery archive retains its older UTC-description document. Use the corrected active/repository runbook; actual runtime timezone was already Asia/Jakarta."
+  }
+}
