@@ -59,3 +59,11 @@ and requires `aria-expanded=false` before the unchanged real assignment command.
 Only returns and the extra edge scenario import this helper. Resume returns onward;
 preserve the completed issue result and earlier unaffected evidence with their
 actual executed commits. No product code changed.
+
+The follow-up exposed an actual narrow-screen layout defect: Fluent Combobox's
+default 250px minimum width extends beyond its shrinking form column and covers
+the reassignment button. Searchable single/multiple pickers now use `min-width: 0`
+within their existing 100% width. The real reassignment regression also checks
+that picker and submit rectangles do not overlap and captures that section before
+clicking. This CSS fix requires a new tested web build and deployment; prior
+production remains the controls release until the fix is verified and activated.

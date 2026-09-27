@@ -679,6 +679,7 @@ td.dg-actions {
 .combobox .fui-Combobox,
 .multi-combobox .fui-Combobox {
   width: 100%;
+  min-width: 0;
 }
 .cb-field {
   display: flex;

@@ -31,6 +31,13 @@ export async function reassignAndCancelWithCustody(page: Page, fixture: NumericJ
   const technicianPicker = page.getByRole('combobox', { name: 'Cari teknisi…', exact: true })
   await technicianPicker.press('Escape')
   await expect(technicianPicker).toHaveAttribute('aria-expanded', 'false')
+  const pickerBounds = await technicianPicker.locator('..').boundingBox()
+  const submitBounds = await page.getByRole('button', { name: 'Tugaskan ulang', exact: true }).boundingBox()
+  expect(pickerBounds).not.toBeNull(); expect(submitBounds).not.toBeNull()
+  const overlap = pickerBounds!.x < submitBounds!.x + submitBounds!.width && pickerBounds!.x + pickerBounds!.width > submitBounds!.x
+    && pickerBounds!.y < submitBounds!.y + submitBounds!.height && pickerBounds!.y + pickerBounds!.height > submitBounds!.y
+  expect(overlap, 'Technician picker must not cover the assignment button').toBe(false)
+  await page.locator('section').filter({ has: page.getByRole('heading', { name: 'Penugasan', exact: true }) }).screenshot({ path: testInfo.outputPath('reassignment-picker-and-button.png'), animations: 'disabled' })
   const reassigned = await confirmOperation(page, `/api/work-orders/${fixture.workOrder.id}/assign`, 'Tugaskan ulang')
   expect(reassigned.assignees).toHaveLength(1)
   expect(reassigned.assignees[0].name).toBe(replacement.name)
