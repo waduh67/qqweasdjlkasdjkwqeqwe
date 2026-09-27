@@ -1,4 +1,5 @@
-import { Cable, CreditCard, HardDrive, PackageCheck, CalendarCheck, Workflow } from 'lucide-react'
+import { Navigation16Regular } from '@fluentui/react-icons'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 import { useEffect, useRef } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -10,29 +11,7 @@ import { EnvSwitcher } from '@/components/molecules'
 import { NotificationBell } from '@/components/organisms'
 import { Breadcrumbs } from '@/components/molecules'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
-import {
-  IconAlert,
-  IconArea,
-  IconAudit,
-  IconChart,
-  IconChat,
-  IconCustomers,
-  IconDashboard,
-  IconGauge,
-  IconInbox,
-  IconLogout,
-  IconMap,
-  IconMonitor,
-  IconPackage,
-  IconPlus,
-  IconReceipt,
-  IconRoute,
-  IconShield,
-  IconSidebar,
-  IconUsers,
-  IconWifi,
-  IconWorkOrder,
-} from '@/components/atoms/icons'
+import { IconAlert, IconLogout } from '@/components/atoms/icons'
 import { HOTSPOT_VIEW_PERMISSIONS } from '@/api/hotspot'
 import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from '@/pages/warehouse/navigation'
 /**
@@ -45,69 +24,69 @@ const GROUPS: NavGroup[] = [
   {
     label: null,
     items: [
-      { to: '/', label: 'Dashboard', permission: null, icon: IconDashboard, end: true },
-      { to: '/reports', label: 'Laporan', permission: 'reporting.report.view', icon: IconChart },
+      { to: '/', label: 'Dashboard', permission: null, icon: NavIcons.Dashboard, end: true },
+      { to: '/reports', label: 'Laporan', permission: 'reporting.report.view', icon: NavIcons.Chart },
     ],
   },
   {
     label: 'Pelanggan & layanan',
     items: [
-      { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: IconPlus },
+      { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: NavIcons.Plus },
       // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
       // (menyatu dengan rencana impor/ekspor pelanggan via CSV). Rute /import-pppoe tetap ada.
-      { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
+      { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: NavIcons.Customers },
       // Keluhan yang dilaporkan pelanggan sendiri dari portal — tetangga Pelanggan, bukan
       // Insiden: yang di sini lahir dari manusia, yang di Lapangan lahir dari alarm.
-      { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: IconChat },
-      { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: IconReceipt },
-       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
-       { to: '/hotspot', label: 'Hotspot & Voucher', permission: HOTSPOT_VIEW_PERMISSIONS, icon: IconWifi },
+      { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: NavIcons.Chat },
+      { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: NavIcons.Receipt },
+       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: NavIcons.Package },
+       { to: '/hotspot', label: 'Hotspot & Voucher', permission: HOTSPOT_VIEW_PERMISSIONS, icon: NavIcons.Wifi },
 
     ],
   },
   {
     label: 'Jaringan',
     items: [
-      { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
-      { to: '/inventory', label: 'Aset jaringan', permission: 'network.odp.view', icon: HardDrive },
-      { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
-      { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
-      { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
-      { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
-      { to: '/network-provisioning', label: 'Segmen jaringan', permission: 'provisioning.segment.view', icon: Cable },
-      { to: '/provisioning', label: 'Provisioning perangkat', permission: 'monitoring.provisioning.view', icon: Workflow },
+      { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: NavIcons.Map },
+      { to: '/inventory', label: 'Aset jaringan', permission: 'network.odp.view', icon: NavIcons.Storage },
+      { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: NavIcons.Gauge },
+      { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: NavIcons.Wifi },
+      { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: NavIcons.Route },
+      { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: NavIcons.Monitor },
+      { to: '/network-provisioning', label: 'Segmen jaringan', permission: 'provisioning.segment.view', icon: NavIcons.Cable },
+      { to: '/provisioning', label: 'Provisioning perangkat', permission: 'monitoring.provisioning.view', icon: NavIcons.Workflow },
     ],
   },
   {
     label: 'Gudang',
     items: [
-      { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: PackageCheck, end: true },
-      ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: page.icon })),
+      { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: NavIcons.PackageCheck, end: true },
+      ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: NavIcons.warehouse[page.path] })),
     ],
   },
   {
     label: 'Lapangan',
     items: [
-      { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: IconAlert },
+      { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: NavIcons.Alert },
       // Papan dispatch (semua WO) di-gate izin dashboard = khusus operator; teknisi (yang
       // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
-      { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: IconWorkOrder },
-      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: IconInbox },
-      { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', icon: PackageCheck },
-      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: CalendarCheck },
+      { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: NavIcons.WorkOrder },
+      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: NavIcons.Inbox },
+      { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', icon: NavIcons.PackageCheck },
+      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: NavIcons.Calendar },
     ],
   },
   {
     label: 'Administrasi',
     items: [
-      { to: '/subscription', label: 'Langganan aplikasi', permission: 'billing.subscription.view', icon: CreditCard },
-      { to: '/users', label: 'Pengguna', permission: 'iam.user.view', icon: IconUsers },
-      { to: '/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: IconShield },
-      { to: '/areas', label: 'Area', permission: 'iam.area.view', icon: IconArea },
-      { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
-      { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
-      { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: CreditCard },
-      { to: '/tax-settings', label: 'Pajak & BHP/USO', permission: 'billing.tax.view', icon: IconReceipt },
+      { to: '/subscription', label: 'Langganan aplikasi', permission: 'billing.subscription.view', icon: NavIcons.Payment },
+      { to: '/users', label: 'Pengguna', permission: 'iam.user.view', icon: NavIcons.Users },
+      { to: '/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: NavIcons.Shield },
+      { to: '/areas', label: 'Area', permission: 'iam.area.view', icon: NavIcons.Area },
+      { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: NavIcons.Audit },
+      { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: NavIcons.Alert },
+      { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: NavIcons.Payment },
+      { to: '/tax-settings', label: 'Pajak & BHP/USO', permission: 'billing.tax.view', icon: NavIcons.Receipt },
     ],
   },
 ]
@@ -123,7 +102,7 @@ export function Layout() {
   const { can, isPlatformAdmin } = useCan()
   const location = useLocation()
   const navigate = useNavigate()
-  const { navLabel, navExpanded, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
+  const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
 
   const flush = FLUSH_ROUTES.has(location.pathname)
 
@@ -159,14 +138,16 @@ export function Layout() {
               di ponsel (lihat useAppShellNav) — sesuai yang dilihat pengguna di layarnya. */}
           <Button
             variant="subtle"
-            icon={<IconSidebar size={18} />}
+            icon={<Navigation16Regular />}
             onClick={toggleNav}
+            ref={toggleButtonRef}
             aria-label={navLabel}
             title={navLabel}
             aria-expanded={navExpanded}
           />
+          <span className="topbar-brand"><BrandMark size={20} /><span>NetOps</span></span>
           <Text as="span" className="badge accent" size={200} weight="semibold">{user?.tenantSlug}</Text>
-          {user?.platformAdmin && <Text as="span" className="badge" size={200} weight="semibold">platform admin</Text>}
+          {isPlatformAdmin && <EnvSwitcher current="tenant" />}
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           {/* Lonceng sebelum kendali lain: inilah satu-satunya kontrol di header yang
@@ -217,17 +198,7 @@ export function Layout() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            <BrandMark size={22} />
-          </span>
-          <span className="brand-text">NetOps</span>
-        </div>
-
-        {/* Platform admin sedang menengok area tenant — switcher konteks di puncak sidebar. */}
-        {isPlatformAdmin && <EnvSwitcher current="tenant" />}
-
-        <SidebarNav compact groups={GROUPS} can={can} storageKey="ftth.navGroups.tenant" />
+        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} compact groups={GROUPS} can={can} storageKey="ftth.navGroups.tenant" />
       </aside>
 
       <div className="main">

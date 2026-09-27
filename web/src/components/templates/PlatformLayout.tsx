@@ -1,3 +1,5 @@
+import { Navigation16Regular } from '@fluentui/react-icons'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 import { Text } from '@fluentui/react-components'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
@@ -7,20 +9,7 @@ import { BrandMark, Button, ThemeToggle } from '@/components/atoms'
 import { EnvSwitcher } from '@/components/molecules'
 import { Breadcrumbs } from '@/components/molecules'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
-import {
-  IconAudit,
-  IconBuilding,
-  IconDashboard,
-  IconFlask,
-  IconGauge,
-  IconLogout,
-  IconMail,
-  IconMonitor,
-  IconRoute,
-  IconShield,
-  IconSidebar,
-  IconUsers,
-} from '@/components/atoms/icons'
+import { IconLogout } from '@/components/atoms/icons'
 
 /**
  * Shell KHUSUS Platform admin (SaaS super-admin), terpisah dari `Layout` operator
@@ -33,36 +22,36 @@ const GROUPS: NavGroup[] = [
   {
     label: null,
     items: [
-      { to: '/platform', label: 'Dashboard', permission: null, icon: IconDashboard, end: true },
-      { to: '/platform/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
+      { to: '/platform', label: 'Dashboard', permission: null, icon: NavIcons.Dashboard, end: true },
+      { to: '/platform/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: NavIcons.Building },
     ],
   },
   {
     label: 'Langganan',
     items: [
-      { to: '/platform/billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: IconGauge },
+      { to: '/platform/billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: NavIcons.Gauge },
       {
         to: '/platform/payments/simulate',
         label: 'Simulasi Pembayaran',
         permission: 'platform.billing.view',
-        icon: IconFlask,
+        icon: NavIcons.Flask,
       },
     ],
   },
   {
     label: 'Infrastruktur',
     items: [
-      { to: '/platform/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: IconRoute },
-      { to: '/platform/jobs', label: 'Pekerjaan Latar', permission: 'platform.ops.view', icon: IconMonitor },
+      { to: '/platform/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: NavIcons.Route },
+      { to: '/platform/jobs', label: 'Pekerjaan Latar', permission: 'platform.ops.view', icon: NavIcons.Monitor },
     ],
   },
   {
     label: 'Administrasi',
     items: [
-      { to: '/platform/email', label: 'Setelan Email', permission: 'platform.email.view', icon: IconMail },
-      { to: '/platform/users', label: 'Pengguna', permission: 'iam.user.view', icon: IconUsers },
-      { to: '/platform/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: IconShield },
-      { to: '/platform/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
+      { to: '/platform/email', label: 'Setelan Email', permission: 'platform.email.view', icon: NavIcons.Mail },
+      { to: '/platform/users', label: 'Pengguna', permission: 'iam.user.view', icon: NavIcons.Users },
+      { to: '/platform/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: NavIcons.Shield },
+      { to: '/platform/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: NavIcons.Audit },
     ],
   },
 ]
@@ -70,7 +59,7 @@ const GROUPS: NavGroup[] = [
 export function PlatformLayout() {
   const { user, logout } = useAuth()
   const { can } = useCan()
-  const { navLabel, navExpanded, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
+  const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
 
   const initials = (user?.name ?? '?')
     .split(' ')
@@ -86,13 +75,15 @@ export function PlatformLayout() {
         <div className="row" style={{ gap: '0.5rem' }}>
           <Button
             variant="subtle"
-            icon={<IconSidebar size={18} />}
+            icon={<Navigation16Regular />}
             onClick={toggleNav}
+            ref={toggleButtonRef}
             aria-label={navLabel}
             title={navLabel}
             aria-expanded={navExpanded}
           />
-          <Text as="span" className="badge accent" size={200} weight="semibold">platform admin</Text>
+          <span className="topbar-brand"><BrandMark size={20} /><span>NetOps</span></span>
+          <EnvSwitcher current="platform" />
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           <ThemeToggle />
@@ -118,16 +109,7 @@ export function PlatformLayout() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            <BrandMark size={22} />
-          </span>
-          <span className="brand-text">NetOps · Platform</span>
-        </div>
-
-        <EnvSwitcher current="platform" />
-
-        <SidebarNav groups={GROUPS} can={can} storageKey="ftth.navGroups.platform" />
+        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} groups={GROUPS} can={can} storageKey="ftth.navGroups.platform" />
       </aside>
 
       <div className="main">

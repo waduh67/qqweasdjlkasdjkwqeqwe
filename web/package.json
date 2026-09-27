@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.5",
+    "@fluentui/react-icons": "^2.0.343",
     "lucide-react": "^1.30.0",
     "maplibre-gl": "^5.24.0",
     "react": "^19.2.7",

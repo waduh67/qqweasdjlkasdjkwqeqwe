@@ -8,13 +8,11 @@ import {
   Text,
 } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
-import { IconChevronsUpDown, IconCheck } from '@/components/atoms/icons'
+import { Apps16Filled, Building16Filled } from '@fluentui/react-icons'
 
 /**
- * Switcher konteks Platform ↔ Tenant di puncak sidebar — bergaya pemilih direktori/
- * langganan Azure Portal (kotak berbingkai: titik status + nama konteks + chevron
- * naik-turun, membuka dropdown pilihan). Hanya dipakai platform admin, menggantikan
- * menu "Tampilan Tenant/Platform" lama.
+ * Switcher konteks Platform ↔ Tenant di header global. Menu radio Fluent memberi
+ * penanda konteks aktif dan navigasi keyboard; hanya tampil untuk platform admin.
  *
  * Perpindahan lewat `useNavigate` eksplisit (bukan `<NavLink>`) supaya andal: memilih
  * opsi selalu menavigasi ke shell terkait lalu menutup menu — tak bergantung pada
@@ -49,12 +47,9 @@ export function EnvSwitcher({ current }: { current: 'platform' | 'tenant' }) {
             title={`Konteks: ${active.name}`}
             icon={null}
           >
-            <span className={`env-dot ${current}`} aria-hidden />
             <span className="env-switch-info">
               <Text as="span" className="env-switch-name" size={300}>{active.name}</Text>
-              <Text as="span" className="env-switch-cap" size={100}>Ganti konteks</Text>
             </span>
-            <IconChevronsUpDown size={15} />
           </MenuButton>
         </MenuTrigger>
         <MenuPopover className="env-menu">
@@ -65,13 +60,12 @@ export function EnvSwitcher({ current }: { current: 'platform' | 'tenant' }) {
                 className={o.key === current ? 'current' : undefined}
                 name="env-switcher"
                 value={o.key}
+                icon={o.key === 'platform' ? <Apps16Filled /> : <Building16Filled />}
               >
-                <span className={`env-dot ${o.key}`} aria-hidden />
-                <span className="env-switch-info">
+                <span className="env-option-text">
                   <Text as="span" className="env-switch-name" size={300}>{o.name}</Text>
                   <Text as="span" className="env-switch-cap" size={100}>{o.desc}</Text>
                 </span>
-                {o.key === current && <IconCheck size={15} className="env-check" />}
               </MenuItemRadio>
             ))}
           </MenuList>

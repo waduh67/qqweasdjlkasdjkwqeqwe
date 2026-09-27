@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 
 /**
@@ -23,6 +23,7 @@ const MOBILE_QUERY = '(max-width: 820px)'
  *   sidebar pelanggan (dan sebaliknya).
  */
 export function useAppShellNav(collapseKey = 'ftth.sidebarCollapsed') {
+  const toggleButtonRef = useRef<HTMLButtonElement>(null)
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(collapseKey) === '1')
   const [navOpen, setNavOpen] = useState(false)
@@ -54,8 +55,14 @@ export function useAppShellNav(collapseKey = 'ftth.sidebarCollapsed') {
     })
   }, [collapseKey])
 
+  const toggleNavFromSidebar = useCallback(() => {
+    // The drawer control becomes hidden on phones; keep keyboard focus visible.
+    toggleButtonRef.current?.focus()
+    toggleNav()
+  }, [toggleNav])
+
   /** Kelas untuk elemen `.app`; `nav-open` hanya berarti di lebar ponsel. */
   const shellClass = `app${collapsed ? ' sidebar-collapsed' : ''}${navOpen ? ' nav-open' : ''}`
 
-  return { collapsed, navOpen, toggleNav, closeNav, shellClass, navExpanded: mobile ? navOpen : !collapsed, navLabel: mobile ? (navOpen ? 'Tutup menu' : 'Buka menu') : (collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar') }
+  return { collapsed, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass, navExpanded: mobile ? navOpen : !collapsed, navLabel: mobile ? (navOpen ? 'Tutup menu' : 'Buka menu') : (collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar') }
 }

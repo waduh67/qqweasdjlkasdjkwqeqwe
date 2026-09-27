@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type ComponentType } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown12Regular, ChevronDoubleLeft16Regular, ChevronDoubleRight16Regular, Search12Regular } from '@fluentui/react-icons'
 import { Input } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
 import type { IconProps } from '@/components/atoms/icons'
@@ -22,11 +22,13 @@ function loadClosed(key: string, defaults: string[]): Set<string> {
 }
 
 /** Sections are discoverable on first visit; opening a deep link reveals its section. */
-export function SidebarNav({ groups, can, storageKey, compact = false }: {
+export function SidebarNav({ groups, can, storageKey, compact = false, onToggle, expanded = true }: {
   groups: NavGroup[]
   can: (permission: string) => boolean
   storageKey: string
   compact?: boolean
+  onToggle?: () => void
+  expanded?: boolean
 }) {
   const key = `${storageKey}.v3.closed`
   const { pathname } = useLocation()
@@ -35,6 +37,8 @@ export function SidebarNav({ groups, can, storageKey, compact = false }: {
   const [query, setQuery] = useState('')
   const matchesPath = (item: NavItem) => item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
   const activeGroup = groups.find(group => group.items.some(matchesPath))?.label
+
+  useEffect(() => { if (!expanded) setQuery('') }, [expanded])
 
   useEffect(() => {
     setQuery('')
@@ -60,8 +64,13 @@ export function SidebarNav({ groups, can, storageKey, compact = false }: {
 
   return (
     <>
-      <div className="nav-search">
-        <Input aria-label="Cari menu" placeholder="Cari menu…" contentBefore={<Search size={16} aria-hidden />} value={query} onChange={(_, data) => setQuery(data.value)} />
+      <div className="nav-toolbar">
+        <div className="nav-search">
+          <Input size="small" aria-label="Cari menu" placeholder="Cari menu" contentBefore={<Search12Regular aria-hidden />} value={query} onChange={(_, data) => setQuery(data.value)} />
+        </div>
+        {onToggle && <Button variant="subtle" className="nav-collapse" onClick={onToggle}
+          aria-label={expanded ? 'Ciutkan navigasi' : 'Lebarkan navigasi'} title={expanded ? 'Ciutkan navigasi' : 'Lebarkan navigasi'} aria-expanded={expanded}
+          icon={expanded ? <ChevronDoubleLeft16Regular /> : <ChevronDoubleRight16Regular />} />}
       </div>
       {visibleGroups.length === 0 && <p className="nav-search-empty">Menu tidak ditemukan.</p>}
       {visibleGroups.map((group, index) => {
@@ -71,14 +80,14 @@ export function SidebarNav({ groups, can, storageKey, compact = false }: {
           <div key={group.label ?? 'main'} className={`nav-group${group.label ? ' nav-group--labeled' : ''}${isClosed ? ' collapsed' : ''}`}>
             {group.label && (
               <Button variant="subtle" className="nav-label nav-group-toggle" onClick={() => toggle(group.label!)} aria-expanded={!isClosed} aria-controls={sectionId}>
+                <ChevronDown12Regular className="nav-group-chevron" aria-hidden />
                 <span>{group.label}</span>
-                <ChevronDown size={14} className="nav-group-chevron" aria-hidden />
               </Button>
             )}
             <nav id={sectionId} aria-label={group.label ?? 'Menu utama'}>
               {group.items.map(item => (
                 <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label} aria-label={item.label}>
-                  <item.icon size={19} strokeWidth={1.75} aria-hidden />
+                  <item.icon className="nav-icon" aria-hidden />
                   <span className="nav-text">{item.label}</span>
                 </NavLink>
               ))}

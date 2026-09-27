@@ -35,8 +35,8 @@
   --sidebar-text: #323130;
   --sidebar-muted: #605e5c;
   --sidebar-border: #edebe9;
-  --sidebar-active-bg: #eff6fc;
-  --sidebar-active-text: #0078d4;
+  --sidebar-active-bg: #edebe9;
+  --sidebar-active-text: #323130;
   --sidebar-active-accent: #0078d4;
 
   /* Status — tetap, tidak di-tema; dipasangkan ikon/label, tak pernah warna saja */
@@ -96,8 +96,8 @@
     --sidebar-text: #d2d0ce;
     --sidebar-muted: #a19f9d;
     --sidebar-border: #3b3a39;
-    --sidebar-active-bg: rgba(40, 153, 245, 0.16);
-    --sidebar-active-text: #2899f5;
+    --sidebar-active-bg: #3b3a39;
+    --sidebar-active-text: #ffffff;
     --sidebar-active-accent: #2899f5;
 
     --good: #34d399;
@@ -142,8 +142,8 @@
   --sidebar-text: #d2d0ce;
   --sidebar-muted: #a19f9d;
   --sidebar-border: #3b3a39;
-  --sidebar-active-bg: rgba(40, 153, 245, 0.16);
-  --sidebar-active-text: #2899f5;
+  --sidebar-active-bg: #3b3a39;
+  --sidebar-active-text: #ffffff;
   --sidebar-active-accent: #2899f5;
 
   --good: #34d399;
@@ -1536,37 +1536,6 @@ td.dg-actions {
 .app.sidebar-collapsed {
   grid-template-columns: 64px 1fr;
 }
-.sidebar {
-  grid-area: sidebar;
-  background: var(--sidebar-bg);
-  color: var(--sidebar-text);
-  border-right: 1px solid var(--sidebar-border);
-  padding: 0.9rem 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  position: sticky;
-  top: var(--topbar-h);
-  height: calc(100vh - var(--topbar-h));
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-/* Saat diciutkan: sembunyikan teks, pusatkan ikon, sisakan tooltip (title). */
-.sidebar-collapsed .brand-text,
-.sidebar-collapsed .nav-text,
-.sidebar-collapsed .nav-label {
-  display: none;
-}
-.sidebar-collapsed .brand {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
-}
-.sidebar-collapsed .sidebar nav a {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
-}
 .brand {
   display: flex;
   align-items: center;
@@ -1587,239 +1556,6 @@ td.dg-actions {
   color: #fff;
   flex: none;
 }
-.nav-label {
-  padding: 0.6rem 0.55rem 0.3rem;
-  color: var(--sidebar-text);
-  font-size: var(--fontSizeBase200);
-  font-weight: var(--fontWeightSemibold);
-}
-/* Header seksi = baris pohon left-nav Azure: chevron di KIRI lalu label (sentence
-   case, bukan kapital), rata kiri seperti item. Chevron berputar -90° (⌄ → ›) saat
-   diciutkan. Baris ikut mendapat hover halus agar terasa bisa diklik. */
-/* Aturan ini menyetel sendiri seluruh gayanya (border/background none, rata kiri, warna/
-   `font` sendiri) supaya header seksi tampil sebagai baris pohon Azure, bukan tombol/pill.
-   Dulu reset tombol native global `button:not([class*='fui-'])` membocorkan gaya tombol ke
-   sini; reset itu sudah dihapus (semua tombol kini atom Fluent), jadi tak ada lagi bocoran. */
-.sidebar button.nav-group-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.5rem 0.55rem;
-  border: none;
-  background: none;
-  color: var(--sidebar-text);
-  font-family: inherit;
-  font-size: var(--fontSizeBase200);
-  text-align: left;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.sidebar button.nav-group-toggle:hover {
-  color: var(--sidebar-text);
-  background: var(--sidebar-bg-2);
-  border-color: transparent;
-}
-.nav-group-chevron {
-  flex: none;
-  color: var(--sidebar-muted);
-  transition: transform 0.15s ease;
-}
-.nav-group.collapsed .nav-group-chevron {
-  transform: rotate(-90deg);
-}
-.sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-/* Anak seksi berlabel di-indent sedikit agar sejajar setelah chevron induk —
-   memperkuat hierarki pohon ala Azure. Indent luruh saat sidebar diciutkan
-   (aturan .sidebar-collapsed lebih spesifik menormalkan padding). */
-.nav-group--labeled nav a {
-  padding-left: 1.55rem;
-}
-.sidebar nav a {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: var(--radius-sm);
-  color: var(--sidebar-text);
-  font-weight: var(--fontWeightRegular);
-  font-size: var(--fontSizeBase200);
-  transition: background 0.12s ease, color 0.12s ease;
-}
-.sidebar nav a svg {
-  flex: none;
-  opacity: 0.7;
-}
-.sidebar nav a:hover {
-  background: var(--sidebar-bg-2);
-  color: var(--sidebar-text);
-  text-decoration: none;
-}
-.sidebar nav a:hover svg {
-  opacity: 1;
-}
-.sidebar nav a.active {
-  background: var(--sidebar-active-bg);
-  color: var(--sidebar-active-text);
-  font-weight: var(--fontWeightSemibold);
-}
-/* Rusuk aksen violet di kiri item aktif — penanda posisi ala referensi. */
-.sidebar nav a.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 1.15rem;
-  border-radius: 0 3px 3px 0;
-  background: var(--sidebar-active-accent);
-}
-.sidebar nav a.active svg {
-  opacity: 1;
-  color: var(--sidebar-active-accent);
-}
-/* Rel ikon (sidebar ciut): rusuk aktif menempel edge kiri kartu, bukan teks. */
-.sidebar-collapsed .sidebar nav a.active::before {
-  left: -0.75rem;
-}
-
-/* ---------- Env switcher (Platform ↔ Tenant) di puncak sidebar ---------- */
-/* Menggantikan menu "Tampilan Tenant/Platform" dengan pil bergaya switcher
-   environment (ala Sandbox/Production). Hanya tampil untuk platform admin. */
-.env-switch {
-  position: relative;
-  margin-bottom: 0.6rem;
-}
-.env-switch-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 0.65rem;
-  border-radius: var(--radius-sm);
-  background: var(--sidebar-bg-2);
-  border: 1px solid var(--sidebar-border);
-  color: var(--sidebar-text);
-  font-family: inherit;
-  font-weight: var(--fontWeightRegular);
-  font-size: var(--fontSizeBase200);
-  cursor: pointer;
-}
-.env-switch-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--sidebar-bg-2) 88%, var(--sidebar-text));
-  border-color: color-mix(in srgb, var(--sidebar-border) 55%, var(--sidebar-text));
-}
-.env-switch-btn .env-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-}
-/* Info dua baris ala pemilih direktori Azure: nama konteks + keterangan kecil. */
-.env-switch-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: var(--lineHeightBase200);
-  text-align: left;
-}
-.env-switch-name {
-  font-weight: var(--fontWeightSemibold);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.env-switch-cap {
-  font-size: var(--fontSizeBase200);
-  font-weight: var(--fontWeightMedium);
-  color: var(--sidebar-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.env-switch-btn > svg {
-  color: var(--sidebar-muted);
-  flex: none;
-}
-.env-dot.platform {
-  background: var(--sidebar-active-accent);
-  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
-}
-.env-dot.tenant {
-  background: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
-}
-.env-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 30;
-  margin: 0;
-  padding: 0.3rem;
-  list-style: none;
-  background: var(--sidebar-bg-2);
-  border: 1px solid var(--sidebar-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-lg);
-}
-.env-menu li {
-  margin: 0;
-}
-.env-menu button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.55rem;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  color: var(--sidebar-text);
-  font-family: inherit;
-  font-size: var(--fontSizeBase200);
-  font-weight: var(--fontWeightRegular);
-  text-align: left;
-  cursor: pointer;
-}
-.env-menu button:hover {
-  background: var(--sidebar-active-bg);
-  color: var(--sidebar-text);
-}
-.env-menu button.current {
-  color: var(--sidebar-active-text);
-  font-weight: var(--fontWeightSemibold);
-}
-.env-menu .env-check {
-  margin-left: auto;
-  color: var(--sidebar-active-accent);
-  flex: none;
-}
-/* Klik di luar menutup dropdown. */
-.env-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 29;
-}
-/* Sidebar ciut: sisakan dot terpusat, sembunyikan label & chevron. */
-.sidebar-collapsed .env-switch-btn {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
-}
-.sidebar-collapsed .env-switch-btn .env-switch-info,
-.sidebar-collapsed .env-switch-btn > svg {
-  display: none;
-}
-
 .main {
   grid-area: main;
   display: flex;
@@ -2700,38 +2436,11 @@ td.dg-actions {
     max-width: 100vw;
     overflow-x: clip;
   }
-  /* Laci selalu tampil versi lengkap (ikon + teks); mode rel-ikon tak berlaku di sini. */
-  .sidebar-collapsed .brand-text,
-  .sidebar-collapsed .nav-text,
-  .sidebar-collapsed .nav-label {
-    display: inline;
-  }
-  .sidebar-collapsed .sidebar nav a,
-  .sidebar-collapsed .brand {
-    justify-content: flex-start;
-    padding-left: 0.7rem;
-    padding-right: 0.7rem;
-  }
   .main:has(.content-flush) {
     height: auto;
   }
   .map-shell {
     min-height: 78vh;
-  }
-  .sidebar {
-    position: fixed;
-    top: var(--topbar-h);
-    bottom: 0;
-    left: 0;
-    width: min(19rem, 84vw);
-    z-index: 41;
-    transform: translateX(-100%);
-    transition: transform 0.18s ease;
-    box-shadow: none;
-  }
-  .app.nav-open .sidebar {
-    transform: none;
-    box-shadow: 6px 0 24px -12px rgba(0, 0, 0, 0.5);
   }
   /* Konten sesak di ponsel: padding halaman dipangkas agar kartu tak jadi lorong sempit. */
   .content {
