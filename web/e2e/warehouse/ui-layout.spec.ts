@@ -10,6 +10,12 @@ test('operator pages remain readable and form controls fit the viewport', async 
   const admin = await signup(page)
   await page.goto('/customers')
   await page.waitForLoadState('networkidle')
+  // A declared family can silently fall back. Verify the actual regular,
+  // semibold and bold faces can load before accepting typography screenshots.
+  expect(await page.evaluate(async () => {
+    const faces = await Promise.all([400, 600, 700].map(weight => document.fonts.load(`${weight} 13px "Azure UI"`)))
+    return faces.every(group => group.length > 0 && group.every(face => face.status === 'loaded'))
+  }), 'Azure UI font faces loaded').toBeTruthy()
   await page.screenshot({ path: testInfo.outputPath('customers-empty.png'), fullPage: true, animations: 'disabled' })
   // Populate through the real form so layout review also covers readable rows
   // and the complete create -> list -> detail interaction, in the owned local tenant.

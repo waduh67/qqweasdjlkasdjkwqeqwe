@@ -31,12 +31,13 @@ const azureBrand: BrandVariants = {
 
 /**
  * Penyetelan yang berlaku di kedua mode: sudut membulat kecil (Azure Portal pakai
- * radius ~2px, bukan 4px default Fluent Teams). Tipografi sengaja dibiarkan pada
- * token web Fluent v9 kanonis agar komponen dan CSS global membaca sumber yang sama.
- * Dengan ini komponen Fluent (Button/Tab/Input/Toolbar) langsung berpenampilan Azure
- * lewat TEMA — bukan lagi CSS per-elemen.
+ * radius ~2px). Font yang benar-benar dimuat dan skala 13px dipakai bersama
+ * oleh komponen Fluent, teks biasa, dan angka pada konsol.
  */
 const azureShared: Partial<Theme> = {
+  fontFamilyBase: 'var(--console-font-family)',
+  fontFamilyNumeric: 'var(--console-font-family)',
+  fontSizeBase300: '13px',
   borderRadiusSmall: '2px',
   borderRadiusMedium: '2px',
   borderRadiusLarge: '4px',

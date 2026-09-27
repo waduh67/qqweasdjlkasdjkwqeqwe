@@ -53,10 +53,10 @@ describe('DataTable', () => {
     expect(container.querySelector('.resource-data-table-wrap .resource-data-table-grid[role="grid"]')).not.toBeNull()
   })
 
-  it('mengunci wrapper header Fluent resource agar tebal dan rata kiri', async () => {
+  it('mengunci wrapper header Fluent resource agar semibold dan rata kiri', async () => {
     const css = await dataTableCssContract()
 
-    expect(css).toMatch(/\.resource-data-table-grid \.fui-DataGridHeaderCell,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*700 !important;/)
+    expect(css).toMatch(/\.resource-data-table-grid \.fui-DataGridHeaderCell,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*600 !important;/)
   })
 
   it('mengunci kontrak CSS resource pada viewport sempit', async () => {

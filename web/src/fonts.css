@@ -1,0 +1,28 @@
+/* Azure Portal uses the Segoe UI 5.32 regular/semibold/bold faces.
+ * Prefer installed faces, then the same version hosted by Microsoft Learn.
+ * Explicit faces keep non-Windows browsers from silently using a heavier fallback.
+ */
+@font-face {
+  font-family: 'Azure UI';
+  src: local('Segoe UI'), url('https://learn.microsoft.com/static/third-party/SegoeUI/5.32/west-european/normal/latest.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Azure UI';
+  src: local('Segoe UI Semibold'), url('https://learn.microsoft.com/static/third-party/SegoeUI/5.32/west-european/semibold/latest.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Azure UI';
+  src: local('Segoe UI Bold'), url('https://learn.microsoft.com/static/third-party/SegoeUI/5.32/west-european/bold/latest.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
+  --console-font-family: 'Azure UI', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+}
