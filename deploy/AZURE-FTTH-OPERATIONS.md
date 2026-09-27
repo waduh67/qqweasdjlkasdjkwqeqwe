@@ -194,7 +194,7 @@ sudo python3 /opt/ftth/setup-private/ui-20260927-typography-3ce5993dc081/deploy-
 
 ## Rilis navigasi Azure — 27 September 2026
 
-**Web aktif** berasal dari commit `97674d0e69618f70990a72fd9d35e108fce158ca`, dengan image
+Rilis navigasi berasal dari commit `97674d0e69618f70990a72fd9d35e108fce158ca`, dengan image
 `sha256:69a96121fade5e06873742134f2220a8d20b1dd94fec7e9e74b67772af7199bc`.
 Paket dan receipt: `/opt/ftth/setup-private/ui-20260927-sidebar-97674d0e/`.
 Salinan lokal: `.omo/runtime/ui-ux/sidebar-20260927/release/`.
@@ -220,4 +220,32 @@ tipografi sebelumnya, sehingga perbaikan font tetap ada:
 ```sh
 sudo python3 /opt/ftth/setup-private/ui-20260927-sidebar-97674d0e/deploy-web.py \
   rollback /opt/ftth/setup-private/ui-20260927-sidebar-97674d0e
+```
+
+## Rilis tabel dan form Azure — 27 September 2026
+
+**Web aktif** berasal dari commit `329039f21d77839e8421c44b7465fe492b61ab60`, dengan image
+`sha256:2e198f303fc86b9137c4ebce40a8516b112c4a25adc64b58e3383c614a1229ee`.
+Paket image, proof, receipt, dan rollback: `/opt/ftth/setup-private/ui-20260927-controls-329039f2/`.
+Salinan lokal: `.omo/runtime/ui-ux/controls-20260927/release/`.
+
+Input dan tombol desktop24px, teks13px, border netral dan sudut2px mengikuti
+referensi Azure. Tabel memakai checkbox20px, garis tipis dan baris satu teks33px
+termasuk garis; isi panjang tetap dapat menambah tinggi. Form pelanggan memakai
+label250px dan kontrol450px di desktop, lalu ditumpuk pada layar kecil. Kode
+pelanggan menjadi kolom tersendiri. Target sentuh dan sidebar yang sudah disetujui
+berfungsi seperti sebelumnya. Pengaturan densitas terpusat di `web/src/controls.css`.
+
+Validasi:24 tes terarah, review independen, build/typecheck, audit44 rute pada dua
+ukuran Firefox (2/2), enam tes rollback, dan14 aset Nginx dengan hash identik.
+Pemeriksaan produksi setelah aktivasi mencakup14 tampilan, empat font Segoe,
+serta form/koordinat/mobile/dark tanpa error atau overflow. Tidak ada data bisnis
+produksi yang dibuat oleh audit. Aktivasi hanya mengganti web;13 container lain
+tetap sama. QA lokal sudah dihentikan, volume uji dipertahankan.
+
+Rollback berikut mengembalikan rilis navigasi sebelumnya:
+
+```sh
+sudo python3 /opt/ftth/setup-private/ui-20260927-controls-329039f2/deploy-web.py \
+  rollback /opt/ftth/setup-private/ui-20260927-controls-329039f2
 ```
