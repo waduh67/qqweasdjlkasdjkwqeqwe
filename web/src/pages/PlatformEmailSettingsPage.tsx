@@ -247,7 +247,7 @@ export function PlatformEmailSettingsPage() {
         <Tab value="delivery">Pengiriman</Tab><Tab value="appearance">Tampilan</Tab><Tab value="subjects">Subjek pesan</Tab><Tab value="preview">Pratinjau & uji kirim</Tab>
       </TabList>
 
-      <div className="card stack" style={{ gap: '0.75rem' }}>
+      <div hidden={section !== 'delivery'} className="card stack email-section" style={{ gap: '0.75rem' }}>
         <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <Text as="span" size={300} className="muted" >
             Pengiriman:
@@ -255,21 +255,8 @@ export function PlatformEmailSettingsPage() {
           <Badge tone={saved.smtpConfigured ? 'good' : 'neutral'}>
             {saved.smtpConfigured ? 'Setelan di halaman ini' : 'Mengikuti konfigurasi server'}
           </Badge>
-          <Text as="span" size={300} className="muted" >
-            Logo:
-          </Text>
-          <Badge tone={saved.logoSet ? 'good' : 'neutral'}>{saved.logoSet ? 'Terpasang' : 'Belum ada'}</Badge>
-          <Text as="span" size={300} className="muted" >
-            URL publik:
-          </Text>
-          <Badge tone={saved.logoUrl ? 'good' : 'warning'}>{saved.logoUrl ? 'Siap' : 'Belum disetel'}</Badge>
         </div>
-        {!saved.logoUrl && (
-          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-            Tanpa URL publik aplikasi, logo tak bisa dirangkai ke badan email — surat tetap terkirim,
-            hanya tampil tanpa gambar.
-          </Text>
-        )}
+        <p className="muted" style={{ margin: 0 }}>Gunakan pratinjau dan uji kirim untuk memeriksa hasil pengiriman setelah menyimpan.</p>
       </div>
 
       {!manage && (
@@ -284,7 +271,7 @@ export function PlatformEmailSettingsPage() {
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Isi host untuk memakai server email khusus. Kosongkan untuk mengikuti konfigurasi server aplikasi.
         </Text>
-        <div className="form-grid">
+        <div className="form-grid form-grid-connection">
           <TextField
             label="Host"
             value={form.smtpHost}
@@ -379,6 +366,11 @@ export function PlatformEmailSettingsPage() {
 
         {form.fromAddress.trim() !== '' && fromOk && <SenderDomainWarning address={form.fromAddress.trim()} />}
 
+
+      </div>
+
+      <div hidden={section !== 'appearance'} className="card stack email-section" aria-disabled={!manage}>
+        <SectionTitle>Tampilan email</SectionTitle>
         <TextField
           label="URL publik aplikasi"
           value={form.publicBaseUrl}
@@ -388,10 +380,6 @@ export function PlatformEmailSettingsPage() {
           maxLength={300}
           hint="Dipakai merangkai alamat gambar logo di badan email. Kosong = email tanpa logo."
         />
-      </div>
-
-      <div hidden={section !== 'appearance'} className="card stack email-section" aria-disabled={!manage}>
-        <SectionTitle>Tampilan email</SectionTitle>
         <EmailLogoField
           logoSet={saved.logoSet}
           logoPath={PLATFORM_EMAIL_LOGO_PATH}

@@ -74,7 +74,7 @@ export function usePortalData() {
  */
 export function PortalLayout() {
   const { customer, logout } = usePortalAuth()
-  const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav('ftth.portal.sidebarCollapsed')
+  const { navLabel, navExpanded, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav('ftth.portal.sidebarCollapsed')
 
   const [profile, setProfile] = useState<PortalAccount | null>(null)
   const [billing, setBilling] = useState<PortalBilling | null>(null)
@@ -117,9 +117,9 @@ export function PortalLayout() {
             variant="subtle"
             icon={<IconSidebar size={18} />}
             onClick={toggleNav}
-            aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            aria-expanded={navOpen}
+            aria-label={navLabel}
+            title={navLabel}
+            aria-expanded={navExpanded}
           />
           {/* Chip ISP: pelanggan bisa berlangganan di lebih dari satu tempat, dan portalnya
               satu pintu — jadi "sedang melihat punya siapa" harus selalu terbaca. */}

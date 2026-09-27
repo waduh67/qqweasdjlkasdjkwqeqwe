@@ -19,7 +19,7 @@ import { useConfirm } from '@/system'
  * - `lg`  → form kompleks / banyak seksi  → Fluent `large` (~940px)
  * - `full`→ form sangat lebar / bertab    → Fluent `full` (100%)
  *
- * **Non-modal** (`modalType="non-modal"`) ala Azure Portal: TAK ada scrim yang
+ * **Non-modal** (`modalType={footer ? 'modal' : 'non-modal'}`) ala Azure Portal: TAK ada scrim yang
  * menutupi konten — daftar di belakang tetap bisa diklik selagi blade terbuka,
  * sehingga memilih baris lain cukup menukar isi blade (data-driven) tanpa menumpuk.
  * ESC / tombol tutup menutup panel; bila form **kotor** (`dirty`) diminta konfirmasi
@@ -80,7 +80,7 @@ export function Blade({
       size={FLUENT_SIZE[size]}
       // Non-modal = tanpa scrim & tanpa focus-trap: konten di belakang tetap
       // interaktif (pola blade Azure). Memilih baris lain cukup menukar isi blade.
-      modalType="non-modal"
+      modalType={footer ? 'modal' : 'non-modal'}
       className={`azure-blade${className ? ` ${className}` : ''}`}
       // Fluent memicu ini untuk ESC (non-modal: tak ada klik-scrim); kita saring
       // lewat requestClose (form kotor → konfirmasi). Karena `open` terkendali,

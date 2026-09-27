@@ -67,7 +67,7 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
 function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { row: ReceiptDraftRow; number: number; costVisible: boolean; onChange: (patch: Partial<ReceiptDraftRow>) => void; onRemove?: () => void }) {
   const [scan, setScan] = useState('')
   function addScan() { if (scan.trim()) { onChange({ serials: [row.serials.trim(), scan.trim()].filter(Boolean).join('\n') }); setScan('') } }
-  return <fieldset className="card stack" style={{ minWidth: 0 }}><legend>Barang {number}</legend>
+  return <fieldset className="card stack receipt-line" style={{ minWidth: 0 }}><legend>Barang {number}</legend>
     <WarehousePicker<ReceiptSkuChoice> label={`Barang ${number}`} load={receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />
     {row.sku && <>
       <WarehouseQuantityField label={row.sku.baseUnit === 'MM' ? 'Panjang reel aktual' : 'Jumlah aktual'} unit={row.sku.baseUnit} value={row.quantity} onChange={quantity => onChange({ quantity })} />

@@ -28,9 +28,9 @@ export function PlatformDashboardPage() {
   const customers = tenants?.filter(tenant => tenant.slug !== 'platform') ?? []
   const partial = !!tenants && total > tenants.length
   const actions = [
-    { to: '/platform/billing', icon: CreditCard, title: 'Langganan & pembayaran', text: 'Atur harga dan penerimaan pembayaran tenant.', permission: 'platform.billing.view' },
-    { to: '/platform/vpn-servers', icon: Network, title: 'Infrastruktur VPN', text: 'Kelola hub dan koneksi router tenant.', permission: 'vpn.server.view' },
-    { to: '/platform/email', icon: Mail, title: 'Email platform', text: 'Atur pengirim dan pesan untuk pelanggan.', permission: 'platform.email.view' },
+    { to: '/platform/billing', icon: CreditCard, title: 'Billing langganan', text: 'Atur harga dan penerimaan pembayaran tenant.', permission: 'platform.billing.view' },
+    { to: '/platform/vpn-servers', icon: Network, title: 'Server VPN', text: 'Kelola hub dan koneksi router tenant.', permission: 'vpn.server.view' },
+    { to: '/platform/email', icon: Mail, title: 'Setelan email', text: 'Atur pengirim dan pesan untuk pelanggan.', permission: 'platform.email.view' },
   ].filter(action => can(action.permission))
   return <div className="stack platform-overview">
     <PageHeader title="Dashboard platform" subtitle="Ringkasan tenant dan pengelolaan layanan NetOps." actions={can('platform.tenant.create') && <Button as="a" href="/platform/tenants?onboard=1" variant="primary" icon={<Plus size={18} />}>Tambah tenant</Button>} />
@@ -38,8 +38,8 @@ export function PlatformDashboardPage() {
       {error ? <div className="card load-error" role="alert"><div><strong>Data tenant gagal dimuat</strong><p>Ringkasan belum dapat ditampilkan. Coba muat kembali.</p></div><Button onClick={() => void reload()} icon={<RefreshCw size={16} />}>Coba lagi</Button></div> : loading ? <div className="card" role="status">Memuat ringkasan tenant…</div> : customers.length === 0 ?
         <section className="card onboarding-empty">
           <div className="empty-symbol"><Building2 size={30} strokeWidth={1.5} aria-hidden /></div>
-          <div><span className="eyebrow">Mulai kelola layanan</span><h2>Tenant pertama Anda dimulai di sini</h2><p>Buat ruang kerja untuk organisasi pelanggan. Setiap tenant memiliki pengguna, jaringan, dan gudangnya sendiri.</p>
-            {can('platform.tenant.create') && <Link className="text-action" to="/platform/tenants?onboard=1">Buat tenant pertama <ArrowRight size={16} aria-hidden /></Link>}
+          <div><span className="eyebrow">Mulai kelola layanan</span><h2>Belum ada tenant pelanggan</h2><p>Tambahkan organisasi pelanggan untuk mulai mengelola jaringan, layanan, dan gudangnya.</p>
+            {can('platform.tenant.create') && <Link className="text-action" to="/platform/tenants?onboard=1">Tambah tenant <ArrowRight size={16} aria-hidden /></Link>}
           </div>
         </section> : <>
         <div className="overview-metrics" aria-label="Ringkasan tenant">

@@ -192,7 +192,7 @@ export function InventoryPage() {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
-        title="Inventory Jaringan"
+        title="Aset jaringan"
       />
       <Tabs tabs={visible} active={tab} onChange={setTab} />
       {tab === 'sites' && <SitesTab />}
@@ -713,8 +713,8 @@ function OltsTab() {
       >
         {draft && (
           <div className="stack">
-          {/* Identitas perangkat */}
-          <div className="row">
+          <h2 className="settings-section-title">Identitas perangkat</h2>
+          <div className="form-grid">
             <div style={{ flex: 1 }}>
               <SelectField
                 label="Site"
@@ -744,7 +744,7 @@ function OltsTab() {
               />
             </div>
           </div>
-          <div className="row">
+          <div className="form-grid">
             <div style={{ flex: 1 }}>
               <SelectField
                 label={<>Vendor <span className="muted">(hardware type)</span></>}
@@ -780,6 +780,7 @@ function OltsTab() {
             placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
           />
 
+          <h2 className="settings-section-title">Koneksi monitoring</h2>
           {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ EPON pun dipolling lewat SNMP, jadi tampil untuk semua vendor */}
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
             <Checkbox
@@ -788,7 +789,7 @@ function OltsTab() {
               onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
             />
             {draft.snmpEnabled && (
-              <div className="row">
+              <div className="form-grid">
                 <div style={{ flex: 1 }}>
                   <TextField
                     label={<>Community string <span className="muted">(RO/RW)</span></>}
@@ -851,7 +852,7 @@ function OltsTab() {
               </>
             )}
             {(isWebManaged(draft.vendor) || draft.webEnabled) && (
-              <div className="row">
+              <div className="form-grid">
                 <div style={{ width: 130 }}>
                   <SelectField
                     label="Protokol"

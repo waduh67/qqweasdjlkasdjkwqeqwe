@@ -50,6 +50,22 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Pelanggan & layanan',
+    items: [
+      { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: IconPlus },
+      // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
+      // (menyatu dengan rencana impor/ekspor pelanggan via CSV). Rute /import-pppoe tetap ada.
+      { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
+      // Keluhan yang dilaporkan pelanggan sendiri dari portal — tetangga Pelanggan, bukan
+      // Insiden: yang di sini lahir dari manusia, yang di Lapangan lahir dari alarm.
+      { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: IconChat },
+      { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: IconReceipt },
+       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
+       { to: '/hotspot', label: 'Hotspot & Voucher', permission: HOTSPOT_VIEW_PERMISSIONS, icon: IconWifi },
+
+    ],
+  },
+  {
     label: 'Jaringan',
     items: [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
@@ -67,22 +83,6 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: PackageCheck, end: true },
       ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: page.icon })),
-    ],
-  },
-  {
-    label: 'Pelanggan & layanan',
-    items: [
-      { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: IconPlus },
-      // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
-      // (menyatu dengan rencana impor/ekspor pelanggan via CSV). Rute /import-pppoe tetap ada.
-      { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
-      // Keluhan yang dilaporkan pelanggan sendiri dari portal — tetangga Pelanggan, bukan
-      // Insiden: yang di sini lahir dari manusia, yang di Lapangan lahir dari alarm.
-      { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: IconChat },
-      { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: IconReceipt },
-       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
-       { to: '/hotspot', label: 'Hotspot & Voucher', permission: HOTSPOT_VIEW_PERMISSIONS, icon: IconWifi },
-
     ],
   },
   {
@@ -227,7 +227,7 @@ export function Layout() {
         {/* Platform admin sedang menengok area tenant — switcher konteks di puncak sidebar. */}
         {isPlatformAdmin && <EnvSwitcher current="tenant" />}
 
-        <SidebarNav groups={GROUPS} can={can} storageKey="ftth.navGroups.tenant" />
+        <SidebarNav compact groups={GROUPS} can={can} storageKey="ftth.navGroups.tenant" />
       </aside>
 
       <div className="main">

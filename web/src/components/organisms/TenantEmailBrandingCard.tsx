@@ -162,7 +162,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <LockedSenderAddress address={saved.platformFromAddress} />
 
-      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div className="form-grid">
         <TextField
           label="Nama pengirim"
           value={form.fromName}
@@ -170,7 +170,6 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           placeholder={saved.inheritedFromName}
           disabled={!manage}
           maxLength={100}
-          style={{ minWidth: 220 }}
         />
         <TextField
           label="Alamat balasan"
@@ -181,7 +180,6 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           maxLength={254}
           validationState={addressOk ? 'none' : 'error'}
           validationMessage={addressOk ? undefined : 'Format alamat email tidak sah.'}
-          style={{ minWidth: 260 }}
         />
       </div>
 
@@ -216,8 +214,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <div className="hr" />
 
-      <SectionTitle>Subjek per pemicu</SectionTitle>
-      <EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} />
+      <details className="settings-disclosure"><summary>Subjek pesan</summary><EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} /></details>
 
       {manage && (
         <div className="spread" style={{ alignItems: 'center' }}>
@@ -230,14 +227,14 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <div className="hr" />
 
-      <SectionTitle>Pratinjau &amp; uji kirim</SectionTitle>
+      <details className="settings-disclosure"><summary>Pratinjau &amp; uji kirim</summary>
       <EmailPreviewPanel
         reloadKey={freshness}
         canSendTest={manage}
         defaultTo={saved.replyToAddress}
         loadPreview={previewTenantEmail}
         sendTest={sendTenantTestEmail}
-      />
+      /></details>
     </div>
   )
 }

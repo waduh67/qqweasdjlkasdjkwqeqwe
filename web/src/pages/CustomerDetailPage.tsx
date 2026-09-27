@@ -116,7 +116,7 @@ export function CustomerDetailBlade({
       open={customerId != null}
       title="Detail pelanggan"
       size="full"
-      className="blade-half"
+      className="blade-customer"
       onClose={onClose}
     >
       {customerId && <CustomerDetailPage customerId={customerId} onShowOnMap={onShowOnMap} />}
@@ -157,7 +157,7 @@ export function CustomerDetailPage({
    */
   onShowOnMap?: (focus: MapFocusState) => void
 }) {
-  // Detail pelanggan kini tampil sebagai flyout fullscreen (dibuka dari daftar), bukan rute
+  // Detail pelanggan tampil sebagai flyout (dibuka dari daftar), bukan rute
   // tersendiri — jadi `id` datang lewat prop, bukan `useParams`. Alias `id` menjaga sisa berkas
   // tetap ringkas; penutupan panel ditangani Blade pembungkus di CustomersPage.
   const id = customerId

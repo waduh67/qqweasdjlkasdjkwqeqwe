@@ -105,7 +105,7 @@ export function TenantsPage() {
   }, [tenants, query, statusFilter])
 
   const columns: Column<Tenant>[] = [
-    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <Text as="strong" weight="semibold" >{t.name}</Text> },
+    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <div><Text as="strong" weight="semibold">{t.name}</Text>{t.slug === 'platform' && <p className="muted entity-caption">Akun sistem · bukan tenant pelanggan</p>}</div> },
     { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => t.slug },
     {
       key: 'status',
@@ -145,7 +145,7 @@ export function TenantsPage() {
         actions={
           can('platform.tenant.create') && (
             <Button variant="primary" onClick={() => openDraft({ ...EMPTY })}>
-              <IconPlus size={15} /> Onboarding tenant
+              <IconPlus size={15} /> Tambah tenant
             </Button>
           )
         }
@@ -181,7 +181,7 @@ export function TenantsPage() {
 
       <Blade
         open={draft != null}
-        title="Onboarding tenant baru"
+        title="Tambah tenant"
         size="sm"
         dirty={dirty}
         onClose={closeDraft}

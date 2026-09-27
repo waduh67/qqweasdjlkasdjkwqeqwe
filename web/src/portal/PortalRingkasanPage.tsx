@@ -39,7 +39,7 @@ export function PortalRingkasanPage() {
           <div className="stack" style={{ gap: '0.15rem' }}>
             <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>Halo, {customerName}</Text>
             <Text as="p" className="page-sub" size={400} style={{ margin: 0 }}>
-              {sub ? `${sub.packageName} · ${speed}` : 'Belum ada paket aktif di akun ini'}
+              {sub ? `${sub.packageName} · ${speed}` : profile ? 'Belum ada paket aktif di akun ini' : 'Data langganan belum tersedia'}
             </Text>
           </div>
           {sub && <StatusBadge status={sub.status} />}
@@ -53,7 +53,7 @@ export function PortalRingkasanPage() {
       </section>
 
       <div className="stat-grid">
-        {arrears > 0 ? (
+        {!billing ? <Stat label="Tagihan" value="Belum tersedia" note="Data tagihan gagal dimuat" /> : arrears > 0 ? (
           <Stat
             label="Tunggakan"
             value={rupiah(arrears)}
@@ -82,7 +82,7 @@ export function PortalRingkasanPage() {
           value={session ? (online ? 'Online' : 'Offline') : '—'}
           valueColor={session ? (online ? 'var(--good-ink)' : 'var(--critical-ink)') : 'var(--muted)'}
           tone={session ? (online ? 'good' : 'crit') : undefined}
-          note={session ? (session.framedIp ?? session.username) : 'Belum ada sesi tercatat'}
+          note={session ? (session.framedIp ?? session.username) : connection ? 'Belum ada sesi tercatat' : 'Data koneksi gagal dimuat'}
         />
         <Stat label="Kecepatan paket" value={speed} note={sub ? sub.packageName : 'Belum ada langganan'} />
         {due ? (
@@ -108,7 +108,7 @@ export function PortalRingkasanPage() {
             <Text as="span" size={200}>Semua tagihan</Text>
           </Button>
         </div>
-        {!due ? (
+        {!billing ? <div className="load-error" role="alert"><p>Data tagihan gagal dimuat.</p><Button onClick={() => window.location.reload()}>Coba lagi</Button></div> : !due ? (
           <EmptyState
             title="Tak ada tagihan terbuka"
             hint="Semua tagihanmu sudah lunas — terima kasih."
@@ -143,7 +143,7 @@ export function PortalRingkasanPage() {
             <Text as="span" size={200}>Detail koneksi</Text>
           </Button>
         </div>
-        {!session ? (
+        {!connection ? <p role="alert">Data koneksi belum tersedia. Coba muat ulang halaman.</p> : !session ? (
           <EmptyState
             title="Belum ada sesi internet"
             hint="Sesi muncul setelah perangkatmu tersambung ke jaringan."

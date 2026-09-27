@@ -308,6 +308,8 @@ function ServerForm({
           placeholder="vpn.isp-anda.com"
           required
         />
+      </div>
+      <div className="form-grid form-grid-port">
         <TextField
           label="Port"
           type="number"
@@ -341,12 +343,12 @@ function ServerForm({
       </Text>
 
       {draft.id === null ? (
-        <TextField
+        <div className="form-field-medium"><TextField
           label="Subnet overlay (CIDR)"
           value={draft.tunnelCidr}
           onChange={(_, data) => setDraft({ ...draft, tunnelCidr: data.value })}
           placeholder="10.8.0.0/24"
-        />
+        /></div>
       ) : (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           CIDR tunnel tidak dapat diubah setelah server dibuat karena IP peer telah dialokasikan.

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Pagination } from '@/components/molecules/Pagination'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -83,9 +84,18 @@ export function CustomersPage() {
   const navigate = useNavigate()
   const [customers, setCustomers] = useState<CustomerView[]>([])
   // Detail pelanggan kini tampil sebagai flyout fullscreen (bukan rute) — id yang dipilih ada di sini.
-  const [detailId, setDetailId] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<CustomerStatus | ''>('')
+  const [params, setParams] = useSearchParams()
+  const detailId = params.get('customer')
+  const query = params.get('q') ?? ''
+  const statusFilter = (params.get('status') ?? '') as CustomerStatus | ''
+  const pageIndex = Math.max(0, Number.parseInt(params.get('page') ?? '0', 10) || 0)
+  const [total, setTotal] = useState(0)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const requestVersion = useRef(0)
+  const setDetailId = (id: string | null) => setParams(previous => { const next = new URLSearchParams(previous); if (id) next.set('customer', id); else next.delete('customer'); return next })
+  const setFilter = (key: string, value: string) => setParams(previous => { const next = new URLSearchParams(previous); if (value) next.set(key, value); else next.delete(key); next.delete('page'); return next }, { replace: true })
+  const setQuery = (value: string) => setFilter('q', value)
+  const setStatusFilter = (value: CustomerStatus | '') => setFilter('status', value)
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<CustomerDraft | null>(null)
   const [initialDraft, setInitialDraft] = useState<CustomerDraft | null>(null)
@@ -102,9 +112,8 @@ export function CustomersPage() {
   const openCustomerId = (location.state as { openCustomerId?: string } | null)?.openCustomerId
   useEffect(() => {
     if (!openCustomerId) return
-    setDetailId(openCustomerId)
-    navigate(location.pathname, { replace: true, state: null })
-  }, [openCustomerId, location.pathname, navigate])
+    setParams(previous => { const next = new URLSearchParams(previous); next.set('customer', openCustomerId); return next }, { replace: true, state: null })
+  }, [openCustomerId, setParams])
 
   // Buka blade sekaligus simpan snapshot awal untuk deteksi "kotor" (konfirmasi tutup).
   const openDraft = (d: CustomerDraft) => {
@@ -148,17 +157,22 @@ export function CustomersPage() {
   }
 
   const reload = useCallback(async () => {
+    const version = ++requestVersion.current
+    setLoading(true)
+    setLoadError(null)
     try {
       const page = await api.get<PageResponse<CustomerView>>(
-        `/api/customers?size=100&query=${encodeURIComponent(query)}`,
+        `/api/customers?size=50&page=${pageIndex}&query=${encodeURIComponent(query)}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ''}`,
       )
+      if (version !== requestVersion.current) return
       setCustomers(page.content)
+      setTotal(page.totalElements)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
+      if (version === requestVersion.current) setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
     } finally {
-      setLoading(false)
+      if (version === requestVersion.current) setLoading(false)
     }
-  }, [query, toast])
+  }, [query, statusFilter, pageIndex])
 
   useEffect(() => {
     void reload()
@@ -389,14 +403,14 @@ export function CustomersPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, kode, alamat, atau telepon…" />
-        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as CustomerStatus | '')}>
+        <SelectField aria-label="Filter status pelanggan" value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as CustomerStatus | '')}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </SelectField>
       </Toolbar>
 
-      <DataTable
+      {loadError ? <div className="card load-error" role="alert"><p>{loadError}</p><Button onClick={() => void reload()}>Coba lagi</Button></div> : <DataTable
         columns={columns}
         rows={rows}
         rowKey={(c) => c.id}
@@ -411,7 +425,8 @@ export function CustomersPage() {
             icon={<IconCustomers size={32} />}
           />
         }
-      />
+      />}
+      {!loadError && <Pagination page={pageIndex} size={50} total={total} busy={loading} onChange={index => setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(index)); return next })} />}
 
       <Blade
         open={draft != null}
@@ -445,11 +460,11 @@ export function CustomersPage() {
               }}
               autoFocus
             />
-            <div className="row">
-              <div style={{ flex: 1 }}>
+            <div className="form-grid">
+              <div>
                 <TextField label="Telepon" value={draft.phone} onChange={(_, data) => setDraft({ ...draft, phone: data.value })} placeholder="08123456789" />
               </div>
-              <div style={{ flex: 1 }}>
+              <div>
                 <TextField label="NIK / No. identitas" value={draft.idCardNumber} onChange={(_, data) => setDraft({ ...draft, idCardNumber: data.value })} placeholder="opsional" />
               </div>
             </div>

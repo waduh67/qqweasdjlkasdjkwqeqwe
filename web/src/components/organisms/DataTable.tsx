@@ -315,7 +315,7 @@ export function DataTable<T>({
 
   return (
     <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card')}>
-      {!loading && (
+      {!loading && sorted.length > 0 && (
         <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
             className={mergeClasses('data-table-grid', resourcePresentation && 'resource-data-table-grid', styles.grid)}

@@ -1,5 +1,6 @@
+import { PageHeader } from '@/components/molecules'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Text } from '@fluentui/react-components'
+import { Text, Tab, TabList } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   getNotificationSettings,
@@ -53,6 +54,7 @@ export function NotificationSettingsPage() {
 
   const [form, setForm] = useState<NotificationSettingsView | null>(null)
   const [loading, setLoading] = useState(true)
+  const [section, setSection] = useState('channels')
   const [saving, setSaving] = useState(false)
   // Input token write-only, terpisah dari view: kosong = pertahankan yang tersimpan.
   const [httpToken, setHttpToken] = useState('')
@@ -152,20 +154,11 @@ export function NotificationSettingsPage() {
   }
 
   return (
-    <div className="stack">
-      <div className="spread">
-        <div>
-          <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Pengaturan Notifikasi</Text>
-        </div>
-        {manage && (
-          <Button variant="primary" onClick={() => void save()} disabled={saving || testingFonnte}>
-            {saving ? 'Menyimpan…' : 'Simpan'}
-          </Button>
-        )}
-      </div>
-
+    <div className="stack settings-page">
+      <PageHeader title="Notifikasi" subtitle="Atur kanal pengiriman dan pesan otomatis untuk pelanggan." actions={manage && section !== 'email' && section !== 'templates' && <Button variant="primary" onClick={() => void save()} disabled={saving || testingFonnte}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>} />
+      <TabList selectedValue={section} onTabSelect={(_, data) => setSection(String(data.value))} aria-label="Bagian notifikasi"><Tab value="channels">Kanal pengiriman</Tab><Tab value="email">Email</Tab><Tab value="templates">Template WhatsApp</Tab><Tab value="triggers">Pesan otomatis</Tab></TabList>
       {/* ---- Gateway WhatsApp ---- */}
-      <div className="card stack">
+      <div hidden={section !== 'channels'} className="card stack settings-panel">
         <SectionTitle>Gateway WhatsApp</SectionTitle>
 
         <Checkbox
@@ -341,7 +334,7 @@ export function NotificationSettingsPage() {
       </div>
 
       {/* ---- Kanal email ---- */}
-      <div className="card stack">
+      <div hidden={section !== 'channels'} className="card stack settings-panel">
         <SectionTitle>Kanal email</SectionTitle>
 
         <Checkbox
@@ -355,13 +348,13 @@ export function NotificationSettingsPage() {
       </div>
 
       {/* ---- Identitas & tampilan email (timpaan atas bawaan platform) ---- */}
-      <TenantEmailBrandingCard manage={manage} />
+      <div hidden={section !== 'email'} className="settings-panel"><TenantEmailBrandingCard manage={manage} /></div>
 
       {/* ---- Template pesan WhatsApp ---- */}
-      <WhatsAppTemplateCard templateReady={form.templateReady} />
+      <div hidden={section !== 'templates'} className="settings-panel"><WhatsAppTemplateCard templateReady={form.templateReady} /></div>
 
       {/* ---- Pemicu otomatis ---- */}
-      <div className="card stack">
+      <div hidden={section !== 'triggers'} className="card stack settings-panel">
         <SectionTitle>Pemicu otomatis</SectionTitle>
         {TRIGGERS.map((t) => (
           <Checkbox

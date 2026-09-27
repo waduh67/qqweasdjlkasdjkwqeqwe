@@ -14,23 +14,24 @@ export type NavItem = {
 }
 export type NavGroup = { label: string | null; items: NavItem[] }
 
-function loadClosed(key: string): Set<string> {
+function loadClosed(key: string, defaults: string[]): Set<string> {
   try {
-    const saved: unknown = JSON.parse(localStorage.getItem(key) ?? '[]')
+    const saved: unknown = JSON.parse(localStorage.getItem(key) ?? JSON.stringify(defaults))
     return new Set(Array.isArray(saved) ? saved.filter((label): label is string => typeof label === 'string') : [])
   } catch { return new Set() }
 }
 
 /** Sections are discoverable on first visit; opening a deep link reveals its section. */
-export function SidebarNav({ groups, can, storageKey }: {
+export function SidebarNav({ groups, can, storageKey, compact = false }: {
   groups: NavGroup[]
   can: (permission: string) => boolean
   storageKey: string
+  compact?: boolean
 }) {
   const key = `${storageKey}.v3.closed`
   const { pathname } = useLocation()
   const id = useId()
-  const [closed, setClosed] = useState(() => loadClosed(key))
+  const [closed, setClosed] = useState(() => loadClosed(key, compact ? groups.filter(group => group.label).slice(1).map(group => group.label!) : []))
   const [query, setQuery] = useState('')
   const matchesPath = (item: NavItem) => item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
   const activeGroup = groups.find(group => group.items.some(matchesPath))?.label
@@ -38,11 +39,11 @@ export function SidebarNav({ groups, can, storageKey }: {
   useEffect(() => {
     setQuery('')
     if (activeGroup) setClosed(previous => {
-      const next = new Set(previous)
+      const next = compact ? new Set(groups.map(group => group.label).filter((label): label is string => !!label)) : new Set(previous)
       next.delete(activeGroup)
       return next
     })
-  }, [pathname, activeGroup])
+  }, [pathname, activeGroup, compact, groups])
 
   const toggle = (label: string) => setClosed(previous => {
     const next = new Set(previous)

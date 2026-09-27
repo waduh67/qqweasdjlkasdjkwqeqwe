@@ -214,6 +214,7 @@ export function InvoicesPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmGenerate, setConfirmGenerate] = useState(false)
   const [payTarget, setPayTarget] = useState<InvoiceView | null>(null)
@@ -240,11 +241,13 @@ export function InvoicesPage() {
   const canViewTax = can('billing.tax.view')
 
   const reload = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
     try {
       const list = await listInvoices()
       setInvoices(list)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat tagihan')
+      setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat tagihan')
     } finally {
       setLoading(false)
     }
@@ -602,7 +605,7 @@ export function InvoicesPage() {
       <PageHeader title="Tagihan" subtitle="Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan." />
       <CommandBar primary={primary} />
 
-      <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
+      {!loadError && !loading && <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
         <SummaryCard
           label="Tunggakan"
           value={fmtRupiah(summary.outstandingAmount)}
@@ -622,18 +625,18 @@ export function InvoicesPage() {
             value={fmtRupiah(Number(obligation.regulatoryObligation))}
           />
         )}
-      </div>
+      </div>}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nomor tagihan, nama, atau kode pelanggan…" />
-        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as InvoiceStatus | '')}>
+        <SelectField aria-label="Filter status tagihan" value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as InvoiceStatus | '')}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </SelectField>
       </Toolbar>
 
-      <DataTable
+      {loadError ? <div className="card load-error" role="alert"><p>{loadError}</p><Button onClick={() => void reload()}>Coba lagi</Button></div> : <DataTable
         columns={columns}
         rows={rows}
         rowKey={(i) => i.id}
@@ -651,7 +654,7 @@ export function InvoicesPage() {
             icon={<IconInbox size={32} />}
           />
         }
-      />
+      />}
 
       <Blade
         open={detail != null}

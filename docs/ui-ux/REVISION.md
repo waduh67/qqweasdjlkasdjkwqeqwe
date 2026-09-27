@@ -23,3 +23,14 @@ Not yet accepted or deployed. Remaining: tenant page families, warehouse queues/
 ## Verification so far
 
 First shared/navigation iteration: 608 tests in 117 frontend suites passed; 9 focused navigation, shell and tenant checks passed. A fresh build after the technician layout changes passed. The full-suite run overlapped those last layout edits, so repeat affected checks before release. Current screenshot review caught and corrected mobile header flex height, drawer footer width and table alignment; recapture is required. Private preview on 127.0.0.1:5174 proxies authenticated production reads and rejects non-auth writes; no business data is submitted during visual capture. Use isolated local backend for transaction regression.
+
+## Checkpoint 2 — page workflows
+
+- Customer list now queries all pages and server-side status filters; query/page/customer selection survive refresh in the URL. Stale responses cannot replace a newer search.
+- Customer account workspace is wider; network forms use responsive field grids. Tenant navigation opens the current module and puts customer work first.
+- Technician phone cards prioritize schedule and task entry; work completion follows material/evidence sections.
+- Warehouse overview has compact action queues and distinct workflow shortcuts; empty queues no longer repeat zero counts.
+- Notification settings separate channels, email, WhatsApp templates and triggers. Email settings retain edits between sections. Mobile command bars expose secondary actions in a menu.
+- Portal and platform dashboards distinguish failed billing/tenant data from paid/empty accounts. Shared creation panels with footers use modal focus handling.
+
+Verification: checkpoint build passed; 28 focused checks across six suites passed, including new failed/empty/partial tenant counts and unavailable portal billing. A preceding broad frontend run passed 608/117; final run still required after the latest edits. Exploratory browser capture covered 27 operator routes at desktop/mobile, then both tests failed on the test locator `Nama` not matching a required label with `*`. The form screenshot itself was intact. The locator is corrected; preserve that failed attempt in `.omo/runtime/ui-ux/exploratory-layout-01`. Some source/build changes overlapped exploration, so those images are design evidence only, not a final regression pass. Freeze product source before the next browser run.
