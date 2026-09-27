@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLot, getPosition, getSegment, getStockAsset, listSegments, stockHistory, type StockAsset, type StockCost, type StockOrigin, type StockPosition } from '@/api/warehouse/stock'
@@ -42,7 +43,7 @@ function AssetSummary({ asset }: { asset: StockAsset }) {
     <Link to={stockLink({ tab: 'positions', serial: asset.serial })}>Lihat posisi stok perangkat</Link>
     {asset.installedOnuId && <p>Terikat pada perangkat ONU · <span className="muted">{asset.installedOnuId}</span></p>}
     <WarehouseOrigin origin={asset.origin} /><WarehouseCost cost={asset.cost} unit={asset.quantity?.baseUnit ?? null} />
-    <details><summary>Referensi audit perangkat</summary><p style={{ overflowWrap: 'anywhere' }}>{asset.assetId}</p></details>
+    <Disclosure title={<>Referensi audit perangkat</>}><p style={{ overflowWrap: 'anywhere' }}>{asset.assetId}</p></Disclosure>
   </section>
 }
 
@@ -58,7 +59,7 @@ function PositionSummary({ row }: { row: StockPosition }) {
     <p>Tercatat: <WarehouseQuantity value={row.physical.quantityBase} unit={row.physical.baseUnit} /> · Tersedia: <WarehouseQuantity value={row.available.quantityBase} unit={row.available.baseUnit} /></p>
     <p>Reservasi belum dipilih: <WarehouseQuantity value={row.reservedUnpicked.quantityBase} unit={row.reservedUnpicked.baseUnit} /> · Disiapkan: <WarehouseQuantity value={row.reservedPicked.quantityBase} unit={row.reservedPicked.baseUnit} /></p>
     {row.lotId && <Link to={stockLink({ lot: row.lotId })}>Telusuri lot / reel asal</Link>}{row.serial && <Link to={stockLink({ tab: 'assets', serial: row.serial })}>Telusuri perangkat serial</Link>}
-    <details><summary>Referensi audit posisi</summary><p style={{ overflowWrap: 'anywhere' }}>Posisi: {row.id}<br />Identitas stok: {row.stockIdentityId}</p></details>
+    <Disclosure title={<>Referensi audit posisi</>}><p style={{ overflowWrap: 'anywhere' }}>Posisi: {row.id}<br />Identitas stok: {row.stockIdentityId}</p></Disclosure>
   </section>
 }
 
@@ -112,8 +113,8 @@ export function WarehouseStockTimeline({ resource, id }: { resource: 'assets' | 
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Belum ada jejak yang dapat ditampilkan" />} columns={[
         { key: 'time', header: 'Waktu', cell: row => <WarehouseTime value={row.recordedAt} /> },
         { key: 'event', header: 'Peristiwa', cell: stockEventLabel },
-        { key: 'quantity', header: 'Jumlah', cell: row => row.kind === 'RESERVATION' ? <span>Belum dipilih: <WarehouseQuantity value={row.reservedUnpickedBase} unit={row.baseUnit} /><br />Disiapkan: <WarehouseQuantity value={row.reservedPickedBase} unit={row.baseUnit} /></span> : <WarehouseQuantity value={row.quantity.quantityBase} unit={row.quantity.baseUnit} /> },
-        { key: 'details', header: 'Rincian', cell: row => row.kind === 'MOVEMENT_LEG' ? <span>{row.documentCode} · Revisi {row.documentRevision}<br /><WarehouseStatus status={row.status} />{row.currentLocationName && <><br />Lokasi (nama saat ini): {row.currentLocationName}</>}</span>
+        { key: 'quantity', header: 'Jumlah', cell: row => row.kind === 'RESERVATION' ? <span>Belum dipilih: <WarehouseQuantity value={row.reservedUnpickedBase} unit={row.baseUnit} />{' · '}Disiapkan: <WarehouseQuantity value={row.reservedPickedBase} unit={row.baseUnit} /></span> : <WarehouseQuantity value={row.quantity.quantityBase} unit={row.quantity.baseUnit} /> },
+        { key: 'details', header: 'Rincian', cell: row => row.kind === 'MOVEMENT_LEG' ? <span>{row.documentCode} · Revisi {row.documentRevision}{' · '}<WarehouseStatus status={row.status} />{row.currentLocationName && <>{' · '}Lokasi (nama saat ini): {row.currentLocationName}</>}</span>
           : row.kind === 'INSPECTION' ? <WarehouseStatus status={row.disposition} /> : row.kind === 'RESERVATION' ? <span>{row.state} · Revisi {row.documentRevision}</span> : <span>Revisi pemakaian {row.useRevision}{row.compensationId && ' · Kompensasi tercatat'}</span> },
       ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>

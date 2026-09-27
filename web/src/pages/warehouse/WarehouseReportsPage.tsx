@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { exportReport, historyReport, listReport, REPORT_KINDS, reportParams, type ReportFilter, type ReportKind } from '@/api/warehouse/reports'
@@ -76,7 +77,7 @@ function ReportPeriod({ kind, filter, apply }: { kind: ReportKind; filter: Repor
   const { can } = useCan()
   const loader = useCallback(() => kind === 'work-order-costs' && filter.workOrderId && can('workorder.view') ? getMaterialWorkOrder(filter.workOrderId) : Promise.resolve(null), [kind, filter.workOrderId, can])
   const result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Rentang tanggal{kind === 'work-order-costs' ? ' dan work order' : ''}</summary><WarehouseState {...result}>{workOrder => <PeriodForm kind={kind} filter={filter} initialWorkOrder={workOrder} apply={apply} />}</WarehouseState></details>
+  return <Disclosure className="card" title={<>Rentang tanggal{kind === 'work-order-costs' ? ' dan work order' : ''}</>}><WarehouseState {...result}>{workOrder => <PeriodForm kind={kind} filter={filter} initialWorkOrder={workOrder} apply={apply} />}</WarehouseState></Disclosure>
 }
 function PeriodForm({ kind, filter, initialWorkOrder, apply }: { kind: ReportKind; filter: ReportFilter; initialWorkOrder: MaterialWorkOrder | null; apply: (values: Record<string, string>) => void }) {
   const { can } = useCan(), [from, setFrom] = useState(filter.from ?? ''), [until, setUntil] = useState(filter.until ?? '')

@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { Link, useSearchParams } from 'react-router-dom'
 import { archiveLocation, archiveSku, archiveSupplier, listLocations, listSkus, listSuppliers } from '@/api/warehouse/masters'
 import { useAuth } from '@/auth/useAuth'
@@ -24,8 +25,8 @@ export function WarehouseCatalogPage() {
   const visible = tabs.filter(tab => can(tab.permission))
   const selected = visible.find(tab => tab.key === params.get('tab'))?.key ?? visible[0]?.key
   return <div className="stack"><PageHeader title="Katalog & Lokasi" subtitle="Siapkan barang, lokasi penyimpanan, pemasok dan akses petugas untuk operasi gudang." />
-    <details className="card" open={!user?.platformAdmin && user?.areaIds.length === 0}>
-      <summary>Urutan setup gudang</summary>
+    <Disclosure className="card" open={!user?.platformAdmin && user?.areaIds.length === 0} title={<>Urutan setup gudang</>}>
+      
       <ol>
         <li>Siapkan area dan berikan area itu secara eksplisit kepada administrator serta petugas gudang.
           {can('iam.area.view') && <> <Link to="/areas">Kelola area</Link>.</>}{can('iam.user.view') && <> <Link to="/users">Atur area pengguna</Link>.</>}</li>
@@ -36,7 +37,7 @@ export function WarehouseCatalogPage() {
       </ol>
       {!user?.platformAdmin && user?.areaIds.length === 0 && <p className="error">Akun Anda belum memiliki area gudang. Area kosong berarti tidak memiliki akses gudang.</p>}
       <p className="muted">Membuat lokasi atau barang tidak menambah stok. Perubahan role dan area dapat memerlukan login ulang.</p>
-    </details>
+    </Disclosure>
     <Tabs tabs={visible.map(({ key, label }) => ({ key, label }))} active={selected ?? 'locations'} onChange={tab => setParams({ tab })} />
     {selected === 'locations' && <WarehouseMasterPanel title="Lokasi" load={listLocations} archive={archiveLocation} canManage={can('inventory.location.manage')}
       emptyHint="Hanya lokasi dalam cakupan gudang dan area Anda yang ditampilkan. Gunakan Tambah lokasi untuk memulai."

@@ -87,7 +87,7 @@ export function WorkOrderFiberWork({ workOrderId }: { workOrderId: string }) {
                 {row.b.colorHex && <span className="splice-dot" style={{ background: row.b.colorHex }} />}
                 {row.b.label}
               </span>
-              {row.note && <div className="muted">{row.note}</div>}</TableCell>
+              {row.note && <span className="muted">{row.note}</span>}</TableCell>
               <TableCell >{row.methodLabel}</TableCell>
               {/* Kosong berarti BELUM DIUKUR, bukan nol — jangan ditulis "0 dB". */}
               <TableCell className="tnum">{row.lossDb == null ? '—' : `${row.lossDb.toFixed(2)} dB`}</TableCell>

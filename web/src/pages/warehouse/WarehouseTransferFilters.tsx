@@ -27,7 +27,7 @@ export function WarehouseTransferFilters({ onApply }: { onApply: (filter: Transf
       setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa filter transfer.') }
   }
-  return <details className="card"><summary>Filter transfer</summary><form className="stack" onSubmit={apply}>
+  return <section className="resource-filters" aria-label="Filter"><form className="stack" onSubmit={apply}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
       <TextField label="Cari kode transfer" value={search} maxLength={200} onChange={(_, data) => setSearch(data.value)} />
       <TextField label="Serial lengkap transfer" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
@@ -38,5 +38,5 @@ export function WarehouseTransferFilters({ onApply }: { onApply: (filter: Transf
       <TextField label="Transfer sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     </div><p className="muted">Lokasi mencakup asal, transit, tujuan, dan tujuan penanganan selisih. SKU dan serial harus cocok pada barang yang sama.</p>
     {error && <p role="alert" className="error">{error}</p>}<Button type="submit" variant="primary">Terapkan filter transfer</Button>
-  </form></details>
+  </form></section>
 }

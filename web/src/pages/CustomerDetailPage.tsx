@@ -2566,8 +2566,8 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
             </span>
           )}
           {Number(inv.taxAmount) > 0 && (
-            <div className="muted">
-              termasuk PPN {fmtRupiah(Number(inv.taxAmount))}</div>
+            <span className="muted">
+              termasuk PPN {fmtRupiah(Number(inv.taxAmount))}</span>
           )}</TableCell>
           <TableCell ><Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
           {/* Halaman bayar publik melayani KEDUA mode gateway (VA/QRIS Pivot maupun

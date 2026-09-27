@@ -195,14 +195,14 @@ export function VpnServersPage() {
       header: 'Titik dial',
       sortValue: (s) => s.host,
       cell: (s) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
+        <span className="stack" style={{ gap: '0.15rem' }}>
           <span>
             {s.host}:{s.port}
           </span>
           {/* Protokol saja tak berarti apa-apa bagi operator; yang dia perlu tahu adalah
               perangkat mana yang bisa masuk lewat hub ini. */}
           <Text as="span" className="muted" size={200}>{s.protocol === 'TCP' ? 'TCP · RouterOS v6 & v7' : 'UDP · RouterOS v7 saja'}</Text>
-        </div>
+        </span>
       ),
     },
     {
@@ -210,10 +210,10 @@ export function VpnServersPage() {
       header: 'Subnet overlay',
       sortValue: (s) => s.tunnelCidr,
       cell: (s) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
+        <span className="stack" style={{ gap: '0.15rem' }}>
           <span>{s.tunnelCidr}</span>
           <Text as="span" className="muted" size={200}>server {s.serverAddress}</Text>
-        </div>
+        </span>
       ),
     },
     { key: 'peers', header: 'Akun', align: 'right', sortValue: (s) => s.peerCount, cell: (s) => s.peerCount },

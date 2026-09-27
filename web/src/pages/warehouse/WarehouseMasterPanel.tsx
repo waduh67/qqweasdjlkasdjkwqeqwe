@@ -35,7 +35,8 @@ export function WarehouseMasterPanel<T extends Master>({ title, load, archive, c
     </div>
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} onRowClick={row => setEditing(row)} empty={<EmptyState title={`Tidak ada ${title.toLowerCase()} yang cocok`} hint={canManage ? emptyHint : 'Tidak ada data sesuai pencarian dan cakupan akses Anda.'} />} columns={[
-        { key: 'name', header: 'Nama', cell: row => <span>{row.name ?? row.code}<br /><span className="muted">{row.code}</span></span> },
+        { key: 'name', header: 'Nama', cell: row => row.name ?? row.code, sortValue: row => row.name ?? row.code },
+        { key: 'code', header: 'Kode', cell: row => row.code, sortValue: row => row.code },
         ...columns,
         { key: 'status', header: 'Status', cell: row => <WarehouseStatus status={row.state} /> },
         { key: 'revision', header: 'Revisi', cell: row => row.revision },

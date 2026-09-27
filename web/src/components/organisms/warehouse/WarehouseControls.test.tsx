@@ -24,7 +24,7 @@ it('retains the captured command after a lost reply and blocks dismiss and doubl
   const props = { title: 'Simpan barang', summary: <p>Kabel</p>, onDone, onClose }
   const rendered = render(<WarehouseCommandDialog {...props} command={first} />)
   fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
-  await screen.findByText('Hasil transaksi belum terkonfirmasi. Coba lagi dengan transaksi yang sama sebelum mengubah isinya.')
+  await screen.findByText('Penyimpanan belum terkonfirmasi. Coba lagi untuk memastikan hasilnya.')
   fireEvent.click(screen.getByRole('button', { name: 'Tutup' }))
   expect(onClose).not.toHaveBeenCalled()
   const another = { ...first, key: 'another', execute: vi.fn() }

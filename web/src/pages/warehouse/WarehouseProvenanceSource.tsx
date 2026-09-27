@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import type { MigrationCase } from '@/api/warehouse/provenanceModels'
 import { WarehouseQuantity } from '@/components/organisms/warehouse/WarehouseQuantity'
 import { baselinePreview, migrationSourceLabels, claimLabels } from './provenancePresentation'
@@ -15,7 +16,7 @@ export function MigrationSourceDetails({ source }: { source: MigrationCase }) {
     {source.source.legacyQuantity !== null && <p>Jumlah pada catatan lama: <strong>{source.source.legacyQuantity}</strong> · {source.source.baseUnit ? 'Satuan tercatat: ' + source.source.baseUnit : 'Satuan belum terbukti'}</p>}
     {source.customer && <p>Pelanggan: {source.customer.name || 'Nama belum tercatat'}</p>}
     {source.workOrder && <p>Pekerjaan: {source.workOrder.code || source.workOrder.name || 'Catatan pekerjaan lama'}</p>}
-    <details><summary>Referensi audit kasus</summary><p>Kasus: {source.id}</p><p>Sumber: {source.sourceId}</p><p>Sidik bukti: {source.sourceHash}</p></details>
+    <Disclosure title={<>Referensi audit kasus</>}><p>Kasus: {source.id}</p><p>Sumber: {source.sourceId}</p><p>Sidik bukti: {source.sourceHash}</p></Disclosure>
     {!!source.claims.length && <ul className="stack">{source.claims.map((claim, index) => <li key={index}>
       <span>{claim.identityType === 'SERIAL' ? 'Serial' : 'MAC'}: <code style={{ whiteSpace: 'pre-wrap' }}>{claim.rawValue || '(kosong)'}</code> · {claim.state ? claimLabels[claim.state] : 'Format identitas perlu diperiksa'}</span>
       {claim.canonicalValue && <p className="muted">Identitas pembanding: {claim.canonicalValue} · {claim.candidateCount} catatan tersimpan</p>}

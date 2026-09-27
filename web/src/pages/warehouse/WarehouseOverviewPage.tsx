@@ -44,7 +44,7 @@ function Shortages() {
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada barang di bawah minimum dalam cakupan ini" hint="Barang tanpa minimum tidak termasuk perbandingan ini." />} columns={[
         { key: 'name', header: 'Barang', cell: row => <Link to={stockLink({ tab: 'positions', skuId: row.skuId })}>{row.name} · {row.skuCode}</Link> },
         { key: 'available', header: 'Tersedia / minimum', cell: row => <><WarehouseQuantity value={row.availableBase} unit={row.baseUnit} /> / <WarehouseQuantity value={row.minimumBase} unit={row.baseUnit} /></> },
-        { key: 'shortage', header: 'Kurang dari minimum', cell: row => <><WarehouseQuantity value={row.shortageBase} unit={row.baseUnit} />{can('inventory.request.view') && <p><Link to={replenishmentLink({ view: 'rules', skuId: row.skuId })}>Aturan pengisian barang</Link></p>}</> },
+        { key: 'shortage', header: 'Kurang dari minimum', cell: row => <><WarehouseQuantity value={row.shortageBase} unit={row.baseUnit} />{can('inventory.request.view') && <span>{' · '}<Link to={replenishmentLink({ view: 'rules', skuId: row.skuId })}>Aturan pengisian barang</Link></span>}</> },
       ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
       {can('inventory.receipt.view') && <Link to="/warehouse/receipts">Buka penerimaan barang</Link>}
     </>}</WarehouseState>
@@ -55,7 +55,7 @@ function Replenishments() {
   return <section className="card stack warehouse-queue" aria-label="Pengisian tertunda"><h2>Kebutuhan pengisian tercatat</h2><Button variant="subtle" size="small" aria-label="Perbarui kebutuhan pengisian" title="Perbarui kebutuhan pengisian" icon={<RefreshCw size={15} />} onClick={result.reload} />
     <WarehouseState {...result}>{data => <>{data.totalElements > 0 && <strong>{data.totalElements} kebutuhan belum selesai</strong>}
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.request.id} empty={<EmptyState title="Tidak ada kebutuhan pengisian tertunda" hint="Atur minimum gudang dan hitung ulang saran dari posisi terbaru." />} columns={[
-        { key: 'name', header: 'Barang / tujuan', cell: row => <><Link to={replenishmentLink({ requestId: row.request.id })}>{row.sku.name}</Link><br />{row.location.name ?? row.location.code}</> },
+        { key: 'name', header: 'Barang / tujuan', cell: row => <><Link to={replenishmentLink({ requestId: row.request.id })}>{row.sku.name}</Link>{' · '}{row.location.name ?? row.location.code}</> },
         { key: 'quantity', header: 'Jumlah tercatat', cell: row => <WarehouseQuantity value={row.request.quantityBase} unit={row.request.baseUnit} /> },
         { key: 'accepted', header: 'Konfirmasi', cell: row => row.request.acceptedAt ? 'Sudah dikonfirmasi; menunggu pemenuhan' : 'Perlu ditinjau terhadap stok terbaru' },
       ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />

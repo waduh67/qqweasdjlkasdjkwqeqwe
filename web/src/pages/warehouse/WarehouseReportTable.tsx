@@ -30,21 +30,21 @@ export function WarehouseReportTable({ data, onPrint }: { data: WarehouseReport;
     { key: 'state', header: 'Verifikasi', cell: () => 'Asal, satuan, atau kepemilikan belum terverifikasi; tidak tersedia untuk dikeluarkan.' },
   ]} />
   if (data.kind === 'movements' || data.kind === 'stock-card') return <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={empty} columns={[
-    { key: 'time', header: 'Tanggal / dokumen', cell: row => <><WarehouseTime value={row.recordedAt} /><br />{document(row)}</> },
-    { key: 'name', header: 'Barang / serial', cell: row => <>{item(row)}<br />{row.serial}</> },
-    { key: 'location', header: 'Lokasi / keadaan', cell: row => <>{row.locationName ?? 'Nama lokasi tidak tersedia'}<br /><WarehouseStatus status={row.status} /> · <WarehouseStatus status={row.legalOwner} /></> },
-    { key: 'quantity', header: 'Pergerakan', cell: row => <>{row.direction === 'IN' ? 'Masuk' : 'Keluar'} · <WarehouseQuantity value={row.quantity.quantityBase} unit={row.quantity.baseUnit} />{row.compensatesPostingId && <p>Pembalikan: {row.compensatesPostingId}</p>}</> },
+    { key: 'time', header: 'Tanggal / dokumen', cell: row => <><WarehouseTime value={row.recordedAt} />{' · '}{document(row)}</> },
+    { key: 'name', header: 'Barang / serial', cell: row => <>{item(row)}{' · '}{row.serial}</> },
+    { key: 'location', header: 'Lokasi / keadaan', cell: row => <>{row.locationName ?? 'Nama lokasi tidak tersedia'}{' · '}<WarehouseStatus status={row.status} /> · <WarehouseStatus status={row.legalOwner} /></> },
+    { key: 'quantity', header: 'Pergerakan', cell: row => <>{row.direction === 'IN' ? 'Masuk' : 'Keluar'} · <WarehouseQuantity value={row.quantity.quantityBase} unit={row.quantity.baseUnit} />{row.compensatesPostingId && <span>{' · '}Pembalikan: {row.compensatesPostingId}</span>}</> },
     ...(data.kind === 'stock-card' ? [{ key: 'balance', header: 'Awal → akhir', cell: (row: ReportMovement) => 'openingQuantityBase' in row && 'closingQuantityBase' in row ? <><WarehouseQuantity value={String(row.openingQuantityBase)} unit={row.quantity.baseUnit} /> → <WarehouseQuantity value={String(row.closingQuantityBase)} unit={row.quantity.baseUnit} /></> : null }] : []),
   ]} />
   if (data.kind === 'custody-aging' || data.kind === 'transit-backlog') return <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={empty} columns={[
-    { key: 'name', header: 'Barang / serial', cell: row => <>{item(row)}<br />{row.serial}</> },
-    { key: 'location', header: 'Lokasi / pemegang', cell: row => <>{row.locationName ?? 'Nama lokasi tidak tersedia'}<br />{custodianLabels[row.custodianKind]}</> },
+    { key: 'name', header: 'Barang / serial', cell: row => <>{item(row)}{' · '}{row.serial}</> },
+    { key: 'location', header: 'Lokasi / pemegang', cell: row => <>{row.locationName ?? 'Nama lokasi tidak tersedia'}{' · '}{custodianLabels[row.custodianKind]}</> },
     { key: 'quantity', header: 'Jumlah', cell: row => <WarehouseQuantity value={row.quantity.quantityBase} unit={row.quantity.baseUnit} /> },
-    { key: 'age', header: 'Sejak / usia', cell: row => row.enteredAt && row.ageSeconds !== null ? <><WarehouseTime value={row.enteredAt} /><br />{(BigInt(row.ageSeconds) / 86400n).toString()} hari</> : 'Waktu masuk belum diketahui' },
+    { key: 'age', header: 'Sejak / usia', cell: row => row.enteredAt && row.ageSeconds !== null ? <><WarehouseTime value={row.enteredAt} />{' · '}{(BigInt(row.ageSeconds) / 86400n).toString()} hari</> : 'Waktu masuk belum diketahui' },
   ]} />
   if (data.kind === 'loan-assets' || data.kind === 'sold-assets') return <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={empty} columns={[
-    { key: 'serial', header: 'Perangkat', cell: row => <>{can('inventory.item.view') ? <Link to={stockLink({ asset: row.assetId })}>{row.serial}</Link> : row.serial}<br />{row.name}</> },
-    { key: 'owner', header: 'Pemilik / penugasan', cell: row => <><WarehouseStatus status={row.legalOwner} /><br />{assignmentLabels[row.assignmentState]}</> },
+    { key: 'serial', header: 'Perangkat', cell: row => <>{can('inventory.item.view') ? <Link to={stockLink({ asset: row.assetId })}>{row.serial}</Link> : row.serial}{' · '}{row.name}</> },
+    { key: 'owner', header: 'Pemilik / penugasan', cell: row => <><WarehouseStatus status={row.legalOwner} />{' · '}{assignmentLabels[row.assignmentState]}</> },
     { key: 'period', header: 'Masa penugasan', cell: row => <><WarehouseTime value={row.startedAt} />{row.endedAt && <> → <WarehouseTime value={row.endedAt} /></>}</> },
     { key: 'wo', header: 'Work order', cell: row => can('inventory.cost.view') ? <Link to={reportLink({ kind: 'work-order-costs', workOrderId: row.workOrderId })}>Biaya WO terkait</Link> : 'Tercatat pada penugasan' },
   ]} />
@@ -55,9 +55,9 @@ export function WarehouseReportTable({ data, onPrint }: { data: WarehouseReport;
       {data.page.unknownQuantities.map(total => <p key={total.baseUnit}>Biaya belum diketahui untuk <WarehouseQuantity value={total.quantityBase} unit={total.baseUnit} />. Tidak dihitung sebagai biaya nol.</p>)}
     </section>
     <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={empty} columns={[
-      { key: 'wo', header: 'Work order / tanggal', cell: row => <><Link to={reportLink({ kind: 'work-order-costs', workOrderId: row.workOrderId })}>{row.workOrderCode ?? 'WO terkait'}</Link><br /><WarehouseTime value={row.recordedAt} /></> },
-      { key: 'item', header: 'Barang / pemakaian', cell: row => <>{item(row)}<br /><WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} />{row.compensatesPostingId && <p>Pembalikan pemakaian</p>}</> },
-      { key: 'cost', header: 'Biaya operasional', cell: row => row.costState === 'UNKNOWN' ? 'Biaya belum diketahui' : <>{money(row.lineTotalMinor!, row.currency!)}<p className="muted">Asal {money(row.sourceTotalMinor!, row.currency!)} per <WarehouseQuantity value={row.sourceBasisQuantityBase!} unit={row.baseUnit} />; dibulatkan ke satuan minor terdekat, setengah ke atas.</p></> },
+      { key: 'wo', header: 'Work order / tanggal', cell: row => <><Link to={reportLink({ kind: 'work-order-costs', workOrderId: row.workOrderId })}>{row.workOrderCode ?? 'WO terkait'}</Link>{' · '}<WarehouseTime value={row.recordedAt} /></> },
+      { key: 'item', header: 'Barang / pemakaian', cell: row => <>{item(row)}{' · '}<WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} />{row.compensatesPostingId && <span>{' · '}Pembalikan pemakaian</span>}</> },
+      { key: 'cost', header: 'Biaya operasional', cell: row => row.costState === 'UNKNOWN' ? 'Biaya belum diketahui' : <>{money(row.lineTotalMinor!, row.currency!)}<span className="muted">{' · '}Asal {money(row.sourceTotalMinor!, row.currency!)} per <WarehouseQuantity value={row.sourceBasisQuantityBase!} unit={row.baseUnit} />; dibulatkan ke satuan minor terdekat, setengah ke atas.</span></> },
     ]} />
   </>
 }

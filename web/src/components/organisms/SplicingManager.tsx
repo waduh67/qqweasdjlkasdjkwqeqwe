@@ -999,7 +999,7 @@ export function SplicingManager({
                   )}
                 </span></TableCell>
                 {canManage && (
-                  <TableCell ><div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
+                  <TableCell ><span className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
                     <Button
                       variant="subtle"
                       onClick={() => {
@@ -1016,10 +1016,10 @@ export function SplicingManager({
                     <Button variant="danger" onClick={() => void disconnect(row.id, label)}>
                       Lepas
                     </Button>
-                  </div></TableCell>
+                  </span></TableCell>
                 )}</TableRow>
                 {editing === row.id && (
-                  <TableRow><TableCell colSpan={canManage ? 6 : 5}><div className="splice-actions">
+                  <TableRow><TableCell colSpan={canManage ? 6 : 5}><span className="splice-actions">
                     <SelectField
                       label="Metode"
                       value={editMethod}
@@ -1047,7 +1047,7 @@ export function SplicingManager({
                     {/* Tiket boleh menyusul (hasil ukur kerap baru masuk keesokan harinya),
                         tapi yang sudah punya tiket tak ditawari pindah — server pun menolak. */}
                     {canPickWorkOrder && !row.workOrderId && (
-                      <div className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+                      <span className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
                         <Text as="span" size={200}>Bukukan ke work order</Text>
                         <Combobox
                           value={editWorkOrder}
@@ -1059,7 +1059,7 @@ export function SplicingManager({
                           placeholder="Biarkan kosong bila tak perlu"
                           emptyText="Tak ada work order terbuka"
                         />
-                      </div>
+                      </span>
                     )}
                     <Button
                       variant="primary"
@@ -1071,7 +1071,7 @@ export function SplicingManager({
                     <Button variant="subtle" onClick={() => setEditing(null)}>
                       Batal
                     </Button>
-                  </div></TableCell></TableRow>
+                  </span></TableCell></TableRow>
                 )}
               </Fragment>
             )

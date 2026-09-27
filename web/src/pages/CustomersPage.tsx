@@ -1,3 +1,5 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { Pagination } from '@/components/molecules/Pagination'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -100,6 +102,7 @@ export function CustomersPage() {
   const [errors, setErrors] = useState<{ name?: string; address?: string; planId?: string }>({})
   const [plans, setPlans] = useState<PlanView[]>([])
   const [saving, setSaving] = useState(false)
+  const creation = useCreationReview(draft != null, !!draft?.id)
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
@@ -225,6 +228,7 @@ export function CustomersPage() {
       toast.error('Lengkapi isian wajib.')
       return
     }
+    if (creation.beforeSave()) return
     setSaving(true)
     try {
       const body = {
@@ -441,6 +445,7 @@ export function CustomersPage() {
       {!loadError && <Pagination page={pageIndex} size={50} total={total} busy={loading} onChange={index => setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(index)); return next })} />}
 
       <Blade
+        creation={{ ...creation, busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama', draft?.name], ['Telepon', draft?.phone], ['Alamat', draft?.address], ['Paket', plans.find(plan => plan.id === draft?.planId)?.name]]} /> }}
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
         subtitle={draft?.id ? draft.code : undefined}
@@ -495,8 +500,8 @@ export function CustomersPage() {
               }}
             />
             <CustomerAreaField value={draft.areaId} onChange={areaId => setDraft({ ...draft, areaId })} />
-            <details className="form-disclosure">
-              <summary>Tentukan titik di peta (opsional)</summary>
+            <Disclosure className="form-disclosure" title={<>Tentukan titik di peta (opsional)</>}>
+              
               <Field label="Lokasi">
               <LocationPicker
                 longitude={draft.longitude}
@@ -505,7 +510,7 @@ export function CustomersPage() {
                 onAddress={(address) => setDraft(draft.address.trim() ? draft : { ...draft, address })}
               />
               </Field>
-            </details>
+            </Disclosure>
             </FormSection>
             {draft.id == null && (
               <FormSection title="Layanan internet" description="Paket menentukan kecepatan dan biaya langganan pelanggan.">

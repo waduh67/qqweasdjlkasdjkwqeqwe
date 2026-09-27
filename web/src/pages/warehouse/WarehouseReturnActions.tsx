@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import type { WarehouseLocation, WarehouseSupplier } from '@/api/warehouse/models'
@@ -14,6 +16,7 @@ import { returnItemLabel } from './returnPresentation'
 export type ReturnAction = 'inspect' | 'repair-dispatch' | 'repair-receive'
 const labels = { inspect: 'Inspeksi retur', 'repair-dispatch': 'Kirim ke servis', 'repair-receive': 'Terima dari servis' }
 export function WarehouseReturnActions({ details, action, onDone, onClose }: { details: ReturnDetails; action: ReturnAction; onDone: () => void; onClose: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { returnCase: view, references: refs } = details
   const [destination, setDestination] = useState<WarehouseLocation | null>(null), [vendor, setVendor] = useState<WarehouseSupplier | null>(null)
   const [measured, setMeasured] = useState(''), [condition, setCondition] = useState<ReturnInspection['condition']>('QUARANTINE')
@@ -30,8 +33,13 @@ export function WarehouseReturnActions({ details, action, onDone, onClose }: { d
       setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian retur.') }
   }
-  return <><form className="card stack" aria-label={labels[action]} onSubmit={prepare}>
-    <h2>{labels[action]}</h2><p>{refs.code} · Revisi {view.revision} · {returnItemLabel(refs.item)}</p>
+  return <><ResourceForm title={<>{labels[action]}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={`Konfirmasi ${labels[action].toLowerCase()}`} confirmLabel="Catat tindakan retur" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+      summary={<><p>{refs.code} · Revisi {view.revision} · {returnItemLabel(refs.item)}</p><p><WarehouseQuantity value={view.quantityBase} unit={view.baseUnit} /> → {destination && locationLabel(destination)}</p>
+        {action === 'inspect' ? <p>Hasil ukur: {measured} {view.baseUnit === 'MM' ? 'm' : 'unit'} · {condition === 'SERVICEABLE' ? 'Layak pakai' : condition === 'DAMAGED' ? 'Rusak' : 'Karantina'}. {reset && `Reset dikonfirmasi: ${resetProof}.`}</p>
+          : <p>{action === 'repair-dispatch' ? vendor?.name : refs.vendor?.name} · {vendorReference} {action === 'repair-receive' && `· ${result === 'REPAIRED' ? 'Diperbaiki' : 'Belum diperbaiki'}`}</p>}
+        {isSerial && <p>Serial: {observed}</p>}<p>Bukti: {evidence}</p>
+        <p>{release ? 'Jumlah yang diperiksa masuk rak tersedia milik ISP.' : action === 'repair-dispatch' ? 'Barang berada dalam penguasaan servis dan belum tersedia.' : 'Barang tetap di karantina. Kepemilikan asal dipertahankan.'}</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau tindakan retur</Button></>}><form id={resourceFormId} className="stack" aria-label={labels[action]} onSubmit={prepare}>
+    <p>{refs.code} · Revisi {view.revision} · {returnItemLabel(refs.item)}</p>
     <p>Jumlah retur: <WarehouseQuantity value={view.quantityBase} unit={view.baseUnit} /></p>
     {view.legalOwner === 'CUSTOMER' && <p role="status">Tetap milik pelanggan. Kondisi layak pakai dan hasil servis tidak mengubahnya menjadi stok tersedia ISP.</p>}
     {action === 'inspect' ? <>
@@ -54,13 +62,8 @@ export function WarehouseReturnActions({ details, action, onDone, onClose }: { d
     {action !== 'inspect' && <TextField label="Referensi servis penyedia" required maxLength={500} value={vendorReference} onChange={(_, data) => setVendorReference(data.value)} />}
     <TextField label="Referensi bukti tindakan retur" required maxLength={500} value={evidence} onChange={(_, data) => setEvidence(data.value)} />
     {error && <p role="alert" className="error">{error}</p>}
-    <div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">Tinjau tindakan retur</Button></div>
-  </form>
-    {operation && <WarehouseCommandDialog title={`Konfirmasi ${labels[action].toLowerCase()}`} confirmLabel="Catat tindakan retur" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
-      summary={<><p>{refs.code} · Revisi {view.revision} · {returnItemLabel(refs.item)}</p><p><WarehouseQuantity value={view.quantityBase} unit={view.baseUnit} /> → {destination && locationLabel(destination)}</p>
-        {action === 'inspect' ? <p>Hasil ukur: {measured} {view.baseUnit === 'MM' ? 'm' : 'unit'} · {condition === 'SERVICEABLE' ? 'Layak pakai' : condition === 'DAMAGED' ? 'Rusak' : 'Karantina'}. {reset && `Reset dikonfirmasi: ${resetProof}.`}</p>
-          : <p>{action === 'repair-dispatch' ? vendor?.name : refs.vendor?.name} · {vendorReference} {action === 'repair-receive' && `· ${result === 'REPAIRED' ? 'Diperbaiki' : 'Belum diperbaiki'}`}</p>}
-        {isSerial && <p>Serial: {observed}</p>}<p>Bukti: {evidence}</p>
-        <p>{release ? 'Jumlah yang diperiksa masuk rak tersedia milik ISP.' : action === 'repair-dispatch' ? 'Barang berada dalam penguasaan servis dan belum tersedia.' : 'Barang tetap di karantina. Kepemilikan asal dipertahankan.'}</p></>} />}
+    <div className="row wrap"></div>
+  </form></ResourceForm>
+    
   </>
 }

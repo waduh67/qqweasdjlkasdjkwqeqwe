@@ -1,3 +1,6 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -112,28 +115,29 @@ function ApprovalBody({ details, reload }: { details: ApprovalDetails; reload: (
   </section><WarehouseApprovalDocument document={document} />
     {document.migration && <WarehouseApprovalMigration key={approval.requestId} id={approval.requestId} document={document} />}
     <WarehouseApprovalEvidence key={approval.requestId} id={approval.requestId} />
-    <details className="card"><summary>Persyaratan pemeriksa tersimpan</summary><p>Versi kebijakan {details.policy.revision}. Kelayakan tindakan tetap diperiksa terhadap izin dan cakupan saat ini.</p>
-      <ol>{details.policy.tiers.map(tier => <li key={tier.number}>Tahap {tier.number}: {tier.approvers.map(approvalPersonLabel).join(', ')}</li>)}</ol></details>
+    <Disclosure className="card" title={<>Persyaratan pemeriksa tersimpan</>}><p>Versi kebijakan {details.policy.revision}. Kelayakan tindakan tetap diperiksa terhadap izin dan cakupan saat ini.</p>
+      <ol>{details.policy.tiers.map(tier => <li key={tier.number}>Tahap {tier.number}: {tier.approvers.map(approvalPersonLabel).join(', ')}</li>)}</ol></Disclosure>
     <ApprovalHistory id={approval.requestId} />
     {decision && <ApprovalDecision details={details} decision={decision} onClose={() => setDecision(null)} reload={reload} />}
     {reworking && <ApprovalRework details={details} onClose={() => setReworking(false)} reload={reload} />}
   </>
 }
 function ApprovalDecision({ details, decision, onClose, reload }: { details: ApprovalDetails; decision: 'APPROVE' | 'REJECT'; onClose: () => void; reload: () => void }) {
+  const resourceFormId = useResourceFormId()
   const [reason, setReason] = useState(''), [error, setError] = useState(''), [operation, setOperation] = useState<WarehouseCommand<WarehouseApproval> | null>(null)
   function prepare(event: FormEvent) {
     event.preventDefault()
     if (!reason.trim() || reason.trim().length > 500) { setError('Isi alasan keputusan atau referensi pemeriksaan, maksimal 500 karakter.'); return }
     setOperation(decideApproval({ requestId: details.approval.requestId, expectedRevision: details.approval.revision, decision, reason: reason.trim() })); setError('')
   }
-  return <><form className="card stack" aria-label="Keputusan persetujuan" onSubmit={prepare}><h2>{decision === 'APPROVE' ? 'Setujui permintaan' : 'Kembalikan untuk perbaikan'}</h2>
+  return <><ResourceForm title={<>{decision === 'APPROVE' ? 'Setujui permintaan' : 'Kembalikan untuk perbaikan'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi keputusan persetujuan" confirmLabel="Simpan keputusan" command={operation} onDone={reload} onClose={() => setOperation(null)} onReload={reload}
+    summary={<><p>{details.document.code} · Revisi permintaan {details.approval.revision}</p><p>{decision === 'APPROVE' ? 'Menyetujui tahap pemeriksaan saat ini.' : 'Mengembalikan permintaan untuk diperbaiki. Tidak ada penyesuaian stok dari penolakan ini.'}</p>
+      <p>{reason}</p>{decision === 'APPROVE' && <p>{approvalImpact(details.document.kind)}</p>}</>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau keputusan</Button></>}><form id={resourceFormId} className="stack" aria-label="Keputusan persetujuan" onSubmit={prepare}>
     <p>{details.document.code} · Revisi permintaan {details.approval.revision} · Tahap {details.actions.currentTier}</p>
     <TextareaField label="Alasan keputusan / referensi pemeriksaan" required maxLength={500} value={reason} onChange={(_, data) => setReason(data.value)} />
     {error && <p className="error" role="alert">{error}</p>}
-    <div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">Tinjau keputusan</Button></div>
-  </form>{operation && <WarehouseCommandDialog title="Konfirmasi keputusan persetujuan" confirmLabel="Simpan keputusan" command={operation} onDone={reload} onClose={() => setOperation(null)} onReload={reload}
-    summary={<><p>{details.document.code} · Revisi permintaan {details.approval.revision}</p><p>{decision === 'APPROVE' ? 'Menyetujui tahap pemeriksaan saat ini.' : 'Mengembalikan permintaan untuk diperbaiki. Tidak ada penyesuaian stok dari penolakan ini.'}</p>
-      <p>{reason}</p>{decision === 'APPROVE' && <p>{approvalImpact(details.document.kind)}</p>}</>} />}</>
+    <div className="row wrap"></div>
+  </form></ResourceForm></>
 }
 function ApprovalRework({ details, onClose, reload }: { details: ApprovalDetails; onClose: () => void; reload: () => void }) {
   const navigate = useNavigate()
@@ -144,11 +148,11 @@ function ApprovalRework({ details, onClose, reload }: { details: ApprovalDetails
 }
 function ApprovalHistory({ id }: { id: string }) {
   const [page, setPage] = useState(0), loader = useCallback(() => approvalHistory(id, page), [id, page]), result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Riwayat keputusan</summary><WarehouseState {...result}>{data => <div className="stack">
+  return <Disclosure className="card" title={<>Riwayat keputusan</>}><WarehouseState {...result}>{data => <div className="stack">
     {!data.items.length && <p>Belum ada keputusan pemeriksa.</p>}
     {data.items.map(row => <section key={row.id}><h3>Tahap {row.tier} · {row.decision === 'APPROVE' ? 'Disetujui' : 'Dikembalikan untuk perbaikan'}</h3>
       <p>{approvalPersonLabel(row.approver)}{row.delegatedFrom && ` atas delegasi ${approvalPersonLabel(row.delegatedFrom)}`} · <WarehouseTime value={row.decidedAt} /> · Revisi {row.revision}</p>
       {row.reason && <p>{row.reason}</p>}{row.evidenceReference && <p style={{ overflowWrap: 'anywhere' }}>Bukti: {row.evidenceReference}</p>}
     </section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
-  </div>}</WarehouseState></details>
+  </div>}</WarehouseState></Disclosure>
 }

@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import { Button, SelectField, TextareaField, TextField } from '@/components/atoms'
@@ -171,8 +172,8 @@ function ResolutionHistory({ source, batch, first }: { source: MigrationCase; ba
     <ul className="stack">{data.items.map(row => <li key={row.id} className="stack"><strong>{resolutionLabels[row.kind]} · Revisi {row.revision}</strong>
       <p><WarehouseTime value={row.createdAt} /> · {row.reason}</p>
       {row.stock && <p>Usulan: <WarehouseQuantity value={row.stock.quantityBase} unit={row.stock.baseUnit} /> · Satuan bukti: {row.stock.sourceUnit}</p>}
-      <details><summary>Referensi keputusan dan bukti</summary><p>ID keputusan: {row.id}</p><p>ID pemeriksa: {row.resolvedBy}</p>
-        {row.duplicateCaseId && <p>Kasus asli: {row.duplicateCaseId}</p>}<ul>{row.evidence.map(file => <li key={file.id}>{file.id} · {file.sha256}</li>)}</ul></details>
+      <Disclosure title={<>Referensi keputusan dan bukti</>}><p>ID keputusan: {row.id}</p><p>ID pemeriksa: {row.resolvedBy}</p>
+        {row.duplicateCaseId && <p>Kasus asli: {row.duplicateCaseId}</p>}<ul>{row.evidence.map(file => <li key={file.id}>{file.id} · {file.sha256}</li>)}</ul></Disclosure>
     </li>)}</ul><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
   </>}</WarehouseState></section>
 }

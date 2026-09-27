@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
 import { getLocation } from '@/api/warehouse/masters'
 import type { WarehouseLocation } from '@/api/warehouse/models'
@@ -37,6 +39,7 @@ function SelectedSource({ source, ...props }: Props & { source: ReturnSource }) 
   return <WarehouseState {...result}>{location => <IntakeForm source={source} initialLocation={location} {...props} />}</WarehouseState>
 }
 function IntakeForm({ source, initialLocation, onSaved, onClose, onReload }: Props & { source: ReturnSource; initialLocation: WarehouseLocation | null }) {
+  const resourceFormId = useResourceFormId()
   const [destination, setDestination] = useState(initialLocation), [evidence, setEvidence] = useState(''), [error, setError] = useState<string | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseReturn> | null>(null)
   function prepare(event: FormEvent) {
@@ -44,7 +47,9 @@ function IntakeForm({ source, initialLocation, onSaved, onClose, onReload }: Pro
     try { setOperation(receiveReturn(buildReturnIntake(source, destination, evidence))); setError(null) }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa sumber retur.') }
   }
-  return <><form className="stack" aria-label="Penerimaan retur" onSubmit={prepare}>
+  return <><ResourceForm title="Penerimaan retur" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi penerimaan retur" confirmLabel="Catat retur" command={operation} onDone={onSaved} onReload={onReload} onClose={() => setOperation(null)}
+      summary={<><p>{source.code} · {returnItemLabel(source.item)}</p><p><WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> → {destination && locationLabel(destination)}</p>
+        <p>Bukti: {evidence}</p><p>{source.origin === 'MATERIAL_RESIDUAL' ? 'Buka inspeksi atas sisa yang sudah diterima; stok fisik tidak ditambahkan lagi.' : 'Terima perangkat ke karantina dengan identitas dan kepemilikan asal.'}</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau penerimaan retur</Button></>}><form id={resourceFormId} className="stack" aria-label="Penerimaan retur" onSubmit={prepare}>
     <p>{returnOriginLabels[source.origin]} · {source.code}</p><p><strong>{returnItemLabel(source.item)}</strong> · <WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> · <WarehouseStatus status={source.legalOwner} /></p>
     {source.origin === 'MATERIAL_RESIDUAL' ? <p>Sudah diterima di {locationLabel(source.location)}. Pencatatan retur membuka pemeriksaan tanpa menambah stok lagi.</p>
       : <><p>Diterima dari {locationLabel(source.location)}. Perangkat masuk karantina dan masih harus diperiksa.</p>
@@ -52,10 +57,8 @@ function IntakeForm({ source, initialLocation, onSaved, onClose, onReload }: Pro
     {source.legalOwner === 'CUSTOMER' && <p role="status">Perangkat tetap milik pelanggan dan tidak boleh menjadi stok tersedia ISP.</p>}
     <TextField label="Referensi bukti penerimaan retur" required maxLength={500} value={evidence} onChange={(_, data) => setEvidence(data.value)} />
     {error && <p role="alert" className="error">{error}</p>}
-    <div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">Tinjau penerimaan retur</Button></div>
-  </form>
-    {operation && <WarehouseCommandDialog title="Konfirmasi penerimaan retur" confirmLabel="Catat retur" command={operation} onDone={onSaved} onReload={onReload} onClose={() => setOperation(null)}
-      summary={<><p>{source.code} · {returnItemLabel(source.item)}</p><p><WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> → {destination && locationLabel(destination)}</p>
-        <p>Bukti: {evidence}</p><p>{source.origin === 'MATERIAL_RESIDUAL' ? 'Buka inspeksi atas sisa yang sudah diterima; stok fisik tidak ditambahkan lagi.' : 'Terima perangkat ke karantina dengan identitas dan kepemilikan asal.'}</p></>} />}
+    <div className="row wrap"></div>
+  </form></ResourceForm>
+    
   </>
 }

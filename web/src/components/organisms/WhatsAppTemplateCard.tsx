@@ -165,14 +165,14 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       key: 'name',
       header: 'Nama',
       cell: (t) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
+        <span className="stack" style={{ gap: '0.15rem' }}>
           <code>{t.name}</code>
           {t.bodyText && (
             <span className="muted" style={{ ...typographyStyles.caption1 }}>
               {t.bodyText.length > 90 ? `${t.bodyText.slice(0, 90)}…` : t.bodyText}
             </span>
           )}
-        </div>
+        </span>
       ),
       sortValue: (t) => t.name,
     },
@@ -204,11 +204,11 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
         t.usedBy.length === 0 ? (
           <span className="muted">—</span>
         ) : (
-          <div className="row" style={{ gap: '0.25rem', flexWrap: 'wrap' }}>
+          <span className="row" style={{ gap: '0.25rem', flexWrap: 'wrap' }}>
             {t.usedBy.map((trigger) => (
               <Badge key={trigger}>{TRIGGER_LABEL[trigger] ?? trigger}</Badge>
             ))}
-          </div>
+          </span>
         ),
     },
     {

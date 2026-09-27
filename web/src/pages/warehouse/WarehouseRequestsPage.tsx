@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -107,18 +108,18 @@ function RequestBody({ summary, workOrder, allocations, reload }: { summary: Mat
       {substituted && !override && <p className="muted">Permintaan berisi substitusi. Izin override diperlukan untuk memprosesnya.</p>}
     </section>
     {summary.lines.length > 0 && <DataTable presentation="warehouse" rows={summary.lines} rowKey={line => line.planLineId} columns={[
-      { key: 'name', header: 'Material', cell: line => { const plan = summary.plan?.lines.find(plan => plan.id === line.planLineId); return plan ? <span>{plan.sku.name} · {plan.sku.code}{plan.continuousCut && <p>Satu potongan utuh</p>}{plan.substitution && <p>Pengganti {plan.originalSku?.name}: {plan.substitution.reason}</p>}</span> : <span>Material revisi sebelumnya <small style={{ overflowWrap: 'anywhere' }}>{line.skuId}</small></span> } },
+      { key: 'name', header: 'Material', cell: line => { const plan = summary.plan?.lines.find(plan => plan.id === line.planLineId); return plan ? <span>{plan.sku.name} · {plan.sku.code}{plan.continuousCut && <span>{' · '}Satu potongan utuh</span>}{plan.substitution && <span>{' · '}Pengganti {plan.originalSku?.name}: {plan.substitution.reason}</span>}</span> : <span>Material revisi sebelumnya <span style={{ overflowWrap: 'anywhere' }}>{' · '}{line.skuId}</span></span> } },
       { key: 'requested', header: summary.demandState === 'DRAFT' ? 'Rencana belum diajukan' : 'Diminta', cell: line => <WarehouseQuantity value={summary.demandState === 'DRAFT' ? summary.plan?.lines.find(plan => plan.id === line.planLineId)?.quantityBase ?? line.requestedBase : line.requestedBase} unit={line.baseUnit} /> },
       { key: 'reserved', header: 'Dicadangkan', cell: line => <WarehouseQuantity value={line.reservedUnpickedBase} unit={line.baseUnit} /> },
       { key: 'picked', header: 'Disiapkan', cell: line => <WarehouseQuantity value={line.reservedPickedBase} unit={line.baseUnit} /> },
       { key: 'issued', header: 'Dikirim', cell: line => <WarehouseQuantity value={line.issuedBase} unit={line.baseUnit} /> },
       { key: 'shortage', header: 'Kekurangan', cell: line => <WarehouseQuantity value={line.backorderBase} unit={line.baseUnit} /> },
     ]} />}
-    <details className="card"><summary>Persiapan pengeluaran</summary><div className="stack"><p>Pengiriman membutuhkan lokasi transit aktif berkode WO_TRANSIT dan cakupan akses dari bin asal sampai transit.</p>
+    <Disclosure className="card" title={<>Persiapan pengeluaran</>}><div className="stack"><p>Pengiriman membutuhkan lokasi transit aktif berkode WO_TRANSIT dan cakupan akses dari bin asal sampai transit.</p>
       {can('inventory.location.view') && <Link to="/warehouse/catalog">Kelola lokasi dan cakupan</Link>}
       {can('inventory.location.manage') && can('inventory.location.view') && <Button onClick={() => setTransitEditor(true)}>Siapkan transit WO</Button>}
       {can('inventory.item.view') && <Link to="/warehouse/stock?bucket=TRANSIT">Lihat stok fisik dalam transit</Link>}
-    </div></details>
+    </div></Disclosure>
     {can('inventory.issue.view') ? <WarehouseIssuePanel summary={summary} active={active} onChanged={reload} /> : <p className="muted">Izin lihat pengeluaran diperlukan untuk membaca slip dan jumlah yang dikonfirmasi diterima.</p>}
     <MaterialHistory workOrderId={workOrder.id} />
     {transitEditor && <WarehouseLocationEditor row={null} readOnly={false} preset={{ code: 'WO_TRANSIT', name: 'Transit material WO', kind: 'TRANSIT', issueEligible: false }} onClose={() => setTransitEditor(false)} onSaved={reload} onReload={reload} />}
@@ -133,6 +134,6 @@ function MaterialHistory({ workOrderId }: { workOrderId: string }) {
   const [page, setPage] = useState(0)
   const loader = useCallback(() => getMaterialHistory(workOrderId, page), [workOrderId, page])
   const result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Riwayat rencana material</summary><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section key={row.plan.id}><h3>Rencana {row.plan.planRevision} · <WarehouseStatus status={row.state} /></h3>
-    <WarehouseDraftExpired expiry={row.draftExpiry} />{row.plan.materialMode === 'NONE' ? <p>Tanpa material: {row.plan.reason}</p> : <ul>{row.plan.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.sku.baseUnit} />{line.substitution && <p>Pengganti {line.originalSku?.name}: {line.substitution.reason}</p>}</li>)}</ul>}</section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></details>
+  return <Disclosure className="card" title={<>Riwayat rencana material</>}><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section key={row.plan.id}><h3>Rencana {row.plan.planRevision} · <WarehouseStatus status={row.state} /></h3>
+    <WarehouseDraftExpired expiry={row.draftExpiry} />{row.plan.materialMode === 'NONE' ? <p>Tanpa material: {row.plan.reason}</p> : <ul>{row.plan.lines.map(line => <li key={line.id}>{line.sku.name}: <WarehouseQuantity value={line.quantityBase} unit={line.sku.baseUnit} />{line.substitution && <p>Pengganti {line.originalSku?.name}: {line.substitution.reason}</p>}</li>)}</ul>}</section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></Disclosure>
 }

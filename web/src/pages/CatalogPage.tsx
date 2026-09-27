@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
@@ -125,6 +126,7 @@ export function CatalogPage() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [initialDraft, setInitialDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
+  const creation = useCreationReview(draft != null, !!draft?.id)
   const [query, setQuery] = useState('')
   const [serviceFilter, setServiceFilter] = useState<ServiceType | ''>('')
 
@@ -221,6 +223,7 @@ export function CatalogPage() {
       autoIsolir: tri(draft.autoIsolir),
       active: draft.active,
     }
+    if (creation.beforeSave()) return
     setSaving(true)
     try {
       await (draft.id ? updatePlan(draft.id, body) : createPlan(body))
@@ -350,6 +353,7 @@ export function CatalogPage() {
       <CommandBar primary={primary} actions={actions} />
 
       <Blade
+        creation={{ ...creation, busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama paket', draft?.name], ['Harga', draft?.price], ['Unduh / unggah (Mbps)', `${draft?.downMbps} / ${draft?.upMbps}`], ['Jenis layanan', draft?.serviceTypes.join(', ')]]} /> }}
         open={draft != null}
         title={draft?.id ? 'Edit paket' : 'Tambah paket'}
         subtitle="Atur kebijakan paket. Atribut RADIUS dibuat otomatis."

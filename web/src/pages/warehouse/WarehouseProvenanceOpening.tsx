@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -39,7 +40,7 @@ function OpeningDirectory({ batch, onSelect }: { batch: string; onSelect: (id: s
   return <section className="card stack"><h2>Usulan saldo awal tersimpan</h2><p>Lanjutkan usulan yang sudah dibuat setelah memuat ulang halaman. Periksa status persetujuannya sebelum membuat usulan pengganti.</p>
     <WarehouseState {...result}>{data => <>
       {!data.items.length ? <p>Belum ada usulan dalam cakupan lokasi Anda. Tinjau hasil pemeriksaan untuk membuat usulan.</p> : <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} columns={[
-        { key: 'name', header: 'Usulan', cell: row => <span>{row.code}<p className="muted">{row.migrationReference}</p></span> },
+        { key: 'name', header: 'Usulan', cell: row => <span>{row.code}<span className="muted">{' · '}{row.migrationReference}</span></span> },
         { key: 'location', header: 'Lokasi pemeriksaan', cell: row => row.reviewLocation.name || row.reviewLocation.code },
         { key: 'state', header: 'Pembukuan', cell: row => row.state === 'EXPIRED' ? 'Kedaluwarsa' : row.state === 'POSTED' ? 'Sudah dibukukan' : 'Belum dibukukan' },
         { key: 'time', header: 'Disimpan', cell: row => <WarehouseTime value={row.createdAt} /> },
@@ -86,9 +87,9 @@ function ReviewCases({ cases, issues, onCase }: { cases: MigrationReviewCase[]; 
       : <p>Saldo tersedia nihil: tidak ada baris stok yang diajukan.</p>}
     {!!cases.length && <DataTable presentation="warehouse" rows={cases.slice(page * 25, (page + 1) * 25)} rowKey={row => row.caseId} columns={[
       { key: 'source', header: 'Catatan asli', cell: row => <span>{row.source.serial === '' ? 'Serial kosong' : row.source.serial ?? row.source.model ?? migrationSourceLabels[row.sourceTable]}
-        <p className="muted">{migrationSourceLabels[row.sourceTable]}</p></span> },
+        <span className="muted">{' · '}{migrationSourceLabels[row.sourceTable]}</span></span> },
       { key: 'decision', header: 'Keputusan', cell: row => <span>{row.resolution ? resolutionLabels[row.resolution.kind] : row.resolutionRequired ? 'Keputusan diperlukan' : 'Riwayat belum terbukti'}
-        {issues.filter(issue => issue.caseId === row.caseId).map(issue => <p key={issue.code} className="error">{migrationIssueLabel(issue.code)}</p>)}</span> },
+        {issues.filter(issue => issue.caseId === row.caseId).map(issue => <span key={issue.code} className="error">{' · '}{migrationIssueLabel(issue.code)}</span>)}</span> },
       { key: 'quantity', header: 'Calon saldo', cell: row => row.resolution?.stock ? <WarehouseQuantity value={row.resolution.stock.quantityBase} unit={row.resolution.stock.baseUnit} /> : 'Tidak menjadi stok tersedia' },
       { key: 'action', header: 'Pemeriksaan', cell: row => <Button onClick={() => onCase(row.caseId)}>Buka kasus</Button> },
     ]} />}
@@ -156,8 +157,8 @@ function FinalizedReceipt({ value }: { value: MigrationFinalization }) {
   return <section className="card stack" aria-label="Bukti finalisasi gudang"><h2>Operasi gudang aktif</h2><p role="status">Finalisasi tercatat pada <WarehouseTime value={value.finalizedAt} />.</p><p>{value.reason}</p>
     <p>Saldo awal yang dibukukan:</p>{value.baselineCount ? <StockTotals totals={value.baselineTotals} /> : <p>Saldo tersedia nihil, tanpa baris stok.</p>}
     <p>{value.cancellationCount} efek lama dibatalkan. {value.retainedIdentityCount} identitas lama tetap dicadangkan dan tidak bisa dipakai untuk penerimaan yang bentrok.</p>
-    <details><summary>Jumlah sumber dan referensi finalisasi</summary><ul>{Object.entries(value.sourceCounts).map(([kind, count]) => <li key={kind}>{migrationSourceLabels[kind as keyof typeof migrationSourceLabels]}: {count}</li>)}</ul>
-      <p>Referensi finalisasi: {value.id}</p><p>ID petugas: {value.finalizedBy}</p><p>Saldo awal: {value.openingDocumentId}</p></details>
+    <Disclosure title={<>Jumlah sumber dan referensi finalisasi</>}><ul>{Object.entries(value.sourceCounts).map(([kind, count]) => <li key={kind}>{migrationSourceLabels[kind as keyof typeof migrationSourceLabels]}: {count}</li>)}</ul>
+      <p>Referensi finalisasi: {value.id}</p><p>ID petugas: {value.finalizedBy}</p><p>Saldo awal: {value.openingDocumentId}</p></Disclosure>
     {can('inventory.item.view') && <Link to="/warehouse/stock">Buka stok gudang</Link>}
   </section>
 }

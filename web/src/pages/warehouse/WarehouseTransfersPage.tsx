@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -88,7 +89,7 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
       <DiscrepancyRecovery transfer={transfer} reload={reload} onReport={() => setAction('discrepancy')} />}
   </section>
     <DataTable presentation="warehouse" rows={transfer.lines} rowKey={line => line.id} columns={[
-      { key: 'item', header: 'Barang', cell: line => <span>{transferLineLabel(details, line.id)}<p className="muted" style={{ overflowWrap: 'anywhere' }}>Identitas asal: {line.stockIdentityId}</p></span> },
+      { key: 'item', header: 'Barang', cell: line => <span>{transferLineLabel(details, line.id)}<span className="muted" style={{ overflowWrap: 'anywhere' }}>{' · '}Identitas asal: {line.stockIdentityId}</span></span> },
       { key: 'quantity', header: ['DRAFT', 'EXPIRED'].includes(transfer.state) ? 'Rencana kirim' : 'Dikirim', cell: line => <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /> },
       { key: 'received', header: 'Diterima', cell: line => <WarehouseQuantity value={line.receivedBase} unit={line.baseUnit} /> },
       { key: 'transit', header: 'Dalam perjalanan', cell: line => <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /> },
@@ -106,10 +107,10 @@ function TransferHistory({ details }: { details: TransferDetails }) {
   const { can } = useCan()
   const id = details.transfer.id
   const [page, setPage] = useState(0), loader = useCallback(() => transferHistory(id, page), [id, page]), result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Riwayat transfer</summary><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section key={row.revision}>
+  return <Disclosure className="card" title={<>Riwayat transfer</>}><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section key={row.revision}>
     <h3>Revisi {row.revision} · <WarehouseStatus status={row.state} /></h3><p><WarehouseTime value={row.recordedAt} /></p><ul>{row.lines.map(line => <li key={line.id}>{transferLineLabel(details, line.id)}: diterima <WarehouseQuantity value={line.receivedBase} unit={line.baseUnit} />, dalam perjalanan <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} /></li>)}</ul>
     {row.resolutionDocumentId && can('inventory.approval.view') && <Link to={`/warehouse/approvals?sourceDocumentId=${encodeURIComponent(row.resolutionDocumentId)}`}>Laporan selisih pada revisi {row.revision}</Link>}
-  </section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></details>
+  </section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></Disclosure>
 }
 
 function DiscrepancyRecovery({ transfer, reload, onReport }: { transfer: WarehouseTransfer; reload: () => void; onReport: () => void }) {

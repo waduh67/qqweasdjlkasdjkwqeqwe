@@ -70,10 +70,10 @@ export function OltRegisteredOnus({
       header: 'Pelanggan',
       sortValue: (o) => o.customerName,
       cell: (o) => (
-        <div>
-          <div style={{ ...typographyStyles.body1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customerName}</div>
-          <div className="muted tnum" style={{ ...typographyStyles.caption1 }}>{o.customerCode}</div>
-        </div>
+        <span>
+          <span style={{ ...typographyStyles.body1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customerName}</span>
+          <span className="muted tnum" style={{ ...typographyStyles.caption1 }}>{o.customerCode}</span>
+        </span>
       ),
     },
     {

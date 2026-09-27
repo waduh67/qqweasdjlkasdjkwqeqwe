@@ -25,7 +25,7 @@ export function WarehouseStockFilters(props: Props) {
     return { sku, location }
   }, [props.filter.skuId, props.filter.locationId, can])
   const result = useWarehouseQuery(loader)
-  return <details className="card"><summary>{props.label ?? 'Filter stok'}</summary><WarehouseState {...result}>{data => <StockFilterForm {...props} initialSku={data.sku} initialLocation={data.location} />}</WarehouseState></details>
+  return <section className="resource-filters" aria-label="Filter"><WarehouseState {...result}>{data => <StockFilterForm {...props} initialSku={data.sku} initialLocation={data.location} />}</WarehouseState></section>
 }
 function StockFilterForm({ filter, buckets: showBuckets, history, onApply, initialSku, initialLocation }: Props & { initialSku: WarehouseSku | null; initialLocation: WarehouseLocation | null }) {
   const { can } = useCan()

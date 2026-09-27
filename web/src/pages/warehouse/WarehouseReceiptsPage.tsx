@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -45,9 +46,9 @@ function ReceiptList({ onNew }: { onNew: () => void }) {
   const result = useWarehouseQuery(loader)
   const canDraft = can('inventory.receipt.manage') && can('inventory.sku.view') && can('inventory.location.view')
   return <>
-    <details className="card"><summary>Persiapan penerimaan</summary><div className="stack"><p>Siapkan pemasok, barang, lokasi transit batas penerimaan, karantina, dan bin tujuan. Pastikan akun Anda memiliki akses ke seluruh lokasi tersebut.</p>
+    <Disclosure className="card" title={<>Persiapan penerimaan</>}><div className="stack"><p>Siapkan pemasok, barang, lokasi transit batas penerimaan, karantina, dan bin tujuan. Pastikan akun Anda memiliki akses ke seluruh lokasi tersebut.</p>
       <Link to="/warehouse/catalog">Buka katalog dan lokasi</Link>{can('inventory.location.manage') && can('inventory.location.view') && <Button onClick={() => setSourceEditor(true)}>Siapkan batas penerimaan</Button>}
-      <p className="muted">Gunakan batas penerimaan yang sudah tersedia. Tombol ini menyiapkan lokasi baru berkode RECEIPT_SOURCE jika belum ada.</p></div></details>
+      <p className="muted">Gunakan batas penerimaan yang sudah tersedia. Tombol ini menyiapkan lokasi baru berkode RECEIPT_SOURCE jika belum ada.</p></div></Disclosure>
     <div className="row wrap">{can('inventory.receipt.manage') && <Button variant="primary" disabled={!canDraft} onClick={onNew}>Buat penerimaan</Button>}
       <SelectField label="Status penerimaan" value={status} onChange={(_, data) => { setStatus(data.value); setPage(0) }}><option value="">Semua status</option>{RECEIPT_STATES.map(state => <option key={state} value={state}>{stateLabels[state]}</option>)}</SelectField>
       <TextField label="Serial barang" value={serial} maxLength={128} onChange={(_, data) => { setSerial(data.value); setPage(0) }} hint="Cari serial lengkap." /><Button onClick={result.reload}>Segarkan</Button>
@@ -104,14 +105,14 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
       {manage && receipt.state === 'RECEIVED_IN_INSPECTION' && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih bin tujuan.</p>}
     </section>
     <DataTable presentation="warehouse" rows={receipt.lines} rowKey={line => line.id} columns={[
-      { key: 'name', header: 'Barang', cell: line => <span>{line.skuName}<br /><span className="muted">{line.skuCode} · {line.serial ?? line.lotCode}</span></span> },
+      { key: 'name', header: 'Barang', cell: line => <span>{line.skuName}{' · '}<span className="muted">{line.skuCode} · {line.serial ?? line.lotCode}</span></span> },
       { key: 'actual', header: 'Jumlah aktual', cell: line => <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} /> },
       { key: 'accepted', header: 'Diterima inspeksi', cell: line => <WarehouseQuantity value={line.acceptedBase} unit={line.baseUnit} /> },
       { key: 'rejected', header: 'Ditolak', cell: line => <WarehouseQuantity value={line.rejectedBase} unit={line.baseUnit} /> },
       { key: 'putaway', header: 'Ditempatkan', cell: line => <WarehouseQuantity value={line.putawayBase} unit={line.baseUnit} /> },
     ]} />
     <WarehouseReceiptEvidence receipt={receipt} onChanged={reload} />
-    {receipt.inspections.length > 0 && <details className="card"><summary>Hasil pemeriksaan tersimpan</summary><ul>{receipt.inspections.map(row => <li key={row.id}>{receipt.lines.find(line => line.id === row.lineId)?.skuName ?? 'Barang penerimaan'}: diterima <WarehouseQuantity value={row.acceptedBase} unit={row.baseUnit} />, ditolak <WarehouseQuantity value={row.rejectedBase} unit={row.baseUnit} /> · {row.reason}</li>)}</ul></details>}
+    {receipt.inspections.length > 0 && <Disclosure className="card" title={<>Hasil pemeriksaan tersimpan</>}><ul>{receipt.inspections.map(row => <li key={row.id}>{receipt.lines.find(line => line.id === row.lineId)?.skuName ?? 'Barang penerimaan'}: diterima <WarehouseQuantity value={row.acceptedBase} unit={row.baseUnit} />, ditolak <WarehouseQuantity value={row.rejectedBase} unit={row.baseUnit} /> · {row.reason}</li>)}</ul></Disclosure>}
     <ReceiptHistory id={receipt.id} />
     {action && <WarehouseReceiptActions receipt={receipt} mode={action} onClose={() => setAction(null)} onChanged={reload} />}
     {operation && <WarehouseCommandDialog title="Terima barang ke karantina" confirmLabel="Konfirmasi penerimaan" command={operation} onClose={() => setOperation(null)} onDone={reload} onReload={reload}
@@ -125,5 +126,5 @@ function ReceiptHistory({ id }: { id: string }) {
   const loader = useCallback(() => getReceiptHistory(id), [id])
   const result = useWarehouseQuery(loader)
   const labels: Record<string, string> = { CREATE: 'Draft dibuat', UPDATE: 'Draft diubah', RECEIVE: 'Barang diterima', INSPECT: 'Pemeriksaan dicatat', PUTAWAY: 'Barang ditempatkan', ATTACHMENT: 'Bukti diunggah' }
-  return <details className="card"><summary>Riwayat penerimaan</summary><WarehouseState {...result}>{rows => <WarehouseHistory entries={rows.map(row => ({ id: row.operationId, occurredAt: row.recordedAt, revision: row.revision, label: labels[row.action] ?? row.action }))} />}</WarehouseState></details>
+  return <Disclosure className="card" title={<>Riwayat penerimaan</>}><WarehouseState {...result}>{rows => <WarehouseHistory entries={rows.map(row => ({ id: row.operationId, occurredAt: row.recordedAt, revision: row.revision, label: labels[row.action] ?? row.action }))} />}</WarehouseState></Disclosure>
 }

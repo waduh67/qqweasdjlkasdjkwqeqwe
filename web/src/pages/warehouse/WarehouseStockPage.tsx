@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { listStock } from '@/api/warehouse/masters'
@@ -75,29 +76,29 @@ function StockList({ tab, params, setParams }: { tab: StockTab; params: URLSearc
   return <>
     <WarehouseStockFilters filter={filter} buckets={tab === 'summary' || tab === 'positions'} onApply={apply} />
     <div className="row wrap"><Button onClick={result.reload}>Segarkan stok</Button><Link to={stockLink({ tab })}>Hapus filter</Link></div>
-    {tab === 'assets' && <details className="card"><summary>Cari atau pindai perangkat</summary><WarehouseSerialLookup onSelect={setFound} candidate={found && <Link to={stockLink({ asset: found.assetId })}>Buka perangkat {found.serial}</Link>} /></details>}
+    {tab === 'assets' && <Disclosure className="card" title={<>Cari atau pindai perangkat</>}><WarehouseSerialLookup onSelect={setFound} candidate={found && <Link to={stockLink({ asset: found.assetId })}>Buka perangkat {found.serial}</Link>} /></Disclosure>}
     {tab === 'summary' && <p className="muted">Jumlah tercatat juga mencakup material terpakai. Tersedia sudah dikurangi reservasi; ambang minimum dibandingkan dengan hasil filter dan cakupan saat ini.</p>}
     {tab === 'unknown' && <p className="muted">Data ini belum memenuhi verifikasi asal, satuan atau kepemilikan. Nilainya tidak dihitung sebagai stok tersedia.</p>}
     <WarehouseState {...result}>{data => <>
       {data.tab === 'summary' && <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={<StockEmpty />} columns={[
-        { key: 'name', header: 'Barang', cell: row => <span><Link to={positionsLink(row.skuId)}>{row.name}</Link><br /><span className="muted">{row.skuCode}</span></span> },
+        { key: 'name', header: 'Barang', cell: row => <span><Link to={positionsLink(row.skuId)}>{row.name}</Link>{' · '}<span className="muted">{row.skuCode}</span></span> },
         { key: 'physical', header: 'Tercatat', align: 'right', cell: row => <WarehouseQuantity value={row.physical.quantityBase} unit={row.physical.baseUnit} /> },
         { key: 'reserved', header: 'Dipesan', align: 'right', cell: row => <WarehouseQuantity value={row.reservedUnpicked.quantityBase} unit={row.reservedUnpicked.baseUnit} /> },
         { key: 'picked', header: 'Disiapkan', align: 'right', cell: row => <WarehouseQuantity value={row.reservedPicked.quantityBase} unit={row.reservedPicked.baseUnit} /> },
         { key: 'available', header: 'Tersedia', align: 'right', cell: row => <WarehouseQuantity value={row.available.quantityBase} unit={row.available.baseUnit} /> },
-        { key: 'minimum', header: 'Minimum SKU', cell: row => row.minimumQuantityBase === null ? 'Ambang tidak tersedia' : <span><WarehouseQuantity value={row.minimumQuantityBase} unit={row.physical.baseUnit} />{BigInt(row.available.quantityBase) < BigInt(row.minimumQuantityBase) && <><br /><strong>Di bawah minimum</strong></>}</span> },
+        { key: 'minimum', header: 'Minimum SKU', cell: row => row.minimumQuantityBase === null ? 'Ambang tidak tersedia' : <span><WarehouseQuantity value={row.minimumQuantityBase} unit={row.physical.baseUnit} />{BigInt(row.available.quantityBase) < BigInt(row.minimumQuantityBase) && <>{' · '}<strong>Di bawah minimum</strong></>}</span> },
       ]} />}
       {data.tab === 'positions' && <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={<StockEmpty />} columns={[
-        { key: 'name', header: 'Barang', cell: row => <span><Link to={stockLink({ position: row.id })}>{row.name}</Link><br />{row.serial ?? row.skuCode}</span> },
-        { key: 'location', header: 'Lokasi / pemegang', cell: row => <span>{row.locationName ?? 'Nama lokasi tidak tersedia'}<br /><span className="muted">{custodianLabels[row.custodianKind]}</span></span> },
-        { key: 'status', header: 'Status / kondisi', cell: row => <span><WarehouseStatus status={row.status} /><br /><WarehouseStatus status={row.condition} /></span> },
+        { key: 'name', header: 'Barang', cell: row => <span><Link to={stockLink({ position: row.id })}>{row.name}</Link>{' · '}{row.serial ?? row.skuCode}</span> },
+        { key: 'location', header: 'Lokasi / pemegang', cell: row => <span>{row.locationName ?? 'Nama lokasi tidak tersedia'}{' · '}<span className="muted">{custodianLabels[row.custodianKind]}</span></span> },
+        { key: 'status', header: 'Status / kondisi', cell: row => <span><WarehouseStatus status={row.status} />{' · '}<WarehouseStatus status={row.condition} /></span> },
         { key: 'owner', header: 'Pemilik', cell: row => <WarehouseStatus status={row.legalOwner} /> },
         { key: 'quantity', header: 'Tercatat', cell: row => <WarehouseQuantity value={row.physical.quantityBase} unit={row.physical.baseUnit} /> },
         { key: 'available', header: 'Tersedia', cell: row => <WarehouseQuantity value={row.available.quantityBase} unit={row.available.baseUnit} /> },
       ]} />}
       {data.tab === 'assets' && <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={<StockEmpty />} columns={[
         { key: 'serial', header: 'Serial', cell: row => <Link to={stockLink({ asset: row.id })}>{row.serial}</Link> },
-        { key: 'name', header: 'Barang', cell: row => <span>{row.name ?? 'Perangkat belum terverifikasi'}<br />{row.skuCode}</span> },
+        { key: 'name', header: 'Barang', cell: row => <span>{row.name ?? 'Perangkat belum terverifikasi'}{' · '}{row.skuCode}</span> },
         { key: 'location', header: 'Lokasi', cell: row => row.locationName ?? 'Nama lokasi tidak tersedia' },
         { key: 'status', header: 'Status', cell: row => <WarehouseStatus status={row.status} /> },
         { key: 'owner', header: 'Pemilik', cell: row => <WarehouseStatus status={row.legalOwner} /> },
@@ -110,7 +111,7 @@ function StockList({ tab, params, setParams }: { tab: StockTab; params: URLSearc
         { key: 'cost', header: 'Biaya asal', cell: row => !can('inventory.cost.view') || row.cost === null ? 'Tidak tersedia dalam akses ini' : row.cost.state === 'UNKNOWN' ? 'Belum diketahui' : 'Tercatat pada detail' },
       ]} />}
       {data.tab === 'unknown' && <DataTable presentation="warehouse" rows={data.page.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada stok belum terverifikasi dalam cakupan ini" />} columns={[
-        { key: 'name', header: 'Barang / serial', cell: row => <span>{row.name ?? 'Data barang lama'}<br />{row.source === 'ASSET' && row.serial ? <Link to={stockLink({ asset: row.id })}>{row.serial}</Link> : row.serial}</span> },
+        { key: 'name', header: 'Barang / serial', cell: row => <span>{row.name ?? 'Data barang lama'}{' · '}{row.source === 'ASSET' && row.serial ? <Link to={stockLink({ asset: row.id })}>{row.serial}</Link> : row.serial}</span> },
         { key: 'quantity', header: 'Nilai tercatat', cell: row => row.quantityBase !== null && row.baseUnit !== null ? <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> : `${row.rawQuantity ?? row.quantityBase ?? 'Belum diketahui'} · satuan belum diverifikasi` },
         { key: 'owner', header: 'Pemilik', cell: row => <WarehouseStatus status={row.legalOwner} /> },
         { key: 'state', header: 'Verifikasi', cell: row => <WarehouseStatus status={row.admission} /> },

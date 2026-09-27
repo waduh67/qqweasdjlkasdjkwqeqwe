@@ -1,34 +1,56 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Combobox, Field, Option, Spinner } from '@fluentui/react-components'
 import type { WarehousePage } from '@/api/warehouse/codec'
-import { Button, SelectField, TextField } from '@/components/atoms'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { warehouseError } from '@/api/warehouse/errors'
 
-/** Bounded directory selection. Searching a new page never drops the selected reference. */
+/** Search and selection share one control; result paging retains the selected reference. */
 export function WarehousePicker<T extends { id: string }>({ label, load, value, onChange, name, optional = false, disabled = false, searchable = true, eligible = () => true }: {
   label: string; load: (search: string, page: number) => Promise<WarehousePage<T>>; value: T | null; onChange: (value: T | null) => void;
   name: (value: T) => string; optional?: boolean; disabled?: boolean; searchable?: boolean; eligible?: (value: T) => boolean
 }) {
+  const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
-  const loader = useCallback(() => load(search, page), [load, search, page])
+  useEffect(() => {
+    const timer = window.setTimeout(() => { setQuery(search.trim()); setPage(0) }, search ? 200 : 0)
+    return () => window.clearTimeout(timer)
+  }, [search])
+  const loader = useCallback(() => load(query, page), [load, query, page])
   const { state, reload } = useWarehouseQuery(loader)
   const rows = state.status === 'ready' ? state.data.items : []
   const choices = value && !rows.some(row => row.id === value.id) ? [value, ...rows] : rows
-  return <div className="stack" style={{ gap: '0.35rem' }}>
-    {searchable && <TextField label={`Cari ${label.toLowerCase()}`} value={search} maxLength={200} disabled={disabled} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />}
-    <SelectField label={label} value={value?.id ?? ''} disabled={disabled || state.status !== 'ready'} required={!optional}
-      onChange={(_, data) => onChange(choices.find(row => row.id === data.value) ?? null)}>
-      <option value="">{optional ? 'Tidak dipilih' : 'Pilih…'}</option>
-      {choices.map(row => <option key={row.id} value={row.id} disabled={!eligible(row)}>{name(row)}{!eligible(row) ? ' — tidak memenuhi syarat' : ''}</option>)}
-    </SelectField>
-    {state.status === 'loading' && <span className="muted" role="status">Memuat pilihan…</span>}
-    {state.status === 'error' && <div role="alert"><p className="error">{warehouseError(state.error)}</p><Button disabled={disabled} onClick={reload}>Muat ulang pilihan</Button></div>}
-    {state.status === 'ready' && state.data.items.length === 0 && <span className="muted">Tidak ada pilihan yang cocok dalam cakupan Anda.</span>}
-    {state.status === 'ready' && (state.data.totalElements > state.data.size || page > 0) && <div className="row wrap">
-      <Button disabled={disabled || page === 0} onClick={() => setPage(page - 1)} aria-label={`Pilihan ${label.toLowerCase()} sebelumnya`}>Sebelumnya</Button>
-      <span className="muted">Halaman {page + 1}</span>
-      <Button disabled={disabled || (page + 1) * state.data.size >= state.data.totalElements} onClick={() => setPage(page + 1)} aria-label={`Pilihan ${label.toLowerCase()} berikutnya`}>Berikutnya</Button>
-    </div>}
-  </div>
+  const loading = state.status === 'loading' || search.trim() !== query
+  return <Field className="app-field warehouse-picker" label={label} required={!optional}>
+    <Combobox size="small" className="app-control app-control-compact" aria-label={label}
+      open={open} disabled={disabled} value={open && searchable ? search : value ? name(value) : ''}
+      selectedOptions={value ? [value.id] : []} placeholder={value ? name(value) : 'Pilih…'}
+      input={{ readOnly: !searchable, autoComplete: 'off' }}
+      onOpenChange={(_, data) => { setOpen(data.open) }}
+      onChange={event => { setSearch(event.target.value); setOpen(true) }}
+      onOptionSelect={(_, data) => {
+        if (data.optionValue === '__next' || data.optionValue === '__previous' || data.optionValue === '__retry') {
+          if (data.optionValue === '__retry') reload()
+          else setPage(current => current + (data.optionValue === '__next' ? 1 : -1))
+          queueMicrotask(() => setOpen(true))
+          return
+        }
+        if (data.optionValue === '__clear' && optional) onChange(null)
+        else {
+          const selected = choices.find(row => row.id === data.optionValue)
+          if (!selected || !eligible(selected)) return
+          onChange(selected)
+        }
+        setOpen(false); setSearch('')
+      }}>
+      {optional && <Option value="__clear">Tidak dipilih</Option>}
+      {choices.map(row => <Option key={row.id} value={row.id} text={name(row)} disabled={!eligible(row) || loading}>{name(row)}</Option>)}
+      {loading && <Option disabled value="__loading" text="Memuat pilihan"><Spinner size="tiny" /> Memuat…</Option>}
+      {state.status === 'error' && <Option value="__retry" text="Muat ulang pilihan">{warehouseError(state.error)} — Muat ulang</Option>}
+      {state.status === 'ready' && !loading && rows.length === 0 && <Option disabled value="__empty">Tidak ada hasil</Option>}
+      {state.status === 'ready' && !loading && page > 0 && <Option value="__previous">Pilihan sebelumnya</Option>}
+      {state.status === 'ready' && !loading && (page + 1) * state.data.size < state.data.totalElements && <Option value="__next">Pilihan berikutnya</Option>}
+    </Combobox>
+  </Field>
 }

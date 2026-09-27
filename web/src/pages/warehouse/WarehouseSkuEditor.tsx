@@ -1,3 +1,4 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import { saveSku } from '@/api/warehouse/masters'
@@ -5,7 +6,6 @@ import type { WarehouseSku } from '@/api/warehouse/models'
 import { displayUnit, formatBaseQuantity, quantityFromInput } from '@/api/warehouse/quantity'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { Button, SelectField, TextField } from '@/components/atoms'
-import { Modal } from '@/components/molecules/Modal'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { WarehouseQuantityField } from '@/components/organisms/warehouse/WarehouseQuantity'
 
@@ -35,7 +35,9 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa isian barang.') }
   }
   return <>
-    <Modal title={readOnly ? 'Detail barang' : row ? 'Ubah barang' : 'Tambah barang'} onClose={onClose} wide footer={<>
+    <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan barang" command={operation} confirmLabel="Simpan barang" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+      summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{TRACKING_LABELS[tracking]} · {displayUnit(unit)} · Minimum {minimum} {displayUnit(unit)}</p>
+        <p>{inspection ? 'Wajib pemeriksaan' : 'Pemeriksaan sesuai penerimaan'} · {ownership.map(mode => mode === 'LOAN' ? 'Pinjaman' : 'Penjualan').join(', ')}</p></>} />)} title={readOnly ? 'Detail barang' : row ? 'Ubah barang' : 'Tambah barang'} onClose={onClose} footer={<>
       <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>Tinjau perubahan</Button>}
     </>}>
       <form id={formId} className="stack" onSubmit={prepare}>
@@ -59,9 +61,7 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
         <p className="muted">Satuan dan pelacakan barang yang sudah memiliki stok atau riwayat tidak dapat diubah.</p>
         {error && <p role="alert" className="error">{error}</p>}
       </form>
-    </Modal>
-    {operation && <WarehouseCommandDialog title="Simpan barang" command={operation} confirmLabel="Simpan barang" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
-      summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{TRACKING_LABELS[tracking]} · {displayUnit(unit)} · Minimum {minimum} {displayUnit(unit)}</p>
-        <p>{inspection ? 'Wajib pemeriksaan' : 'Pemeriksaan sesuai penerimaan'} · {ownership.map(mode => mode === 'LOAN' ? 'Pinjaman' : 'Penjualan').join(', ')}</p></>} />}
+    </ResourceForm>
+    
   </>
 }

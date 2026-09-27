@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { uuid } from '@/api/warehouse/codec'
@@ -47,9 +48,9 @@ function ReturnList() {
       empty={<EmptyState title="Belum ada retur dalam cakupan Anda" hint="Sumber retur berasal dari sisa material yang sudah diterima atau perangkat hasil pelepasan yang sah." />} columns={[
         { key: 'code', header: 'Retur', cell: row => <Link to={detailPath(row.returnCase.id)}>{row.references.code}</Link> },
         { key: 'item', header: 'Barang', cell: row => returnItemLabel(row.references.item) },
-        { key: 'source', header: 'Asal', cell: row => <span>{returnOriginLabels[row.returnCase.origin]}<br />{row.references.sourceCode}</span> },
+        { key: 'source', header: 'Asal', cell: row => <span>{returnOriginLabels[row.returnCase.origin]}{' · '}{row.references.sourceCode}</span> },
         { key: 'amount', header: 'Jumlah retur', cell: row => <WarehouseQuantity value={row.returnCase.quantityBase} unit={row.returnCase.baseUnit} /> },
-        { key: 'state', header: 'Status dokumen', cell: row => <span><WarehouseStatus status={row.returnCase.state} />{row.references.rmaHandoverId && <p>Serah-terima RMA dibuat</p>}</span> },
+        { key: 'state', header: 'Status dokumen', cell: row => <span><WarehouseStatus status={row.returnCase.state} />{row.references.rmaHandoverId && <span>{' · '}Serah-terima RMA dibuat</span>}</span> },
         { key: 'owner', header: 'Pemilik', cell: row => <WarehouseStatus status={row.returnCase.legalOwner} /> },
       ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></>}</WarehouseState>
   </>
@@ -90,10 +91,10 @@ function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () =>
 }
 function ReturnHistory({ details }: { details: ReturnDetails }) {
   const id = details.returnCase.id, [page, setPage] = useState(0), loader = useCallback(() => returnHistory(id, page), [id, page]), result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Riwayat retur dan servis</summary><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section className="stack" key={row.revision}>
+  return <Disclosure className="card" title={<>Riwayat retur dan servis</>}><WarehouseState {...result}>{data => <div className="stack">{data.items.map(row => <section className="stack" key={row.revision}>
     <h3>Revisi {row.revision} · <WarehouseStatus status={row.state} /></h3><p><WarehouseTime value={row.recordedAt} /></p>
     <p><WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> · <WarehouseStatus status={row.condition} /> · <WarehouseStatus status={row.legalOwner} /></p>
     <p>{returnLocationLabel(details, row.locationId)}</p>{row.inspection && <p>Bukti inspeksi: {row.inspection.evidenceReference}</p>}
     {row.repair && <p>Referensi servis: {row.repair.vendorReference}{row.repair.receiptReference && ` · Kembali: ${row.repair.receiptReference}`}</p>}
-  </section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></details>
+  </section>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} /></div>}</WarehouseState></Disclosure>
 }

@@ -4,12 +4,14 @@ import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 
 /** Shared Fluent dialog: use the same focus manager as drawers and menus. */
-export function Modal({ title, onClose, children, footer, wide }: {
+export function Modal({ title, onClose, children, footer, wide, layout = 'dialog', className = '' }: {
   title: ReactNode
   onClose: () => void
   children: ReactNode
   footer?: ReactNode
   wide?: boolean
+  layout?: 'dialog' | 'resource'
+  className?: string
 }) {
   // Imperative dialogs have no DialogTrigger for Fluent to restore. Capture the
   // launcher before the surface moves focus, and restore only after it unmounts.
@@ -40,9 +42,12 @@ export function Modal({ title, onClose, children, footer, wide }: {
   }, [launcher])
   return (
     <Dialog open onOpenChange={(_, data) => { if (!data.open) onClose() }}>
-      <DialogSurface className={`console-dialog${wide ? ' console-dialog-wide' : ''}`}>
+      <DialogSurface className={`console-dialog ${className}${wide ? ' console-dialog-wide' : ''}${layout === 'resource' ? ' resource-form-dialog' : ''}`}>
         <DialogBody>
-          <DialogTitle action={<Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />}>{title}</DialogTitle>
+          <div className="console-dialog-heading">
+            <DialogTitle>{title}</DialogTitle>
+            <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
+          </div>
           <DialogContent>{children}</DialogContent>
           {footer && <DialogActions>{footer}</DialogActions>}
         </DialogBody>

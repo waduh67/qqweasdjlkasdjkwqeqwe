@@ -25,7 +25,7 @@ export function WarehouseCountFilters({ onApply }: { onApply: (filter: CountFilt
       onApply({ locationId: location?.id, skuId: sku?.id, state: state || undefined, query: query.trim() || undefined, serial: serial.trim() || undefined, from: start?.toISOString(), until: end?.toISOString() }); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa filter stock opname.') }
   }
-  return <details className="card"><summary>Filter stock opname</summary><form className="stack" onSubmit={apply}>
+  return <section className="resource-filters" aria-label="Filter"><form className="stack" onSubmit={apply}>
     <TextField label="Cari kode stock opname" value={query} maxLength={200} onChange={(_, data) => setQuery(data.value)} />
     <SelectField label="Status stock opname" value={state} onChange={(_, data) => setState(data.value as typeof state)}><option value="">Semua status</option>{COUNT_STATES.map(state => <option key={state} value={state}>{countStateLabels[state]}</option>)}</SelectField>
     <TextField label="Serial lengkap stock opname" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
@@ -34,5 +34,5 @@ export function WarehouseCountFilters({ onApply }: { onApply: (filter: CountFilt
     <TextField label="Stock opname dibuat mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
     <TextField label="Stock opname sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     {error && <p className="error" role="alert">{error}</p>}<Button type="submit" variant="primary">Terapkan filter stock opname</Button>
-  </form></details>
+  </form></section>
 }

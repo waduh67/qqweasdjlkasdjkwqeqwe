@@ -1,3 +1,6 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
 import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -91,7 +94,7 @@ function CountBody({ details, recent, reload }: { details: CountDetails; recent:
     {count.state === 'POSTED' && <p role="status">Hasil penghitungan sudah dibukukan. Lihat keputusan persetujuan untuk selisih yang memerlukan penyesuaian.</p>}
   </section>
     <DataTable presentation="warehouse" rows={count.entries} rowKey={entry => entry.balanceId} columns={[
-      { key: 'item', header: 'Posisi barang', cell: entry => <span>{countLineLabel(details, entry.balanceId)}<p className="muted" style={{ overflowWrap: 'anywhere' }}>Posisi: {entry.balanceId}</p></span> },
+      { key: 'item', header: 'Posisi barang', cell: entry => <span>{countLineLabel(details, entry.balanceId)}<span className="muted" style={{ overflowWrap: 'anywhere' }}>{' · '}Posisi: {entry.balanceId}</span></span> },
       { key: 'person', header: 'Penghitung', cell: entry => countCounterLabel(details, entry.counterId) },
       { key: 'result', header: 'Hasil putaran ini', cell: entry => {
         const fact = observed.find(fact => fact.balanceId === entry.balanceId)
@@ -107,6 +110,7 @@ function CountBody({ details, recent, reload }: { details: CountDetails; recent:
   </>
 }
 function CountObservation({ details, balanceId, onDone, onClose }: { details: CountDetails; balanceId: string; onDone: () => void; onClose: () => void }) {
+  const resourceFormId = useResourceFormId()
   const entry = details.count.entries.find(entry => entry.balanceId === balanceId)!
   const [quantity, setQuantity] = useState(''), [reason, setReason] = useState(''), [reference, setReference] = useState(''), [error, setError] = useState('')
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseCount> | null>(null)
@@ -118,25 +122,25 @@ function CountObservation({ details, balanceId, onDone, onClose }: { details: Co
       setOperation(observeCount(details.count.id, { expectedRevision: details.count.revision, balanceId, quantityBase, reason: reason.trim(), documentReference: reference.trim() })); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa hasil hitung.') }
   }
-  return <><form className="card stack" aria-label="Catat hasil hitung" onSubmit={prepare}><h2>{countLineLabel(details, balanceId)}</h2>
+  return <><ResourceForm title={<>{countLineLabel(details, balanceId)}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan hasil hitung" confirmLabel="Simpan hasil fisik" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+    summary={<><p>{details.references.code} · Revisi {details.count.revision}</p><p>{countLineLabel(details, balanceId)}: {quantity} {entry.baseUnit === 'MM' ? 'm' : 'unit'}</p>
+      <p>{reason} · Bukti: {reference}</p><p>Hasil ini menjadi catatan tetap untuk putaran berjalan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau hasil hitung</Button></>}><form id={resourceFormId} className="stack" aria-label="Catat hasil hitung" onSubmit={prepare}>
     <p>{locationLabel(details.references.location)} · Penghitung: {countCounterLabel(details, entry.counterId)}</p>
     <p style={{ overflowWrap: 'anywhere' }}>Posisi: {balanceId}</p><p>Masukkan jumlah yang benar-benar dihitung. Nol diperbolehkan. Hasil yang disimpan tidak dapat ditimpa pada putaran yang sama.</p>
     <WarehouseQuantityField label="Hasil hitung fisik" unit={entry.baseUnit} value={quantity} allowZero onChange={setQuantity} />
     <TextareaField label="Keterangan penghitungan" value={reason} required maxLength={500} onChange={(_, data) => setReason(data.value)} />
     <TextField label="Referensi lembar hitung" value={reference} required maxLength={500} onChange={(_, data) => setReference(data.value)} />
-    {error && <p className="error" role="alert">{error}</p>}<div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">Tinjau hasil hitung</Button></div>
-  </form>{operation && <WarehouseCommandDialog title="Simpan hasil hitung" confirmLabel="Simpan hasil fisik" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
-    summary={<><p>{details.references.code} · Revisi {details.count.revision}</p><p>{countLineLabel(details, balanceId)}: {quantity} {entry.baseUnit === 'MM' ? 'm' : 'unit'}</p>
-      <p>{reason} · Bukti: {reference}</p><p>Hasil ini menjadi catatan tetap untuk putaran berjalan.</p></>} />}</>
+    {error && <p className="error" role="alert">{error}</p>}<div className="row wrap"></div>
+  </form></ResourceForm></>
 }
 function CountHistory({ details }: { details: CountDetails }) {
   const id = details.count.id, [page, setPage] = useState(0), loader = useCallback(() => countHistory(id, page), [id, page]), result = useWarehouseQuery(loader)
-  return <details className="card"><summary>Riwayat hasil hitung</summary><WarehouseState {...result}>{data => <div className="stack">
+  return <Disclosure className="card" title={<>Riwayat hasil hitung</>}><WarehouseState {...result}>{data => <div className="stack">
     {!data.items.length && <p>Belum ada hasil hitung yang dapat Anda lihat.</p>}
     {data.items.map(({ fact, recordedAt }) => <section key={fact.id}><h3>{countLineLabel(details, fact.balanceId)}</h3><p>{countCounterLabel(details, fact.counterId)} · Putaran dari revisi {fact.roundRevision} · <WarehouseTime value={recordedAt} /></p>
       <p><WarehouseQuantity value={fact.quantityBase} unit={fact.baseUnit} /> · {fact.reason}</p><p>Bukti: {fact.documentReference}</p></section>)}
     <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
-  </div>}</WarehouseState></details>
+  </div>}</WarehouseState></Disclosure>
 }
 /** Explicit reviewer read: only mounted after submission, never in the blind editor. */
 export function WarehouseCountComparison({ id }: { id: string }) {

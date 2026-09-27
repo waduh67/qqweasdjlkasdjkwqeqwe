@@ -4,6 +4,7 @@ import './fonts.css'
 import './index.css'
 import './console.css'
 import './controls.css'
+import './resource-layout.css'
 import './navigation.css'
 import App from './App.tsx'
 

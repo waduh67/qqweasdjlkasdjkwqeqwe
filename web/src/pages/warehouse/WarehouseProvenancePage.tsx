@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCan } from '@/auth/useCan'
@@ -65,8 +66,8 @@ function MigrationOverview({ summary, onRefresh }: { summary: MigrationSummary; 
     <p>{summary.sourceCount} catatan sumber · {summary.conflictGroupCount} kelompok identitas berbenturan · {summary.unitUnverifiedBalanceCount} saldo dengan satuan belum terbukti</p>
     <p>{pending} efek atau antrean tertunda {summary.batch ? 'pada saat pemeriksaan dimulai' : 'pada data saat ini'}. Status pembatalannya diperiksa pada tahap aktivasi.</p>
     <p>Data lama, serial, tautan pelanggan, dan riwayat tetap tersimpan. Catatan yang belum terbukti tidak dianggap stok yang dapat dikeluarkan.</p>
-    <details><summary>Lihat jumlah menurut sumber</summary><ul>{Object.entries(summary.sourceCounts).map(([source, count]) =>
-      <li key={source}>{migrationSourceLabels[source as keyof typeof migrationSourceLabels]}: {count}</li>)}</ul></details>
+    <Disclosure title={<>Lihat jumlah menurut sumber</>}><ul>{Object.entries(summary.sourceCounts).map(([source, count]) =>
+      <li key={source}>{migrationSourceLabels[source as keyof typeof migrationSourceLabels]}: {count}</li>)}</ul></Disclosure>
     <div className="row wrap"><Button onClick={onRefresh}>Muat ulang laporan gudang lama</Button>
       {!summary.batch && summary.cutover.state !== 'ENFORCED' && <Button variant="primary" onClick={() => setOperation(beginMigration(summary))}>Mulai pemeriksaan gudang</Button>}</div>
     {operation && <WarehouseCommandDialog title="Mulai pemeriksaan gudang lama" command={operation} confirmLabel="Mulai pemeriksaan"
@@ -85,7 +86,7 @@ function CaseList({ onSelect }: { onSelect: (id: string) => void }) {
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id}
         empty={<EmptyState title="Tidak ada kasus pada halaman ini" hint="Ubah jenis catatan atau lanjutkan pemeriksaan saldo awal jika seluruh sumber memang kosong." />} columns={[
-          { key: 'identity', header: 'Catatan asli', cell: row => <span style={{ overflowWrap: 'anywhere' }}>{migrationCaseLabel(row)}<p className="muted">{migrationSourceLabels[row.sourceTable]}</p></span> },
+          { key: 'identity', header: 'Catatan asli', cell: row => <span style={{ overflowWrap: 'anywhere' }}>{migrationCaseLabel(row)}<span className="muted">{' · '}{migrationSourceLabels[row.sourceTable]}</span></span> },
           { key: 'location', header: 'Lokasi', cell: row => row.location?.name || row.location?.code || 'Belum terbukti' },
           { key: 'quantity', header: 'Kuantitas lama', cell: row => row.source.legacyQuantity === null ? 'Lihat catatan asli' : row.source.legacyQuantity + ' · ' + (row.source.baseUnit || 'satuan belum terbukti') },
           { key: 'claims', header: 'Identitas', cell: row => !row.claims.length ? 'Lihat bukti sumber' : [...new Set(row.claims.map(claim => claim.state ? claimLabels[claim.state] : 'Format perlu diperiksa'))].join(' · ') },

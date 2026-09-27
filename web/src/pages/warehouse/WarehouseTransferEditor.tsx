@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { getLot, listPositions, type StockPosition } from '@/api/warehouse/stock'
@@ -23,6 +25,7 @@ type Recipient = { id: string; name: string; status: string }
 export interface TransferEditorInitial { transfer: WarehouseTransfer; source: WarehouseLocation; destination: WarehouseLocation;
   transit: WarehouseLocation; receiver: Recipient; rows: TransferDraftLine[] }
 export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }: { initial?: TransferEditorInitial; onSaved: (row: WarehouseTransfer) => void; onClose: () => void; onReload: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { can } = useCan(), { user } = useAuth()
   const [source, setSource] = useState<WarehouseLocation | null>(initial?.source ?? null)
   const [destination, setDestination] = useState<WarehouseLocation | null>(initial?.destination ?? null)
@@ -46,8 +49,11 @@ export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }:
       setOperation(initial ? updateTransfer(initial.transfer.id, initial.transfer.revision, draft) : createTransfer(draft)); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian transfer.') }
   }
-  return <><form className="stack" aria-label="Draft transfer" onSubmit={prepare}>
-    <h2>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</h2><p>Draft belum memindahkan atau mencadangkan stok. Setelah disimpan, pengirim perlu mengirim barang dan penerima mengonfirmasi jumlah fisik yang diterima.</p>
+  return <><ResourceForm title={<>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft transfer" confirmLabel="Simpan transfer" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+      summary={<><p>{source && locationLabel(source)} → {transit && locationLabel(transit)} → {destination && locationLabel(destination)}</p><p>Pengirim: {actor.name} · Penerima: {receiver?.name}</p>
+        <ul>{rows.map(row => <li key={row.key}>{row.position?.name} · {row.position?.serial ?? row.position?.stockIdentityId}: {row.quantity} {row.position?.physical.baseUnit === 'MM' ? 'm' : 'unit'}</li>)}</ul>
+        <p>{reason}</p><p>Stok belum berpindah. Kondisi dan kepemilikan barang tetap mengikuti sumbernya.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!source}>Tinjau transfer</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft transfer" onSubmit={prepare}>
+    <p>Draft belum memindahkan atau mencadangkan stok. Setelah disimpan, pengirim perlu mengirim barang dan penerima mengonfirmasi jumlah fisik yang diterima.</p>
     {initial && <p>Revisi {initial.transfer.revision}. Perubahan sebelumnya tetap tersimpan di riwayat. Barang yang tidak lagi tersedia perlu dipilih kembali.</p>}
     {receiver?.status !== 'ACTIVE' && initial && <p role="status">Penerima tersimpan sudah tidak aktif. Pilih penerima aktif sebelum menyimpan.</p>}
     <WarehousePicker label="Lokasi asal transfer" load={receiptLocations} value={source} name={locationLabel} eligible={row => transferLocationKinds.includes(row.kind)}
@@ -65,13 +71,10 @@ export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }:
     {source ? rows.map((row, index) => <TransferLineEditor key={row.key} row={row} number={index + 1} sourceId={source.id} actorId={actor.id} onChange={patch => update(row.key, patch)}
       onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />) : <p>Pilih lokasi asal untuk mencari barang fisik.</p>}
     <div className="row wrap"><Button type="button" disabled={!source || rows.length >= 100} onClick={() => setRows(current => [...current, emptyLine()])}>Tambah barang transfer</Button>
-      <Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary" disabled={!source}>Tinjau transfer</Button></div>
+      </div>
     {error && <p className="error" role="alert">{error}</p>}
-  </form>
-    {operation && <WarehouseCommandDialog title="Simpan draft transfer" confirmLabel="Simpan transfer" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
-      summary={<><p>{source && locationLabel(source)} → {transit && locationLabel(transit)} → {destination && locationLabel(destination)}</p><p>Pengirim: {actor.name} · Penerima: {receiver?.name}</p>
-        <ul>{rows.map(row => <li key={row.key}>{row.position?.name} · {row.position?.serial ?? row.position?.stockIdentityId}: {row.quantity} {row.position?.physical.baseUnit === 'MM' ? 'm' : 'unit'}</li>)}</ul>
-        <p>{reason}</p><p>Stok belum berpindah. Kondisi dan kepemilikan barang tetap mengikuti sumbernya.</p></>} />}
+  </form></ResourceForm>
+    
   </>
 }
 

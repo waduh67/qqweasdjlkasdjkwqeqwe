@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
 import { dispatchRma, getRmaDetails, getRmaWorkOrder, type CustomerRmaHandover, type ReturnDetails, type RmaWorkOrder } from '@/api/warehouse/returns'
 import type { WarehouseLocation } from '@/api/warehouse/models'
@@ -43,6 +45,7 @@ function SelectedOrder({ details, orderId, onClose, onDone }: { details: ReturnD
   return <WarehouseState {...result}>{order => <RmaForm details={details} order={order} onClose={onClose} onDone={onDone} />}</WarehouseState>
 }
 function RmaForm({ details, order, onClose, onDone }: { details: ReturnDetails; order: RmaWorkOrder; onClose: () => void; onDone: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { user } = useAuth(), [technician, setTechnician] = useState(''), [transit, setTransit] = useState<WarehouseLocation | null>(null), [field, setField] = useState<WarehouseLocation | null>(null)
   const [serial, setSerial] = useState(''), [evidence, setEvidence] = useState(''), [error, setError] = useState(''), [operation, setOperation] = useState<WarehouseCommand<CustomerRmaHandover> | null>(null)
   function prepare(event: FormEvent) {
@@ -53,7 +56,10 @@ function RmaForm({ details, order, onClose, onDone }: { details: ReturnDetails; 
     }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa serah-terima RMA.') }
   }
-  return <><form className="stack" aria-label="Serah-terima RMA" onSubmit={prepare}>
+  return <><ResourceForm title="Serah-terima RMA" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi pengiriman RMA" confirmLabel="Kirim RMA ke transit" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+      summary={<><p>{order.code} · Revisi WO {order.revision} · Retur revisi {details.returnCase.revision}</p><p>{returnItemLabel(details.references.item)} · 1 unit · Serial {serial}</p>
+        <p>Penerima: {order.technicians.find(row => row.id === technician)?.name}</p><p>{transit && locationLabel(transit)} → {field && locationLabel(field)}</p>
+        <p>Bukti: {evidence}</p><p>Barang tetap milik pelanggan dan belum diterima teknisi. Tidak menambah stok tersedia ISP.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} variant="primary" type="submit" disabled={!technician}>Tinjau pengiriman RMA</Button></>}><form id={resourceFormId} className="stack" aria-label="Serah-terima RMA" onSubmit={prepare}>
     <p>{order.code} · Revisi WO {order.revision} · Dari {returnLocationLabel(details, details.returnCase.locationId)}</p>
     <SelectField label="Teknisi penerima RMA" value={technician} required onChange={(_, data) => { setTechnician(data.value); setField(null) }}>
       <option value="">Pilih…</option>{order.technicians.map(row => <option key={row.id} value={row.id} disabled={row.id === user?.id}>{row.name}</option>)}</SelectField>
@@ -63,12 +69,9 @@ function RmaForm({ details, order, onClose, onDone }: { details: ReturnDetails; 
     <TextField label="Serial fisik RMA" value={serial} required maxLength={128} onChange={(_, data) => setSerial(data.value)}
       onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation() } }} />
     <TextField label="Referensi bukti RMA" value={evidence} required maxLength={500} onChange={(_, data) => setEvidence(data.value)} />
-    {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button variant="primary" type="submit" disabled={!technician}>Tinjau pengiriman RMA</Button></div>
-  </form>
-    {operation && <WarehouseCommandDialog title="Konfirmasi pengiriman RMA" confirmLabel="Kirim RMA ke transit" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
-      summary={<><p>{order.code} · Revisi WO {order.revision} · Retur revisi {details.returnCase.revision}</p><p>{returnItemLabel(details.references.item)} · 1 unit · Serial {serial}</p>
-        <p>Penerima: {order.technicians.find(row => row.id === technician)?.name}</p><p>{transit && locationLabel(transit)} → {field && locationLabel(field)}</p>
-        <p>Bukti: {evidence}</p><p>Barang tetap milik pelanggan dan belum diterima teknisi. Tidak menambah stok tersedia ISP.</p></>} />}
+    {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"></div>
+  </form></ResourceForm>
+    
   </>
 }
 function RmaReceipt({ id }: { id: string }) {

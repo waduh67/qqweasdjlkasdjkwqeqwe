@@ -5,8 +5,13 @@ import { addLocation, addSku, addSupplier, setupOwnArea } from './catalog'
 export async function selectNamed(page: Page, name: string, label: string) {
   const control = page.getByRole('combobox', { name, exact: true })
   await expect(control).toBeEnabled()
-  await expect(control.getByRole('option', { name: label, exact: true })).toBeAttached()
-  await control.selectOption({ label })
+  if (await control.evaluate(element => element.tagName === 'SELECT')) {
+    await expect(control.getByRole('option', { name: label, exact: true })).toBeAttached()
+    await control.selectOption({ label })
+  } else {
+    await control.click()
+    await page.getByRole('option', { name: label, exact: true }).click()
+  }
 }
 export async function confirmOperation(page: Page, path: string, button: string, method = 'POST', dialogTitle?: string) {
   const scope = dialogTitle ? page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: dialogTitle, exact: true }) }) : page

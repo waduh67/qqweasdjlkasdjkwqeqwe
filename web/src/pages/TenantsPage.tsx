@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
@@ -44,6 +45,7 @@ export function TenantsPage() {
   const [deleting, setDeleting] = useState(false)
   const [defaultFee, setDefaultFee] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
+  const creation = useCreationReview(draft != null)
   const [formError, setFormError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -109,7 +111,7 @@ export function TenantsPage() {
   }, [tenants, query, statusFilter])
 
   const columns: Column<Tenant>[] = [
-    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <div><Text as="strong" weight="semibold">{t.name}</Text>{t.slug === 'platform' && <p className="muted entity-caption">Akun sistem · bukan tenant pelanggan</p>}</div> },
+    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <span><Text as="strong" weight="semibold">{t.name}</Text>{t.slug === 'platform' && <span className="muted entity-caption">{' · '}Akun sistem · bukan tenant pelanggan</span>}</span> },
     { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => t.slug },
     {
       key: 'status',
@@ -184,6 +186,7 @@ export function TenantsPage() {
       />
 
       <Blade
+        creation={{ ...creation, busy: saving, prepare: () => (document.getElementById('tenant-onboarding') as HTMLFormElement | null)?.requestSubmit(), summary: <><CreationSummary rows={[['Tenant', draft?.name], ['Slug', draft?.slug]]} />{formError && <p className="error" role="alert">{formError}</p>}</> }}
         open={draft != null}
         title="Tambah tenant"
         size="sm"
@@ -207,6 +210,7 @@ export function TenantsPage() {
           <form id="tenant-onboarding" className="stack" onSubmit={event => {
             event.preventDefault()
             if (saving) return
+            if (creation.beforeSave()) return
             setSaving(true)
             setFormError(null)
             const { monthlyFee, ...rest } = draft

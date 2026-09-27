@@ -27,7 +27,7 @@ export function WarehouseApprovalFilters({ onApply }: { onApply: (filter: Approv
       onApply({ status: status || undefined, operation: operation || undefined, query: query.trim() || undefined, serial: serial.trim() || undefined, locationId: location?.id, skuId: sku?.id, from: start?.toISOString(), until: end?.toISOString() }); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa filter persetujuan.') }
   }
-  return <details className="card"><summary>Filter persetujuan</summary><form className="stack" onSubmit={apply}>
+  return <section className="resource-filters" aria-label="Filter"><form className="stack" onSubmit={apply}>
     <TextField label="Cari kode dokumen persetujuan" value={query} maxLength={200} onChange={(_, data) => setQuery(data.value)} />
     <SelectField label="Status persetujuan" value={status} onChange={(_, data) => setStatus(data.value as typeof status)}><option value="">Semua status</option>{APPROVAL_STATES.map(status => <option key={status} value={status}>{statuses[status]}</option>)}</SelectField>
     <SelectField label="Jenis persetujuan" value={operation} onChange={(_, data) => setOperation(data.value as typeof operation)}><option value="">Semua jenis</option>{POLICY_OPERATIONS.map(operation => <option key={operation} value={operation}>{approvalOperationLabels[operation]}</option>)}</SelectField>
@@ -37,5 +37,5 @@ export function WarehouseApprovalFilters({ onApply }: { onApply: (filter: Approv
     <TextField label="Persetujuan diajukan mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
     <TextField label="Persetujuan sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     {error && <p className="error" role="alert">{error}</p>}<Button type="submit" variant="primary">Terapkan filter persetujuan</Button>
-  </form></details>
+  </form></section>
 }

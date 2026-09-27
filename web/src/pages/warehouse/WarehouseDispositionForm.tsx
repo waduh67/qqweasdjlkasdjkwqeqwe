@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useState, type FormEvent } from 'react'
 import { createCompensation, createDisposition, type Compensation, type Disposition } from '@/api/warehouse/dispositions'
 import type { WarehouseLocation } from '@/api/warehouse/models'
@@ -11,6 +13,7 @@ import { locationLabel, receiptLocations } from './receiptChoices'
 import { returnItemLabel } from './returnPresentation'
 
 export function WarehouseDispositionForm({ details, original, onClose, onDone, onReload }: { details: ReturnDetails; original?: Disposition; onClose: () => void; onDone: () => void; onReload: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { returnCase: returned } = details
   const [action, setAction] = useState<'LOSS' | 'SCRAP'>('LOSS'), [target, setTarget] = useState<WarehouseLocation | null>(null)
   const [reason, setReason] = useState(''), [reference, setReference] = useState(''), [error, setError] = useState('')
@@ -35,7 +38,10 @@ export function WarehouseDispositionForm({ details, original, onClose, onDone, o
       setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa permintaan disposisi.') }
   }
-  return <><form className="stack" aria-label={title} onSubmit={prepare}><h3>{title}</h3>
+  return <><ResourceForm title={title} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi permintaan disposisi" confirmLabel="Simpan permintaan disposisi" command={operation} onDone={onDone} onReload={onReload} onClose={() => setOperation(null)}
+    summary={<><p>{details.references.code} · Retur revisi {returned.revision}</p><p>{original ? `Koreksi ${original.code} revisi ${original.revision}` : action === 'LOSS' ? 'Kehilangan' : 'Scrap barang rusak'}</p>
+      <p>{returnItemLabel(details.references.item)} · <WarehouseQuantity value={returned.quantityBase} unit={returned.baseUnit} /> → {target && locationLabel(target)}</p><p>{reason}</p><p>Bukti: {reference}</p>
+      <p>Dokumen diajukan untuk persetujuan independen. Menyimpan permintaan belum membukukan perpindahan barang.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal disposisi</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau permintaan disposisi</Button></>}><form id={resourceFormId} className="stack" aria-label={title} onSubmit={prepare}><h3>{title}</h3>
     <p>{details.references.code} · Retur revisi {returned.revision} · {returnItemLabel(details.references.item)}</p>
     <p>Seluruh barang pada retur: <WarehouseQuantity value={returned.quantityBase} unit={returned.baseUnit} /></p>
     {original ? <p>Disposisi sumber {original.code} · Revisi {original.revision}. Koreksi membuat catatan baru yang merujuk pembukuan lama.</p>
@@ -45,9 +51,6 @@ export function WarehouseDispositionForm({ details, original, onClose, onDone, o
     <TextField label="Referensi bukti disposisi" required maxLength={500} value={reference} onChange={(_, data) => setReference(data.value)} />
     <p>Permintaan ini memerlukan persetujuan independen. {original ? 'Setelah disetujui, barang kembali ke karantina untuk pemeriksaan; stok tersedia belum bertambah.' : 'Barang tetap pada lokasi sekarang sampai keputusan disetujui dan dibukukan.'}</p>
     {error && <p role="alert" className="error">{error}</p>}
-    <div className="row wrap"><Button type="button" onClick={onClose}>Batal disposisi</Button><Button type="submit" variant="primary">Tinjau permintaan disposisi</Button></div>
-  </form>{operation && <WarehouseCommandDialog title="Konfirmasi permintaan disposisi" confirmLabel="Simpan permintaan disposisi" command={operation} onDone={onDone} onReload={onReload} onClose={() => setOperation(null)}
-    summary={<><p>{details.references.code} · Retur revisi {returned.revision}</p><p>{original ? `Koreksi ${original.code} revisi ${original.revision}` : action === 'LOSS' ? 'Kehilangan' : 'Scrap barang rusak'}</p>
-      <p>{returnItemLabel(details.references.item)} · <WarehouseQuantity value={returned.quantityBase} unit={returned.baseUnit} /> → {target && locationLabel(target)}</p><p>{reason}</p><p>Bukti: {reference}</p>
-      <p>Dokumen diajukan untuk persetujuan independen. Menyimpan permintaan belum membukukan perpindahan barang.</p></>} />}</>
+    <div className="row wrap"></div>
+  </form></ResourceForm></>
 }

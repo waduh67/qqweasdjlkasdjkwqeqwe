@@ -27,9 +27,9 @@ export function WarehouseIssuePanel({ summary, onChanged, active }: { summary: M
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Belum ada slip dalam cakupan Anda" hint="Siapkan barang dari reservasi untuk membuat slip pengeluaran." />} columns={[
         { key: 'code', header: 'Slip', cell: row => <Button variant="subtle" onClick={() => setSelected(row)}>{row.code}</Button> },
-        { key: 'state', header: 'Status saat ini', cell: row => <><WarehouseStatus status={row.unpicked ? 'UNPICKED' : row.state} /><p className="muted">Revisi {row.revision} · Rencana {row.planRevision}</p></> },
+        { key: 'state', header: 'Status saat ini', cell: row => <><WarehouseStatus status={row.unpicked ? 'UNPICKED' : row.state} /><span className="muted">{' · '}Revisi {row.revision} · Rencana {row.planRevision}</span></> },
         { key: 'receiver', header: 'Penerima', cell: row => row.receiver.name },
-        { key: 'lines', header: 'Jumlah per barang', cell: row => <ul>{row.lines.map(line => <li key={line.issueLineId}><strong>{line.sku.name}</strong> · {line.serial ?? line.lotCode}<br />Disiapkan <WarehouseQuantity value={line.pickedBase} unit={line.baseUnit} /><br />Dikirim <WarehouseQuantity value={line.dispatchedBase} unit={line.baseUnit} /><br />Diterima <WarehouseQuantity value={line.acceptedBase} unit={line.baseUnit} /></li>)}</ul> },
+        { key: 'lines', header: 'Jumlah per barang', cell: row => <ul>{row.lines.map(line => <li key={line.issueLineId}><strong>{line.sku.name}</strong> · {line.serial ?? line.lotCode}{' · '}Disiapkan <WarehouseQuantity value={line.pickedBase} unit={line.baseUnit} />{' · '}Dikirim <WarehouseQuantity value={line.dispatchedBase} unit={line.baseUnit} />{' · '}Diterima <WarehouseQuantity value={line.acceptedBase} unit={line.baseUnit} /></li>)}</ul> },
       ]} /><WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={next => { setSelected(null); setPage(next) }} />
     </>}</WarehouseState>
     {selected && <IssueDetail key={selected.id} row={selected} summary={summary} active={active} onClose={() => setSelected(null)} onChanged={onChanged} />}

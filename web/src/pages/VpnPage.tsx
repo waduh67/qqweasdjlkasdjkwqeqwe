@@ -523,7 +523,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
             placeholder="otomatis"
           /></TableCell>
           <TableCell className="tnum muted">{f.address}</TableCell>
-          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
             <TextField
               value={editing.devicePort}
               onChange={(_, data) => setEditing({ ...editing, devicePort: data.value })}
@@ -536,15 +536,15 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
               <option value="TCP">TCP</option>
               <option value="UDP">UDP</option>
             </SelectField>
-          </div></TableCell>
-          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+          </span></TableCell>
+          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
             <Button variant="primary" size="small" onClick={saveEdit} disabled={busy}>
               Simpan
             </Button>
             <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
               Batal
             </Button>
-          </div></TableCell></TableRow>
+          </span></TableCell></TableRow>
         ) : (
           <TableRow key={f.id}><TableCell ><strong>{f.label}</strong></TableCell>
           <TableCell ><span className="tnum">{f.address}</span>{' '}
@@ -552,7 +552,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
             Salin
           </Button></TableCell>
           <TableCell className="tnum">{f.devicePort} <span className="muted">{f.protocol}</span></TableCell>
-          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
             <Button
               variant="subtle"
               size="small"
@@ -571,7 +571,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
             <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(f)}>
               Cabut
             </Button>
-          </div></TableCell></TableRow>
+          </span></TableCell></TableRow>
         ),
       )}</TableBody></Table>
 
@@ -722,18 +722,18 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
             placeholder="mis. Kolam PPPoE"
           /></TableCell>
           <TableCell className="tnum muted">{r.cidr}</TableCell>
-          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
             <Button variant="primary" size="small" onClick={saveEdit} disabled={busy || !editing.label.trim()}>
               Simpan
             </Button>
             <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
               Batal
             </Button>
-          </div></TableCell></TableRow>
+          </span></TableCell></TableRow>
         ) : (
           <TableRow key={r.id}><TableCell ><strong>{r.label}</strong></TableCell>
           <TableCell className="tnum">{r.cidr}</TableCell>
-          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+          <TableCell ><span className="row" style={{ gap: '0.35rem' }}>
             <Button
               variant="subtle"
               size="small"
@@ -745,7 +745,7 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
             <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(r)}>
               Cabut
             </Button>
-          </div></TableCell></TableRow>
+          </span></TableCell></TableRow>
         ),
       )}</TableBody></Table>
 

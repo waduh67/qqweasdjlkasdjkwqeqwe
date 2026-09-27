@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ApprovalDocument } from '@/api/warehouse/approvalReads'
 import { WarehouseDataError } from '@/api/warehouse/codec'
@@ -67,7 +68,7 @@ function Case({ id, row, document }: { id: string; row: MigrationReviewCase; doc
       {busy === reference.id ? 'Membaca bukti…' : 'Unduh bukti kasus ' + (index + 1)}
     </Button>)}</div>
     {error && <p role="alert" className="error">{error}</p>}
-    <details><summary>Referensi kasus</summary><p>Kasus: {row.caseId}</p><p>Catatan asli: {row.sourceId}</p>
-      {resolution?.duplicateCaseId && <p>Kasus acuan duplikat: {resolution.duplicateCaseId}</p>}<p>Sidik sumber: {row.sourceHash}</p></details>
+    <Disclosure title={<>Referensi kasus</>}><p>Kasus: {row.caseId}</p><p>Catatan asli: {row.sourceId}</p>
+      {resolution?.duplicateCaseId && <p>Kasus acuan duplikat: {resolution.duplicateCaseId}</p>}<p>Sidik sumber: {row.sourceHash}</p></Disclosure>
   </article>
 }

@@ -1,3 +1,5 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import { Link } from 'react-router-dom'
@@ -43,8 +45,10 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian penerimaan.') }
   }
   return <>
-    <form id={formId} className="stack" onSubmit={prepare}>
-      <h2>{receipt ? 'Ubah draft penerimaan' : 'Draft penerimaan baru'}</h2>
+    <ResourceForm title={<>{receipt ? 'Ubah draft penerimaan' : 'Draft penerimaan baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft penerimaan" confirmLabel="Simpan draft" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+      summary={<><p><strong>{reference}</strong> · {supplier?.name}{receipt && ` · Revisi ${receipt.revision}`}</p><p>{source?.name ?? source?.code} → {inspection?.name}</p>
+        <ul>{rows.map(row => <li key={row.key}>{row.sku?.name}: {row.sku && `${formatBaseQuantity(buildReceiptLines([row], costVisible)[0].quantityBase, row.sku.baseUnit)} ${displayUnit(row.sku.baseUnit)}`}</li>)}</ul><p>Perubahan stok: belum ada. Lanjutkan Terima barang dari detail setelah draft tersimpan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau draft</Button></>}><form id={formId} className="stack" onSubmit={prepare}>
+      
       <p className="muted">Menyimpan draft belum menambah stok. Lampiran draft lama perlu diunggah ulang setelah isi draft berubah.</p>
       <div style={grid}>
         <TextField label="Referensi surat jalan" required maxLength={500} value={reference} onChange={(_, data) => setReference(data.value)} />
@@ -55,12 +59,10 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
       <p className="muted">Batas penerimaan memakai lokasi transit RECEIPT_SOURCE. Barang masuk ke karantina sebelum ditempatkan ke bin. <Link to="/warehouse/catalog">Kelola lokasi / pemasok / barang</Link></p>
       {rows.map((row, index) => <ReceiptLineEditor key={row.key} row={row} number={index + 1} costVisible={costVisible} onChange={patch => update(row.key, patch)} onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />)}
       <div className="row wrap"><Button type="button" disabled={rows.length >= 100} onClick={() => setRows(current => [...current, emptyReceiptRow()])}>Tambah baris barang</Button>
-        <Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">Tinjau draft</Button></div>
+        </div>
       {error && <p className="error" role="alert">{error}</p>}
-    </form>
-    {operation && <WarehouseCommandDialog title="Simpan draft penerimaan" confirmLabel="Simpan draft" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
-      summary={<><p><strong>{reference}</strong> · {supplier?.name}{receipt && ` · Revisi ${receipt.revision}`}</p><p>{source?.name ?? source?.code} → {inspection?.name}</p>
-        <ul>{rows.map(row => <li key={row.key}>{row.sku?.name}: {row.sku && `${formatBaseQuantity(buildReceiptLines([row], costVisible)[0].quantityBase, row.sku.baseUnit)} ${displayUnit(row.sku.baseUnit)}`}</li>)}</ul><p>Perubahan stok: belum ada. Lanjutkan Terima barang dari detail setelah draft tersimpan.</p></>} />}
+    </form></ResourceForm>
+    
   </>
 }
 
@@ -76,7 +78,7 @@ function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { r
         <TextField label="Pindai serial baru" value={scan} maxLength={128} onChange={(_, data) => setScan(data.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addScan() } }} hint="Enter hanya menambahkan serial ke daftar." />
         <Button type="button" onClick={addScan}>Tambahkan hasil pindai</Button>
       </> : <TextField label="Kode lot / reel" required maxLength={120} value={row.lotCode} onChange={(_, data) => onChange({ lotCode: data.value })} />}
-      <details><summary>Konversi kemasan dan biaya</summary><div className="stack">
+      <Disclosure title={<>Konversi kemasan dan biaya</>}><div className="stack">
         <Checkbox label="Catat konversi kemasan" checked={row.useConversion} onChange={(_, data) => onChange({ useConversion: data.checked === true })} />
         {row.useConversion && <div style={grid}>
           <TextField label={`Isi kemasan dalam ${row.sku.baseUnit} (pembilang)`} required value={row.numerator} onChange={(_, data) => onChange({ numerator: data.value })} />
@@ -88,7 +90,7 @@ function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { r
           {row.useCost && <div style={grid}><TextField label="Total biaya (satuan minor)" required value={row.totalMinor} onChange={(_, data) => onChange({ totalMinor: data.value })} hint="Bilangan bulat dalam satuan minor mata uang; bukan harga per unit." />
             <TextField label="Mata uang" required maxLength={3} value={row.currency} onChange={(_, data) => onChange({ currency: data.value.toUpperCase() })} /></div>}
         </> : <p className="muted">Rincian biaya memerlukan izin lihat biaya.</p>}
-      </div></details>
+      </div></Disclosure>
     </>}
     {onRemove && <Button type="button" onClick={onRemove}>Hapus baris {number}</Button>}
   </fieldset>

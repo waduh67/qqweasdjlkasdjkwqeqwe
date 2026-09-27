@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { Text } from '@fluentui/react-components'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '@/api/client'
@@ -214,7 +215,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <div className="hr" />
 
-      <details className="settings-disclosure"><summary>Subjek pesan</summary><EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} /></details>
+      <Disclosure className="settings-disclosure" title={<>Subjek pesan</>}><EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} /></Disclosure>
 
       {manage && (
         <div className="spread" style={{ alignItems: 'center' }}>
@@ -227,14 +228,14 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <div className="hr" />
 
-      <details className="settings-disclosure"><summary>Pratinjau &amp; uji kirim</summary>
+      <Disclosure className="settings-disclosure" title={<>Pratinjau &amp; uji kirim</>}>
       <EmailPreviewPanel
         reloadKey={freshness}
         canSendTest={manage}
         defaultTo={saved.replyToAddress}
         loadPreview={previewTenantEmail}
         sendTest={sendTenantTestEmail}
-      /></details>
+      /></Disclosure>
     </div>
   )
 }

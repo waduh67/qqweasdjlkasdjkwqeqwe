@@ -22,7 +22,7 @@ import {
   type TableColumnDefinition,
 } from '@fluentui/react-components'
 import { ArrowDown, ArrowLeftRight, ArrowUp, MoreHorizontal } from 'lucide-react'
-import { EmptyState, SelectField, SkeletonRows } from '@/components/atoms'
+import { EmptyState, SkeletonRows } from '@/components/atoms'
 
 /**
  * Tabel data generik — pengganti tunggal untuk pola "kartu per item" di seluruh
@@ -185,7 +185,6 @@ export function DataTable<T>({
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
   const warehousePresentation = presentation === 'warehouse'
-  const mobileCards = warehousePresentation
 
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -227,7 +226,7 @@ export function DataTable<T>({
               ) : (
                 column.cell(row)
               )}
-              {column.description && <span className="resource-cell-description">{column.description(row)}</span>}
+              {column.description && <span className="resource-cell-description"> · {column.description(row)}</span>}
               </div>
               {actions.length > 0 && (
                 <TableCellActions visible={hasInlineControls}>
@@ -331,21 +330,7 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className={mergeClasses('card', 'table-card', 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card', mobileCards && 'mobile-card-table')}>
-      {mobileCards && !loading && sorted.length > 0 && columns.some(column => column.sortValue) && (
-        <div className="mobile-table-sort">
-          <SelectField label="Urutkan tabel" value={sort ? `${sort.key}:${sort.dir}` : ''} onChange={(_, data) => {
-            const [key, dir] = data.value.split(':')
-            setSort(key ? { key, dir: dir as 'asc' | 'desc' } : null)
-            onSortChange?.()
-          }}>
-            <option value="">Urutan awal</option>
-            {columns.filter(column => column.sortValue).flatMap(column => ['asc', 'desc'].map(dir => (
-              <option key={`${column.key}:${dir}`} value={`${column.key}:${dir}`}>{typeof column.header === 'string' ? column.header : column.key} · {dir === 'asc' ? 'naik' : 'turun'}</option>
-            )))}
-          </SelectField>
-        </div>
-      )}
+    <div className={mergeClasses('table-card', 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card')}>
       {!loading && sorted.length > 0 && (
         <div ref={scrollRef} className={mergeClasses('table-wrap', 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
@@ -445,10 +430,7 @@ export function DataTable<T>({
                           }
                           style={{ flex: isActionCell ? undefined : `1 1 ${column?.minWidth ?? 168}px`, textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
                         >
-                          {mobileCards ? <>
-                            <span className="warehouse-mobile-label" aria-hidden="true">{isActionCell ? 'Tindakan' : column?.header}</span>
-                            <div className="warehouse-cell-value">{renderCell(item)}</div>
-                          </> : renderCell(item)}
+                          {renderCell(item)}
                         </DataGridCell>
                       )
                     }}
@@ -459,7 +441,7 @@ export function DataTable<T>({
           </DataGrid>
         </div>
       )}
-      {scrollable && !loading && sorted.length > 0 && !mobileCards && <p className="table-scroll-hint"><ArrowLeftRight size={14} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya</p>}
+      {scrollable && !loading && sorted.length > 0 && <p className="table-scroll-hint"><ArrowLeftRight size={14} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya</p>}
       {loading && (
         <div style={{ padding: '1rem' }}>
           <SkeletonRows rows={5} cols={columns.length + leadCols} />

@@ -28,7 +28,7 @@ export function WarehouseReturnFilters({ onApply }: { onApply: (filter: ReturnFi
       setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa filter retur.') }
   }
-  return <details className="card"><summary>Filter retur</summary><form className="stack" onSubmit={apply}>
+  return <section className="resource-filters" aria-label="Filter"><form className="stack" onSubmit={apply}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
       <TextField label="Cari kode atau barang retur" value={search} maxLength={200} onChange={(_, data) => setSearch(data.value)} />
       <TextField label="Serial lengkap retur" value={serial} maxLength={128} onChange={(_, data) => setSerial(data.value)} />
@@ -40,5 +40,5 @@ export function WarehouseReturnFilters({ onApply }: { onApply: (filter: ReturnFi
       <TextField label="Dibuat mulai tanggal" type="date" value={from} onChange={(_, data) => setFrom(data.value)} />
       <TextField label="Sampai tanggal" type="date" value={until} onChange={(_, data) => setUntil(data.value)} />
     </div>{error && <p role="alert" className="error">{error}</p>}<Button type="submit" variant="primary">Terapkan filter retur</Button>
-  </form></details>
+  </form></section>
 }

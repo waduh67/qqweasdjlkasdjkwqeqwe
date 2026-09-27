@@ -8,6 +8,8 @@ import {
 } from '@fluentui/react-components'
 import { X } from 'lucide-react'
 import { useConfirm } from '@/system'
+import { ResourceForm } from './ResourceForm'
+import type { CreationFlow } from './CreationReview'
 
 /**
  * Blade — panel geser-dari-kanan ala Azure Portal, PENGGANTI modal terpusat untuk
@@ -41,6 +43,8 @@ export function Blade({
   footer,
   children,
   className,
+  creation,
+  layout,
 }: {
   open: boolean
   title: ReactNode
@@ -53,6 +57,8 @@ export function Blade({
   children: ReactNode
   /** Kelas tambahan pada drawer — mis. `blade-half` untuk lebar ~50% di desktop. */
   className?: string
+  creation?: CreationFlow
+  layout?: 'resource'
 }) {
   const confirm = useConfirm()
   const requestClose = () => {
@@ -69,6 +75,19 @@ export function Blade({
     }).then((ok) => {
       if (ok) onClose()
     })
+  }
+
+  if (creation || layout === 'resource') {
+    if (!open) return null
+    const reviewing = creation?.reviewing
+    const prepare = () => creation?.prepare()
+    return <ResourceForm title={title} className={className} onClose={requestClose}
+      readOnly={!creation} editing={creation?.editing} busy={creation?.busy} onReview={prepare} reviewAction={!!creation}
+      onBack={() => creation?.back()} review={reviewing ? creation.summary : undefined}
+      footer={footer}
+      reviewFooter={reviewing ? <><Button disabled={creation.busy} onClick={creation.back}>Sebelumnya</Button>{footer}</> : undefined}>
+      {children}
+    </ResourceForm>
   }
 
   return (

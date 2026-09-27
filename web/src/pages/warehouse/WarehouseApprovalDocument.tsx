@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { Link } from 'react-router-dom'
 import type { ApprovalDocument } from '@/api/warehouse/approvalReads'
 import { useCan } from '@/auth/useCan'
@@ -22,8 +23,8 @@ export function WarehouseApprovalDocument({ document }: { document: ApprovalDocu
       <p>Harga historis belum diketahui. Semua tahap persetujuan dalam kebijakan wajib diperiksa.</p>
       {document.migration.baselineCount === 0 && <p>Usulan ini menyatakan tidak ada stok fisik. Tidak ada jumlah barang yang ditambahkan.</p>}
       {document.migration.unresolvedHistoricalCount > 0 && <p>{document.migration.unresolvedHistoricalCount} catatan historis belum diselesaikan dan tetap disimpan di luar stok yang dapat digunakan.</p>}
-      <details><summary>Referensi audit migrasi</summary><p style={{ overflowWrap: 'anywhere' }}>Batch: {document.migration.batchId}</p>
-        <p style={{ overflowWrap: 'anywhere' }}>Sidik sumber: {document.migration.sourceHash}</p><p style={{ overflowWrap: 'anywhere' }}>Sidik tinjauan: {document.migration.reviewHash}</p></details>
+      <Disclosure title={<>Referensi audit migrasi</>}><p style={{ overflowWrap: 'anywhere' }}>Batch: {document.migration.batchId}</p>
+        <p style={{ overflowWrap: 'anywhere' }}>Sidik sumber: {document.migration.sourceHash}</p><p style={{ overflowWrap: 'anywhere' }}>Sidik tinjauan: {document.migration.reviewHash}</p></Disclosure>
     </section>}
     <div className="row wrap">
       {document.receiptId && can('inventory.receipt.view') && <Link to={receiptLink(document.receiptId)}>Buka penerimaan sumber</Link>}
@@ -39,7 +40,7 @@ export function WarehouseApprovalDocument({ document }: { document: ApprovalDocu
     ]} />}
     {document.kind === 'COUNT' && (document.comparisons.length ? <><h3>Perbandingan pada pengajuan ini</h3>
       <DataTable presentation="warehouse" rows={document.comparisons} rowKey={row => row.balanceId} columns={[
-        { key: 'item', header: 'Posisi barang', cell: row => <span>{document.lines.find(line => line.skuId === row.skuId)?.name}<p className="muted" style={{ overflowWrap: 'anywhere' }}>{row.balanceId}</p></span> },
+        { key: 'item', header: 'Posisi barang', cell: row => <span>{document.lines.find(line => line.skuId === row.skuId)?.name}<span className="muted" style={{ overflowWrap: 'anywhere' }}>{' · '}{row.balanceId}</span></span> },
         { key: 'counter', header: 'Penghitung', cell: row => approvalPersonLabel(row.counter) },
         { key: 'book', header: 'Stok buku saat hitung', cell: row => <WarehouseQuantity value={row.bookQuantityBase} unit={row.baseUnit} /> },
         { key: 'physical', header: 'Hasil fisik', cell: row => <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> },

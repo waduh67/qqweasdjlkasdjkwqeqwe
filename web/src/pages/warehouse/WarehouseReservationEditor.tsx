@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import type { MaterialSummary } from '@/api/warehouse/materialModels'
@@ -14,6 +16,7 @@ import { buildReservation, type ReserveDraft } from './materialActions'
 
 type ReservationResult = Awaited<ReturnType<ReturnType<typeof materialRequestAction>['execute']>>
 export function WarehouseReservationEditor({ summary, onDone, onClose }: { summary: MaterialSummary; onDone: () => void; onClose: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { can } = useCan()
   const planLines = summary.plan?.lines ?? []
   const [drafts, setDrafts] = useState<ReserveDraft[]>(() => summary.lines.filter(line => planLines.some(p => p.id === line.planLineId) && BigInt(line.backorderBase) > 0n).map(line => ({ planLineId: line.planLineId, selected: false, quantity: formatBaseQuantity(line.backorderBase, line.baseUnit), position: null })))
@@ -26,8 +29,9 @@ export function WarehouseReservationEditor({ summary, onDone, onClose }: { summa
     try { setOperation(materialRequestAction(summary.demandDocumentId!, 'reserve', buildReservation(summary, drafts, reason, can('inventory.request.override')))); setError(null) }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa pilihan reservasi.') }
   }
-  return <><form className="card stack" onSubmit={prepare} aria-label="Reservasi sebagian">
-    <h2>Reservasi sebagian / pilih stok</h2><p>Pilih baris dan jumlah yang dicadangkan. Sisa kebutuhan tetap tercatat sebagai kekurangan.</p>
+  return <><ResourceForm title={<>Reservasi sebagian / pilih stok</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Cadangkan stok" confirmLabel="Cadangkan pilihan" command={operation} onDone={onDone} onClose={() => setOperation(null)} onReload={onDone}
+      summary={<><p>Revisi permintaan {summary.demandRevision}. Stok fisik belum berpindah.</p><ul>{drafts.filter(row => row.selected).map(row => <li key={row.planLineId}>{planLines.find(line => line.id === row.planLineId)?.sku.name}: {row.quantity} {displayUnit(planLines.find(line => line.id === row.planLineId)!.sku.baseUnit)} · {row.position ? positionLabel(row.position) : 'Pilihan otomatis FIFO'}</li>)}</ul>{reason && <p>{reason}</p>}<p>Hasil reservasi dan kekurangan akan dimuat ulang setelah transaksi.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau reservasi</Button></>}><form id={resourceFormId} className="stack" onSubmit={prepare} aria-label="Reservasi sebagian">
+    <p>Pilih baris dan jumlah yang dicadangkan. Sisa kebutuhan tetap tercatat sebagai kekurangan.</p>
     {drafts.map(row => {
       const line = planLines.find(line => line.id === row.planLineId)!
       return <fieldset key={row.planLineId} className="stack" style={{ minWidth: 0 }}><legend>{line.sku.name}</legend>
@@ -40,10 +44,9 @@ export function WarehouseReservationEditor({ summary, onDone, onClose }: { summa
     })}
     {drafts.some(row => row.selected && row.position) && <TextareaField label="Alasan pemilihan stok" required maxLength={1000} value={reason} onChange={(_, data) => setReason(data.value)} />}
     {error && <p className="error" role="alert">{error}</p>}
-    <div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">Tinjau reservasi</Button></div>
-  </form>
-    {operation && <WarehouseCommandDialog title="Cadangkan stok" confirmLabel="Cadangkan pilihan" command={operation} onDone={onDone} onClose={() => setOperation(null)} onReload={onDone}
-      summary={<><p>Revisi permintaan {summary.demandRevision}. Stok fisik belum berpindah.</p><ul>{drafts.filter(row => row.selected).map(row => <li key={row.planLineId}>{planLines.find(line => line.id === row.planLineId)?.sku.name}: {row.quantity} {displayUnit(planLines.find(line => line.id === row.planLineId)!.sku.baseUnit)} · {row.position ? positionLabel(row.position) : 'Pilihan otomatis FIFO'}</li>)}</ul>{reason && <p>{reason}</p>}<p>Hasil reservasi dan kekurangan akan dimuat ulang setelah transaksi.</p></>} />}
+    <div className="row wrap"></div>
+  </form></ResourceForm>
+    
   </>
 }
 function positionLabel(row: StockPosition) { return `${row.name} · ${row.serial ?? `Potongan ${row.stockIdentityId.slice(0, 8)}`} · ${row.locationName ?? 'Lokasi tanpa nama'} · ${formatBaseQuantity(row.available.quantityBase, row.available.baseUnit)} ${displayUnit(row.available.baseUnit)}` }

@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { useCallback, useState } from 'react'
 import { listPolicyHistory } from '@/api/warehouse/settings'
 import { Button } from '@/components/atoms'
@@ -16,9 +17,9 @@ function History() {
   const [page, setPage] = useState(0), loader = useCallback(() => listPolicyHistory(page), [page]), result = useWarehouseQuery(loader)
   return <><p>Versi tersimpan yang seluruh lokasi kebijakannya dapat Anda akses saat ini. Nama pemeriksa mengikuti direktori saat ini.</p><WarehouseState {...result}>{data => <>
     {!data.items.length && <p>Belum ada versi kebijakan dalam cakupan ini.</p>}
-    {data.items.map(row => row.current && <details key={row.current.id} className="card"><summary>Versi {row.current.revision} · <WarehouseTime value={row.current.createdAt} /></summary>
+    {data.items.map(row => row.current && <Disclosure key={row.current.id} className="card" title={<>Versi {row.current.revision} · <WarehouseTime value={row.current.createdAt} /></>}>
       <p>Disimpan oleh {row.references.users.find(user => user.id === row.current!.actorId)?.name ?? 'pengguna yang namanya tidak tersedia'}.</p>
       <WarehousePolicyPreview locations={row.references.locations} rules={policyRulesDraft(row)} currency={row.current.currency} expiry={String(row.current.expiryHours)} />
-    </details>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
+    </Disclosure>)}<WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
   </>}</WarehouseState></>
 }

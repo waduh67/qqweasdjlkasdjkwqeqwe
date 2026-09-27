@@ -53,13 +53,13 @@ function ReplenishmentList({ parsed, apply, page }: { parsed: ReturnType<typeof 
     {creating && create && <WarehouseReplenishmentRuleForm onClose={() => setCreating(false)} reload={() => { setCreating(false); result.reload() }} onDone={rule => apply({ ruleId: rule.id })} />}
     <WarehouseState {...result}>{data => <>
       {data.view === 'rules' ? <DataTable presentation="warehouse" rows={data.data.items} rowKey={row => row.rule.id} empty={empty} columns={[
-        { key: 'name', header: 'Barang / lokasi', cell: row => <><Link to={replenishmentLink({ ruleId: row.rule.id })}>{row.sku.name} · {row.sku.code}</Link><br />{row.location.name ?? row.location.code}</> },
+        { key: 'name', header: 'Barang / lokasi', cell: row => <><Link to={replenishmentLink({ ruleId: row.rule.id })}>{row.sku.name} · {row.sku.code}</Link>{' · '}{row.location.name ?? row.location.code}</> },
         { key: 'minimum', header: 'Minimum / target', cell: row => <><WarehouseQuantity value={row.rule.minimumBase} unit={row.rule.baseUnit} /> / <WarehouseQuantity value={row.rule.targetBase} unit={row.rule.baseUnit} /></> },
         { key: 'active', header: 'Aturan', cell: row => <>{row.rule.active ? 'Aktif' : 'Diarsipkan'} · Revisi {row.rule.revision}</> },
       ]} /> : <DataTable presentation="warehouse" rows={data.data.items} rowKey={row => row.request.id} empty={empty} columns={[
-        { key: 'name', header: 'Barang / lokasi', cell: row => <><Link to={replenishmentLink({ requestId: row.request.id })}>{row.sku.name} · {row.sku.code}</Link><br />{row.location.name ?? row.location.code}</> },
+        { key: 'name', header: 'Barang / lokasi', cell: row => <><Link to={replenishmentLink({ requestId: row.request.id })}>{row.sku.name} · {row.sku.code}</Link>{' · '}{row.location.name ?? row.location.code}</> },
         { key: 'quantity', header: 'Kebutuhan tercatat', cell: row => <WarehouseQuantity value={row.request.quantityBase} unit={row.request.baseUnit} /> },
-        { key: 'state', header: 'Status', cell: row => <>{replenishmentLabels[row.request.state]}{row.request.acceptedAt && <p>Sudah dikonfirmasi</p>}</> },
+        { key: 'state', header: 'Status', cell: row => <>{replenishmentLabels[row.request.state]}{row.request.acceptedAt && <span>{' · '}Sudah dikonfirmasi</span>}</> },
       ]} />}
       <WarehousePagination page={data.data.page} size={data.data.size} total={data.data.totalElements} onChange={page} />
     </>}</WarehouseState>

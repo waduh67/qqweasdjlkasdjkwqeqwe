@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
 import { countCounters, countPositions, createCount, updateCount, type CountDetails, type CountPerson, type CountPosition, type WarehouseCount } from '@/api/warehouse/counts'
 import type { WarehouseLocation } from '@/api/warehouse/models'
@@ -17,6 +19,7 @@ type Row = CountEditorRow
 export interface CountEditorInitial { details: CountDetails; location: WarehouseLocation; rows: CountEditorRow[] }
 const empty = (): Row => ({ key: crypto.randomUUID(), position: null, counter: null })
 export function WarehouseCountEditor({ initial, onSaved, onClose, onReload = onClose }: { initial?: CountEditorInitial; onSaved: (count: WarehouseCount) => void; onClose: () => void; onReload?: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { can } = useCan(), { user } = useAuth()
   const [location, setLocation] = useState<WarehouseLocation | null>(initial?.location ?? null), [reason, setReason] = useState(initial?.details.references.reason ?? '')
   const [rows, setRows] = useState<Row[]>(() => initial?.rows ?? [empty()]), [error, setError] = useState('')
@@ -36,7 +39,8 @@ export function WarehouseCountEditor({ initial, onSaved, onClose, onReload = onC
       setOperation(initial ? updateCount(initial.details.count.id, initial.details.count.revision, draft) : createCount(draft)); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa isian stock opname.') }
   }
-  return <><form className="stack" aria-label="Draft stock opname" onSubmit={prepare}><h2>{initial ? 'Ubah draft stock opname' : 'Stock opname baru'}</h2>
+  return <><ResourceForm title={<>{initial ? 'Ubah draft stock opname' : 'Stock opname baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft stock opname" confirmLabel="Simpan stock opname" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    summary={<>{initial && <p>{initial.details.references.code} · Revisi {initial.details.count.revision}</p>}<p>{location && locationLabel(location)}</p><p>{reason}</p><ul>{rows.map(row => <li key={row.key}>{row.position && countItemLabel(row.position.item)} · posisi {row.position?.id} · {row.counter && countPersonLabel(row.counter)}</li>)}</ul><p>Draft belum membuka penghitungan dan belum mengubah stok.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!location}>Tinjau stock opname</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft stock opname" onSubmit={prepare}>
     {initial && <p>Revisi {initial.details.count.revision}. Perubahan hanya tersedia sebelum penghitungan dimulai; riwayat tersimpan tetap utuh.</p>}
     <p>Penghitungan mencakup posisi yang dipilih pada satu lokasi. Petugas mencatat hasil fisik tanpa angka pembanding stok buku.</p>
     <WarehousePicker label="Lokasi stock opname" load={receiptLocations} value={location} name={locationLabel} onChange={value => { setLocation(value); setRows([empty()]); setRowPage(0) }} />
@@ -49,9 +53,8 @@ export function WarehouseCountEditor({ initial, onSaved, onClose, onReload = onC
       remove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />) : <p>Pilih lokasi untuk mencari posisi barang.</p>}
     {error && <p className="error" role="alert">{error}</p>}
     <div className="row wrap"><Button type="button" disabled={!location || rows.length >= 100} onClick={() => { setRowPage(Math.floor(rows.length / 25)); setRows(current => [...current, empty()]) }}>Tambah posisi hitung</Button>
-      <Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary" disabled={!location}>Tinjau stock opname</Button></div>
-  </form>{operation && <WarehouseCommandDialog title="Simpan draft stock opname" confirmLabel="Simpan stock opname" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
-    summary={<>{initial && <p>{initial.details.references.code} · Revisi {initial.details.count.revision}</p>}<p>{location && locationLabel(location)}</p><p>{reason}</p><ul>{rows.map(row => <li key={row.key}>{row.position && countItemLabel(row.position.item)} · posisi {row.position?.id} · {row.counter && countPersonLabel(row.counter)}</li>)}</ul><p>Draft belum membuka penghitungan dan belum mengubah stok.</p></>} />}</>
+      </div>
+  </form></ResourceForm></>
 }
 function CountEntryEditor({ row, number, locationId, update, remove }: { row: Row; number: number; locationId: string; update: (patch: Partial<Row>) => void; remove?: () => void }) {
   const positions = useCallback((search: string, page: number) => countPositions({ locationId, query: search.trim() || undefined, page }), [locationId])

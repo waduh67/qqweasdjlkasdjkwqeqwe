@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { useId as useResourceFormId } from 'react'
 import { useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
 import type { WarehouseLocation } from '@/api/warehouse/models'
@@ -13,6 +15,7 @@ import { locationLabel, receiptLocations } from './receiptChoices'
 import { transferLineLabel, transferLocationLabel, transferPersonLabel } from './transferPresentation'
 
 export function WarehouseTransferActions({ details, action, onDone, onClose }: { details: TransferDetails; action: 'receive' | 'discrepancy'; onDone: () => void; onClose: () => void }) {
+  const resourceFormId = useResourceFormId()
   const { transfer } = details
   const [rows, setRows] = useState<TransferReceiptLine[]>(() => transfer.lines.filter(line => BigInt(line.inTransitBase) > 0n).map(line => ({ lineId: line.id, selected: false, quantity: formatBaseQuantity(line.inTransitBase, line.baseUnit) })))
   const [evidence, setEvidence] = useState('')
@@ -33,8 +36,12 @@ export function WarehouseTransferActions({ details, action, onDone, onClose }: {
       setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian transaksi.') }
   }
-  return <><form className="card stack" aria-label={action === 'receive' ? 'Penerimaan transfer' : 'Selisih transfer'} onSubmit={prepare}>
-    <h2>{action === 'receive' ? 'Terima barang transfer' : 'Laporkan sisa hilang / ditolak'}</h2>
+  return <><ResourceForm title={<>{action === 'receive' ? 'Terima barang transfer' : 'Laporkan sisa hilang / ditolak'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title={action === 'receive' ? 'Konfirmasi penerimaan transfer' : 'Konfirmasi selisih transfer'} confirmLabel={action === 'receive' ? 'Catat penerimaan' : 'Catat selisih'} command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+      summary={<><p>{transfer.code} · Revisi {transfer.revision}</p>
+        <p>{action === 'receive' ? `Diterima ${transferPersonLabel(details, transfer.receiverId)} di ${transferLocationLabel(details, transfer.destinationLocationId)}` : `${kind === 'LOST' ? 'Hilang' : 'Ditolak'} → ${destination && locationLabel(destination)}`}</p>
+        <ul>{(action === 'receive' ? rows.filter(row => row.selected) : rows).map(row => { const line = transfer.lines.find(line => line.id === row.lineId)!; return <li key={row.lineId}>{transferLineLabel(details, row.lineId)}: {action === 'receive' ? `${row.quantity} ${line.baseUnit === 'MM' ? 'm' : 'unit'}` : <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} />}</li> })}</ul>
+        <p>Bukti: {evidence}</p><p>{action === 'receive' ? 'Jumlah yang belum diterima tetap dalam transit. Kepemilikan dan kondisi tidak berubah.' : `${reason}. Stok tetap di transit sampai keputusan independen dibukukan.`}</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">{action === 'receive' ? 'Tinjau penerimaan' : 'Tinjau selisih'}</Button></>}><form id={resourceFormId} className="stack" aria-label={action === 'receive' ? 'Penerimaan transfer' : 'Selisih transfer'} onSubmit={prepare}>
+    
     <p>{transfer.code} · Revisi {transfer.revision} · Penerima: {transferPersonLabel(details, transfer.receiverId)}</p>
     {action === 'receive' ? <><p>Isi hanya jumlah fisik yang diterima. Sisanya tetap dalam perjalanan. Kondisi dan pemilik barang mengikuti pengiriman.</p>
       {rows.map(row => {
@@ -51,12 +58,8 @@ export function WarehouseTransferActions({ details, action, onDone, onClose }: {
     </>}
     <TextField label="Referensi bukti transfer" required maxLength={500} value={evidence} onChange={(_, data) => setEvidence(data.value)} hint="Misalnya nomor berita acara atau referensi bukti penerimaan fisik." />
     {error && <p className="error" role="alert">{error}</p>}
-    <div className="row wrap"><Button type="button" onClick={onClose}>Batal</Button><Button type="submit" variant="primary">{action === 'receive' ? 'Tinjau penerimaan' : 'Tinjau selisih'}</Button></div>
-  </form>
-    {operation && <WarehouseCommandDialog title={action === 'receive' ? 'Konfirmasi penerimaan transfer' : 'Konfirmasi selisih transfer'} confirmLabel={action === 'receive' ? 'Catat penerimaan' : 'Catat selisih'} command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
-      summary={<><p>{transfer.code} · Revisi {transfer.revision}</p>
-        <p>{action === 'receive' ? `Diterima ${transferPersonLabel(details, transfer.receiverId)} di ${transferLocationLabel(details, transfer.destinationLocationId)}` : `${kind === 'LOST' ? 'Hilang' : 'Ditolak'} → ${destination && locationLabel(destination)}`}</p>
-        <ul>{(action === 'receive' ? rows.filter(row => row.selected) : rows).map(row => { const line = transfer.lines.find(line => line.id === row.lineId)!; return <li key={row.lineId}>{transferLineLabel(details, row.lineId)}: {action === 'receive' ? `${row.quantity} ${line.baseUnit === 'MM' ? 'm' : 'unit'}` : <WarehouseQuantity value={line.inTransitBase} unit={line.baseUnit} />}</li> })}</ul>
-        <p>Bukti: {evidence}</p><p>{action === 'receive' ? 'Jumlah yang belum diterima tetap dalam transit. Kepemilikan dan kondisi tidak berubah.' : `${reason}. Stok tetap di transit sampai keputusan independen dibukukan.`}</p></>} />}
+    <div className="row wrap"></div>
+  </form></ResourceForm>
+    
   </>
 }

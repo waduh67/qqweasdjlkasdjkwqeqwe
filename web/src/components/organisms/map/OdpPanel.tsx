@@ -109,14 +109,14 @@ export function OdpPanel({
             <TableBody>{inspection.occupants.map((occupant) => (
               <TableRow key={occupant.portNumber}><TableCell className="tnum">{occupant.portNumber}</TableCell>
               <TableCell >{occupant.customerName}
-              <br />
+              {' · '}
               <Text as="span" className="muted" size={200}>
                 {occupant.phone ?? occupant.customerCode}
               </Text></TableCell>
               <TableCell ><Text as="span" className="muted tnum" size={200}>
                 {occupant.onuSerialNumber}
               </Text>
-              <br />
+              {' · '}
               <StatusBadge status={occupant.onuStatus} label={onuStatusLabel(occupant.onuStatus)} /></TableCell>
               <TableCell ><Text as="span" className="tnum" weight="semibold" style={{ color: HEALTH_COLOR[occupant.opticalHealth] }}>
                 {occupant.installRxPowerDbm != null ? `${occupant.installRxPowerDbm} dBm` : occupant.opticalHealth}
