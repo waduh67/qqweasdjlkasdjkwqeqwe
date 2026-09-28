@@ -28,3 +28,15 @@ Deployment is frontend only. The helper checks the current image and pins, insta
 A recovery Git bundle from the base checkpoint plus docs, screenshots, tests and release receipts is copied to the private remote release directory. The verified archive hash/path is recorded in `recovery-backup.json` and the active run cursor. Preserve the older warehouse task's acceptance; this correction has its own release receipt.
 
 For an intentional rollback only, use `sudo python3 <remote-release>/deploy-web.py rollback <remote-release>` on the production host. The helper checks for foreign image/pin changes before reverting.
+
+## Deployed result
+
+- Source: `c68f2e821d1ca796beb88222465b99d8bcbfb93a` (pushed).
+- Live image: `sha256:e71cc1449c36876e36cdee0ea30a87a4c4d201c7a4cf30f4232c1f90c42e80d3`.
+- Remote release: `/opt/ftth/setup-private/ui-20260928-layers-c68f2e82`.
+- Exact static manifest and public index verified; all 14 non-web containers unchanged. Backend and public FTTH/Drive health passed.
+- Production Firefox: 11 desktop/mobile captures, three layers with independent confirmation/draft retention, list close without additional reads, and all five sidebar groups retained across navigation/refresh. Explicit collapse persists. Zero page errors or business API writes.
+- The initial production request counter included Cloudflare telemetry (`/cdn-cgi/rum`) as business writes. It was scoped to application APIs; the complete corrected check passed. No product change was needed.
+- Owned local preview/backend stopped through its validated wrapper; process records removed and unrelated processes left intact.
+
+The final documentation checkpoint is bundled under `recovery-<checkpoint8>/recovery.tar.gz` in the remote release. See the verified private receipt and run cursor for its SHA/path. This correction has no outstanding deployment work.

@@ -25,3 +25,5 @@ The reference supplies Fluent typography, compact labeled fields, link creation 
 No actionable P1/P2 remains in the reviewed scope. This is not a complete accessibility conformance audit. Child layers are intentionally limited to the active in-memory workflow; reloading the browser does not preserve unsaved drafts. On mobile, previous layers remain mounted but are covered by the active panel. The implementation permits recursive nesting; runtime evidence exercises three layers.
 
 Previous filter and table/create audits remain in Git at `6dd673b3:design-qa.md`, `docs/ui-ux/AZURE-FILTER-BAR.md`, and `docs/ui-ux/AZURE-RESOURCE-WORKFLOWS-RELEASE.md`.
+
+Production verification passed for source `c68f2e82`: 11 Firefox captures and the complete layered/sidebar scenario, no page errors or business API writes. Paired before/after desktop and mobile images were opened for the final visual review. All 14 non-web containers were preserved.
