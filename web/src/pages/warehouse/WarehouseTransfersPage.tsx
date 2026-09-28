@@ -42,12 +42,11 @@ export function WarehouseTransfersPage() {
 }
 function TransferList({ onNew }: { onNew: () => void }) {
   const { can } = useCan()
-  const [filterVersion, setFilterVersion] = useState(0)
   const [filter, setFilter] = useState<TransferFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => listTransfers({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setFilter({}); setPage(0); setFilterVersion(version => version + 1) }}
+  return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
     create={can('inventory.transfer.manage') ? { label: 'Buat transfer', onClick: onNew } : undefined} />
-    <WarehouseTransferFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />
+    <WarehouseTransferFilters onApply={filter => { setFilter(filter); setPage(0) }} /></div>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.transfer.id} empty={<EmptyState title="Belum ada transfer dalam cakupan Anda" hint="Buat transfer dari stok fisik yang sudah diterima dan belum terikat pengeluaran WO." />} columns={[
       { key: 'code', header: 'Transfer', cell: row => <Link to={detailPath(row.transfer.id)}>{row.transfer.code}</Link> },
       { key: 'route', header: 'Asal → Tujuan', cell: row => <span>{transferLocationLabel(row, row.transfer.sourceLocationId)} → {transferLocationLabel(row, row.transfer.destinationLocationId)}</span> },

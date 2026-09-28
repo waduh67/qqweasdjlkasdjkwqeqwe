@@ -43,12 +43,11 @@ export function WarehouseReturnsPage() {
 }
 function ReturnList({ onNew }: { onNew: () => void }) {
   const { can } = useCan()
-  const [filterVersion, setFilterVersion] = useState(0)
   const [filter, setFilter] = useState<ReturnFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => listReturns({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setFilter({}); setPage(0); setFilterVersion(version => version + 1) }}
+  return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
     create={can('inventory.return.manage') ? { label: 'Terima retur baru', onClick: onNew, disabled: !can('inventory.location.view') } : undefined} />
-    <WarehouseReturnFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />
+    <WarehouseReturnFilters onApply={filter => { setFilter(filter); setPage(0) }} /></div>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.returnCase.id}
       empty={<EmptyState title="Belum ada retur dalam cakupan Anda" hint="Sumber retur berasal dari sisa material yang sudah diterima atau perangkat hasil pelepasan yang sah." />} columns={[
         { key: 'code', header: 'Retur', cell: row => <Link to={detailPath(row.returnCase.id)}>{row.references.code}</Link> },

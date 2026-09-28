@@ -43,11 +43,11 @@ export function WarehouseApprovalsPage() {
   </div>
 }
 function ApprovalList({ sourceId }: { sourceId?: string }) {
-  const [filter, setFilter] = useState<ApprovalFilter>({}), [page, setPage] = useState(0), [filterVersion, setFilterVersion] = useState(0)
+  const [filter, setFilter] = useState<ApprovalFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => approvalWorkbench({ ...filter, sourceDocumentId: sourceId, page }), [filter, sourceId, page]), result = useWarehouseQuery(loader)
   return <section className="stack" aria-label="Daftar persetujuan">
-    <WarehouseListActions onRefresh={result.reload} onReset={sourceId ? undefined : () => { setFilter({}); setPage(0); setFilterVersion(value => value + 1) }} />
-    {sourceId ? <h2>Permintaan tersimpan untuk dokumen ini</h2> : <WarehouseApprovalFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />}
+    <div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload} />
+    {sourceId ? <h2>Permintaan tersimpan untuk dokumen ini</h2> : <WarehouseApprovalFilters onApply={filter => { setFilter(filter); setPage(0) }} />}</div>
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.approval.requestId}
         empty={<EmptyState title="Belum ada permintaan persetujuan dalam cakupan Anda" hint="Ajukan dari dokumen sumber yang siap diperiksa. Permintaan lama tetap dapat dibuka untuk melihat keputusannya." />} columns={[

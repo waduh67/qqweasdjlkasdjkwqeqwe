@@ -1,3 +1,4 @@
+import { filterControl } from '@/test/filterControl'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -80,7 +81,7 @@ it('uses server state filters before pagination and displays named read-only row
   show('/warehouse/replenishment?state=PENDING')
   const link = await screen.findByRole('link', { name: 'Kabel pengisian · CABLE' }); expect(link.getAttribute('href')).toContain(`requestId=${id.document}`)
   expect(screen.getByText(/Rak pengisian/, { selector: '.table-cell-content' })).toBeTruthy(); expect(screen.queryByRole('button', { name: 'Tambah aturan minimum' })).toBeNull()
-  await selectControl(screen.getByRole('combobox', { name: 'Status pengisian' }), { target: { value: 'CANCELLED' } })
+  await selectControl(await filterControl('Status pengisian'), { target: { value: 'CANCELLED' } })
   await screen.findByText('Belum ada catatan pengisian sesuai filter'); expect(fetch.mock.calls.at(-1)![0]).toContain('state=CANCELLED')
 })
 it('does not request denied or malformed routes and exposes no read-only mutation buttons', async () => {
@@ -117,4 +118,17 @@ it('creates a named exact-unit rule after validating thresholds and never invent
   const body = JSON.parse(fetch.mock.calls.find(([, init]) => init.method === 'POST')![1].body as string)
   expect(body).toMatchObject({ skuId: id.sku, locationId: id.inspection, minimumBase: '50500', targetBase: '100000', packageMultipleBase: '25000', baseUnit: 'MM' })
   expect(body).not.toHaveProperty('expectedRevision')
+})
+
+it('keeps linked SKU and location restrictions removable without requesting their directories', async () => {
+  const fetch = vi.fn(async (_path: string) => response(reportPage([]))); vi.stubGlobal('fetch', fetch)
+  show(`/warehouse/replenishment?skuId=${id.sku}&locationId=${id.inspection}&state=PENDING&page=2`)
+  fireEvent.click(await screen.findByRole('button', { name: 'Hapus Barang' }))
+  await waitFor(() => expect(fetch.mock.calls.at(-1)![0]).not.toContain('skuId='))
+  expect(fetch.mock.calls.at(-1)![0]).toContain(`locationId=${id.inspection}`)
+  expect(fetch.mock.calls.at(-1)![0]).toContain('state=PENDING')
+  expect(fetch.mock.calls.at(-1)![0]).not.toContain('page=2')
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus Lokasi stok' }))
+  await waitFor(() => expect(fetch.mock.calls.at(-1)![0]).not.toContain('locationId='))
+  expect(fetch.mock.calls.every(([path]) => path.startsWith('/api/v1/warehouse/replenishments'))).toBe(true)
 })

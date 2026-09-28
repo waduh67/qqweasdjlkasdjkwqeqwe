@@ -1,10 +1,13 @@
+import { WarehouseReferenceFilter } from '@/components/organisms/warehouse/WarehouseReferenceFilter'
+import { getSku, getLocation, listSkus, listLocations } from '@/api/warehouse/masters'
+import { FilterBar, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { uuid, oneOf, integer } from '@/api/warehouse/codec'
 import { listReplenishmentRequests, listReplenishmentRules, REPLENISHMENT_STATES, type ReplenishmentFilter } from '@/api/warehouse/replenishment'
 import { useCan } from '@/auth/useCan'
-import { EmptyState, SelectField } from '@/components/atoms'
+import { EmptyState } from '@/components/atoms'
 import { PageHeader, Tabs } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
@@ -28,6 +31,8 @@ function parse(params: URLSearchParams) {
   if ((view === 'rules' && state) || (view === 'requests' && active)) throw new Error()
   return { view, filter, state, active, ruleId, requestId }
 }
+const filterSkus = (search: string, page: number) => listSkus({ search, page })
+const filterLocations = (search: string, page: number) => listLocations({ search, page })
 export function WarehouseReplenishmentPage() {
   const { can } = useCan(), [params, setParams] = useSearchParams()
   if (!can('inventory.request.view')) return <WarehouseDenied />
@@ -37,7 +42,7 @@ export function WarehouseReplenishmentPage() {
   return <div className="stack"><PageHeader title="Pengisian Stok" />
     {parsed.ruleId || parsed.requestId ? <><Link to="/warehouse/replenishment">Kembali ke pengisian stok</Link><WarehouseReplenishmentDetail key={params.toString()} kind={parsed.ruleId ? 'rules' : 'requests'} id={(parsed.ruleId ?? parsed.requestId)!} /></> : <>
       <Tabs active={parsed.view} tabs={[{ key: 'requests', label: 'Kebutuhan pengisian' }, { key: 'rules', label: 'Aturan minimum' }]} onChange={view => apply({ view, state: view === 'requests' ? 'PENDING' : '', active: view === 'rules' ? 'true' : '' })} />
-      <ReplenishmentList key={params.toString()} parsed={parsed} apply={apply} page={page => { const next = new URLSearchParams(params); next.set('page', String(page)); setParams(next) }} />
+      <ReplenishmentList key={parsed.view} parsed={parsed} apply={apply} page={page => { const next = new URLSearchParams(params); next.set('page', String(page)); setParams(next) }} />
     </>}
   </div>
 }
@@ -48,12 +53,14 @@ function ReplenishmentList({ parsed, apply, page }: { parsed: ReturnType<typeof 
   const result = useWarehouseQuery(loader), create = can('inventory.request.manage') && can('inventory.sku.view') && can('inventory.location.view')
   const empty = <EmptyState title="Belum ada catatan pengisian sesuai filter" hint="Atur batas minimum per barang dan gudang, lalu hitung ulang kebutuhan." />
   return <>
-    <WarehouseListActions onRefresh={result.reload} onReset={() => apply({ skuId: '', locationId: '', state: '', active: '' })} create={create ? { label: 'Tambah aturan minimum', onClick: () => setCreating(true) } : undefined} />
-    <section className="resource-filters row">
-    {view === 'rules' ? <SelectField label="Keaktifan aturan" value={active ?? ''} onChange={(_, value) => apply({ active: value.value })}><option value="">Semua aturan</option><option value="true">Aktif</option><option value="false">Diarsipkan</option></SelectField> :
-      <SelectField label="Status pengisian" value={state ?? ''} onChange={(_, value) => apply({ state: value.value })}><option value="">Semua status</option>{REPLENISHMENT_STATES.map(value => <option key={value} value={value}>{replenishmentLabels[value]}</option>)}</SelectField>}
+    <div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload} create={create ? { label: 'Tambah aturan minimum', onClick: () => setCreating(true) } : undefined} />
+    <FilterBar>
+      {(can('inventory.sku.view') || filter.skuId) && <WarehouseReferenceFilter label="Barang" valueId={filter.skuId} canLookup={can('inventory.sku.view')} get={getSku} load={filterSkus} onChange={skuId => apply({ skuId })} name={row => `${row.name} · ${row.code}`} />}
+      {(can('inventory.location.view') || filter.locationId) && <WarehouseReferenceFilter label="Lokasi stok" valueId={filter.locationId} canLookup={can('inventory.location.view')} get={getLocation} load={filterLocations} onChange={locationId => apply({ locationId })} name={row => row.name ?? row.code} />}
+    {view === 'rules' ? <FilterSelect caption="Status" label="Keaktifan aturan" value={active ?? ''} onChange={value => apply({ active: value })}><option value="">Semua aturan</option><option value="true">Aktif</option><option value="false">Diarsipkan</option></FilterSelect> :
+      <FilterSelect caption="Status" label="Status pengisian" value={state ?? ''} onChange={value => apply({ state: value })}><option value="">Semua status</option>{REPLENISHMENT_STATES.map(value => <option key={value} value={value}>{replenishmentLabels[value]}</option>)}</FilterSelect>}
 
-    </section>
+    </FilterBar></div>
     {creating && create && <WarehouseReplenishmentRuleForm onClose={() => setCreating(false)} reload={() => { setCreating(false); result.reload() }} onDone={rule => apply({ ruleId: rule.id })} />}
     <WarehouseState {...result}>{data => <>
       {data.view === 'rules' ? <DataTable presentation="warehouse" rows={data.data.items} rowKey={row => row.rule.id} empty={empty} columns={[

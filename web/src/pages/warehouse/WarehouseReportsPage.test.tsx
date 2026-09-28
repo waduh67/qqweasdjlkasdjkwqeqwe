@@ -1,3 +1,4 @@
+import { filterControl, openFilter } from '@/test/filterControl'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -22,7 +23,7 @@ it('uses server pagination and preserves scope in export, then revokes prepared 
   fireEvent.click(screen.getByRole('button', { name: 'Ekspor CSV' })); expect((await screen.findByRole('link', { name: 'Unduh CSV' })).getAttribute('download')).toBe('gudang-movements.csv')
   const path = fetch.mock.calls.find(([p]) => p.includes('/export.csv'))![0]
   expect(path).toContain(`locationId=${id.inspection}`); expect(path).not.toContain('page=')
-  await selectControl(screen.getByRole('combobox', { name: 'Jenis laporan' }), { target: { value: 'stock-card' } })
+  await selectControl(await filterControl('Jenis laporan'), { target: { value: 'stock-card' } })
   await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:report'))
 })
 it('keeps signed unknown costs explicit and shows exact currency totals only with current cost permission', async () => {
@@ -67,8 +68,9 @@ it('gates report and cost access and malformed links before any request, and dis
 it('shows empty results honestly, blocks oversized export, and validates paired date ranges', async () => {
   const fetch = vi.fn(async (path: string) => response(reportPage([], 0, 25, path.includes('direction=desc') ? 1001 : 0))); vi.stubGlobal('fetch', fetch)
   const view = show(); await screen.findByText('Tidak ada data laporan dalam cakupan ini')
-   fireEvent.change(screen.getByLabelText('Awal periode'), { target: { value: '2026-09-01T00:00' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Terapkan periode' })); expect(screen.getByText(/Isi awal dan akhir yang valid/)).toBeTruthy(); expect(fetch).toHaveBeenCalledOnce()
+  await openFilter('Periode')
+  fireEvent.change(screen.getByLabelText('Awal periode'), { target: { value: '2026-09-01T00:00' } })
+  expect(screen.getByText('Lengkapi kedua tanggal.')).toBeTruthy(); expect(fetch).toHaveBeenCalledOnce()
   view.unmount(); show('/warehouse/reports?direction=desc'); await screen.findByRole('button', { name: 'Ekspor CSV' })
   expect(screen.getByRole('button', { name: 'Ekspor CSV' })).toHaveProperty('disabled', true)
 })

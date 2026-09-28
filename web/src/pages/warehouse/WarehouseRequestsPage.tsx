@@ -1,3 +1,4 @@
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
@@ -10,7 +11,7 @@ import { listAllocations, type ReservationAllocation } from '@/api/warehouse/res
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { getMaterialWorkOrder, listMaterialWorkOrders, WORK_ORDER_STATES, type MaterialWorkOrder } from '@/api/warehouse/workOrders'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
+import { Button, EmptyState } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
@@ -47,8 +48,8 @@ function WorkOrderList() {
   const loader = useCallback(() => listMaterialWorkOrders({ query: search.trim() || undefined, status: status || undefined, page }), [search, status, page])
   const result = useWarehouseQuery(loader)
   const labels: Record<string, string> = { DRAFT: 'Draft', ASSIGNED: 'Ditugaskan', IN_PROGRESS: 'Dikerjakan', DONE: 'Selesai', CANCELLED: 'Dibatalkan' }
-  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setSearch(''); setStatus(''); setPage(0) }} /><div className="resource-filters row wrap"><TextField label="Cari work order" value={search} maxLength={200} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
-    <SelectField label="Status work order" value={status} onChange={(_, data) => { setStatus(data.value); setPage(0) }}><option value="">Semua status</option>{WORK_ORDER_STATES.map(state => <option value={state} key={state}>{labels[state]}</option>)}</SelectField></div>
+  return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload} /><FilterBar search={<FilterSearch label="Cari work order" value={search} maxLength={200} onChange={value => { setSearch(value); setPage(0) }} />}>
+    <FilterSelect caption="Status" label="Status work order" value={status} onChange={value => { setStatus(value); setPage(0) }}><option value="">Semua status</option>{WORK_ORDER_STATES.map(state => <option value={state} key={state}>{labels[state]}</option>)}</FilterSelect></FilterBar></div>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada work order dalam cakupan Anda" hint="Pilih atau buat work order pada menu pekerjaan, lalu susun kebutuhan materialnya." />} columns={[
       { key: 'workOrder', header: 'Work order', cell: row => <Link to={requestLink(row.id)}>{row.code} · {row.title}</Link> },
       { key: 'customer', header: 'Pelanggan', cell: row => row.customerId ? row.customerName ?? 'Nama pelanggan tidak tersedia' : 'Tidak terkait pelanggan' },

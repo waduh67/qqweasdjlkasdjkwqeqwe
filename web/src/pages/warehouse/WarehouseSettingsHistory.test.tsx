@@ -1,3 +1,4 @@
+import { filterControl } from '@/test/filterControl'
 import { clickRowAction } from '@/test/rowAction'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -45,7 +46,7 @@ it('shows scoped delegation paging and state filters to read-only users, and hid
   expect(screen.queryByRole('button', { name: 'Tambah delegasi' })).toBeNull(); expect(screen.queryByRole('button', { name: 'Cabut delegasi' })).toBeNull()
   fireEvent.click(within(list).getByRole('button', { name: 'Berikutnya' }))
   await screen.findByText('Tidak ada delegasi sesuai filter')
-  await selectControl(screen.getByRole('combobox', { name: 'Status delegasi' }), { target: { value: 'REVOKED' } })
+  await selectControl(await filterControl('Status delegasi'), { target: { value: 'REVOKED' } })
   await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.includes('page=0&state=REVOKED'))).toBe(true))
   first.unmount(); permissions.clear(); fetch.mockClear(); show()
   expect(screen.queryByRole('button', { name: 'Kelola delegasi pemeriksa' })).toBeNull(); expect(fetch).not.toHaveBeenCalled()

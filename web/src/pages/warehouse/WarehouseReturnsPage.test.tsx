@@ -1,3 +1,4 @@
+import { filterControl, openFilter } from '@/test/filterControl'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -32,8 +33,8 @@ function dispatched(): WarehouseReturn {
 }
 function input(label: string, value: string) { fireEvent.change(screen.getByRole('textbox', { name: label }), { target: { value } }) }
 async function choose(label: string, value: string) {
-  await waitFor(() => expect(screen.getByRole('combobox', { name: label })).not.toHaveProperty('disabled', true))
-  await selectControl(screen.getByRole('combobox', { name: label }), { target: { value } })
+  await filterControl(label)
+  await selectControl(await filterControl(label), { target: { value } })
 }
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
@@ -63,15 +64,15 @@ it('shows named server pages and applies source and date filters before reloadin
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/returns')
   await screen.findByRole('link', { name: 'RET-FIRST' }); expect(screen.getByText('Sisa kabel drop · REEL-001')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Berikutnya' })); await screen.findByRole('link', { name: 'RET-LAST' })
-  
+
   await choose('Asal retur', 'MATERIAL_RESIDUAL')
   input('Cari kode atau barang retur', 'sisa')
+  await openFilter('Tanggal')
   fireEvent.change(screen.getByLabelText('Dibuat mulai tanggal'), { target: { value: '2026-09-01' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter retur' }))
-  expect(screen.getByRole('alert').textContent).toContain('tanggal awal dan akhir')
+  expect(screen.getByText('Lengkapi kedua tanggal.')).toBeTruthy()
   fireEvent.change(screen.getByLabelText('Sampai tanggal'), { target: { value: '2026-09-25' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter retur' }))
   await screen.findByRole('link', { name: 'RET-FIRST' })
+  await waitFor(() => expect(fetch.mock.calls.at(-1)![0]).toContain('query=sisa'))
   const latest = fetch.mock.calls.at(-1)![0]
   expect(latest).toContain('origin=MATERIAL_RESIDUAL'); expect(latest).toContain('from='); expect(latest).toContain('until='); expect(latest).toContain('page=0')
 })

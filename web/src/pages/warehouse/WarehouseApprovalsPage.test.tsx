@@ -1,3 +1,4 @@
+import { filterControl, openFilter } from '@/test/filterControl'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -38,15 +39,20 @@ it('pages actual document codes and applies approval filters from page zero with
     return response(page([{ approval: details.approval, documentCode: second ? 'RCPT-OLD' : 'RCPT-NEW', operation: 'RECEIPT', requester: details.document.requester, requestedAt: details.requestedAt }], second ? 1 : 0, 1, 2))
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/approvals')
   await screen.findByRole('link', { name: 'RCPT-NEW · Revisi 5' }); fireEvent.click(screen.getByRole('button', { name: 'Berikutnya' }))
-  await screen.findByRole('link', { name: 'RCPT-OLD · Revisi 5' }); 
+  await screen.findByRole('link', { name: 'RCPT-OLD · Revisi 5' });
   fireEvent.change(screen.getByRole('textbox', { name: 'Cari kode dokumen persetujuan' }), { target: { value: 'RCPT' } })
-  await selectControl(screen.getByRole('combobox', { name: 'Status persetujuan' }), { target: { value: 'PENDING' } })
-  await selectControl(screen.getByRole('combobox', { name: 'Jenis persetujuan' }), { target: { value: 'RECEIPT' } })
+  await selectControl(await filterControl('Status persetujuan'), { target: { value: 'PENDING' } })
+  await selectControl(await filterControl('Jenis persetujuan'), { target: { value: 'RECEIPT' } })
+  await openFilter('Serial lengkap persetujuan')
   fireEvent.change(screen.getByRole('textbox', { name: 'Serial lengkap persetujuan' }), { target: { value: 'ONU-001' } })
+  await screen.findByRole('button', { name: 'Hapus Serial lengkap persetujuan' })
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+  await openFilter('Tanggal')
   fireEvent.change(screen.getByLabelText('Persetujuan diajukan mulai tanggal'), { target: { value: '2026-09-01' } })
   fireEvent.change(screen.getByLabelText('Persetujuan sampai tanggal'), { target: { value: '2026-09-25' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Terapkan filter persetujuan' }))
   await screen.findByRole('link', { name: 'RCPT-NEW · Revisi 5' })
+  await waitFor(() => expect(fetch.mock.calls.at(-1)![0]).toContain('serial=ONU-001'))
+  await waitFor(() => expect(fetch.mock.calls.at(-1)![0]).toContain('query=RCPT'))
   expect(Object.fromEntries(new URLSearchParams(fetch.mock.calls.at(-1)![0].split('?')[1]))).toMatchObject({ page: '0', status: 'PENDING', operation: 'RECEIPT', query: 'RCPT', serial: 'ONU-001' })
   expect(fetch.mock.calls.every(([path]) => path.startsWith(root))).toBe(true)
 })

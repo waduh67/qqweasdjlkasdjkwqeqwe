@@ -1,3 +1,4 @@
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
@@ -7,7 +8,7 @@ import { getReceipt, getReceiptHistory, listReceipts, RECEIPT_STATES, receiveRec
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { formatBaseQuantity, displayUnit } from '@/api/warehouse/quantity'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
+import { Button, EmptyState } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
@@ -47,13 +48,13 @@ function ReceiptList({ onNew }: { onNew: () => void }) {
   const result = useWarehouseQuery(loader)
   const canDraft = can('inventory.receipt.manage') && can('inventory.sku.view') && can('inventory.location.view')
   return <>
-    <WarehouseListActions onRefresh={result.reload} onReset={() => { setStatus(''); setSerial(''); setPage(0) }}
+    <div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
       create={can('inventory.receipt.manage') ? { label: 'Buat penerimaan', disabled: !canDraft, onClick: onNew } : undefined}
       actions={can('inventory.location.manage') && can('inventory.location.view') ? [{ key: 'source', label: 'Atur batas penerimaan', onClick: () => setSourceEditor(true) }] : []} />
-    <div className="resource-filters row wrap">
-      <SelectField label="Status penerimaan" value={status} onChange={(_, data) => { setStatus(data.value); setPage(0) }}><option value="">Semua status</option>{RECEIPT_STATES.map(state => <option key={state} value={state}>{stateLabels[state]}</option>)}</SelectField>
-      <TextField label="Serial barang" value={serial} maxLength={128} onChange={(_, data) => { setSerial(data.value); setPage(0) }} />
-    </div>
+    <FilterBar search={<FilterSearch label="Serial barang" value={serial} maxLength={128} onChange={value => { setSerial(value); setPage(0) }} />}>
+      <FilterSelect caption="Status" label="Status penerimaan" value={status} onChange={value => { setStatus(value); setPage(0) }}><option value="">Semua status</option>{RECEIPT_STATES.map(state => <option key={state} value={state}>{stateLabels[state]}</option>)}</FilterSelect>
+
+    </FilterBar></div>
     {!can('inventory.receipt.manage') && <p className="muted">Akses baca saja. Izin kelola penerimaan diperlukan untuk mencatat barang dan pemeriksaan.</p>}
     {can('inventory.receipt.manage') && !canDraft && <p className="muted">Pembuatan draft memerlukan izin lihat barang dan lokasi untuk memilih sumber yang benar.</p>}
     <WarehouseState {...result}>{data => <>

@@ -1,9 +1,10 @@
+import { FilterBar, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { useCallback, useState } from 'react'
 import { DELEGATION_STATES, listDelegations, revokeDelegation, type WarehouseDelegation } from '@/api/warehouse/settings'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useCan } from '@/auth/useCan'
-import { Button, EmptyState, SelectField } from '@/components/atoms'
+import { Button, EmptyState } from '@/components/atoms'
 import { DataTable } from '@/components/organisms/DataTable'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { WarehouseTime } from '@/components/organisms/warehouse/WarehouseLines'
@@ -25,9 +26,9 @@ function Delegations() {
   const loader = useCallback(() => listDelegations({ page, state: state || undefined }), [page, state]), result = useWarehouseQuery(loader)
   function refresh() { setCreating(false); setOperation(null); result.reload() }
   return <div className="stack"><h2>Delegasi pemeriksa</h2>
-    <WarehouseListActions onRefresh={refresh} onReset={() => { setState(''); setPage(0) }} create={can('inventory.approval.manage') ? { label: 'Tambah delegasi', onClick: () => setCreating(true) } : undefined} />
-    <section className="resource-filters row">
-    <SelectField label="Status delegasi" value={state} onChange={(_, value) => { setState(value.value as typeof state); setPage(0) }}><option value="">Semua status</option>{DELEGATION_STATES.map(value => <option key={value} value={value}>{labels[value]}</option>)}</SelectField></section>
+    <div className="resource-list-controls"><WarehouseListActions onRefresh={refresh} create={can('inventory.approval.manage') ? { label: 'Tambah delegasi', onClick: () => setCreating(true) } : undefined} />
+    <FilterBar>
+    <FilterSelect caption="Status" label="Status delegasi" value={state} onChange={value => { setState(value as typeof state); setPage(0) }}><option value="">Semua status</option>{DELEGATION_STATES.map(value => <option key={value} value={value}>{labels[value]}</option>)}</FilterSelect></FilterBar></div>
 
     {creating && can('inventory.approval.manage') && <WarehouseDelegationForm onDone={refresh} onClose={() => setCreating(false)} />}
     <WarehouseState {...result}>{data => <><DataTable rowActions={row => can('inventory.approval.manage') && !row.delegation.revokedAt ? [{ key: 'action', label: <>Cabut delegasi</>, onClick: () => setOperation({ command: revokeDelegation(row.delegation), description: `${row.approver?.name ?? 'Pemeriksa asal'} → ${row.delegate?.name ?? 'Penerima delegasi'} · ${locationLabel(row.location)} · Revisi ${row.delegation.revision}` }) }] : []} presentation="warehouse" rows={data.items} rowKey={row => row.delegation.id} empty={<EmptyState title="Tidak ada delegasi sesuai filter" hint="Pemeriksa dapat bertindak sesuai kebijakan dan kewenangannya sendiri." />} columns={[

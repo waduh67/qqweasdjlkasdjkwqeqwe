@@ -1,9 +1,10 @@
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
 import { useCallback, useState, type ReactNode } from 'react'
 import type { WarehousePage } from '@/api/warehouse/codec'
 import type { MasterFilter } from '@/api/warehouse/masters'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
-import { EmptyState, SelectField, TextField } from '@/components/atoms'
+import { EmptyState } from '@/components/atoms'
 import { DataTable, type Column } from '@/components/organisms/DataTable'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { WarehousePagination } from '@/components/organisms/warehouse/WarehousePagination'
@@ -28,13 +29,13 @@ export function WarehouseMasterPanel<T extends Master>({ title, load, archive, c
   const toast = useToast()
   function saved() { setEditing(null); setArchiving(null); result.reload(); toast.success(`${title} berhasil disimpan`) }
   return <div className="stack">
-    <WarehouseListActions onRefresh={result.reload} onReset={() => { setSearch(''); setStatus('ACTIVE'); setPage(0) }}
+    <div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
       create={canManage ? { label: `Tambah ${title.toLowerCase()}`, onClick: () => setEditing('new') } : undefined} />
-    <div className="resource-filters row wrap" style={{ alignItems: 'end' }}>
-      <TextField label={`Cari ${title.toLowerCase()}`} value={search} maxLength={200} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
-      <SelectField label="Status master" value={status} onChange={(_, data) => { setStatus(data.value as typeof status); setPage(0) }}><option value="ACTIVE">Aktif</option><option value="ARCHIVED">Diarsipkan</option></SelectField>
+    <FilterBar search={<FilterSearch label={`Cari ${title.toLowerCase()}`} value={search} maxLength={200} onChange={value => { setSearch(value); setPage(0) }} />}>
 
-    </div>
+      <FilterSelect caption="Status" defaultValue="ACTIVE" label="Status master" value={status} onChange={value => { setStatus(value as typeof status); setPage(0) }}><option value="ACTIVE">Aktif</option><option value="ARCHIVED">Diarsipkan</option></FilterSelect>
+
+    </FilterBar></div>
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} onRowClick={row => setEditing(row)} empty={<EmptyState title={`Tidak ada ${title.toLowerCase()} yang cocok`} hint={canManage ? emptyHint : 'Tidak ada data sesuai pencarian dan cakupan akses Anda.'} />} columns={[
         { key: 'name', header: 'Nama', cell: row => row.name ?? row.code, sortValue: row => row.name ?? row.code },

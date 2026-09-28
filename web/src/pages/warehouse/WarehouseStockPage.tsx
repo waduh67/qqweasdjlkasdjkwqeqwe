@@ -41,7 +41,7 @@ export function WarehouseStockPage() {
           : params.has('position') ? <><Link to={stockLink({ tab: 'positions' })}>Kembali ke posisi stok</Link><WarehousePositionDetail key={params.get('position')} id={params.get('position')!} /></>
             : <><Tabs tabs={tabs.filter(row => row.key !== 'unknown' || can('inventory.provenance.view'))} active={tab} onChange={next => {
               const values = new URLSearchParams(params); values.set('tab', next); values.delete('page'); if (!['summary', 'positions'].includes(next)) values.delete('bucket'); setParams(values)
-            }} />{tab === 'unknown' && !can('inventory.provenance.view') ? <WarehouseDenied /> : <StockList key={params.toString()} tab={tab} params={params} setParams={setParams} />}</>}
+            }} />{tab === 'unknown' && !can('inventory.provenance.view') ? <WarehouseDenied /> : <StockList key={tab} tab={tab} params={params} setParams={setParams} />}</>}
   </div>
 }
 function StockEmpty() {
@@ -75,8 +75,8 @@ function StockList({ tab, params, setParams }: { tab: StockTab; params: URLSearc
     return `/warehouse/stock?${next}`
   }
   return <>
-    <WarehouseListActions onRefresh={result.reload} onReset={() => setParams(new URLSearchParams({ tab }))} />
-    <WarehouseStockFilters filter={filter} buckets={tab === 'summary' || tab === 'positions'} onApply={apply} />
+    <div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload} />
+    <WarehouseStockFilters filter={filter} buckets={tab === 'summary' || tab === 'positions'} onApply={apply} /></div>
     {tab === 'assets' && <Disclosure className="card" title={<>Cari atau pindai perangkat</>}><WarehouseSerialLookup onSelect={setFound} candidate={found && <Link to={stockLink({ asset: found.assetId })}>Buka perangkat {found.serial}</Link>} /></Disclosure>}
     {tab === 'summary' && <p className="muted">Jumlah tercatat juga mencakup material terpakai. Tersedia sudah dikurangi reservasi; ambang minimum dibandingkan dengan hasil filter dan cakupan saat ini.</p>}
     {tab === 'unknown' && <p className="muted">Data ini belum memenuhi verifikasi asal, satuan atau kepemilikan. Nilainya tidak dihitung sebagai stok tersedia.</p>}

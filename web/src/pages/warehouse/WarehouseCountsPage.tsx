@@ -45,12 +45,11 @@ export function WarehouseCountsPage() {
 }
 function CountList({ onNew }: { onNew: () => void }) {
   const { can } = useCan()
-  const [filterVersion, setFilterVersion] = useState(0)
   const [filter, setFilter] = useState<CountFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => countWorkbench({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><WarehouseListActions onRefresh={result.reload} onReset={() => { setFilter({}); setPage(0); setFilterVersion(version => version + 1) }}
+  return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
     create={can('inventory.count.manage') ? { label: 'Buat stock opname', onClick: onNew } : undefined} />
-    <WarehouseCountFilters key={filterVersion} onApply={filter => { setFilter(filter); setPage(0) }} />
+    <WarehouseCountFilters onApply={filter => { setFilter(filter); setPage(0) }} /></div>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.count.id}
       empty={<EmptyState title="Belum ada stock opname untuk Anda" hint="Dokumen terlihat bagi pembuat dan penghitung yang ditugaskan dalam cakupan lokasi saat ini." />} columns={[
         { key: 'code', header: 'Stock opname', cell: row => <Link to={detailPath(row.count.id)}>{row.references.code}</Link> },
