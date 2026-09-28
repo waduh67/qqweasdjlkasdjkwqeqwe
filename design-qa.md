@@ -32,3 +32,5 @@ Private evidence: `.omo/runtime/ui-ux/azure-filterbar-20260928/`. Source files `
 `browser-report.json` and `browser-final.log`: ten warehouse lists, catalog selection, individual removal, pending search/Back, retained focus, quick serial/Escape, date completion and mobile. Fourteen captures, zero page errors and zero business writes. `ResourceFilters.test.tsx` covers automatic selection, independent removal/focus, quick dismissal, browser reset, valid dates and restored intervals. Full regression, build and guarded release results are in the release handoff.
 
 Previous create-form/table audit remains in Git at `90b7b41f:design-qa.md` and `docs/ui-ux/AZURE-RESOURCE-WORKFLOWS-RELEASE.md`.
+
+Production verification: source `15aa445db59c4cf812613d3ec71f7d529f9c63d5` is live. The exact static manifest was verified, then 15 authenticated Firefox captures and filter interactions passed with no page errors, business writes or page overflow. Full regression: 636/636 tests across 127 files; final report follow-up: 6/6; guarded deployment helper: 9/9. Production screenshots share the private runtime with the source references.
