@@ -6,7 +6,7 @@ import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { Button, TextField } from '@/components/atoms'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 
-export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onReload }: { row: WarehouseSupplier | null; readOnly: boolean; onClose: () => void; onSaved: () => void; onReload: () => void }) {
+export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onReload }: { row: WarehouseSupplier | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseSupplier) => void; onReload: () => void }) {
   const formId = useId()
   const [code, setCode] = useState(row?.code ?? '')
   const [name, setName] = useState(row?.name ?? '')

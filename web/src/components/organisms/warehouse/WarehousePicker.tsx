@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/atoms'
 import { Combobox, Field, Option, Spinner } from '@fluentui/react-components'
 import type { WarehousePage } from '@/api/warehouse/codec'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { warehouseError } from '@/api/warehouse/errors'
 
 /** Search and selection share one control; result paging retains the selected reference. */
-export function WarehousePicker<T extends { id: string }>({ label, load, value, onChange, name, optional = false, placeholder, disabled = false, searchable = true, eligible = () => true }: {
+export function WarehousePicker<T extends { id: string }>({ label, load, value, onChange, name, optional = false, placeholder, disabled = false, searchable = true, create, eligible = () => true }: {
+  create?: { label: string; onClick: () => void };
   label: string; load: (search: string, page: number) => Promise<WarehousePage<T>>; value: T | null; onChange: (value: T | null) => void;
   name: (value: T) => string; optional?: boolean; placeholder?: string; disabled?: boolean; searchable?: boolean; eligible?: (value: T) => boolean
 }) {
@@ -52,5 +54,6 @@ export function WarehousePicker<T extends { id: string }>({ label, load, value, 
       {state.status === 'ready' && !loading && page > 0 && <Option value="__previous">Pilihan sebelumnya</Option>}
       {state.status === 'ready' && !loading && (page + 1) * state.data.size < state.data.totalElements && <Option value="__next">Pilihan berikutnya</Option>}
     </Combobox>
+    {create && !disabled && <Button type="button" variant="subtle" className="resource-create-link" onClick={create.onClick}>{create.label}</Button>}
   </Field>
 }

@@ -38,8 +38,8 @@ export function WarehouseCountsPage() {
   } catch { return <div className="card stack" role="alert"><p>Alamat stock opname tidak dikenal.</p><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link></div> }
   if (!can('inventory.count.view')) return <WarehouseDenied />
   return <div className="stack"><PageHeader title="Stock Opname" />
-    {creating ? <WarehouseCountEditor onSaved={count => { setCreating(false); navigate(detailPath(count.id)) }} onClose={() => setCreating(false)} />
-      : id ? <><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link><CountDetail key={id} id={id} /></>
+    {creating && <WarehouseCountEditor onSaved={count => { setCreating(false); navigate(detailPath(count.id)) }} onClose={() => setCreating(false)} />}
+    {id ? <><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link><CountDetail key={id} id={id} /></>
       : <><CountList onNew={() => setCreating(true)} /></>}
   </div>
 }
@@ -74,10 +74,11 @@ function CountBody({ details, recent, reload }: { details: CountDetails; recent:
   const owner = user?.id === references.requester.id, manage = can('inventory.count.manage')
   const observed = recent.filter(fact => fact.roundRevision === count.roundRevision)
   const complete = count.entries.every(entry => observed.some(fact => fact.balanceId === entry.balanceId))
-  if (editing && count.state === 'DRAFT' && owner && manage && can('inventory.location.view'))
-    return <WarehouseCountEdit id={count.id} onSaved={() => { setEditing(false); reload() }} onClose={() => setEditing(false)} onReload={() => { setEditing(false); reload() }} />
-  if (observing) return <CountObservation details={details} balanceId={observing} onDone={reload} onClose={() => setObserving(null)} />
-  return <><section className="card stack" aria-label="Detail stock opname"><h2>{references.code}</h2>
+
+
+  return <>
+    {(editing && count.state === 'DRAFT' && owner && manage && can('inventory.location.view')) && <WarehouseCountEdit id={count.id} onSaved={() => { setEditing(false); reload() }} onClose={() => setEditing(false)} onReload={() => { setEditing(false); reload() }} />}
+    {(observing) && <CountObservation details={details} balanceId={observing} onDone={reload} onClose={() => setObserving(null)} />}<section className="card stack" aria-label="Detail stock opname"><h2>{references.code}</h2>
     <p><WarehouseStatus status={count.state} /> · Revisi {count.revision} · <WarehouseTime value={references.createdAt} /></p>
     <p>{locationLabel(references.location)} · Pembuat: {countPersonLabel(references.requester)}</p><p>{references.reason}</p>
     <p>Hanya posisi yang ditugaskan pada dokumen ini yang dihitung. Angka stok buku tidak ditampilkan selama penghitungan.</p>

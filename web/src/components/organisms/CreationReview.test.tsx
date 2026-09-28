@@ -47,7 +47,7 @@ describe('resource creation review', () => {
     await user.click(screen.getByRole('button', { name: 'Lanjutkan pengisian' }))
     expect(screen.getByRole('button', { name: 'Mode voucher' }).getAttribute('aria-pressed')).toBe('true')
     await user.click(screen.getByRole('button', { name: 'Tutup' }))
-    await user.click(screen.getByRole('button', { name: 'Buang perubahan' }))
+    await user.click(await screen.findByRole('button', { name: 'Buang perubahan' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
   it('validates before review, preserves Basics, and submits once while navigation is locked', async () => {
@@ -95,7 +95,7 @@ describe('resource creation review', () => {
     await user.click(screen.getByRole('button', { name: 'Lanjutkan pengisian' }))
     expect(screen.getByRole('textbox', { name: 'Nama' })).toHaveProperty('value', 'Draf gudang')
     await user.click(screen.getByRole('button', { name: 'Tutup' }))
-    await user.click(screen.getByRole('button', { name: 'Buang perubahan' }))
+    await user.click(await screen.findByRole('button', { name: 'Buang perubahan' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(screen.getByRole('main')).toBeTruthy()
     expect(save).not.toHaveBeenCalled()

@@ -10,7 +10,7 @@ import { WarehouseCommandDialog } from '@/components/organisms/warehouse/Warehou
 import { WarehouseQuantityField } from '@/components/organisms/warehouse/WarehouseQuantity'
 
 const TRACKING_LABELS = { SERIAL: 'Per perangkat (serial)', LOT: 'Per lot / gulungan', BULK: 'Curah / jumlah' }
-export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }: { row: WarehouseSku | null; readOnly: boolean; onClose: () => void; onSaved: () => void; onReload: () => void }) {
+export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }: { row: WarehouseSku | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseSku) => void; onReload: () => void }) {
   const formId = useId()
   const [code, setCode] = useState(row?.code ?? '')
   const [name, setName] = useState(row?.name ?? '')

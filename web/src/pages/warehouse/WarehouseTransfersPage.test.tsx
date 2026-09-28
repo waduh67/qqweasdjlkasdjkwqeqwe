@@ -337,7 +337,7 @@ it('edits a saved draft with its persisted receiver and exact revision after rev
   expect(JSON.parse(String(writes[0][1]?.body))).toMatchObject({ expectedRevision: 0, draft: { receiverId: id.receiver,
     reason: 'Perubahan kebutuhan gudang tujuan', lines: [{ sourceBalanceId: id.position, stockIdentityId: id.piece, quantityBase: '60125', baseUnit: 'MM' }] } })
   expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
-  expect(screen.getByRole('region', { name: 'Detail transfer' }).textContent).toContain('Revisi 1')
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Detail transfer' }).textContent).toContain('Revisi 1'))
 })
 it('reloads a stale saved draft before another edit and never invents a retry revision', async () => {
   let current = transferFixture()

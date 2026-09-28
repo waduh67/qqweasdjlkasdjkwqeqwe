@@ -35,8 +35,8 @@ export function WarehouseTransfersPage() {
   } catch { return <div className="card stack" role="alert"><p>Alamat transfer tidak dikenal.</p><Link to="/warehouse/transfers">Kembali ke daftar transfer</Link></div> }
   if (!can('inventory.transfer.view')) return <WarehouseDenied />
   return <div className="stack warehouse-transfers"><PageHeader title="Transfer" />
-    {creating ? <WarehouseTransferEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />
-      : id ? <><Link to="/warehouse/transfers">Kembali ke daftar transfer</Link><TransferDetail key={id} id={id} /></>
+    {creating && <WarehouseTransferEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />}
+    {id ? <><Link to="/warehouse/transfers">Kembali ke daftar transfer</Link><TransferDetail key={id} id={id} /></>
       : <><TransferList onNew={() => setCreating(true)} /></>}
   </div>
 }
@@ -68,10 +68,11 @@ function TransferBody({ details, reload }: { details: TransferDetails; reload: (
   const manage = can('inventory.transfer.manage'), sender = user?.id === transfer.senderId, receiver = user?.id === transfer.receiverId
   const receiverActive = details.references.people.some(person => person.id === transfer.receiverId && person.active)
   const waiting = ['DISPATCHED', 'PART_RECEIVED'].includes(transfer.state)
-  if (editing && transfer.state === 'DRAFT' && manage && sender && can('inventory.item.view') && can('inventory.location.view'))
-    return <WarehouseTransferEdit details={details} onSaved={() => { setEditing(false); reload() }} onClose={() => setEditing(false)} onReload={() => { setEditing(false); reload() }} />
-  if (action) return <WarehouseTransferActions details={details} action={action} onDone={reload} onClose={() => setAction(null)} />
-  return <><section className="card stack" aria-label="Detail transfer"><h2 style={{ overflowWrap: 'anywhere' }}>{transfer.code}</h2><p><WarehouseStatus status={transfer.state} /> · Revisi {transfer.revision} · <WarehouseTime value={transfer.recordedAt} /></p>
+
+
+  return <>
+    {(editing && transfer.state === 'DRAFT' && manage && sender && can('inventory.item.view') && can('inventory.location.view')) && <WarehouseTransferEdit details={details} onSaved={() => { setEditing(false); reload() }} onClose={() => setEditing(false)} onReload={() => { setEditing(false); reload() }} />}
+    {(action) && <WarehouseTransferActions details={details} action={action} onDone={reload} onClose={() => setAction(null)} />}<section className="card stack" aria-label="Detail transfer"><h2 style={{ overflowWrap: 'anywhere' }}>{transfer.code}</h2><p><WarehouseStatus status={transfer.state} /> · Revisi {transfer.revision} · <WarehouseTime value={transfer.recordedAt} /></p>
     <p>{transferLocationLabel(details, transfer.sourceLocationId)} → {transferLocationLabel(details, transfer.transitLocationId)} → {transferLocationLabel(details, transfer.destinationLocationId)}</p>
     <p>Pengirim: <strong>{transferPersonLabel(details, transfer.senderId)}</strong> · Penerima: <strong>{transferPersonLabel(details, transfer.receiverId)}</strong></p><p>{transfer.reason}</p>
     <WarehouseDraftExpired expiry={transfer.draftExpiry} />

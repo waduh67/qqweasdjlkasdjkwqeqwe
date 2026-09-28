@@ -83,10 +83,13 @@ function RequestBody({ summary, workOrder, allocations, reload }: { summary: Mat
   const canSelect = current.some(row => row.reservedPickedBase === '0' && BigInt(row.reservedUnpickedBase) > 0n)
   const hasObligations = summary.lines.some(line => BigInt(line.reservedUnpickedBase) + BigInt(line.reservedPickedBase) + BigInt(line.issuedBase) > 0n)
   const shortage = summary.lines.some(line => summary.plan?.lines.some(plan => plan.id === line.planLineId) && BigInt(line.backorderBase) > 0n)
-  if (editor === 'plan') return <MaterialPlanEditor summary={summary} onSaved={reload} onClose={() => setEditor(null)} onReload={reload} />
-  if (editor === 'reserve') return <WarehouseReservationEditor summary={summary} onDone={reload} onClose={() => setEditor(null)} />
-  if (editor === 'pick' || editor === 'release') return <WarehouseAllocationEditor summary={summary} allocations={current} action={editor} onDone={reload} onClose={() => setEditor(null)} />
+
+
+
   return <>
+    {(editor === 'plan') && <MaterialPlanEditor summary={summary} onSaved={reload} onClose={() => setEditor(null)} onReload={reload} />}
+    {(editor === 'reserve') && <WarehouseReservationEditor summary={summary} onDone={reload} onClose={() => setEditor(null)} />}
+    {(editor === 'pick' || editor === 'release') && <WarehouseAllocationEditor summary={summary} allocations={current} action={editor} onDone={reload} onClose={() => setEditor(null)} />}
     <section className="card stack" aria-label="Permintaan work order"><h2>{workOrder.code} · {workOrder.title}</h2>
       <p>{workOrder.customerId ? workOrder.customerName ?? 'Nama pelanggan tidak tersedia' : 'Pekerjaan tanpa pelanggan'} · Teknisi: {workOrder.assignees.map(person => person.name ?? 'Nama tidak tersedia').join(', ') || 'Belum ditugaskan'}</p>
       <p>Rencana {summary.revisions.planRevision} · WO revisi {summary.revisions.workOrderRevision}{summary.demandRevision !== null && ` · Permintaan revisi ${summary.demandRevision}`} · <WarehouseStatus status={summary.planState === 'EXPIRED' ? 'EXPIRED' : summary.demandState} /></p>

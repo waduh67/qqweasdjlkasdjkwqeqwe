@@ -12,7 +12,7 @@ import { ResourceForm } from './ResourceForm'
 import type { CreationFlow } from './CreationReview'
 
 /**
- * Resource creation uses the full-page Basics/review flow. Other details remain
+ * Resource creation uses a retained Basics/review layer. Other details remain
  * in a side drawer; both surfaces protect drafts marked dirty by their owner.
  */
 export type BladeSize = 'sm' | 'lg' | 'full'

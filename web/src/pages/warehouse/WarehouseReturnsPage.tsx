@@ -35,8 +35,8 @@ export function WarehouseReturnsPage() {
   } catch { return <div className="card stack" role="alert"><p>Alamat retur tidak dikenal.</p><Link to="/warehouse/returns">Kembali ke daftar retur</Link></div> }
   if (!can('inventory.return.view')) return <WarehouseDenied />
   return <div className="stack warehouse-returns"><PageHeader title="Retur & Servis" />
-    {creating ? <WarehouseReturnEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />
-      : id ? <><Link to="/warehouse/returns">Kembali ke daftar retur</Link><ReturnDetail key={id} id={id} /></>
+    {creating && <WarehouseReturnEditor onSaved={row => { setCreating(false); navigate(detailPath(row.id)) }} onClose={() => setCreating(false)} onReload={() => setCreating(false)} />}
+    {id ? <><Link to="/warehouse/returns">Kembali ke daftar retur</Link><ReturnDetail key={id} id={id} /></>
         : <>{can('inventory.return.manage') && <WarehousePendingMaterialReturns />}
           {can('inventory.return.manage') && !can('inventory.location.view') && <p className="muted">Izin lihat lokasi diperlukan untuk memilih karantina penerimaan.</p>}<ReturnList onNew={() => setCreating(true)} /></>}
   </div>
@@ -66,8 +66,9 @@ function ReturnDetail({ id }: { id: string }) {
 function ReturnBody({ details, reload }: { details: ReturnDetails; reload: () => void }) {
   const { can } = useCan(), { returnCase: view, references: refs } = details, [action, setAction] = useState<ReturnAction | null>(null)
   const manage = can('inventory.return.manage'), locations = can('inventory.location.view'), waiting = view.state === 'RECEIVED_IN_INSPECTION' && !refs.rmaHandoverId
-  if (action) return <WarehouseReturnActions details={details} action={action} onDone={reload} onClose={() => setAction(null)} />
-  return <><section className="card stack" aria-label="Detail retur"><h2 style={{ overflowWrap: 'anywhere' }}>{refs.code}</h2>
+
+  return <>
+    {(action) && <WarehouseReturnActions details={details} action={action} onDone={reload} onClose={() => setAction(null)} />}<section className="card stack" aria-label="Detail retur"><h2 style={{ overflowWrap: 'anywhere' }}>{refs.code}</h2>
     <p><WarehouseStatus status={view.state} /> · Revisi {view.revision} · <WarehouseTime value={view.recordedAt} /></p>
     <h3>{returnItemLabel(refs.item)}</h3><p><WarehouseQuantity value={view.quantityBase} unit={view.baseUnit} /> · <WarehouseStatus status={view.condition} /> · <WarehouseStatus status={view.legalOwner} /></p>
     <p style={{ overflowWrap: 'anywhere' }}>Sumber: {returnOriginLabels[view.origin]} · {refs.sourceCode}</p>

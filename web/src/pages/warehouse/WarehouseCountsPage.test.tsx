@@ -3,6 +3,7 @@ import { countItemLabel, countPersonLabel } from './countPresentation'
 import { warehouseStatusLabel } from '@/components/organisms/warehouse/WarehouseStatus'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { tokenStore } from '@/api/client'
@@ -85,7 +86,7 @@ it('records exact blind measured metres only for the assigned counter and cannot
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau hasil hitung' })); fireEvent.click(await screen.findByRole('button', { name: 'Simpan hasil fisik' }))
   await screen.findByRole('heading', { name: 'CNT-001' })
   expect(screen.queryByRole('button', { name: 'Aksi baris' })).toBeNull()
-  expect(screen.getAllByText('82,500 m').length).toBeGreaterThan(0)
+  await waitFor(() => expect(screen.getAllByText('82,500 m').length).toBeGreaterThan(0))
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(writes).toHaveLength(1); expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ expectedRevision: 1, balanceId: id.balance, quantityBase: '82500', reason: 'Ukur fisik reel', documentReference: 'LEMBAR-001' })
   expect(fetch.mock.calls.every(([path]) => path.startsWith(root) && !path.includes('/review'))).toBe(true)
@@ -169,14 +170,15 @@ it('hydrates all 100 saved assignments beyond picker pages and reviews one exact
     if (path.includes('/positions?') || path.includes('/counters?') || path.includes('/locations?')) return response(page([]))
     return read(path, details.count)
   }); vi.stubGlobal('fetch', fetch); show()
-  fireEvent.click(await screen.findByRole('button', { name: 'Ubah draft stock opname' }))
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Ubah draft stock opname' }))
   const firstRow = (await screen.findByText('Posisi hitung 1', { selector: 'legend' })).closest('fieldset')!
   expect(within(firstRow).getByRole('combobox', { name: 'Barang dihitung 1' })).toHaveProperty('value', `${countItemLabel(positions[0].item)} · ${warehouseStatusLabel(positions[0].condition)} · ${warehouseStatusLabel(positions[0].legalOwner)} · Gudang · ${positions[0].id.slice(0, 8)}`)
   expect(screen.queryByText('Posisi hitung 100', { selector: 'legend' })).toBeNull()
-  await selectControl(screen.getByRole('combobox', { name: 'Halaman posisi hitung' }), { target: { value: '3' } })
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Halaman posisi hitung' }), '3')
   const lastRow = (await screen.findByText('Posisi hitung 100', { selector: 'legend' })).closest('fieldset')!
-  expect(within(lastRow).getByRole('combobox', { name: 'Barang dihitung 100' })).toHaveProperty('value', `${countItemLabel(positions[99].item)} · ${warehouseStatusLabel(positions[99].condition)} · ${warehouseStatusLabel(positions[99].legalOwner)} · Gudang · ${positions[99].id.slice(0, 8)}`)
-  expect(within(lastRow).getByRole('combobox', { name: 'Penghitung 100' })).toHaveProperty('value', countPersonLabel(details.references.counters[0]))
+  expect(await within(lastRow).findByRole('combobox', { name: 'Barang dihitung 100' })).toHaveProperty('value', `${countItemLabel(positions[99].item)} · ${warehouseStatusLabel(positions[99].condition)} · ${warehouseStatusLabel(positions[99].legalOwner)} · Gudang · ${positions[99].id.slice(0, 8)}`)
+  expect(await within(lastRow).findByRole('combobox', { name: 'Penghitung 100' })).toHaveProperty('value', countPersonLabel(details.references.counters[0]))
   const reasonInput = screen.getByRole('textbox', { name: 'Alasan stock opname' })
   expect(reasonInput).toHaveProperty('value', 'Pemeriksaan akhir bulan')
   fireEvent.change(reasonInput, { target: { value: 'Perubahan jadwal penghitungan' } })

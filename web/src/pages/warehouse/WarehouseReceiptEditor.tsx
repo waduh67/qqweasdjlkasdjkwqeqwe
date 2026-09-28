@@ -2,7 +2,9 @@ import { Disclosure } from '@/components/molecules/Disclosure'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
-import { Link } from 'react-router-dom'
+import { WarehouseLocationEditor } from './WarehouseLocationEditor'
+import { WarehouseSupplierEditor } from './WarehouseSupplierEditor'
+import { WarehouseSkuEditor } from './WarehouseSkuEditor'
 import type { WarehouseLocation } from '@/api/warehouse/models'
 import { saveReceipt, type WarehouseReceipt } from '@/api/warehouse/receipts'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
@@ -29,6 +31,7 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
   const [rows, setRows] = useState<ReceiptDraftRow[]>(() => receipt ? rowsFromReceipt(receipt) : [emptyReceiptRow()])
   const [error, setError] = useState<string | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseReceipt> | null>(null)
+  const [creatingMaster, setCreatingMaster] = useState<'supplier' | 'source' | 'inspection' | null>(null)
   const costVisible = can('inventory.cost.view')
   if (!can('inventory.receipt.manage')) return <WarehouseDenied />
   if (receipt && receipt.draftEditability !== 'EDITABLE') return <div className="card stack" role="alert"><p>Penerimaan ini tidak dapat diubah melalui editor draft. Muat ulang detail; usulan pengganti yang sudah tercatat memerlukan usulan baru dari kasus retur asal.</p><Button onClick={onClose}>Kembali</Button></div>
@@ -52,25 +55,31 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
       <p className="muted">Menyimpan draft belum menambah stok. Lampiran draft lama perlu diunggah ulang setelah isi draft berubah.</p>
       <div style={grid}>
         <TextField label="Referensi surat jalan" required maxLength={500} value={reference} onChange={(_, data) => setReference(data.value)} />
-        <WarehousePicker label="Pemasok" load={receiptSuppliers} value={supplier} onChange={setSupplier} name={row => row.code ? `${row.name} · ${row.code}` : row.name} />
-        <WarehousePicker<LocationChoice> label="Batas penerimaan" load={receiptLocations} value={source} onChange={setSource} name={locationLabel} eligible={row => row.kind === 'TRANSIT' && row.code === 'RECEIPT_SOURCE'} />
-        <WarehousePicker<LocationChoice> label="Lokasi pemeriksaan" load={receiptLocations} value={inspection} onChange={setInspection} name={locationLabel} eligible={row => row.kind === 'QUARANTINE' && !row.issueEligible} />
+        <WarehousePicker create={can('inventory.receipt.manage') ? { label: 'Tambah pemasok', onClick: () => setCreatingMaster('supplier') } : undefined} label="Pemasok" load={receiptSuppliers} value={supplier} onChange={setSupplier} name={row => row.code ? `${row.name} · ${row.code}` : row.name} />
+        <WarehousePicker<LocationChoice> create={can('inventory.location.manage') ? { label: 'Tambah batas penerimaan', onClick: () => setCreatingMaster('source') } : undefined} label="Batas penerimaan" load={receiptLocations} value={source} onChange={setSource} name={locationLabel} eligible={row => row.kind === 'TRANSIT' && row.code === 'RECEIPT_SOURCE'} />
+        <WarehousePicker<LocationChoice> create={can('inventory.location.manage') ? { label: 'Tambah lokasi pemeriksaan', onClick: () => setCreatingMaster('inspection') } : undefined} label="Lokasi pemeriksaan" load={receiptLocations} value={inspection} onChange={setInspection} name={locationLabel} eligible={row => row.kind === 'QUARANTINE' && !row.issueEligible} />
       </div>
-      <p className="muted">Batas penerimaan memakai lokasi transit RECEIPT_SOURCE. Barang masuk ke karantina sebelum ditempatkan ke bin. <Link to="/warehouse/catalog">Kelola lokasi / pemasok / barang</Link></p>
+      <p className="muted">Barang diterima di lokasi pemeriksaan sebelum ditempatkan ke gudang.</p>
       {rows.map((row, index) => <ReceiptLineEditor key={row.key} row={row} number={index + 1} costVisible={costVisible} onChange={patch => update(row.key, patch)} onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />)}
       <div className="row wrap"><Button type="button" disabled={rows.length >= 100} onClick={() => setRows(current => [...current, emptyReceiptRow()])}>Tambah baris barang</Button>
         </div>
       {error && <p className="error" role="alert">{error}</p>}
-    </form></ResourceForm>
+    </form>
+      {creatingMaster === 'supplier' && <WarehouseSupplierEditor row={null} readOnly={false} onClose={() => setCreatingMaster(null)} onReload={() => setCreatingMaster(null)} onSaved={saved => { setSupplier(saved); setCreatingMaster(null) }} />}
+      {(creatingMaster === 'source' || creatingMaster === 'inspection') && <WarehouseLocationEditor row={null} readOnly={false} allowedKinds={creatingMaster === 'source' ? ['TRANSIT'] : ['QUARANTINE']} fixedCode={creatingMaster === 'source' ? 'RECEIPT_SOURCE' : undefined}
+        preset={creatingMaster === 'source' ? { code: 'RECEIPT_SOURCE', name: 'Penerimaan pemasok', kind: 'TRANSIT', issueEligible: false } : { code: '', name: '', kind: 'QUARANTINE', issueEligible: false }}
+        onClose={() => setCreatingMaster(null)} onReload={() => setCreatingMaster(null)} onSaved={saved => { if (creatingMaster === 'source' && saved.kind === 'TRANSIT' && saved.code === 'RECEIPT_SOURCE') setSource(saved); if (creatingMaster === 'inspection' && saved.kind === 'QUARANTINE' && !saved.issueEligible) setInspection(saved); setCreatingMaster(null) }} />}
+    </ResourceForm>
 
   </>
 }
 
 function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { row: ReceiptDraftRow; number: number; costVisible: boolean; onChange: (patch: Partial<ReceiptDraftRow>) => void; onRemove?: () => void }) {
-  const [scan, setScan] = useState('')
+  const [scan, setScan] = useState(''), [creatingSku, setCreatingSku] = useState(false)
+  const { can } = useCan()
   function addScan() { if (scan.trim()) { onChange({ serials: [row.serials.trim(), scan.trim()].filter(Boolean).join('\n') }); setScan('') } }
-  return <fieldset className="card stack receipt-line" style={{ minWidth: 0 }}><legend>Barang {number}</legend>
-    <WarehousePicker<ReceiptSkuChoice> label={`Barang ${number}`} load={receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />
+  return <><fieldset className="card stack receipt-line" style={{ minWidth: 0 }}><legend>Barang {number}</legend>
+    <WarehousePicker<ReceiptSkuChoice> create={can('inventory.sku.manage') ? { label: 'Tambah barang baru', onClick: () => setCreatingSku(true) } : undefined} label={`Barang ${number}`} load={receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />
     {row.sku && <>
       <WarehouseQuantityField label={row.sku.baseUnit === 'MM' ? 'Panjang reel aktual' : 'Jumlah aktual'} unit={row.sku.baseUnit} value={row.quantity} onChange={quantity => onChange({ quantity })} />
       {row.sku.tracking === 'SERIAL' ? <>
@@ -94,4 +103,6 @@ function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { r
     </>}
     {onRemove && <Button type="button" onClick={onRemove}>Hapus baris {number}</Button>}
   </fieldset>
+    {creatingSku && <WarehouseSkuEditor row={null} readOnly={false} onClose={() => setCreatingSku(false)} onReload={() => setCreatingSku(false)} onSaved={sku => { onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' }); setCreatingSku(false) }} />}
+  </>
 }

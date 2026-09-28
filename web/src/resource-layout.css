@@ -175,3 +175,32 @@
 .resource-export .resource-export-action { height: 28px; font-weight: 400; }
 .resource-export-action .fui-Button__icon { color: var(--accent); }
 .resource-export-action:disabled .fui-Button__icon { color: var(--muted); }
+
+/* Resource blades retain the page beneath them; each child leaves its parent visible. */
+.resource-form-dialog.resource-form-dialog {
+  inset: var(--topbar-h, 40px) 0 0 auto;
+  width: max(480px, calc(min(1120px, 100vw - 264px) - var(--resource-layer-depth, 0) * 40px));
+  height: calc(100dvh - var(--topbar-h, 40px));
+  border-left: 1px solid var(--border); box-shadow: -4px 0 14px #00000014;
+  container-type: inline-size;
+}
+.resource-layer-trail { display: flex; align-items: center; gap: 8px; min-height: 28px; margin-bottom: 12px; white-space: nowrap; overflow-x: auto; flex: 0 0 auto; font-size: 12px; color: var(--muted); }
+.resource-layer-trail > span { display: inline-flex; align-items: center; gap: 8px; }
+.resource-layer-trail > .fui-Button { flex-shrink: 0; }
+.resource-form-dialog .console-dialog-heading { min-height: 64px; }
+@container (max-width: 760px) {
+  .resource-form-content .app-field { display: flex; flex-direction: column; }
+  .resource-form-content .app-field > .fui-Field__label { padding: 0; margin-bottom: 4px; }
+  .resource-summary > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .resource-choice-group legend { float: none; width: auto; }
+  .resource-choice-group > div { margin-left: 0; }
+  .resource-form-content .resource-choice-control { margin-left: 0; }
+}
+@media (max-width: 819px) {
+  .resource-form-dialog.resource-form-dialog { inset: var(--topbar-h, 40px) 0 0; width: 100%; height: calc(100dvh - var(--topbar-h, 40px)); border-left: 0; }
+}
+
+.warehouse-picker .app-button.app-button-compact.resource-create-link { justify-self: start; align-self: start; justify-content: flex-start; padding: 0; min-width: 0; color: var(--accent); font-weight: 400; min-height: 24px; }
+
+.warehouse-picker .resource-create-link:hover { color: var(--accent); background: transparent; text-decoration: underline; }
+.resource-form-dialog .fui-DialogActions { flex-direction: row; flex-wrap: wrap; }

@@ -12,8 +12,9 @@ export function useResourceReviewLock(locked: boolean) {
   useLayoutEffect(() => { setLocked?.(locked); return () => setLocked?.(false) }, [locked, setLocked])
 }
 
-/** The same full-page surface for details and review; form submission owns validation. */
-export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, reviewFooter, className, reviewAction = false, dirty = false }: {
+/** A retained resource layer for details and review; form submission owns validation. */
+export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus }: {
+  returnFocus?: HTMLElement | null;
   title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode;
   onBack: () => void; onClose: () => void; readOnly?: boolean; editing?: boolean;
   onReview?: () => void; busy?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean
@@ -51,7 +52,7 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
     else content.current?.querySelector('form')?.requestSubmit()
   }
   return <ReviewLock.Provider value={setLocked}>
-    <Modal title={title} onClose={requestClose} layout="resource" className={className} footer={withCancelGuard(review ? reviewFooter : reviewAction ? <>
+    <Modal returnFocus={returnFocus} title={title} onClose={requestClose} layout="resource" className={className} footer={withCancelGuard(review ? reviewFooter : reviewAction ? <>
       <Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy} onClick={toReview}>{reviewLabel}</Button>
     </> : footer)}>
       {!readOnly && <TabList className="resource-form-tabs" selectedValue={review ? 'review' : 'basics'} onTabSelect={(_, data) => {

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ComponentType } from 'react'
+import { useEffect, useId, useRef, useState, type ComponentType } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ChevronDown12Regular, ChevronDoubleLeft16Regular, ChevronDoubleRight16Regular, Search12Regular } from '@fluentui/react-icons'
 import { Input } from '@fluentui/react-components'
@@ -21,7 +21,7 @@ function loadClosed(key: string, defaults: string[]): Set<string> {
   } catch { return new Set() }
 }
 
-/** Sections are discoverable on first visit; opening a deep link reveals its section. */
+/** Groups open independently; saved choices survive navigation and refresh. */
 export function SidebarNav({ groups, can, storageKey, compact = false, onToggle, expanded = true }: {
   groups: NavGroup[]
   can: (permission: string) => boolean
@@ -33,21 +33,24 @@ export function SidebarNav({ groups, can, storageKey, compact = false, onToggle,
   const key = `${storageKey}.v3.closed`
   const { pathname } = useLocation()
   const id = useId()
-  const [closed, setClosed] = useState(() => loadClosed(key, compact ? groups.filter(group => group.label).slice(1).map(group => group.label!) : []))
-  const [query, setQuery] = useState('')
   const matchesPath = (item: NavItem) => item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
   const activeGroup = groups.find(group => group.items.some(matchesPath))?.label
+  const [closed, setClosed] = useState(() => loadClosed(key, compact ? groups.filter(group => group.label).slice(1).map(group => group.label!).filter(label => label !== activeGroup) : []))
+  const [query, setQuery] = useState('')
+  const previousPath = useRef(pathname)
 
   useEffect(() => { if (!expanded) setQuery('') }, [expanded])
-
   useEffect(() => {
+    if (previousPath.current === pathname) return
+    previousPath.current = pathname
     setQuery('')
     if (activeGroup) setClosed(previous => {
-      const next = compact ? new Set(groups.map(group => group.label).filter((label): label is string => !!label)) : new Set(previous)
-      next.delete(activeGroup)
+      if (!previous.has(activeGroup)) return previous
+      const next = new Set(previous); next.delete(activeGroup)
+      try { localStorage.setItem(key, JSON.stringify([...next])) } catch { /* Optional preference storage. */ }
       return next
     })
-  }, [pathname, activeGroup, compact, groups])
+  }, [pathname, activeGroup, key])
 
   const toggle = (label: string) => setClosed(previous => {
     const next = new Set(previous)

@@ -22,9 +22,10 @@ export function WarehouseCustomerRma({ details, reload }: { details: ReturnDetai
   const { can } = useCan(), [creating, setCreating] = useState(false)
   if (details.references.rmaHandoverId) return <RmaReceipt id={details.references.rmaHandoverId} />
   if (!readyForRma(details)) return null
-  if (creating) return <RmaEditor details={details} onClose={() => setCreating(false)} onDone={reload} />
+
   const readable = can('workorder.order.view') && can('inventory.location.view')
-  return <section className="card stack" aria-label="Pengembalian RMA pelanggan"><h2>Kembalikan perangkat pelanggan</h2>
+  return <section className="card stack" aria-label="Pengembalian RMA pelanggan">
+    {(creating) && <RmaEditor details={details} onClose={() => setCreating(false)} onDone={reload} />}<h2>Kembalikan perangkat pelanggan</h2>
     <p>Inspeksi dan reset servis sudah selesai. Serahkan perangkat yang sama ke teknisi pada WO perbaikan pelanggan asal.</p>
     <Button variant="primary" disabled={!readable} onClick={() => setCreating(true)}>Siapkan serah-terima RMA</Button>
     {!readable && <p className="muted">Pemilihan WO dan tujuan RMA memerlukan izin lihat work order dan lihat lokasi.</p>}

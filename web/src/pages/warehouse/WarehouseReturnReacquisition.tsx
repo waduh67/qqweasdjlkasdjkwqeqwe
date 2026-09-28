@@ -22,8 +22,9 @@ export function WarehouseReturnReacquisition({ details, reload }: { details: Ret
   const { can } = useCan(), id = details.returnCase.id, [page, setPage] = useState(0), [creating, setCreating] = useState(false)
   const loader = useCallback(() => listReacquisitions(id, page), [id, page]), result = useWarehouseQuery(loader)
   const mayRequest = can('inventory.return.manage') && can('inventory.approval.request') && (can('workorder.evidence.view') || can('workorder.order.field'))
-  if (creating) return <ReacquisitionEditor details={details} onClose={() => setCreating(false)} onDone={reload} />
-  return <section className="card stack" aria-label="Alih kepemilikan retur"><h2>Alih kepemilikan perangkat pelanggan</h2>
+
+  return <section className="card stack" aria-label="Alih kepemilikan retur">
+    {(creating) && <ReacquisitionEditor details={details} onClose={() => setCreating(false)} onDone={reload} />}<h2>Alih kepemilikan perangkat pelanggan</h2>
     <p>Perubahan menjadi milik ISP memerlukan bukti pelanggan dan keputusan petugas yang independen. Barang tetap di karantina sampai inspeksi dan reset untuk pelepasan selesai.</p>
     <WarehouseState {...result}>{data => <>
       {data.items.length ? data.items.map(item => <section className="stack" key={item.documentId}>
@@ -75,6 +76,6 @@ function ReacquisitionForm({ details, signature, onDone, onClose }: { onClose: (
     <Checkbox label="Saya telah memeriksa bukti dan persetujuan pelanggan untuk alih kepemilikan ini" checked={confirmed} onChange={(_, data) => setConfirmed(data.checked === true)} />
     {error && <p role="alert" className="error">{error}</p>}
   </form></ResourceForm>
-    
+
   </>
 }

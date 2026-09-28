@@ -24,8 +24,9 @@ export function WarehouseSupplierReplacements({ details, reload }: { details: Re
   const { can } = useCan(), id = details.returnCase.id, [page, setPage] = useState(0), [creating, setCreating] = useState(false)
   const loader = useCallback(() => listReplacements(id, page), [id, page]), result = useWarehouseQuery(loader)
   const canCreate = can('inventory.return.manage') && can('inventory.receipt.manage') && can('inventory.location.view')
-  if (creating) return <ReplacementEditor details={details} onClose={() => setCreating(false)} onDone={reload} />
-  return <section className="card stack" aria-label="Penerimaan perangkat pengganti"><h2>Perangkat pengganti dari penyedia</h2>
+
+  return <section className="card stack" aria-label="Penerimaan perangkat pengganti">
+    {(creating) && <ReplacementEditor details={details} onClose={() => setCreating(false)} onDone={reload} />}<h2>Perangkat pengganti dari penyedia</h2>
     <p>Serial berbeda menjadi penerimaan baru dengan asal dan kepemilikan yang terikat ke kasus servis. Perangkat lama tetap tercatat di penyedia sampai ada penanganan terpisah.</p>
     <WarehouseState {...result}>{items => <>
       {items.length ? items.map(item => <ReplacementReceipt key={item.id} item={item} />) : <p>Belum ada penerimaan pengganti pada halaman ini.</p>}

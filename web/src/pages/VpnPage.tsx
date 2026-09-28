@@ -507,7 +507,9 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
   const update = (patch: Partial<typeof addDraft>) => editing ? setEditing({ ...editing, ...patch }) : setAddDraft({ ...addDraft, ...patch })
   const save = editing ? saveEdit : add
   const closeEditor = () => { setCreating(false); setEditing(null) }
-  if (creating || editing) return <Blade open title={editing ? 'Ubah penerusan port' : 'Tambah penerusan port'} onClose={closeEditor}
+
+  return <Blade open layout="resource" title={`Port remote · ${acct.label}`} onClose={onClose}>
+    {(creating || editing) && <Blade open title={editing ? 'Ubah penerusan port' : 'Tambah penerusan port'} onClose={closeEditor}
     creation={{ ...creation, busy, prepare: save, summary: <CreationSummary rows={[
       ['Akun VPN', acct.label], ['Nama layanan', value.label || 'Otomatis'], ['Port perangkat', value.devicePort], ['Protokol', value.protocol],
     ]} /> }} footer={<><Button disabled={busy} onClick={closeEditor}>Batal</Button><Button variant="primary" disabled={busy} onClick={save}>Simpan</Button></>}>
@@ -520,8 +522,7 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
       <SelectField label="Protokol" value={value.protocol} onChange={(_, data) => update({ protocol: data.value as VpnForwardProtocol })}><option value="TCP">TCP</option><option value="UDP">UDP</option></SelectField>
       <TextField label="Nama layanan" value={value.label} onChange={(_, data) => update({ label: data.value })} placeholder="Otomatis dari port" />
     </div>
-  </Blade>
-  return <Blade open layout="resource" title={`Port remote · ${acct.label}`} onClose={onClose}>
+  </Blade>}
     <CommandBar primary={{ key: 'create', label: 'Tambah penerusan port', icon: <IconPlus size={16} />, onClick: () => setCreating(true), disabled: busy || full }} />
     <DataTable rows={acct.forwards} rowKey={row => row.id} columns={[
       { key: 'name', header: 'Layanan', cell: row => row.label },
@@ -621,15 +622,16 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
   const cidr = editing ? acct.routes.find(row => row.id === editing.id)?.cidr ?? '' : draft.cidr
   const save = editing ? saveEdit : add
   const closeEditor = () => { setCreating(false); setEditing(null) }
-  if (creating || editing) return <Blade open title={editing ? 'Ubah blok pelanggan' : 'Tambah blok pelanggan'} onClose={closeEditor}
+
+  return <Blade open layout="resource" title={`Blok pelanggan · ${acct.label}`} onClose={onClose}>
+    {(creating || editing) && <Blade open title={editing ? 'Ubah blok pelanggan' : 'Tambah blok pelanggan'} onClose={closeEditor}
     creation={{ ...creation, busy, prepare: save, summary: <CreationSummary rows={[
       ['Akun VPN', acct.label], ['CIDR', cidr], ['Nama blok', value.label],
     ]} /> }} footer={<><Button disabled={busy} onClick={closeEditor}>Batal</Button><Button variant="primary" disabled={busy || !isCidrLike(cidr)} onClick={save}>Simpan</Button></>}>
     <div className="stack"><TextField label="CIDR" required disabled={!!editing} value={cidr} onChange={(_, data) => setDraft({ ...draft, cidr: data.value })} placeholder="10.20.0.0/24" />
       <TextField label="Nama blok" value={value.label} onChange={(_, data) => editing ? setEditing({ ...editing, label: data.value }) : setDraft({ ...draft, label: data.value })} />
     </div>
-  </Blade>
-  return <Blade open layout="resource" title={`Blok pelanggan · ${acct.label}`} onClose={onClose}>
+  </Blade>}
     <CommandBar primary={{ key: 'create', label: 'Tambah blok pelanggan', icon: <IconPlus size={16} />, onClick: () => setCreating(true), disabled: busy || full }} />
     <DataTable rows={acct.routes} rowKey={row => row.id} columns={[
       { key: 'name', header: 'Nama', cell: row => row.label },
@@ -813,7 +815,7 @@ function CommandBlock({
           border: '1px solid var(--border)',
           borderRadius: '6px',
           overflowX: 'auto',
-          
+
         }}
       >
         <code>{command}</code>

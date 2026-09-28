@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -168,4 +169,39 @@ it('never offers rejected pieces for putaway through the SKU inspection bypass',
   const receipt = receiptFixture(), line = { ...receipt.lines[0], inspectionRequired: false, pieces: [receiptPieceFixture(), { ...receiptPieceFixture(), stockIdentityId: id.source, disposition: 'QUARANTINE' as const }, { ...receiptPieceFixture(), stockIdentityId: id.supplier, disposition: 'ACCEPTED' as const }] }
   expect(receiptCandidates(receipt, line, 'putaway').map(piece => piece.stockIdentityId)).toEqual([id.piece, id.supplier])
   expect(receiptCandidates(receipt, line, 'inspect').map(piece => piece.stockIdentityId)).toEqual([id.piece])
+})
+
+it('keeps the filtered receipt list mounted when create is opened and cancelled', async () => {
+  const fetch = vi.fn(async (path: string) => path.includes('/receipts?') ? response(page([receiptFixture()])) : directory(path))
+  vi.stubGlobal('fetch', fetch); render(<MemoryRouter><WarehouseReceiptsPage /></MemoryRouter>)
+  const user = userEvent.setup(); await screen.findByRole('link', { name: 'SJ-001' })
+  const search = screen.getByRole('textbox', { name: 'Serial barang' })
+  await user.type(search, 'ONU-KEEP')
+  await waitFor(() => expect(fetch.mock.calls.some(([path]) => path.includes('serial=ONU-KEEP'))).toBe(true))
+  const count = fetch.mock.calls.filter(([path]) => path.includes('/receipts?')).length
+  await user.click(screen.getByRole('button', { name: 'Buat penerimaan' }))
+  await screen.findByRole('textbox', { name: 'Referensi surat jalan' })
+  await user.click(screen.getByRole('button', { name: 'Tutup' }))
+  await screen.findByRole('link', { name: 'SJ-001' })
+  expect(screen.getByRole('textbox', { name: 'Serial barang' })).toBe(search)
+  expect(search).toHaveProperty('value', 'ONU-KEEP')
+  expect(fetch.mock.calls.filter(([path]) => path.includes('/receipts?'))).toHaveLength(count)
+})
+it('creates a supplier in a child layer and selects it without submitting or replacing the receipt draft', async () => {
+  const supplier = { id: id.supplier, name: 'Pemasok baru', code: 'NEW', revision: 0, state: 'ACTIVE', contactReference: null }
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => init?.method === 'POST' ? response(supplier) : directory(path))
+  vi.stubGlobal('fetch', fetch); const saved = vi.fn()
+  render(<MemoryRouter><WarehouseReceiptEditor onClose={vi.fn()} onSaved={saved} onReload={vi.fn()} /></MemoryRouter>)
+  const user = userEvent.setup(); await user.type(screen.getByRole('textbox', { name: 'Referensi surat jalan' }), 'SJ-KEEP')
+  await user.click(screen.getByRole('button', { name: 'Tambah pemasok' }))
+  await user.type(screen.getByRole('textbox', { name: 'Kode pemasok' }), 'NEW')
+  await user.type(screen.getByRole('textbox', { name: 'Nama pemasok' }), 'Pemasok baru')
+  await user.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+  expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Simpan pemasok' }))
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Pemasok' })).toHaveProperty('value', 'Pemasok baru · NEW'))
+  expect(screen.getByRole('textbox', { name: 'Referensi surat jalan' })).toHaveProperty('value', 'SJ-KEEP')
+  expect(saved).not.toHaveBeenCalled()
+  const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
+  expect(writes).toHaveLength(1); expect(writes[0][0]).toBe('/api/v1/warehouse/suppliers')
 })

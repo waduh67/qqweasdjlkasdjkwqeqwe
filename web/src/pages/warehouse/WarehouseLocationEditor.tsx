@@ -19,7 +19,7 @@ import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 type LocationChoice = { id: string; label: string; areaId?: string | null; siteId?: string | null; kind?: WarehouseLocation['kind'] }
 type UserChoice = { id: string; label: string; active?: boolean }
 type SiteChoice = { id: string; label: string; areaId?: string | null }
-type EditorProps = { row: WarehouseLocation | null; readOnly: boolean; onClose: () => void; onSaved: () => void; onReload: () => void; preset?: Pick<WarehouseLocation, 'code' | 'name' | 'kind' | 'issueEligible'> }
+type EditorProps = { allowedKinds?: readonly WarehouseLocation['kind'][]; fixedCode?: string; row: WarehouseLocation | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseLocation) => void; onReload: () => void; preset?: Pick<WarehouseLocation, 'code' | 'name' | 'kind' | 'issueEligible'> }
 const kinds: Record<WarehouseLocation['kind'], string> = { WAREHOUSE: 'Gudang', BIN: 'Bin / rak', VEHICLE: 'Kendaraan', TECHNICIAN: 'Teknisi', CUSTOMER_SITE: 'Lokasi pelanggan', QUARANTINE: 'Karantina', LOST: 'Barang hilang', DISPOSED: 'Penghapusan', TRANSIT: 'Transit' }
 const canIssue = (kind: WarehouseLocation['kind']) => ['WAREHOUSE', 'BIN', 'VEHICLE', 'TECHNICIAN'].includes(kind)
 const locationChoice = (row: WarehouseLocation): LocationChoice => ({ id: row.id, label: `${row.name ?? row.code} · ${row.code}`, areaId: row.areaId, siteId: row.siteId, kind: row.kind })
@@ -33,6 +33,7 @@ async function accessible<T>(promise: Promise<T>): Promise<T | null> {
 export function WarehouseLocationEditor(props: EditorProps) {
   const { can } = useCan()
   const { row } = props
+  const [returnFocus] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const loader = useCallback(async () => {
     const [areas, parent, custodian, site] = await Promise.all([
       can('iam.area.view') ? listSetupAreas() : Promise.resolve([]),
@@ -43,25 +44,26 @@ export function WarehouseLocationEditor(props: EditorProps) {
     return { areas, parent, custodian, site }
   }, [can, row])
   const result = useWarehouseQuery(loader)
-  if (result.state.status !== 'ready') return <Modal title="Lokasi" onClose={props.onClose}><WarehouseState {...result}>{() => null}</WarehouseState></Modal>
+  if (result.state.status !== 'ready') return <Modal returnFocus={returnFocus} layout="resource" title="Lokasi" onClose={props.onClose}><WarehouseState {...result}>{() => null}</WarehouseState></Modal>
   const { areas, parent, custodian, site } = result.state.data
-  return <LocationForm {...props} areas={areas}
+  return <LocationForm {...props} returnFocus={returnFocus} areas={areas}
     initialParent={row?.parentLocationId ? parent ? locationChoice(parent) : { id: row.parentLocationId, label: 'Lokasi induk tersimpan (nama tidak dapat diakses)' } : null}
     initialCustodian={row?.custodianId ? custodian ? { id: custodian.id, label: `${custodian.name} · ${custodian.email}`, active: custodian.status === 'ACTIVE' } : { id: row.custodianId, label: 'Penanggung jawab tersimpan (nama tidak dapat diakses)' } : null}
     initialSite={row?.siteId ? site ? { id: site.id, label: `${site.name} · ${site.code}`, areaId: site.areaId } : { id: row.siteId, label: 'Site tersimpan (nama tidak dapat diakses)' } : null} />
 }
 
-function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas, initialParent, initialCustodian, initialSite }: EditorProps & {
-  areas: SetupArea[]; initialParent: LocationChoice | null; initialCustodian: UserChoice | null; initialSite: SiteChoice | null
+function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, allowedKinds, fixedCode, returnFocus, areas, initialParent, initialCustodian, initialSite }: EditorProps & {
+  returnFocus: HTMLElement | null; areas: SetupArea[]; initialParent: LocationChoice | null; initialCustodian: UserChoice | null; initialSite: SiteChoice | null
 }) {
   const { can } = useCan()
   const { user } = useAuth()
   const formId = useId()
-  const [code, setCode] = useState(row?.code ?? preset?.code ?? '')
+  const [code, setCode] = useState(row?.code ?? fixedCode ?? preset?.code ?? '')
   const [name, setName] = useState(row?.name ?? preset?.name ?? '')
   const [kind, setKind] = useState<WarehouseLocation['kind']>(row?.kind ?? preset?.kind ?? 'WAREHOUSE')
   const [areaId, setAreaId] = useState(row?.areaId ?? '')
   const [parent, setParent] = useState(initialParent)
+  const [creatingParent, setCreatingParent] = useState(false)
   const [custodian, setCustodian] = useState(initialCustodian)
   const [site, setSite] = useState(initialSite)
   const [issueEligible, setIssueEligible] = useState(row?.issueEligible ?? preset?.issueEligible ?? true)
@@ -77,6 +79,7 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
   function prepare(event: FormEvent) {
     event.preventDefault(); if (readOnly) return
     if (!user?.platformAdmin && !areaId) { setError('Pilih area yang diberikan kepada akun Anda.'); return }
+    if (allowedKinds && !allowedKinds.includes(kind)) { setError('Pilih jenis lokasi yang sesuai.'); return }
     if (kind === 'BIN' && !parent) { setError('Bin memerlukan lokasi induk.'); return }
     if (kind === 'TECHNICIAN' && !custodian) { setError('Pilih teknisi yang bertanggung jawab.'); return }
     setError(null)
@@ -84,7 +87,7 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
       custodianId: custodian?.id ?? null, siteId: site?.id ?? null, issueEligible, ...(row ? { expectedRevision: row.revision } : {}) }, row?.id))
   }
   return <>
-    <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan lokasi" confirmLabel="Simpan lokasi" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    <ResourceForm returnFocus={returnFocus} readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan lokasi" confirmLabel="Simpan lokasi" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{kinds[kind]} · {areas.find(area => area.id === areaId)?.name ?? (areaId ? 'Area tersimpan' : 'Tanpa area')}</p>
         <p>{parent ? `Induk: ${parent.label}` : 'Lokasi utama'}</p>{custodian && <p>{custodian.label}</p>}<p>{issueEligible ? 'Dapat menjadi sumber pengeluaran' : 'Tidak menjadi sumber pengeluaran'}</p></>} />)} title={readOnly ? 'Detail lokasi' : row ? 'Ubah lokasi' : 'Tambah lokasi'} onClose={onClose} footer={<>
       <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
@@ -92,10 +95,10 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
       <form id={formId} className="stack" onSubmit={prepare}>
         {row && <p className="muted">Tersimpan: {row.name ?? row.code} · Revisi {row.revision}</p>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
-          <TextField label="Kode lokasi" required maxLength={64} pattern="[A-Z0-9][A-Z0-9._-]{0,63}" value={code} disabled={readOnly} onChange={(_, data) => setCode(data.value.toUpperCase())} />
+          <TextField label="Kode lokasi" required maxLength={64} pattern="[A-Z0-9][A-Z0-9._-]{0,63}" value={code} disabled={readOnly || !!fixedCode} onChange={(_, data) => setCode(data.value.toUpperCase())} />
           <TextField label="Nama lokasi" required maxLength={200} value={name} disabled={readOnly} onChange={(_, data) => setName(data.value)} />
           <SelectField label="Jenis lokasi" value={kind} disabled={readOnly} onChange={(_, data) => { const next = data.value as typeof kind; setKind(next); if (!canIssue(next)) setIssueEligible(false) }}>
-            {Object.entries(kinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {Object.entries(kinds).filter(([value]) => !allowedKinds || allowedKinds.includes(value as WarehouseLocation['kind'])).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </SelectField>
           <SelectField label="Area lokasi" value={areaId} required={!user?.platformAdmin} disabled={readOnly || !can('iam.area.view') || parent !== null}
             onChange={(_, data) => { setAreaId(data.value); setSite(null) }}>
@@ -103,7 +106,7 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
             {areaId && !choices.some(area => area.id === areaId) && <option value={areaId}>Area tersimpan (nama tidak dapat diakses)</option>}
             {choices.map(area => <option key={area.id} value={area.id}>{area.name} · {area.code}</option>)}
           </SelectField>
-          <WarehousePicker<LocationChoice> label="Lokasi induk" load={locations} value={parent} disabled={readOnly} optional={kind !== 'BIN'} name={choice => choice.label}
+          <WarehousePicker<LocationChoice> create={!readOnly && can('inventory.location.manage') ? { label: 'Tambah lokasi induk', onClick: () => setCreatingParent(true) } : undefined} label="Lokasi induk" load={locations} value={parent} disabled={readOnly} optional={kind !== 'BIN'} name={choice => choice.label}
             eligible={choice => choice.id !== row?.id && (choice.kind === undefined || ['WAREHOUSE', 'BIN'].includes(choice.kind))}
             onChange={choice => { setParent(choice); if (choice?.areaId !== undefined) setAreaId(choice.areaId ?? ''); if (choice?.siteId !== undefined && choice.siteId !== site?.id) setSite(null) }} />
           {can('iam.user.view') ? <WarehousePicker<UserChoice> label="Penanggung jawab" load={users} value={custodian} disabled={readOnly} optional={kind !== 'TECHNICIAN'} name={choice => choice.label}
@@ -117,6 +120,8 @@ function LocationForm({ row, readOnly, onClose, onSaved, onReload, preset, areas
         <p className="muted">Hierarki, area, pemegang dan kelayakan lokasi yang masih memiliki stok atau referensi tidak dapat diubah.</p>
         {error && <p role="alert" className="error">{error}</p>}
       </form>
+      {creatingParent && <WarehouseLocationEditor allowedKinds={['WAREHOUSE', 'BIN']} row={null} readOnly={false} onClose={() => setCreatingParent(false)} onReload={() => setCreatingParent(false)}
+        onSaved={saved => { setParent(locationChoice(saved)); setAreaId(saved.areaId ?? ''); if (saved.siteId !== site?.id) setSite(null); setCreatingParent(false) }} />}
     </ResourceForm>
 
   </>

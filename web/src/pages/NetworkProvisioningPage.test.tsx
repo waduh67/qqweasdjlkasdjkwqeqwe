@@ -206,7 +206,7 @@ describe('NetworkProvisioningPage', () => {
     managed.unmount()
 
     render(<ProvisioningEditorModal editor="intents" profiles={[{ revision: 1, value: { id: 'profile-shared', name: 'Residential shared', poolId: 'pool-1' } }]} topology={{ nodes: [{ id: 'olt-1', name: 'OLT Utama', role: 'OLT', reference: { kind: 'OLT', id: 'olt-device-1' }, administrativeStatus: 'ENABLED' }], interfaces: [{ id: 'pon-1', nodeId: 'olt-1', name: 'PON 1', role: 'ACCESS', reference: { kind: 'PON', id: 'pon-port-1' }, administrativeStatus: 'ENABLED' }], links: [] }} defaultPoolId="pool-1" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
-    await screen.findByText('Buat intent layanan')
+    await screen.findByRole('heading', { name: 'Buat intent layanan' })
     fireEvent.change(screen.getByLabelText(/ID langganan/), { target: { value: 'sub-new' } })
     fireEvent.change(screen.getByLabelText(/OLT akses/), { target: { value: 'olt-1' } })
     fireEvent.change(screen.getByLabelText(/Port PON/), { target: { value: 'pon-1' } })
@@ -220,7 +220,7 @@ describe('NetworkProvisioningPage', () => {
 
   it('mengirim enum topologi persis seperti kontrak server', async () => {
     render(<ProvisioningEditorModal editor="topology" profiles={[]} defaultPoolId="" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
-    await screen.findByText('Tambah node topologi')
+    await screen.findByRole('heading', { name: 'Tambah node topologi' })
     const input = screen.getByRole('dialog').querySelector<HTMLInputElement>('input')
     const role = screen.getByRole('dialog').querySelector<HTMLSelectElement>('select')
     expect(input).not.toBeNull()

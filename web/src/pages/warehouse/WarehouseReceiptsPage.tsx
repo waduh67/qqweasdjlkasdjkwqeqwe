@@ -33,8 +33,8 @@ export function WarehouseReceiptsPage() {
   const id = params.get('id')
   const newDraft = params.get('new') === '1'
   return <div className="stack"><PageHeader title="Penerimaan Barang" />
-    {newDraft ? <WarehouseReceiptEditor key={fresh} onClose={() => setParams({})} onReload={() => setFresh(value => value + 1)} onSaved={row => setParams({ id: row.id })} />
-      : id ? <ReceiptDetail id={id} /> : <ReceiptList onNew={() => setParams({ new: '1' })} />}
+    {newDraft && <WarehouseReceiptEditor key={fresh} onClose={() => setParams({})} onReload={() => setFresh(value => value + 1)} onSaved={row => setParams({ id: row.id })} />}
+    {id ? <ReceiptDetail id={id} /> : <ReceiptList onNew={() => setParams({ new: '1' })} />}
   </div>
 }
 
@@ -82,12 +82,13 @@ function ReceiptBody({ receipt, reload }: { receipt: WarehouseReceipt; reload: (
   const [action, setAction] = useState<'inspect' | 'putaway' | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<ReceiptTransition> | null>(null)
   const manage = can('inventory.receipt.manage')
-  if (edit && receipt.state === 'DRAFT' && receipt.draftEditability === 'EDITABLE') return <WarehouseReceiptEditor receipt={receipt} onClose={() => setEdit(false)} onSaved={reload} onReload={reload} />
+
   function saveReference() {
     const lines = receipt.lines.map(line => `${line.skuName} (${line.skuCode}) ${line.serial ?? line.lotCode ?? ''}: ${formatBaseQuantity(line.quantityBase, line.baseUnit)} ${displayUnit(line.baseUnit)}`)
     saveReceiptFile(new Blob([['Penerimaan barang', receipt.externalReference, `Pemasok: ${receipt.supplierName}`, `Status: ${stateLabels[receipt.state]} · Revisi ${receipt.revision}`, `Dibuat: ${receipt.createdAt}`, ...lines, `${window.location.origin}${receiptLink(receipt.id)}`].join('\n')], { type: 'text/plain;charset=utf-8' }), `penerimaan-${receipt.id}-r${receipt.revision}.txt`)
   }
   return <>
+    {(edit && receipt.state === 'DRAFT' && receipt.draftEditability === 'EDITABLE') && <WarehouseReceiptEditor receipt={receipt} onClose={() => setEdit(false)} onSaved={reload} onReload={reload} />}
     <section className="card stack" aria-label="Detail penerimaan"><h2>{receipt.externalReference}</h2><p>{receipt.supplierName} · <WarehouseStatus status={receipt.state} /> · Revisi {receipt.revision}</p>
       <p>{receipt.sourceLocationName ?? 'Batas penerimaan'} → {receipt.inspectionLocationName ?? 'Lokasi pemeriksaan'}</p>
       <p className="muted"><WarehouseTime value={receipt.createdAt} /> · Referensi audit: {receipt.id}</p>

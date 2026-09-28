@@ -1,36 +1,27 @@
-# Azure warehouse filter bar QA
+# Resource layers and sidebar QA
 
-Final visual result: passed for the compact command/search/filter correction. Release evidence is recorded in `docs/ui-ux/AZURE-FILTER-BAR.md`.
+The resource workflow preserves the page beneath creation/edit panels and supports nested master creation. Sidebar groups persist independently across navigation and refresh. Release details are in `docs/ui-ux/AZURE-RESOURCE-LAYERS.md`.
 
-## Reference and comparison
+## Visual basis
 
-References supplied by the user:
-- https://gcdnb.pbrd.co/images/leE18BR4Xko4.png
-- https://gcdnb.pbrd.co/images/KPaof3VfAKNP.png
+User's Azure create reference: https://gcdnb.pbrd.co/images/pkZMMD5sB9lL.png, saved in `azure-warehouse-20260927/azure-create.png`. Prior live create/list behavior was captured before editing. Reference, before and implementation screenshots were opened together for comparison at 1910 × 921; mobile used 390 × 844. Private evidence root: `.omo/runtime/ui-ux/azure-layers-20260928/`.
 
-Private evidence: `.omo/runtime/ui-ux/azure-filterbar-20260928/`. Source files `reference-1.png` and `reference-2.png` are 1910 × 921. Firefox implementation captures use the same desktop viewport, scale 1, light theme; mobile uses 390 × 844. Reference and implementation images were opened together in the same comparison inputs, including the final report actions and open catalog filter. This matches the command/filter region; the existing product navigation and warehouse-specific content remain different from Azure's VM page.
+The reference supplies Fluent typography, compact labeled fields, link creation below selectors, tabs, breadcrumb and fixed action footer. The latest user request additionally requires visible retained/nested panels. Desktop layers therefore keep the original page and parent edges visible; this is an interaction correction, not a claim of pixel identity to Azure's full-width VM screenshot. Existing application typography and icons remain.
 
-## Findings and fixes
+## Findings resolved
 
-1. Commands and filters previously occupied separate large stack gaps, with global Apply/Reset controls. They now share a zero-gap wrapper: command separator, 10px padding, then 24px search and rounded blue filter chips. Secondary criteria live under Add filter. No global Apply/Reset controls remain in warehouse lists.
-2. Filters no longer require form submission. Single selections update server queries immediately, search is debounced 250ms, and dates publish only complete valid intervals. A chip's remove control clears its own criterion. Date-only end dates remain inclusive in the UI and exclusive in requests.
-3. Pending search could overwrite browser Back, open date drafts could retain a previous URL interval, and selected URL references could be invisible without directory permission. POP navigation resets the draft/timer; date endpoints follow URL state; reference chips retain removable IDs without unauthorized lookups. Independent read-only source review closed all three P2 findings.
-4. A serial entered just before closing its popup could be discarded. The debounce now belongs to the filter, survives popup dismissal, and cancels when the filter is removed. Dedicated regression and Firefox quick-Escape checks pass.
-5. Final visual comparison found report Export CSV still styled as a bordered form button. It now uses a flat icon/text action beside Refresh, and the extra top separator is removed. Final report capture was regenerated after this correction.
+- Early editor returns unmounted warehouse lists/details and caused reads/filter resets on close. Editors now render alongside their retained parent.
+- Nested creation previously linked away from the receipt. Supplier, SKU and location creation now opens in a child and selects its returned record.
+- Child submit/dismissal could affect an ancestor. Portal submit/click isolation and topmost close routing protect the stack; dirty confirmation applies only to the closing panel.
+- Metadata loading replaced the location surface and lost the initiating control. The launcher now survives that replacement.
+- Parent-location creation offered ineligible kinds. Nested options and submission enforce warehouse/bin; receipt targets enforce transit/quarantine and source code.
+- Route effects previously closed all non-active sidebar groups. They now preserve other groups and restore explicit choices from browser storage.
+- Final visual pass aligned inline creation text with its selector and kept the mobile action footer compact.
 
-## Fidelity and behavior
+## Evidence and limits
 
-- 180px search, 24px controls/chips, 8px horizontal spacing, 10px command-to-filter gap, blue action icons and pale-blue chips.
-- Existing Segoe-based Fluent typography; 13px control text, regular labels, semibold selected values. No claim of identical raster rendering across OS/browser fonts.
-- Popovers use a 520px desktop surface constrained to viewport minus 32px; mobile wraps chips and stacks date controls with no page overflow.
-- Azure's reference supports multi-selection and operators. Current APIs support single criteria; popovers expose those real choices and apply immediately as requested, without decorative unsupported operators.
-- Existing paged searchable master pickers remain one combined search/select field. Historical directory queries retain archived masters where supported.
-- No actionable P0/P1/P2 remains in the reviewed command/filter scope. This is not a full accessibility-conformance audit. Current operational rows are sparse in the local fixture; filter payloads, permissions, paging and dates are covered by regression tests.
+643 frontend tests across 129 files passed. Firefox checks retain filtered list reads, save/select one real local supplier, navigate three layers with independent confirmation and drafts, cover four other create/close flows, and restore all five sidebar groups plus explicit collapse. Desktop/mobile captures have no page overflow or browser errors. Production validation is read-only for business data.
 
-## Evidence
+No actionable P1/P2 remains in the reviewed scope. This is not a complete accessibility conformance audit. Child layers are intentionally limited to the active in-memory workflow; reloading the browser does not preserve unsaved drafts. On mobile, previous layers remain mounted but are covered by the active panel. The implementation permits recursive nesting; runtime evidence exercises three layers.
 
-`browser-report.json` and `browser-final.log`: ten warehouse lists, catalog selection, individual removal, pending search/Back, retained focus, quick serial/Escape, date completion and mobile. Fourteen captures, zero page errors and zero business writes. `ResourceFilters.test.tsx` covers automatic selection, independent removal/focus, quick dismissal, browser reset, valid dates and restored intervals. Full regression, build and guarded release results are in the release handoff.
-
-Previous create-form/table audit remains in Git at `90b7b41f:design-qa.md` and `docs/ui-ux/AZURE-RESOURCE-WORKFLOWS-RELEASE.md`.
-
-Production verification: source `15aa445db59c4cf812613d3ec71f7d529f9c63d5` is live. The exact static manifest was verified, then 15 authenticated Firefox captures and filter interactions passed with no page errors, business writes or page overflow. Full regression: 636/636 tests across 127 files; final report follow-up: 6/6; guarded deployment helper: 9/9. Production screenshots share the private runtime with the source references.
+Previous filter and table/create audits remain in Git at `6dd673b3:design-qa.md`, `docs/ui-ux/AZURE-FILTER-BAR.md`, and `docs/ui-ux/AZURE-RESOURCE-WORKFLOWS-RELEASE.md`.
