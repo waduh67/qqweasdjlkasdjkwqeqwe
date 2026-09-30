@@ -11,7 +11,7 @@ Decisions:
 - Keep the full warehouse CI prerequisite and exact tested image publication. Merge Cloudflare SSH transport while preserving the installed Azure shared-proxy and image-pin wrapper.
 - Production configuration defaults true; explicit host overrides remain supported.
 
-Candidate checks completed: all server test sources compile; frontend production build, lint (existing warnings), warehouse E2E typecheck; 367 unchanged warehouse migration files and 368 unique migration versions; 5 activation/rollback tests and 6 workflow gate tests; both native and shared-proxy Compose configuration validation. Independent read-only review closed the deployment and modal activation findings.
+Candidate checks completed: all server test sources compile; 761 frontend tests; 16 Firefox browser tests covering OLT inventory/manual polling, map refresh, and nested warehouse forms at mobile/desktop sizes; frontend production build, lint (existing warnings), warehouse E2E typecheck; 367 unchanged warehouse migration files and 368 unique migration versions; 5 activation/rollback tests and 6 workflow gate tests; both native and shared-proxy Compose configuration validation. Independent read-only review closed the deployment and modal activation findings. Firefox map checks use Xvfb and software WebGL; this VPS's headless Firefox cannot create a WebGL2 context.
 
 Deployment uses the installed wrapper when present, preserving non-app container identities. Only the tested immutable server/web images are activated; failures restore original image pins unless an operator changed them. SSH/configuration failures stop topology detection. Main's native Nginx deployment remains available only after explicit topology detection.
 

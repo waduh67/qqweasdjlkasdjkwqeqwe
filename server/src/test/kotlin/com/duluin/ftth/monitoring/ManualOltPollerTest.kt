@@ -311,6 +311,7 @@ class ManualOltPollerTest {
             release.countDown()
             first.get(5, TimeUnit.SECONDS)
             assertThat(adapter.probeCalls).isEqualTo(2)
+            verifyPersistence(persister, tenantId, target, true, emptyList(), null)
             verifyPersistence(persister, otherTenant, target, true, emptyList(), null)
         } finally {
             release.countDown()
@@ -386,7 +387,7 @@ class ManualOltPollerTest {
 
     private fun verifyPersistence(persister: OltReadingPersister, tenant: UUID, target: OltPollingTarget,
         reachable: Boolean, readings: List<OnuReading>, reason: String?, count: Int = 1): ServerPollWindow {
-        val calls = mockingDetails(persister).invocations.filter { it.method.name == "persist" && it.arguments[1] == target }
+        val calls = mockingDetails(persister).invocations.filter { it.method.name == "persist" && it.arguments[0] == tenant && it.arguments[1] == target }
         assertThat(calls).hasSize(count)
         calls.forEach { assertThat(it.arguments.take(5)).containsExactly(tenant, target, reachable, readings, reason) }
         return calls.last().arguments[5] as ServerPollWindow
