@@ -111,9 +111,9 @@ describe('manual SNMP poll action', () => {
     expect(countRequests(fetch, '/api/monitoring/olts/olt-a/poll', 'POST')).toBe(1)
     await act(async () => pending.resolve(Response.json(pollResult)))
 
-    const successAnnouncement = await screen.findByRole('status')
-    expect(successAnnouncement.textContent).toBe('SNMP OLT-01 selesai · 32 ONU terbaca.')
-    expect(screen.getAllByRole('status')).toHaveLength(1)
+    const successAnnouncement = await announcement('polite')
+    expect(successAnnouncement.querySelector('span')?.innerText).toBe('SNMP OLT-01 selesai · 32 ONU terbaca.')
+    expect(document.body.querySelectorAll(':scope > [aria-live="polite"][data-tabster-never-hide]')).toHaveLength(1)
     await waitFor(() => expect(countRequests(fetch, '/api/olts/olt-a')).toBe(2))
     expect(onPollCompleted).toHaveBeenCalledTimes(1)
   })
@@ -169,7 +169,7 @@ describe('manual SNMP poll action', () => {
 
     const announcement = await screen.findByRole('status')
     expect(announcement.textContent).toBe('SNMP OLT-01 selesai · 32 ONU terbaca.')
-    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(document.body.querySelectorAll(':scope > [aria-live="polite"][data-tabster-never-hide]')).toHaveLength(1)
     await waitFor(() => expect(countRequests(fetch, '/api/olts/olt-a')).toBe(3))
     expect(staleOnPollCompleted).not.toHaveBeenCalled()
     expect(currentOnPollCompleted).toHaveBeenCalledTimes(1)
@@ -192,7 +192,7 @@ describe('manual SNMP poll action', () => {
     await user.click(await screen.findByRole('button', { name: 'Cek SNMP' }))
     const unreachableAnnouncement = await screen.findByRole('alert')
     expect(unreachableAnnouncement.textContent).toBe('OLT-01 tidak merespons SNMP.')
-    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(document.body.querySelectorAll(':scope > [aria-live="assertive"][data-tabster-never-hide]')).toHaveLength(1)
     expect(countRequests(fetch, '/api/olts/olt-a')).toBe(2)
   })
 
@@ -212,9 +212,9 @@ describe('manual SNMP poll action', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Cek SNMP' }))
 
-    const errorAnnouncement = await screen.findByRole('alert')
-    expect(errorAnnouncement.textContent).toBe('Polling SNMP sedang berjalan')
-    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    const errorAnnouncement = await announcement('assertive')
+    expect(errorAnnouncement.querySelector('span')?.innerText).toBe('Polling SNMP sedang berjalan')
+    expect(document.body.querySelectorAll(':scope > [aria-live="assertive"][data-tabster-never-hide]')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Cek SNMP' }).hasAttribute('disabled')).toBe(false)
     expect(screen.getByRole('tab', { name: 'Ringkasan' })).toBeDefined()
     expect(countRequests(fetch, '/api/olts/olt-a')).toBe(1)
@@ -294,3 +294,11 @@ describe('manual SNMP poll action', () => {
     expect(deviceReads).toBe(2)
   })
 })
+
+async function announcement(politeness: string) {
+  return waitFor(() => {
+    const live = document.body.querySelector<HTMLElement>(`:scope > [aria-live="${politeness}"][data-tabster-never-hide]`)
+    expect(live?.querySelector('span')?.innerText).toBeTruthy()
+    return live!
+  })
+}

@@ -1,0 +1,106 @@
+{
+  "status": "FAILED_FOCUSED",
+  "parent": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "counts": {
+    "tests": 13,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "a961810d94f567f600162d5b61e7d7ff1fa8e63195483e6ee010469eb70e8718",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+      "sha256": "273ad7f093666daf5aaf8c7e40b9b2800fb4676d8641fca8ac95b3be44929179",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryScopeIT",
+      "sha256": "cd0563192c2118efa13ebea8c4e2ea0b53dfa7c0e9864c00538d50dcc1ca3ec8",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
+      "sha256": "993c99e2ab4b0cfe7fffa5d189d2944819c662c6794c302b21b403efcb3a6119",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+      "sha256": "e7d60e623012366a3439b5235195a24cab5f0569bc4a7601d1bc40f2e38f07e9",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+      "sha256": "435c3e4527fb8baefa9c6d58bf9963cb16c06142604e04ea7ebcddd48c2eb65d",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "sha256": "dfc7aa352147157fe77c8151188f6493c7d686e762194aa02573731879c0ea1d",
+      "tests": 4,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 1,
+  "cleanupExitCode": 0,
+  "sourceInputCount": 2625,
+  "sourceInventorySha256": "652be05f7fc27760b73810265ce2909e81ea3ce24a5add3fa4804f7b8cb1d2da",
+  "runnerSha256": "e5cd37c27f78cd1cb442517ab4e6222b8de8138de1feecf73f795d435f26ea3c",
+  "failure": "Only new policy-only DeleteTenant fixture failed: owner INSERT omitted row tenant scope. Root corrected fixture to explicit transaction-local tenant scope, focused deletion rerun pending.",
+  "scope": "Pinned old178.11 HTTP creation of six transfer drafts and six material plans with old/future/nonfinite/recent/current timestamps, actual migration table-lock wait, bounded backfill, unchanged source fingerprints, original response bytes, current effective states/late command rejection and repeat migration passed. Existing two count/transfer handoffs, raw transfer dispatch replay, two startup negatives, expired scope revocation, original three DeleteTenant cases and modules passed.",
+  "lockProofLimit": "Explicit ROW EXCLUSIVE table lock models an old writer. No concurrent business-mutation claim.",
+  "laterChange": "DeleteTenantIT fixture corrected after runner cleanup; other captured source inputs unchanged at correction.",
+  "handoffs": [
+    {
+      "family": "count",
+      "schemaBefore": "178.10",
+      "pinnedApplication": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+      "seedSha256": "52a2c81402314b38b6c85dfcda8f9f28668d7a9c348e54fdf35b3d6d635b3e56",
+      "bootstrapDescriptorSha256": "f8b8ae166b05e08d3dca5678ff604f0e7cbb956bd3291d1089a7d51989529a07",
+      "processExitCode": 0,
+      "oldProcessClosedBeforeCurrentMigration": true
+    },
+    {
+      "family": "expiry",
+      "schemaBefore": "178.11",
+      "pinnedApplication": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+      "seedSha256": "40b4aaea913c7a04df7d499ca959465e53ce72c09ffd9ac80b569bddbdd4c73b",
+      "bootstrapDescriptorSha256": "f8b8ae166b05e08d3dca5678ff604f0e7cbb956bd3291d1089a7d51989529a07",
+      "processExitCode": 0,
+      "oldProcessClosedBeforeCurrentMigration": true
+    },
+    {
+      "family": "transfer",
+      "schemaBefore": "178.9",
+      "pinnedApplication": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+      "seedSha256": "104b20681f879e346f119a863098035cff72c991ef62fcb5f34bfeb02686fe15",
+      "bootstrapDescriptorSha256": "f8b8ae166b05e08d3dca5678ff604f0e7cbb956bd3291d1089a7d51989529a07",
+      "processExitCode": 0,
+      "oldProcessClosedBeforeCurrentMigration": true
+    }
+  ]
+}

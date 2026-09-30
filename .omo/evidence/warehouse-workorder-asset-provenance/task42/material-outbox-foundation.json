@@ -1,0 +1,69 @@
+{
+  "sourceCommit": "accompanying material outbox foundation checkpoint",
+  "jvm": {
+    "tests": 20,
+    "failures": 0,
+    "suites": [
+      {
+        "module": "domain",
+        "suite": "MaterialQuantityTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "94e751e3e613aa9918e94e764aa76a08567223b977f4ce1322366031b66e51b4"
+      },
+      {
+        "module": "domain",
+        "suite": "NavigationTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "134400ff23cda06404327f8089cc087c9669f726ed1cdf9459cc17ac61e0ab04"
+      },
+      {
+        "module": "domain",
+        "suite": "OutboxTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "c0ad9beff19cc731aba29c33f89b71d0779c677226cf285a4747da685de89433"
+      },
+      {
+        "module": "domain",
+        "suite": "WorkOrderReducerTest[jvm]",
+        "tests": 2,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "7c786e3cd713c58285ed085d498cb7b83521840dc3cbf504c31f3e843b81a179"
+      },
+      {
+        "module": "data",
+        "suite": "MaterialRepositoryTest[jvm]",
+        "tests": 7,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "641d25b3cb640f25ebb85f01e2f2dc1dad5539fff113b6aa5d9595e1db020d41"
+      },
+      {
+        "module": "data",
+        "suite": "WorkOrderRepositoryTest[jvm]",
+        "tests": 1,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "34fa8de0e253f348febe62379826b1f7d8bf4800b2269411e222c3a769a00bf2"
+      },
+      {
+        "module": "core/storage",
+        "suite": "EncryptedOutboxTest[jvm]",
+        "tests": 7,
+        "failures": 0,
+        "skipped": 0,
+        "sha256": "8e8591c7c52cfa166bd71329d651619ed5de3e8941ee03bf898a145183cd6a9a"
+      }
+    ],
+    "execution": "Storage7 executed and PASS in18s; final domain5/data8 executed and PASS in17s with unchanged storage7 up-to-date"
+  },
+  "coverage": "Exact MM/EA and overflow checks; typed real wire paths; scoped encrypted draft/attempt state survives repository recreation; lost response uses exact same bytes/key after source consumption; pre-send source revision conflict; partial receipt; server rejection; malformed success stays uncertain; logout purge; no serial consumption or foreign-receiver ACK; isolated per-key completion.",
+  "native": "Android and iOS adapter source updated for durable states and per-key completion, backwards readable ten-field records, checked persistence failures. Native compile/runtime NOT verified in this checkpoint.",
+  "remaining": "Task42 remains OPEN: feature/materials MVI screen, app DI/navigation/session observer, full KMP/graph checks and configured iOS compile checks. Tasks43-48/F1-F4 remain."
+}

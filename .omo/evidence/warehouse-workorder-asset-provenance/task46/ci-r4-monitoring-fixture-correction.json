@@ -1,0 +1,208 @@
+{
+  "status": "FAILED_FIXTURE_CORRECTION_PENDING",
+  "run": 36125103447,
+  "testedCommit": "53e9dbff0babb11f482dd9cfaf6c2c5d7e267d6b",
+  "recordedAtUtc": "2026-09-25T10:56:46.651171+00:00",
+  "artifact": {
+    "run": 36125103447,
+    "artifactId": 10859408443,
+    "name": "warehouse-server-53e9dbff0babb11f482dd9cfaf6c2c5d7e267d6b",
+    "artifactDigest": "sha256:0382b80dc1bee29bc0f7f81eec8f1e6e7c1530ed974cdb8873e445c26a820bdd",
+    "encryptedArchiveSha256": "c1214900d5e33a1deac10922b39ef8ad171e6fcca134ef23da8f6ebc13f75adf",
+    "downloadedAndDecrypted": true
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.AlarmRuleIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "580cc2e2a455e492f39b29fdad68dd97fa9ba760acbb6633c3c8ae7fb3ebe33f",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "00f9e679d120fc950595a2b6336b76e72e99dc669e13709e258da5d10f3ea3c1",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.GisImpactedIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "b53a62657d59574168a74c38ef11c5e0fcdf5071ba97b0a1ecfcaf9562a5ad15",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.GisUtilizationIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "34927bf6fdb6e81af361e8fa15451757d42a47fb25bb8925c160a523558c1423",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.IncidentIT",
+      "tests": 6,
+      "failures": 5,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "d8764e4bc668d8b604f9d3c4d9501c2807f8c5e6417f28b11db768448e6d302a",
+      "failedCases": [
+        "blast-radius LOS ditandai dugaan fiber putus()",
+        "insiden menutup sendiri saat alarm akarnya pulih()",
+        "banjir alarm ONU di bawah satu ODC menjadi satu insiden yang tersimpan dan bisa diakui()",
+        "blast-radius dying-gasp ditandai dugaan mati listrik area, bukan fiber putus()",
+        "insiden aktif tersaring hanya ke pelanggan yang terdampak()"
+      ]
+    },
+    {
+      "suite": "com.duluin.ftth.NetworkEndToEndIT",
+      "tests": 15,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "64f0ff26dba9db106eb4794bb5323287d9e8c6e3b981e4925f085286c249ec74",
+      "failedCases": [
+        "telusur jalur diperkaya hop BRAS di puncak dan Rx optik hidup pada ONT()",
+        "tetangga sejalur mendaftar se-ODP dan se-PON dengan bacaan hidup()"
+      ]
+    },
+    {
+      "suite": "com.duluin.ftth.NotificationIT",
+      "tests": 3,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "7da298823904e6b35a16b6efbebe68d6c5c9c911f13b90069073805fbb8f43a0",
+      "failedCases": [
+        "broadcast lewat kanal email menyurati alamat pelanggan dan mencatatnya di riwayat()",
+        "broadcast menyasar seluruh pelanggan terdampak insiden dan mencatat hasil per penerima()"
+      ]
+    },
+    {
+      "suite": "com.duluin.ftth.OdpPortBoardIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "7d2aa139795fadeb470a803aff1fe187cde2ae71c4b982d5c0f5aa0ec6f1c986",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "95ac02e997aa8b78a86043f30342ff3337f1171bfd04afc5e6db25928b786ba0",
+      "failedCases": [
+        "redaman yang memburuk memunculkan satu WO preventif dan pemindaian ulang tidak menumpuk()"
+      ]
+    },
+    {
+      "suite": "com.duluin.ftth.SurveyCapacityIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "1344cc5a1c3bbfc3db69d99498e0f00ba8dc967baa449df7f1630ab6db68b67b",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "06415723e0067a883586668ce4f18773a8506e553b3d05d9ea678b3841dbfaac",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "8bcfb524ad424c5b154a7e8c5917eb50f0ec2d212a69448818b0ff074fe8eb1b",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "b2f82f2dae579ba45b8e4608269927c564e65c6f198154e208ede263b87cd2a3",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "43b38eaef4943c5d26ca628c8d557d866b4090bdf3ae318c5a5413c9fd3ae51e",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "9def4e2143b312b62747eed178df20ceb327f62c98d9055387c3c56a4dd61b24",
+      "failedCases": []
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "ce1f7b9cf7deefea23d95ef86a8c302d70407ce7fe63f4b59b40a49684e6bf6f",
+      "failedCases": []
+    }
+  ],
+  "totals": {
+    "tests": 149,
+    "failures": 10,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failuresExplained": [
+    "Nine monitoring cases submit OLT-X although their actual attached topology uses a generated OLT code. Current PATH_MISMATCH rejection is correct.",
+    "Predictive fixture sends seven-day-old samples outside the 72-hour collector admission window and stages the legacy ONU later than every sample."
+  ],
+  "corrections": [
+    "Bind metrics to the actual OLT code for the fixture tenant in IncidentIT, NotificationIT and NetworkEndToEndIT.",
+    "Require accepted count equal every submitted reading and no unknown serials in all four fixtures.",
+    "Stage explicit legacy ONU history three days earlier; use seven six-hour samples preserving a -1 dB/day trend and seven flat control samples. No current device or stock origin is fabricated."
+  ],
+  "originalTestMethodsPreserved": {
+    "server/src/test/kotlin/com/duluin/ftth/IncidentIT.kt": 6,
+    "server/src/test/kotlin/com/duluin/ftth/NotificationIT.kt": 3,
+    "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt": 15,
+    "server/src/test/kotlin/com/duluin/ftth/PredictiveMaintenanceIT.kt": 1
+  },
+  "sourceSha256": {
+    "server/src/test/kotlin/com/duluin/ftth/IncidentIT.kt": "2e42b22caac1667bcb76b42898530afff5cf44b59d990acfddcf671805e0be9a",
+    "server/src/test/kotlin/com/duluin/ftth/NotificationIT.kt": "27521e5decb71df24b4c587bae959934492433bd20775822bf59a453d78cbe96",
+    "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt": "7ac39bfa5a5077506a5526e54e004f7a095dc98702de184e80bd98b6fe02b015",
+    "server/src/test/kotlin/com/duluin/ftth/PredictiveMaintenanceIT.kt": "4f84c034509790f6317fce410dd7c66dec772bbbc44a8f0e1fc94da41755d15b",
+    "server/src/test/kotlin/com/duluin/ftth/customer/LegacyOnuTestFixture.kt": "ef11ba08fef4f4cdf170c6e9d4661005098de86b4624f5a2b6586c24c64903da"
+  },
+  "validation": "diff check passes; corrected Kotlin compilation and runtime are pending",
+  "limits": [
+    "139 of149 cases passed; this is not a successful focused or full regression.",
+    "No product ingestion/path/time guard or migration changed.",
+    "Original local R3 remains running with its old inputs; archive before rerunning locally."
+  ]
+}

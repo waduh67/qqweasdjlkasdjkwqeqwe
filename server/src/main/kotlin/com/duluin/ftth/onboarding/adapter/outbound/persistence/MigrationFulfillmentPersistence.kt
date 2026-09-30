@@ -1,10 +1,10 @@
 package com.duluin.ftth.onboarding.adapter.outbound.persistence
 
-import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
 import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.Id
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.PersistenceContext
@@ -15,11 +15,13 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.time.Instant
+import org.hibernate.annotations.TenantId
 
 @Entity
 @Table(name = "migration_fulfillment_inbox")
 class MigrationFulfillmentInboxJpaEntity(
-    id: UUID,
+    @Id val id: UUID,
     @Column(name = "operation_key", nullable = false, length = 200) var operationKey: String,
     @Column(name = "subscription_id", nullable = false) var subscriptionId: UUID,
     @Column(nullable = false, length = 100) var username: String,
@@ -29,7 +31,15 @@ class MigrationFulfillmentInboxJpaEntity(
     @Column(name = "credential_handle_id") var credentialHandleId: UUID?,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 32) var state: InboxState = InboxState.PENDING,
     @Column(name = "canonical_hash", nullable = false, length = 64) var canonicalHash: String,
-) : TenantAwareJpaEntity(id)
+) {
+    @TenantId
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    var tenantId: UUID? = null
+        protected set
+
+    @Column(nullable = false, updatable = false)
+    val createdAt: Instant = Instant.now()
+}
 
 enum class InboxState { PENDING, APPROVED, APPLIED, FAILED }
 

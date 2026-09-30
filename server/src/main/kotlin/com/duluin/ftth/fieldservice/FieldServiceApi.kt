@@ -8,6 +8,7 @@ interface FieldServiceApi {
     fun visit(id: UUID): VisitRef?
     fun visitsByWorkOrder(workOrderId: UUID): List<VisitRef>
     fun applyFulfillment(command: VisitFulfillmentCommand): VisitFulfillmentResult
+    fun lockFulfillment(visitId: UUID, workOrderId: UUID): VisitRef
 }
 
 data class VisitFulfillmentCommand(
@@ -19,6 +20,7 @@ data class VisitFulfillmentCommand(
     val operationKey: String,
     val payloadHash: String,
     val receivedAt: Instant,
+    val reference: com.duluin.ftth.common.domain.FulfillmentEffectReference? = null,
 )
 
 data class VisitFulfillmentResult(

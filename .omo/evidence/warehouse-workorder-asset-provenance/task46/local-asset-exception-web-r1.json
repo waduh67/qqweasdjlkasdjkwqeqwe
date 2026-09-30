@@ -1,0 +1,40 @@
+{
+  "status": "PASSED_FOCUSED",
+  "baseCommit": "cc47f434e7c2fc58ff0095feb8c643717f889e86",
+  "counts": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "sourceSha256": {
+    "web/src/api/warehouse/customerAssetExceptions.ts": "c9605d03a5d7496a0dd90f0d3da619306a285b653bb5b03f603709a1db2d7954",
+    "web/src/components/organisms/customer/CustomerAssetPanel.tsx": "f05ff42ec0a6abe2d57915970956ddb7e14e53c2b8634e574417d82eb6bdc966",
+    "web/src/components/organisms/customer/CustomerAssetException.tsx": "f0107e67639328779e3227a5e7a5726c5b76d27132e9cf42c41b913942591c7e",
+    "web/src/components/organisms/customer/CustomerAssetException.test.tsx": "d4b49fb34511f73cb259c9ff688e1bee2939a3ebb13ef5829b888e1e10ee34db",
+    "web/src/components/organisms/customer/CustomerAssetPanel.test.tsx": "5f1864b1f526af1a7e228ef645a5aa0d37e36d366f35bc19844876f7a95923ce"
+  },
+  "allWebSourceInputsUnchangedDuringRun": true,
+  "webSourceInputCount": 520,
+  "reportSha256": "e7af2b25b59a9599e281901953adbea81f8a869a157ea9c17a72bf310013a37d",
+  "logSha256": "70fa98aabc59c34b76a93ad42b346c32cf3fb77754a8fb1c70cca253e585ca54",
+  "checks": {
+    "unitTests": "PASSED",
+    "warehouseE2eTypecheck": "PASSED",
+    "lint": "PASSED_WITH_WARNINGS",
+    "productionBuild": "PASSED"
+  },
+  "runner": {
+    "sessionId": 35602,
+    "observedExecExitCode": 0,
+    "observedTerminalOutput": "ASSET_EXCEPTION_WEB_EXIT 0",
+    "failFast": "Sequential unguarded commands in set -euo pipefail subshell; host QA lock held",
+    "commands": [
+      "timeout 180s npm test -- --run src/components/organisms/customer/CustomerAssetException.test.tsx src/components/organisms/customer/CustomerAssetPanel.test.tsx --reporter=default --reporter=junit --outputFile.junit=<private-runtime>/asset-exception-web-r1.xml",
+      "timeout 180s npm run typecheck:warehouse-e2e",
+      "timeout 180s npm run lint",
+      "timeout 240s npm run build"
+    ]
+  },
+  "limitation": "Mocked HTTP UI scenarios; actual endpoint and real browser validation still required. Not final F1-F4 acceptance."
+}

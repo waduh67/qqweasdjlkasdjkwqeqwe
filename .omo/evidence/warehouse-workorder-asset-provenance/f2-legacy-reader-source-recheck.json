@@ -1,0 +1,54 @@
+{
+  "recordedAtUtc": "2026-09-25T14:32:07.938852+00:00",
+  "sourceHead": "a1d4eb19461b0c0adb9bcc54611a65af48362081",
+  "sourceState": "uncommitted compatibility correction patch",
+  "reviewerHead": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "status": "source findings addressed; compilation and runtime pending; not final F2 approval",
+  "files": [
+    {
+      "path": ".github/workflows/warehouse.yml",
+      "bytes": 18039,
+      "sha256": "ab41ac1ee2269abe3c24b6eea928b12b2db26c33be2c89c895da89b23eda98b4"
+    },
+    {
+      "path": "docs/warehouse-queries.md",
+      "bytes": 14503,
+      "sha256": "7c7422d30d337774c573d004816be0d6c7512f144f1d5445a18c35d4b84f5db7"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryController.kt",
+      "bytes": 1703,
+      "sha256": "6e5ced7598e9c20874207683c971eccedc55544cd0594254a28f40685e1e53f5"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryQueryController.kt",
+      "bytes": 1337,
+      "sha256": "94a2becceeaf0bd6089606cbba5b1393966a6d34d06359a5aa6525d2e1125d50"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+      "bytes": 3806,
+      "sha256": "8889a17cbe57d2871c4ee5b52125eee4effa538bd415ed6f5ead6f82ee53601e"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseQueryService.kt",
+      "bytes": 4409,
+      "sha256": "aab05ad0db33698d4dd848201b86abbc7705094c7fc11c77aa2e5824774f91a6"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseLegacyQueries.kt",
+      "bytes": 3408,
+      "sha256": "9cae5c81e349e529b3e429c9b8682bc986da39e32c646b2227b8ed24064d680b"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseLegacyReadScopeIT.kt",
+      "bytes": 9110,
+      "sha256": "db5afe55b5234f4c784b430db000d8dfd26a2a81ba58faa9b06f6a5c230df6d5"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseLegacyReservationIT.kt",
+      "bytes": 3528,
+      "sha256": "9a72c525c781bbeabf0a979cf28e00ace81a1807c138e4b16849c1061d4d66b5"
+    }
+  ]
+}

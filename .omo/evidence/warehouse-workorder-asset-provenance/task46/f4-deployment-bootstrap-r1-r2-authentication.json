@@ -1,0 +1,266 @@
+{
+  "ciNonserverProofSha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+  "codeCiRun": 36265279847,
+  "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "dependencyPreparation": {
+    "applicationStartedAtDependencyPreparation": false,
+    "architectures": [
+      "amd64"
+    ],
+    "imageCount": 6,
+    "images": {
+      "caddy:2": {
+        "architecture": "amd64",
+        "id": "sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52",
+        "repoDigests": [
+          "caddy@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52"
+        ]
+      },
+      "freeradius/freeradius-server:3.2.5": {
+        "architecture": "amd64",
+        "id": "sha256:8f250816e151415c3e9504efa633b20d371329918d3e4056b36af846fb6dd3f9",
+        "repoDigests": [
+          "freeradius/freeradius-server@sha256:8f250816e151415c3e9504efa633b20d371329918d3e4056b36af846fb6dd3f9"
+        ]
+      },
+      "ftth-local/ftth-genieacs:1306b65c34167b2d48f4817ce72990fed3b85aa3": {
+        "architecture": "amd64",
+        "id": "sha256:38a796736eac1b871b14da4fddb98b491e787c327c4ac423bcc5a3d6f1cd8cb6",
+        "repoDigests": [
+          "ftth-local/ftth-genieacs@sha256:38a796736eac1b871b14da4fddb98b491e787c327c4ac423bcc5a3d6f1cd8cb6"
+        ]
+      },
+      "mongo:4.4": {
+        "architecture": "amd64",
+        "id": "sha256:4be76f674fc4b27859816811b8baa3c51830eb1dbf4ca81a51e26b79edd662ef",
+        "repoDigests": [
+          "mongo@sha256:4be76f674fc4b27859816811b8baa3c51830eb1dbf4ca81a51e26b79edd662ef"
+        ]
+      },
+      "postgres:16-alpine": {
+        "architecture": "amd64",
+        "id": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+        "repoDigests": [
+          "postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+        ]
+      },
+      "timescale/timescaledb-ha:pg17@sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a": {
+        "architecture": "amd64",
+        "id": "sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a",
+        "repoDigests": [
+          "timescale/timescaledb-ha@sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a"
+        ]
+      }
+    },
+    "receiptSha256": "cd9fae8b0c1ac331a2a1c0e7bb84553885f7de6b21388cb05341a89113808b31",
+    "scope": "Prepared dependency image metadata only; bootstrap verifies PostgreSQL/radiusDB/MinIO startup, not network protocol execution"
+  },
+  "edgePreparation": {
+    "productionActivated": false,
+    "receiptSha256": "04b28ff2a507f47d161b7cec583e7d406a5794dd5b76b8e03ffce40463b598d4",
+    "reviewScope": "source and safe receipt only; live TLS/HTTP responses and prior edge config bytes not included in these bundles",
+    "setupResponse": 503,
+    "sourceSha256": "8d514dc4ab72b663488cff9197643efa4d76c342ceda56f1a6f0a37f1211eed1"
+  },
+  "finalF4Approval": false,
+  "fullCodeCiStillPending": true,
+  "imageVerifierSourceBundledWithExecutionReceipt": false,
+  "imageVerifierSourcePreviouslyReviewed": true,
+  "imageVerifierSourceSha256": "fae40d2cff3469ad5e68f5e3f986f1cfe447056190a23916b2dfaa2afbdea35b",
+  "images": {
+    "server": {
+      "allLayerBytesMatchRootfsDigests": true,
+      "ciConfigDigest": "sha256:fb928f2d384d0397e15e27b12f5eb2e57a9ba14ba0c88aa25e16247f2316b484",
+      "configurationBytesUnchanged": true,
+      "containerdImageStore": true,
+      "destinationContentAssessment": "source-reviewed executed verifier receipt; raw destination re-export not independently rehashed by reviewer",
+      "destinationImageId": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+      "destinationReexportBytesAvailableLocally": false,
+      "exportSha256": "sha256:0f9df0913bde859f879ce7d7efe0896e069acc98312dfd3bfbc838ec7519959c",
+      "layerCount": 9,
+      "layerDiffIds": [
+        "sha256:485d137fd3bfb545f1b417ea708e2281594be7a334e8a85ab75c5332db6089e9",
+        "sha256:598e8330e2e633ea6b06bbf1e8b80c275553b7c1de53899af154d1f480a7eefa",
+        "sha256:6ef140adb005bc29cbfb04d9691e7bcb987d4a88ba5580133b35e7b075a2e447",
+        "sha256:5ed31bb5973d3132c3ccf7df7eb5276c1cf91c1cfb00681ac67875b3855ca14e",
+        "sha256:254a3332bf866cbd0fde7f3b48e3c33549d6db64fad35060f230ce330ccebd3a",
+        "sha256:3be377b6a337ab815dd6bb13eebe7a264c76322c83ebd18e4234c7b78245c279",
+        "sha256:69fe2ead7496e9e6ce48018e5879c9acde7480b6539672e9e8b5fdb8c3b48bb7",
+        "sha256:f569c37f3e710296e98c76f3c78408f51e90299bfac4e5b4a6298d70ad5d81b3",
+        "sha256:d9dc6dee9068d6848b4d9457b840a63ff472d4ef33770fac1f7f2183d412ca0a"
+      ],
+      "noImageRebuild": true,
+      "originalArchiveDigest": "sha256:a7157859343855feb88a1ee1af24b6756ada270f3adda58a560dfcc89f8696ea",
+      "originalCiArchiveAndLayersIndependentlyRehashed": true,
+      "sourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "tag": "warehouse-ci-server:1306b65c34167b2d48f4817ce72990fed3b85aa3"
+    },
+    "web": {
+      "allLayerBytesMatchRootfsDigests": true,
+      "ciConfigDigest": "sha256:0d12c624b41070cb3f585bd1b6d751d08e6e79863a4bdc6c437822f49fb5d903",
+      "configurationBytesUnchanged": true,
+      "containerdImageStore": true,
+      "destinationContentAssessment": "source-reviewed executed verifier receipt; raw destination re-export not independently rehashed by reviewer",
+      "destinationImageId": "sha256:ffdf1809281b559bbb3f9021fad2cd829ae5f1220e09e0b376bc35da733063e8",
+      "destinationReexportBytesAvailableLocally": false,
+      "exportSha256": "sha256:0e038f99581b666299e78db8f9cad73104f3a52a1cb54e674aa109dc07dc3332",
+      "layerCount": 10,
+      "layerDiffIds": [
+        "sha256:74d97c428c51a828f9051a7a40a53ff1fc99e54fc30323ce36760701b0b7f711",
+        "sha256:379f51bf5b58bf458dfe39fe97ba49d63950929004af1808361bfe01ba73d6d0",
+        "sha256:641b74319bab4250ece7d99c1e71fba36e67931d64b62a1d574a56986d45dae0",
+        "sha256:2a7ed9afc1c38e245bbe331a4bbf99010cc9ff2ae546ee9507373a3a2dc80f0c",
+        "sha256:149ab1e5d6caa8add417a7dc26743baa867bf078b3c6aafc96b8197221a87a1c",
+        "sha256:41473198c04ae23f0434ac3a73f8e52549312be4638d2979bc1df9d209bdb9c0",
+        "sha256:c86f6810da0b81ee848c1e6cc4bc22c0b7bd4f553f81ef3a33c41791b90631a2",
+        "sha256:001b5608a9297e16ed0253a4694ca1cc98fa554c7e39c36ca652742cfc294efc",
+        "sha256:e4192a239b5664cd2eaea973067d4f6cf6c826008d139414c2b96ea378936438",
+        "sha256:05ea12161e771d7f2f5cf5dba51cc6ea74f9efed96650fb1218c6d8043d25155"
+      ],
+      "noImageRebuild": true,
+      "originalArchiveDigest": "sha256:eaa4792804af1d812417b1898d51ab9308a195abe0eebf40b88caebfb56ad200",
+      "originalCiArchiveAndLayersIndependentlyRehashed": true,
+      "sourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "tag": "warehouse-ci-web:1306b65c34167b2d48f4817ce72990fed3b85aa3"
+    }
+  },
+  "limits": [
+    "Bootstrap runs execute server only; web identity is recorded but web/gateway not exercised by these runs",
+    "Safe runtime assertions and logs authenticated; standalone raw HTTP login/health and SQL result/inspect outputs are absent",
+    "Destination image config/layers are linked by the reviewed executed verifier receipt; destination re-export tar bytes are not in this downloaded evidence",
+    "No SMTP delivery, gateway TLS, storage roundtrip, CWMP/RADIUS operation, hardware certification, production rollout or full-CI success is claimed"
+  ],
+  "loadedImageReceiptSha256": "13f516643df96885be75bf374ee4dc36ae9979b4058f8aadeb5ebca969b87668",
+  "networkProbeSourceReview": {
+    "fixedOpenApiServerUrl": "/",
+    "forwardedSchemeRuntimeProven": false,
+    "httpForwardedHttpsIsNotTlsHandshake": true,
+    "networkR1CountsAsPass": false,
+    "openApiSourceSha256": "12c3e0daba60a7bf3b784b35ec861ee854e680aade0a35bd181bafa37b86cf7a",
+    "ownedObjectCleanupAndReadinessAdded": true,
+    "requiredFixtureCorrection": "Require the configured relative server URL and report gateway/web/login/docs only; OpenAPI cannot witness forwarded scheme",
+    "sha256": "63138e256b2d934b9bc5d5c1679157ad45a0bc8b0fcb64347a00da2ea2e15147",
+    "status": "Initial probe fixture has incorrect OpenAPI URL expectation; parent reports network R1 failed, raw not authenticated here"
+  },
+  "privateFileManifestSha256": "975ce7c4f7182b13239b398d3f27dd9d8264928e5d6c68e9dc960434eb5e19b9",
+  "reviewedAtUtc": "2026-09-26T20:45:13.945741+00:00",
+  "reviewerExecutedQa": false,
+  "reviewerMutations": false,
+  "reviewerSsh": false,
+  "runs": {
+    "r1": {
+      "allExtractedFilesMatchArchive": true,
+      "archiveBytes": 61027,
+      "archiveSha256": "78f8ce1a48b0815f3e1ba003d9e2b4a4789af21417d68d3be62aa8d2ebf71145",
+      "authenticatedRegularFiles": 14,
+      "cleanupExitCode": 0,
+      "countsAsPass": false,
+      "databaseRetained": true,
+      "datasourceHealthFailureMarkers": 0,
+      "failure": "Production JSON readiness timed out; optional mail health repeatedly failed",
+      "finishedAtUtc": "2026-09-26T20:38:20.311742+00:00",
+      "fresh367MigrationApplicationLogOccurrences": 1,
+      "logSha256": {
+        "containers.log": "cf532171f61f79c432021184e98fed21c8d88d95fed1660727876d1295354a9f",
+        "missing-demo.log": "44e819ea64b875604630376e07261f69b95435502bdb34371c14e6fb883214df",
+        "runner.log": "bdc189ea08b50228638a1a842a2eaeefed45b0d6ddaf65415aadd705e699e7f6"
+      },
+      "mailHealthFailureMarkerOccurrences": 82,
+      "missingSecretValidatorMessageOccurrences": 2,
+      "ownedContainerAndNetworkRemovalMarkers": 5,
+      "ownedContainerStopMarkers": 4,
+      "positiveApplicationStarts": 1,
+      "privateGeneratedSecretsAreDistinctAndStrong": true,
+      "publicEndpointOpened": false,
+      "receiptSha256": "2e1df768b7e907fbcb98fd8c8c6d897eff1a43c5c57fdd2d71c00021191cbf9a",
+      "runnerExitCode": 1,
+      "sourceCodeAssertionsReviewed": true,
+      "sourceSha256": {
+        "docker-compose.prod.yml": "1906dd9975d9f915456c186a73b8aed1dd47fbf1f3dfaee4d2b1849c1565c207",
+        "postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+        "setup-private/production-bootstrap-probe.py": "f7a23422a25f34097526fd3f29b962db7254a42125df73b3e585b3bb81362493"
+      },
+      "startedAtUtc": "2026-09-26T20:32:18.006362+00:00",
+      "status": "FAIL"
+    },
+    "r2": {
+      "allExtractedFilesMatchArchive": true,
+      "archiveBytes": 32393,
+      "archiveSha256": "1377ccbcfee4a8f5cc15600a1f4439c1c21584da7e8849404eaeea38dd174118",
+      "authenticatedRegularFiles": 12,
+      "backendStarts": [
+        "2026-09-26T20:40:21.245603999Z",
+        "2026-09-26T20:41:03.073612045Z"
+      ],
+      "cleanupExitCode": 0,
+      "databaseHealthNotDisabled": true,
+      "databaseRetained": true,
+      "datasourceHealthFailureMarkers": 0,
+      "executedPermissionDenials": [
+        "schema CREATE",
+        "draft policy DELETE"
+      ],
+      "finishedAtUtc": "2026-09-26T20:41:44.292464+00:00",
+      "fresh367MigrationApplicationLogOccurrences": 1,
+      "jsonReadinessLoginRoleAndClockResults": "Executed source assertions plus captured safe receipt; standalone raw HTTP/SQL/inspect responses were not persisted",
+      "logSha256": {
+        "containers.log": "b738445504e0a8ac974ad6e90fb25692f33c70741cfb0102905a510e5db530bd",
+        "missing-demo.log": "0e79158ef3cd6f8aedf847c29ddac559f869602bbb0eba202724e4bc78dcc025",
+        "runner.log": "62ecbf20f98c9eca0d36ed104a86b255234e23552085bdd1269fd1f133abaf09"
+      },
+      "mailHealthFailureMarkerOccurrences": 0,
+      "migrations": {
+        "count": 367,
+        "failed": 0,
+        "latest": "178.12"
+      },
+      "missingSecretValidatorMessageOccurrences": 2,
+      "noDemoOrBusinessFixtures": {
+        "customers": 0,
+        "demoTenants": 0,
+        "stockPositions": 0
+      },
+      "optionalEnvironmentSmtpHealthDisabled": true,
+      "ownedContainerAndNetworkRemovalMarkers": 5,
+      "ownedContainerStopMarkers": 4,
+      "platformLoginPassed": true,
+      "positiveApplicationStarts": 2,
+      "privateGeneratedSecretsAreDistinctAndStrong": true,
+      "productionModeWithoutQaProfile": true,
+      "publicEndpointOpened": false,
+      "rawPermissionDenialsIndependentlyObserved": true,
+      "receiptSha256": "389e41fa100d85beaa337a3fa5563500a0f02cc1cf3811c679b0a0a26f3600a4",
+      "restrictedDraftClockTables": [
+        "inventory_draft_policy",
+        "inventory_document_draft_activity",
+        "inventory_plan_draft_activity",
+        "inventory_document_draft_expiry",
+        "inventory_plan_draft_expiry"
+      ],
+      "runnerExitCode": 0,
+      "runtimeRole": {
+        "app": "warehouse_app",
+        "bypass": false,
+        "createDb": false,
+        "createRole": false,
+        "databaseOwner": "warehouse_owner",
+        "ownerMembership": false,
+        "ownsRelations": false,
+        "schemaCreate": false,
+        "super": false
+      },
+      "sameImageRestartAndLoginPassed": true,
+      "sourceCodeAssertionsReviewed": true,
+      "sourceSha256": {
+        "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+        "postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+        "setup-private/production-bootstrap-probe.py": "8350f8ffec6432f360a75a5dcdbb32774fa263114885a75c68d00ed3412cc570"
+      },
+      "sourceUnchanged": true,
+      "startedAtUtc": "2026-09-26T20:39:19.276959+00:00",
+      "status": "PASS"
+    }
+  },
+  "status": "BOOTSTRAP_R2_PASS_AUTHENTICATED_R1_FAILURE_PRESERVED",
+  "transferManifestSha256": "136a6fa1e32dc6a742e307ae2149aacb00a110ca0ceaaa096e82ea8f0b808330"
+}

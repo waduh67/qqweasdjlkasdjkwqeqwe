@@ -1,0 +1,79 @@
+{
+  "task": 36,
+  "sourceCommit": "d1395e7b",
+  "status": "Return discovery backend verified; UI still in progress",
+  "run": "return-discovery",
+  "backend": {
+    "tests": 11,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "546d900bdd41940e1d0791a54d7d133cf3b702e827fb79b276ca5861f90c2a36"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnHistoryIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "6c40c8531bb054677ebf779d5cb9469e9e8464f35f02b320f14cf6f336f7a9a4"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "dcc43026440326fc74abf91c8bd710cbd943d20c87c448c66961caa70b928487"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "49a66fc78f39505f7c1df9e6e0e656a6f3a546b16084f4dec7b99fb54dcfb3aa"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnListIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "a83ce845ed161705ab2b198b2f842912f3e881d9737a9759c832c529088789e8"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnWorkbenchIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "a9c2a2cdacb76c334b6239f7ef4230c4cb217491ba908cd2627a510d2d44106b"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "8493476f3956bb022c9f2c8b8e1c5db605e5281035599a0dd110de3d1a5d4ce1"
+      }
+    ],
+    "build": "BUILD SUCCESSFUL in 4m56s"
+  },
+  "acceptance": [
+    "Eligible acknowledged residuals and independent recovered assets with exact stock/title and scoped before counts/pages",
+    "Intake of already acknowledged residual adds no movement",
+    "Current named references do not rewrite original return replies",
+    "LOAN/SALE title, measured inspection and concurrency regressions",
+    "Six return/repair revisions paged latest-first with count and legacy ascending array",
+    "Revoked historical repair location hides list/detail/history after return to quarantine",
+    "Persisted RMA handover reference survives reload without changing historical return view"
+  ],
+  "cleanup": "Owned processes and containers/network stopped; volumes retained",
+  "limitations": "No actual return browser claim; task36 transfer browser already verified separately. Return/repair frontend completion and tests still required."
+}

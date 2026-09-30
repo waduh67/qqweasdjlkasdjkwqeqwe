@@ -1,0 +1,57 @@
+{
+  "recordedAt": "2026-09-24T15:28:40.483923+00:00",
+  "task": 28,
+  "scope": "Actual approved LOSS/SCRAP compensation followed by reset, reissue and installation to another customer; repeated old compensation denied",
+  "verifiedProductCommit": "f87b1f21",
+  "verifiedMainTree": "7b05887729dd57708174962a4a85283a154d019a",
+  "result": "PASS",
+  "run": "compensation-asset",
+  "duration": "2m49s",
+  "counts": {
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 3
+  },
+  "command": "scripts/warehouse/qa.sh server --tests '*WarehouseCompensationAssetIT' --tests '*WarehouseReturnITReuse' --tests '*ModularityTests' --no-parallel",
+  "redaction": "Only test names/counts and source/result digests; no raw logs or credentials",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "cetak peta module()",
+        "hotspot accesses only public BNG and catalog APIs()",
+        "struktur module valid()"
+      ],
+      "xmlSha256": "9a68e40dee3bd824c535414958bed34634193af5924b8cf4427965c70f6c3eb5"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCompensationAssetIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] dispositionAction = \"LOSS\"",
+        "[2] dispositionAction = \"SCRAP\""
+      ],
+      "xmlSha256": "334b2b85d26b9f49843f67419d8a75f5441b1dd8e5b1dc68f1a53af2497c053d"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "inspected loan is issued and installed for a new customer with its physical identity and old episode intact()"
+      ],
+      "xmlSha256": "dc381f26d5af3c99d184e4881de7875f41718766ae9124a96e03360973767325"
+    }
+  ]
+}

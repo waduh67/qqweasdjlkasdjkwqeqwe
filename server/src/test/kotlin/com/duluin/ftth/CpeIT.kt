@@ -98,7 +98,7 @@ class CpeIT {
             ),
         )
         val serial = "SN-$s"
-        post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}""")
+        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, serial)
         return customer to serial
     }
 
@@ -682,7 +682,7 @@ class CpeIT {
             ),
         )
         val serial = "SN-$s"
-        post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}""")
+        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, serial)
         seedAcsDevice(serial, "genie-${uniq()}", ssid = "WiFi-Budi")
         scheduler.syncAll()
 

@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Table,
@@ -704,8 +706,12 @@ export function SplicingManager({
     onChanged?.()
   }
 
+  const [connecting, setConnecting] = useState(false)
+  const connectionCreation = useCreationReview(connecting)
   const connect = async () => {
-    if (!leftPick || !rightPick || busy) return
+    if (!leftPick || !rightPick || busy || sameCable || pairWarning != null) return
+    setConnecting(true)
+    if (connectionCreation.beforeSave()) return
     setBusy(true)
     try {
       await api.post('/api/fiber-connections', {
@@ -718,11 +724,11 @@ export function SplicingManager({
         workOrderId: workOrderId || null,
       })
       toast.success(`${leftPick.label} ↔ ${rightPick.label} tersambung`)
-      await afterChange()
+      await afterChange(); setConnecting(false)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyambung')
     } finally {
-      setBusy(false)
+      setBusy(false); connectionCreation.finish()
     }
   }
 
@@ -895,6 +901,15 @@ export function SplicingManager({
             </Text>
           )}
 
+          <Blade open={connecting} title="Sambungkan serat" onClose={() => setConnecting(false)}
+            creation={{ ...connectionCreation, busy, prepare: () => void connect(), summary: <CreationSummary rows={[
+              ['Ujung A', leftPick?.label], ['Ujung B', rightPick?.label], ['Metode', SPLICE_METHOD_LABEL[method]], ['Rugi (dB)', lossDb || 'Belum diukur'],
+            ]} /> }} footer={<><Button disabled={busy} onClick={() => setConnecting(false)}>Batal</Button><Button variant="primary" disabled={busy} onClick={() => void connect()}>Sambungkan</Button></>}>
+            <div className="stack"><CreationSummary rows={[["Ujung A", leftPick?.label], ["Ujung B", rightPick?.label]]} />
+              <SelectField label="Metode" value={method} onChange={(_, data) => setMethod(data.value as SpliceMethod)}>{METHODS.map(item => <option key={item} value={item}>{SPLICE_METHOD_LABEL[item]}</option>)}</SelectField>
+              <TextField label="Rugi (dB)" value={lossDb} onChange={(_, data) => setLossDb(data.value)} placeholder="Belum diukur" />
+            </div>
+          </Blade>
           {canManage && (
             <div className="splice-actions">
               <SelectField
@@ -979,7 +994,7 @@ export function SplicingManager({
                     mengerjakannya, dan kapan. Sambungan lama (dibuat sebelum ini dicatat)
                     tak punya pelaksana — waktunya pun ikut disembunyikan, sebab yang
                     tersimpan cuma saat kolomnya ditambahkan, bukan saat serat dilas. */}
-                <TableCell ><span className="stack" style={{ gap: '0.15rem' }}>
+                <TableCell ><span className="table-inline-values">
                   {row.workOrderCode ? (
                     <Badge tone="accent">{row.workOrderCode}</Badge>
                   ) : (
@@ -999,7 +1014,7 @@ export function SplicingManager({
                   )}
                 </span></TableCell>
                 {canManage && (
-                  <TableCell ><div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
+                  <TableCell ><span className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
                     <Button
                       variant="subtle"
                       onClick={() => {
@@ -1016,10 +1031,10 @@ export function SplicingManager({
                     <Button variant="danger" onClick={() => void disconnect(row.id, label)}>
                       Lepas
                     </Button>
-                  </div></TableCell>
+                  </span></TableCell>
                 )}</TableRow>
                 {editing === row.id && (
-                  <TableRow><TableCell colSpan={canManage ? 6 : 5}><div className="splice-actions">
+                  <TableRow><TableCell colSpan={canManage ? 6 : 5}><span className="splice-actions">
                     <SelectField
                       label="Metode"
                       value={editMethod}
@@ -1047,7 +1062,7 @@ export function SplicingManager({
                     {/* Tiket boleh menyusul (hasil ukur kerap baru masuk keesokan harinya),
                         tapi yang sudah punya tiket tak ditawari pindah — server pun menolak. */}
                     {canPickWorkOrder && !row.workOrderId && (
-                      <div className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+                      <span className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
                         <Text as="span" size={200}>Bukukan ke work order</Text>
                         <Combobox
                           value={editWorkOrder}
@@ -1059,7 +1074,7 @@ export function SplicingManager({
                           placeholder="Biarkan kosong bila tak perlu"
                           emptyText="Tak ada work order terbuka"
                         />
-                      </div>
+                      </span>
                     )}
                     <Button
                       variant="primary"
@@ -1071,7 +1086,7 @@ export function SplicingManager({
                     <Button variant="subtle" onClick={() => setEditing(null)}>
                       Batal
                     </Button>
-                  </div></TableCell></TableRow>
+                  </span></TableCell></TableRow>
                 )}
               </Fragment>
             )

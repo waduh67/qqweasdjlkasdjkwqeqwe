@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Text } from '@fluentui/react-components'
+import { Text, Tab, TabList } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   deletePlatformEmailLogo,
@@ -104,6 +104,7 @@ export function PlatformEmailSettingsPage() {
   const [logoBusy, setLogoBusy] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   // Dinaikkan tiap kali setelan tersimpan berubah, supaya pratinjau & logo ditarik ulang.
+  const [section, setSection] = useState('delivery')
   const [freshness, setFreshness] = useState(0)
 
   useEffect(() => {
@@ -241,31 +242,21 @@ export function PlatformEmailSettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <PageHeader title="Setelan Email" />
+      <PageHeader title="Setelan email" subtitle="Pengiriman dan tampilan email bawaan untuk seluruh tenant." />
+      <TabList selectedValue={section} onTabSelect={(_, data) => setSection(String(data.value))} aria-label="Bagian setelan email">
+        <Tab value="delivery">Pengiriman</Tab><Tab value="appearance">Tampilan</Tab><Tab value="subjects">Subjek pesan</Tab><Tab value="preview">Pratinjau & uji kirim</Tab>
+      </TabList>
 
-      <div className="card stack" style={{ gap: '0.75rem' }}>
+      <div hidden={section !== 'delivery'} className="card stack email-section" style={{ gap: '0.75rem' }}>
         <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <Text as="span" size={300} className="muted" >
-            Sumber SMTP:
+            Pengiriman:
           </Text>
           <Badge tone={saved.smtpConfigured ? 'good' : 'neutral'}>
-            {saved.smtpConfigured ? 'Setelan di halaman ini' : 'Variabel lingkungan (env)'}
+            {saved.smtpConfigured ? 'Setelan di halaman ini' : 'Mengikuti konfigurasi server'}
           </Badge>
-          <Text as="span" size={300} className="muted" >
-            Logo:
-          </Text>
-          <Badge tone={saved.logoSet ? 'good' : 'neutral'}>{saved.logoSet ? 'Terpasang' : 'Belum ada'}</Badge>
-          <Text as="span" size={300} className="muted" >
-            URL publik:
-          </Text>
-          <Badge tone={saved.logoUrl ? 'good' : 'warning'}>{saved.logoUrl ? 'Siap' : 'Belum disetel'}</Badge>
         </div>
-        {!saved.logoUrl && (
-          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-            Tanpa URL publik aplikasi, logo tak bisa dirangkai ke badan email — surat tetap terkirim,
-            hanya tampil tanpa gambar.
-          </Text>
-        )}
+        <p className="muted" style={{ margin: 0 }}>Gunakan pratinjau dan uji kirim untuk memeriksa hasil pengiriman setelah menyimpan.</p>
       </div>
 
       {!manage && (
@@ -275,13 +266,12 @@ export function PlatformEmailSettingsPage() {
         </Text>
       )}
 
-      <div className="card stack" aria-disabled={!manage}>
+      <div hidden={section !== 'delivery'} className="card stack email-section" aria-disabled={!manage}>
         <SectionTitle>Server SMTP</SectionTitle>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Kosongkan <Text as="strong" weight="semibold" >host</Text> untuk memakai kredensial dari variabel lingkungan seperti
-          sebelumnya. Begitu host diisi, baris inilah yang dipakai — tanpa perlu restart container.
+          Isi host untuk memakai server email khusus. Kosongkan untuk mengikuti konfigurasi server aplikasi.
         </Text>
-        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div className="form-grid form-grid-connection">
           <TextField
             label="Host"
             value={form.smtpHost}
@@ -289,7 +279,6 @@ export function PlatformEmailSettingsPage() {
             placeholder="smtp.contoh.net"
             disabled={!manage}
             maxLength={255}
-            style={{ minWidth: 240 }}
           />
           <TextField
             label="Port"
@@ -299,10 +288,9 @@ export function PlatformEmailSettingsPage() {
             maxLength={5}
             validationState={portOk ? 'none' : 'error'}
             validationMessage={portOk ? undefined : 'Port 1–65535.'}
-            style={{ width: 110 }}
           />
         </div>
-        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div className="form-grid">
           <TextField
             label="Username"
             value={form.smtpUsername}
@@ -310,7 +298,6 @@ export function PlatformEmailSettingsPage() {
             disabled={!manage}
             maxLength={255}
             autoComplete="off"
-            style={{ minWidth: 240 }}
           />
           <TextField
             label="Password"
@@ -322,7 +309,6 @@ export function PlatformEmailSettingsPage() {
             disabled={!manage}
             maxLength={255}
             autoComplete="new-password"
-            style={{ minWidth: 240 }}
           />
         </div>
         <div className="row" style={{ gap: '1.5rem', flexWrap: 'wrap' }}>
@@ -353,7 +339,7 @@ export function PlatformEmailSettingsPage() {
         <div className="hr" />
 
         <SectionTitle>Identitas pengirim</SectionTitle>
-        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div className="form-grid">
           <TextField
             label="Alamat pengirim"
             type="email"
@@ -364,8 +350,7 @@ export function PlatformEmailSettingsPage() {
             maxLength={254}
             validationState={fromOk ? 'none' : 'error'}
             validationMessage={fromOk ? undefined : 'Format alamat email tidak sah.'}
-            hint={fromOk ? 'Kosong = kanal email mati; pesan hanya masuk log server.' : undefined}
-            style={{ minWidth: 260 }}
+            hint={fromOk ? 'Wajib diisi agar email dapat dikirim ke pelanggan.' : undefined}
           />
           <TextField
             label="Nama pengirim"
@@ -376,12 +361,16 @@ export function PlatformEmailSettingsPage() {
             required
             validationState={form.fromName.trim() ? 'none' : 'error'}
             validationMessage={form.fromName.trim() ? undefined : 'Wajib diisi.'}
-            style={{ minWidth: 220 }}
           />
         </div>
 
         {form.fromAddress.trim() !== '' && fromOk && <SenderDomainWarning address={form.fromAddress.trim()} />}
 
+
+      </div>
+
+      <div hidden={section !== 'appearance'} className="card stack email-section" aria-disabled={!manage}>
+        <SectionTitle>Tampilan email</SectionTitle>
         <TextField
           label="URL publik aplikasi"
           value={form.publicBaseUrl}
@@ -391,10 +380,6 @@ export function PlatformEmailSettingsPage() {
           maxLength={300}
           hint="Dipakai merangkai alamat gambar logo di badan email. Kosong = email tanpa logo."
         />
-      </div>
-
-      <div className="card stack" aria-disabled={!manage}>
-        <SectionTitle>Tampilan email</SectionTitle>
         <EmailLogoField
           logoSet={saved.logoSet}
           logoPath={PLATFORM_EMAIL_LOGO_PATH}
@@ -421,13 +406,13 @@ export function PlatformEmailSettingsPage() {
         />
       </div>
 
-      <div className="card stack" aria-disabled={!manage}>
-        <SectionTitle>Subjek per pemicu</SectionTitle>
+      <div hidden={section !== 'subjects'} className="card stack email-section" aria-disabled={!manage}>
+        <SectionTitle>Subjek pesan</SectionTitle>
         <EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} />
       </div>
 
       {manage && (
-        <div className="card spread" style={{ alignItems: 'center' }}>
+        <div className="card spread settings-save-bar" style={{ alignItems: 'center' }}>
           <Text as="span" size={300} className="muted" >{dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}</Text>
           <div className="row" style={{ gap: '0.5rem' }}>
             <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
@@ -440,7 +425,7 @@ export function PlatformEmailSettingsPage() {
         </div>
       )}
 
-      <div className="card stack">
+      <div hidden={section !== 'preview'} className="card stack email-section">
         <SectionTitle>Pratinjau &amp; uji kirim</SectionTitle>
         <EmailPreviewPanel
           reloadKey={freshness}
@@ -504,7 +489,7 @@ export function PlatformEmailSettingsPage() {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <Text as="strong" size={300} weight="semibold">{children}</Text>
+  return <h2 className="settings-section-title">{children}</h2>
 }
 
 function FormRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {

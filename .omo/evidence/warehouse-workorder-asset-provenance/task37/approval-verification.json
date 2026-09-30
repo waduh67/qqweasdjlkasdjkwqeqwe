@@ -1,0 +1,94 @@
+{
+  "task": 37,
+  "scope": "Approval workbench/source projection/actions/legacy queue and UI; evidence review, discrepancy recovery, disposition UI and actual browser remain",
+  "backend": [
+    {
+      "sourceCommit": "7b84c704",
+      "tests": 25,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseApprovalIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2f06853d8422b818b97437982c0cd07793d42ec7d54b90211e9f810558a86e8a"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseApprovalITCompatibility",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e9cf7780e716b41453e01c819dd8db7844e662c7ec833c5d33839fb03938172f"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseApprovalITSource",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "68034c911ea777896c6022d7afa00f086bf4a8c2847d0c5d973ed38e04d233d2"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "972e940703697ec7ffd8b11fa0976927aca4de9c3ab82c7be7234e0bac9e4d96"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "525225ef0f784a5ce010bdc6b7b697938f4c92c2c9502e1fc4798c9db3a7a8bc"
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c1a289f76f3abd4652ebe05ec2e29b27b3e75b4161409103ae31a13ff385b128"
+        }
+      ],
+      "run": "6m29s batch had one additional new-test expectation failure; these six suites passed"
+    },
+    {
+      "sourceCommit": "0ccf3ab1",
+      "tests": 3,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchIT",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "067d3caf4516c57bdc077a1e2aa7925527318518344766c18af087e4c646c3b6"
+        }
+      ],
+      "run": "BUILD SUCCESSFUL in1m53s, corrected total101/1 rather than303"
+    }
+  ],
+  "web": {
+    "sourceCommit": "0ccf3ab1",
+    "tests": 28,
+    "files": 5,
+    "durationSeconds": 5.66,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "acceptance": [
+    "Approval-only actor named frozen document and actual final operation/movement effect",
+    "SQL filters and per-owner transaction authorization before total/page",
+    "Original WO area revoked while warehouse scopes stay visible: queue empty, detail404, no rollback-only500",
+    "Cost absent from HTTP without permission; current tier authority excludes source actor",
+    "Count capacity omitted from lines; frozen comparison only after submission",
+    "Current source revision rework; source-bound evaluation and command confirmation",
+    "Legacy read/queue compatibility, captured decision retry,409 reload"
+  ],
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

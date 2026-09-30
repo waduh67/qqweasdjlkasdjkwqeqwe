@@ -1,0 +1,214 @@
+{
+  "workflowRun": 36114803368,
+  "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+  "workflowConclusion": "FAILURE",
+  "web": {
+    "kind": "vitest",
+    "status": "PASSED",
+    "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+    "tests": 576,
+    "testFiles": 115,
+    "reportSha256": [
+      "d787fb8bdedb453106bd9264d27637a43264627f320dedbeca9074f14d1a2b96"
+    ]
+  },
+  "shared": {
+    "tests": 44,
+    "modules": 7,
+    "reports": [
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 1,
+        "suites": [
+          {
+            "suite": "DiTest[jvm]",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "1b4fd2fbd470bbc79906ccc596b91b2b57625f39ad3fee41ed43a91178e990f2"
+        ]
+      },
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 6,
+        "suites": [
+          {
+            "suite": "MviStoreTest[jvm]",
+            "tests": 5,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "MviViewModelTest[jvm]",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "275755d86d6367d16f4b81449516fb548c1c765fdbeb09d00c034555eb809329",
+          "ee9e368097617e58e29bae394234c068be1b3cf2669dfb1455e831921164f2a2"
+        ]
+      },
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 7,
+        "suites": [
+          {
+            "suite": "EncryptedOutboxTest[jvm]",
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "9dfc7a109892413b892fbac4c2ca3ada14c5295a1ba72358829d359242786c35"
+        ]
+      },
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 10,
+        "suites": [
+          {
+            "suite": "MaterialRepositoryTest[jvm]",
+            "tests": 9,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "WorkOrderRepositoryTest[jvm]",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "d309032cb2e57d960b5568872a98aba0c9f861883ea0d8865314499c4d421846",
+          "10d027898bc9dbd7e1db3a6e3eafd40cd424f164ae1e5d46d263d36f7aeb98e1"
+        ]
+      },
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 5,
+        "suites": [
+          {
+            "suite": "MaterialQuantityTest[jvm]",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "NavigationTest[jvm]",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "OutboxTest[jvm]",
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "WorkOrderReducerTest[jvm]",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "c76b2bb4934a6ae258819184bef170d704ed885bf14cc9abf596d5126569f8fb",
+          "4b9811c390dc006e6cd2bce8848697a1e0f0ec797ebf53042860b24e23c4b7e1",
+          "119b9aa1ceba60c2e9d514f7a5945e00d39d64da977ac6062f9c134b4f8acb9a",
+          "00d5c398d86deb452c1a03e7e64e0d1c3141b1be97050f453e6fb23789e2e455"
+        ]
+      },
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 8,
+        "suites": [
+          {
+            "suite": "MaterialFeatureTest[jvm]",
+            "tests": 5,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "MaterialScreenUiTest[jvm]",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "c4a81333b9687b7970dbee710da270eba705828dc1bd02ef30da94e6c2ae297e",
+          "850ad67a28647e83e0da417ae6c3344baea66ae2e398930a211eda36c74b932e"
+        ]
+      },
+      {
+        "kind": "junit",
+        "status": "PASSED",
+        "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+        "tests": 7,
+        "suites": [
+          {
+            "suite": "WorkOrderReducerTest[jvm]",
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "WorkOrderScreenUiTest[jvm]",
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ],
+        "reportSha256": [
+          "d162e4fbb00d98381f99487dec0ca14838dc4fa9cf0d639855a0d27c240b298c",
+          "35b4e67fe785c6c6d063490ea34c76041592665c41f2561bafdd7bd92cb9206d"
+        ]
+      }
+    ],
+    "originalCiValidator": "rejected legitimate [jvm] suffix; corrected parser verifies these same raw executed reports"
+  },
+  "native": {
+    "commit": "42356cf23a047402c3fd3e9417f0c8675734e2ba",
+    "runner": "macos-latest",
+    "tasks": {
+      "compileKotlinIosArm64": "COMPILED",
+      "compileKotlinIosSimulatorArm64": "COMPILED"
+    },
+    "nativeRuntimeOrRelease": false
+  },
+  "remaining": "Server, browser and legacy jobs stopped before execution because the pinned MinIO registry rejected access. Exact source replacement is pending."
+}

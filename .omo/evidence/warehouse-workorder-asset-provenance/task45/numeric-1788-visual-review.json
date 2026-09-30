@@ -1,0 +1,16 @@
+{
+  "status": "PASSED_STOCK_VISUAL_REVIEW_WITH_CAPTURE_CORRECTION_PENDING",
+  "testedCommit": "64e5057378df0b370c42dbe8d0d53b589a535126",
+  "ciRun": 36129278994,
+  "screenshot": "numeric-1788-final-stock-mobile.png",
+  "sha256": "7d6575b36fbeacddda6ea5531a21df08e87b16947f4620cc9963539ec91e132f",
+  "observed": "917,500 m cable and9 available ONUs; no reserved or picked quantity in final filtered stock.",
+  "browserTests": 2,
+  "captureFinding": "Original customer-loan-accepted image did not show the episode and was obscured by transient upload confirmations. New capture waits for natural toast expiry and scrolls to the existing episode. It does not hide or dismiss UI or change product behavior.",
+  "pendingSources": [
+    "web/e2e/warehouse/asset-screenshots.ts",
+    "web/e2e/warehouse/warehouse-empty-tenant.spec.ts"
+  ],
+  "validation": "E2E TypeScript check passed; new screenshot capture runtime pending.",
+  "limitation": "Synthetic QA stock screenshot only; not independent final approval."
+}

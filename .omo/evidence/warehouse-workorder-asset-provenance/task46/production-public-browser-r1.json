@@ -1,0 +1,14 @@
+{
+  "status": "FAIL",
+  "startedAtUtc": "2026-09-27T09:12:17.082Z",
+  "domain": "ftth.karuhundeveloper.com",
+  "viewports": [
+    1280,
+    390
+  ],
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "testScope": "Real public UI login, dashboard, browser reload/session refresh, responsive rendering and logout",
+  "failureType": "TimeoutError",
+  "finishedAtUtc": "2026-09-27T09:12:48.021Z",
+  "sourceSha256": "52ea76310a9e9113052c1d5464ffdfb22c1ef3a66cf4ca90c4acdee184737dfb"
+}

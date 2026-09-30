@@ -1,0 +1,20 @@
+{
+  "reviewedAtUtc": "2026-09-26T19:12:30.193626+00:00",
+  "status": "PASS",
+  "actualAssertionCount": 607,
+  "passed": 607,
+  "failed": 0,
+  "pending": 0,
+  "runnerExitCode": 0,
+  "typecheckLintBuildSequencePassed": true,
+  "webSourceFiles": 523,
+  "webSourceInputsStable": true,
+  "reportSha256": "22db81abb82a319766c6326600ed8bec4d4c5901f7d84d451c190ff168a9079b",
+  "runnerSha256": "8f7586b157edc61d18de4c66146b2b3038457fdfd8bd207cfad2c9ec7837d877",
+  "logSha256": "e3e4d9f0e5382788387be06ba4e1f2f6e17051268e42347e0ee6b85783693ded",
+  "capturedInputsSha256": "5fb3d66377752a3a1eec740b442f366aa45303ecf6e3d697a63745e797ecb820",
+  "currentJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+  "builtWebFileCount": 14,
+  "builtWebManifestSha256": "e8229a23d63fece5bb273a4f8115962a58d3b0ffd1c7aaaad42711ae091bd84e",
+  "copySourceReviewSha256": "8f5b515f72834ea365138d334acac5009d175f68dcadd3931d350113f03ec591"
+}

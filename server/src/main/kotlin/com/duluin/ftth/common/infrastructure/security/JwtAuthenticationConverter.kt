@@ -25,6 +25,7 @@ class JwtAuthenticationConverter : Converter<Jwt, AbstractAuthenticationToken> {
             platformAdmin = jwt.getClaimAsBoolean(JwtClaims.PLATFORM_ADMIN) ?: false,
             permissions = jwt.getClaimAsStringList(JwtClaims.PERMISSIONS)?.toSet() ?: emptySet(),
             areaIds = jwt.getClaimAsStringList(JwtClaims.AREAS)?.map(UUID::fromString)?.toSet() ?: emptySet(),
+            sessionId = jwt.id,
         )
         return FtthAuthenticationToken(user)
     }

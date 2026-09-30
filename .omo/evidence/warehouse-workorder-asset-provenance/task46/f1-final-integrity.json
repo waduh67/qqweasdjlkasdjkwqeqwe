@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "decision": "APPROVE",
+  "files": {
+    "f1-compliance.md": "3bd0bb7011ce212c67b246930b6a5b37aaf50fe6c0446d076be1cbcc555ae812",
+    "f1-compliance.json": "8c3a3db4da5664a76a2fed67e2cf1c281ade3c974a80e2fce0f2774749f694ba",
+    "task46/f1-final-host-evidence-authentication.json": "816d9decbca925b478df2bb004770d986be0d114a39c361a5b105b48f865c89e"
+  },
+  "resolvedWorkspaceReferences": 55,
+  "canonicalProofReferences": 11,
+  "taskIndexesUnchanged": 48,
+  "tasks": 48,
+  "contracts": 11,
+  "literalSelectors": 58,
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "ciRun": 36265279847,
+  "operationsDocumentSha256": "78a823a806847567d09f25b742b2e85f7a1a56c8499d20337bca14056869ff7b",
+  "sourceFilesRehashed": 580,
+  "productOrPlanOrIndexEdits": false,
+  "ownerAcceptancePending": true,
+  "readOnlyPlanCommand": {
+    "command": "grep -nE '^- \\[ \\] ([0-9]+|F[0-9]+)\\.' .omo/plans/warehouse-workorder-asset-provenance.md",
+    "exitCode": 0,
+    "observedUncheckedRows": [
+      "46",
+      "47",
+      "48",
+      "F1",
+      "F2",
+      "F3",
+      "F4"
+    ],
+    "observedLineNumbers": [
+      462,
+      467,
+      472,
+      479,
+      480,
+      481,
+      482
+    ]
+  }
+}

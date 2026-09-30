@@ -15,6 +15,7 @@ export function ThemeToggle() {
   const next = theme === 'dark' ? 'light' : 'dark'
   return (
     <Button
+      size="medium"
       variant="subtle"
       icon={theme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
       onClick={toggle}

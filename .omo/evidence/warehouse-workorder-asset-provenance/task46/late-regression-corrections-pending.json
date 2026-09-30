@@ -1,0 +1,21 @@
+{
+  "status": "RUNTIME_PENDING",
+  "sourceBase": "b36090652b7c33d3b06dc21df9962a6229595f58",
+  "sourceSha256": {
+    "server/src/main/resources/db/migration/V178_8__warehouse_return_title_scope_entry.sql": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnTitleScopeUpgradeIT.kt": "700d670b360ee38767957ed7f1e1e05a1b887b3391f463c7a0907bfd6a2be3fb",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt": "0ad792c93d372a0fcd1890587569aa0c18a36a653b5248abe6cd82e1a450208b",
+    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt": "5b11a298619da67d7b4e1f12f27f57ba6752a542f4c35eafe0fb2677ae87e016"
+  },
+  "findings": [
+    "AV02 opening provenance uses obsolete transition; assert current explicit source rejection and rollback.",
+    "58 deferred trigger functions need exact row-specific entry prologues; return-title lookup can skip scope assertion through RLS. New additive 178.8 moves assertion before lookup.",
+    "Two more historical HTTP fixtures require version-correct application binaries; seven historical tests remain mandatory.",
+    "Manual conflict fixture must generate its own ownership episodes, independently of test order.",
+    "Empty tenant deletion must skip protected tables containing no rows for that tenant.",
+    "Tenant with immutable history is rejected before deleting any data; preserve normal RLS, privileges and triggers.",
+    "Historical title fixture must replace JDBC sessions after DDL to discard cached prepared row types."
+  ],
+  "tenantDeletionAssumption": "Conservative existing immutable-history contract: empty tenant deletable; protected history returns409 and directs to Suspend. Optional user preference pending, no approval inferred.",
+  "validation": "Workflow guard 5 tests, actionlint and shell syntax passed. Kotlin/new database runtime pending. Previous149 focused tests passed at b3609065, not these new sources."
+}

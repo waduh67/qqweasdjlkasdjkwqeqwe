@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { typographyStyles } from '@fluentui/react-components'
 import { ApiError } from '@/api/client'
@@ -40,6 +42,8 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
   const [form, setForm] = useState<'provision' | 'reset' | null>(null)
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const creation = useCreationReview(form !== null, form === 'reset')
 
   const load = useCallback(() => {
     if (!canView) return
@@ -61,7 +65,8 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
       toast.success(okMessage)
       load()
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+      const message = err instanceof ApiError ? err.message : 'Operasi gagal'
+      setError(message); toast.error(message)
     } finally {
       setBusy(false)
     }
@@ -69,13 +74,14 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
 
   const closeForm = () => {
     setForm(null)
+    setError(null)
     setLogin('')
     setPassword('')
   }
 
   // Provisi/reset yang MUNGKIN mengungkap password: tampung hasilnya untuk ditampilkan.
   const runRevealing = async (action: () => Promise<PortalCredentialProvisioned>, okMessage: string) => {
-    setBusy(true)
+    setBusy(true); setError(null)
     try {
       const result = await action()
       if (result.temporaryPassword) setReveal(result)
@@ -83,10 +89,19 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
       closeForm()
       load()
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+      const message = err instanceof ApiError ? err.message : 'Operasi gagal'
+      setError(message); toast.error(message)
     } finally {
       setBusy(false)
     }
+  }
+
+  const save = () => {
+    if (password.trim() && password.trim().length < 8) { setError('Password minimal 8 karakter.'); return }
+    if (creation.beforeSave()) return
+    void runRevealing(() => form === 'provision'
+      ? provisionPortalCredential(customerId, { login: login.trim() || null, password: password.trim() || null })
+      : resetPortalPassword(customerId, password.trim() || null), form === 'provision' ? 'Kredensial dibuat' : 'Password direset').finally(creation.finish)
   }
 
   return (
@@ -154,13 +169,11 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
               <Button
                 variant="primary"
                 disabled={busy}
-                onClick={() => void runRevealing(() => provisionPortalCredential(customerId, {}), 'Kredensial dibuat')}
+                onClick={() => setForm('provision')}
               >
-                Buatkan login (password otomatis)
+                Buat login portal
               </Button>
-              <Button variant="subtle" disabled={busy} onClick={() => setForm('provision')}>
-                Isi manual…
-              </Button>
+
             </>
           ) : (
             <>
@@ -196,49 +209,15 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
         </div>
       )}
 
-      {canManage && form !== null && (
-        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.6rem' }}>
-          {form === 'provision' && (
-            <TextField
-              label="Login (kosong = kode pelanggan)"
-              value={login}
-              onChange={(_, data) => setLogin(data.value)}
-              placeholder="mis. budi.santoso"
-              autoFocus
-            />
-          )}
-          <TextField
-            label="Password (kosong = generate otomatis)"
-            type="text"
-            value={password}
-            onChange={(_, data) => setPassword(data.value)}
-            placeholder="minimal 8 karakter"
-            autoComplete="new-password"
-            autoFocus={form === 'reset'}
-          />
-          <div className="row" style={{ gap: '0.4rem' }}>
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() =>
-                void runRevealing(
-                  () =>
-                    form === 'provision'
-                      ? provisionPortalCredential(customerId, {
-                          login: login.trim() || null,
-                          password: password.trim() || null,
-                        })
-                      : resetPortalPassword(customerId, password.trim() || null),
-                  form === 'provision' ? 'Kredensial dibuat' : 'Password direset',
-                )
-              }
-            >
-              Simpan
-            </Button>
-            <Button variant="subtle" disabled={busy} onClick={closeForm}>Batal</Button>
-          </div>
+      {canManage && form !== null && <Blade open title={form === 'provision' ? 'Buat login portal' : 'Reset password portal'} onClose={closeForm}
+        creation={{ ...creation, busy, prepare: save, summary: <>{error && <p role="alert">{error}</p>}<CreationSummary rows={[
+          ['Login', form === 'provision' ? login.trim() || 'Kode pelanggan' : status?.login], ['Password', password ? 'Ditentukan pengguna' : 'Dibuat otomatis'],
+        ]} /></> }} footer={<><Button disabled={busy} onClick={closeForm}>Batal</Button><Button variant="primary" disabled={busy} onClick={save}>Simpan</Button></>}>
+        <div className="stack">{error && <p role="alert">{error}</p>}{form === 'provision' && <TextField label="Login" value={login} onChange={(_, data) => setLogin(data.value)} placeholder="Gunakan kode pelanggan" />}
+          <TextField label="Password" type="password" minLength={8} value={password} onChange={(_, data) => setPassword(data.value)} autoComplete="new-password" hint="Kosongkan untuk membuat password otomatis." />
         </div>
-      )}
+      </Blade>}
+
     </div>
   )
 }

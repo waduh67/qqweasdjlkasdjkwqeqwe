@@ -58,9 +58,9 @@ tetap mengambilnya pada siklus otomatis berikutnya (maksimal sekitar 5 menit).
 
 | Vendor | Teknologi | Identitas ONU | Status |
 |---|---|---|---|
-| **ZTE** | GPON | serial (ZTEG + heksa) | didukung |
-| **HUAWEI** | GPON | serial | didukung |
-| **FIBERHOME** | GPON | serial | didukung |
+| **ZTE** | GPON | serial (ZTEG + heksa) | asumsi kompatibilitas lama; dokumentasi GPON belum terverifikasi |
+| **HUAWEI** | GPON | serial 8 oktet | objek XPON tertentu didukung mirror MIB; belum validasi hardware |
+| **FIBERHOME** | GPON | sumber serial belum diketahui | profil baku tidak tersedia; OID lama ternyata deskripsi/kecepatan port |
 | **HSGQ** | EPON | **MAC address** | didukung (tabel enterprise `.50224.3`) |
 | **HSGQ-G01ID** | GPON | serial | profil `.50224.3.12` dipilih dari `sysDescr` |
 | NOKIA | — | — | **ada di dropdown tapi belum ada adapter** → dilewati diam-diam, **tanpa** alarm |
@@ -130,6 +130,11 @@ dan satuan RX/TX mengikuti MIB. Nilai SNMP tidak dijamin identik dengan web OLT.
 Jam OLT yang belum disetel bisa menghasilkan tahun 1970 dan tetap ditampilkan
 apa adanya. Tidak ada OID password atau aksi konfigurasi dalam profil ini.
 
+Lihat [matriks bukti GPON](gpon-profile-evidence.md) untuk OID, unit, enum, indeks,
+provenance sumber dan batas dukungan. Validasi hardware GPON ditunda sesuai
+keputusan pengguna; bukan penghalang task23. Indeks mentah tidak dianggap PON
+terverifikasi. FiberHome melaporkan galat protokol eksplisit, bukan sukses kosong.
+
 ---
 
 ## Cara kerja polling (biar paham kalau ada yang aneh)
@@ -197,8 +202,8 @@ Body `200` memuat `oltId`, `oltCode`, `reachable`, `readingCount`,
 Ini kegagalan paling nyebelin karena **gak ada error sama sekali**: OLT bisa
 dihubungi (gak ada alarm OLT_UNREACHABLE), polling jalan, tapi ONU-nya nol terus.
 Sebabnya biasanya **OID-nya meleset**. Peta MIB GPON kami (`MibProfiles`:
-ZTE/HUAWEI/FIBERHOME) disusun dari dokumentasi vendor dan **belum diadu dengan
-perangkat GPON nyata**; firmware yang beda kerap menggeser sub-tree. Kalau OID salah,
+ZTE/HUAWEI/FIBERHOME) memiliki tingkat bukti berbeda, bukan semuanya dokumentasi
+vendor terverifikasi, dan **belum divalidasi dengan perangkat GPON nyata**. Kalau OID salah,
 walk-nya balik kosong — dan "kosong" gak dibedain dari "OLT-nya emang gak punya ONU".
 
 Buat itu ada **tab Diagnostik** di detail OLT (izin `monitoring.collector.manage`).
@@ -210,15 +215,15 @@ pakai OID yang **persis dipakai polling**, lalu kasih vonis per peran:
 
 | Vonis | Artinya | Tindakan |
 |---|---|---|
-| **Terbaca** | menjawab & nilainya masuk akal | aman |
+| **Terbaca** | menjawab & nilainya sesuai penafsir sekarang | bukan bukti unit atau mapping vendor; cocokkan matriks dokumentasi |
 | **Kosong** | sub-tree gak dijawab: OID salah buat firmware ini, atau fiturnya mati | cari OID benernya pakai walk manual |
 | **Tak terbaca** | **menjawab tapi gak satu pun nilainya kebaca** — skala/satuan atau pemetaan status beda | paling licin: polling "sukses" tapi metrik kosong |
 | **Belum dipetakan** | profil vendor kami emang belum punya OID buat peran itu | metrik itu selalu kosong |
 
-Peran ber-label **wajib** (serial/MAC, status, redaman RX) yang gak "Terbaca"
-menandai identitas atau metrik utama yang bermasalah, bukan selalu berarti nol ONU. Nilai **mentah** ikut ditampilkan
-di samping tafsirannya — dari situ kelihatan skalanya: `-2350` itu 0,01 dBm,
-`-23500` itu 0,001 dBm.
+Profil GPON memerlukan OID serial/status yang diketahui. Nilai status yang tidak
+dikenal menjadi UNKNOWN; optik yang hilang tetap null. Angka mentah saja tidak
+membuktikan skala: /100 untuk objek Huawei yang tercantum didukung deskripsi MIB,
+sedangkan /1000 pada profil ZTE masih asumsi kompatibilitas belum terverifikasi.
 
 **2. Walk OID manual** (`GET /api/monitoring/olts/{id}/snmp-walk?oid=…&limit=50`) —
 telusuri sub-tree buat **nyari** OID yang bener. Hasilnya OID penuh + nilai, siap

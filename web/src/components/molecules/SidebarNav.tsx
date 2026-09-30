@@ -1,21 +1,10 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
-import { ChevronDown } from 'lucide-react'
-import { Text } from '@fluentui/react-components'
+import { useEffect, useId, useRef, useState, type ComponentType } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { ChevronDown12Regular, ChevronDoubleLeft16Regular, ChevronDoubleRight16Regular, Search12Regular } from '@fluentui/react-icons'
+import { Input } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
-import type { ComponentType } from 'react'
 import type { IconProps } from '@/components/atoms/icons'
 
-/**
- * Navigasi sidebar berkelompok ala left-nav Azure Portal: tiap seksi berlabel
- * (mis. "Jaringan", "Layanan Pelanggan") jadi header yang bisa diciutkan lewat
- * chevron — persis pola Azure (Overview / Infrastructure ▾ / …). Seksi tanpa label
- * (grup teratas berisi Dashboard) selalu tampil. Status buka/tutup tiap seksi
- * disimpan di localStorage agar bertahan antar-kunjungan.
- *
- * Dipakai bersama oleh shell tenant ([Layout]) dan shell platform ([PlatformLayout])
- * supaya perilaku & gaya seragam. Filter izin tetap di pemanggil lewat `can`.
- */
 export type NavItem = {
   to: string
   label: string
@@ -23,96 +12,89 @@ export type NavItem = {
   icon: ComponentType<IconProps>
   end?: boolean
 }
-
 export type NavGroup = { label: string | null; items: NavItem[] }
 
-// Nilai tersimpan = daftar label seksi yang DIBUKA. Menyimpan yang terbuka (bukan yang
-// diciutkan) berarti seksi default TERTUTUP ala left-nav Azure — user membuka seksi yang
-// ia perlukan dan pilihannya bertahan antar-kunjungan.
-function loadExpanded(storageKey: string): Set<string> {
+function loadClosed(key: string, defaults: string[]): Set<string> {
   try {
-    const raw = localStorage.getItem(storageKey)
-    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
-  } catch {
-    return new Set()
-  }
+    const saved: unknown = JSON.parse(localStorage.getItem(key) ?? JSON.stringify(defaults))
+    return new Set(Array.isArray(saved) ? saved.filter((label): label is string => typeof label === 'string') : [])
+  } catch { return new Set() }
 }
 
-export function SidebarNav({
-  groups,
-  can,
-  storageKey,
-}: {
+/** Groups open independently; saved choices survive navigation and refresh. */
+export function SidebarNav({ groups, can, storageKey, compact = false, onToggle, expanded = true }: {
   groups: NavGroup[]
   can: (permission: string) => boolean
-  /** Kunci localStorage unik per-shell agar status ciut tenant & platform terpisah. */
   storageKey: string
+  compact?: boolean
+  onToggle?: () => void
+  expanded?: boolean
 }) {
-  // Kunci dinaikkan ke `.v2` karena semantik berubah (dulu simpan yang diciutkan) —
-  // data lama diabaikan agar seksi tetap default tertutup.
-  const key = `${storageKey}.v2`
-  const [expanded, setExpanded] = useState<Set<string>>(() => loadExpanded(key))
+  const key = `${storageKey}.v3.closed`
+  const { pathname } = useLocation()
+  const id = useId()
+  const matchesPath = (item: NavItem) => item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
+  const activeGroup = groups.find(group => group.items.some(matchesPath))?.label
+  const [closed, setClosed] = useState(() => loadClosed(key, compact ? groups.filter(group => group.label).slice(1).map(group => group.label!).filter(label => label !== activeGroup) : []))
+  const [query, setQuery] = useState('')
+  const previousPath = useRef(pathname)
 
-  const toggle = (label: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(label)) next.delete(label)
-      else next.add(label)
-      localStorage.setItem(key, JSON.stringify([...next]))
+  useEffect(() => { if (!expanded) setQuery('') }, [expanded])
+  useEffect(() => {
+    if (previousPath.current === pathname) return
+    previousPath.current = pathname
+    setQuery('')
+    if (activeGroup) setClosed(previous => {
+      if (!previous.has(activeGroup)) return previous
+      const next = new Set(previous); next.delete(activeGroup)
+      try { localStorage.setItem(key, JSON.stringify([...next])) } catch { /* Optional preference storage. */ }
       return next
     })
+  }, [pathname, activeGroup, key])
+
+  const toggle = (label: string) => setClosed(previous => {
+    const next = new Set(previous)
+    if (next.has(label)) next.delete(label)
+    else next.add(label)
+    try { localStorage.setItem(key, JSON.stringify([...next])) } catch { /* Storage can be unavailable. */ }
+    return next
+  })
+  const search = query.trim().toLocaleLowerCase('id')
+  const visibleGroups = groups.map(group => ({ ...group, items: group.items.filter(item => {
+    const permitted = item.permission === null || (typeof item.permission === 'string' ? can(item.permission) : item.permission.some(can))
+    return permitted && (!search || `${group.label ?? ''} ${item.label}`.toLocaleLowerCase('id').includes(search))
+  }) })).filter(group => group.items.length)
 
   return (
     <>
-      {groups.map((group, i) => {
-        const visible = group.items.filter(
-          (item) =>
-            item.permission === null ||
-            (typeof item.permission === 'string'
-              ? can(item.permission)
-              : item.permission.some(can)),
-        )
-        if (visible.length === 0) return null
-
-        // Grup tanpa label (Dashboard dkk) tak bisa diciutkan — selalu tampil.
-        if (!group.label) {
-          return (
-            <div key={i} className="nav-group">
-              <nav>
-                {visible.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
-                    <item.icon size={18} />
-                    <Text as="span" className="nav-text" size={200}>{item.label}</Text>
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
-          )
-        }
-
-        const isCollapsed = !expanded.has(group.label)
+      <div className="nav-toolbar">
+        <div className="nav-search">
+          <Input size="small" aria-label="Cari menu" placeholder="Cari menu" contentBefore={<Search12Regular aria-hidden />} value={query} onChange={(_, data) => setQuery(data.value)} />
+        </div>
+        {onToggle && <Button size="medium" variant="subtle" className="nav-collapse" onClick={onToggle}
+          aria-label={expanded ? 'Ciutkan navigasi' : 'Lebarkan navigasi'} title={expanded ? 'Ciutkan navigasi' : 'Lebarkan navigasi'} aria-expanded={expanded}
+          icon={expanded ? <ChevronDoubleLeft16Regular /> : <ChevronDoubleRight16Regular />} />}
+      </div>
+      {visibleGroups.length === 0 && <p className="nav-search-empty">Menu tidak ditemukan.</p>}
+      {visibleGroups.map((group, index) => {
+        const isClosed = !!group.label && closed.has(group.label) && !search
+        const sectionId = `${id}-${index}`
         return (
-          <div key={group.label} className={`nav-group nav-group--labeled${isCollapsed ? ' collapsed' : ''}`}>
-            <Button
-              variant="subtle"
-              className="nav-label nav-group-toggle"
-              onClick={() => toggle(group.label as string)}
-              aria-expanded={!isCollapsed}
-            >
-              {/* Chevron di KIRI label — pola pohon left-nav Azure (⌄ terbuka / › tertutup). */}
-              <ChevronDown size={16} className="nav-group-chevron" aria-hidden />
-              <Text as="span" size={100} weight="semibold">{group.label}</Text>
-            </Button>
-            {!isCollapsed && (
-              <nav>
-                {visible.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
-                    <item.icon size={18} />
-                    <Text as="span" className="nav-text" size={200}>{item.label}</Text>
-                  </NavLink>
-                ))}
-              </nav>
+          <div key={group.label ?? 'main'} className={`nav-group${group.label ? ' nav-group--labeled' : ''}${isClosed ? ' collapsed' : ''}`}>
+            {group.label && (
+              <Button size="medium" variant="subtle" className="nav-label nav-group-toggle" onClick={() => toggle(group.label!)} aria-expanded={!isClosed} aria-controls={sectionId}>
+                <ChevronDown12Regular className="nav-group-chevron" aria-hidden />
+                <span>{group.label}</span>
+              </Button>
             )}
+            <nav id={sectionId} aria-label={group.label ?? 'Menu utama'}>
+              {group.items.map(item => (
+                <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label} aria-label={item.label}>
+                  <item.icon className="nav-icon" aria-hidden />
+                  <span className="nav-text">{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
           </div>
         )
       })}

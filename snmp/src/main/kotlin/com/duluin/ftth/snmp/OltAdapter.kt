@@ -7,8 +7,8 @@ import com.duluin.ftth.contract.OnuReading
  * Kontrak untuk berbicara dengan satu jenis OLT.
  *
  * Inilah titik di mana perbedaan vendor diisolasi. Setiap vendor memakai MIB,
- * OID, dan satuan yang berbeda — ZTE melaporkan redaman dalam 0,001 dBm sementara
- * Huawei dalam 0,01 dBm — dan semua keanehan itu berhenti di sini. Bagian lain
+ * OID, dan satuan yang berbeda; dukungan dan ketidakpastiannya dicatat dalam
+ * docs/gpon-profile-evidence.md. Penafsiran tersebut berhenti di sini. Bagian lain
  * collector maupun server hanya pernah melihat [OnuReading] yang sudah seragam.
  *
  * Menambah vendor baru berarti menambah satu implementasi, bukan menyentuh
@@ -32,8 +32,8 @@ interface OltAdapter {
     /**
      * OID yang dipakai adapter ini beserta perannya — bahan alat validasi OID di lapangan.
      *
-     * Peta MIB kami disusun dari dokumentasi vendor, dan firmware berbeda kerap menggeser
-     * sub-tree: satu OID meleset dan seluruh polling diam-diam mengembalikan nol baris tanpa
+     * Peta MIB memiliki tingkat bukti berbeda; satu OID meleset dan seluruh polling bisa
+     * mengembalikan nol baris tanpa
      * error. Dengan rencana ini, operator yang berdiri di depan OLT sungguhan bisa menyuruh
      * server men-walk tiap OID dan melihat mana yang menjawab — tanpa perlu akses shell ke
      * server maupun ke perangkat.

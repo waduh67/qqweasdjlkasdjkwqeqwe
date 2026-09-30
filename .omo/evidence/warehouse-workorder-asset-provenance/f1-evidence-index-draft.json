@@ -1,0 +1,2481 @@
+{
+  "schemaVersion": 1,
+  "status": "DRAFT_INDEX_ONLY_NO_HISTORICAL_RECONSTRUCTION",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "reviewedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "rows": [
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-1/",
+      "task": 1,
+      "implementationSource": [
+        {
+          "path": "scripts/warehouse/test-environment.sh",
+          "line": 1,
+          "sha256": "165e7a1055c1048dc6f03e61d06b11887ae14fc3f20c79f2090d879f55025e2a"
+        },
+        {
+          "path": "scripts/warehouse/qa.sh",
+          "line": 1,
+          "sha256": "a49f51b1f2b9133c3b5560ca0a32473497e01f08b4503c1fb50b6d02faa6d60e"
+        },
+        {
+          "path": "deploy/docker-compose.warehouse-test.yml",
+          "line": 1,
+          "sha256": "5c3c7fe6e49c84187ae60134341264c745056670e2439b2db9cb8fef11c0fec3"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseEnvironmentIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/0",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-2/",
+      "task": 2,
+      "implementationSource": [
+        {
+          "path": "docs/warehouse-contracts.md",
+          "line": 1,
+          "sha256": "d598701793f0a4913f0e1f9d7ff41802a12b0b63057e50eb53d1e348c40c7857"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderValidationPort.kt",
+          "line": 6,
+          "sha256": "9bae2bef7e07889c2bfc7a89699fdfbdd79b30af0cc003815fcc274c2a9d7eba"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+          "line": 7,
+          "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/iam/CurrentAuthorityApi.kt",
+          "line": 8,
+          "sha256": "0fce38f6ff3bdee2660529595365a955a32cf0f2447893579d2fff5f1c7ca21d"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+          "line": 1,
+          "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+          "line": 1,
+          "sha256": "5bccecbfce1b0dd489460da0faa0fbe450a3bf2cf3d9e61e8eb6fefe511fc2d2"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehousePolicyContracts.kt",
+          "line": 1,
+          "sha256": "9a90336cdc9ae9e18d4bd2910ed886adcd3f641a726d49a6d35bec1775ea6260"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseApprovalContracts.kt",
+          "line": 1,
+          "sha256": "2210b38bfead007eee1b39de8d01ec9b426ddc33e5d238cc74afe368d98001a7"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseContractTest)",
+        "G(ModularityTests)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/1",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-3/",
+      "task": 3,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+          "line": 6,
+          "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockUnitDefinition.kt",
+          "line": 5,
+          "sha256": "fb48645faa7988972e3e899b3adb80db00461bd455688a3ca1283fbc818d5d5e"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/common/domain/identity/DeviceIdentity.kt",
+          "line": 6,
+          "sha256": "1a002445614de81f28b1433871f9a8393f90b86e340fe11fea23ea2535c2e202"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+          "line": 1,
+          "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseQuantityTest)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/2",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-4/",
+      "task": 4,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
+          "line": 22,
+          "sha256": "e3e73ce6cd9883d81503bc19a62e02a04acb909c99a7443c56c24cea0fdf59da"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V173__warehouse_masters_identity_and_cutover.sql",
+          "line": 1,
+          "sha256": "738e9ff3feea697cf96ffa8c8d72585203b1b3916c7b33d481cbb3f3f23ec578"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V174__warehouse_documents_and_balances.sql",
+          "line": 1,
+          "sha256": "b72dc30f5b0c5ccacbc7555c31fadf22201811461d72b67c58636eac4492fb71"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseSchemaIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/3",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-5/",
+      "task": 5,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePostingService.kt",
+          "line": 13,
+          "sha256": "078f9905f466f9067be04664bb59dd8ff8cb8b58831629fe305316cdf5b5132f"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt",
+          "line": 16,
+          "sha256": "8e6b14f57a3975e167bc8a27567f1112fe05ad485053ef63831edef078d1edc0"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingStock.kt",
+          "line": 1,
+          "sha256": "cf7c85b2769e81ca4090ce6f0f868bdfa0d08ab234b92a69b191bffb67e95d55"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingProjection.kt",
+          "line": 1,
+          "sha256": "02a9ef90238f1eff3608faf21d8d44301a0eadadc8e24414fbdef78342454635"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableInventoryFulfillmentService.kt",
+          "line": 14,
+          "sha256": "2815bf094b7fe4623f1d3aef3bd472196c010114b46039215a4f91612329dd5a"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialConsumptionService.kt",
+          "line": 13,
+          "sha256": "503e5205358ada33a7abbd83c86a77d258319451343bfe2fefaca53450bb8a7e"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehousePostingIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/4",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-6/",
+      "task": 6,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseOperationStore.kt",
+          "line": 8,
+          "sha256": "613b659c129bb9bd5fa5799629582e4e7b512029b25266382ccef5dd30b0cb66"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseOutboxDeliveryStore.kt",
+          "line": 11,
+          "sha256": "2cf16b6fac873e071d5f69614dd7dce8cae568bfff1f0555d6420833871d73d7"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOutboxDispatcher.kt",
+          "line": 13,
+          "sha256": "d42f4da129fa518ef6eed886d8783220b8cafd2cd055760156f7ac6ba82534b5"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/iam/adapter/outbound/persistence/CurrentAuthorityPersistence.kt",
+          "line": 20,
+          "sha256": "2faccf09eab302d7c617e9f37610e5efd77a96694fb89a1dfbbc6244ae433637"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
+          "line": 22,
+          "sha256": "e3e73ce6cd9883d81503bc19a62e02a04acb909c99a7443c56c24cea0fdf59da"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseConcurrencyIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/5",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-7/",
+      "task": 7,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseMasterController.kt",
+          "line": 22,
+          "sha256": "a36d1798f9c23ea386d2804fa8685444d248465bbc662a84332cd53b7d4ed87d"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMasterService.kt",
+          "line": 21,
+          "sha256": "72935465502ff58801f481a892a05311e3c7bc2467bec781a55350240ed2f6f7"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMasterPersistence.kt",
+          "line": 13,
+          "sha256": "59334a3bef75234137dd8e483487d5690d473b2c51b76fd9cf7b0c9b8c48bd39"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseMasterIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/6",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-8/",
+      "task": 8,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseReceiptController.kt",
+          "line": 16,
+          "sha256": "41ca444f1a8b4dbe67677fa73ea3b09edf8863670b271d74074a3910013a9986"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+          "line": 19,
+          "sha256": "aad286f05f70cf3c91f9d245858f666ede2790478d50c35ea09f7aee286a867b"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+          "line": 11,
+          "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptOrigins.kt",
+          "line": 13,
+          "sha256": "31b276132e28668cc86f1a77809c7cfdeffe1e3729e3b60beafac1e7bf8d0850"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+          "line": 26,
+          "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseReceiptIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/7",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-9/",
+      "task": 9,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseQueryController.kt",
+          "line": 12,
+          "sha256": "2f8b0ac8da3af33672cf55a8e67ad3c3ba968abc3be43bdcb24628f1473f78cf"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseQueryService.kt",
+          "line": 19,
+          "sha256": "d7944e546a151e4ef4964f52066548c59751425df496b8981b826d1d247496c2"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseQueryPersistence.kt",
+          "line": 8,
+          "sha256": "ce8efccf7e89519328aa260ef274dfa62205a54a60b34223bcbccb3bdc28d3ff"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseQueryIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/8",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-10/",
+      "task": 10,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
+          "line": 23,
+          "sha256": "1698d6e3b3f371719f4d744c86b51e91b9a0ab8af381233f4370b7413db0669c"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
+          "line": 20,
+          "sha256": "06f08914e2d28711875ab373ea65aa1cfb51c66a3b94591bda50717d8b2d2ded"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
+          "line": 14,
+          "sha256": "ceb9a73a9311582f326ac3f973f74602f3ab0f99976d2c585572242a6c7e71b0"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
+          "line": 11,
+          "sha256": "72e1f1a4b6035a238cb2b2e766cd466856ff26841dc48056ff26bcbf5933d273"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+          "line": 20,
+          "sha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseReservationIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/9",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-11/",
+      "task": 11,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyService.kt",
+          "line": 12,
+          "sha256": "b23762a3b0b652e5fe24b00936209bb54a258a3357cd22b4125eb7581b771b09"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDelegationService.kt",
+          "line": 14,
+          "sha256": "9f21e17db268b1d34eb4ba43d3c728132e219c75b8a625377ff5cc2c843b204f"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/iam/domain/catalog/PermissionCatalog.kt",
+          "line": 13,
+          "sha256": "5843d163672973f850c303ae31ea0d5c2f69147ad2b54596e8ff0a622da04bdf"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWarehouseScopeApi.kt",
+          "line": 6,
+          "sha256": "1d5bda19ded8bb0eb53dc46fb851b45e61b72f953807a164059b98ea471f0bac"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175__warehouse_policy_foundations.sql",
+          "line": 1,
+          "sha256": "2d97d88e5a98721586b2e2f5a742cf4ae84612ce8d0abe84360da0f93e0929ce"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehousePolicyIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/10",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-12/",
+      "task": 12,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
+          "line": 12,
+          "sha256": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalAuthority.kt",
+          "line": 13,
+          "sha256": "092a5b4e0c7656903b62dde8e57fb925c6acef25c8c4fdf342cd1ef1df3ef3d2"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalExpiry.kt",
+          "line": 15,
+          "sha256": "d55cdee852b10a482567e4970fee5d1e6fbf49d69771a560243a7e73dc8ce340"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+          "line": 1,
+          "sha256": "19036b8adf56b4342d45472514d44b8b1f0824d5abadba10e21305020e555825"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseApprovalIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/11",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-13/",
+      "task": 13,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/MaterialWorkflowService.kt",
+          "line": 12,
+          "sha256": "d718c91eba0d8a8228c57530ff7a93b314c995af0edfe0b780ce90968c831a60"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/MaterialWorkflowController.kt",
+          "line": 12,
+          "sha256": "1cef30ef05601a6246f097820661dff1b1a7120910fc16dd20ab1531eb75539c"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+          "line": 7,
+          "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt",
+          "line": 16,
+          "sha256": "48d46cc0dc4758b078503de8655337e37c28178c7112f992a87718a3a2623756"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialTemplateService.kt",
+          "line": 14,
+          "sha256": "02def784721c2b11cbb5d341fec25c89b84cb4f7b7f1ff8a2cd1d786064f7337"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialPlans.kt",
+          "line": 15,
+          "sha256": "174321df2340802740507489621e114bac0d2e0f1a7feb4c0f945ddf2bf92987"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WorkOrderMaterialsIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/12",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-14/",
+      "task": 14,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseIssueService.kt",
+          "line": 21,
+          "sha256": "0f4dd7799a22c20574fef7ffb0ae0659ac222c28c6ac9fde5c25060ec83426b6"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseIssueStore.kt",
+          "line": 11,
+          "sha256": "1244697a4c5264db42203e200804c46f4480daf8ae1cd6dcc787fcdf7af88d78"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseIssueIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/13",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-15/",
+      "task": 15,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialReceiptService.kt",
+          "line": 21,
+          "sha256": "d2d17b89b6ac1ff06187f13a51430da8dbe91fe327bb3bb34adbb2ec7a8e2552"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
+          "line": 22,
+          "sha256": "028423ffa4e33b69a955457e4d77e3725a4541aa209f162a4b2553aa8f6e4f5d"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WorkOrderMaterialReceiptIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/14",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-16/",
+      "task": 16,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialUsageService.kt",
+          "line": 21,
+          "sha256": "4ba8dd8637a582974ba104bd651031cbacc13072b5be17d502fbe95557d236fa"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialUsageService.kt",
+          "line": 21,
+          "sha256": "c9f9f939a67a9850daea7f7f68348da9251fd91fb72ffa5ac5322e5ab489692f"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialUsageDeltaService.kt",
+          "line": 17,
+          "sha256": "b8954c6012974320eab6632b25d0198505eb2bb89efec0df371c98bc00532808"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialFacts.kt",
+          "line": 16,
+          "sha256": "7416ba18bd21fee9bdd44d9bbc81e237eab4d7e515393a509e1c980c70cfb83c"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WorkOrderMaterialUsageIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/15",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-17/",
+      "task": 17,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentContracts.kt",
+          "line": 6,
+          "sha256": "c6b2fb84209398cce97b8d4f70ff41b94c8a938d30d85cf4bd81c5c37d0099f7"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentEventListeners.kt",
+          "line": 15,
+          "sha256": "b196b7e76be6b9f084cfecc2f250a295a95415b6f8902c26d5e0484b37f9f579"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialConsumptionService.kt",
+          "line": 13,
+          "sha256": "503e5205358ada33a7abbd83c86a77d258319451343bfe2fefaca53450bb8a7e"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySettlementApi.kt",
+          "line": 1,
+          "sha256": "978be5445ba9cf740fcac7b32ded725a098133db3af7ed275deda83e18777a94"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt",
+          "line": 1,
+          "sha256": "34805ef237b772dde31ce1cb93057578880ed5e53fdb6b64851ef117fa176eed"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseFulfillmentIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/16",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-18/",
+      "task": 18,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialSettlementService.kt",
+          "line": 13,
+          "sha256": "55ea935e90867c80f9cf163970660498b1cb396db8d993e74fd6b6edb48266b4"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialLifecycleService.kt",
+          "line": 15,
+          "sha256": "c61648c896a6d9ac8a9b0d69af8dd2c3f7c76dc6320abd6a7415158126d81dd0"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+          "line": 22,
+          "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/application/service/WorkOrderMaterialReworkService.kt",
+          "line": 20,
+          "sha256": "61685f04039bf2d28e25f9364bbdcc66ba247b0442a42eddbd662d60df762a22"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WorkOrderMaterialLifecycleIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/17",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-19/",
+      "task": 19,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
+          "line": 17,
+          "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
+          "line": 15,
+          "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
+          "line": 1,
+          "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_50__customer_asset_episode_history.sql",
+          "line": 1,
+          "sha256": "a6d7c47827ed7d8e998639c4e9de9c7e4dac21a5ac64bf1a6c227f23203c12d2"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_51__customer_asset_episode_binding.sql",
+          "line": 1,
+          "sha256": "69749a66ef0d4dbd84f4761d5a877836df56646b855698f7e470c6c7ec99527a"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_52__customer_asset_episode_binding_scope.sql",
+          "line": 1,
+          "sha256": "ba39bcf24c5cb3044e8a1f049cef72c71ecef9687c78a1b6711eba0460c4d726"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_53__customer_asset_episode_snapshots.sql",
+          "line": 1,
+          "sha256": "c207cdc91d215b310049f5ec31b209371e2ca1a7e77727c6e373de20b6da11f4"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_54__customer_asset_episode_canonical_truth.sql",
+          "line": 1,
+          "sha256": "893f4a3c44ac387d062a74a6c62537bcf9283897a8bea306c7feb68f8a4d05f0"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_48__customer_asset_episode_storage.sql",
+          "line": 1,
+          "sha256": "a3a0d1573e7b468a33c7aeadc787183c6812a219883204de3e46974908208279"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V175_49__customer_asset_episode_legacy.sql",
+          "line": 1,
+          "sha256": "4a538bea4076d8e98577c2bd9860025fc2afc0747fb2905850355b1639fcf590"
+        }
+      ],
+      "requiredSelectors": [
+        "G(CustomerAssetSchemaIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/18",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-20/",
+      "task": 20,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+          "line": 6,
+          "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+          "line": 18,
+          "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+          "line": 16,
+          "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+          "line": 15,
+          "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+          "line": 20,
+          "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
+        }
+      ],
+      "requiredSelectors": [
+        "G(CustomerWarehouseProvenanceIT)",
+        "G(ModularityTests)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/19",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-21/",
+      "task": 21,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetHandoverService.kt",
+          "line": 17,
+          "sha256": "6d1877832e88cad8e04b8e964f3412c9315841486ce549726b6d45234bacbe59"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+          "line": 15,
+          "sha256": "0f88052f0b10822ea8c8174360c8865b7ccae5b874cefdbce122f179ea291bca"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+          "line": 8,
+          "sha256": "5cf6f8412b73b0cc73837b072f5c2b8dd3ec14b7ada91c300111b903fcadb2eb"
+        }
+      ],
+      "requiredSelectors": [
+        "G(CustomerAssetOwnershipIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/20",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-22/",
+      "task": 22,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/AssetReplacementService.kt",
+          "line": 12,
+          "sha256": "0f08c48a7953cd57b27460d9b0496eb0fd7366fb8b30be7f869a37befa2e334d"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetReplacementService.kt",
+          "line": 16,
+          "sha256": "e4539a16a88a53d17f5c2a38ef71fdfa40f2b63812a842659a272ad503275527"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetRelocationService.kt",
+          "line": 18,
+          "sha256": "729ed360649f75a53e791377ca873cfbf287972a8e9828fbf42e28e7d970f200"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
+          "line": 11,
+          "sha256": "30a4e30106b61cbc0022c7393c432537136c15d6ddf97a4db5c47e186b3cba40"
+        }
+      ],
+      "requiredSelectors": [
+        "G(CustomerAssetReplacementIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/21",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-23/",
+      "task": 23,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/DiscoveredOnuService.kt",
+          "line": 27,
+          "sha256": "b21987ec8545936b72991f1dd4843a3064c3455036dc3c656fc48c3642207894"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/AutoProvisionScheduler.kt",
+          "line": 33,
+          "sha256": "678e16a47e95bd05c5b6207d97c590d7aaec395d6933784258c491f9a0458e64"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/MetricIngestionService.kt",
+          "line": 40,
+          "sha256": "f89099d0b846001b04ecbbc814716b89f339649156549756c0f25cbf3f9ff7a9"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/cpe/adapter/outbound/persistence/CpeObservationBindingStore.kt",
+          "line": 13,
+          "sha256": "01e2766b48b59b535bbfd03b1597a099a319897626b8338c9e36de4572b651f0"
+        },
+        {
+          "path": "docs/gpon-profile-evidence.md",
+          "line": 1,
+          "sha256": "1cef4b858920441620eb919d34fca05657f4849abac443413d1ad99e5e966451"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseDiscoveryIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/22",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-24/",
+      "task": 24,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/onboarding/application/service/ExpressOnboardingService.kt",
+          "line": 26,
+          "sha256": "53e2fd26771b9230c35b37e0609d1b849d26de6ea5fd1e791d4e9ae51567c4de"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/onboarding/application/service/ImportCustomersService.kt",
+          "line": 42,
+          "sha256": "62212d1b33f136754f742a1a11262475364dc85ff3a1d991d408d54646922ccc"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+          "line": 20,
+          "sha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/subscriber360/application/service/Subscriber360Service.kt",
+          "line": 31,
+          "sha256": "f6ec080ae25f1f5910911eb9daa752fcc3a8f52027f1ad61974f08b83c38a65c"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialConsumptionApiV2.kt",
+          "line": 6,
+          "sha256": "cccf5e2aa53e25cd031e110003d02bf439d9dd1173d3854dcbea7af8bf262bbf"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseCompatibilityIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/23",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-25/",
+      "task": 25,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt",
+          "line": 19,
+          "sha256": "d27a67d1f7438b7a508c8795293aae0ae55c5c44e99352f280ce85a6630e3987"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferDiscrepancyService.kt",
+          "line": 16,
+          "sha256": "43d5c80af69fa3debead25120361d3d330f3b3f173b9e6d24bc83c6bbb709827"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferStore.kt",
+          "line": 11,
+          "sha256": "4f959e3bf849984393b1aca325c50c34d702422b1eca007871a8328e965b68bb"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseTransferIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/24",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-26/",
+      "task": 26,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt",
+          "line": 19,
+          "sha256": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
+          "line": 19,
+          "sha256": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt",
+          "line": 18,
+          "sha256": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+          "line": 1,
+          "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseReturnIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/25",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task26/verification.json",
+          "sha256": "27c7036537a32a9dc281cc33a167b7c6c78453b3dee276c1c596892e814637a4",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-27/",
+      "task": 27,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+          "line": 16,
+          "sha256": "424d1d520f75dca21444d5980c7ca7fd1d89c159fc5db9dbd89730fb2915c6a5"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
+          "line": 13,
+          "sha256": "54020e00f658b03315d9ffabce54ba1b668ca70b8121d9853e0ec1d0be2c6d3d"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+          "line": 19,
+          "sha256": "c70bd771373dbaa4fe50041b19e36cd19160b18a16b11a3a30a41e35b9838a3f"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseCountIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/26",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [],
+      "missingHistoricalDirectory": true
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-28/",
+      "task": 28,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+          "line": 17,
+          "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+          "line": 16,
+          "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+          "line": 18,
+          "sha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseDispositionIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/27",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/active-loan-loss-verification.json",
+          "sha256": "14751301bd46c2f9cc628fce283603e385959f00276314dbec08679cee8fac3d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/asset-compensation-verification.json",
+          "sha256": "f282003e9606669b7972f56c595490b921bb7558d8179f192c0003b8a2ea9f96",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-verification.json",
+          "sha256": "40b285f604f849a5b6f3da150d191e8d96924ddd503b9046c8837e34fac346df",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/existing-flow-regression-verification.json",
+          "sha256": "3450428f1c4ac7f907216f558da90444719985b5f8c6745deee25ff06171a649",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task28/return-disposition-verification.json",
+          "sha256": "6e45a7be305cf81ef24c9abc1dd00aba370e1d13d2430d320e9b0adf27b1b131",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-29/",
+      "task": 29,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReplenishmentService.kt",
+          "line": 16,
+          "sha256": "fe8dc468d10121ee16a5c2382cbb1bc681ee634533d7560d0f03bd4c8fededa7"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReplenishmentQueryService.kt",
+          "line": 19,
+          "sha256": "f1dd9b097717e7d9ca632207823c4156c56802d5ffc1439ea7fcf5cf8034b270"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseReplenishmentIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/28",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task-29/resume-result.json",
+          "sha256": "60b44f1166edf57d0b4aef39b9711a8045d5eddd425ff0918b851477e3499505",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task-29/resume-source-manifest.json",
+          "sha256": "c29a5a5b8bbeef18fa52c5792e3b7d1b1ac8e1a8497ac5754f1f1922b57cc970",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-30/",
+      "task": 30,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportService.kt",
+          "line": 17,
+          "sha256": "3877da2a0853a700a0d2113ae4784f2cd2803417564632436fc0043b5e160888"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
+          "line": 9,
+          "sha256": "367e9e939c4293474de2c636b21506ebd69128dd18ec1e2d346bd2e0078e6b7b"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
+          "line": 8,
+          "sha256": "945858cfcd5f8b9afba04503df8ad83b58d44f274cbd55ab2235f08d964e402c"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportCsv.kt",
+          "line": 1,
+          "sha256": "26ca2be6eeba505022491f83d3e943d8341a5b019dfc7b34ee8bb0f23e1b5d5f"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderReadPort.kt",
+          "line": 7,
+          "sha256": "1bee78b31af3de2ecc06e50179205984534e5d138ebfb9e68239619d3b03b81e"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
+          "line": 15,
+          "sha256": "fc5020f89e9320a0a97d8c44c5ab5c737ce1df5de9e6466d4c6dcd0db5362375"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseReportIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/29",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task30/verification.json",
+          "sha256": "b34f3e26be3b365207058b9cb81604956d3cce2620ecdab365060103b6ac70d3",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-31/",
+      "task": 31,
+      "implementationSource": [
+        {
+          "path": "web/src/api/warehouse",
+          "directory": true
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseRoutes.tsx",
+          "line": 28,
+          "sha256": "8c58448f5bdfed1e49f0f5ac2695f97f3ed226608119867cec8e0a1aa4796477"
+        },
+        {
+          "path": "web/src/pages/warehouse/navigation.ts",
+          "line": 1,
+          "sha256": "e7b6f41668f3897f0f3b71c3e822065d4570c37b66ceb1e511d2a23861df710a"
+        },
+        {
+          "path": "web/playwright.warehouse.config.ts",
+          "line": 1,
+          "sha256": "1a0af0400df8c916fd7a28a87777254b7f8851005af0a44bc350b7a4d30b90ce"
+        },
+        {
+          "path": "web/DESIGN.md",
+          "line": 1,
+          "sha256": "0cac864fa007745308c4bb19b55ad6ea42bec044e253db67874e2182251e18f5"
+        }
+      ],
+      "requiredSelectors": [
+        "W(src/api/warehouse)",
+        "B(setup.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/30",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task31/api-verification.json",
+          "sha256": "092b0d3da07892b921817b9f14c162d6e2d540f6c514c6e45af59b7a1180bd71",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task31/controls-verification.json",
+          "sha256": "ecfcc3742c5600d17e13624c0863a6958a957e98f025194741169250460e5285",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task31/quantity-verification.json",
+          "sha256": "d739d58e57f5f99150b742712fa19d0b276c7895ef9ea13e8cd4c4ceedad6196",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task31/verification.json",
+          "sha256": "74e2654fb68cb7c5f29bc27cefefbfe577be4543b4e1ceedc5c55527c407194c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-32/",
+      "task": 32,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseCatalogPage.tsx",
+          "line": 20,
+          "sha256": "588fb0ae748846afd97bf4c84dd1d34b1c6f48d8ab791c38b04c2358c0b851e6"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseMasterPanel.tsx",
+          "line": 14,
+          "sha256": "70231bd7cac478280fdcf0fc0f69c95dc969428a65ba48632952fd17be79c129"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseSkuEditor.tsx",
+          "line": 13,
+          "sha256": "fb0748d7bea3de09163a9e2b6b137f74db62b1169b6084dd9f332764a7d64139"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseLocationEditor.tsx",
+          "line": 32,
+          "sha256": "1698bd0a5a7ee71c55c25e621e7294756b2a034dd2a64075e7e116a495790942"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseSupplierEditor.tsx",
+          "line": 9,
+          "sha256": "97870041f57c326da69c8e7857a7c7a394f88da8adf09e0de7f6e9f84269e9a5"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseCatalogPage)",
+        "B(setup.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/31",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task32/catalog-verification.json",
+          "sha256": "c24d31e128215cc0c779b96cbe21d1c55121e53a0853f88c5aca13cc114e5ecf",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task32/foundation-verification.json",
+          "sha256": "be844cf9ad9cddd33390c6f611816e3f9c86c9b7afefa8df35de70c6ecc07ca6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task32/verification.json",
+          "sha256": "5b1e9247d25d2e260fd9cdd1699a801a40d46aa39a923ef475e9c7f987f12d33",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-33/",
+      "task": 33,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseReceiptsPage.tsx",
+          "line": 26,
+          "sha256": "f2a98d5c41b4a5dd3e4ac24d024aee9d58fe87ae0e3f03a9ca337d894d43c403"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReceiptEditor.tsx",
+          "line": 20,
+          "sha256": "e36d8bbea839383d217a3e215ef8071c22e6d41c12676c341e0fc5f7cd122f53"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReceiptActions.tsx",
+          "line": 20,
+          "sha256": "bc4378e84fc2b929ef5e4faf806b362c7e110152d0d332e5fd12d5b9d408874b"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReceiptEvidence.tsx",
+          "line": 15,
+          "sha256": "5931b16eb7b3c8d19a6647dd96b17a427fce591a294acbba7607a821ced2d9d7"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseReceiptsPage)",
+        "B(receiving.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/32",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task33/foundation-verification.json",
+          "sha256": "90c72d0aadb5d7f505cb6247deae5f3e4110bea752b6e5320c6855d82454e50a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task33/metadata-final-verification.json",
+          "sha256": "5bf9811f37b86c66f2d38eba84542860a7854a8e30ae6729223f7037982f388f",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task33/metadata-verification.json",
+          "sha256": "7cee885df70ef3642ba314b355307f85ea7d369a5ea2720d833d9e99399320a9",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task33/verification.json",
+          "sha256": "1f6958a5a5239f225d582adc157c808aea1310078e8ae8caea328ac2f4634504",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-34/",
+      "task": 34,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseStockPage.tsx",
+          "line": 22,
+          "sha256": "df922777509be33854e50b44ef00590c66ed0150cacbb3398422a24617495941"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseStockDetail.tsx",
+          "line": 17,
+          "sha256": "fc94c7737068bf28caa7afb7fe72c589293cdf3e6fec7036fe36b540b83964dd"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseStockFilters.tsx",
+          "line": 18,
+          "sha256": "b105fb3155a3813f94887c86ee657279ad33e4673eef4dc2d71225f9d985a550"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseStockPage)",
+        "B(receiving.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/33",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/api-verification.json",
+          "sha256": "c9f95364236df3ef23f9fc28e2790a34931f64609fbefdd2ac66b205e2d20998",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/bucket-verification.json",
+          "sha256": "a9fe4b08d47edc7b325c46bf478fc91c7428d163ec36b5a6114787a9bc2fb99c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/compile-correction.json",
+          "sha256": "85a72e639cb8eaa619e2f639c44925d1b5807d6f128fa7772211728ed0a38a6f",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/display-metadata-verification.json",
+          "sha256": "428c433270389b5f9c2c8183ac476f6382f713b699018f927facebad78611e92",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/functional-browser.json",
+          "sha256": "5a0a31d9f50f3032b765b577d20b9ae02448662b287ea906ac14f2f922680dbd",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/ui-verification.json",
+          "sha256": "76804088148d8bef4e2e9330e4ecf262afa4fd1061b6088bf7526acdfaa0e21c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task34/verification.json",
+          "sha256": "acc3f36fc825290a2f7b5c9361d930dabbf08eb4e0be6e56800d2a612174dcdd",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-35/",
+      "task": 35,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseRequestsPage.tsx",
+          "line": 27,
+          "sha256": "0d08913176592c24384be752541257d33fd1db1c1b92b025dbefe6fb52ea06e0"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReservationEditor.tsx",
+          "line": 16,
+          "sha256": "fb8e2b79cd8f69cddadf9ac7f1e89a46d14b50a5eec1b233e0e2d09423ab2254"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseAllocationEditor.tsx",
+          "line": 13,
+          "sha256": "515cb42a54b647fd416e884f8af2e5ca685615b01097070ba9969b336c6e66d9"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseIssuePanel.tsx",
+          "line": 20,
+          "sha256": "2723078f2a4d28fdcee8083ab7b836bb28f775e8a9156a84008ac15e3a37ccbf"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseRequestsPage)",
+        "B(issue.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/34",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/allocation-metadata-verification.json",
+          "sha256": "6c85d3140d9fae5f007c99dd029f68478c9b6be172ca257d729ac105bec9023a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/api-foundation.json",
+          "sha256": "df216558b6c22a3c9340fa2d985abe7286fe21504f2e1e2cb767a8c9ac12ce09",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/demand-mapping-verification.json",
+          "sha256": "6118f0cb6ad9dfbb28bc014771f70d678f2ddd7a271afd9adbd200bd2669dc94",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/discovery-api-verification.json",
+          "sha256": "c35a58421c1e685cea73e5fe1a966fc3f1844b6604a5e3769759a5de505bb2aa",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/issue-list-verification.json",
+          "sha256": "1218c617f554a813adc71b5bf47c50526695380cef30636aa81c0413887d0db6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/picker-none-verification.json",
+          "sha256": "0bd5f4e7a81814e8ba1065c4e4c1efd3b3f35aa68771885a075aaccc054e80e0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/verification.json",
+          "sha256": "f1b5e08e609162a2f0d299b6b1fcd3ff7fa73264a9c0fa28afb2f239441d51fe",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/workbench-dialog-verification.json",
+          "sha256": "0d82cb5357b68bd07ad1432a859cd8af1bfa30ab7b3bf6f44c6d086ae60ef6c9",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task35/workbench-web-verification.json",
+          "sha256": "716720a48b4612b4965a97228467f0333ab3dccb6ce4baca0e11bf1bb6cf2977",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-36/",
+      "task": 36,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseTransfersPage.tsx",
+          "line": 24,
+          "sha256": "e360c4d36ab2aab188d4584a305ca557f14d3698dc872bc11517f3c4a8343bd3"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseTransferActions.tsx",
+          "line": 15,
+          "sha256": "804c63831708fc60346a309134d27907a862babfab765fa922c1afc1ff97d64e"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReturnsPage.tsx",
+          "line": 27,
+          "sha256": "9620154009c9f7fe1ac2dc0e0d8925970981100a19451c53928522f44aa29371"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReturnActions.tsx",
+          "line": 16,
+          "sha256": "806c848e1da7f7e23614ac8b43bae5f28e155dee29ee5fa53fe67cc2fe8e0768"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseCustomerRma.tsx",
+          "line": 19,
+          "sha256": "1e34cf3f4ebc42aa4a2d2200a7f2984ba805c94b5e7b975d16a5db26aa3d969f"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseTransfersPage)",
+        "W(WarehouseReturnsPage)",
+        "B(returns.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/35",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/completion.json",
+          "sha256": "ef3f700a803a3e9da6a3b01e2c287700d99d1721e1e10f589d68419aaa60b070",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/discovery-verification.json",
+          "sha256": "6b4890f07ecb499648c9caf95b2ca3b993c1fe11459771512b60b51b9e5dde99",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/full-web-verification.json",
+          "sha256": "37bbbf7a563f0e2a4c81fbd11be46fb0c1e70a2f5d93f4b5d106d82ba3f74f91",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/reacquisition-discovery-verification.json",
+          "sha256": "172c1f3f1de86e1e0bed25cc8bbcb0b2269676c73dc54e9f86df64485d9c8519",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/return-asset-context-verification.json",
+          "sha256": "6e21fd57ab83145e381d0386eaa0af9d842eb0e2556e90d9535c7f54a9c97d25",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/return-discovery-verification.json",
+          "sha256": "68b3050344680d24d228b7bc924eff2f06fa0ba0751ba0973a4b1b3b593a3b78",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/rma-reads-verification.json",
+          "sha256": "5412dc908b4a8bca79519a08b2476031a47637b29e9749b0cb6558c3255df14e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/transfer-browser-verification.json",
+          "sha256": "283198d118f291c31dc705763f3547222203c63093905d60237f9a46a555c52f",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/transfer-filters-verification.json",
+          "sha256": "70cd2e6054c6ae0b9588be4fbca485806368d10a14c5ffdadf6f3a8796f9845a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task36/workbench-verification.json",
+          "sha256": "0bef974e8dcbedbc03353c86f2ccb8836dc98e2b9a67873cdfa1dc8ce763c99c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-37/",
+      "task": 37,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseCountsPage.tsx",
+          "line": 26,
+          "sha256": "783f6d3b67494ab2826f7bdfb69dfcb534485f8c7f4259e4a1e4b55f4b6dfbc2"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+          "line": 26,
+          "sha256": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseDispositionForm.tsx",
+          "line": 13,
+          "sha256": "7deffe53dbc451df7c0f06c62977cdec6c13f88d491c04416073fe7f8963e41e"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseCountsPage)",
+        "W(WarehouseApprovalsPage)",
+        "B(returns.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/36",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/approval-verification.json",
+          "sha256": "9d9192b7975d58d9e6271346da1e56a5d5dd55624007c6faba2059594c3915c0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/count-verification.json",
+          "sha256": "e63eddec456294ff1aaa3fb2bee6ede27624c7ee33752c23a35b6eb2a1d537c3",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/discrepancy-browser-verification.json",
+          "sha256": "cf72a4d6753fffc2689c375c7a82693aea234df319ea745a64996bf5ae16b2f8",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/disposition-workbench-verification.json",
+          "sha256": "abfe06df336cf871ba6e799f1fa7b4fa2855ea80317e47475a0968b3f588a20e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/evidence-verification.json",
+          "sha256": "e9cda4382d9aab47ef381e17d926d0e52e8f4a62e9d7215ec2679675f07c63a0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/transfer-recovery-verification.json",
+          "sha256": "faf6228c03e2076a5a864a19bcf0d71b3bd728172ef7e91c5b4f5ba5b0e1fad5",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task37/web-verification.json",
+          "sha256": "547bdb3e3d67b2bb47dd8a8a338df2c99f3856f21c4aa7b11cf7c0908bdbb907",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-38/",
+      "task": 38,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/warehouse/WarehouseOverviewPage.tsx",
+          "line": 23,
+          "sha256": "4f031caeb7f67aae574fbac79ed8776ffe4ab740277110d3c9b18880b1a994c4"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReplenishmentPage.tsx",
+          "line": 17,
+          "sha256": "bc7cd678471859ade0fa1e73b72179e83e86ebc6d717c22704fc7dbc3060a2ea"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseReportsPage.tsx",
+          "line": 18,
+          "sha256": "c5def9dadd5149114973b2152d5f700dc6165825e1d584354d1186f32a05b4c9"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseSettingsPage.tsx",
+          "line": 20,
+          "sha256": "42d23cc87820215e963573536b9ec08bb2923b2f119424be0b5c85f2e1aad211"
+        },
+        {
+          "path": "web/src/pages/WarehouseOperationsPage.tsx",
+          "line": 1,
+          "sha256": "7517de2711818dbea3342ee27dd53a303eb823e4d7d24118367b4a2b7f9680db"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WarehouseOverviewPage)",
+        "W(WarehouseReportsPage)",
+        "W(WarehouseSettingsPage)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/37",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/overview-verification.json",
+          "sha256": "4c4baec220a2a7be2a314e2ae2fce672bc020d1f28ddb52fde1d09d041d75196",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/policy-workbench-verification.json",
+          "sha256": "0e42a96b1cd7d12be19ebaece067af4836183543114cfedb0396c024728063b4",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/replenishment-workbench-verification.json",
+          "sha256": "e2002773411b2695efeadd08ae0a5ee0cc026d899f68a2dfed3d94c7fd99a6e5",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/reports-workbench-verification.json",
+          "sha256": "56db6a019edae147992edfa318c42bd5d81738342c6f69e70fa22f50a9c43c2a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task38/settings-workbench-verification.json",
+          "sha256": "ad0f1f5903cc306d3d3c88672998fc7d37a2e78d13e04f3e70c1525287800fb4",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-39/",
+      "task": 39,
+      "implementationSource": [
+        {
+          "path": "web/src/components/organisms/workorder/WorkOrderMaterials.tsx",
+          "line": 26,
+          "sha256": "602558c949ac425c8e76e5b6b5b5b214d319c9cc272d363641b313f7709fe07f"
+        },
+        {
+          "path": "web/src/pages/warehouse/MaterialPlanEditor.tsx",
+          "line": 15,
+          "sha256": "e61c3a70f8ca440ca7d5a381d3da191bbe9a71465576126b3161be2149e60b31"
+        },
+        {
+          "path": "web/src/components/organisms/workorder/WorkOrderDetailBody.tsx",
+          "line": 44,
+          "sha256": "506af625a186b4d4010c47ca65e395ef00cb39ac22da3c8b58bfba9e6185ec07"
+        }
+      ],
+      "requiredSelectors": [
+        "W(WorkOrderMaterials)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/38",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task39/material-core-web-verification.json",
+          "sha256": "2551e653ddc224a030f350904c54ab8e2a6a672c742f7a0d2169628bf877fead",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task39/material-review-verification.json",
+          "sha256": "c03de7b22e160c06e8fa223378613d67345ffd9d00e7f636f00f11c4f17d555a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task39/material-workbench-verification.json",
+          "sha256": "653d88243dff2dc70085dc395c1fafefd86c68eb67b111d661c0ee7ee251a982",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-40/",
+      "task": 40,
+      "implementationSource": [
+        {
+          "path": "web/src/pages/MyMaterialsPage.tsx",
+          "line": 27,
+          "sha256": "8d6d23f3b54b09a7c275d025141869cbc60e8fc28618452f6b823a6f25f03ce3"
+        },
+        {
+          "path": "web/src/api/warehouse/myMaterials.ts",
+          "line": 8,
+          "sha256": "8027b1ebaa379648b4d6b1b0971bae4039a8328ce4643e3710016e0e1c13f378"
+        }
+      ],
+      "requiredSelectors": [
+        "W(MyMaterialsPage)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/39",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/material-handover-verification.json",
+          "sha256": "e43768aa93119d9123d931d6cf7e47899f4f222c43af04f750953dc87d16e17c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/my-materials-core-verification.json",
+          "sha256": "142ce10b642a0b4af30145c61367f2d7041ea5969b82bc56c692c4c4a2e2e4bd",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/my-materials-read-verification.json",
+          "sha256": "3e426695a271391c049618b1415768dc0052798771bca8c2032df884bc73c6e6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task40/my-materials-serial-return-verification.json",
+          "sha256": "0b485a1c7804daafc8b35032c776a423e37b0064066c3e554c88e932e594848e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-41/",
+      "task": 41,
+      "implementationSource": [
+        {
+          "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+          "line": 14,
+          "sha256": "c87460823e4e39fc97a583ba0251cecc9ad8a766b3db8ab014a7446081f69f72"
+        },
+        {
+          "path": "web/src/pages/CustomerDetailPage.tsx",
+          "line": 103,
+          "sha256": "3d1259fd85b2830e7e450d2ce6b21442cb0a650f77bb495b9b0af2c82bdb26ac"
+        },
+        {
+          "path": "web/src/components/organisms/DiscoveredOnuInbox.tsx",
+          "line": 59,
+          "sha256": "3f7a3925b66dbde13f64147b2a73898d64b5f9c0cd9e7822355ae52bbabb7774"
+        },
+        {
+          "path": "web/src/portal/portalAssets.ts",
+          "line": 6,
+          "sha256": "1419208bcf229e3338b5c409607b84f3a5135faf622338a95098e6f627b75230"
+        }
+      ],
+      "requiredSelectors": [
+        "W(CustomerAssetPanel)",
+        "B(customer-assets.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/40",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/customer-asset-core-verification.json",
+          "sha256": "4786ccdafd59c1bf496e76da2856cb3fa03dfe651fbd61c4b44d146ee5deb63a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/customer-asset-read-verification.json",
+          "sha256": "d0f2c537981f6ccc4733fbf6072cc076d86bc39fc900f878ab8b47cf9df97708",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task41/my-materials-rma-verification.json",
+          "sha256": "b3a352e712fcec97b4e62fd27ee3445aaf35af858c69ae5ae278eb4139a6dabd",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-42/",
+      "task": 42,
+      "implementationSource": [
+        {
+          "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+          "line": 6,
+          "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
+        },
+        {
+          "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+          "line": 16,
+          "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
+        },
+        {
+          "path": "mobile/feature/materials",
+          "directory": true
+        },
+        {
+          "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+          "line": 31,
+          "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
+        },
+        {
+          "path": "settings.gradle.kts",
+          "line": 1,
+          "sha256": "dc313390fb86876fe4e50dd869d85580569cd3eb611eb0b3b1e8a3cf77a71926"
+        }
+      ],
+      "requiredSelectors": [
+        "K"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/41",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-feature-verification.json",
+          "sha256": "21ee4c494bb8eaed61172e4368e7554837f55cca6e281de65444dc914a3ed4d8",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-ios-local-verification.json",
+          "sha256": "6c42bbea60df4609eb13743320c7a6207962315c37af26306b10f6e8f0dc69e7",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-ios-macos-verification.json",
+          "sha256": "0626f0057b571a46155b381c3cc6df18ae9abbca5d5623bfcfb726295ac94838",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task42/material-outbox-foundation.json",
+          "sha256": "6883c72f0904480b92af0247b8d55a41fae7a94198363a3f47924136788364b1",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-43/",
+      "task": 43,
+      "implementationSource": [
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+          "line": 15,
+          "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+          "line": 26,
+          "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
+        },
+        {
+          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+          "line": 15,
+          "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
+        },
+        {
+          "path": "web/src/pages/warehouse/WarehouseProvenancePage.tsx",
+          "line": 21,
+          "sha256": "a25a884e59dac45191c8289ccd2fc076b50e2fe5e8cf23586202cdffc888b8f1"
+        },
+        {
+          "path": "docs/warehouse-migrations.md",
+          "line": 1,
+          "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V177__warehouse_legacy_preservation.sql",
+          "line": 1,
+          "sha256": "dcfa14774e95a35af8d86135889fe03dd2085500f704f23f3189a7eed519cb88"
+        },
+        {
+          "path": "server/src/main/resources/db/migration/V178__warehouse_tenant_finalization.sql",
+          "line": 1,
+          "sha256": "f6b8780d898577c16f2b63298e9d3fd43244d6e32a02a4c921ae04c7a1c9997d"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseMigrationIT)",
+        "W(WarehouseProvenancePage)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/42",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/cancellation-final-verification.json",
+          "sha256": "79244c2c20f0737c3b84cbe57bed4fcabaa5652995ef4e0746e5397f9efdf09e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/cancellation-regression-verification.json",
+          "sha256": "90ba472bee38b8163a030b16815db1aad73bec3163c6c626ca4a5824bcbc1cde",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/current-cutoff-verification.json",
+          "sha256": "c97ffb7aac70488fdd63b0f6123ad9b41432352ba9c1494eff2195c7653f0bad",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/current-identity-verification.json",
+          "sha256": "873bbbe3dacd77fd5889f8ecacf5420d12c2f263d4e7c012d80a240f800a1f06",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/finalization-verification.json",
+          "sha256": "814daae9ce3d1f7f13a19983b6a9b7047d9da4418756bf865ee4f1932642fc7b",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/legacy-closure-verification.json",
+          "sha256": "12306c2bdc17f5da242c1de7b20eb5f9bdf4f622d3165cced01a65d988f3004d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/legacy-fulfillment-verification.json",
+          "sha256": "03111268147afb5b11955bf59b530f6e85651289058e5a7aae9841d14fa0094b",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/migration-evidence-verification.json",
+          "sha256": "54aca96e2756fa3bcefc2160b415557cc17bb3df303e0d17942715c139147169",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/migration-resolution-verification.json",
+          "sha256": "873ddea452c4571c207a6089d7a2175de0bafd3b463376ca92f591b242f65c64",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-admission-verification.json",
+          "sha256": "5482419004684e783b16e47ab2cf550392cca7e762de7a96750f8ad4661b55db",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-directory-verification.json",
+          "sha256": "5aa6324a04f790f3b3edda7ba513d0eeae76cdfcf1dd9899298776647c82abe0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-policy-verification.json",
+          "sha256": "4bd7f1e1f4125b43f97d2ec29f25f901a8c8ac48ebf3f46df5b397c70800727e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-review-verification.json",
+          "sha256": "574812921b9115acf0bec01bc7d4fc97d47172244c8ab011aa7d0a7e4955c8a2",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/opening-web-verification.json",
+          "sha256": "cb7822dee1386fa40265a88653cc4e6925c28469c4e2d2ffc24609e8dbaa121e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/preservation-migration-verification.json",
+          "sha256": "17dcd56f700865408cd19f2c620b0ee1fb75e9c8b4a9cd7bcdb213fcd8372ee9",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/provenance-query-batch-verification.json",
+          "sha256": "510ca5ce9b7c9c8f9dededc097f5ff0b0c4741473d94d547c0348bfc2cbd945c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task43/ui-verification.json",
+          "sha256": "3f03b2d1e412cb115a744dda23cdc0427a718d0caf6e6ac0e2171875d104cf9e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-44/",
+      "task": 44,
+      "implementationSource": [
+        {
+          "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+          "line": 16,
+          "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d"
+        },
+        {
+          "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+          "line": 1,
+          "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseRecoveryIT)",
+        "G(WarehouseConcurrentLifecycleIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/43",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/mixed-material-verification.json",
+          "sha256": "0dfc026eecc0004a41606c0472779605b9e382dd0da67a129caa22ec6f567f53",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/numeric-recovery-verification.json",
+          "sha256": "8866e53d9a875e04155473ab76e7d1e5e2076fe3c594079252bca956295646c1",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/numeric-temporal-verification.json",
+          "sha256": "8a38d3598f50c8354a452ade9e82abac46e4fc7cc5003fbe939aa5aef6870486",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/reassignment-settlement-verification.json",
+          "sha256": "37098d713e3631ac03a9d2ee6cd2681437d147b4aa8429440d653cc0cd8acaf6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/serial-settlement-verification.json",
+          "sha256": "64fb21e6953561a8bb3d1c003b36707bf6a34cc58edb7b443b0927e746d26f60",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task44/usage-order-verification.json",
+          "sha256": "bf07df9e70225e06b70b8355e74fa5ee413ec89162dc59d2610ec33ab4ba49b0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-45/",
+      "task": 45,
+      "implementationSource": [
+        {
+          "path": "web/e2e/warehouse/warehouse-empty-tenant.spec.ts",
+          "line": 1,
+          "sha256": "142edaaab0903536d967af133c8ee5192ecf1f096dd8f1ae20dbb502627e36c0"
+        },
+        {
+          "path": "web/e2e/warehouse/customer-assets.spec.ts",
+          "line": 1,
+          "sha256": "96e3008be3efdb8c28fb13aed7f5b1ec6b8cf263746eecf24edc1eed3e1f666b"
+        },
+        {
+          "path": "web/e2e/warehouse/exceptions.spec.ts",
+          "line": 1,
+          "sha256": "1d7381aa72dff144d340c97f346a700532c5f53ce9f30b74fb359face551c4d7"
+        },
+        {
+          "path": "web/e2e/warehouse/issue.spec.ts",
+          "line": 1,
+          "sha256": "fe022fb029f4897aac26caa250d388cac7f89a1494c2c4d655a90911f8d45733"
+        },
+        {
+          "path": "web/e2e/warehouse/returns.spec.ts",
+          "line": 1,
+          "sha256": "92b85b8bdebd6ded03e9ae27f2edcf0db222559bf4678b8ccbd2ba2cfac82fb5"
+        }
+      ],
+      "requiredSelectors": [
+        "B(warehouse-empty-tenant.spec.ts)",
+        "B(customer-assets.spec.ts)",
+        "B(exceptions.spec.ts)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/44",
+      "currentState": "CURRENT_NONSERVER_AVAILABLE_SERVER_AND_FINAL_REVIEW_PENDING",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/browser-matrix-r5-verification.json",
+          "sha256": "f028f48cbd996ae1065a57ce7a8ea5eb7b63bf3818efc71bf60ac82d536f4157",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/ci-r3-return-reassignment-verification.json",
+          "sha256": "0c6fe127799a96d99a3f6f28893a137564074d20a54ca01e989431b913eef216",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/customer-area-verification.json",
+          "sha256": "9df485fe30da0b55f6b1c93d05d634d4ff13bd6124950ed611a473be570239e0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/customer-assets-browser-verification.json",
+          "sha256": "0f59b9319b7c6c8001188c256ece529bacfb9b9a07e82aa203c6416e43417949",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/customer-removal-web-verification.json",
+          "sha256": "cb6b46be08ba9dc973daf93d489b8b326e2b5c18fc6b64d2b9cf3e5d849cd701",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/issue-return-count-browser-verification.json",
+          "sha256": "5731bac0257515d5acbcdabd62205404bd8703100d1186f0688b548e9031d424",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/legacy-browser-verification.json",
+          "sha256": "5ccfb8a023551f22a802e13363dda0ada46d851b7add6d52f463b7aa77ee5513",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/localized-status-browser-verification.json",
+          "sha256": "68ca7973f10b49e5fd9ca3a8864c2840300dddc2c4beb15e5a138635bf180bf9",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/numeric-1788-visual-review.json",
+          "sha256": "884bb160e5456e21f57f078aac9d16bb0fd0e343847ab0ddb8022d1850864c1d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/numeric-1789-handover-verification.json",
+          "sha256": "b46272bdb3ce6eda4d0094a47cedc4c24b1ace2b5a36657226a8817122fb57ad",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/numeric-browser-verification.json",
+          "sha256": "0ba135276dfe3b7737c64235c4e71a3a9c483c9080e12dda936fb206497d692c",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/numeric-onu-browser-verification.json",
+          "sha256": "df4a215beec408796a77db310a81c61f2823a7629cb9680903c9a0de8dc8ad67",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/rma-category-verification.json",
+          "sha256": "82062ebb8fa23423ddf4f89135e99e780c4f243ade1f8eead57e1ec81a97abc6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/serial-identity-web-verification.json",
+          "sha256": "d4fc585a38be80d0ef545d1e9592629a2bb643d20b6abbb14af29c72272f4f83",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task45/workorder-status-label-verification.json",
+          "sha256": "de23533dc41175371bef82b6f959a1c5ce0e80f67557924eb0fdd47b4900b9fa",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-46/",
+      "task": 46,
+      "implementationSource": [
+        {
+          "path": "server/build.gradle.kts",
+          "line": 1,
+          "sha256": "ca149a31652e646b184eb4f292b3959af0a973bf5235c71a5c6b019856b08de7"
+        },
+        {
+          "path": "scripts/warehouse/qa.sh",
+          "line": 1,
+          "sha256": "a49f51b1f2b9133c3b5560ca0a32473497e01f08b4503c1fb50b6d02faa6d60e"
+        },
+        {
+          "path": "scripts/warehouse/historical-upgrades.sh",
+          "line": 1,
+          "sha256": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2"
+        },
+        {
+          "path": "server/src/test/kotlin/com/duluin/ftth/WorkOrderIT.kt",
+          "line": 36,
+          "sha256": "4d7934d192473964b02fc55a7df41e6ba2cf3e21850eed307959764265f7414d"
+        },
+        {
+          "path": "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt",
+          "line": 29,
+          "sha256": "7ac39bfa5a5077506a5526e54e004f7a095dc98702de184e80bd98b6fe02b015"
+        }
+      ],
+      "requiredSelectors": [
+        "G(WarehouseCompatibilityIT)"
+      ],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/45",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-2c1d8e08-nonserver-verification.json",
+          "sha256": "60561fddaa38ebb803aa55ed299b7c146e79a75ca447fa8b0e147ed2e49e04b0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-64e50573-nonserver-verification.json",
+          "sha256": "7a9462ef3ce81d12c5d13c4371dad65abeee675f7fe4cdfa2ab6f9b572df2921",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-b360-historical-failure.json",
+          "sha256": "90ea6800b62b628174b3f6ee5c1fb0cf4f1e182b786bbdc47a085bcac669002a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-browser-web-shared-r2.json",
+          "sha256": "25955b740a8dbdc00303b7bc5b4c4a7b7fcce3e59fe12ddc2bccf4be737a6501",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-native-legacy-r2.json",
+          "sha256": "586dc7b33cbbb786ca9ad2696803f788e12f811af87d8ab62194978a36db78b6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-r2-complete-server-failure.json",
+          "sha256": "0dacfeef5a602bf76a76d85cf7855a5323ddc85c9d1a10119ddebf779b205bac",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-r4-monitoring-fixture-correction.json",
+          "sha256": "b575db1cfce4e760d0b9fb5b78fe00b0d7dc91ddcb4afc1bbf363dd2a619f094",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/ci-web-shared-native-r1.json",
+          "sha256": "0dc4267607afe6a3b27f570400c0e53d7f6fcb3a87c0635681b2633501cc96a1",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/database-isolation-verification.json",
+          "sha256": "1e1111c4d50bcaffad4a134a05476dff609b60c0040635e5cde103337483c8c4",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/fixture-compile-correction.json",
+          "sha256": "e33d831fc182995b1188c6630c7583e33984bb0c18ec614f021f1391d72ed9b2",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/fixture-validation-checkpoint.json",
+          "sha256": "fada7b2eeb57f703d39a0dbca5dd8e5b25bc614f2ca1d98a0927fc5bc9a8427d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/focused-r3-empty-tenant-failure.json",
+          "sha256": "04041e22cd765ba1d424992bef87bfc51a8aad4c799b3c92154d28c8ed377c4d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/full-server-r3-incomplete-verification.json",
+          "sha256": "94e74ed3cb5ba43c0c88d4d402787772a2de223a50b00816535040496fa14e82",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/full-server-r3-progress.json",
+          "sha256": "f2487b8f8a6427c47a4e581b80322fe4e228f28a84c73d5a90069911ae72462b",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/historical-overlay-reuse-verification.json",
+          "sha256": "74f52e2d2dc39974c632afd6ff8ba688da07910dbe4dac16fa23e84a0f18d48a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/historical-projection-upgrade-verification.json",
+          "sha256": "b184d094e19d654da0f189506f2922e0b8915a36d118838f1dfb5fef597cf018",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/late-regression-corrections-pending.json",
+          "sha256": "183026a5f9360a498ed66296f42b9ba69e754fde69cab558530b73d106248941",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-focused-r2-verification.json",
+          "sha256": "cb01df87a68ad87c79ead9dd5efa4620211f4ab2973dc13a573ad985e0992c7a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-focused-r4-verification.json",
+          "sha256": "4d6b0d1a908c9308b1df12128f7acbeb4c3b54b8d51a39b3fefb005ca1c21915",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-historical-r2-failure.json",
+          "sha256": "e1e0ae95e86e7abd8881bea8fc4b5e32550cdfe0341b423a2163bf54e0dfb024",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-historical-r5-verification.json",
+          "sha256": "37bf5c7ef790066e71817c9b3374e2deeca756cd8fac6e2d3d388b0c8727b68a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/native-source-equivalence.json",
+          "sha256": "c692670d0e2b47804e2faff7c23a68f33cd8b8dc78fbaa77c24e85a669f28a7f",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-browser-reassignment.json",
+          "sha256": "9ab6a51dcdf770cb63ade72f75082743295b6929fc1c4ffb90d19a8babbdf9c0",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-deployment-orphan.json",
+          "sha256": "6860f4a304271747c6868eb65d6274348b280a4e9c9eaa049f86fa02ff7115e1",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-episode-upgrade.json",
+          "sha256": "aea25b1fcff89b5110cc8b0fbb6773c6fd76d342f41f56562de21d133139ea40",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-handover-source-denial.json",
+          "sha256": "7fc8bc5086581759ba9857fb99a396579e68b8f9fa5e5a158a9c6f38c057396d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-historical-upgrades.json",
+          "sha256": "d068c19ec16c949498f2c42fac31193ddb54513bd809329a5019bdbf5059eece",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-legacy-preflight.json",
+          "sha256": "e8d482f0503c24186fd2ca0a773cce77268120fad211c9ca088a95aaddacb52a",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-network-fixtures.json",
+          "sha256": "afc7f63a3479dd3b8954f3d565209bbe522cd1dee49c93e3f58fe7efa7523663",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-patch-manifest.json",
+          "sha256": "8054d80c75b79cfb93465915dfaacce1b66ccaa3b39efd4645e4512736ecdd26",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/pending-template-action.json",
+          "sha256": "e6140fa60cb213fa4676a6da6ac8213e1f71fc1e44fbced26df909ed1feb69b6",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/plan-qa-source-inventory.json",
+          "sha256": "17cc4bb1a12a76985e7297c8940b7add9193bbcca39df584146949b557e26f5b",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/portal-contact-verification.json",
+          "sha256": "3e9e06ed7dd1baf7f53c9bd117db4e05a5226b39968e92354a68b33b43b9828d",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/qa-function-recovery-verification.json",
+          "sha256": "f1da53f8f12dd64de9bab9ff51be6d4d96ac0b73d4017c9b4e21d5a047d15385",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task46/return-state-contract-correction.json",
+          "sha256": "9da14591915ae2833adc8b91b1766fca71f7f344acfa9222e4033d37fa772c4e",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-47/",
+      "task": 47,
+      "implementationSource": [
+        {
+          "path": "docs/warehouse.md",
+          "line": 1,
+          "sha256": "d515cd3cb3d38955c03ccea64630bc46bf93c9bf9f32907d66fbe7fa55cc09dc"
+        },
+        {
+          "path": "docs/warehouse-review.md",
+          "line": 1,
+          "sha256": "070aa20fa40417ee5f2d5c10317e5e7a768b6130f1ae425a02afbb2a608c66c9"
+        },
+        {
+          "path": "docs/warehouse-migrations.md",
+          "line": 1,
+          "sha256": "7023ea7a91a66922e841c4c93802c24f487eb2afec86d62ac4327f8e3912aa94"
+        },
+        {
+          "path": "docs/work-order.md",
+          "line": 1,
+          "sha256": "ce742ca72f391fb6fecacf3493185b1eabe2ab467d9c7384924cfab44705bb34"
+        },
+        {
+          "path": "docs/mobile.md",
+          "line": 1,
+          "sha256": "fc1872cebc4a7842183ba38b8bffb1eafccbdf02e3d4bf91a0c5916eca5ff807"
+        },
+        {
+          "path": "deploy/DEPLOY.md",
+          "line": 1158,
+          "sha256": "465d96303300c1c003483b0513b1e5bd5780bb688d26a02624d0d970be3e10d9"
+        },
+        {
+          "path": "scripts/warehouse/preflight.sql",
+          "line": 1,
+          "sha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338"
+        }
+      ],
+      "requiredSelectors": [],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/46",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/ci-r3-upgraded-preflight-verification.json",
+          "sha256": "e8c37fb4e1e696a5934cab92609addf55e60e4362f00fc35d6c5034c4b15cbb5",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/current-runbook-verification.json",
+          "sha256": "0ac543ebf151366fe925a2099ecc4198c9a0ba09ec16e24b09f7b367a42677cc",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task47/local-preflight-r3-verification.json",
+          "sha256": "a3cc97a3c40818b34c56af8dd8d8c9179f184a0a20cee70319d259c4d0864ea5",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    },
+    {
+      "targetDirectory": ".omo/evidence/warehouse-workorder-asset-provenance/task-48/",
+      "task": 48,
+      "implementationSource": [
+        {
+          "path": ".github/workflows/warehouse.yml",
+          "line": 1,
+          "sha256": "3037ccfddecf452380ff4036ed50d3ec0d7368a971900a300f96496ce78c3de5"
+        },
+        {
+          "path": ".github/workflows/deploy.yml",
+          "line": 1,
+          "sha256": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20"
+        },
+        {
+          "path": "scripts/warehouse/ci-results.py",
+          "line": 12,
+          "sha256": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912"
+        },
+        {
+          "path": "scripts/warehouse/ci-artifacts.py",
+          "line": 1,
+          "sha256": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f"
+        },
+        {
+          "path": "scripts/warehouse/publish-images.py",
+          "line": 1,
+          "sha256": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e"
+        },
+        {
+          "path": "scripts/warehouse/image-smoke.sh",
+          "line": 1,
+          "sha256": "0b3eb2c7e58ecd62c79d8649043b0abfddc563ca00ffb861812a9fc21a2474ed"
+        }
+      ],
+      "requiredSelectors": [],
+      "currentIndependentMapping": "f1-compliance-source-evidence.json#tasks/47",
+      "currentState": "REJECT_PREREQUISITES_AND_PENDING_CURRENT_SERVER",
+      "historicalSafeReferences": [
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/ci-foundation-verification.json",
+          "sha256": "66b40cba573ef469ec14fcea0ba4a0d71a077bba32388737fbefb87ee8f16f51",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/current-release-guard-verification.json",
+          "sha256": "268897c49d16ca0ccc0342a2fc21597d087407d94a1ed80ffaf2b6ff732f8ac4",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/docker-image-smoke-verification.json",
+          "sha256": "7c678450de2b466f43ea4e45fb5ee005bfb3914db61a8e984812247c5b2138d5",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/interrupted-gradle-evidence-verification.json",
+          "sha256": "869fda78b5d492d95e78bac6bc9ac29ea69860046ebe59ad7162f3f64c90e571",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        },
+        {
+          "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/minio-source-verification.json",
+          "sha256": "f731372718b4075617e4e4cac394f8c8c1834c0c1c4cca379419442c6cb96514",
+          "authority": "REFERENCE_ONLY; content/source/command/counts require validation"
+        }
+      ],
+      "missingHistoricalDirectory": false
+    }
+  ]
+}

@@ -42,7 +42,7 @@ class DiscoveredOnuPersistenceAdapter(
     override fun findById(id: UUID): DiscoveredOnu? = jpa.findById(id).orElse(null)?.toDomain()
 
     override fun findBySerialNumber(serialNumber: String): DiscoveredOnu? =
-        jpa.findBySerialNumber(serialNumber.trim().uppercase())?.toDomain()
+        jpa.findBySerialNumberAndStateNot(serialNumber.trim().uppercase(), DiscoveredOnuState.PROVISIONED)?.toDomain()
 
     override fun findByState(state: DiscoveredOnuState): List<DiscoveredOnu> =
         jpa.findByStateOrderByLastSeenAtDesc(state).map { it.toDomain() }

@@ -2,7 +2,7 @@ package com.duluin.ftth.inventory
 
 import com.duluin.ftth.inventory.application.service.InventoryMovementLedgerService
 import com.duluin.ftth.inventory.application.service.InventoryReconciliationService
-import com.duluin.ftth.inventory.application.service.MaterialConsumptionService
+import com.duluin.ftth.inventory.legacy.LegacyMaterialCharacterization as MaterialConsumptionService
 import com.duluin.ftth.inventory.application.service.CycleCountCommand
 import com.duluin.ftth.inventory.domain.model.*
 import org.assertj.core.api.Assertions.assertThat

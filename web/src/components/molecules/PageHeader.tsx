@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Text, typographyStyles } from '@fluentui/react-components'
 
 /**
  * Kepala halaman ala Azure: judul + subjudul di kiri, slot aksi (CommandBar) di
@@ -10,16 +9,19 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  icon,
 }: {
   title: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
+  icon?: ReactNode
 }) {
   return (
     <div className="page-header">
+      {icon && <span className="page-header-icon" aria-hidden="true">{icon}</span>}
       <div className="page-header-text">
-        <h1 className="page-title" style={typographyStyles.title1}>{title}</h1>
-        {subtitle && <Text as="p" className="page-sub" size={300}>{subtitle}</Text>}
+        <h1 className="page-title">{title}</h1>
+        {subtitle && <p className="page-sub">{subtitle}</p>}
       </div>
       {actions && <div className="page-header-actions">{actions}</div>}
     </div>

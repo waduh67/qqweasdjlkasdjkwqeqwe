@@ -1,0 +1,13 @@
+{
+  "status": "APPLIED_SAFE_INDEX_REFRESH_NOT_FINAL_ACCEPTANCE",
+  "sourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "canonicalIndexesVerified": 48,
+  "historicalBlocksVerified": 192,
+  "candidateArtifactLocation": "Private reviewer preparation; every canonical target in the manifest contains those exact candidate bytes",
+  "manifestSha256": "e03474ae048b687fa7edd225787c0035edd1e01e9befd0abb28d24ad5b00492f",
+  "laterSourceDelta": [
+    "web/src/pages/MyMaterialsPage.tsx",
+    "web/src/components/organisms/warehouse/WarehouseStatus.tsx"
+  ],
+  "laterDeltaProof": "task46/local-residual-receipt-copy-r2.json"
+}

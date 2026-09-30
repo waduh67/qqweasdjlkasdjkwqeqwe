@@ -1,0 +1,14 @@
+package com.duluin.ftth.inventory.application.port.outbound
+
+import com.duluin.ftth.inventory.WarehouseApprovalAttempt
+import com.duluin.ftth.inventory.WarehouseApprovalStatus
+import java.time.Instant
+
+enum class ApprovalPostingKind { RECEIPT, OPENING_BALANCE, TITLE_CORRECTION, RETURN_TITLE, ADJUSTMENT, COUNT, LOSS, SCRAP, DISPOSITION_REVERSAL, ASSET_LOSS }
+
+class ReceiptPostingApproval internal constructor(val attempt: WarehouseApprovalAttempt, val expiresAt: Instant,
+    val policyHash: String, val sourceHash: String, val cutoverEpoch: Long, internal val transactionId: String,
+    internal val kind: ApprovalPostingKind = ApprovalPostingKind.RECEIPT)
+
+class ApprovalPostingStopped(val approval: ReceiptPostingApproval, val status: WarehouseApprovalStatus) :
+    RuntimeException("Approval posting stopped: ${status.name}")

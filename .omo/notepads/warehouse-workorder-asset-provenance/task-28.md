@@ -1,0 +1,602 @@
+# Task28 — independent loss, scrap and compensation (in progress)
+
+## Task28 COMPLETE —183 affected regression tests green
+
+asset-loss-regression against c09c6da9 completed183 tests/11 suites with zero
+failures/errors/skips in13m20s. Replacement48, ownership72, episode revisions30,
+returned dispositions17, compensation12, actual returned-device reuse1 and
+modularity3 all passed. Owned QA stopped cleanly with volumes retained. Portable
+sanitized evidence: task28/existing-flow-regression-verification.json.
+
+Together with30 disposition/compensation guards,6 compensated-asset reuse cases
+and15 active-loan-loss/guard cases already verified, task28 acceptance is satisfied:
+approved document-bound exact quantities; immutable original costs/evidence;
+independent policy approvals; loss of a live ISP loan closes the existing episode
+without fake recovery; customer-owned SALE property is denied; exact original
+posting linkage for correction; closed/reused/installed downstream state cannot
+be casually reversed. Plan task28 is now checked. Compensation remains scoped to
+returned LOSS/SCRAP, as documented; arbitrary ledger rewrites are not exposed.
+All migrations through147 remain immutable;148 next unused, reserve before use.
+
+Whole plan remains ACTIVE. Task30 initial report foundation4414f9b6 is pushed;
+its7-case reports-initial QA is now running, NOT yet green. See task-30 notes.
+30–48 and F1–F4 remain. Continue autonomously with commits, remote checkpoints,
+sanitized evidence and recovery notes. No main merge/deploy/reset.
+
+## Task28 active-loan loss VERIFIED — existing-flow regression running
+
+asset-loss-guards against c09c6da9 passed15 tests /3 suites, zero failures/errors/
+skips,3m7s. Both primary LOAN/SALE paths and10 safety scenarios passed.147 applied
+22:49:14.237 JKT and is immutable: 5da98c83d788aa398a8b70e43e583b2fa1f694e25dd9bf334c27f8f25cccb31f.
+All143–147 migrations are immutable;148 next unused, reserve before creation.
+Owned QA stopped cleanly with volumes retained. Portable sanitized evidence:
+.omo/evidence/warehouse-workorder-asset-provenance/task28/active-loan-loss-verification.json.
+
+An accepted active ISP loan can now be independently declared lost without fake
+removal/return records. Exactly one approved LOSS closes its existing assignment
+and customer episode and queues provisioning atomically, retaining original loan,
+handover, installation and telemetry history. Actual recovery during pending
+approval becomes durable STALE; races produce one closure. Direct SQL pending
+effect/assignment closure, requester/delegation, unknown cost and revoked replay
+are denied. Scope filtering precedes pagination. Rebuild and pending replacement
+permit retirement both passed. Existing returned-disposition/compensation proof
+was already30 green; actual compensated-device reuse was6 green separately.
+
+Current .omo/runtime/asset-loss-regression.sh / .log checks CustomerAssetReplacementIT,
+CustomerAssetOwnershipIT,CustomerAssetEpisodeRevisionIT,WarehouseDisposition*IT,
+WarehouseCompensation*IT,WarehouseReturnITReuse and ModularityTests. Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/asset-loss-regression/xml;
+private DB log asset-loss-regression-database.log. Do not assume count/result yet.
+Product main remains c09c6da9. Wait for this affected existing-flow regression,
+then save evidence and assess task28 acceptance before marking complete.
+Task28 and whole-plan still OPEN;30–48/F1–F4 pending. Docs/warehouse-dispositions.md
+now describes actual return compensation and active loan loss contracts.
+All current checkpoints are pushed with explicit local SSH key; no main merge,
+deploy or reset. Goal remains active until the whole plan is actually finished.
+
+## Task28 lost-loan outbox binding fix — 15-case validation running
+
+20bb5ce9 is published. asset-loss-evidence-fixed executed5 tests/1 failure,
+0 errors/skips,1m56s.146 applied22:46:28.708 JKT, immutable: d7126fe6d9ab06ef9415d3ebbebf86de03193a142359d7db31c0bd6c8968f837.
+LOAN draft/replay/get/list, policy-derived approval request and requester403 passed.
+The checker effect reached COMMIT but rolled back because144 compared the outbox
+payload with the approval response. PostingDocuments correctly emits the physical
+posting/legs snapshot instead. SALE rejection and3 modularity tests passed.
+
+147 was reserved before creation and changes that comparison to the exact expected
+posting JSON derived from the two actual ledger legs, including identity, custody,
+condition, title, quantity, unit, document line and endpoint; no approval/stock/episode
+guard was removed. Actual source validation and all existing ledger rows remain.
+
+Current .omo/runtime/asset-loss-guards.sh / .log selects WarehouseAssetLoss*IT
+(2 primary journeys +10 guards) and ModularityTests3, expected15. Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/asset-loss-guards/xml;
+private DB log asset-loss-guards-database.log. Do NOT claim147 applied or tests green
+until execution confirms.148 next unused after147 applies. All143–146 immutable.
+When these pass, run the relevant removal/return/compensation regressions, persist
+sanitized verification and assess task28 acceptance before marking complete.
+Whole-plan goal remains active;30–48/F1–F4 pending. No main merge/deploy/reset.
+
+## Task28 active-loan loss query fixes — five-case verification running
+
+0200fecf is published. Its asset-loss-effect run executed5 tests/2 failures,2m1s.
+144 applied22:42:24.363 JKT and is IMMUTABLE:
+41ffc26a006cdc7b55ac1ffd4e07e02bfc1b5abbd52c05d2bdce4bf846089708.
+Both cases stopped in the shared deployment validator at an unqualified
+`authorization_id` introduced by144.145 was reserved first and qualifies only
+those references; no validation was removed.145 applied22:44:24.291 JKT, immutable:
+95037d52b3ae6acf430c8a5c2c49d9ffafe7b47ac8931cf30812115c87bdeba4.
+
+The asset-loss-effect-fixed run executed5 tests/1 failure,1m40s: SALE rejection
+and3 modularity cases passed. LOAN reached draft source capture then failed on
+PostgreSQL precedence in `body->'evidence'-'receivedAt'`.146 was reserved first
+and adds only the necessary parentheses in the143 function, forward-only.
+
+Authored10 WarehouseAssetLossGuardsIT scenarios plus shared fixture: real recovery
+while approval waits -> durable stale; raw SQL effect/assignment closure denied;
+unknown receipt cost; simultaneous approvals; reject/fresh request; requester
+through delegation; revoked replay; scoped/redacted pagination; projection rebuild
+with dated telemetry preserved; pending replacement authorization retirement.
+These10 cases are NOT verified yet. Current .omo/runtime/asset-loss-evidence-fixed.sh
+/ .log still selects only WarehouseAssetLossIT2 + ModularityTests3 to verify the
+complete effect first. Archive task28/asset-loss-evidence-fixed/xml, private DB log
+asset-loss-evidence-fixed-database.log. No146 apply or LOAN green claim yet.
+
+After that run succeeds, run all12 asset-loss cases + relevant existing removal,
+return disposition/compensation and modularity regressions. Keep task28 OPEN until
+this source path and its guards pass. All143–145 bytes immutable;147 next unused
+once146 applies. Whole-plan goal active;30–48/F1–2–3–4 remain pending.
+Remote checkpoint command uses explicit local key (see previous note).
+
+## Task28 active-loan loss effect checkpoint — validation pending
+
+143 applied 22:34:18.972 JKT and is immutable:
+d613a31245fe294a38113ff109e3fb52b4467d348f2d6d642cae02bc23f57936.
+Request run: 5 tests, 2 failures, 1m56s. Both fixtures first stopped before the new
+API because signature replacement lacked correctionReason. Fixed fixture signed
+assessment revision then ran5 tests/2 failures/1m50s: LOAN reached new document
+insert and exposed a source FK error (handover ID differs from its posting document
+ID); SALE material-summary helper was not appropriate after accepted sale. The
+request now resolves the actual acceptance operation ID;144 fixes the immutable143
+assertion forward. Fixture reads WO revision directly and does not manufacture stock.
+
+144 was reserved BEFORE creation and now implements the ASSET_LOSS approved effect:
+LOSS policy / one LOSS movement / exact paired CUSTOMER_INSTALLED -> LOST legs,
+original title and quantity retained, one DISPOSED event and immutable approval
+source. It seals current source and closes the existing assignment. Customer and
+fulfillment implement public inventory ports for atomic episode retirement and
+provisioning outbox; original deployment/handover/obligation rows stay intact.
+New loss-linked ONU event/retirement records preserve customer history. Unconsumed
+permits depending on the lost assignment are retired and cannot later be consumed.
+Existing removal and return validators remain intact; historical title/deployment
+validation accepts only a complete sealed loss effect. RLS, old/new deferred routes,
+replay, current source checks and exact ledger projection reconciliation apply.
+
+Current .omo/runtime/asset-loss-effect.sh / .log selects WarehouseAssetLossIT (2)
+and ModularityTests (3), expected5. Archive task28/asset-loss-effect/xml; private
+DB log asset-loss-effect-database.log. No144 apply or green effect claimed yet.
+Check execution before editing SQL. Once applied144 is immutable;145 next unused.
+Next add stale/recovery/title, self/delegate, competing approvals, direct-SQL
+forgery, scope/replay, unknown cost, old permits and rebuild guards; then task28
+completion evidence. Task28 and whole-plan remain OPEN;30–48/F1–F4 pending.
+
+Push f88ba8a5 initially failed public-key authentication. Explicit local key works:
+env -u GIT_SSH_COMMAND -u GIT_SSH git -c core.sshCommand='ssh -i /home/fajar/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes' push origin HEAD:refs/heads/feat/warehouse-workorder
+Confirmed f88ba8a5 published. Do not print private key/env credentials.
+
+## Task28 active-loan loss draft checkpoint — validation pending
+
+Added InventoryAssetLossApi, request/get/scoped-list at /api/v1/warehouse/asset-losses,
+WarehouseAssetLossService/Store/models and HTTP error mapping. Request binds an
+accepted LOAN handover, active ISP assignment, exact physical identity/position,
+assignment/title/WO revisions, current evidence object and original receipt cost.
+Replay preserves the original draft after current authority/location/cutover checks.
+No customer name, address, evidence object key or cost appears in the public view.
+
+V175.143 was reserved before creation. inventory_asset_loss_request is forced RLS
+and append-only, captures actual assignment/asset/segment/balance/handover/customer
+installation/ONU revision/evidence/WO/cost rows, and seals one DRAFT0 ASSET_LOSS
+header/line with no posting. Do NOT assume143 applied until the run log confirms.
+All migrations through142 remain immutable. Next SQL must use144 after143 applies.
+
+Current .omo/runtime/asset-loss-request.sh / .log selects WarehouseAssetLossIT
+(LOAN full approval journey, SALE rejection) and ModularityTests (3), expected5.
+Archive task28/asset-loss-request/xml, private DB log asset-loss-request-database.log.
+The approval owner/effect/episode retirement are not implemented yet, so the LOAN
+journey is expected to stop after draft/replay/read at approval. Inspect actual
+execution and migration state before editing SQL or claiming test results.
+
+Next: ASSET_LOSS maps LOSS policy and posts exactly one approved LOSS from customer
+custody to LOST, closes assignment and retires its customer episode in the SAME
+transaction, persists recovery closure and a provisioning outbox. Revalidate all
+captured source revisions; stale/rejected decisions cannot move stock. Extend
+historical deployment/title validation forward to accept the sealed loss closure,
+without fake removal/return records. Add independent/delegated, stale/recovery,
+concurrent, SQL-forgery, replay/scope, rebuild and title/customer-property guards.
+Task28 and whole-plan remain OPEN. Prior6 actual reuse cases and30 combined cases
+are GREEN and portable evidence was published at04ffd8ef (product567a3113).
+
+## Task28 asset compensation VERIFIED; active loan loss remains open
+
+The compensation-asset run against f87b1f21 passed 6 tests / 3 suites, zero
+failures/errors/skips, 2m49s. Both LOSS and SCRAP assets were actually recovered,
+compensated, reset/inspected, issued and installed to a different customer. An old
+correction using the CURRENT return revision was denied; committed replay stayed
+nonphysical and all old/new assignment and ONU histories remained intact.
+The existing plain asset reuse test and 3 modularity tests also passed.
+Portable evidence: .omo/evidence/warehouse-workorder-asset-provenance/task28/asset-compensation-verification.json.
+Owned QA stopped; volumes retained. Product main remains 567a3113. All work through
+f87b1f21 was pushed to origin/feat/warehouse-workorder.
+
+Scope assessment: task28 needs an approved LOSS path for an unrecovered ISP loan,
+not only inspected RETURN dispositions. Current active assignments remain recoverable
+and cannot be written off. Implement a separate document-bound ASSET_LOSS request
+and LOSS-policy approval, preserving original deployment/handover records and title,
+retiring the assignment and customer episode atomically with a single LOSS posting.
+Require actual asset/assignment/title/WO/source revisions and evidence; exclude SALE
+customer property, independent self/delegate approval, no fake physical removal or
+return intake. Recheck changed installation/title/recovery state at decision time.
+Expose recovery closure from approved loss without changing the original obligation.
+143 is next unused; reserve before creation. All migrations through142 immutable.
+Task28 and whole-plan goal remain OPEN; 30–48/F1–F4 still pending.
+
+## Task28 return disposition and compensation VERIFIED — asset reuse test running
+
+The compensation-guards run against567a3113 product source passed30 tests/6 suites,
+0 failures/errors/skips,4m54s. All20 earlier disposition/modularity cases plus2
+LOSS/SCRAP compensation/reinspection journeys and8 compensation guards passed.
+142 applied22:19:08.476 JKT and is IMMUTABLE:
+f792dc3f6d64f6190dac9b575e5c74e66022a6fc41ae4922f8a12aeeb4cff83a.
+Owned resources stopped with volumes retained. Portable sanitized evidence:
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-verification.json.
+It records all30 names/counts, XML digests, source main-tree and138–142 checksums.
+
+Compensation now restores exactly one whole piece to Q, reopens its outstanding
+return obligation, requires fresh accepted inspection before availability, preserves
+original posting/history, and produces one linked REVERSAL. Closed material
+settlement, closure while approval waits, competing/rejected corrections, direct
+SQL pending effects, available-bin restoration and revoked replay all behave as
+required; current projections rebuild correctly.
+
+New WarehouseCompensationAssetIT has2 actual LOAN LOSS/SCRAP recovery -> approved
+compensation -> reset/inspection -> normal issue -> different customer installation
+journeys. It then uses CURRENT return revision to attempt another correction of
+the old disposition, expects SOURCE_NOT_VERIFIED409, and checks the new installation
+and old episode remain intact. Original correction replay must stay nonphysical.
+These2 new tests were not in the30-case run and have not passed yet.
+Current .omo/runtime/compensation-asset.sh / .log selects those2, the existing
+WarehouseReturnITReuse (1), and ModularityTests (3): expected6. Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-asset/xml;
+DB log compensation-asset-database.log. Product main is unchanged since567a3113.
+
+Task28 stays OPEN until the remaining acceptance and source-scope assessment are
+finished. Assess the plan's loan-obligation approved-loss requirement before
+claiming complete: currently disposition accepts inspected RETURNs, and compensation
+accepts their exact loss/scrap movements. It cannot yet write off an unrecovered
+active customer loan or arbitrary issued/warehouse/vendor stock.143 is next unused
+SQL version; reserve before creation. All SQL through142 is applied immutable.
+Whole-plan goal remains active;30–48/F1–F4 remain. No main merge/deploy/reset.
+
+## Task28 compensation outbox checkpoint — 30-case regression pending
+
+Published6cca7fd1 compensation-effect ran5 tests/2 suites,2 failures,0 errors/skips,
+2m5s.141 applied22:16:00.258 JKT and is IMMUTABLE:
+636454e183295ddb3e433cb7a2e1e5056a4881f8dacafc450a12d7ab4e8baac0.
+
+Both real reversal requests and approval requests passed, and requester self-decision
+was denied. Checker posting rolled back at inventory_outbox_event_kind_check:
+the new DISPOSITION_REVERSED event needed a forward enum-constraint extension.
+142 reserved before creation and adds only that event, preserving the existing
+outbox check.141/140 and earlier SQL are untouched.
+
+Added8 WarehouseCompensationGuardsIT cases: closed settlement before request;
+closure after approval request -> durable STALE; concurrent corrections -> one
+reversal; rejected source immutable/fresh request; available-bin destination denied;
+revoked scope denies committed replay; raw SQL pending effect denied; rebuild
+preserves exactly one restored piece and original posting. These are authored,
+not yet verified. Specific installed/reused-asset compensation and broader loss
+scope remain outstanding, along with task28 completion evidence.
+
+Current .omo/runtime/compensation-guards.sh / .log selects WarehouseCompensation*IT,
+WarehouseDisposition*IT and ModularityTests (expected30 tests/6 suites). Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-guards/xml;
+DB log compensation-guards-database.log. Inspect execution before claiming142
+applied or any compensation committed. Initial20-green disposition evidence remains
+portable at adb4ca79; task28 remains OPEN. Next source change must preserve current
+validation identity; no DB reset or applied-migration edits.
+
+## Task28 compensation effect checkpoint — 141 authored, validation pending
+
+Published base27ec2709 compensation-request actually executed5 tests/2 suites,
+2 failures,0 errors/skips,1m59s. Both LOSS/SCRAP compensation draft201 and exact
+replay succeeded; both stopped at approval/request because owner was missing.
+140 applied22:10:14.007 JKT and is IMMUTABLE:
+ebbc1297ff12996825eac5601ec7367b282e8f564b25eacd9eaaa35343f0fd4e.
+
+This checkpoint adds WarehouseCompensationAdmission/Owner/EffectStore. It maps
+DISPOSITION_REVERSAL to ADJUSTMENT policy, binds the compensation snapshot into
+approval source, rechecks original source/current sink/WO/material/asset revisions,
+and posts one REVERSAL linked to originalPostingId. A matching single
+DISPOSITION_REVERSED outbox event is wired in PostingDocuments and approval event
+lookup. The nonphysical warehouse.return.restore step advances only return history
+back to RECEIVED_IN_INSPECTION/QUARANTINE. Old posting stays POSTED1; no original
+ledger rewrite. Generic rework requires a fresh compensation request.
+
+141 was reserved BEFORE creation. It captures approved live source, enforces one
+compensation per original movement, exact paired legs/approval/operation/outbox and
+return transition, and routes old/new row changes through deferred guards. It
+extends140 DRAFT lifecycle and existing return validators forward. Existing139
+settled-return calculation already excludes restored Q until fresh accepted
+inspection. Current ledger guard allows later legitimate reinspection/reuse.
+
+Current .omo/runtime/compensation-effect.sh / .log selects WarehouseCompensationIT
+(2 full reversal/reinspection journeys) and ModularityTests (3). Archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-effect/xml;
+DB log compensation-effect-database.log. No141 successful apply or test result
+claimed yet; check logs before modifying SQL. Never edit140 or older applied SQL.
+Next add closed-before/after-request, competing/rejected/duplicate corrections,
+revoked scopes, raw SQL bypass, rebuild and reused installed asset rejection.
+Task28/whole-plan goal remain active; vendor/outstanding loss scope still open.
+
+## Task28 compensation draft implementation checkpoint — validation pending
+
+The published20-green initial return-disposition evidence is adb4ca79 (product
+18447663). Overall task28/whole-plan goal remain open. New work in this checkpoint:
+InventoryCompensationApi, typed input/view/context/record, WarehouseCompensationService,
+WarehouseCompensationStore and controller. POST/GET/list are under
+/api/v1/warehouse/dispositions/{dispositionId}/compensations; GET detail adds/{id}.
+
+Request requires original POSTED1 LOSS/SCRAP, its actual APPLIED movement and
+linked latest return revision, whole remaining ISP sink position, no prior linked
+compensation, no active assignment/reservation, and an open material lifecycle.
+WO is locked through the public port before topology/return/stock. The new
+source captures WO/asset/material revisions; destination is quarantine only.
+Immutable actor/key replay returns original draft after current access checks.
+List authorizes original locations before querying and filters new quarantine
+destination scope before pagination; DTOs expose no cost/customer fields.
+WarehouseReturnStore.position gains explicit status parameter default QUARANTINE,
+with compensation passing LOST/DISPOSED. Existing callers retain Q behavior.
+
+140 was reserved before creation. inventory_compensation_request has forced RLS,
+append-only snapshots, actual original effect/ledger/return/material source capture,
+and exact DRAFT0 header/line/no-posting seal. DISPOSITION_REVERSAL is admitted as
+new document kind. New SQL is not yet known applied: inspect current run before
+changing it;139 and older remain immutable. No compensation approval owner or
+physical effect is implemented yet; 141 or later must extend lifecycle forward.
+
+Current .omo/runtime/compensation-request.sh / .log selects WarehouseCompensationIT
+(2 real LOSS/SCRAP reversal journeys) + ModularityTests (3). Archive is
+.omo/evidence/warehouse-workorder-asset-provenance/task28/compensation-request/xml,
+database log compensation-request-database.log. Expect new request to progress
+to approval/request missing owner; do not call these5 tests green without logs.
+No changes to main/deploy; checkpoints push HEAD:refs/heads/feat/warehouse-workorder.
+
+Next effect: add ApprovalPostingKind.DISPOSITION_REVERSAL, map policy to ADJUSTMENT
+without taking existing ADJUSTMENT owner from transfer discrepancy. Seal approval
+source with compensation record; revalidate current sink and material revision
+before decision and posting. One new REVERSAL movement compensates original ID,
+restores QUARANTINE/QUARANTINE at target, preserves owner/quantity and original
+posting. Exactly one explicit matching outbox kind; update both PostingDocuments
+default kind and WarehouseApprovalStore.event selection. Add linked nonphysical
+warehouse.return.restore step, original return history validators, new effect
+capture/exact deferred guards and old/new table routing. Original139 effect already
+allows later return revision and uses generic current ledger reconciliation.
+Reject closed settlement, duplicate reversal, downstream reused/installed/consumed
+state. Reinspection after restoration must be required before availability and
+returned residual re-settlement. Task28 also needs broader loss scope assessment.
+
+## Task28 initial return LOSS/SCRAP VERIFIED — compensation remains open
+
+The disposition-verified run against18447663 product source completed20 tests/4
+suites,0 failures/errors/skips,2m42s. All2 residual LOSS/SCRAP settlement journeys,
+11 source/permission/concurrency/replay/integrity guards,4 serialized LOAN/SALE
+cases, and3 modularity checks passed. Owned QA cleanup completed with volumes
+retained. Portable sanitized evidence is committed at
+.omo/evidence/warehouse-workorder-asset-provenance/task28/return-disposition-verification.json.
+It contains every test name/count, XML digest, product main-tree identity and
+138/139 checksums; raw private XML/logs remain excluded from commits.
+
+Verified behavior: independent posting moves the exact quantity once, preserves
+original returned quantity and old customer assignment history, and closes the
+returned residual obligation without new physical postings on WO settlement.
+Customer title, bad quantities, unknown cost, currency mismatch, direct SQL fake
+effects, requester delegation, revoked scope and stale sources reject correctly.
+Competing approvals produce one effect; both MM and serialized projections rebuild.
+All10 old return/approval regressions also passed in preceding28-case mixed run.
+
+Task28 is still OPEN. WarehouseCompensationIT has2 authored but unexecuted cases;
+its proposed endpoint is not implemented. Next: a new DISPOSITION_REVERSAL source
+kind with ADJUSTMENT policy, actual original movement linkage, independent approval,
+current disposed position and closed-material lifecycle checks, and one paired
+REVERSAL restoring QUARANTINE plus a nonphysical return-history step. Preserve
+original posting; reject duplicate/reused/installed/consumed rollback. Broader
+vendor/outstanding loss paths still need assessment.140 is available but NOT yet
+reserved/created.138 and139 remain immutable. Overall goal continues beyond28.
+
+## Task28 exact outbox/error contract checkpoint — 20-case rerun pending
+
+The disposition-guards combined run against dac2434b completed28 tests/8 suites,
+12 failures,0 errors/skips,6m18s. All10 return/delegation/expiry regressions and
+3 modularity checks passed. New disposition source-stale, unknown-cost and scoped
+paging checks passed. Failed positive posts raised
+DISPOSITION_EXACT_APPROVED_POSTING_REQUIRED because PostingDocuments generated a
+default DISPATCHED event in addition to supplied DISPOSED. Its new LOSS/SCRAP
+mapping now derives DISPOSED, retaining the existing exactly-one-event DB guard.
+No139 SQL changes;139 remains applied immutable.
+
+Customer-owner and invalid-quantity requests were rejected in the service but
+escaped as ServletException: the new controller was missing from WarehouseHttpErrors
+assignableTypes. Added it, preserving existing error/status contracts. The new
+delegation test failed while creating the grant (INDEPENDENT_APPROVER_REQUIRED):
+its delegator was not configured in policy. Corrected fixture policy to include
+requester + independent checker before requesting approval, then delegates after
+request to test actual decision-time requester exclusion.
+
+Added2 source-control guards (USD vs IDR policy and raw SQL pending-approval effect)
+and docs/warehouse-dispositions.md with current supported workflow/limits. Current
+.omo/runtime/disposition-verified.sh / .log selects only WarehouseDisposition*IT
+and ModularityTests: expected20 tests (2 residual,11 guards,4 asset,3 modularity).
+Archive task28/disposition-verified/xml, DB log disposition-verified-database.log.
+Results pending; do not claim committed disposal until this run passes.
+
+WarehouseCompensationIT is separately authored (2 LOSS/SCRAP cases) and NOT in that
+run. It expects POST /dispositions/{id}/compensations, then independent ADJUSTMENT
+approval of a new document, one REVERSAL linked to the original movement, restored
+QUARANTINE, outstanding17.5m until fresh inspection, original history unchanged,
+replay/duplicate protection. No compensation implementation or140 migration exists.
+Use140 onward for new SQL; reserve before creation. Closed-settlement and reused
+asset reversal guards still needed. Task28 remains OPEN and whole-plan goal active.
+
+## Task28 approval event and asset coverage checkpoint — regression running
+
+Published base0daab7e3 preserves applied139 (SHAa9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489).
+The disposition-costed run executed5 tests/2 suites,2 failures,0 errors/skips,
+2m12s. Costed draft and independent approval request passed; requester self-decide
+returned403 as expected. Both actual checker decisions reached posting but the
+transaction rolled back before commit: WarehouseApprovalStore.event selected only
+older event kinds and threw NoSuchElementException for DISPOSED. Added that exact
+event to its lookup; no SQL changes and no fallback success.
+
+Added4 actual serialized-device cases: LOAN LOSS/SCRAP retain closed assignment
+history and survive balance rebuild; SALE LOSS/SCRAP must reject customer-title
+writeoff without creating a request. Shared serial receipt fixture now also uses
+the optional actual-cost hook, default unknown for all prior fixture users.
+
+Current .omo/runtime/disposition-guards.sh / .log runs WarehouseDisposition*IT,
+WarehouseReturnSettlementIT, WarehouseReturnITIntegrity, WarehouseApprovalITDelegation,
+WarehouseApprovalITExpiry and ModularityTests. Archive task28/disposition-guards/xml;
+database log disposition-guards-database.log. Results pending; do not claim a
+committed loss/scrap effect until this run proves it.13 new guard/asset cases are
+included with the2 full residual settlement cases and affected regressions.
+
+Next complete missing compensation as a NEW linked approved movement restoring
+only quarantine, with a source-bound return transition and open/closed obligation
+checks. Do not duplicate ADJUSTMENT owner (transfer discrepancy owns that kind).
+Active/reused/consumed downstream state must reject implicit rollback. Vendor and
+other outstanding loss paths remain to assess before task28 can be marked done.
+
+## Task28 source-cost checkpoint — 139 applied, posting validation pending
+
+139 is now APPLIED and IMMUTABLE. SHA256:
+a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489.
+The first effect run failed42601 from ERaRCODE at SQL187 (4 tests,1 failure,
+1m7s); Flyway rolled back21:46:37.717 JKT. The next run failed the guarded
+return terminal-state anchor:117 had inserted DRAFT handling (4 tests,1 failure);
+Flyway rolled back21:48:04.973 JKT. Both fixes preceded139's FIRST successful
+application at21:49:43.056 JKT. Never edit139 or earlier applied migrations again.
+
+The disposition-ledger run executed5 tests/2 suites,2 failures,0 errors/skips,
+1m53s. Both real LOSS and SCRAP request201/replay paths passed. Approval request
+correctly returned COST_BASIS_REQUIRED because the shared material fixture had
+no receipt cost. No physical disposition has passed yet;3 modularity tests passed.
+
+Added a shared fixture cost hook (default unknown preserves prior behavior),
+WarehouseDispositionFixture with declared actual source receipt cost, and9 new
+behavioral guards: unknown cost, bad quantities, changed inspection, rejection
+and fresh request, competing approvals, requester delegation, revoked scope,
+scoped paging and posted MM rewrite/rebuild. Guards are authored, not yet run.
+
+Current validation .omo/runtime/disposition-costed.sh / .log selects the2 full
+LOSS/SCRAP settlement cases plus3 modularity checks. Archive task28/disposition-costed/xml.
+After it passes run WarehouseDispositionGuardsIT and affected return/approval
+regressions; add forward migration140 if runtime invariants need correction.
+Compensation, returned asset loss/scrap and remaining task28 acceptance still open.
+
+## Task28 approved physical effect checkpoint — validation running
+
+Supersedes the older draft-only status below. Published base7944bb50 includes
+138; disposition-request actually ran4 tests/2 suites,1 failure,0 errors/skips
+in1m46s. POST disposition201 and exact replay passed; the failure was missing
+approval source owner at test line43. Flyway138 applied21:34:36.248 JKT and is
+IMMUTABLE:34a2b183f2a4f1395981b5efdf5e14d3033ca9f7121b767c9d3f2ab52c74ea3b.
+
+This checkpoint adds independent LOSS/SCRAP owners, admission revalidation,
+approval-kind wiring, one paired physical posting and a linked nonphysical
+warehouse.return.dispose operation.139 was reserved before creation. Its new
+immutable effect captures the live source, binds both operations/approval/legs,
+validates EA and MM current positions against applied ledger, extends existing
+return histories/lifecycle forward, and counts approved disposal as settlement
+of the original returned residual without counting another issued disposition.
+
+The initial verification is .omo/runtime/disposition-effect.sh / .log; owned
+private archive task28/disposition-effect/xml and disposition-effect-database.log.
+It selects WarehouseDispositionIT + ModularityTests. No result or successful139
+application is claimed yet; check logs before changing this SQL. Earlier138 and
+older migrations must never change. Task28 stays OPEN; loss/compensation and
+adversarial/scoping/concurrency/rebuild checks remain. Task26 remains COMPLETE
+with its published53-test22-suite portable evidence at7c6eb6e5.
+
+## Task28 draft request implementation checkpoint — validation pending
+
+Task26 completion checkpoint7c6eb6e5 is published with53 green tests/22 suites and
+sanitized portable evidence. Overall goal remains active. Task28 is NOT complete.
+
+The real initial disposition-red baseline executed1 test/1 failure/0 errors/skips,
+1m32s. All actual receipt/use/residual return/inspection/policy setup passed; the
+new POST /api/v1/warehouse/dispositions returned404 at test line37. Archive:
+.omo/evidence/warehouse-workorder-asset-provenance/task28/disposition-red/xml.
+
+Authored InventoryDispositionApi, typed LOSS/SCRAP input/view, controller/service,
+WarehouseDispositionStore/Record. Initial request accepts exact ISP-owned RETURN
+quantity in RECEIVED_IN_INSPECTION; SCRAP additionally requires DAMAGED. It locks
+WO through the public inventory-owned port before warehouse topology/documents
+and physical source, captures actual receipt/lot cost, checks custody/return and
+approval-request permissions, and stores immutable actor/key/source snapshots.
+Read/list expose no cost or customer fields; current location/area/site scope is
+applied before pagination. No physical posting or approval owner exists yet.
+
+138 was reserved BEFORE creation in docs/warehouse-migrations.md. It captures the
+real return operation, current balances/asset/segment, WO revision and original
+cost, and seals a DRAFT0 header/line with NO movements/operations. Draft-only
+restriction must be extended forward when implementing real independent effects.
+
+First disposition-draft compile succeeded;4 tests/2 suites/1 failure/0 errors/skips,
+59s:3 modularity passed,1 context startup failed. Flyway138 failed42601 near CASE
+inside the large IF at SQL line29 (position5663), and logged at21:32:45.351 JKT
+"Changes successfully rolled back". No138 apply succeeded. Added parentheses to
+that CASE before successful application; old137 and earlier files unchanged.
+Minor get/list state handling was also tightened before the corrected build.
+
+Corrected run is .omo/runtime/disposition-request.sh / .log, archive
+.omo/evidence/warehouse-workorder-asset-provenance/task28/disposition-request/xml,
+database log disposition-request-database.log. It selects WarehouseDispositionIT
+and ModularityTests. Confirm migration application before treating138 immutable.
+The behavioral test should next reach approval/request; that owner and posting
+are deliberately unfinished, so do not call4 tests green without actual results.
+
+Next: implement independent LOSS/SCRAP owner + exact effect, nonphysical linked
+return state transition, and settled-return calculation for authorized disposal.
+Then add loss/vendor custody, compensation, and adversarial/scoping/replay cases.
+Detailed design constraints follow below; no resetting DB or changing applied SQL.
+
+Task26 combined regression is running against compiled c050efeb product source;
+do not mark it complete before its nonzero result. Current task28 work is only
+the WarehouseDispositionIT behavioral test. No disposition service, endpoint or
+new migration has been implemented. No task28 test has passed yet.
+
+The first scenario uses the existing real MaterialLifecycleFixture: receive1km,
+issue100m, use82.5m, return and acknowledge17.5m, inspect DAMAGED. It requests a
+SCRAP document, rejects requester self-approval, accepts an independent scoped
+checker, and expects17.5m DISPOSED/SCRAP,900m AVAILABLE,82.5m CONSUMED. The original
+returned quantity stays17.5m; settledReturnBase becomes17.5m. WO closure must add
+no physical posting. No fake stock/source fixtures or generic SQL balance setup.
+
+Proposed request route: POST /api/v1/warehouse/dispositions, Idempotency-Key.
+Input: sourceDocumentId, expectedRevision (source), stockIdentityId, quantityBase,
+baseUnit, destinationLocationId, action, reason, evidenceReference. The test uses
+action SCRAP and sourceDocumentId pointing to the inspected RETURN. Result201
+contains id of a new DRAFT0 document; use existing approvals/request and decide.
+The command must not move stock until approval. Rejection requires a new request
+with current evidence; do not edit an immutable source snapshot.
+
+Implementation constraints and reusable pieces:
+
+- Use Inventory-owned API, service and persistence; cross-owner WO locking goes
+  through AssetHandoverWorkOrderPort.lockTitle or a suitable inventory-owned port.
+  Resolve WO from inventory_material_residual or inventory_asset_removal; RETURN
+  headers currently do not populate work_order_id. Take WO before topology and
+  inventory document/asset/stock locks. Use current authority before replay.
+- WarehouseApprovalOwner has one owner per kind. Existing ADJUSTMENT belongs to
+  WarehouseTransferApprovalOwner; do not steal or duplicate that kind. LOSS and
+  SCRAP already map to corresponding policies in WarehousePolicySource. Extend
+  ApprovalPostingKind and DurableApprovalService's business action mapping for
+  concrete new owners. Any reversal kind must map to ADJUSTMENT policy while
+  retaining its original disposition movement link.
+- WarehouseTransferStock derives actual original receipt/lot cost and segment
+  identity. WarehouseReturnStore.position includes balance and segment revisions.
+  Lock/check exact current dimensions again before posting; preserve unknown cost
+  instead of inventing0. Exception policies require an independent first tier.
+- Customer and unknown title cannot be disposed as ISP property. For the initial
+  return path, require legalOwner ISP; explicit separately approved reacquisition
+  already exists for customer returns. Never use an old sale signature as inferred
+  consent to destroy property. Same-asset loan recovery history remains intact.
+- Use one real paired posting to LOST or DISPOSED sink, preserving total quantity;
+  SCRAP changes condition to SCRAP. Do not debit arbitrary negative stock. For
+  returned residuals, dispose the exact measured segment. Broader stock/issue loss
+  must preserve split lineage, allocations, customer assignments and obligations.
+- New request/effect tables must have RLS, immutable source/current capture and
+  deferred exact posting/approval/operation/outbox bindings. Reserve the next SQL
+  version in docs/warehouse-migrations.md BEFORE creation. V175.137 is applied and
+  immutable. V177/V178 remain reserved for43; never reset QA volumes or old SQL.
+- Return history is strongly validated. Extend warehouse_assert_return and
+  warehouse_assert_returned_asset with a narrowly validated new nonphysical
+  return transition linked to the approval's physical disposition effect; reuse
+  the pattern in132 warehouse.return.reacquire, with its own exact assertion.
+  Preserve all older source/inspection/repair/title checks. Add LOST to public
+  ReturnState if needed and final state checks, never reinterpret it as ACCEPTED.
+- warehouse_material_settled_return_base (122) currently counts only exact
+  ACCEPTED inspection postings. Extend it for exact independently approved return
+  disposition, counting each acknowledged residual once. MaterialLifecycleStore
+  and warehouse_material_obligation_totals (123) still hardcode disposed0 for
+  direct issued-stock loss; update when supporting that path. Do not subtract a
+  returned-and-later-disposed quantity twice in MaterialPhysicalTotalsStore.
+- Compensation must be a new document tied to the original APPLIED movement.
+  Require its exact remaining source position, prevent active/consumed/reused asset
+  rollback and duplicate reversal, restore only to quarantine, and keep a closed
+  WO's obligations consistent. Do not implement generic ledger edits.
+
+Remaining task28 tests: scoped current replay, requester/delegate exclusion,
+unknown/mixed-currency cost, competing decisions/source change, overquantity,
+customer title refusal, direct database fake effect, restart/rebuild, real loss,
+and compensation including already reused/installed asset rejection. Only mark
+28 complete after its actual command/effect/obligation paths and checks pass.

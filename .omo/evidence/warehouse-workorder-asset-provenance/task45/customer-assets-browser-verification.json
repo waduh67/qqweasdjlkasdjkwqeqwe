@@ -1,0 +1,48 @@
+{
+  "baseline": "e3e9708b",
+  "browser": {
+    "tests": 4,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "durationMs": 365476.687,
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ],
+    "viewports": [
+      "1280x900",
+      "375x812"
+    ],
+    "setup": "real UI only; independent technician and QA accounts; no stock SQL seeds or route mocks"
+  },
+  "assertions": [
+    "1000m/10 received -> 100m/1 issued -> 82.5m/1 installed with real ONU id, signed handover, 17.5m returned and QA approved",
+    "917.5m/9 available before asset followups",
+    "sold unit removal, vendor repair, post-service reset, RMA ACK/reinstall only to original customer; title remains CUSTOMER",
+    "loan swap closes original A history; reset/release; same physical asset issued to B, A history preserved; 917.5m/8 available and 2 active installations"
+  ],
+  "rmaCategory": {
+    "red": {
+      "tests": 3,
+      "failed": 1,
+      "case": "NULL category"
+    },
+    "migration": "178.7",
+    "applied": "current owned browser database",
+    "serverGreenAndOldVolumeUpgrade": "PENDING"
+  },
+  "applicationJarSha256": "feb76b4cbcc373e41729f9e3740c0207aaaa9695c52bc657ec346fec566debab",
+  "sha256": {
+    "web/e2e/warehouse/customer-assets.spec.ts": "ad2030a1e7003b00a58dcbe47cc5d714259d24c7953241d88065ac9195788e54",
+    "web/e2e/warehouse/asset-journey.ts": "c19ba199d445f5939ab45433a5adb947d60adc766070513ca49da1f44b059d86",
+    "web/e2e/warehouse/loan-reuse-journey.ts": "e7a4c04815bbfbb5a198b7e9524e1f79d12b33e05e2c18908e46ea1a0e40a281",
+    "web/e2e/warehouse/loan-reuse-scenario.ts": "ec361ec5615f9c2daec18d05421e5ea451589b9781d02d32c22ed871e6329449",
+    "web/e2e/warehouse/numeric-journey.ts": "712d84ddc9aca4984009458a92cfceaa942383167f5e6af50d958beddf32ffe0",
+    "web/e2e/warehouse/catalog.ts": "c8e7d53d56d1fcc4de0cf257b01096ba8619f7f42f69d919b33cac4dc09f161b",
+    "web/e2e/warehouse/fulfillment.ts": "e8ac4fb0710374ac320e292dfda9ebef17ae2ae592e88a4c3515c211dcb29bb5",
+    "server/src/main/resources/db/migration/V178_7__warehouse_rma_optional_category.sql": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCustomerRmaDeploymentIT.kt": "6ddf660948d87cea47fab7371a751396482302818df0c6590fd89f9cdd0e6445"
+  },
+  "screenshots": "Private traces/screenshots retained. Drawer screenshots show current viewport; fuller history screenshots still needed for final visual review."
+}

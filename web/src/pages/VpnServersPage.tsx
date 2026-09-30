@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
@@ -16,7 +18,7 @@ import {
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
-import { SearchInput } from '@/components/molecules'
+import { FormSection, SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconAlert, IconPlus, IconRoute } from '@/components/atoms/icons'
@@ -88,6 +90,7 @@ export function VpnServersPage() {
   const { items: servers, loading, run } = useResource(listServers)
 
   const [draft, setDraft] = useState<ServerDraft | null>(null)
+  const creation = useCreationReview(draft != null, !!draft?.id)
   // Token node + perintah pasang hanya tampil sekali (setelah buat/rotasi).
   const [secret, setSecret] = useState<VpnServerView | null>(null)
   const [query, setQuery] = useState('')
@@ -127,7 +130,7 @@ export function VpnServersPage() {
     })
 
   const save = () => {
-    if (!draft) return
+    if (!draft || creation.beforeSave()) return
     void run(async () => {
       if (draft.id) {
         const body: UpdateVpnServerRequest = {
@@ -148,7 +151,7 @@ export function VpnServersPage() {
         setSecret(await createServer(body))
       }
       setDraft(null)
-    }, draft.id ? 'Server diperbarui' : 'Server dibuat — jalankan perintah pasang di VPS')
+    }, draft.id ? 'Server diperbarui' : 'Server dibuat').finally(creation.finish)
   }
 
   const regenerate = (server: VpnServerView) => {
@@ -195,14 +198,14 @@ export function VpnServersPage() {
       header: 'Titik dial',
       sortValue: (s) => s.host,
       cell: (s) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
+        <span className="table-inline-values">
           <span>
             {s.host}:{s.port}
           </span>
           {/* Protokol saja tak berarti apa-apa bagi operator; yang dia perlu tahu adalah
               perangkat mana yang bisa masuk lewat hub ini. */}
           <Text as="span" className="muted" size={200}>{s.protocol === 'TCP' ? 'TCP · RouterOS v6 & v7' : 'UDP · RouterOS v7 saja'}</Text>
-        </div>
+        </span>
       ),
     },
     {
@@ -210,10 +213,10 @@ export function VpnServersPage() {
       header: 'Subnet overlay',
       sortValue: (s) => s.tunnelCidr,
       cell: (s) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
+        <span className="table-inline-values">
           <span>{s.tunnelCidr}</span>
           <Text as="span" className="muted" size={200}>server {s.serverAddress}</Text>
-        </div>
+        </span>
       ),
     },
     { key: 'peers', header: 'Akun', align: 'right', sortValue: (s) => s.peerCount, cell: (s) => s.peerCount },
@@ -234,24 +237,21 @@ export function VpnServersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader title="Server VPN" />
-
-      <div className="spread">
-        <span className="muted">{servers.length} hub</span>
-        {canManage && (
+      <PageHeader title="Server VPN" subtitle="Kelola hub yang menghubungkan router tenant ke platform." actions={canManage && (
           <Button variant="primary" onClick={() => setDraft({ ...EMPTY_SERVER })}>
             <IconPlus size={15} /> Tambah hub
           </Button>
-        )}
-      </div>
+        )} />
 
       {secret && <InstallSecretCard server={secret} onDismiss={() => setSecret(null)} />}
 
-      {draft && <ServerForm draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setDraft(null)} />}
+      {draft && <ServerForm creation={{ ...creation, prepare: save, summary: <CreationSummary rows={[
+        ['Nama hub', draft.name], ['Host', draft.host], ['Port', draft.port], ['Protokol', draft.protocol], ['Subnet tunnel', draft.tunnelCidr || 'Otomatis'],
+      ]} /> }} draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setDraft(null)} />}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, titik dial, atau subnet…" />
-        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
+        <SelectField aria-label="Filter status hub" value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           <option value="">Semua status</option>
           {statuses.map((s) => (
             <option key={s} value={s}>{statusLabel(s)}</option>
@@ -285,50 +285,61 @@ export function VpnServersPage() {
 /* ---------- Form hub ---------- */
 
 function ServerForm({
+  creation,
   draft,
   setDraft,
   onSave,
   onCancel,
 }: {
+  creation: CreationFlow
   draft: ServerDraft
   setDraft: (d: ServerDraft) => void
   onSave: () => void
   onCancel: () => void
 }) {
   return (
-    <div className="card stack">
-      <div className="row">
+    <Blade open title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} onClose={onCancel} creation={creation}
+      footer={<Button variant="primary" disabled={creation.busy} onClick={onSave}>Simpan</Button>}>
+    <form className="stack" onSubmit={event => { event.preventDefault(); onSave() }}>
+      <FormSection title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} description="Tentukan alamat publik dan koneksi yang dipakai router.">
+      <div className="form-grid">
         <TextField
           label="Nama hub"
           value={draft.name}
           onChange={(_, data) => setDraft({ ...draft, name: data.value })}
           placeholder="Hub Utama"
-          style={{ flex: 2 }}
+          required
         />
         <TextField
           label="Host / IP publik VPS"
           value={draft.host}
           onChange={(_, data) => setDraft({ ...draft, host: data.value })}
           placeholder="vpn.isp-anda.com"
-          style={{ flex: 2 }}
+          required
         />
+      </div>
+      <div className="form-grid form-grid-port">
         <TextField
           label="Port"
+          type="number"
+          min={1}
+          max={65535}
           value={draft.port}
           onChange={(_, data) => setDraft({ ...draft, port: data.value })}
           placeholder="1194"
-          style={{ flex: 1 }}
+
         />
         <SelectField
           label="Protokol"
           value={draft.protocol}
           onChange={(_, data) => setDraft({ ...draft, protocol: data.value as VpnProtocol })}
-          style={{ flex: 1 }}
+
         >
             <option value="TCP">TCP — RouterOS v6 dan v7</option>
             <option value="UDP">UDP — RouterOS v7</option>
         </SelectField>
       </div>
+      </FormSection>
 
       {/* Pilihan protokol tak bisa dibalik tanpa mengganggu perangkat: yang sudah men-dial harus
           menempel ulang confignya. Sebutkan konsekuensinya di tempat pilihannya diambil. */}
@@ -341,25 +352,19 @@ function ServerForm({
       </Text>
 
       {draft.id === null ? (
-        <TextField
+        <div className="form-field-medium"><TextField
           label="Subnet overlay (CIDR)"
           value={draft.tunnelCidr}
           onChange={(_, data) => setDraft({ ...draft, tunnelCidr: data.value })}
           placeholder="10.8.0.0/24"
-        />
+        /></div>
       ) : (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           CIDR tunnel tidak dapat diubah setelah server dibuat karena IP peer telah dialokasikan.
         </Text>
       )}
 
-      <div className="row">
-        <Button variant="primary" onClick={onSave}>
-          Simpan
-        </Button>
-        <Button onClick={onCancel}>Batal</Button>
-      </div>
-    </div>
+    </form></Blade>
   )
 }
 

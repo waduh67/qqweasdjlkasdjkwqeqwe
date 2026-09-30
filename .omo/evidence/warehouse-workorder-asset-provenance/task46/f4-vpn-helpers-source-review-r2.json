@@ -1,0 +1,107 @@
+{
+  "status": "VPN_HOST_HELPER_SOURCE_CORRECTIONS_ACCEPTED_WITH_RUNTIME_GATES_PENDING",
+  "reviewedAtUtc": "2026-09-26T21:27:46.629054+00:00",
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "currentCodeCiRun": 36265279847,
+  "currentCodeCiCompleteEvidenceAuthenticated": false,
+  "reviewerExecutedQaSshDockerOrInstaller": false,
+  "sourceFindings": {
+    "VPN-SOURCE-01": {
+      "status": "CLOSED_FOR_REVIEWED_HOST_PATCH_DESIGN_AND_SYNTHETIC_FRAGMENT_EXECUTION",
+      "genericApplicationInstallerUnchangedAndDefective": true,
+      "originalDefectReproducedByParentFragmentTest": true,
+      "actualRenderedInstallerStillRequiresReviewAndApproval": true
+    },
+    "VPN-SOURCE-02": {
+      "status": "CLOSED_IN_HELPER_SOURCE",
+      "checksImmediatelyBeforeInstallation": [
+        "Server directory absent or empty",
+        "Legacy OpenVPN configurations absent",
+        "TCP and UDP port1194 unused",
+        "FTTH sync/firewall unit files absent and systemd LoadState not-found",
+        "Firewall helper and sysctl file absent",
+        "OpenVPN instance drop-in directory absent",
+        "No overlapping current IPv4 route in any table",
+        "No FTTH or 10.8.0.* firewall markers/rules"
+      ],
+      "actualHostPreflightStillPending": true
+    }
+  },
+  "otherCorrections": {
+    "originalPatchedAndPatcherHashesBound": true,
+    "approvalBindsOriginalPatchedReceiptAndInstallHelperHashes": true,
+    "privateUnifiedDiffPath": "install.patch",
+    "postFirewallRestartReadinessChecks": [
+      "OpenVPN active",
+      "Sync timer active",
+      "Firewall unit active",
+      "TCP1194 listening"
+    ]
+  },
+  "sourceInputs": {
+    "prepare-production-vpn.py": {
+      "sha256": "7bfc97148da992c1a9be5d2cc8f0923eda85f058cace40bd7c3f47ab305cf0d4",
+      "bytes": 7915,
+      "pythonAstParse": "PASS"
+    },
+    "install-production-vpn.py": {
+      "sha256": "9e9ce97c67b030d8a3b4b011fae9f82aca0b8403826862ca0870523490892f7c",
+      "bytes": 9624,
+      "pythonAstParse": "PASS"
+    },
+    "patch-vpn-installer.py": {
+      "sha256": "1eb0d31771aa4f3d5e47b9b0666af792bfd638b245f3186defef4d6295abbb0e",
+      "bytes": 1718,
+      "pythonAstParse": "PASS"
+    },
+    "test_vpn_installer_patch.py": {
+      "sha256": "093f9f1da175856d30bbcf3de4e13d839dcd77b3eb254192f8e9644d850c83ba",
+      "bytes": 2965,
+      "pythonAstParse": "PASS"
+    },
+    "vpn-cleanup-patch-r1.log": {
+      "sha256": "3e0a927f49780e20454e98853316dd3f8fb830be16d9f2c5d2a910771cc03026",
+      "bytes": 773
+    },
+    "vpn-cleanup-patch-r1.exit": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "vpn-cleanup-patch-r1.json": {
+      "sha256": "0f2046011e00578d4ef425860aa13742bdfe2d6186ae7d16ef000820cb3bded8",
+      "bytes": 705
+    }
+  },
+  "executedEvidenceAuthentication": {
+    "status": "PASS",
+    "cases": [
+      "test_corrected_clean_host_reaches_service_steps",
+      "test_listing_failure_aborts_before_service_steps",
+      "test_only_unmarked_legacy_tunnel_destination_is_deleted",
+      "test_original_clean_host_defect_reproduced",
+      "test_patcher_rejects_unknown_or_duplicate_source"
+    ],
+    "count": 5,
+    "exitCode": 0,
+    "receiptSourceAndLogHashesMatch": true,
+    "testScope": "Existing parent-executed stub iptables fragments only; reviewer did not execute tests"
+  },
+  "staticTemplateComparison": {
+    "file": "server/src/main/resources/vpn/install.sh.template",
+    "sha256": "468eb859ded93670ae39d8792913ee4bf79d1d1af275d239dda21c432ea13123",
+    "matches1306": true,
+    "exactOriginalBlockOccurrences": 1,
+    "replacementReversesExactly": true,
+    "certificateKeyAndConfigurationPlaceholdersUnchanged": true,
+    "actualRenderedInstallerChecked": false
+  },
+  "scopeLimits": [
+    "This is source approval of host helpers with five parent-executed stub-only fragment cases; not installation authorization or final F4.",
+    "The unchanged generic application installer defect is not fixed by a private host patch.",
+    "Actual rendered installer original, exact patch, certificate bytes and separate hash approval remain pending until real application activation.",
+    "No preparation, installer, SSH, Docker, service or network operation was executed by this reviewer.",
+    "Runtime installation, callbacks, firewall idempotence and host readiness remain pending.",
+    "Enabled boot dependencies do not prove an actual reboot; physical MikroTik/device certification is outside this review.",
+    "Current full code CI and final release acceptance remain pending."
+  ]
+}

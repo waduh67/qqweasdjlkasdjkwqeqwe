@@ -1,0 +1,63 @@
+{
+  "task": 31,
+  "status": "complete",
+  "verifiedAt": "2026-09-24T16:56:16.102367+00:00",
+  "browserSourceCommit": "55b19223a3cef378ae872fef4687a891ad4de839",
+  "browserCommand": "scripts/warehouse/qa.sh browser setup.spec.ts",
+  "browserStats": {
+    "startTime": "2026-09-24T16:54:58.982Z",
+    "duration": 12349.289,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "browserCases": [
+    {
+      "project": "warehouse-desktop",
+      "name": "real signup, independent approver navigation and explicit unavailable route",
+      "status": "passed",
+      "durationMs": 6166
+    },
+    {
+      "project": "warehouse-mobile",
+      "name": "real signup, independent approver navigation and explicit unavailable route",
+      "status": "passed",
+      "durationMs": 4736
+    }
+  ],
+  "browserRawSha256": "c0e2fcb80c30290ebac74c7453ee1ca33341b1097a3c3b3dcedb95c63e7d6113",
+  "browserEnvironment": {
+    "database": "warehouse_e2e",
+    "appRole": "warehouse_app",
+    "role": "NOSUPERUSER NOBYPASSRLS",
+    "backend": "http://127.0.0.1:17880",
+    "web": "http://127.0.0.1:14188",
+    "viewports": [
+      "1280x900",
+      "375x812 with touch"
+    ],
+    "mockedResponses": false,
+    "sqlInventorySeeds": false
+  },
+  "assertions": [
+    "real UI signup and login",
+    "real UI role and user creation",
+    "approver-only overview and paginated queue without stock requests",
+    "direct stock HTTP403",
+    "stock UI permission denial",
+    "unknown warehouse route explicitly unavailable",
+    "mobile navigation uses touch tap",
+    "no document horizontal overflow",
+    "API and proxy JSON health prove owned DB, role and marker"
+  ],
+  "unitEvidence": "controls-verification.json (49 passed, unit-source a030927f)",
+  "additionalRegressionEvidence": "quantity-verification.json (14 existing API/session/navigation tests)",
+  "build": "server bootJar and web TypeScript/Vite PASS",
+  "cleanup": "owned processes, containers and network stopped; volumes retained",
+  "screenshots": {
+    ".omo/evidence/warehouse-workorder-asset-provenance/task31/warehouse-desktop-approver.png": "602b56766975b0991b13c45f70bb3ed50f13fc757c1a913f36582cd988a3b34a",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task31/warehouse-mobile-approver.png": "d19a84a19ecce1f0fc5cdf24f37891c1f53a26421b13224aa287176dc6fcd382"
+  },
+  "remainingScope": "Tasks32\u201348 and F1\u2013F4 remain open. Task31 supplies route foundation; operational screens follow their own tasks."
+}

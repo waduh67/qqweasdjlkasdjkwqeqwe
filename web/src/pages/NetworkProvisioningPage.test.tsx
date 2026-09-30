@@ -12,7 +12,7 @@ import { NetworkProvisioningPage } from './NetworkProvisioningPage'
 
 vi.mock('@/hooks/useProvisioningPermissions', () => ({ useProvisioningPermissions: vi.fn() }))
 const toast = { success: vi.fn(), error: vi.fn(), info: vi.fn() }
-vi.mock('@/system', () => ({ useToast: () => toast }))
+vi.mock('@/system', () => ({ useConfirm: () => vi.fn(), useToast: () => toast }))
 
 const mockedPermissions = vi.mocked(useProvisioningPermissions)
 
@@ -206,28 +206,30 @@ describe('NetworkProvisioningPage', () => {
     managed.unmount()
 
     render(<ProvisioningEditorModal editor="intents" profiles={[{ revision: 1, value: { id: 'profile-shared', name: 'Residential shared', poolId: 'pool-1' } }]} topology={{ nodes: [{ id: 'olt-1', name: 'OLT Utama', role: 'OLT', reference: { kind: 'OLT', id: 'olt-device-1' }, administrativeStatus: 'ENABLED' }], interfaces: [{ id: 'pon-1', nodeId: 'olt-1', name: 'PON 1', role: 'ACCESS', reference: { kind: 'PON', id: 'pon-port-1' }, administrativeStatus: 'ENABLED' }], links: [] }} defaultPoolId="pool-1" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
-    await screen.findByText('Buat intent layanan')
+    await screen.findByRole('heading', { name: 'Buat intent layanan' })
     fireEvent.change(screen.getByLabelText(/ID langganan/), { target: { value: 'sub-new' } })
     fireEvent.change(screen.getByLabelText(/OLT akses/), { target: { value: 'olt-1' } })
     fireEvent.change(screen.getByLabelText(/Port PON/), { target: { value: 'pon-1' } })
     fireEvent.change(screen.getByLabelText(/ID ONU/), { target: { value: 'onu-1' } })
     fireEvent.change(screen.getByLabelText(/Profil segmen/), { target: { value: 'profile-shared' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
 
     await waitFor(() => expect(provisioningApi.createServiceIntent).toHaveBeenCalledWith({ subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, accessOltId: 'olt-device-1', accessPonPortId: 'pon-port-1', accessOnuId: 'onu-1' }))
   })
 
   it('mengirim enum topologi persis seperti kontrak server', async () => {
     render(<ProvisioningEditorModal editor="topology" profiles={[]} defaultPoolId="" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
-    await screen.findByText('Tambah node topologi')
-    const input = document.querySelector<HTMLInputElement>('.modal input')
-    const role = document.querySelector<HTMLSelectElement>('.modal select')
+    await screen.findByRole('heading', { name: 'Tambah node topologi' })
+    const input = screen.getByRole('dialog').querySelector<HTMLInputElement>('input')
+    const role = screen.getByRole('dialog').querySelector<HTMLSelectElement>('select')
     expect(input).not.toBeNull()
     expect(role).not.toBeNull()
     if (!input || !role) return
     fireEvent.change(input, { target: { value: 'OLT Baru' } })
     fireEvent.change(role, { target: { value: 'OLT' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
 
     await waitFor(() => expect(provisioningApi.createTopologyNode).toHaveBeenCalledWith({
       name: 'OLT Baru', role: 'OLT', status: 'ENABLED',

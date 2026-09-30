@@ -1,9 +1,10 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useState } from 'react'
 import { api } from '@/api/client'
 import { SPLITTER_RATIOS, type SiteView } from '@/api/network'
 import type { PageResponse } from '@/api/types'
 import { Button, SelectField, TextareaField, TextField } from '@/components/atoms'
-import { BladeHead } from '@/components/molecules'
 import { ASSET_META, type AssetKind } from '@/map/mapAssets'
 import { MOUNTING_OPTIONS, todayIso } from '@/utils/closureFieldData'
 import { CUSTOM_SIZE, JOINT_BOX_SIZES, ODC_SIZES, ODP_SIZES } from '@/utils/closureSizing'
@@ -32,7 +33,7 @@ export function PlaceAssetForm({
   lng: number
   lat: number
   onCancel: () => void
-  onSave: (payload: Record<string, unknown>) => void
+  onSave: (payload: Record<string, unknown>) => void | Promise<void>
 }) {
   const meta = ASSET_META[kind]
   const [code, setCode] = useState('')
@@ -107,7 +108,7 @@ export function PlaceAssetForm({
     setCapacity(preset.capacity)
   }
 
-  const submit = () => {
+  const buildPayload = () => {
     const base: Record<string, unknown> = { code: sanitizeCode(code), name: name.trim() }
     if (kind === 'OLT') {
       base.siteId = siteId
@@ -116,21 +117,18 @@ export function PlaceAssetForm({
       if (managementIp.trim()) base.managementIp = managementIp.trim()
       if (snmpCommunity.trim()) base.snmpCommunity = snmpCommunity.trim()
       base.snmpPort = Number(snmpPort) || 161
-      onSave(base)
-      return
+      return base
     }
     // Rak tak beralamat sendiri: ia berdiri di dalam POP, dan alamat POP itulah
     // alamatnya. Yang menentukan ukurannya jumlah port — tiap port berkepala dua.
     if (kind === 'ODF') {
       base.siteId = siteId
       base.portCount = portCount
-      onSave(base)
-      return
+      return base
     }
     if (address.trim()) base.address = address.trim()
     if (kind === 'SITE') {
-      onSave(base)
-      return
+      return base
     }
     // Data lapangan cuma milik kotak (ODC/ODP/JB): yang dikirim hanya yang benar
     // terisi — bidang kosong berarti "belum tahu", dan itu jawaban yang sah.
@@ -141,13 +139,22 @@ export function PlaceAssetForm({
     if (kind === 'JOINT_BOX') {
       base.trayCount = trayCount
       base.capacity = capacity
-      onSave(base)
-      return
+      return base
     }
     // Kosong = kabinet tanpa splitter (cross-connect), bukan isian yang terlewat.
     base.splitterRatio = splitterRatio || null
     base.capacity = capacity
-    onSave(base)
+    return base
+  }
+
+  const creation = useCreationReview(true)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const submit = async () => {
+    if (!canSubmit || creation.beforeSave()) return
+    setSaveError(null)
+    try { await onSave(buildPayload()) }
+    catch (error) { setSaveError(error instanceof Error ? error.message : 'Gagal menyimpan perangkat.') }
+    finally { creation.finish() }
   }
 
   // OLT & ODF wajib pilih site; aset lain hanya butuh kode + nama.
@@ -155,13 +162,13 @@ export function PlaceAssetForm({
   const canSubmit = code.trim() !== '' && name.trim() !== '' && (!needsSite || siteId !== '')
 
   return (
-    <aside className="map-panel blade">
-      <BladeHead
-        title={`${meta.label} baru`}
-        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)} · seret pin untuk menggeser`}
-        onClose={onCancel}
-        closeLabel="Batal"
-      />
+    <Blade open title={`${meta.label} baru`} onClose={onCancel}
+      creation={{ ...creation, prepare: () => void submit(), summary: <><CreationSummary rows={[
+        ['Jenis perangkat', meta.label], ['Kode', sanitizeCode(code)], ['Nama', name.trim()], ['Alamat', address],
+        ['Koordinat', `${lat.toFixed(6)}, ${lng.toFixed(6)}`],
+        ...(needsSite ? [['Site induk', sites.find(site => site.id === siteId)?.name] as [string, string | undefined]] : []),
+      ]} />{saveError && <p role="alert">{saveError}</p>}</> }}
+      footer={<><Button disabled={creation.busy} onClick={onCancel}>Batal</Button><Button variant="primary" disabled={!canSubmit || creation.busy} onClick={() => void submit()}>Simpan {meta.label}</Button></>}>
       <div className="blade-body stack">
         <TextField
           label="Kode"
@@ -361,19 +368,12 @@ export function PlaceAssetForm({
               onChange={(_, data) => setNotes(data.value)}
               rows={2}
               maxLength={1000}
-              placeholder="Kunci dititip di pos satpam; tiang miring, jangan dipanjat sendirian…"
+              placeholder="Catatan pemasangan atau akses lokasi"
             />
           </>
         )}
-        <div className="row">
-          <Button variant="primary" disabled={!canSubmit} onClick={submit}>
-            Simpan {meta.label}
-          </Button>
-          <Button variant="subtle" onClick={onCancel}>
-            Batal
-          </Button>
-        </div>
+
       </div>
-    </aside>
+    </Blade>
   )
 }

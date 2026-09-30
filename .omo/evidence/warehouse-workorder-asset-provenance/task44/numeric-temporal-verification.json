@@ -1,0 +1,328 @@
+{
+  "phase": "Task44 complete: actual numeric recovery, concurrent decisions, same-asset temporal reuse and canonical return serial",
+  "baseCommit": "5a2601efe59895122059994b431ae3ba9a5f12ce",
+  "sourceSha256": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnModels.kt": "c6d035155ccc0dc6886b662030c113abf0c10300c946470560e6e8a866b8dad7",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37",
+    "server/src/main/resources/db/migration/V178_6__warehouse_return_canonical_serial.sql": "a1090f524423ed8623f561c6c26b18cade0aa440ec439634317754cf55659f7b",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericCountIT.kt": "e753f6e967bc0f4b69d0576b4e7bb6e762a745ac4680a6ffff34e94ee3c708ff",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "ef9f745c1e74ebaf9591fe53b322bb8360b41370830181b106d3f2de8d016e1a",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericReuseFixture.kt": "9d8a0748ce82bc804c9e9d14ff100892df11172d535ef7fb711c8aaa1edb02bb",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseTemporalNumericIT.kt": "e5a47e824cde64b74aab55547e35fb9fb24507729c865367a3fbf7faa70c3da0",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCustomerRmaFixture.kt": "8ccd8e313410c428ea43c7e1d5ad75d4995582dba0d03acbeb094cdcb83d9247",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRepairFixture.kt": "acb052c7512c224f3541616b33eb1e648dfc48e72b8a3c086d4a81a78d381f55",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnAssetFixture.kt": "40231f88ffe1941635273f1fba1b32dd7cdd78af3801b564b574b2d8aac9ba4d",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnCanonicalSerialIT.kt": "db62444f91ec228c0f1d54ac943160e81121bb582b83d645e3075352400dc533",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierRepairIT.kt": "b9c989ae838a195ee788e4c5873921ff810622748b86d437d0d7cdbbfbe86160"
+  },
+  "migration": {
+    "version": "178.6",
+    "sha256": "a1090f524423ed8623f561c6c26b18cade0aa440ec439634317754cf55659f7b",
+    "immutable": true,
+    "nextFree": "178.7",
+    "changes": "Five guarded identity comparisons; no row backfill, raw history and original command bytes preserved"
+  },
+  "verification": {
+    "matrix": {
+      "tests": 58,
+      "suiteCount": 22,
+      "elapsed": "7m20s",
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseTemporalNumericIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaReacquisitionIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnCanonicalSerialIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIntegrityIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "populatedUpgrade": {
+      "tests": 4,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseTemporalNumericIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseReturnCanonicalSerialIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "existingTenantCount": 2138,
+      "preservedPhysical": {
+        "inventory_document": {
+          "rows": 9701,
+          "digest": "81dcfa397a02812f349988f43876a49e"
+        },
+        "inventory_usage_snapshot": {
+          "rows": 564,
+          "digest": "263951ef87451e7fe3351d734d22ff42"
+        },
+        "inventory_material_usage": {
+          "rows": 564,
+          "digest": "0730c8b395070fbf4a229ae554c26cfe"
+        },
+        "inventory_material_usage_line": {
+          "rows": 543,
+          "digest": "57488d2c0e16d534df3951f3aed145d0"
+        },
+        "inventory_customer_material_fact": {
+          "rows": 549,
+          "digest": "df1c5cf071e826d7cbef24d14fd5be8b"
+        },
+        "inventory_movement": {
+          "rows": 18645,
+          "digest": "a6ec80a9281f2df51412e1154bfa7217"
+        },
+        "inventory_movement_leg": {
+          "rows": 36298,
+          "digest": "d9d0ee2ed529fe39db998f9cb59c09cd"
+        },
+        "inventory_balance_projection": {
+          "rows": 18473,
+          "digest": "56febbb9056b89eb64b677cf5746682a"
+        },
+        "inventory_segment": {
+          "rows": 6840,
+          "digest": "a24e7870cf78c5a9cc5f6a83bdf5cbdf"
+        },
+        "inventory_serialized_asset": {
+          "rows": 3292,
+          "digest": "b6eea50182e6c1845718f8e2c7804254"
+        },
+        "inventory_asset_assignment": {
+          "rows": 1001,
+          "digest": "e13ee77a7d84845af21b69830d18048b"
+        },
+        "inventory_material_settlement": {
+          "rows": 47,
+          "digest": "724d26b865e16129d00c79194e3995cd"
+        },
+        "fulfillment_approval_snapshot": {
+          "rows": 55,
+          "digest": "2f3543f9bc1a507a365490716d47b14f"
+        },
+        "inventory_return_case": {
+          "rows": 392,
+          "digest": "55f6aa20ea1bc323642c27930f5d4649"
+        },
+        "inventory_repair_case": {
+          "rows": 139,
+          "digest": "d70464e748a2f55df7bc17d310414a65"
+        },
+        "inventory_rma_handover": {
+          "rows": 69,
+          "digest": "d1f5de67badf893b93d8f6309a32d625"
+        },
+        "inventory_asset_removal": {
+          "rows": 401,
+          "digest": "85328e6f5527845a1e78b2a6cf9de722"
+        },
+        "inventory_rma_receipt": {
+          "rows": 62,
+          "digest": "6848f143136b0bec77f3d62568243919"
+        }
+      },
+      "priorChecksumsUnchanged": true,
+      "appliedDelta": [
+        "178.6"
+      ]
+    }
+  },
+  "acceptance": {
+    "physicalReference": "Actual 1000000MM/10ONU receipt,100000MM/1ONU issue and ACK,82500MM consumption, actual customer LOAN installation/handover,17500MM inspected return,proof completion and independent QA. Final917500MM available+82500MM consumed,0 technician MM,9 available ONU+1 installed,10 physical assets.",
+    "distinctKeys": "Barrier-synchronized competing use commands yield200+409; winner replays original result,one usage and exactly two children of issued cable; remaining physical flow completes.",
+    "count": "Selected quarantine count becomes COUNT_STALE after actual inspection moves its cable; unchanged partial bin count posts with no adjustment and excludes the new remnant position. Actual barrier-concurrent independent count decisions post once.",
+    "reuse": "Actual signed removal,intake,reset inspection,explicit same-asset reservation among ten ONUs,reissue and ACK,customer B installation and QA preserve assetId and A history. Frozen A review is byte-identical. Delayed A metric enters only old episode; duplicate batch idempotent,no B metric/status/alarm effects. Concurrent stale A and fresh B ACS snapshots keep customer fields separate.",
+    "canonicalSerial": "Mixed-case raw receipt serial survives return,LOAN/SALE supplier repair and same-customer sold RMA. Scanner case/whitespace compares canonical identity,wrong serial still rejects,altering command bytes under the same key still conflicts,original raw origin/history remains unchanged.",
+    "crashAndOutbox": "WarehouseRecoveryIT reran both actual HTTP postcommit response-loss+whole-app close and fresh-app exact replay+real outbox redelivery tests. Existing phase proof records socket,context and lease assertions; this run also passes conservation and revoked/foreign scope.",
+    "sourceAuthority": "Reassignment and serialized-only QA gates rerun; old source actors remain immutable while new use and current QA/proof authority remain fenced. Prior isolation and owner witness tests are linked below."
+  },
+  "priorTask44Proofs": [
+    "mixed-material-verification.json",
+    "usage-order-verification.json",
+    "serial-settlement-verification.json",
+    "numeric-recovery-verification.json",
+    "reassignment-settlement-verification.json"
+  ],
+  "honestFailureHistory": [
+    "Initial scoped-count draft wrongly requested unsupported full-location/serial counting and failed400; corrected to actual selected measured positions, then5 tests passed.",
+    "First8-suite numeric matrix30tests29passed; repeated fixture serials across retained tenants correctly made global ACS ownership ambiguous. Unique serials fixed that fixture.",
+    "Next temporal-only run reached actual return inspection and failed409 because raw mixed-case receipt serial was compared to upper-case scanner text. Corrected service and five SQL guards forward-only in178.6.",
+    "Focused final4tests3suites passed2m43s before final58-case matrix and populated upgrade."
+  ],
+  "limitations": [
+    "ACS/metrics use real owner services with offline payload fixtures,not vendor/hardware certification.",
+    "Whole application closes and restarts; no unrelated process kill is claimed.",
+    "Task45 browser drafts are separate and unverified by this server proof. Tasks46\u201348 and final audits remain open.",
+    "Raw authenticated logs/XML/traces remain private."
+  ],
+  "supportingSha256": {
+    ".gitattributes": "b6d07181bb92f172f890a01f4d8ad4c54629fb4012e8dfa0a39c998dc07d0215"
+  },
+  "formatting": "V178.6 retains its already-applied trailing empty line. A path-specific Git whitespace attribute exempts only blank-at-eof for that immutable file; other whitespace checks remain enabled."
+}

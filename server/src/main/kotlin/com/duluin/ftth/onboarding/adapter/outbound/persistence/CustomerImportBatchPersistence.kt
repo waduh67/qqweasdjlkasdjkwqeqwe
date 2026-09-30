@@ -19,7 +19,9 @@ import org.hibernate.type.SqlTypes
 @Table(name = "customer_import_batch")
 class CustomerImportBatchJpaEntity(
     id: UUID = UUID.randomUUID(),
-) : TenantAwareJpaEntity(id) {
+) : CustomerImportIdentityEntity(id) {
+    @Column(name = "created_at", nullable = false, updatable = false)
+    val createdAt: java.time.Instant = java.time.Instant.now()
     @Column(name = "operation_key", nullable = false, updatable = false, length = 240)
     lateinit var operationKey: String
     @Column(nullable = false, updatable = false, length = 64)
@@ -60,7 +62,7 @@ class CustomerImportBatchJpaEntity(
 @Table(name = "customer_import_staging_row")
 class CustomerImportStagingRowJpaEntity(
     id: UUID = UUID.randomUUID(),
-) : TenantAwareJpaEntity(id) {
+) : CustomerImportIdentityEntity(id) {
     @Column(name = "batch_id", nullable = false, updatable = false)
     lateinit var batchId: UUID
     @Column(name = "row_number", nullable = false, updatable = false)
@@ -76,7 +78,7 @@ class CustomerImportStagingRowJpaEntity(
 @Table(name = "customer_import_error")
 class CustomerImportErrorJpaEntity(
     id: UUID = UUID.randomUUID(),
-) : TenantAwareJpaEntity(id) {
+) : CustomerImportIdentityEntity(id) {
     @Column(name = "batch_id", nullable = false, updatable = false)
     lateinit var batchId: UUID
     @Column(name = "row_number", nullable = false, updatable = false)

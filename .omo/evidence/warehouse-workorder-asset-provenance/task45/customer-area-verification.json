@@ -1,0 +1,29 @@
+{
+  "sourceCheckpoint": "a3c83602 plus this fix",
+  "red": {
+    "tests": 3,
+    "failed": 1,
+    "case": "unrestricted administrator cannot select first area"
+  },
+  "green": {
+    "tests": 4,
+    "files": 2,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 3070
+  },
+  "existingContract": "CustomerService.search -> AuthenticatedUser.areaScope: empty areaIds is unrestricted for customer administration",
+  "warehouseAuthority": "CurrentAuthorityPersistence still requires explicit area scope; no server authorization changes",
+  "assertions": [
+    "legacy customer first-area choice is visible",
+    "scoped users only see own area descendants",
+    "inaccessible stored assignment remains unchanged",
+    "missing area permission does not load or enable options"
+  ],
+  "lint": "PASS exit0; existing set-state-in-effect warning remains",
+  "legacyBrowser": "R3 old UI2PASS; after phase reproduced missing options2FAIL; R4 rerun pending",
+  "sha256": {
+    "web/src/components/organisms/customer/CustomerAreaField.tsx": "3d7d6ee6f6666f8fed86bd2958a4751a8d90bb2195aca021ad7a91a0b9aa21c5",
+    "web/src/components/organisms/customer/CustomerAreaField.test.tsx": "b34aa33cccd8ec659db36e7f66bb1d9451e05d2b9ecf82320bf326efb9877157"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "task": 36,
+  "status": "complete",
+  "productSourceCommit": "99b98b41",
+  "testCorrectionCommit": "2c82db3f",
+  "web": {
+    "tests": 178,
+    "files": 28,
+    "durationSeconds": 36.1,
+    "build": "TypeScript and production Vite build passed",
+    "lint": "warehouse API/pages/components oxlint passed"
+  },
+  "acceptance": [
+    "Transfer draft/dispatch/partial receipt/discrepancy and durable history with names and bounded filters",
+    "Eligible whole return source intake, measured inspection, serial/reset checklist and current owner restrictions",
+    "Same-serial vendor dispatch/receipt and new-serial replacement receipt continuation",
+    "Customer RMA current WO revision/assigned receiver dispatch and persisted handover state",
+    "Signed original-WO title request and persisted independent approval continuation"
+  ],
+  "evidence": [
+    {
+      "path": "full-web-verification.json",
+      "sha256": "37bbbf7a563f0e2a4c81fbd11be46fb0c1e70a2f5d93f4b5d106d82ba3f74f91"
+    },
+    {
+      "path": "transfer-filters-verification.json",
+      "sha256": "70cd2e6054c6ae0b9588be4fbca485806368d10a14c5ffdadf6f3a8796f9845a"
+    },
+    {
+      "path": "transfer-browser-verification.json",
+      "sha256": "283198d118f291c31dc705763f3547222203c63093905d60237f9a46a555c52f"
+    },
+    {
+      "path": "return-discovery-verification.json",
+      "sha256": "68b3050344680d24d228b7bc924eff2f06fa0ba0751ba0973a4b1b3b593a3b78"
+    },
+    {
+      "path": "return-asset-context-verification.json",
+      "sha256": "6e21fd57ab83145e381d0386eaa0af9d842eb0e2556e90d9535c7f54a9c97d25"
+    },
+    {
+      "path": "rma-reads-verification.json",
+      "sha256": "5412dc908b4a8bca79519a08b2476031a47637b29e9749b0cb6558c3255df14e"
+    },
+    {
+      "path": "reacquisition-discovery-verification.json",
+      "sha256": "172c1f3f1de86e1e0bed25cc8bbcb0b2269676c73dc54e9f86df64485d9c8519"
+    }
+  ],
+  "browser": {
+    "sourceCommit": "49e8a1d4",
+    "passed": 2,
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ],
+    "durationSeconds": 38.005451,
+    "screenshots": 10,
+    "scenario": "Actual100m transfer with60m received and40m transit; all screenshots reviewed"
+  },
+  "plannedContinuation": [
+    "Task37 implements request/decision destinations for saved approval source links",
+    "Task40/41 then45 add full technician return and customer RMA browser paths as specified in task36 QA",
+    "Camera progressive enhancement remains task40; today manual and keyboard scanning are supported"
+  ],
+  "migrations": "No changes; applied through V175_147",
+  "cleanup": "Owned QA processes/containers/network stopped; volumes retained"
+}

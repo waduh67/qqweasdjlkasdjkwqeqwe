@@ -8,6 +8,9 @@ import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.workorder.WorkOrderRef
 import com.duluin.ftth.inventory.CustomerMaterialFactRef
+import com.duluin.ftth.inventory.CustomerMaterialFactV2
+import com.duluin.ftth.inventory.WarehousePage
+import com.duluin.ftth.inventory.WarehousePageRequest
 import java.util.UUID
 
 /**
@@ -28,7 +31,7 @@ interface Subscriber360Query {
      *
      * @throws com.duluin.ftth.common.domain.error.NotFoundException bila pelanggan tak ada.
      */
-    fun assemble(customerId: UUID): Subscriber360View
+    fun assemble(customerId: UUID, materialPage: WarehousePageRequest = WarehousePageRequest()): Subscriber360View
 }
 
 /**
@@ -51,6 +54,7 @@ data class Subscriber360View(
     val openWorkOrder: WorkOrderRef?,
     val materialHistory: List<CustomerMaterialFactRef>? = null,
     val access: Subscriber360Access,
+    val materialHistoryV2: WarehousePage<CustomerMaterialFactV2>? = null,
 )
 
 /**
@@ -65,4 +69,5 @@ data class Subscriber360Access(
     val cpe: Boolean,
     val workOrder: Boolean,
     val materialHistory: Boolean = false,
+    val materialHistoryV2: Boolean = false,
 )

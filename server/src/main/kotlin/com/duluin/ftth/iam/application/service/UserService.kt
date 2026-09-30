@@ -1,5 +1,7 @@
 package com.duluin.ftth.iam.application.service
 
+import com.duluin.ftth.iam.authorizeChange
+
 import com.duluin.ftth.common.audit.AuditTrailEvent
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
@@ -34,9 +36,11 @@ class UserService(
     private val passwordHasher: PasswordHasher,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageUserUseCase {
 
     override fun create(command: CreateUserCommand): UserView {
+        authority.authorizeChange("iam.user.create").incrementEpoch()
         val email = Email.of(command.email)
         if (userRepository.existsByEmail(email)) throw ConflictException("Email '${email.value}' sudah dipakai")
         validatePassword(command.password)
@@ -56,6 +60,7 @@ class UserService(
     }
 
     override fun update(id: UUID, command: UpdateUserCommand): UserView {
+        authority.authorizeChange("iam.user.update").incrementEpoch()
         val user = load(id)
         user.rename(command.name)
         val saved = userRepository.save(user)
@@ -64,17 +69,18 @@ class UserService(
     }
 
     override fun assignAccess(id: UUID, command: AssignAccessCommand): UserView {
+        authority.authorizeChange("iam.user.assign").incrementEpoch()
         val user = load(id)
         user.assignRoles(validateRoles(command.roleIds))
         user.assignAreas(validateAreas(command.areaIds))
         val saved = userRepository.save(user)
-        // Cabut refresh token agar perubahan izin berlaku setelah access-token kadaluarsa.
         refreshTokens.revokeAllForUser(id)
         audit("user.access_changed", saved)
         return saved.toView()
     }
 
     override fun setEnabled(id: UUID, enabled: Boolean): UserView {
+        authority.authorizeChange("iam.user.update").incrementEpoch()
         val user = load(id)
         if (enabled) {
             user.enable()
@@ -89,6 +95,7 @@ class UserService(
     }
 
     override fun delete(id: UUID) {
+        authority.authorizeChange("iam.user.delete").incrementEpoch()
         val user = load(id)
         requireNotSelf(id, "menghapus")
         userRepository.deleteById(id)

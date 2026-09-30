@@ -1,7 +1,5 @@
 package com.duluin.ftth
 
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -27,23 +25,11 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class GisUtilizationIT {
+class GisUtilizationIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
 
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
-
-    private val pass = "secret12345"
-
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
-
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -59,19 +45,17 @@ class GisUtilizationIT {
         val customer = id(
             post(
                 "/api/customers", token,
-                """{"code":"C-$tag","name":"Pelanggan $tag","address":"Jl. Uji","location":{"longitude":106.996,"latitude":-6.246}}""",
+                """{"areaId":"${area(token)}","code":"C-$tag","name":"Pelanggan $tag","address":"Jl. Uji","location":{"longitude":106.996,"latitude":-6.246}}""",
             ),
         )
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$tag"}"""))
+        val onu = registerWarehouseOnu(token, customer, "SN-$tag")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odp","portNumber":$port}""", 200)
     }
 
     @Test
     fun `heatmap melaporkan utilisasi port tiap ODP dalam jangkauan`() {
         val slug = "util${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Util Co", admin, "Admin", pass))
-        val token = login(slug, admin)
+        val token = tenant(slug)
         val s = uniq().uppercase()
 
         // Rantai POP → OLT → PON → ODC untuk menaungi ODP.

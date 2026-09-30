@@ -1,0 +1,37 @@
+{
+  "regression": {
+    "tests": 191,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "http_restart": "PASS",
+  "posting_counts_before": [
+    4,
+    7,
+    4,
+    1,
+    0,
+    4,
+    6,
+    3,
+    3,
+    0,
+    0
+  ],
+  "posting_counts_after": [
+    4,
+    7,
+    4,
+    1,
+    0,
+    4,
+    6,
+    3,
+    3,
+    0,
+    0
+  ],
+  "boot_jar_sha256": "f465c71634d9fff60c7449b9b623afc1e169508eb8a7045c98488ff6de74af36",
+  "cleanup": "PASS"
+}

@@ -1,0 +1,24 @@
+{
+  "checkedAtCommit": "aa22c32e96fdd416453b5b4e222756a9f14cd334",
+  "runUrl": "https://github.com/waduh67/qqweasdjlkasdjkwqeqwe/actions/runs/36097475699",
+  "artifact": {
+    "commit": "636209cfacd8e54ab9704e525e89d730b483bf46",
+    "runner": "macos-latest",
+    "tasks": {
+      "compileKotlinIosArm64": "COMPILED",
+      "compileKotlinIosSimulatorArm64": "COMPILED"
+    },
+    "nativeRuntimeOrRelease": false
+  },
+  "sourcePathsUnchanged": [
+    "mobile",
+    "build-logic",
+    "gradle",
+    "settings.gradle.kts",
+    "build.gradle.kts",
+    "gradle.properties",
+    "contract",
+    ".github/workflows/mobile-materials.yml"
+  ],
+  "finalReleaseGate": "Pending full task46/48 checks; rerun if relevant inputs change"
+}

@@ -1,0 +1,68 @@
+{
+  "phase": "M05 current source capture at exclusive cutoff; approval/admission pending",
+  "build": "SUCCESSFUL in 2m 54s",
+  "tests": 13,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationCaptureIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationResolutionIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "files": {
+    "server/src/main/resources/db/migration/V177_4__warehouse_current_cutoff_snapshot.sql": "6275f0da7a4d0c23e06aaf94a36f7214fd934d8c28d54f60b283e9966ac3ed50",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt": "c7760831fb270744ab543d0f15fa3897055dbc7ebc6dbb030693ab7e21732d7d",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "830f0f592b73ad831b39ff35fd198483b2b91b493cc1fc8a8e1fc1604c1ae5cc",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/ProvenanceCustomerAdapter.kt": "5b95d0ea1cb4cf9e7b6125a256c82796be6917c550b7bce85a3c26bff52c4c35",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationCaptureIT.kt": "b89bd97b88a424018ea9a3c82283221e38d42878cf4021d9b0d4c450dc22257c"
+  },
+  "checks": [
+    "full packaged migration with canonical collisions and orphan references",
+    "live read-only report uses actual source after Flyway; GET does not persist snapshots",
+    "actual PostgreSQL writer holds shared cutoff fence and changes legacy quantity",
+    "HTTP begin waits on that writer, then rejects stale report hash after writer commit",
+    "refreshed begin captures actual91000, retains original82500 case, replays exact original response",
+    "stable case identity between live preview and frozen batch",
+    "added source included and removed projection excluded from current manifest while old snapshot remains",
+    "customer source capture through root owner port with current area authority",
+    "no post-seal case injection",
+    "resolution4, scoped query2, full packaged boot2 and modularity3 regressions pass",
+    "no documents or verified stock fabricated"
+  ],
+  "notYetProven": [
+    "pending legacy fulfillment outbox capture and terminal reconciliation",
+    "independent batch approval and opening posting",
+    "identity admission, tenant finalization and mixed-state restart",
+    "real browser reconciliation"
+  ]
+}

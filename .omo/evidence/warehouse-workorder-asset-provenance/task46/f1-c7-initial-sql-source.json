@@ -1,0 +1,258 @@
+{
+  "review": "F1 targeted C7 initial private SQL sketch",
+  "status": "SOURCE_REVIEW_ONLY_REQUIRES_R1_R2_R3_R4",
+  "qa_executed_by_reviewer": false,
+  "final_f1": false,
+  "validation_head": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "sql_applied": false,
+  "note": "f1-c7-initial-sql-review.md",
+  "inputs": [
+    {
+      "source": "original-private-unapplied",
+      "path": ".omo/runtime/warehouse-draft-expiry.sql",
+      "sha256": "357b65d171cd917ce2529b3ace1694cb423bd05f967250b77e7c7611ccc71324",
+      "bytes": 22520,
+      "lines": 342
+    },
+    {
+      "source": "validation",
+      "path": ".omo/plans/warehouse-workorder-asset-provenance.md",
+      "sha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+      "bytes": 115123
+    },
+    {
+      "source": "validation",
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-draft-expiry-design.md",
+      "sha256": "59f3d1037c583e28b56e6485c36f288877118dd6fa640d74369ba027943e8d75",
+      "bytes": 14292
+    },
+    {
+      "source": "validation",
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-draft-expiry-clock-design.md",
+      "sha256": "71772c1a713ef528837a1c4f5446c2fd0714ef9c65da2d7f0448340f8f7e81db",
+      "bytes": 15218
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174__warehouse_documents_and_balances.sql",
+      "sha256": "b72dc30f5b0c5ccacbc7555c31fadf22201811461d72b67c58636eac4492fb71",
+      "bytes": 41511
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174_6__warehouse_command_delivery_metadata.sql",
+      "sha256": "7814525a737390663bdc0d670fac0e238ab97245c3f360495ae9c0a4c9c46274",
+      "bytes": 2671
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174_12__warehouse_receipt_intake.sql",
+      "sha256": "d0e1dc015cf05a16c4756ca65939adb0036122311051f74c63a4c7078ad03938",
+      "bytes": 6657
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174_13__warehouse_receipt_evidence_version.sql",
+      "sha256": "ce41336b5f245150467c8efd542afcf4dde7c730d37ed5670929b7e3796f2837",
+      "bytes": 3270
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_3__warehouse_durable_approvals.sql",
+      "sha256": "592043ef4402955d8bb5d6405b0c496f2014976528e6210a7c8c143b5f8aeeed",
+      "bytes": 5533
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_4__warehouse_approval_effect_binding.sql",
+      "sha256": "2953350b3d2e3c3f35bafcdfc6532d0cba72aafd6df06c4cf426a5d6de0bd661",
+      "bytes": 4496
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_5__warehouse_approval_deferred_scope.sql",
+      "sha256": "e2f61e802bf6999abbded37ba073150a88f088da63c8c487354f0a1e112ace14",
+      "bytes": 2301
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_7__warehouse_approval_decision_binding.sql",
+      "sha256": "a7926fcb4a96d743a3490ffc9219ad16516a5e7029e1dac701e1599907d5a828",
+      "bytes": 7563
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_8__warehouse_material_planning.sql",
+      "sha256": "0e81d6a61f60e77a390731d495ad8e875ce94d04f5a1b8d6e0bfe18b88aaf891",
+      "bytes": 6570
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_10__warehouse_material_submission_binding.sql",
+      "sha256": "88e9e481dc51c759d43f01407e115705463a6a159cd1cf2080f4d73c3f6c3407",
+      "bytes": 6325
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_70__warehouse_title_correction_storage.sql",
+      "sha256": "25debc74fcec0771615224014f7e624c4aaa94f8d86121f3fa99760fcb9e2d02",
+      "bytes": 8328
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_71__warehouse_title_approval_execution.sql",
+      "sha256": "20bf458d57037650b0f33b131a6ae913f11708ef62214b7de76bff4d3a0a7ba6",
+      "bytes": 10307
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_73__warehouse_title_final_state.sql",
+      "sha256": "48c58ac2a0bb979711e50df6ec206d6d253b1d848d246058fc564b1160c5f355",
+      "bytes": 15037
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_76__warehouse_title_approval_snapshot.sql",
+      "sha256": "7ccb333bc4af6910b0fa505aca1f3bcf8762067ef6eda9f8430df406e0855080",
+      "bytes": 994
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_77__warehouse_title_final_seals.sql",
+      "sha256": "aafd4246dd5aef6a87eb331246efbea37e1221515ab1a83ae852e55ac3bbcda2",
+      "bytes": 2275
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_113__warehouse_transfer_bindings.sql",
+      "sha256": "9fc5a1a45f55fbd314e450c189c80a11ecd03de54ab83bda851354b4fad631bf",
+      "bytes": 10236
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_113_1__warehouse_transfer_discrepancy.sql",
+      "sha256": "b744363fb41898d1080926a51eb9bc6348d231c3ef0aa34454fa68f95c274032",
+      "bytes": 8013
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_114__warehouse_blind_count_sessions.sql",
+      "sha256": "e4894f4c0c23bd578510ea0940b7ba676b996131d0a0df2739f6008c80cdbbc4",
+      "bytes": 7907
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_114_1__warehouse_count_approval_binding.sql",
+      "sha256": "3838467487a76a8af893acc444e05f132e62c42b2386c8043ff09fbaf57a7e49",
+      "bytes": 12214
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_128__warehouse_rma_reacquisition_title.sql",
+      "sha256": "5c57b1faec84685ac29ecd7b09fb070f7645bcfe227aed3c178fc41fbf5c2da8",
+      "bytes": 1077
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_132__warehouse_return_reacquisition_effect.sql",
+      "sha256": "e38b4f88081afc6c625ec60cb5e5da6fdc4e333f7bf2703e04c4541a19a57f47",
+      "bytes": 42580
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_135__warehouse_supplier_replacement_receipt.sql",
+      "sha256": "ab998db9effece220beed9b979164b54aee915531ec81a3c9bc4f722ba1b2abd",
+      "bytes": 16716
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_136__warehouse_replacement_receipt_policy_context.sql",
+      "sha256": "9c1eb477eca82db04b769074e0f60d400637ea724953593515478594b0b5cb50",
+      "bytes": 3722
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_139__warehouse_return_disposition_effect.sql",
+      "sha256": "a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489",
+      "bytes": 30260
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_141__warehouse_disposition_compensation_effect.sql",
+      "sha256": "636454e183295ddb3e433cb7a2e1e5056a4881f8dacafc450a12d7ab4e8baac0",
+      "bytes": 24772
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_144__warehouse_asset_loss_effect.sql",
+      "sha256": "41ffc26a006cdc7b55ac1ffd4e07e02bfc1b5abbd52c05d2bdce4bf846089708",
+      "bytes": 34793
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V177_7__warehouse_approved_opening_admission.sql",
+      "sha256": "96cfc4248a805342b65b04df3bbe1fc29368de6b6c6da8cac2fa16166ab1c26e",
+      "bytes": 37106
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql",
+      "sha256": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
+      "bytes": 1575
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V178_10__warehouse_transfer_draft_revision.sql",
+      "sha256": "d82891a8941a294bab114069297e931cf8ad6cd0cc7d8a8a7e2f06e736bd4ce2",
+      "bytes": 5492
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V178_11__warehouse_count_draft_revision.sql",
+      "sha256": "e204ad6c111a45e60610cf5338e218b8514fa06d54f3af3d243458c07570dce7",
+      "bytes": 12154
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptEvidenceService.kt",
+      "sha256": "deb75ea6dc849254c77aec9e7c2f5f5027618ee985599004c4942b1700a2e573",
+      "bytes": 7007
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+      "sha256": "d0520181714ecd845cc3e1accfaedda4f6a452e08d541185170be08557328d5c",
+      "bytes": 18431
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
+      "sha256": "c3876128c17c5295b574f7034813f7b9b83c9fd343cf519dad7ab79ec07a44c7",
+      "bytes": 3133
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferApprovalOwner.kt",
+      "sha256": "2c1783a3785c142f5f062b09755b958e849921c657dfad93f3d76aa3d021c801",
+      "bytes": 5603
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
+      "bytes": 10179
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt",
+      "sha256": "8e6b14f57a3975e167bc8a27567f1112fe05ad485053ef63831edef078d1edc0",
+      "bytes": 4358
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
+      "sha256": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76",
+      "bytes": 15853
+    }
+  ]
+}

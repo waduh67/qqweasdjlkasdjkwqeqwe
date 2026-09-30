@@ -1,8 +1,6 @@
 package com.duluin.ftth
 
 import com.duluin.ftth.contract.CollectorProtocol
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -25,28 +23,14 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class IncidentIT {
+class IncidentIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
-
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
-
-    private fun newTenantAdmin(prefix: String): String {
-        val slug = "$prefix${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        return login(slug, admin)
-    }
+    private fun newTenantAdmin(prefix: String): String = tenant("$prefix${uniq()}")
+    private val oltCodes = mutableMapOf<String, String>()
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -61,6 +45,7 @@ class IncidentIT {
 
     private fun buildChain(token: String): Chain {
         val s = uniq().uppercase()
+        oltCodes[token] = "OLT-$s"
         val site = id(post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":-6.23}}"""))
         val olt = id(
             post("/api/olts", token, """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE","managementIp":"10.0.0.1","snmpCommunity":"rahasia"}"""),
@@ -82,9 +67,9 @@ class IncidentIT {
     /** Seperti [attachOnu] tetapi juga mengembalikan id pelanggan pemilik ONU. */
     private fun attachOnuReturningCustomer(token: String, odpId: String, port: Int): Pair<String, String> {
         val s = uniq().uppercase()
-        val customer = id(post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
+        val customer = id(post("/api/customers", token, """{"areaId":"${area(token)}","code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
         val serial = "SN-$s"
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
+        val onu = registerWarehouseOnu(token, customer, "$serial")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
         return customer to serial
     }
@@ -92,25 +77,27 @@ class IncidentIT {
     /** Pelanggan polos tanpa ONU/pasangan jaringan — tak akan pernah terdampak insiden topologi. */
     private fun bareCustomer(token: String): String {
         val s = uniq().uppercase()
-        return id(post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
+        return id(post("/api/customers", token, """{"areaId":"${area(token)}","code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
     }
 
     private fun newCollector(token: String): String =
         JsonPath.read(post("/api/monitoring/collectors", token, """{"name":"C-${uniq()}","pollIntervalSeconds":60}"""), "$.apiKey")
 
-    private fun reading(serial: String, status: String, rx: Double?) =
-        """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
+    private fun reading(token: String, serial: String, status: String, rx: Double?) =
+        """{"serialNumber":"$serial","oltCode":"${oltCodes.getValue(token)}","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
 
     /** Bacaan dengan sebab putus dari register OLT — bahan korelasi mati-listrik vs fiber-putus. */
-    private fun readingCause(serial: String, status: String, cause: String) =
-        """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}","lastDownCause":"$cause"}"""
+    private fun readingCause(token: String, serial: String, status: String, cause: String) =
+        """{"serialNumber":"$serial","oltCode":"${oltCodes.getValue(token)}","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}","lastDownCause":"$cause"}"""
 
     private fun sendMetrics(apiKey: String, vararg readings: String) {
-        mockMvc.perform(
+        val result = mockMvc.perform(
             post("/api/collector/metrics").header(CollectorProtocol.API_KEY_HEADER, apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"batchId":"b-${uniq()}","collectedAt":"${Instant.now()}","readings":[${readings.joinToString(",")}]}"""),
-        ).andExpect(status().isOk)
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(JsonPath.read<Int>(result, "$.accepted")).isEqualTo(readings.size)
+        assertThat(JsonPath.read<List<String>>(result, "$.unknownSerialNumbers")).isEmpty()
     }
 
     private fun incidents(token: String): String =
@@ -135,7 +122,7 @@ class IncidentIT {
         val apiKey = newCollector(token)
 
         // Dua ONU kehilangan sinyal, satu tetap sehat.
-        sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null), reading(c, "ONLINE", -21.0))
+        sendMetrics(apiKey, reading(token, a, "LOS", null), reading(token, b, "LOS", null), reading(token, c, "ONLINE", -21.0))
 
         // Korelasi (dipicu setelah commit ingestion) menyimpan SATU insiden berakar
         // ODC, bukan dua tiket terpisah.
@@ -167,11 +154,11 @@ class IncidentIT {
         val b = attachOnu(token, chain.odp, port = 2)
         val apiKey = newCollector(token)
 
-        sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null))
+        sendMetrics(apiKey, reading(token, a, "LOS", null), reading(token, b, "LOS", null))
         assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).hasSize(1)
 
         // Fiber tersambung lagi → alarm menutup → korelasi menutup insidennya sendiri.
-        sendMetrics(apiKey, reading(a, "ONLINE", -21.0), reading(b, "ONLINE", -20.0))
+        sendMetrics(apiKey, reading(token, a, "ONLINE", -21.0), reading(token, b, "ONLINE", -20.0))
         assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).isEmpty()
     }
 
@@ -189,9 +176,9 @@ class IncidentIT {
         // pulih, bukan kirim teknisi cari kabel).
         sendMetrics(
             apiKey,
-            readingCause(a, "OFFLINE", "DYING_GASP"),
-            readingCause(b, "OFFLINE", "DYING_GASP"),
-            readingCause(c, "OFFLINE", "DYING_GASP"),
+            readingCause(token, a, "OFFLINE", "DYING_GASP"),
+            readingCause(token, b, "OFFLINE", "DYING_GASP"),
+            readingCause(token, c, "OFFLINE", "DYING_GASP"),
         )
 
         val json = incidents(token)
@@ -216,7 +203,7 @@ class IncidentIT {
 
         // Dua ONU LOS serentak — sinyal hilang total, register bukan dying-gasp:
         // pola fiber putus, kirim teknisi.
-        sendMetrics(apiKey, readingCause(a, "LOS", "LOS"), readingCause(b, "LOS", "LOS"))
+        sendMetrics(apiKey, readingCause(token, a, "LOS", "LOS"), readingCause(token, b, "LOS", "LOS"))
 
         val json = incidents(token)
         assertThat(JsonPath.read<List<Any>>(json, "$[*]")).hasSize(1)
@@ -239,7 +226,7 @@ class IncidentIT {
         val apiKey = newCollector(token)
 
         // Dua ONU se-ODP LOS → satu insiden berakar ODC yang berdampak ke A & B.
-        sendMetrics(apiKey, reading(serialA, "LOS", null), reading(serialB, "LOS", null))
+        sendMetrics(apiKey, reading(token, serialA, "LOS", null), reading(token, serialB, "LOS", null))
         assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).hasSize(1)
 
         // Pelanggan terdampak melihat persis insiden itu.

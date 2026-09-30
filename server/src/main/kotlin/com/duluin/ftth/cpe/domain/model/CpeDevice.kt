@@ -37,6 +37,14 @@ class CpeDevice private constructor(
     customerId: UUID?,
     onuId: UUID?,
 ) {
+    var observedFieldsAt: Instant? = null
+        private set
+
+    fun withObservedFieldsAt(time: Instant?): CpeDevice {
+        observedFieldsAt = time
+        return this
+    }
+
     var oui: String? = oui
         private set
     var productClass: String? = productClass

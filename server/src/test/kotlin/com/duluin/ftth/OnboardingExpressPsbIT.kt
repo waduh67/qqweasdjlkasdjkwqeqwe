@@ -90,6 +90,13 @@ class OnboardingExpressPsbIT {
 
         // Area pelanggan → dipetakan ke sebuah BRAS lewat cakupan area BRAS.
         val areaId = id(post("/api/areas", token, """{"code":"AR${uniq()}","name":"Zona ${uniq()}"}"""))
+        val current = get("/api/me", token)
+        val userId = JsonPath.read<String>(current, "$.id")
+        val roles = JsonPath.read<List<String>>(current, "$.roleIds").joinToString(",") { "\"$it\"" }
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/users/$userId/access")
+            .header("Authorization", "Bearer $token").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"roleIds":[$roles],"areaIds":["$areaId"]}"""))
+            .andExpect { assertThat(it.response.status).isEqualTo(200) }
         val nasId = id(
             post(
                 "/api/bng/nas", token,

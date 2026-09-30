@@ -1,0 +1,77 @@
+{
+  "ciRun": 36124045412,
+  "testedCommit": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+  "legacyHead": "abaecd9e129cdfe12058d777fad3da2a9320c3c2",
+  "currentHead": "c227f6bc730d61e0dd95e4dcfacc0297f081a83c",
+  "jars": {
+    "current": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2",
+    "legacy": "e70f76715e6c302a23cf4c101410ea4c777eb29abe9bd45fc8615eec71f6d0d5"
+  },
+  "projects": [
+    "warehouse-desktop",
+    "warehouse-mobile"
+  ],
+  "phases": [
+    "before",
+    "after",
+    "restart"
+  ],
+  "tests": 6,
+  "upgradedCatalogSkus": 2,
+  "readOnlyPreflight": {
+    "status": "PASSED",
+    "schemaBefore": "172",
+    "schemaAfter": "178.7",
+    "readOnly": true,
+    "positiveProbes": 2,
+    "negativeProbes": 6,
+    "negativeReasons": [
+      "migration mismatch",
+      "SKU unit mismatch",
+      "cutover mismatch"
+    ],
+    "rows": [
+      {
+        "database": "warehouse_fixture_0137936932f720c2c3675f6ebffbf95b",
+        "schema": "public",
+        "applicationRole": "warehouse_app",
+        "version": "178.7",
+        "cutover": "ENFORCED",
+        "customers": 1,
+        "onus": 1,
+        "positions": 0,
+        "movements": 1,
+        "verifiedQuantityByUnit": {}
+      },
+      {
+        "database": "warehouse_fixture_0137936932f720c2c3675f6ebffbf95b",
+        "schema": "public",
+        "applicationRole": "warehouse_app",
+        "version": "178.7",
+        "cutover": "ENFORCED",
+        "customers": 1,
+        "onus": 1,
+        "positions": 0,
+        "movements": 1,
+        "verifiedQuantityByUnit": {}
+      }
+    ],
+    "preflightSqlSha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+    "reports": {
+      "preflight-1-migration.txt": "8e1b5ab16cdaacbd1a4b8ba9f9698871634144e7fbf7abe7cdee390d7d63a455",
+      "preflight-0-unit.txt": "b24c85c0351e1856e52333f5f8f7605564fcad7e4e451750ea55f3623c528cda",
+      "preflight-0-migration.txt": "198e8d6690c0014e084ad2c9cc8f798c9e656944756b4a2750f67c12c24a837f",
+      "preflight-0-positive.txt": "54fc65ddbb086350c595d10ad827d453e8bb4f3316be85deb269e8beda6760d4",
+      "preflight-1-positive.txt": "657b3e04feb7573125eab3c8438457d1c813bf8a6d9c5c4cba759c8c48c87ce1",
+      "preflight-0-cutover.txt": "75c63d85efb7b3a70dd8c6c5469c20d0508c1bfc8622f0f1eae5df3f7ec097c2",
+      "preflight-1-cutover.txt": "9df2dda1b0a5c1746b3b44f8564222e5e5e45d607fe266575cc2195112ae9a6b",
+      "preflight-1-unit.txt": "75915274bc67856ebdd20fdcf76e935049fecd45a5f6650e27ed55c7ea927d0d"
+    }
+  },
+  "preservedCustomers": 2,
+  "preservedOnus": 2,
+  "historicalChecksumsUnchanged": true,
+  "databaseRetained": true,
+  "separateDatabase": true,
+  "sharedFunctionDefinitionsUnchanged": true
+}

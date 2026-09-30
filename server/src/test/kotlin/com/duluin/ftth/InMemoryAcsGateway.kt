@@ -121,14 +121,16 @@ class InMemoryAcsGateway : AcsGateway {
         }
     }
 
-    override fun runPing(genieacsId: String, host: String, count: Int): PingDiagnostic {
+    override fun runPing(genieacsId: String, host: String, count: Int, beforePost: () -> Unit): PingDiagnostic {
+        beforePost()
         if (failing) throw IllegalStateException("ACS menolak ping (uji)")
         pingCalls += Triple(genieacsId, host, count)
         return pings[genieacsId]?.copy(host = host)
             ?: PingDiagnostic(host, PingDiagnostic.COMPLETE, count, 0, 12, 9, 18)
     }
 
-    override fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic {
+    override fun runSpeedTest(genieacsId: String, direction: SpeedDirection, beforePost: () -> Unit): SpeedTestDiagnostic {
+        beforePost()
         if (failing) throw IllegalStateException("ACS menolak uji kecepatan (uji)")
         speedTestCalls += genieacsId to direction
         return speedTests[genieacsId]?.get(direction)

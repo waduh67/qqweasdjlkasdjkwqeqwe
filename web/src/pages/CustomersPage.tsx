@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
+import { Disclosure } from '@/components/molecules/Disclosure'
+import { Pagination } from '@/components/molecules/Pagination'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { CustomerStatus, CustomerView } from '../api/network'
+import { customerStatusLabel, type CustomerStatus, type CustomerView } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
-import { PageHeader } from '@/components/molecules'
+import { FormSection, PageHeader } from '@/components/molecules'
 import { Field } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { LocationPicker } from '@/components/organisms'
@@ -19,11 +22,12 @@ import { useConfirm, useToast } from '@/system'
 import { IconCustomers } from '@/components/atoms/icons'
 import { downloadBlob } from '@/utils/download'
 import { CustomerDetailBlade } from './CustomerDetailPage'
+import { CustomerAreaField } from '@/components/organisms/customer/CustomerAreaField'
 
 /**
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
- * terisi = menyunting pelanggan itu (PUT). `areaId` dibawa apa adanya (form ini tak punya
- * pemilih area) agar sunting field lain tak diam-diam menghapus penempatan area pelanggan.
+ * terisi = menyunting pelanggan itu (PUT). Penempatan area tetap dibawa saat menyunting
+ * field lain; perubahan area dipilih secara eksplisit dari cakupan operator.
  *
  * `planId` hanya berlaku saat MENAMBAH: pelanggan lahir bersama paketnya, sekali kirim.
  * Saat menyunting biodata, paket sengaja tak ikut — pindah paket berdampak ke tagihan &
@@ -65,9 +69,6 @@ const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: 'TERMINATED', label: 'Berhenti' },
 ]
 
-function customerStatusLabel(status: CustomerStatus): string {
-  return STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
-}
 
 /**
  * Daftar pelanggan — tabel padat bisa-urut dengan pencarian & filter status di atasnya.
@@ -82,15 +83,26 @@ export function CustomersPage() {
   const navigate = useNavigate()
   const [customers, setCustomers] = useState<CustomerView[]>([])
   // Detail pelanggan kini tampil sebagai flyout fullscreen (bukan rute) — id yang dipilih ada di sini.
-  const [detailId, setDetailId] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<CustomerStatus | ''>('')
+  const [params, setParams] = useSearchParams()
+  const detailId = params.get('customer')
+  const query = params.get('q') ?? ''
+  const statusFilter = (params.get('status') ?? '') as CustomerStatus | ''
+  const pageIndex = Math.max(0, Number.parseInt(params.get('page') ?? '0', 10) || 0)
+  const [total, setTotal] = useState(0)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const requestVersion = useRef(0)
+  const [refreshVersion, setRefreshVersion] = useState(0)
+  const setDetailId = (id: string | null) => setParams(previous => { const next = new URLSearchParams(previous); if (id) next.set('customer', id); else next.delete('customer'); return next })
+  const setFilter = (key: string, value: string) => setParams(previous => { const next = new URLSearchParams(previous); if (value) next.set(key, value); else next.delete(key); next.delete('page'); return next }, { replace: true })
+  const setQuery = (value: string) => setFilter('q', value)
+  const setStatusFilter = (value: CustomerStatus | '') => setFilter('status', value)
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<CustomerDraft | null>(null)
   const [initialDraft, setInitialDraft] = useState<CustomerDraft | null>(null)
   const [errors, setErrors] = useState<{ name?: string; address?: string; planId?: string }>({})
   const [plans, setPlans] = useState<PlanView[]>([])
   const [saving, setSaving] = useState(false)
+  const creation = useCreationReview(draft != null, !!draft?.id)
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
@@ -101,9 +113,8 @@ export function CustomersPage() {
   const openCustomerId = (location.state as { openCustomerId?: string } | null)?.openCustomerId
   useEffect(() => {
     if (!openCustomerId) return
-    setDetailId(openCustomerId)
-    navigate(location.pathname, { replace: true, state: null })
-  }, [openCustomerId, location.pathname, navigate])
+    setParams(previous => { const next = new URLSearchParams(previous); next.set('customer', openCustomerId); return next }, { replace: true, state: null })
+  }, [openCustomerId, setParams])
 
   // Buka blade sekaligus simpan snapshot awal untuk deteksi "kotor" (konfirmasi tutup).
   const openDraft = (d: CustomerDraft) => {
@@ -147,21 +158,37 @@ export function CustomersPage() {
   }
 
   const reload = useCallback(async () => {
+    const version = ++requestVersion.current
+    setLoading(true)
+    setLoadError(null)
     try {
       const page = await api.get<PageResponse<CustomerView>>(
-        `/api/customers?size=100&query=${encodeURIComponent(query)}`,
+        `/api/customers?size=50&page=${pageIndex}&query=${encodeURIComponent(query)}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ''}`,
       )
+      if (version !== requestVersion.current) return
+      const lastPage = Math.max(0, Math.ceil(page.totalElements / 50) - 1)
+      if (pageIndex > lastPage) {
+        setParams(previous => {
+          const next = new URLSearchParams(previous)
+          if (lastPage === 0) next.delete('page')
+          else next.set('page', String(lastPage))
+          return next
+        }, { replace: true })
+        return
+      }
       setCustomers(page.content)
+      setTotal(page.totalElements)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
+      if (version === requestVersion.current) setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
     } finally {
-      setLoading(false)
+      if (version === requestVersion.current) setLoading(false)
     }
-  }, [query, toast])
+  }, [query, statusFilter, pageIndex, setParams])
 
   useEffect(() => {
     void reload()
-  }, [reload])
+    return () => { requestVersion.current += 1 }
+  }, [reload, refreshVersion])
 
   const rows = useMemo(
     () => (statusFilter ? customers.filter((c) => c.status === statusFilter) : customers),
@@ -201,6 +228,7 @@ export function CustomersPage() {
       toast.error('Lengkapi isian wajib.')
       return
     }
+    if (creation.beforeSave()) return
     setSaving(true)
     try {
       const body = {
@@ -221,13 +249,15 @@ export function CustomersPage() {
         await api.post('/api/customers', { ...body, planId: draft.planId || null })
       }
       closeDraft()
-      await reload()
+      // Refresh the current URL's query after the mutation, even if navigation
+      // changed while its request was pending.
+      setRefreshVersion(value => value + 1)
       toast.success(draft.id ? 'Data pelanggan diperbarui' : 'Pelanggan ditambahkan')
     } catch (err) {
       const fallback = draft.id ? 'Gagal memperbarui pelanggan' : 'Gagal menambah pelanggan'
       toast.error(err instanceof ApiError ? err.message : fallback)
     } finally {
-      setSaving(false)
+      setSaving(false); creation.finish()
     }
   }
 
@@ -242,7 +272,9 @@ export function CustomersPage() {
         next.delete(c.id)
         return next
       })
-      await reload()
+      // Refresh the current URL's query after the mutation, even if navigation
+      // changed while its request was pending.
+      setRefreshVersion(value => value + 1)
       toast.success('Pelanggan dihapus')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus pelanggan')
@@ -259,7 +291,9 @@ export function CustomersPage() {
     try {
       await Promise.all(ids.map((id) => api.del(`/api/customers/${id}`)))
       setSelected(new Set())
-      await reload()
+      // Refresh the current URL's query after the mutation, even if navigation
+      // changed while its request was pending.
+      setRefreshVersion(value => value + 1)
       toast.success(`${ids.length} pelanggan dihapus`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus pelanggan')
@@ -288,30 +322,25 @@ export function CustomersPage() {
     {
       key: 'name',
       header: 'Nama',
+      minWidth: 240,
       sortValue: (c) => c.name,
       cell: (c) => c.name,
       onCellClick: (c) => setDetailId(c.id),
       inlineActions: hasRowActions ? inlineActions : undefined,
     },
-    { key: 'code', header: 'Kode', sortValue: (c) => c.code, cell: (c) => c.code },
-    { key: 'phone', header: 'Telepon', sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
+    { key: 'code', header: 'Kode', minWidth: 150, sortValue: (c) => c.code, cell: (c) => c.code },
+    { key: 'phone', header: 'Telepon', minWidth: 135, sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
     {
       key: 'status',
       header: 'Status',
+      minWidth: 150,
       sortValue: (c) => c.status,
-      cell: (c) => `${customerStatusLabel(c.status)}${c.awaitingInstallation ? ' · Menunggu instalasi' : ''}`,
+      cell: (c) => customerStatusLabel(c.status),
+      description: (c) => c.awaitingInstallation ? 'Menunggu instalasi' : null,
     },
-    { key: 'address', header: 'Alamat', sortValue: (c) => c.address, cell: (c) => c.address },
-    { key: 'onuCount', header: 'ONU', align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
-    {
-      key: 'onuLocation',
-      header: 'Lokasi ONU',
-      sortValue: (c) => c.onus.find((o) => o.odpCode)?.odpCode ?? '',
-      cell: (c) => {
-        const attached = c.onus.find((o) => o.odpCode)
-        return attached ? `${attached.odpCode} port ${attached.odpPortNumber}` : <span className="muted">—</span>
-      },
-    },
+    { key: 'address', header: 'Alamat', minWidth: 240, sortValue: (c) => c.address, cell: (c) => c.address },
+    { key: 'onuCount', header: 'ONU', minWidth: 64, align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
+
   ]
 
   // CommandBar: primary `+ Tambah` dipatok kiri; sekunder berjajar berkelompok
@@ -376,10 +405,11 @@ export function CustomersPage() {
   ])
 
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
+    <div className="stack resource-page customers-page">
       <PageHeader
         title="Pelanggan"
-        subtitle="Data pelanggan, perangkat ONU, dan penempatannya di ODP."
+        icon={<IconCustomers size={32} />}
+        subtitle="Kelola pelanggan, langganan, dan perangkat yang terpasang."
       />
 
       {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
@@ -388,14 +418,14 @@ export function CustomersPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, kode, alamat, atau telepon…" />
-        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as CustomerStatus | '')}>
+        <SelectField aria-label="Filter status pelanggan" value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as CustomerStatus | '')}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </SelectField>
       </Toolbar>
 
-      <DataTable
+      {loadError ? <div className="card load-error" role="alert"><p>{loadError}</p><Button onClick={() => void reload()}>Coba lagi</Button></div> : <DataTable
         columns={columns}
         rows={rows}
         rowKey={(c) => c.id}
@@ -406,32 +436,35 @@ export function CustomersPage() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : undefined}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan pelanggan pertama atau impor data pelanggan melalui menu di atas.'}
             icon={<IconCustomers size={32} />}
           />
         }
-      />
+      />}
+      {!loadError && total > 50 && <p className="resource-sort-note">Pengurutan kolom berlaku untuk halaman ini.</p>}
+      {!loadError && <Pagination page={pageIndex} size={50} total={total} busy={loading} onChange={index => setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(index)); return next })} />}
 
       <Blade
+        creation={{ ...creation, busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama', draft?.name], ['Telepon', draft?.phone], ['Alamat', draft?.address], ['Paket', plans.find(plan => plan.id === draft?.planId)?.name]]} /> }}
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
         subtitle={draft?.id ? draft.code : undefined}
-        size="sm"
+        size="lg"
+        className="blade-customer-form"
         dirty={dirty}
-        onClose={closeDraft}
+        onClose={() => { if (!saving) closeDraft() }}
         footer={
           <>
+            <Button onClick={closeDraft} disabled={saving}>Batal</Button>
             <Button variant="primary" onClick={() => void save()} disabled={saving}>
               {saving ? 'Menyimpan…' : 'Simpan'}
-            </Button>
-            <Button onClick={closeDraft} disabled={saving}>
-              Batal
             </Button>
           </>
         }
       >
         {draft && (
-          <div className="stack">
+          <div className="stack azure-resource-form">
+            <FormSection title="Identitas pelanggan">
             <TextField
               label="Nama"
               required
@@ -444,14 +477,8 @@ export function CustomersPage() {
               }}
               autoFocus
             />
-            <div className="row">
-              <div style={{ flex: 1 }}>
-                <TextField label="Telepon" value={draft.phone} onChange={(_, data) => setDraft({ ...draft, phone: data.value })} placeholder="08123456789" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField label="NIK / No. identitas" value={draft.idCardNumber} onChange={(_, data) => setDraft({ ...draft, idCardNumber: data.value })} placeholder="opsional" />
-              </div>
-            </div>
+            <TextField label="Telepon" value={draft.phone} onChange={(_, data) => setDraft({ ...draft, phone: data.value })} placeholder="08123456789" />
+            <TextField label="NIK / No. identitas" value={draft.idCardNumber} onChange={(_, data) => setDraft({ ...draft, idCardNumber: data.value })} placeholder="opsional" />
             <TextField
               label="Email"
               type="email"
@@ -459,6 +486,8 @@ export function CustomersPage() {
               onChange={(_, data) => setDraft({ ...draft, email: data.value })}
               placeholder="opsional"
             />
+            </FormSection>
+            <FormSection title="Alamat pemasangan">
             <TextField
               label="Alamat"
               required
@@ -470,15 +499,21 @@ export function CustomersPage() {
                 if (errors.address) setErrors((p) => ({ ...p, address: undefined }))
               }}
             />
-            <Field label="Lokasi">
+            <CustomerAreaField value={draft.areaId} onChange={areaId => setDraft({ ...draft, areaId })} />
+            <Disclosure className="form-disclosure" title={<>Tentukan titik di peta (opsional)</>}>
+              
+              <Field label="Lokasi">
               <LocationPicker
                 longitude={draft.longitude}
                 latitude={draft.latitude}
                 onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
                 onAddress={(address) => setDraft(draft.address.trim() ? draft : { ...draft, address })}
               />
-            </Field>
+              </Field>
+            </Disclosure>
+            </FormSection>
             {draft.id == null && (
+              <FormSection title="Layanan internet">
               <SelectField
                 label="Paket langganan"
                 required={plans.length > 0}
@@ -488,10 +523,10 @@ export function CustomersPage() {
                 validationMessage={errors.planId}
                 hint={
                   !canPlanView
-                    ? 'Butuh izin lihat paket untuk memilihnya di sini — paketnya bisa ditetapkan menyusul di detail pelanggan.'
+                    ? 'Anda belum memiliki izin melihat paket. Paket dapat ditetapkan kemudian melalui detail pelanggan.'
                     : plans.length === 0
-                      ? 'Belum ada paket aktif — buat dulu di menu Paket Internet, lalu tetapkan paketnya di detail pelanggan.'
-                      : 'Satu pelanggan satu langganan: paketnya ikut lahir di sini, dan nanti diganti di tempat — tak pernah ditambah.'
+                      ? 'Belum ada paket aktif. Buat paket di menu Paket Internet, lalu tetapkan melalui detail pelanggan.'
+                      : 'Paket langsung terhubung saat pelanggan disimpan. Perubahan paket tersedia di detail pelanggan.'
                 }
                 onChange={(_, data) => {
                   setDraft({ ...draft, planId: data.value })
@@ -505,6 +540,7 @@ export function CustomersPage() {
                   </option>
                 ))}
               </SelectField>
+              </FormSection>
             )}
           </div>
         )}

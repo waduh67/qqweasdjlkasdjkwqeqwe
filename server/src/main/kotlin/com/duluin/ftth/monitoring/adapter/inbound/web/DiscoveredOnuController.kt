@@ -48,7 +48,8 @@ class DiscoveredOnuController(
     fun provision(
         @PathVariable id: UUID,
         @Valid @RequestBody request: ProvisionDiscoveredOnuRequest,
-    ): DiscoveredOnuView = useCase.provision(id, request.toCommand())
+        @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key", required = false) operationKey: String?,
+    ): DiscoveredOnuView = useCase.provision(id, request.toCommand().copy(operationKey = operationKey.orEmpty()))
 
     @PostMapping("/{id}/ignore")
     @PreAuthorize("@authz.can('monitoring.provisioning.manage')")
@@ -68,11 +69,15 @@ data class ProvisionDiscoveredOnuRequest(
     /** Port pada ODP; @Min hanya berlaku bila diisi (null dilewati validasi). */
     @field:Min(1) val portNumber: Int?,
     val installRxPowerDbm: Double?,
+    val authorizationId: UUID? = null,
+    val expectedRevision: Long = 0,
 ) {
     fun toCommand() = ProvisionDiscoveredOnuCommand(
         customerId = customerId,
         odpId = odpId,
         portNumber = portNumber,
         installRxPowerDbm = installRxPowerDbm,
+        authorizationId = authorizationId,
+        expectedRevision = expectedRevision,
     )
 }

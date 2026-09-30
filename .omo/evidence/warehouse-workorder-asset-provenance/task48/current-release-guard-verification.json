@@ -1,0 +1,51 @@
+{
+  "status": "PASSED_GUARD_TESTS_ONLY",
+  "testedSourceCommit": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
+  "tests": 28,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "commands": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-results.py",
+      "tests": 11,
+      "exitCode": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-artifacts.py",
+      "tests": 4,
+      "exitCode": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-ci-workflow.py",
+      "tests": 5,
+      "exitCode": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-publish-images.py",
+      "tests": 5,
+      "exitCode": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/warehouse/test-historical-overlays.py",
+      "tests": 3,
+      "exitCode": 0
+    }
+  ],
+  "actionlint": "PASSED",
+  "sourceInputs": {
+    "scripts/warehouse/test-ci-results.py": "fa73ff039840857cbe0bc83ca4cda395f5a7540da705faf7099599f1227fede4",
+    "scripts/warehouse/test-ci-artifacts.py": "ecbd398327fbeef180a873329e716e1d49ed79f002227b08f17580a6ccbe5b5b",
+    "scripts/warehouse/test-ci-workflow.py": "c96d629db2d6bfca9f9af46dd7cda689ceee6ef4fdaf65eed9250082b20d4935",
+    "scripts/warehouse/test-publish-images.py": "05d06676a416d4237ffd9389495111088d49f5de0de785c2aa5c075ad435ec0b",
+    "scripts/warehouse/test-historical-overlays.py": "914127aeebd2a6382f162264fae5a005948712ba6fc491a6a17849793d092cdc",
+    "scripts/warehouse/ci-results.py": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912",
+    "scripts/warehouse/ci-artifacts.py": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f",
+    "scripts/warehouse/publish-images.py": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e",
+    "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
+    ".github/workflows/warehouse.yml": "2031667fb146be70f5e4825cb028a919525f4b0b1523cf4874d0effe2c8aeafa",
+    ".github/workflows/deploy.yml": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20",
+    ".github/actions/warehouse-setup/action.yml": "5bd5fc02a043b90d00a3aa300efe911f93ac28186e0668fd2948ec6be0dcc8d3"
+  },
+  "limitation": "These tests verify failure handling and release dependencies; full application regression and aggregate CI remain mandatory."
+}

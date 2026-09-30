@@ -1,0 +1,52 @@
+{
+  "phase": "M05 preservation; interactive resolution/admission still pending",
+  "migration": "V177__warehouse_legacy_preservation.sql",
+  "sha256": "dcfa14774e95a35af8d86135889fe03dd2085500f704f23f3189a7eed519cb88",
+  "fullPackagedMigration": true,
+  "legacyStartVersion": "172",
+  "packagedMigrationFiles": 341,
+  "suites": [
+    {
+      "suite": "WarehouseMigrationITBoot",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "WarehouseMigrationInventoryTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "WarehouseSchemaITUpgrade",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "build": "SUCCESSFUL in 1m 9s",
+  "fixtureCounts": {
+    "tenants": 2,
+    "assets": 3,
+    "installedOnuRecords": 2,
+    "preservedCases": 11,
+    "identityConflictGroups": 3,
+    "unverifiedLegacyBalanceQuantity": "82500",
+    "newVerifiedPositions": 0,
+    "newDocuments": 0,
+    "pendingLegacyMovements": 1
+  },
+  "checks": [
+    "original IDs/raw serial/MAC/installed links preserved",
+    "serialized historical leg 1 EA preserved; unknown bulk units unchanged",
+    "unconditional claim rejects competing identity",
+    "immutable RLS snapshots; unrelated customer address absent",
+    "batch requires VALIDATING fence; manifest and hash derived by database",
+    "app cannot alter evidence or enable ENFORCED without independent approval",
+    "full clean and collision expansion; repeated migrations execute zero"
+  ]
+}

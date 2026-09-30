@@ -1,0 +1,11 @@
+# Optional SMTP health configuration review
+
+The deployment-only mapping `MANAGEMENT_HEALTH_MAIL_ENABLED: ${FTTH_MAIL_HEALTH_ENABLED:-false}` is appropriate for a fresh installation with intentionally unconfigured SMTP. It disables only Spring Boot's mail health indicator. It does not disable the production configuration validator, database health, schema guard, RLS, migrations or application checks.
+
+The actual application source supports this distinction: `SmtpSenderFactory.current()` prioritizes SMTP settings saved in the database; its environment fallback explicitly rejects a blank Spring mail host. The standard mail indicator tests the fixed Spring sender rather than the dynamically selected platform SMTP configuration. An enabled indicator can therefore fail for an empty environment fallback even when the application deliberately supports SMTP setup through the UI. No broader health-group or application change is needed for this deployment correction.
+
+The current Compose, environment template and shared-proxy documentation accurately describe the optional indicator and its environment-only scope. Only those three files changed since the prior reviewed deployment candidate; application/build/test/workflow/migration inputs remain unchanged. Diff check passed. Exact hashes are in the paired JSON.
+
+Health UP does not establish successful email delivery. Existing application behavior logs messages when SMTP/from is missing; portal recovery and email alerts require real SMTP configuration. Even the platform test response may report a logged result as delivered, so actual SMTP outcome/inbox receipt is the eventual delivery proof. This is an existing application behavior and a disclosed deployment limitation, not a request to expand this configuration fix.
+
+Preserve the original R1 timeout/failure and raw evidence. A fresh R2 should prove the missing-secret rejection and positive production startup using the same authenticated image, with no QA profile or database/default-health disabling, followed by the existing role/clock/login/restart/cleanup assertions. This reviewer has only source-reviewed the change and has not authenticated R1 raw logs or executed R2. Current complete code CI and final F4 approval remain pending.

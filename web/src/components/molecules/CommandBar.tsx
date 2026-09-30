@@ -1,5 +1,6 @@
+import { MoreHorizontal } from 'lucide-react'
 import type { ReactElement } from 'react'
-import { Toolbar, ToolbarDivider } from '@fluentui/react-components'
+import { Menu, MenuButton, MenuItem, MenuList, MenuPopover, MenuTrigger, Toolbar, ToolbarDivider } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
 
 export type CommandAction = {
@@ -22,10 +23,11 @@ export function CommandBar({
   return (
     <Toolbar className="azure-commandbar" aria-label="Aksi">
       {primary && <CommandButton action={primary} primary />}
-      {primary && actions.length > 0 && <CommandDivider />}
-      {actions.map((action) => (
-        <CommandActionItem key={action.key} action={action} />
-      ))}
+      <div className="command-secondary">
+        {primary && actions.length > 0 && <CommandDivider />}
+        {actions.map((action) => <CommandActionItem key={action.key} action={action} />)}
+      </div>
+      {actions.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton size="small" appearance="subtle" icon={<MoreHorizontal size={18} />}>Aksi lainnya</MenuButton></MenuTrigger><MenuPopover><MenuList>{actions.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
     </Toolbar>
   )
 }
@@ -46,7 +48,7 @@ function CommandDivider() {
 function CommandButton({ action, primary }: { action: CommandAction; primary?: boolean }) {
   return (
     <Button
-      variant={primary ? 'primary' : 'subtle'}
+      variant="subtle"
       className={primary ? 'cmd-btn cmd-primary' : 'cmd-btn'}
       icon={action.icon}
       onClick={action.onClick}

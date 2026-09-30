@@ -1,0 +1,46 @@
+{
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "executedByReviewer": false,
+  "finalF4Approval": false,
+  "findings": [
+    {
+      "evidence": "Line11 iterates gate.hostConfigurationSha256 with no required-key set; {} passes. Lines8-10 only compare a fixed commit and four PASS strings plus a boolean.",
+      "id": "ACT-F4-01",
+      "requiredCorrection": "Require the exact reviewed host-file inventory and hash values; bind current CI run/proof hashes, backup drill and final independent review receipts to the approval record before mutation.",
+      "severity": "high",
+      "status": "OPEN_IN_REVIEWED_SOURCE",
+      "subject": "Approval receipt can omit all host file checks and lacks source-bound final evidence requirements"
+    },
+    {
+      "evidence": "Lines89-92 restore disk file only if reload throws. Public HTTPS/login/Drive/backups at95-103 can fail after reload and outer handler only writes FAIL.",
+      "id": "ACT-F4-02",
+      "requiredCorrection": "Record switch state and restore/reload the prior owned FTTH block on post-switch failure without overwriting concurrent unrelated edits; record recovery success/failure. Preserve migrated DB/history and do not reset volumes.",
+      "severity": "high",
+      "status": "OPEN_IN_REVIEWED_SOURCE",
+      "subject": "Post-switch failure leaves public route active, and reload failure restores only file bytes"
+    }
+  ],
+  "fullCodeCiStillPending": true,
+  "parentReportsNotExecuted": true,
+  "positiveChecks": [
+    "Absent approval file aborts before mutation",
+    "Pinned application image references checked in rendered Compose and actual container IDs",
+    "Production=true, seed=false, no QA profile",
+    "Runtime role/migrations/restricted clock ACLs verified before public switch",
+    "Only expected private/default/edge bindings accepted",
+    "Shared Caddy managed-block replacement preserves unrelated bytes before switch",
+    "Candidate Caddy validation and original-file compare before reload",
+    "Private and public authenticated login plus pre/post Drive200 checks",
+    "Initial application/radius backups requested"
+  ],
+  "reviewedAtUtc": "2026-09-26T21:10:41.251576+00:00",
+  "runtimeNotYetProven": [
+    "Current full CI acceptance",
+    "Final approved release receipt and host inventory completeness",
+    "Activation and actual public HTTPS/login/Drive result",
+    "Failure recovery of managed edge route",
+    "Initial production backup result"
+  ],
+  "sourceSha256": "9d6d2624903b961901d17fcca2a3c11ba3172edea33bbd095a89bec756f71b26",
+  "status": "STAGED_ACTIVATION_SOURCE_REVIEW_CHANGES_REQUIRED"
+}

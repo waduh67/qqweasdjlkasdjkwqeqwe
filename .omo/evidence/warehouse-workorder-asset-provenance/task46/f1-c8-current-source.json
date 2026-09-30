@@ -1,0 +1,117 @@
+{
+  "kind": "bounded-current-c8-read-only-source-recheck",
+  "sourceHead": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "worktree": "warehouse-regression-validation",
+  "trackedDiffSha256": "047bbb0eddba66c0d3a4023e6ac9e1877220516ad0409171214be7de1443d284",
+  "executedQAByReviewer": false,
+  "rawRuntimeEvidenceRevalidatedByReviewer": false,
+  "freshSourceFindings": [],
+  "finalF1Approval": false,
+  "changedSincePriorReviewedManifest": [
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt",
+    "web/e2e/warehouse/asset-exception-journey.ts"
+  ],
+  "availableSafeEvidenceSummary": {
+    "serverR2": {
+      "tests": 87,
+      "suites": 4,
+      "sourceRelationship": "before adjacent legacy ownership-read fix"
+    },
+    "serverR3": {
+      "tests": 13,
+      "suites": 2,
+      "sourceRelationship": "current read fix; separate from broader R2"
+    },
+    "webR2": {
+      "tests": 18
+    },
+    "f2RawVerification": "recorded in independent F2 safe review; not repeated here",
+    "browserR1": "failed during fixture user creation",
+    "browserR2": "running at review time"
+  },
+  "sourceFiles": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+      "sha256": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "sha256": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt",
+      "sha256": "fe79648722c83a0465312c59eda6fdd6d5d7c52ad68c6bb7786be024d5e2c2f9"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/AssetHandoverCustomerAdapter.kt",
+      "sha256": "7ad61304449ead33a524371c7161bbf21b103d9e4dc577299291e9a5bf36b739"
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt",
+      "sha256": "9a61868e7f7d18efd9a7d321d2e2cf82a06b4f048096a152dc895bd71996f84e"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+      "sha256": "e62d365c14e62ad5aa4e258afee6d20434cd80baa99b0d4394f08159a4bd9f5d"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetException.tsx",
+      "sha256": "69ac25e1d6dbba42da94b5b8422bdfbd0024b5c5ba731974ada4c7ca1104ab42"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetException.test.tsx",
+      "sha256": "64d2478d1ebda60ab6d00b45b530bd2c030c55af3bff4eb96ea9b68cffc5e7d0"
+    },
+    {
+      "path": "web/src/api/warehouse/customerAssetExceptions.ts",
+      "sha256": "c9605d03a5d7496a0dd90f0d3da619306a285b653bb5b03f603709a1db2d7954"
+    },
+    {
+      "path": "web/e2e/warehouse/asset-exception-journey.ts",
+      "sha256": "5123b1532511ec3cc0eb96e28ffaf9a22ef6c895bfbfcc62726329eda8293728"
+    },
+    {
+      "path": "web/e2e/warehouse/customer-assets.spec.ts",
+      "sha256": "6eb9636ed009601d3900ffb7cfd1c9fed957d33f20662eef9d4f4c381b39e615"
+    },
+    {
+      "path": "web/e2e/warehouse/loan-reuse-scenario.ts",
+      "sha256": "fd902cdcf15ad36f167f55b1fdbddf9536863c9d271790f343e11b607867793c"
+    },
+    {
+      "path": "web/e2e/warehouse/numeric-journey.ts",
+      "sha256": "09fa6913e7e95dc393d71b04e9aaf4975bac2547617ef5908d3c33ae0c4d7474"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+      "sha256": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32"
+    },
+    {
+      "path": "web/e2e/warehouse/helpers.ts",
+      "sha256": "92fe62539d8b8a20de1cf0231ee3b423d72256ad8eb5fe9ecab2a9b52f65240e"
+    }
+  ],
+  "safeEvidenceRecords": [
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-asset-exception-server-r2.json",
+      "sha256": "3f47145d0f5539eb527cc3c09b156b8735ff78d9a08a68b235d03f955683aa4c"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-asset-exception-server-r3.json",
+      "sha256": "0acda7f849052726133c9688e7f5ae5eb6ae6c5260e09487a4140eea0098ef04"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-asset-exception-web-r2.json",
+      "sha256": "3810e282d1a3118e530ca44e0b6d2bf6179bc12cd561f2319aecba3529262058"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-asset-exception-executed-verification.md",
+      "sha256": "324b08b33069c391fee05c3d74cfb2909ce4a5b3f35ea18d589fbb93a309ee72"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-asset-exception-executed-verification.json",
+      "sha256": "d2d3604cab8bcac53aa614de008e79df6110893398d37557b572648e4d05073e"
+    }
+  ]
+}

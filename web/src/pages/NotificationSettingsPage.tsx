@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/molecules'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
@@ -38,11 +39,12 @@ import { IconAlert } from '@/components/atoms/icons'
 const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'FONNTE', 'META_CLOUD', 'QONTAK']
 const DEFAULT_TEST_MESSAGE = 'Pesan uji konfigurasi Fonnte dari aplikasi FTTH.'
 
-type NotificationTab = 'whatsapp' | 'email' | 'triggers'
+type NotificationTab = 'whatsapp' | 'email' | 'templates' | 'triggers'
 
 const NOTIFICATION_TABS: { key: NotificationTab; label: string }[] = [
   { key: 'whatsapp', label: 'WhatsApp' },
   { key: 'email', label: 'Email' },
+  { key: 'templates', label: 'Template WhatsApp' },
   { key: 'triggers', label: 'Pemicu otomatis' },
 ]
 
@@ -200,7 +202,7 @@ export function NotificationSettingsPage() {
 
   const pathSegment = location.pathname.split('/').filter(Boolean).at(-1)
   const activeTab: NotificationTab =
-    pathSegment === 'email' || pathSegment === 'triggers' ? pathSegment : 'whatsapp'
+    pathSegment === 'email' || pathSegment === 'triggers' || pathSegment === 'templates' ? pathSegment : 'whatsapp'
   const storedHttpTokenAvailable = persistedProvider === form.provider && form.httpTokenSet
   const canTestWhatsApp =
     isTestableProvider(form.provider) &&
@@ -211,17 +213,8 @@ export function NotificationSettingsPage() {
       : Boolean(httpToken.trim()) || storedHttpTokenAvailable)
 
   return (
-    <div className="stack">
-      <div className="spread">
-        <div>
-          <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Pengaturan Notifikasi</Text>
-        </div>
-        {manage && (
-          <Button variant="primary" onClick={() => void save()} disabled={saving || testingWhatsApp}>
-            {saving ? 'Menyimpan…' : 'Simpan'}
-          </Button>
-        )}
-      </div>
+    <div className="stack settings-page">
+      <PageHeader title="Notifikasi" subtitle="Atur kanal pengiriman dan pesan otomatis untuk pelanggan." actions={manage && activeTab !== 'templates' && <Button variant="primary" onClick={() => void save()} disabled={saving || testingWhatsApp}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>} />
 
       <div className="workspace-tabs">
         <Tabs
@@ -434,7 +427,7 @@ export function NotificationSettingsPage() {
                 </div>
               )}
 
-              <WhatsAppTemplateCard templateReady={form.templateReady} />
+
             </div>
           )}
         />
@@ -485,6 +478,7 @@ export function NotificationSettingsPage() {
             </div>
           )}
         />
+        <Route path="templates" element={<div className="settings-panel" role="tabpanel" id="notification-settings-panel-templates" aria-labelledby="notification-settings-tab-templates"><WhatsAppTemplateCard templateReady={form.templateReady} /></div>} />
         <Route path="*" element={<Navigate to="/notifications/whatsapp" replace />} />
       </Routes>
     </div>

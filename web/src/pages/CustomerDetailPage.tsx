@@ -1,18 +1,17 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { api, ApiError } from '../api/client'
-import type { PageResponse } from '../api/types'
+import { CustomerAssetPanel } from '@/components/organisms/customer/CustomerAssetPanel'
 import type {
   CustomerTrace,
   CustomerView,
   NeighborView,
-  OdpView,
-  OnuView,
   SubscriberNeighbors,
 } from '../api/network'
-import { onuStatusLabel } from '../api/network'
+import { customerStatusLabel, hasCustomerLocation, onuStatusLabel } from '../api/network'
 import { DOWN_CAUSE_LABEL, type OnuHistoryView, type OnuMetricView } from '../api/monitoring'
 import {
   CPE_ACTION_LABEL,
@@ -118,7 +117,7 @@ export function CustomerDetailBlade({
       open={customerId != null}
       title="Detail pelanggan"
       size="full"
-      className="blade-half"
+      className="blade-customer"
       onClose={onClose}
     >
       {customerId && <CustomerDetailPage customerId={customerId} onShowOnMap={onShowOnMap} />}
@@ -159,7 +158,7 @@ export function CustomerDetailPage({
    */
   onShowOnMap?: (focus: MapFocusState) => void
 }) {
-  // Detail pelanggan kini tampil sebagai flyout fullscreen (dibuka dari daftar), bukan rute
+  // Detail pelanggan tampil sebagai flyout (dibuka dari daftar), bukan rute
   // tersendiri — jadi `id` datang lewat prop, bukan `useParams`. Alias `id` menjaga sisa berkas
   // tetap ringkas; penutupan panel ditangani Blade pembungkus di CustomersPage.
   const id = customerId
@@ -171,7 +170,6 @@ export function CustomerDetailPage({
   const [refreshKey, setRefreshKey] = useState(0)
 
   const [customer, setCustomer] = useState<CustomerView | null>(null)
-  const [odps, setOdps] = useState<OdpView[]>([])
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
   const [neighbors, setNeighbors] = useState<SubscriberNeighbors | null>(null)
   const [metrics, setMetrics] = useState<OnuMetricView[]>([])
@@ -211,7 +209,6 @@ export function CustomerDetailPage({
 
   // Gerbang izin sebagai boolean primitif: `can` dari useCan berganti identitas
   // tiap render, jadi tak boleh masuk daftar dependensi effect (memicu loop).
-  const canAssign = can('customer.onu.assign')
   const canMetric = can('monitoring.metric.view')
   const canAccess = can('bng.access.view')
   // Tab Trafik digerbang izin baca sesi/trafik (sama dengan panel B-ras Check).
@@ -221,15 +218,6 @@ export function CustomerDetailPage({
   const canBilling = can('billing.invoice.view')
   const canIncident = can('incident.ticket.view')
   const canWorkorder = can('workorder.order.view')
-
-  // ODP untuk form pasang ONU — hanya bila boleh memasang.
-  useEffect(() => {
-    if (!canAssign) return
-    void api
-      .get<PageResponse<OdpView>>('/api/odps?size=100')
-      .then((page) => setOdps(page.content))
-      .catch(() => setOdps([]))
-  }, [canAssign])
 
   // Jalur & tetangga: dua tarikan independen, toleran gagal (izin/opsional).
   useEffect(() => {
@@ -320,8 +308,10 @@ export function CustomerDetailPage({
     {
       key: 'map',
       label: 'Lihat di peta',
+      disabled: !hasCustomerLocation(customer.location),
       icon: <IconMap size={16} />,
       onClick: () => {
+        if (!hasCustomerLocation(customer.location)) return
         const focus = mapFocusState('customer', id, customer.location)
         if (onShowOnMap) onShowOnMap(focus)
         else navigate('/map', focus)
@@ -335,7 +325,7 @@ export function CustomerDetailPage({
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <h1 className="page-title" style={{ margin: 0 }}>{customer.name}</h1>
         <span className="badge">{customer.code}</span>
-        <StatusBadge status={customer.status} />
+        <StatusBadge status={customer.status} label={customerStatusLabel(customer.status)} />
         {customer.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
       </div>
 
@@ -345,7 +335,7 @@ export function CustomerDetailPage({
 
       <Tabs tabs={tabDefs} active={tab} onChange={setTab} />
 
-      {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} />}
+      {tab === 'ringkasan' && <RingkasanTab customer={customer} run={run} />}
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
@@ -432,7 +422,7 @@ function EssentialsBlock({
         <span className="chev" aria-hidden>
           <IconChevronDown size={14} />
         </span>
-        Essentials
+        Informasi utama
       </Button>
 
       {open && (
@@ -442,7 +432,7 @@ function EssentialsBlock({
               <span className="tnum">{customer.code}</span>
             </Ess>
             <Ess label="Status">
-              <StatusBadge status={customer.status} />
+              <StatusBadge status={customer.status} label={customerStatusLabel(customer.status)} />
             </Ess>
             <Ess label="Alamat">{customer.address}</Ess>
             <Ess label="Telepon">{customer.phone}</Ess>
@@ -450,7 +440,7 @@ function EssentialsBlock({
             <Ess label="NIK / identitas">{customer.idCardNumber}</Ess>
             <Ess label="Koordinat">
               <span className="tnum">
-                {customer.location.latitude}, {customer.location.longitude}
+                {hasCustomerLocation(customer.location) ? `${customer.location.latitude}, ${customer.location.longitude}` : 'Belum ditentukan'}
               </span>
             </Ess>
           </dl>
@@ -545,11 +535,9 @@ function EssentialsBlock({
 
 function RingkasanTab({
   customer,
-  odps,
   run,
 }: {
   customer: CustomerView
-  odps: OdpView[]
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   // Profil & angka 360° kini hidup di blok Essentials permanen di atas tab, jadi tab
@@ -558,10 +546,9 @@ function RingkasanTab({
     <div className="stack" style={{ gap: '0.25rem' }}>
       <SubscriptionManager customer={customer} run={run} />
 
-      <OnuManager customer={customer} odps={odps} run={run} />
+      <OnuManager customer={customer} run={run} />
 
-      {/* Momen operator baru mengetik serial ONU adalah momen ia menyetel ONT-nya; kartu
-          setelan TR-069 muncul tepat di situ. Pada pelanggan tanpa ONU ia derau murni. */}
+      {/* Pengaturan ACS melengkapi pemantauan perangkat yang sudah terdaftar. */}
       {customer.onus.length > 0 && <OntAcsSettingsCard />}
 
       <PortalCredentialCard customerId={customer.id} />
@@ -590,7 +577,6 @@ function SubscriptionManager({
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   const { can } = useCan()
-  const confirm = useConfirm()
   const canManage = can('customer.subscription.update')
   const [plans, setPlans] = useState<PlanView[]>([])
   const [planId, setPlanId] = useState('')
@@ -620,6 +606,8 @@ function SubscriptionManager({
     setPriceOverride('')
   }, [live?.id, live?.planId])
 
+  const [editingForm, setEditingForm] = useState(false)
+  const creation = useCreationReview(editingForm, sub !== null)
   const selected = plans.find((p) => p.id === planId) ?? null
   const override = priceOverride.trim()
   // Tak ada yang berubah → tombol mati, biar tak ada perintah kosong yang mengantre
@@ -634,44 +622,14 @@ function SubscriptionManager({
   const submit = async () => {
     if (!planId || unchanged) return
     const body = { planId, monthlyFeeOverride: override === '' ? null : Number(override) }
-    if (live) {
-      const ok = await confirm({
-        title: 'Ganti paket langganan',
-        message: (
-          <>
-            {live.packageName} ({live.bandwidthMbps} Mbps) → {selected?.name ?? '—'} (
-            {selected ? `${selected.downMbps} Mbps` : '—'})
-            {override !== '' && ` · harga negosiasi Rp ${override}`}
-            <br />
-            Kecepatan, QoS, dan tagihan periode berikutnya mengikuti paket baru.
-          </>
-        ),
-        confirmLabel: 'Ganti paket',
-      })
-      if (!ok) return
-    } else if (ended) {
-      const ok = await confirm({
-        title: 'Berlangganan lagi',
-        message: (
-          <>
-            Langganan {customer.name} dihidupkan kembali dengan paket {selected?.name ?? '—'}
-            {override !== '' && ` · harga negosiasi Rp ${override}`}.
-            <br />
-            Statusnya kembali menunggu instalasi, akun PPPoE lamanya dipakai lagi, dan penagihan
-            berjalan lagi mulai periode berikutnya.
-          </>
-        ),
-        confirmLabel: 'Berlangganan lagi',
-      })
-      if (!ok) return
-    }
+    if (override && (!Number.isFinite(Number(override)) || Number(override) < 0)) return
+    if (creation.beforeSave()) return
     setSaving(true)
     await run(
-      () => api.put(`/api/customers/${customer.id}/subscription`, body),
+      async () => { await api.put(`/api/customers/${customer.id}/subscription`, body); setEditingForm(false); setPriceOverride('') },
       live ? 'Paket langganan diganti' : ended ? 'Langganan dihidupkan kembali' : 'Paket ditetapkan',
     )
-    setSaving(false)
-    setPriceOverride('')
+    setSaving(false); creation.finish()
   }
 
   return (
@@ -691,7 +649,13 @@ function SubscriptionManager({
       )}
 
       {canManage && (
-        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+        <><Button onClick={() => setEditingForm(true)}>{actionLabel}</Button>
+        <Blade open={editingForm} title={actionLabel} onClose={() => setEditingForm(false)}
+          creation={{ ...creation, busy: saving, prepare: () => void submit(), summary: <><CreationSummary rows={[
+            ['Pelanggan', customer.name], ['Paket', selected?.name], ['Biaya bulanan', fmtRupiah(override ? Number(override) : selected?.price ?? 0)],
+          ]} /><p>{ended ? 'Langganan akan diaktifkan kembali dengan akun dan riwayat sebelumnya.' : 'Paket dan tagihan periode berikutnya mengikuti pilihan ini.'}</p></> }}
+          footer={<><Button disabled={saving} onClick={() => setEditingForm(false)}>Batal</Button><Button variant="primary" disabled={!planId || unchanged || saving} onClick={() => void submit()}>{actionLabel}</Button></>}>
+        <div className="stack">
           {plans.length === 0 ? (
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Tidak ada paket aktif.
@@ -721,9 +685,7 @@ function SubscriptionManager({
                   placeholder={selected ? String(selected.price) : 'ikut paket'}
                   style={{ flex: '1 1 140px' }}
                 />
-                <Button variant="primary" disabled={!planId || unchanged || saving} onClick={() => void submit()}>
-                  {actionLabel}
-                </Button>
+
               </div>
               {selected && (
                 <p className="muted tnum" style={{ margin: 0,  }}>
@@ -736,7 +698,7 @@ function SubscriptionManager({
                 : 'Satu pelanggan memiliki satu langganan; ganti paket tidak menambah langganan. Layanan kedua di lokasi lain memerlukan pelanggan baru.'}</Text>
             </>
           )}
-        </div>
+        </div></Blade></>
       )}
     </div>
   )
@@ -772,145 +734,22 @@ function SubscriptionActions({
 }
 
 /** Kelola perangkat ONU pelanggan: daftarkan, pasang ke port ODP, lepas. */
-function OnuManager({
-  customer,
-  odps,
-  run,
-}: {
+function OnuManager({ customer, run }: {
   customer: CustomerView
-  odps: OdpView[]
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
-  const { can } = useCan()
-  const confirm = useConfirm()
-  const [serial, setSerial] = useState('')
-  const [attach, setAttach] = useState<{ onuId: string; odpId: string; port: string; rx: string } | null>(null)
-
-  return (
+  return <>
+    <CustomerAssetPanel customerId={customer.id} areaId={customer.areaId} onChanged={() => void run(async () => undefined, 'Data perangkat diperbarui')} />
     <div className="card stack" style={{ gap: '0.5rem' }}>
-      <SectionHead icon={<IconInventory size={16} />} title="Perangkat ONU" />
-      {customer.onus.length === 0 && (
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tidak ada ONU terdaftar.</Text>
-      )}
-      {customer.onus.map((onu: OnuView) => (
-        <div key={onu.id} className="spread" style={{ alignItems: 'center' }}>
-          <Text as="span" size={300}  >{onu.serialNumber}{' '}
-          {onu.odpCode ? (
-            <span className="badge accent">
-              {onu.odpCode} port {onu.odpPortNumber}
-            </span>
-          ) : (
-            <span className="badge">belum terpasang</span>
-          )}{' '}
-          <span style={{ color: HEALTH_COLOR[onu.opticalHealth],  }}>
-            {onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}
-          </span></Text>
-          {can('customer.onu.assign') && (
-            <div className="row">
-              {onu.odpId ? (
-                // Masih terpasang: lepas dulu — hapus sengaja tak ditawarkan agar port
-                // ODP tak menggantung (aturan sama yang ditegakkan OnuService.delete).
-                <Button onClick={() => void run(() => api.post(`/api/customers/onus/${onu.id}/detach`), 'ONU dilepas')}>
-                  Lepas
-                </Button>
-              ) : (
-                <>
-                  <Button onClick={() => setAttach({ onuId: onu.id, odpId: odps[0]?.id ?? '', port: '1', rx: '' })}>
-                    Pasang ke ODP
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() =>
-                      void (async () => {
-                        if (
-                          !(await confirm({
-                            title: 'Hapus ONU',
-                            message: `Hapus permanen ONU ${onu.serialNumber} dari pelanggan ini?`,
-                            confirmLabel: 'Hapus',
-                            danger: true,
-                          }))
-                        )
-                          return
-                        void run(() => api.del(`/api/customers/onus/${onu.id}`), 'ONU dihapus')
-                      })()
-                    }
-                  >
-                    Hapus
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {attach && (
-        <div className="row" style={{ marginTop: '0.4rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <SelectField
-            label="ODP"
-            value={attach.odpId}
-            onChange={(_, data) => setAttach({ ...attach, odpId: data.value })}
-            style={{ flex: 2, minWidth: 160 }}
-          >
-            {odps.map((odp) => (
-              <option key={odp.id} value={odp.id}>
-                {odp.code} ({odp.capacity} port)
-              </option>
-            ))}
-          </SelectField>
-          <TextField
-            label="Port"
-            value={attach.port}
-            onChange={(_, data) => setAttach({ ...attach, port: data.value })}
-            style={{ flex: 1, minWidth: 80 }}
-          />
-          <TextField
-            label="Redaman (dBm)"
-            value={attach.rx}
-            onChange={(_, data) => setAttach({ ...attach, rx: data.value })}
-            placeholder="-22.5"
-            style={{ flex: 1, minWidth: 100 }}
-          />
-          <Button
-            variant="primary"
-            onClick={() =>
-              void run(async () => {
-                await api.post(`/api/customers/onus/${attach.onuId}/attach`, {
-                  odpId: attach.odpId,
-                  portNumber: Number(attach.port),
-                  installRxPowerDbm: attach.rx ? Number(attach.rx) : null,
-                })
-                setAttach(null)
-              }, 'ONU dipasang')
-            }
-          >
-            Pasang
-          </Button>
-          <Button onClick={() => setAttach(null)}>Batal</Button>
-        </div>
-      )}
-
-      {can('customer.onu.assign') && (
-        <div className="row" style={{ marginTop: '0.4rem' }}>
-          <TextField
-            placeholder="Serial ONU baru, mis. ZTEG-C0FFEE01"
-            value={serial}
-            onChange={(_, data) => setSerial(data.value)}
-          />
-          <Button
-            onClick={() =>
-              void run(async () => {
-                await api.post(`/api/customers/${customer.id}/onus`, { serialNumber: serial })
-                setSerial('')
-              }, 'ONU didaftarkan')
-            }
-          >
-            Daftarkan ONU
-          </Button>
-        </div>
-      )}
+      <SectionHead icon={<IconInventory size={16} />} title="Pemantauan ONU" />
+      {customer.onus.length === 0 && <p className="muted">Tidak ada ONU terdaftar.</p>}
+      {customer.onus.map(onu => <div key={onu.id} className="spread wrap">
+        <span>{onu.serialNumber} · {onu.odpCode ? `${onu.odpCode} port ${onu.odpPortNumber}` : 'Belum terhubung ke port ODP'}</span>
+        <span style={{ color: HEALTH_COLOR[onu.opticalHealth] }}>{onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}</span>
+      </div>)}
+      <p className="muted">Pemasangan, penggantian, pelepasan fisik, dan pindah ODP dilakukan pada aset perangkat pelanggan di atas.</p>
     </div>
-  )
+  </>
 }
 
 /* ---------- Tab: Jalur (topologi hulu + anggaran redaman) ---------- */
@@ -1536,7 +1375,9 @@ function SubscriptionAccessCard({
     setForm('reset')
   }
 
-  const submitProvision = () =>
+  const accessCreation = useCreationReview(form === 'provision')
+  const submitProvision = () => {
+    if (provisionInvalid || accessCreation.beforeSave()) return
     void run(async () => {
       await provisionAccess({
         subscriptionId: sub.id,
@@ -1549,7 +1390,8 @@ function SubscriptionAccessCard({
         framedIp: macBased ? framedIp || null : null,
       })
       close()
-    }, 'Akun jaringan dibuat')
+    }, 'Akun jaringan dibuat').finally(accessCreation.finish)
+  }
 
   // Validasi form provisi per-tipe: login butuh username+password; MAC butuh MAC (+ IP
   // wajib untuk Static). Paket wajib dipilih di semua kasus.
@@ -1706,7 +1548,11 @@ function SubscriptionAccessCard({
           Belum ada akun jaringan. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
         </Text>
       ) : form === 'provision' ? (
-        <div className="stack" style={{ gap: '0.5rem' }}>
+        <Blade open title="Buat akun jaringan" onClose={close}
+          creation={{ ...accessCreation, prepare: submitProvision, summary: <CreationSummary rows={[
+            ['Username', username], ['Layanan', SERVICE_TYPE_LABEL[authType]], ['Paket', plans.find(plan => plan.id === planId)?.name], ['IP reservasi', framedIp],
+          ]} /> }} footer={<><Button disabled={accessCreation.busy} onClick={close}>Batal</Button><Button variant="primary" onClick={submitProvision} disabled={provisionInvalid || accessCreation.busy}>Provisi</Button></>}>
+        <div className="stack">
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <PlanField plans={plans} value={planId} onChange={changeProvisionPlan} />
             <SelectField
@@ -1763,15 +1609,12 @@ function SubscriptionAccessCard({
 
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-            <Button variant="primary" onClick={submitProvision} disabled={provisionInvalid}>
-              Provisi
-            </Button>
-            <Button onClick={close}>Batal</Button>
+
           </div>
           <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{macBased
             ? 'DHCP/Static memakai MAC sebagai identitas. Static memerlukan IP reservasi.'
             : 'Kata sandi disimpan terenkripsi dan hanya dapat di-reset.'}</Text>
-        </div>
+        </div></Blade>
       ) : (
         <div className="spread" style={{ alignItems: 'center' }}>
           <Text as="span" size={300} className="muted" >Belum ada akun jaringan untuk langganan ini.</Text>
@@ -2703,8 +2546,8 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
             </span>
           )}
           {Number(inv.taxAmount) > 0 && (
-            <div className="muted">
-              termasuk PPN {fmtRupiah(Number(inv.taxAmount))}</div>
+            <span className="muted">
+              termasuk PPN {fmtRupiah(Number(inv.taxAmount))}</span>
           )}</TableCell>
           <TableCell ><Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
           {/* Halaman bayar publik melayani KEDUA mode gateway (VA/QRIS Pivot maupun

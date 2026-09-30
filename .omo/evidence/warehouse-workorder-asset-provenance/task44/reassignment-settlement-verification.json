@@ -1,0 +1,327 @@
+{
+  "phase": "Task44 partial: QA of historical material after reassignment and real delivery reconciliation",
+  "baseCommit": "0e530ae159a3a438c7e0a941b06033ebbc075156",
+  "status": "Correction verified; remaining task44 combined checks and45–48/F1–F4 open",
+  "regressionBeforeFix": {
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+        "tests": 2,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "result": "Both actual complete mixed and serial-only jobs fail409 SOURCE_NOT_VERIFIED at QA after reassignment"
+  },
+  "server": {
+    "effectiveCurrentCoverage": {
+      "tests": 108,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+          "tests": 38,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "broad": {
+      "build": "BUILD FAILED in 7m 5s",
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+          "tests": 2,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.ModularityTests",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+          "tests": 24,
+          "failures": 3,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+          "tests": 38,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "focusedReruns": [
+      {
+        "build": "BUILD SUCCESSFUL in 1m 16s",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      {
+        "build": "BUILD SUCCESSFUL in 1m 48s",
+        "suites": [
+          {
+            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+            "tests": 24,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      }
+    ],
+    "history": "Broad108 had4 failures:1 test expected403 after area/role revoke but received correct404;3 old envelope fixtures attempted forbidden synthetic legacy checkpoints. Focused current suites replace those results; broad raw reports preserved."
+  },
+  "populatedUpgrade": {
+    "existingTenantCount": 2136,
+    "preservedPhysical": {
+      "inventory_document": {
+        "rows": 9686,
+        "digest": "f2646107545ff36425aea00859bc19e4"
+      },
+      "inventory_usage_snapshot": {
+        "rows": 563,
+        "digest": "8ef7a1a4867a2fe94598a9e0221330eb"
+      },
+      "inventory_material_usage": {
+        "rows": 563,
+        "digest": "656577a2c547f0d8174e3ac726efaf50"
+      },
+      "inventory_material_usage_line": {
+        "rows": 542,
+        "digest": "e1da835170d5bfb7a155d0159d02039e"
+      },
+      "inventory_customer_material_fact": {
+        "rows": 548,
+        "digest": "58c6049ffd23954ac38fec88b85e4b61"
+      },
+      "inventory_movement": {
+        "rows": 18619,
+        "digest": "163b2111fd630b6f0c69427bfdd43771"
+      },
+      "inventory_movement_leg": {
+        "rows": 36182,
+        "digest": "56af38f82b246d13ce169761f7a34b62"
+      },
+      "inventory_balance_projection": {
+        "rows": 18414,
+        "digest": "a78b0b6010dec0269446ef82cb500ece"
+      },
+      "inventory_segment": {
+        "rows": 6814,
+        "digest": "91d6f675a671abd23e2610af17d42f7c"
+      },
+      "inventory_serialized_asset": {
+        "rows": 3272,
+        "digest": "3e983fa352218eb3d647bf79d5486b3d"
+      },
+      "inventory_asset_assignment": {
+        "rows": 999,
+        "digest": "98c0f043e9684958aa47e59e482f1493"
+      },
+      "inventory_material_settlement": {
+        "rows": 45,
+        "digest": "1a52975416a6337535341a7206814e2b"
+      },
+      "fulfillment_approval_snapshot": {
+        "rows": 53,
+        "digest": "b304d72aa12ae6774c9cc88ddbf2318e"
+      }
+    },
+    "priorChecksumsUnchanged": true,
+    "appliedDelta": [
+      "178.5"
+    ],
+    "build": "BUILD SUCCESSFUL in 2m 7s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "checks": [
+    "Real mixed1000000MM/10ONU fixture and all-SERIAL fixture complete actual use/install/LOAN handover/return before reassignment. Old actor new-use is403; old actor roles and areas are then revoked. New assigned technician supplies fresh completion proof with the original customer handover signature; independent QA succeeds with no new physical posting.",
+    "Mixed final917500MM available+82500MM consumed=1000000MM; serial-only1000000MM remains available. Both9availableONU+1installed=10assets,0 technicianMM,1active assignment,1handover.",
+    "Historical owner reads and SQL retain exact original actor/receipt/command/posting/result verification. Only membership of the original actor in today's roster is removed from QA-source checks. New-use/install authorization and current QA/proof/source revision checks remain.",
+    "Omitting bulk usage or deployment witnesses, and substituting assetId or actorId, reject at real SQL constraints before first approval commit. Existing current-authority, usage-source/concurrency, forged-snapshot/owner and Modularity cases pass.",
+    "Whole-app HTTP response-loss and actual outbox redelivery numeric recovery reruns successfully with the new historical source rules.",
+    "Envelope regressions now use actual usage/completion/approval and real persistent claim/reconciliation. Only a returned message copy is malformed, given unsupported type, or a foreign tenant payload. Stored payload stays original, no owner effects occur before reconciliation, then valid redelivery applies exactly1 settlement and2 owner effects without new physical movements.",
+    "Populated old-volume upgrade adds only178.5; every existing row count/digest in13 physical/history tables and every prior Flyway checksum remain unchanged. Both volumes retained and new default restored."
+  ],
+  "migration": {
+    "version": "178.5",
+    "scope": "Owned new and retained populated QA databases",
+    "state": "APPLIED and immutable",
+    "nextFree": "178.6"
+  },
+  "remaining": [
+    "Full numeric stale count/different-key cut and actual physical time-aware reuse acceptance; supporting synthetic episode tests are not that physical gate.",
+    "Known historical175.21 projection upgrade fixture/schema mismatch; task46 version-correct repair still required.",
+    "Tasks45–48 and F1–F4. No native/runtime release or deployment claim."
+  ],
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt": "34805ef237b772dde31ce1cb93057578880ed5e53fdb6b64851ef117fa176eed",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "a2ed9c82250ef793012ff0a1c32121d883963f58e716701858b0c7bc41c34972",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBinding.kt": "aa8a2cb8413a3c5df9f5aaa7927e92d50e6e65f6f9a269352dea9a9b7e501637",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseLifecycleFailurePort.kt": "1f3c1cb239c91d983e71e4e9626de02cc98b267ebb27582669fddd01ac316368",
+    "server/src/main/resources/db/migration/V178_5__warehouse_historical_material_actors.sql": "85ae2a27ec50781cadc01871682aed0b26a17078fb64a2a0777df968d444ef81",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/FulfillmentEnvelopeFailurePort.kt": "d1d62bcd4ba5e0f92bae3a1aea4ee3ea62ba1f8ad09ee8b3f65662eade604b82",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseReassignmentSettlementIT.kt": "2bea019ca5579e6d39efdbd507a36f3c41447fdbcde09a1266b67e16b4185c8d"
+  }
+}

@@ -22,6 +22,7 @@ include(
     ":mobile:core:location",
     ":mobile:core:evidence",
     ":mobile:feature:workorders",
+    ":mobile:feature:materials",
     ":mobile:feature:attendance",
     ":mobile:feature:payroll",
 )

@@ -178,7 +178,7 @@ describe('tab OLT — kontrak tampilan dan aksi', () => {
 
     const toolbar = screen.getByRole('toolbar', { name: 'Aksi' })
     expect(Array.from(toolbar.querySelectorAll('button')).map((button) => button.textContent?.trim())).toEqual([
-      'Tambah OLT', 'Hapus', 'Segarkan',
+      'Tambah OLT', 'Hapus', 'Segarkan', 'Aksi lainnya',
     ])
     expect(screen.getByRole('button', { name: 'Hapus' }).hasAttribute('disabled')).toBe(true)
     await user.click(screen.getAllByRole('checkbox')[1])

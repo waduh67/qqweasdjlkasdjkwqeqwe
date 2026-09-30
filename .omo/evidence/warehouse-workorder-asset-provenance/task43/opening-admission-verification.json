@@ -1,0 +1,124 @@
+{
+  "phase": "M05 independently approved original opening admission and posting; cutover remains VALIDATING",
+  "baseCommit": "7b02a825c6ec7ea84f8d403837cc7ff09494103b",
+  "build": "BUILD SUCCESSFUL in 6m 28s",
+  "tests": 47,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseApprovalIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehousePolicyITEvaluation",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseApprovalEvidenceIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehousePostingIT",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "files": {
+    "server/build.gradle.kts": "ca149a31652e646b184eb4f292b3959af0a973bf5235c71a5c6b019856b08de7",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryApprovalQueryApi.kt": "b69c955c818e01be1c750b5a9d52e5f57ec0482a50459bc80157295d9c001275",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt": "5bccecbfce1b0dd489460da0faa0fbe450a3bf2cf3d9e61e8eb6fefe511fc2d2",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseApprovalQueryController.kt": "c75790bc501d3dd1dde6134533d537915787e8d2b206dc1beaac4d88c69e154c",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningPostingStore.kt": "6ea41389ff599b2adad3787f5143583f933092160aef0fbd1d333b099e58d764",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "6777ca91a593d8128432b7c3ac0469e9d78652ff190b76068bb6c3e00e37e652",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingDocuments.kt": "1140fca888cde21ce5fa7aa37ef66887ebb497e195c70c747dd7bc302e531824",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingSql.kt": "d1c4f41eccecdb34dc6ced6d2ad14b2a9ccb1f7c9b7e9b0ce1b1d6e86b0733ef",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingStock.kt": "cf7c85b2769e81ca4090ce6f0f868bdfa0d08ab234b92a69b191bffb67e95d55",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReceiptApprovalPostingGuard.kt": "9fe6b9e6907c686eb05cc524ca279bbf8c51367f95d6f681b3b03147474d969e",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCommandJdbc.kt": "c6a9532602b400c58095115b06e16d8771c1180a8619e94f5804ecbc863ace90",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseInboxStore.kt": "b114ffa5152ce8ee6e2f177aeff56a9d60d3a0e9c95eddc6028ff734b4253a19",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt": "8e6b14f57a3975e167bc8a27567f1112fe05ad485053ef63831edef078d1edc0",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/outbound/ReceiptPostingApproval.kt": "2331dd19f6e5c9e620eec18b53caa7bba9654c94939ad753a499934082a90b2f",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt": "19036b8adf56b4342d45472514d44b8b1f0824d5abadba10e21305020e555825",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryTenantPolicyService.kt": "5289fd01ded77f5b5bd7d1ae0720b7ab624f8bc2f986d5620f99bbcba131f617",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationOpeningApprovalOwner.kt": "27fcd162a3d30fc664d9e7208c585c0a2b3fa1fc89bf7c9875907d7f01d698c9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalAuthority.kt": "092a5b4e0c7656903b62dde8e57fb925c6acef25c8c4fdf342cd1ef1df3ef3d2",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalEvidence.kt": "7154ef8cdd3949aac2a297e891da8207aab2e862ad6b55a467a520cc126800b9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalProjection.kt": "e969517a135f30246f6ef4963d2da1b97737b647a04745fc246336d0957cf46b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt": "acc1a071a1eee9fe2cbeaad9bc8dbde5ebe027655486d2781930b2124e4a0821",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": "109f3a83c34bee23c01b91a9cd73de1e24d579fd70c5cb9a075f1c5e2b4fd8b3",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePostingService.kt": "078f9905f466f9067be04664bb59dd8ff8cb8b58831629fe305316cdf5b5132f",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/InventoryMovement.kt": "8f620528f9c42a2fa1510c87ffaabdb82a99b3be449eb800ca94fa8c79d04b35",
+    "server/src/main/resources/db/migration/V177_7_1__warehouse_unvalued_opening_approval.sql": "6d7d10af5298f749c47e0afbef69ce11ea9f96b706635ebb1c85d76e0a955db4",
+    "server/src/main/resources/db/migration/V177_7_2__warehouse_opening_tier_reference.sql": "408dc32e72ec9f3bf101011044acda3e23ae791929260e62e01df7a037b42209",
+    "server/src/main/resources/db/migration/V177_7_3__warehouse_opening_admission_references.sql": "1576f7e37ca0bec3e0cbaf190c9dcd03d778ca18cc154a2a4ffb0a2c67592a31",
+    "server/src/main/resources/db/migration/V177_7__warehouse_approved_opening_admission.sql": "96cfc4248a805342b65b04df3bbe1fc29368de6b6c6da8cac2fa16166ab1c26e",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "ec204e64446f8cddfcf6e4c6f903a056a6f412415e1911daae3bd2b621ceb1bd",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITPolicy.kt": "74e39939af54640e6f9359aef74c383607a32926774af4a2c2cb75851e2c0ffb"
+  },
+  "checks": [
+    "Full packaged migrations through V177.7.3 boot against original V172 legacy fixtures and current databases using non-owner NOSUPERUSER NOBYPASSRLS application role.",
+    "Real HTTP all-tier independent opening requests, scoped sealed case pages and actual private MinIO PDF download; no provenance.manage grant is required for independent approval-view actors.",
+    "Original serialized asset UUID and raw serial are preserved; reviewed duplicate remains staged; exact1EA and82500MM admitted at original warehouse without supplier or historical valuation.",
+    "All configured tiers must approve. Concurrent final approvals for two proposals admit one baseline; loser is STALE; original decision response replays exactly.",
+    "Faults after owner effect, effect receipt and response roll back claims, original asset admission, lot, segment, balances, decision, outbox and inbox. Same key subsequently succeeds once.",
+    "Current customer area change invalidates an earlier approval even when its actor now has both areas. Rejected immutable proposal requires a new source proposal.",
+    "Existing empty legacy tenant posts explicit independent zero baseline with no physical SKU, line, movement leg, balance or lot; no zero valuation is fabricated.",
+    "Application role cannot insert admission witnesses; pending approval cannot call owner admission. V177.6 sealed line forgery/readiness tests still pass.",
+    "Only the actual opening approval receipt consumes during VALIDATING. Duplicate receipt applies no second effect; an ordinary consumer is rejected.",
+    "Receipt approval/workbench/evidence, all-tier policies, schema/cutover policy and persistent stock-conservation/restart/phase-rollback regressions pass. These posting fixtures do not replace task44 actual customer episode acceptance.",
+    "Spring test context cache is bounded to1 with1536MiB test heap. Retry completes47 tests without skips after the earlier combined run exposed heap exhaustion."
+  ],
+  "remaining": [
+    "Actual cancellation receipts for pending legacy effects",
+    "All-current identity reservations",
+    "Finalization and M06 mixed-tenant restart",
+    "Provenance management UI and browser acceptance",
+    "Tasks44-48 and F1-F4"
+  ]
+}

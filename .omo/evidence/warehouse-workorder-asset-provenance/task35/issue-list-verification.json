@@ -1,0 +1,50 @@
+{
+  "task": 35,
+  "phase": "scoped persisted issue list and actual receipt totals",
+  "sourceCommit": "e90857a3",
+  "tests": 13,
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "26e514937ebd2dabe0120327e07ce2c8de9710a3382a95789eae52b0cef94152"
+    },
+    {
+      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialIssueListIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "7c4c6892eb799e5d2e9914146adbd24239a02654cb3f72f9b96eda700ee5773d"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseIssueITListing",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "cb1db684fe6fba52bc4c2997d73bd9beee18f45323394c494896912bfee076dd"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseIssueITReplayGuards",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "4e680afbb74c411b486550b9a48826a02476ab6d1914fc0b4acfefeb11d8ee4b"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseIssueITSerial",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "fbc80ef254325cda715ce0c907eed049c56765bc8a005081d396665f05440ef0"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in3m39s",
+  "cleanup": "owned processes containers network stopped;volumes retained"
+}

@@ -1,0 +1,13 @@
+// Used only in the pinned historical checkout; leaves its build and product source intact.
+gradle.projectsEvaluated {
+    def server = gradle.rootProject.findProject(':server')
+    if (server == null) return // Included build-logic has its own project graph.
+    server.tasks.register('warehouseDraftSeedClasspath') {
+        dependsOn server.tasks.named('testClasses')
+        doLast {
+            def destination = System.getenv('WAREHOUSE_DRAFT_UPGRADE_CLASSPATH_OUTPUT')
+            if (!destination) throw new GradleException('Missing owned draft bootstrap output')
+            new File(destination).text = server.sourceSets.test.runtimeClasspath.asPath + '\n'
+        }
+    }
+}

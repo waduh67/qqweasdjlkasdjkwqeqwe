@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useState, type FormEvent } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Link, useNavigate } from 'react-router-dom'
@@ -24,8 +25,10 @@ export function SignupPage() {
   const [done, setDone] = useState<SignupResult | null>(null)
   const [copied, setCopied] = useState(false)
 
+  const creation = useCreationReview(true)
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
+    if (creation.beforeSave()) return
     setError(null)
     setBusy(true)
     try {
@@ -34,7 +37,7 @@ export function SignupPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal mendaftar')
     } finally {
-      setBusy(false)
+      setBusy(false); creation.finish()
     }
   }
 
@@ -110,19 +113,19 @@ export function SignupPage() {
           <div>
             <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Daftar ISP baru</Text>
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-              Buat ruang kerja NetOps untuk jaringan FTTH-mu
+              Daftarkan ISP dan akun administrator Anda.
             </Text>
           </div>
         </div>
 
-        <TextField
+        <div className="public-form-fields stack" hidden={creation.reviewing} inert={creation.reviewing ? true : undefined}>        <TextField
           label="Nama ISP"
           value={name}
           onChange={(_, data) => setName(data.value)}
           required
           autoFocus
           placeholder="mis. Net Media"
-          hint="Kode ISP untuk masuk kami buatkan otomatis dari nama ini."
+          hint="Kode ISP dibuat otomatis."
         />
         <TextField
           label="Nama admin"
@@ -148,6 +151,10 @@ export function SignupPage() {
           minLength={8}
           autoComplete="new-password"
         />
+</div>
+        {creation.reviewing && <div className="public-creation-review"><Text as="h3" weight="semibold">Tinjau pendaftaran</Text><CreationSummary rows={[
+          ['Nama ISP', name], ['Nama admin', adminName], ['Email admin', adminEmail],
+        ]} /></div>}
 
         {error && (
           <Text as="p" className="error" size={300} style={{ margin: 0 }}>
@@ -155,8 +162,9 @@ export function SignupPage() {
           </Text>
         )}
 
+        {creation.reviewing && <Button type="button" disabled={busy} onClick={creation.back}>Sebelumnya</Button>}
         <Button variant="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
-          {busy ? <Spinner /> : 'Daftar'}
+          {busy ? <Spinner /> : creation.reviewing ? 'Daftar' : 'Tinjau pendaftaran'}
         </Button>
         <Text as="p" className="muted" size={300} style={{ margin: 0, textAlign: 'center' }}>
           Sudah punya akun? <Link to="/login">Masuk</Link>

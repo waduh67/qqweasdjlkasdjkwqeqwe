@@ -1,6 +1,6 @@
 package com.duluin.ftth.inventory
 
-import com.duluin.ftth.inventory.application.service.InventoryMovementLedgerService
+import com.duluin.ftth.inventory.application.service.DurableInventoryFulfillmentService
 import com.duluin.ftth.inventory.domain.model.InventoryMovement
 import com.duluin.ftth.inventory.domain.model.MovementCommand
 import java.util.UUID
@@ -18,10 +18,10 @@ data class WorkOrderInventoryConsumed(
 )
 
 class InventoryMovementApiAdapter(
-    private val ledger: InventoryMovementLedgerService,
+    private val fulfillment: DurableInventoryFulfillmentService,
 ) : InventoryMovementApi {
     override fun consume(command: MovementCommand): InventoryMovement {
         require(command.kind.name == "CONSUME") { "consumption API accepts CONSUME movements only" }
-        return ledger.apply(command)
+        return fulfillment.consumeMovement(command)
     }
 }

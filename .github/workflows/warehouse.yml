@@ -1,0 +1,459 @@
+name: warehouse
+
+on:
+  push:
+    branches: [feat/warehouse-workorder, 'work/warehouse-*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warehouse-${{ github.workflow }}-${{ github.ref }}
+  # Checkpoint pushes must preserve the complete regression report already running.
+  cancel-in-progress: false
+
+env:
+  GRADLE_USER_HOME: ${{ github.workspace }}/.omo/runtime/gradle-home
+  PYTHONDONTWRITEBYTECODE: '1'
+  WAREHOUSE_EVIDENCE_RECIPIENT: ${{ vars.WAREHOUSE_EVIDENCE_RECIPIENT }}
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/warehouse-setup
+      - name: Offline GPON profiles, wire contracts and collector regression
+        run: |
+          set -euo pipefail
+          ./gradlew :contract:test :snmp:test :collector:test --rerun-tasks --no-build-cache --no-daemon --no-parallel --max-workers=2 \
+            > .omo/runtime/ci/protocols.log 2>&1
+      - name: Verify each offline protocol module executed tests
+        if: always()
+        run: |
+          set -euo pipefail
+          for module in contract snmp collector; do
+            python3 scripts/warehouse/ci-results.py junit --source "$module/build/test-results/test" \
+              --output ".omo/runtime/ci/protocols-$module.json" --commit "$GITHUB_SHA"
+          done
+      - name: Compile current server tests before running historical applications
+        run: ./gradlew :server:compileTestKotlin --no-daemon --no-parallel --max-workers=2
+      - name: Check repaired compatibility fixtures before the full regression
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          classes=(
+            com.duluin.ftth.AlarmRuleIT
+            com.duluin.ftth.GisCutBlastRadiusIT
+            com.duluin.ftth.GisImpactedIT
+            com.duluin.ftth.GisUtilizationIT
+            com.duluin.ftth.IncidentIT
+            com.duluin.ftth.NetworkEndToEndIT
+            com.duluin.ftth.NotificationIT
+            com.duluin.ftth.OdpPortBoardIT
+            com.duluin.ftth.SurveyCapacityIT
+            com.duluin.ftth.PredictiveMaintenanceIT
+            com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes
+            com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT
+            com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT
+            com.duluin.ftth.customer.CustomerDeploymentFinalStateIT
+            com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions
+            com.duluin.ftth.inventory.WarehouseContractTest
+            com.duluin.ftth.inventory.WarehouseSchemaITProvenance
+            com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming
+            com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT
+            com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT
+            com.duluin.ftth.inventory.WarehouseSchemaITPolicy
+            com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT
+            com.duluin.ftth.tenancy.DeleteTenantIT
+            com.duluin.ftth.inventory.WarehouseReportIT
+            com.duluin.ftth.inventory.WarehouseReportPrivacyIT
+            com.duluin.ftth.inventory.WarehouseReportJourneyIT
+            com.duluin.ftth.inventory.WarehouseReportExportIT
+            com.duluin.ftth.inventory.WarehouseReportCsvTest
+            com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT
+            com.duluin.ftth.inventory.WarehouseQueryITCompatibility
+            com.duluin.ftth.inventory.WarehouseQueryITPrivacy
+            com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT
+            com.duluin.ftth.inventory.WarehouseLegacyReservationIT
+            com.duluin.ftth.inventory.WarehouseCountDraftIT
+            com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT
+            com.duluin.ftth.inventory.WarehouseCountIT
+            com.duluin.ftth.inventory.WarehouseCountWorkbenchIT
+            com.duluin.ftth.fulfillment.WarehouseNumericCountIT
+            com.duluin.ftth.inventory.WarehouseTransferDraftIT
+            com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT
+            com.duluin.ftth.inventory.WarehouseTransferContractTest
+            com.duluin.ftth.inventory.WarehouseTransferIT
+            com.duluin.ftth.inventory.WarehouseTransferITGuards
+            com.duluin.ftth.inventory.WarehouseTransferITSerial
+            com.duluin.ftth.inventory.WarehouseTransferITPositions
+            com.duluin.ftth.inventory.WarehouseTransferITDurability
+            com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy
+            com.duluin.ftth.inventory.WarehouseTransferListIT
+            com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT
+            com.duluin.ftth.ModularityTests
+          )
+          args=()
+          for name in "${classes[@]}"; do args+=(--tests "$name"); done
+          result=0
+          scripts/warehouse/qa.sh server "${args[@]}" > .omo/runtime/ci/compatibility.log 2>&1 || result=$?
+          if [[ -d server/build/test-results/test ]]; then
+            cp -a server/build/test-results/test .omo/runtime/ci/compatibility-results
+          fi
+          (( result == 0 )) || exit "$result"
+          python3 scripts/warehouse/ci-results.py junit --source .omo/runtime/ci/compatibility-results \
+            --output .omo/runtime/ci/compatibility.json --commit "$GITHUB_SHA"
+          python3 - "${classes[@]}" <<'PYCODE'
+          from pathlib import Path
+          import sys, xml.etree.ElementTree as ET
+          reports = list(Path('server/build/test-results/test').glob('TEST-*.xml'))
+          assert {ET.parse(report).getroot().attrib['name'] for report in reports} == set(sys.argv[1:])
+          # The focused reports are preserved privately. A later failed build or
+          # interrupted full suite must not reuse their successful XML.
+          for report in reports:
+              report.unlink()
+          PYCODE
+      - name: Full server, fresh migrations and historical upgrade
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          scripts/warehouse/qa.sh server > .omo/runtime/ci/server.log 2>&1
+      - name: Verify executed server results
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 scripts/warehouse/ci-results.py junit --source server/build/test-results/test \
+            --output .omo/runtime/ci/server.json --commit "$GITHUB_SHA"
+          for gate in projection-upgrade historical-upgrades; do
+            read -r historical < ".omo/runtime/$gate-latest.txt"
+            cp "$historical/verification.json" ".omo/runtime/ci/$gate.json"
+          done
+      - name: Stop owned QA resources
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f .omo/runtime/warehouse-test.env ]]; then
+            scripts/warehouse/qa.sh stop
+            scripts/warehouse/test-environment.sh down
+          fi
+      - name: Encrypt raw server evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          raw=(server/build/test-results/test .omo/runtime/ci/server.log)
+          for evidence in .omo/runtime/ci/protocols.log contract/build/test-results/test snmp/build/test-results/test collector/build/test-results/test; do
+            [[ ! -e "$evidence" ]] || raw+=("$evidence")
+          done
+          for evidence in .omo/runtime/ci/compatibility.log .omo/runtime/ci/compatibility-results; do
+            [[ ! -e "$evidence" ]] || raw+=("$evidence")
+          done
+          for gate in projection-upgrade historical-upgrades; do
+            if [[ -f ".omo/runtime/$gate-latest.txt" ]]; then
+              read -r historical < ".omo/runtime/$gate-latest.txt"
+              raw+=("$historical")
+            fi
+          done
+          # Keep both focused and full-suite old-process handoffs, including
+          # private seed responses and diagnostics when a child JVM fails.
+          for evidence in .omo/runtime/draft-upgrade-bootstrap .omo/runtime/draft-upgrade-handoff-*; do
+            [[ ! -d "$evidence" ]] || raw+=("$evidence")
+          done
+          python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" \
+            --output .omo/runtime/ci/server-evidence.age "${raw[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-server-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/warehouse-setup
+        with:
+          web: 'true'
+      - name: Web lint, browser contracts, unit tests and production bundle
+        run: |
+          set -euo pipefail
+          npm --prefix web run lint
+          npm --prefix web run typecheck:warehouse-e2e
+          (cd web && npm test -- --reporter=default --reporter=json --outputFile=../.omo/runtime/web-unit.json) > .omo/runtime/ci/web.log 2>&1
+          npm --prefix web run build
+      - name: Verify executed web results
+        if: always()
+        run: python3 scripts/warehouse/ci-results.py vitest --source .omo/runtime/web-unit.json --output .omo/runtime/ci/web.json --commit "$GITHUB_SHA"
+      - name: Encrypt raw web evidence
+        if: always()
+        run: python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" --output .omo/runtime/ci/web-evidence.age .omo/runtime/web-unit.json .omo/runtime/ci/web.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-web-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
+  shared:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/warehouse-setup
+      - name: Shared KMP contracts, field workflows and module graph
+        run: |
+          set -euo pipefail
+          ./gradlew :mobile:domain:jvmTest :mobile:data:jvmTest :mobile:core:mvi:jvmTest \
+            :mobile:core:storage:jvmTest :mobile:feature:workorders:jvmTest \
+            :mobile:feature:materials:jvmTest :mobile:app:jvmTest verifyMobileModuleGraph \
+            --no-daemon --no-parallel --max-workers=2 > .omo/runtime/ci/shared.log 2>&1
+      - name: Verify each required shared module executed tests
+        if: always()
+        run: |
+          set -euo pipefail
+          for module in domain data core/mvi core/storage feature/workorders feature/materials app; do
+            python3 scripts/warehouse/ci-results.py junit --source "mobile/$module/build/test-results/jvmTest" \
+              --output ".omo/runtime/ci/shared-${module//\//-}.json" --commit "$GITHUB_SHA"
+          done
+      - name: Encrypt raw shared evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          raw=(.omo/runtime/ci/shared.log)
+          for module in domain data core/mvi core/storage feature/workorders feature/materials app; do
+            raw+=("mobile/$module/build/test-results/jvmTest")
+          done
+          python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" --output .omo/runtime/ci/shared-evidence.age "${raw[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-shared-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        spec: [setup, receiving, provenance, issue, returns, exceptions, warehouse-empty-tenant, customer-assets, draft-expiry]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/warehouse-setup
+        with:
+          web: 'true'
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Real UI against owned PostgreSQL and object storage
+        env:
+          SPEC: ${{ matrix.spec }}
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          scripts/warehouse/qa.sh browser "$SPEC.spec.ts" > .omo/runtime/ci/browser.log 2>&1
+      - name: Verify both browser projects and exact application artifact
+        if: always()
+        run: |
+          set -euo pipefail
+          read -r jar < server/build/warehouse/boot-jar-path.txt
+          python3 scripts/warehouse/ci-results.py playwright --source .omo/runtime/warehouse-playwright.json \
+            --output .omo/runtime/ci/browser.json --commit "$GITHUB_SHA" --artifact "$jar"
+      - name: Stop owned QA resources
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f .omo/runtime/warehouse-test.env ]]; then
+            scripts/warehouse/qa.sh stop
+            scripts/warehouse/test-environment.sh down
+          fi
+      - name: Encrypt authenticated browser traces and reports
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" --output .omo/runtime/ci/browser-evidence.age \
+            .omo/runtime/ci/browser.log .omo/runtime/warehouse-playwright.json .omo/runtime/warehouse-playwright-artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-browser-${{ matrix.spec }}-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
+  legacy-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/warehouse-setup
+        with:
+          web: 'true'
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Historical UI, independent cutover and restart
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          scripts/warehouse/legacy-browser.sh > .omo/runtime/ci/legacy.log 2>&1
+      - name: Verify all historical browser phases
+        if: always()
+        run: |
+          set -euo pipefail
+          read -r legacy < .omo/runtime/warehouse-legacy-latest.txt
+          for phase in before after restart; do
+            python3 scripts/warehouse/ci-results.py playwright --source "$legacy/$phase-report.json" \
+              --output ".omo/runtime/ci/legacy-$phase.json" --commit "$GITHUB_SHA"
+          done
+          cp "$legacy/verification.json" .omo/runtime/ci/legacy-upgrade.json
+      - name: Stop owned QA resources
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f .omo/runtime/warehouse-test.env ]]; then
+            scripts/warehouse/qa.sh stop
+            scripts/warehouse/test-environment.sh down
+          fi
+      - name: Encrypt raw historical evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          raw=(.omo/runtime/ci/legacy.log)
+          if [[ -f .omo/runtime/warehouse-legacy-latest.txt ]]; then
+            read -r legacy < .omo/runtime/warehouse-legacy-latest.txt
+            raw+=("$legacy")
+          fi
+          python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" --output .omo/runtime/ci/legacy-evidence.age "${raw[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-legacy-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
+  native:
+    uses: ./.github/workflows/mobile-materials.yml
+
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/warehouse-setup
+      - uses: docker/setup-buildx-action@v3
+      - name: Build server image for verification
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          load: true
+          tags: warehouse-ci-server:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=warehouse-server
+          cache-to: type=gha,mode=max,scope=warehouse-server
+      - name: Build web image for verification
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: web/Dockerfile
+          load: true
+          tags: warehouse-ci-web:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=warehouse-web
+          cache-to: type=gha,mode=max,scope=warehouse-web
+      - name: Exercise the exact images with real HTTP and restart
+        run: |
+          set -euo pipefail
+          scripts/warehouse/test-environment.sh up
+          server=$(docker image inspect -f '{{.Id}}' "warehouse-ci-server:$GITHUB_SHA")
+          web=$(docker image inspect -f '{{.Id}}' "warehouse-ci-web:$GITHUB_SHA")
+          scripts/warehouse/image-smoke.sh "$server" "$web" "$GITHUB_SHA" > .omo/runtime/ci/image-smoke.log 2>&1
+          read -r smoke < .omo/runtime/warehouse-image-latest.txt
+          cp "$smoke/verification.json" .omo/runtime/ci/image-smoke.json
+      - name: Save the tested images for the dependent publication job
+        run: |
+          set -euo pipefail
+          mkdir -p .omo/runtime/ci/images
+          docker save -o .omo/runtime/ci/images/server.tar "warehouse-ci-server:$GITHUB_SHA"
+          docker save -o .omo/runtime/ci/images/web.tar "warehouse-ci-web:$GITHUB_SHA"
+          cp .omo/runtime/ci/image-smoke.json .omo/runtime/ci/images/verification.json
+          python3 scripts/warehouse/publish-images.py .omo/runtime/ci/images --commit "$GITHUB_SHA" --prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-tested-images-${{ github.sha }}
+          path: .omo/runtime/ci/images/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Stop owned QA resources
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f .omo/runtime/warehouse-test.env ]]; then
+            scripts/warehouse/test-environment.sh down
+          fi
+      - name: Encrypt image smoke evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          raw=(.omo/runtime/ci/image-smoke.log)
+          if [[ -f .omo/runtime/warehouse-image-latest.txt ]]; then
+            read -r smoke < .omo/runtime/warehouse-image-latest.txt
+            raw+=("$smoke/containers.log" "$smoke/state.json" "$smoke/before-restart.json" "$smoke/after-restart.json")
+          fi
+          python3 scripts/warehouse/ci-artifacts.py --commit "$GITHUB_SHA" --output .omo/runtime/ci/image-evidence.age "${raw[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-image-proof-${{ github.sha }}
+          path: |
+            .omo/runtime/ci/*.json
+            .omo/runtime/ci/*.age
+          if-no-files-found: error
+          retention-days: 14
+
+  acceptance:
+    needs: [server, web, shared, browser, legacy-upgrade, native, images]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every release prerequisite to succeed
+        env:
+          GATE_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ['GATE_RESULTS'])
+          required = {'server', 'web', 'shared', 'browser', 'legacy-upgrade', 'native', 'images'}
+          assert set(results) == required, 'Required warehouse gate is missing'
+          assert all(value['result'] == 'success' for value in results.values()), 'Warehouse release prerequisites failed, skipped, or were cancelled'
+          print('PASS: every warehouse release prerequisite succeeded')
+          PY

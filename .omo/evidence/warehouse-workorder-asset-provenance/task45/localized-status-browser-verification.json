@@ -1,0 +1,54 @@
+{
+  "status": "PASSED_SUPPLEMENT",
+  "testedCommit": "6853f15adbc3cc7218e6cb535d5d463f80cc07b8",
+  "download": {
+    "run": 36126213391,
+    "artifactId": 10860537665,
+    "name": "warehouse-browser-returns-6853f15adbc3cc7218e6cb535d5d463f80cc07b8",
+    "artifactDigest": "sha256:8feae30280d0060894e10e26696172bcb997ce5b7e9cc135e9cebbe895e8300a",
+    "encryptedArchiveSha256": "43feeac09094d3b0f68a8ea4078a04f71c75b36357c162db92b5861add2964e0",
+    "downloadedAndDecrypted": true
+  },
+  "browser": {
+    "kind": "playwright",
+    "status": "PASSED",
+    "commit": "6853f15adbc3cc7218e6cb535d5d463f80cc07b8",
+    "tests": 4,
+    "projects": {
+      "warehouse-desktop": 2,
+      "warehouse-mobile": 2
+    },
+    "reportSha256": [
+      "4b01d90f334c5d1c56b935b675bcef16c45ee61c99b169aed2f94d10392c509e"
+    ],
+    "artifactSha256": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2"
+  },
+  "revalidated": {
+    "kind": "playwright",
+    "status": "PASSED",
+    "commit": "6853f15adbc3cc7218e6cb535d5d463f80cc07b8",
+    "tests": 4,
+    "projects": {
+      "warehouse-desktop": 2,
+      "warehouse-mobile": 2
+    },
+    "reportSha256": [
+      "4b01d90f334c5d1c56b935b675bcef16c45ee61c99b169aed2f94d10392c509e"
+    ]
+  },
+  "visualReview": {
+    "screenshot": "reassigned-technician-localized-mobile.png",
+    "sha256": "f971551607317e9fd2013a2c89e027641bda1cf14035b58baf7aa8225c7b4d12",
+    "observations": [
+      "Status teknis: Dikerjakan is visible, replacing raw IN_PROGRESS.",
+      "Newly assigned technician has no inherited shipment or held stock.",
+      "Return/transfer controls and empty state remain visible in mobile layout."
+    ],
+    "safeToShare": "Synthetic QA data only; visually reviewed, no credentials or real customer data visible."
+  },
+  "inputEquivalence": {
+    "webGitTree": "aadf52e63f70b4e37c52927933780a1da811644e",
+    "comparedToCommit": "64e5057378df0b370c42dbe8d0d53b589a535126"
+  },
+  "limitation": "This confirms the label and browser flow at6853. New178.8 database and tenant-erasure source require their own current server/browser checks; no aggregate release pass claimed."
+}

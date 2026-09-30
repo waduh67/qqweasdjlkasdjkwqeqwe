@@ -1,0 +1,75 @@
+{
+  "review": "F1 final bounded C7 SQL sketch field recheck",
+  "status": "NO_REMAINING_FINDING_IN_REQUESTED_SOURCE_PATCH",
+  "final_f1": false,
+  "c7_implementation_accepted": false,
+  "qa_executed_by_reviewer": false,
+  "sql_applied": false,
+  "validation_head": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+  "recovery_copy_equals_private_after_two_header_lines": true,
+  "inputs": [
+    {
+      "source": "original-private-unapplied",
+      "path": ".omo/runtime/warehouse-draft-expiry.sql",
+      "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "bytes": 39372,
+      "lines": 542
+    },
+    {
+      "source": "validation-recovery-unapplied",
+      "path": ".omo/drafts/warehouse-draft-expiry.sql",
+      "sha256": "7ad81ff125e67c415780bd778858676590e6b2cdde3cde07ebfd398c4e59ffea",
+      "bytes": 39543,
+      "lines": 544
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
+      "bytes": 10179,
+      "lines": 119
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "sha256": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
+      "bytes": 10881,
+      "lines": 161
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptDraftValidation.kt",
+      "sha256": "7af5e0e5e39dbb8f4ba95a2ec986eb61de99bc5da89fdd277357dae28dd8b956",
+      "bytes": 4627,
+      "lines": 67
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+      "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642",
+      "bytes": 3318,
+      "lines": 76
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "sha256": "32f5690f22de9cf03a7f7f7c918009a9714fb50fafa1e4bc2ca03684aa6a52ba",
+      "bytes": 5235,
+      "lines": 59
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174__warehouse_documents_and_balances.sql",
+      "sha256": "b72dc30f5b0c5ccacbc7555c31fadf22201811461d72b67c58636eac4492fb71",
+      "bytes": 41511,
+      "lines": 519
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174_12__warehouse_receipt_intake.sql",
+      "sha256": "d0e1dc015cf05a16c4756ca65939adb0036122311051f74c63a4c7078ad03938",
+      "bytes": 6657,
+      "lines": 95
+    }
+  ]
+}

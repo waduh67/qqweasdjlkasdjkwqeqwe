@@ -6,6 +6,7 @@ import java.util.UUID
 
 interface CpeDeviceJpaRepository : JpaRepository<CpeDeviceJpaEntity, UUID> {
     fun findByGenieacsId(genieacsId: String): CpeDeviceJpaEntity?
+    fun findByGenieacsIdAndOnuId(genieacsId: String, onuId: UUID): CpeDeviceJpaEntity?
     fun findByCustomerId(customerId: UUID): List<CpeDeviceJpaEntity>
 }
 

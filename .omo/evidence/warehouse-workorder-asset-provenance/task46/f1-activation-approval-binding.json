@@ -1,0 +1,12 @@
+{
+  "status": "F1_READY_FOR_ACTIVATION_ONLY",
+  "candidateSha256": "01c431cd307a3954fadcb0877d7e135f4acedb9b4fcf31e0d8ff03da3087b2b5",
+  "approvalWorkspaceRelativePath": ".omo/runtime/azure-ftth-setup/release-evidence/f1-activation-approval.json",
+  "approvalSha256": "3e3b2e8668ca799db04ca4d430c2db1a321e9ee42cedcd56952287c1d91c3e2c",
+  "sourceEvidenceWorkspaceRelativePath": ".omo/runtime/warehouse-f1-review/.omo/evidence/warehouse-workorder-asset-provenance/task46/f1-activation-readiness-source-evidence.json",
+  "sourceEvidenceSha256": "1a528ce37b725bc5152b41a2ea9a9635d9c9a2d3bf5bbbd5df2ae349faaed697",
+  "approvalMode": "0600",
+  "finalHostAcceptance": false,
+  "sourceOrQaReviewRepeated": false,
+  "finalCandidateHashBindingVerified": true
+}

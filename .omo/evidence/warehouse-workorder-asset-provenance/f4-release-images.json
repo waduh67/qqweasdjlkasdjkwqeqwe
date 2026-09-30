@@ -1,0 +1,54 @@
+{
+  "status": "ARCHIVES_VERIFIED_NO_DOCKER_EXECUTION",
+  "commit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "ciRun": 36137258991,
+  "artifactId": 10865254666,
+  "githubArtifactSha256": "sha256:f1c4918b1759b8ff8f2469fd0fedebba21f35ef8fa7ad3bb1af7b6e7668bff43",
+  "images": {
+    "server": "sha256:754d74c805d804a570a925718488cfe46988f6debcb11ecaef934cec3b947ce1",
+    "web": "sha256:4c06e4663040669c5ed77f474687fd7f26725ffc0960c7ff9390ba25985924c2"
+  },
+  "archiveDigests": {
+    "server": "sha256:4cbf17c491c94e6e9c9882f88a781f28b3f4429048342a7089814f49ad9c0265",
+    "web": "sha256:abe41ac2eb2d19facd075ddeced69bff20cd0172e40f8d3ceee951a091e8e0b0"
+  },
+  "configDigests": {
+    "server": "sha256:754d74c805d804a570a925718488cfe46988f6debcb11ecaef934cec3b947ce1",
+    "web": "sha256:4c06e4663040669c5ed77f474687fd7f26725ffc0960c7ff9390ba25985924c2"
+  },
+  "phases": [
+    {
+      "phase": "before-restart",
+      "staticAssets": 3,
+      "persistedReplays": 14,
+      "persistedReads": 16,
+      "stockKinds": 4,
+      "realHttp": true,
+      "sqlBusinessSeeding": false
+    },
+    {
+      "phase": "after-restart",
+      "staticAssets": 3,
+      "persistedReplays": 14,
+      "persistedReads": 16,
+      "stockKinds": 4,
+      "realHttp": true,
+      "sqlBusinessSeeding": false
+    }
+  ],
+  "sameImagesAfterRestart": true,
+  "backendAndGatewayJsonReadiness": true,
+  "publicationExecuted": false,
+  "embeddedArtifacts": {
+    "serverJarSha256": "5c7767be59fa804a8e73ff7ee6d63ac8c2dad41786d957573a75b937660dd870",
+    "migrationFilesByteMatched": 364,
+    "legacyInMemoryServicesAbsent": true,
+    "productionApplicationConfigByteMatched": true,
+    "webStaticFiles": 15,
+    "webStaticManifestSha256": "6ce3523749ce1dad0d638fce696f4ab9560ba21c9a907b7f3c9ce016266e7a7a",
+    "webNginxConfigSha256": "f37cde747611e5600c8278c41a2fae7640798f53a597a2224c48143d88a5c9ef",
+    "webNginxConfigByteMatched": true
+  },
+  "productionComposeSha256": "7426809f60b4ee2adc778b2808264be88a0c194ac7398f1e3fb046391be48c91",
+  "privateRuntimeOrEnvFilesAbsentFromApplicationPayload": true
+}

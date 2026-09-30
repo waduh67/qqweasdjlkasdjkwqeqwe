@@ -45,8 +45,8 @@ class CollectorGatewayController(
     @Operation(summary = "Mengirim batch hasil polling ONU")
     fun ingest(
         @AuthenticationPrincipal principal: CollectorPrincipal,
-        @RequestBody batch: MetricBatch,
-    ): IngestResult = ingestion.ingest(principal.collectorId, principal.tenantId, batch)
+        @RequestBody batch: com.duluin.ftth.monitoring.application.port.inbound.CollectorObservationBatch,
+    ): IngestResult = ingestion.ingestRaw(principal.collectorId, principal.tenantId, batch)
 
     @PostMapping("/bng-sessions")
     @Operation(summary = "Mengirim batch sesi PPPoE dari sebuah BRAS")

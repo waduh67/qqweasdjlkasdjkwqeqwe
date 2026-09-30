@@ -1,0 +1,288 @@
+{
+  "status": "VERIFIED_COMBINED_FOCUSED_ONLY_NOT_FINAL_F2",
+  "verifiedAtUtc": "2026-09-26T10:57:04.241942+00:00",
+  "validationBaseCommit": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+  "sourceState": "Uncommitted COUNT correction atop the stated base; all server/src files compared at verification time.",
+  "proofFilesSha256": {
+    "local-count-transfer-focused-r1.json": "f748caab7342b1ae65a84354778d237cbce02bf7c423dec33be54e393996937c",
+    "local-count-transfer-focused-r2.json": "f0f4bbfd7966fc3d42df4808b126937658ee4df3b62cc82f4b04f483952ee175",
+    "local-count-web-r4.json": "0affbfff47bcfe46d9f8ac590de1322319d0ea3fa0e6dc67f4a1e6e3afd9759d"
+  },
+  "r1": {
+    "suites": 19,
+    "tests": 67,
+    "passed": 65,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0,
+    "reportCountsHashesAndCaseClassesMatched": true,
+    "log": {
+      "sha256": "3f1007ca1031f9cbcdd30da48580e803633cdc3dac0c865c7f325009231f85af",
+      "buildSuccessMarkers": 0,
+      "buildFailureMarkers": 1
+    }
+  },
+  "r2": {
+    "suites": 2,
+    "tests": 14,
+    "passed": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "reportCountsHashesAndCaseClassesMatched": true,
+    "log": {
+      "sha256": "43c7fb6629373459b28af629cb79bd26a011f2ecdbc3570dcf05072df52a8dab",
+      "buildSuccessMarkers": 1,
+      "buildFailureMarkers": 0
+    }
+  },
+  "serverSourceBinding": {
+    "recordedFiles": 2601,
+    "currentFiles": 2601,
+    "added": [],
+    "missing": [],
+    "unchangedFiles": 2599,
+    "onlyChangedFiles": {
+      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftIT.kt": {
+        "r1": "3f0ebde94df57ea49c341d52e982e820884a14541bb0e8b0400dc522d9197e4a",
+        "currentAndR2": "cba0511b9b5c161673aac2e63ba25dc5ba87977a9b5f1af91f1d61832f175557"
+      },
+      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftIT.kt": {
+        "r1": "743fd47b3eee54e404b5e6ceb937e669a827ce12be5db25051b2fdbc42ce462c",
+        "currentAndR2": "5e0558a3c8907ac2754e414d02403a93a7eb63248d03bef2d923f99f5b2d0eb5"
+      }
+    },
+    "scope": "Every current file under server/src; build configuration and toolchain are outside this input map.",
+    "priorProofHashChainMatched": true
+  },
+  "composedResult": {
+    "suites": 19,
+    "tests": 67,
+    "passed": 67,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "unchangedR1Suites": 17,
+    "unchangedR1PassingCases": 53,
+    "replacedR2Suites": 2,
+    "rerunPassingCases": 14,
+    "countDraftAndUpgradeCases": 9,
+    "transferDraftAndUpgradeCases": 7,
+    "exactRootCompositionMatched": true,
+    "suiteReports": [
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "7abc7f9c08539d0854ca242b94bcecc38199872993efe793c006edd2daa141ef"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "9bfdd11aa3b3ec47b0a88ecca470b770dc234124a550c5718a2bcf29141980a6"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountDraftIT",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "b2e6085c9c26daf6007f24ea3e12361a3ae1a2b325f5b658bfba7e4bddeb652c"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "9699cb9e487949424a7da745a52d5970bffeaccb1ee41ca944702d726a7729f1"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "60884775d40325bdd4de88cc48391e16f0b420b8d4a667b950f1ee0134729350"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "56563d482a7cde28b56fdd74fd32e7ee57143b180b08fc84e1eabed043808daf"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "799203085df6eb35fa8601f526adb3510db2e00b8dbc6b7d724b7e4545be2f9d"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReservationIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "18531279a71ea25398dd156800a3500112271fdcb4d401f8c7e210a1c87eef88"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "0429014c6e4a7893ace1d7a2214780174d3de72769e8e274073b8a276e1dc85b"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "caf5f5be95df500c25777519773d336c1f81680b97f75b5cf1ba5190c2d01b28"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftIT",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "3e69c9a2757ae2bc42e2a33d7ba3dd5c2f1737b6c9e8fc7e327be955eea4a4d1"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "222faea42bd4e67f5a7921b457d2b382082988c77e08530098fbe8a1df0594ec"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "cb72357014964472e1b091f50c5503b6d1dd975738977e09b91de0558891a914"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "1aac09671cea0ea975dac410597ca7424863a00a1e8da2a6281b52ab9451aade"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDurability",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "03863cd52caecfdd6948159140c755b0c024aa1520b87f685ff696e5ae550cf5"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITGuards",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "79366cbdb18b7f6915a2088d167c7e73ac98346f7920a1a5a13b8b0bb210cf47"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITPositions",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "3de854a0c10995d316d39e2fbaffa574fad9fe9401d4493204ba4489b05ac2f7"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "92cb26e9d37133b97b5b195733412d28ba7ee9f615e5dd0839d4ad48331ed1b4"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "reportSha256": "7df9b06d89e4bfdd1d7866df054dec3545a7bb757c0f27d020a657a9b8a1f355"
+      }
+    ],
+    "caseIdentityNote": "All transfer case IDs match. COUNT replaces parameter observed=80000 with observed=80 for the corrected BULK/EA positive variance fixture; the complete eight-case class reran.",
+    "notAnUnfilteredRegression": true
+  },
+  "web": {
+    "counts": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "reportSha256": "8bb42980479553a03f21a3358ff5baace75f79a4e6a905e1ece2976377128467",
+    "logSha256": "3caa3178783e6c1ac028852d60b51c6643cd9e18b03416324a4692a9e3cca71a",
+    "sourceSha256": {
+      "web/src/pages/warehouse/WarehouseCountEditor.tsx": "7d8a9813b8b60a30ab73a8cb2ed22fd9fd9c7f219a44e0c52ae50e255ad1cf31",
+      "web/src/pages/warehouse/WarehouseCountEdit.tsx": "189b9c167640f1547b03cf0e4f01efd40df8fad87d4ad8d5539c734fd7f61202",
+      "web/src/pages/warehouse/WarehouseCountsPage.tsx": "968d5a470ad4339379bbbc0a03b7650742b59c88637423955bf3ab3235a8d389",
+      "web/src/pages/warehouse/WarehouseCountsPage.test.tsx": "8adee87766f0c20e6135a409d216176ff2ed207c099c7f7d0b741ff7f70ca9fe",
+      "web/src/api/warehouse/counts.ts": "68e2b4faa9972d4ccc3ff9e69961b7fe3375b9470c8f02a7094f5fd928f96900",
+      "web/e2e/warehouse/count-journey.ts": "92626c27ea0ffa291368085679d401f020360c4bb9e010e8509d05a697d582dd"
+    },
+    "allSixSourceWitnessesMatchCurrent": true,
+    "uniqueCases": true,
+    "max100CaseSeconds": 1.845382079,
+    "lintWarningDiagnosticLines": 99,
+    "independentlyObservedLogSignals": {
+      "warehouseE2eTypecheckCommand": true,
+      "productionBuildCommand": true,
+      "productionBuildCompletion": true
+    },
+    "rootRecordedCompletedRunnerExitCode": 0,
+    "rootRecordedChecks": {
+      "unitTests": "PASSED",
+      "warehouseE2eTypecheck": "PASSED",
+      "lint": "PASSED_WITH_WARNINGS",
+      "productionBuild": "PASSED"
+    },
+    "exitEvidenceLimit": "The root preserved the exact sequential set -e runner and aggregate terminal/exec exit 0 from session 5469. Together with independently inspected stage continuity and successful build, this supports all four commands returning 0. The receipt was recorded by root after execution; the private log itself does not contain per-step exit codes.",
+    "notBrowserEvidence": true,
+    "rootRunnerReceipt": {
+      "shell": "bash",
+      "failFast": "set -e; each command is sequential and unguarded, EXIT trap reports aggregate status",
+      "observedTerminalOutput": "COUNT_WEB_CHECK_EXIT 0",
+      "observedExecExitCode": 0,
+      "execSessionId": 5469,
+      "receiptSource": "Root tool response from write_stdin after this exact inline runner completed; recorded after execution",
+      "commands": [
+        "timeout --kill-after=15s 180s npm test -- --run src/pages/warehouse/WarehouseCountsPage.test.tsx --reporter=default --reporter=junit --outputFile.junit=<private-runtime>/count-web-r4.xml",
+        "timeout --kill-after=15s 180s npm run typecheck:warehouse-e2e",
+        "timeout --kill-after=15s 180s npm run lint",
+        "timeout --kill-after=15s 240s npm run build"
+      ],
+      "logging": "All four commands redirect or append stdout and stderr into count-web-r4.log; EXIT trap emits status to the tool response."
+    }
+  },
+  "privacy": "Only names, counts, hashes and synthesized status facts persisted. No raw XML, failure bodies, system-out or logs copied.",
+  "remainingGates": [
+    "Complete current full regression and any affected-source reruns",
+    "Real browser result and source binding",
+    "Remaining feature work including retained-draft idle expiry before final F2"
+  ],
+  "reviewerRanQA": false,
+  "finalF2Approval": false
+}

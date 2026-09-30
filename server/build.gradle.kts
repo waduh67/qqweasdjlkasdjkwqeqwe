@@ -51,7 +51,7 @@ dependencies {
     // Boot 4 memecah autoconfigure per teknologi; FlywayAutoConfiguration ada di modul ini.
     implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
-    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.postgresql:postgresql")
 
     // Geometri PostGIS. Kehadiran modul ini membuat PostgreSQLDialect otomatis
     // mengaktifkan dukungan spasial; JTS ikut sebagai dependensi transitif.
@@ -60,6 +60,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("com.github.ben-manes.caffeine:caffeine")
+    implementation("org.apache.pdfbox:pdfbox:3.0.8")
 
     implementation(libs.springdoc.webmvc.ui)
 
@@ -84,9 +85,42 @@ tasks.withType<Test> {
     useJUnitPlatform()
     maxParallelForks = 1
     forkEvery = 50
-    maxHeapSize = "768m"
+    // Integration suites also open a second real server for restart checks.
+    // Bound cached contexts so earlier HTTP suites cannot exhaust the test JVM.
+    maxHeapSize = "1536m"
+    systemProperty("spring.test.context.cache.maxSize", "1")
     systemProperty("ftth.scheduling.enabled", "false")
     testLogging {
         events("passed", "skipped", "failed")
+    }
+    if (providers.environmentVariable("WAREHOUSE_QA").orNull == "true") {
+        systemProperty("warehouse.test.classpath", sourceSets.test.get().runtimeClasspath.asPath)
+        outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
+        filter.isFailOnNoMatchingTests = true
+        addTestListener(object : TestListener {
+            override fun beforeSuite(suite: TestDescriptor) = Unit
+            override fun beforeTest(testDescriptor: TestDescriptor) = Unit
+            override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) = Unit
+            override fun afterSuite(suite: TestDescriptor, result: TestResult) {
+                if (suite.parent == null) {
+                    check(result.testCount > 0 && result.skippedTestCount == 0L) {
+                        "Warehouse QA requires nonzero executed tests and zero skipped tests"
+                    }
+                    logger.lifecycle("WAREHOUSE_COUNTS tests={} failures={} skipped={}", result.testCount, result.failedTestCount, result.skippedTestCount)
+                }
+            }
+        })
+    }
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    val metadata = layout.buildDirectory.file("warehouse/boot-jar-path.txt")
+    outputs.file(metadata)
+    doLast {
+        metadata.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(archiveFile.get().asFile.canonicalPath + "\n")
+        }
     }
 }

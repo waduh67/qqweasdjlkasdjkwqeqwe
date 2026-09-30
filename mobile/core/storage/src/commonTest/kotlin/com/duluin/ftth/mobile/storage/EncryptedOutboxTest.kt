@@ -2,11 +2,30 @@ package com.duluin.ftth.mobile.storage
 
 import com.duluin.ftth.mobile.domain.EnqueueResult
 import com.duluin.ftth.mobile.domain.SecureOutboxOperation
+import com.duluin.ftth.mobile.domain.OutboxIdentity
+import com.duluin.ftth.mobile.domain.SecureDeliveryState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class EncryptedOutboxTest {
+    @Test fun scopedPayloadAndAttemptStateSurviveRestartAndOnlyExactCompletionRemovesOneCommand() {
+        val records = MemoryRecords()
+        val operation = SecureOutboxOperation("user", "device", "session", "materials.tenant", "key", "hash", 7, byteArrayOf(1, 2))
+        val scope = OutboxIdentity("user", "device", "session")
+        val first = EncryptedOutbox(records, TestCipher(), "user")
+        first.enqueueSecure(operation); first.enqueueSecure(operation.copy(key = "other"))
+        first.mark(scope, operation.namespace, operation.key, SecureDeliveryState.ATTEMPTED)
+        val restored = EncryptedOutbox(records, TestCipher(), "user")
+        assertEquals(SecureDeliveryState.ATTEMPTED, restored.entries(scope, operation.namespace).first().state)
+        assertEquals(listOf<Byte>(1, 2), restored.entries(scope, operation.namespace).first().operation.payload.toList())
+        assertEquals(emptyList(), restored.entries(scope.copy(sessionId = "new"), operation.namespace))
+        assertEquals(emptyList(), restored.entries(scope, "materials.foreign-tenant"))
+        assertEquals(EnqueueResult.Conflict, restored.enqueueSecure(operation.copy(payload = byteArrayOf(2, 1))))
+        assertFailsWith<OutboxUserScopeException> { restored.complete(scope.copy(userId = "other-user"), operation.namespace, operation.key) }
+        restored.complete(scope, operation.namespace, operation.key)
+        assertEquals(listOf("other"), restored.entries(scope, operation.namespace).map { it.operation.key })
+    }
     @Test
     fun durableReplayAndConflictSurviveRecreation() {
         val records = MemoryRecords()
@@ -90,6 +109,7 @@ class MemoryRecords : SecureOutboxRecords {
     override fun write(record: SecureOutboxRecord) { values["${record.operation.userId}:${record.operation.namespace}:${record.operation.key}"] = record }
     override fun delete(userId: String) { values.entries.removeAll { it.value.operation.userId == userId } }
     override fun retry(key: String): Boolean = values[key]?.let { values[key] = it.copy(retries = it.retries + 1); true } ?: false
+    override fun remove(key: String) { values.remove(key) }
     fun tamper(key: String) { values[key] = values.getValue(key).copy(payload = EncryptedBlob("test", byteArrayOf(9))) }
 }
 

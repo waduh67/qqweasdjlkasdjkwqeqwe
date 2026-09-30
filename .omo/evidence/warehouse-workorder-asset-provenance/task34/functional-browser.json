@@ -1,0 +1,13 @@
+{
+  "task": 34,
+  "sourceCommit": "3d377e6f",
+  "run": "stock-explorer-compiled",
+  "expected": 2,
+  "failed": 0,
+  "skipped": 0,
+  "flaky": 0,
+  "durationSeconds": 44.751801,
+  "visualReview": "8 synthetic screenshots reviewed; inherited ellipsis clipped history detail; corrected in following commit",
+  "cleanup": "owned processes containers network removed; volumes retained",
+  "remaining": "readability browser verification"
+}

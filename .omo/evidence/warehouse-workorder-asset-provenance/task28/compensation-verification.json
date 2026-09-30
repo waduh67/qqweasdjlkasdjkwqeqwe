@@ -1,0 +1,119 @@
+{
+  "recordedAt": "2026-09-24T15:25:26.956462+00:00",
+  "task": 28,
+  "scope": "Inspected-return LOSS/SCRAP plus linked compensation; installed/reused asset compensation test and broader loss scope still in progress",
+  "verifiedProductCommit": "567a3113",
+  "verifiedMainTree": "7b05887729dd57708174962a4a85283a154d019a",
+  "result": "PASS",
+  "run": "compensation-guards",
+  "duration": "4m54s",
+  "counts": {
+    "tests": 30,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 6
+  },
+  "command": "scripts/warehouse/qa.sh server --tests '*WarehouseCompensation*IT' --tests '*WarehouseDisposition*IT' --tests '*ModularityTests' --no-parallel",
+  "environment": "Owned isolated PostgreSQL app role NOSUPERUSER NOBYPASSRLS; private MinIO; JDK21; serialized QA lock; no volume reset",
+  "redaction": "Only test names/counts and source/result digests; no HTTP bodies, headers, tokens or raw logs",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "cetak peta module()",
+        "hotspot accesses only public BNG and catalog APIs()",
+        "struktur module valid()"
+      ],
+      "xmlSha256": "d78e48c654d62d005e3f3a62424d1d4652d4c61246b9d0c6f6200d1c82f4deff"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCompensationGuardsIT",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "competing corrections of the same original movement produce one reversal()",
+        "compensated stock rebuild keeps the original disposition and exactly one restored piece()",
+        "rejected correction cannot edit its sealed source and a fresh approved request may restore it()",
+        "closing material after compensation request makes the pending approval durably stale()",
+        "revoked source scope denies replay of an applied correction()",
+        "closed material settlement requires its corrective workflow before compensation can be requested()",
+        "correction cannot return stock directly to an available bin()",
+        "a pending correction cannot insert its effect through direct SQL()"
+      ],
+      "xmlSha256": "f0a353d2d239ce0d60c37085142a87038ef985f9907dd71df8310e822de976af"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseCompensationIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] action = \"LOSS\"",
+        "[2] action = \"SCRAP\""
+      ],
+      "xmlSha256": "f82f086b8b77dac905999d53430e40038857559d51d59dc70286cc7463b4937d"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseDispositionAssetIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\", action = \"SCRAP\"",
+        "[2] mode = \"LOAN\", action = \"LOSS\"",
+        "[3] mode = \"SALE\", action = \"SCRAP\"",
+        "[4] mode = \"SALE\", action = \"LOSS\""
+      ],
+      "xmlSha256": "b821341d309841e2c07eaeb41bd22352fb39071e0b19d81574d6ae03783a460b"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseDispositionGuardsIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "pending approval cannot admit a physical disposition effect through direct SQL()",
+        "rejected disposition preserves source and requires a fresh request with its own approval()",
+        "disposition list removes hidden destinations before pagination()",
+        "competing independently approved drafts can dispose the same remnant only once()",
+        "unknown receipt cost stays unknown and blocks threshold approval without inventing zero()",
+        "changed inspection makes pending approval durably stale without a physical effect()",
+        "receipt currency cannot be converted implicitly to the disposition policy currency()",
+        "disposed measured segment cannot be rewritten and rebuild preserves the exact applied ledger()",
+        "requester delegation cannot turn a configured checker into an independent approver()",
+        "current destination scope is required to replay an approved decision()",
+        "writeoff cannot overdraw or silently resize the measured returned segment()"
+      ],
+      "xmlSha256": "831fc28609367157456a118039ca10f5903cc870e0b89fd72ede549444d4968e"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] action = \"SCRAP\"",
+        "[2] action = \"LOSS\""
+      ],
+      "xmlSha256": "facf2fc32aeba10a962ca7515d31c86ff6915be6c01c6d2b1630919912d882f4"
+    }
+  ],
+  "migrations": {
+    "V175_138__warehouse_disposition_request.sql": "34a2b183f2a4f1395981b5efdf5e14d3033ca9f7121b767c9d3f2ab52c74ea3b",
+    "V175_139__warehouse_return_disposition_effect.sql": "a9a1f5567678d9b4841bad38b3f2fd79f4256efeeb65b8563fe442923de2e489",
+    "V175_140__warehouse_disposition_compensation_request.sql": "ebbc1297ff12996825eac5601ec7367b282e8f564b25eacd9eaaa35343f0fd4e",
+    "V175_141__warehouse_disposition_compensation_effect.sql": "636454e183295ddb3e433cb7a2e1e5056a4881f8dacafc450a12d7ab4e8baac0",
+    "V175_142__warehouse_disposition_compensation_event.sql": "f792dc3f6d64f6190dac9b575e5c74e66022a6fc41ae4922f8a12aeeb4cff83a"
+  }
+}

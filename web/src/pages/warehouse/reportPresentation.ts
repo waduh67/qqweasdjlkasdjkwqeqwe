@@ -1,0 +1,2 @@
+export const reportLabels = { stock: 'Ringkasan stok', 'unknown-stock': 'Stok belum terverifikasi', 'stock-card': 'Kartu stok', 'custody-aging': 'Usia penguasaan barang', 'transit-backlog': 'Barang dalam perjalanan', 'loan-assets': 'Perangkat dipinjamkan', 'sold-assets': 'Perangkat dijual', 'work-order-costs': 'Biaya pemakaian WO', movements: 'Buku pergerakan stok' }
+export const reportLink = (values: Record<string, string>) => `/warehouse/reports?${new URLSearchParams(values)}`

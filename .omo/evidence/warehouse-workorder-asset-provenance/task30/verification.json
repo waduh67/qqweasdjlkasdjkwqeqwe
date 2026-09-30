@@ -1,0 +1,175 @@
+{
+  "recordedAt": "2026-09-24T16:23:57.562403+00:00",
+  "task": 30,
+  "scope": "Scoped stock/provenance/aging/transit/loan/sale/WO cost reports and versioned print;full numeric LOAN andSALE journeys;1000-row CSV bound;current cost/privacy/legacy guards;acknowledgement replay lifecycle and affected receipt regression",
+  "verifiedProductCommit": "422cf536",
+  "verifiedMainTree": "121263902d2b950892a213ce7cdf2d3ad0f99f44",
+  "result": "PASS",
+  "run": "reports-replay-fixed",
+  "duration": "5m35s",
+  "counts": {
+    "tests": 53,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 10
+  },
+  "command": "scripts/warehouse/qa.sh server --tests '*WarehouseReport*IT' --tests '*WarehouseReportCsvTest' --tests '*WorkOrderMaterialReceiptIT*' --tests '*ModularityTests' --no-parallel",
+  "environment": "Owned isolated PostgreSQL app role NOSUPERUSER NOBYPASSRLS; private MinIO; JDK21; serialized QA lock; owned volumes retained",
+  "redaction": "Only test names/counts and source/result digests;no raw HTTP logs or credentials",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "cetak peta module()",
+        "hotspot accesses only public BNG and catalog APIs()",
+        "struktur module valid()"
+      ],
+      "xmlSha256": "cc643f5e3ebc2fe81c5e312f953fb5293373ff2ec5de8a9afdf4fe0100448952"
+    },
+    {
+      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "remaining receipt closes issue when all dispatched quantity accepted()",
+        "foreign tenant cannot read or acknowledge issue()",
+        "foreign stock identity cannot replace dispatched identity()",
+        "[1] mode = \"snapshot\"",
+        "[2] mode = \"line\"",
+        "[3] mode = \"state\"",
+        "[4] mode = \"no-tenant\"",
+        "[5] mode = \"foreign-tenant\"",
+        "[6] mode = \"restored-tenant\"",
+        "serial subset enters custody only with exact dispatched serial()",
+        "[1] field = \"actorId\"",
+        "[2] field = \"tenantId\"",
+        "[3] field = \"receiverId\"",
+        "[4] field = \"movementId\"",
+        "[5] field = \"destinationCustody\"",
+        "[6] field = \"approver\"",
+        "dispatch leaves all material in transit when receiver has not acknowledged()",
+        "reassignment retains custody and own receipt but denies further acknowledgement()",
+        "same key returns original bytes when receipt already posted()",
+        "acknowledgement moves sixty metres into named receiver custody when one hundred metres dispatched()",
+        "[1] quantity = \"100001\"",
+        "[2] quantity = \"-1\"",
+        "[3] quantity = \"1.5\"",
+        "[4] quantity = \"9223372036854775808\"",
+        "[5] quantity = \"060000\"",
+        "administrator cannot impersonate named receiver()",
+        "revoked transit scope denies replay and private receipt despite original token()",
+        "changed payload conflicts when key already used()",
+        "stale issue revision cannot acknowledge with a new key()"
+      ],
+      "xmlSha256": "fe2fb960eba13f267ddd47187c07d3ae2b7ab4c92af01b50eec71859bb5facfa"
+    },
+    {
+      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"same-key\"",
+        "[2] mode = \"different-key\"",
+        "[3] mode = \"scope\"",
+        "[4] mode = \"reassignment\""
+      ],
+      "xmlSha256": "3806cc31b0dd910152090cfbf85df16a19dc3d16d0c6ccc68e0de6d9b90c00e8"
+    },
+    {
+      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"\"",
+        "[2] mode = \"foreign\"",
+        "composite receiver foreign key rejects another tenants named receiver()",
+        "cleared and foreign scope hide both receipt tables while restored scope validates()",
+        "receipt cannot acquire extra lines in a later transaction()"
+      ],
+      "xmlSha256": "f4901d6ee5ae4e531574a11f111d858fd39bbe51b09c8b1a28f5b38ca53d9205"
+    },
+    {
+      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "new receipt with stale work order revision never reaches physical posting()",
+        "authorized receipt replay survives work order progress but still checks payload and revoked scope()"
+      ],
+      "xmlSha256": "c070f2af8d43c802041d8ebd74766ee9912798905b03b95372d96f37fd7c8588"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReportCsvTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "spreadsheet formula prefixes remain text after whitespace and controls are trimmed()"
+      ],
+      "xmlSha256": "6de9a1d4e5aeaca1b6dd1f324f37b2f83c07453012571cda4aa4210a60aa183b"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReportExportIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "more than one thousand actual ledger entries require a narrower export()"
+      ],
+      "xmlSha256": "4c42de53b758007038de8f430cf94bcac2feae72ed143a257c1946cf358c90ac"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReportIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "unknown receipt cost stays unknown and never creates a zero monetary total()",
+        "report access does not require stock view and hides costs foreign records and unscoped pages()",
+        "report filters and export paging fail closed()",
+        "returned remnant stock card preserves opening balance and exact original use cost()"
+      ],
+      "xmlSha256": "8131315e2e1c4d0318cebcee05fbef3fcc089b43caf938f9351e6c263af4cfbc"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReportJourneyIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\"",
+        "[2] mode = \"SALE\""
+      ],
+      "xmlSha256": "11d8e1ad46ad389f18e00ebeafdc83d53822dc917782cee57257a8d3bb09371a"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseReportPrivacyIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "revoked cost permission immediately redacts the same historical print and export session()",
+        "legacy unverified raw quantity report never assigns units or available stock()"
+      ],
+      "xmlSha256": "f01dca1626f4035221d00dedcaa0eaebb3f6b976b3ee2d421cbbb8f9c34e4a6d"
+    }
+  ]
+}

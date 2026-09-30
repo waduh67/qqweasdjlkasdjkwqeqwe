@@ -1,0 +1,274 @@
+{
+  "status": "AUTHENTICATED_CANCELLED_DURING_FOCUSED_NOT_A_PASS",
+  "ciRun": 36264069182,
+  "testedCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "reviewedAtUtc": "2026-09-26T19:16:04.480036+00:00",
+  "ciStatus": "completed",
+  "ciConclusion": "cancelled",
+  "archive": {
+    "run": 36264069182,
+    "commit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "artifactId": 10914150712,
+    "name": "warehouse-server-c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "artifactDigest": "sha256:922845eeacb16a4b8e660d0541c54aba4b1d50eb8204092411bd86e101679b1c",
+    "zipBytes": 241812,
+    "authenticatedDecryption": true,
+    "encryptedArchiveSha256": "01a8c28aa939ee93a78bba82c7453d6b3e319948db7f3f1ae1e4e2311e251472",
+    "decryptedTarSha256": "a491a492c8751488c697a3592f849325e747aa970cb70fa724cfc72e92bda6b1",
+    "rawFiles": 47
+  },
+  "authenticatedRawMembersCompared": 47,
+  "rawMemberManifestSha256": "2b06b90b00bb9072e77c5a5df8109eb92e15dec37b7fb86b53843acb66bba060",
+  "ciJobs": [
+    {
+      "name": "web",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (provenance)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (issue)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (draft-expiry)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (warehouse-empty-tenant)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (customer-assets)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "shared",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (setup)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (returns)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (exceptions)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "server",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "name": "images",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (receiving)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "legacy-upgrade",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "native / ios-compile",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "acceptance",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "serverSteps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T18:54:30Z",
+      "completedAt": "2026-09-26T18:54:31Z"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T18:54:31Z",
+      "completedAt": "2026-09-26T18:54:34Z"
+    },
+    {
+      "name": "Run ./.github/actions/warehouse-setup",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T18:54:34Z",
+      "completedAt": "2026-09-26T18:54:56Z"
+    },
+    {
+      "name": "Offline GPON profiles, wire contracts and collector regression",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T18:54:56Z",
+      "completedAt": "2026-09-26T18:59:54Z"
+    },
+    {
+      "name": "Verify each offline protocol module executed tests",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T18:59:54Z",
+      "completedAt": "2026-09-26T18:59:54Z"
+    },
+    {
+      "name": "Compile current server tests before running historical applications",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T18:59:54Z",
+      "completedAt": "2026-09-26T19:03:31Z"
+    },
+    {
+      "name": "Check repaired compatibility fixtures before the full regression",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "startedAt": "2026-09-26T19:03:31Z",
+      "completedAt": "2026-09-26T19:13:33Z"
+    },
+    {
+      "name": "Full server, fresh migrations and historical upgrade",
+      "status": "completed",
+      "conclusion": "skipped",
+      "startedAt": "2026-09-26T19:13:33Z",
+      "completedAt": "2026-09-26T19:13:33Z"
+    },
+    {
+      "name": "Verify executed server results",
+      "status": "completed",
+      "conclusion": "failure",
+      "startedAt": "2026-09-26T19:13:33Z",
+      "completedAt": "2026-09-26T19:13:33Z"
+    },
+    {
+      "name": "Stop owned QA resources",
+      "status": "completed",
+      "conclusion": "failure",
+      "startedAt": "2026-09-26T19:13:33Z",
+      "completedAt": "2026-09-26T19:14:03Z"
+    },
+    {
+      "name": "Encrypt raw server evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T19:14:03Z",
+      "completedAt": "2026-09-26T19:14:03Z"
+    },
+    {
+      "name": "Run actions/upload-artifact@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T19:14:03Z",
+      "completedAt": "2026-09-26T19:14:05Z"
+    },
+    {
+      "name": "Post Run ./.github/actions/warehouse-setup",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T19:14:05Z",
+      "completedAt": "2026-09-26T19:14:05Z"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T19:14:05Z",
+      "completedAt": "2026-09-26T19:14:05Z"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-26T19:14:05Z",
+      "completedAt": "2026-09-26T19:14:05Z"
+    }
+  ],
+  "protocols": {
+    "contract": {
+      "tests": 2,
+      "suites": 1
+    },
+    "snmp": {
+      "tests": 25,
+      "suites": 3
+    },
+    "collector": {
+      "tests": 170,
+      "suites": 31
+    }
+  },
+  "protocolXmlSha256": {
+    "contract/build/test-results/test/TEST-com.duluin.ftth.contract.CertificationMatrixContractTest.xml": "27abecffe4fb9c0a2031c792d7429eb4b862aba005d6c40888ec590a48470d82",
+    "snmp/build/test-results/test/TEST-com.duluin.ftth.snmp.GponDocumentedProfileTest.xml": "fdfe2fed3083266e2f253bce4f2b089ae4fe1c57594f279b0c3958456f7d2abe",
+    "snmp/build/test-results/test/TEST-com.duluin.ftth.snmp.GponSnmpAdapterTest.xml": "097ea5807a148eda008a46476f09e0743efa5ec12e1431204239ef01801f4d7a",
+    "snmp/build/test-results/test/TEST-com.duluin.ftth.snmp.HsgqEponSnmpAdapterTest.xml": "90b087c41eae05c940a6e04192aa5e479e50ea4e9e67c225bd9f2c501e339f3f",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.CollectorAgentTest.xml": "2037481fb54e27863af25372a5d7f2eb0711a2bf35837ea4de6aa8995f9e5345",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.CollectorProtocolSerializationTest.xml": "54e359b7f160b8c1c95ef14a8e939f4cedaf3c7a7d73ef573690adbb84f28d5b",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.CollectorRuntimeModeTest.xml": "6aa4c10bc50947a2d438571ab16ad7ce6376926c1aac4ef94be593d84de0ba2c",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.ObservationRetryTest.xml": "6126eaa4b74939ee26f8419312031370b69fde7db6d06b7fcb60d1800a60307c",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.ProvisioningWireCompatibilityTest.xml": "1e46c6863bc06951f1162702b11f0f185769d70c4a11c2e46d4b422387d127ec",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.RuntimeProvisioningAdapterFactoryTest.xml": "3ca0c0bb7a0689ba7ba1723c465b8808b6f03dd36c9748bead6d348b26014d4f",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapterTest.xml": "bc7a043772f072a14cf10a67b0c4d9d9fdb1a2d58527915c2314fc7778a3b4a6",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.RadiusDaeTest.xml": "ceedc9f132208f98383549a1e49fb1b2dd9005af0bdcb0e5fb5374f46e96f6ff",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapterTest.xml": "2f8b2455b2ad590ce3e4b1e970b1085c83c21eceb02cdb9eef561b71ca990af8",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.RouterOsProvisioningLifecycleTest.xml": "025e088bfe9a434319491ecf88ca60ac5a1b90c52dc3c128ee1e62c4191db638",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.RouterOsProvisioningStateStoreTest.xml": "7659e7a672ff174e01221343a2ab26e192c78100d881bf9211e02a2755394218",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.SimulatorBngAdapterTest.xml": "3bd6bc58d89e336c9e3503117e402ec055bccde3f629efad6a4e5732d26ef9e8",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.HsgqOltTargetContractTest.xml": "4d4f3a747e038a0f22d73d1ba5f65213983bb25c850f50331e5d3f7971387103",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningFailureTest.xml": "9547358b25320daa2b5c8f60d3a10071b1108f854ef970e86623f5177de39868",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningLifecycleTest.xml": "33a7c9e7b1afd1d9b626814fc09ab8615b317c7c8b29c6987c46a78070bec542",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningModelTest.xml": "84181add4f027a7dd4f29a71d946af0d092248690bd79965596659dfce1a62c5",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningPortsTest.xml": "f83600f55b80a0d45f897b4dc908daa31dea5403b072deb9dd6d35701d8c9743",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningStateStoreTest.xml": "9ace6ec1b74acdf76eac604df51cad50f1aace9e2f72661afdd0d9a28318fdc5",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapterTest.xml": "f81d064dc55053712729f71fac40343ac02349ea08fddef7e55656855fc54364",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.huawei.HuaweiProfileTest.xml": "c3a4772c6dabf03df65b4ce12200f35c7828036c25dffa55025caaa39b387b56",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.huawei.HuaweiProvisioningAdapterTest.xml": "91a4f4bf75a549e356a5182f798c118ed1928c9fdca67c64f2a3f3c6d2ff4c7a",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.huawei.HuaweiTranscriptTest.xml": "bb9c041e419a2748d50b6e0f9488319b7d88fd2d0f13905779675db0cd22e35e",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.iosxe.IosXeProfileTest.xml": "c7b092ed0011d01e081f31b114715267ff4de19271eec5e6214cf5643b431cb4",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.iosxe.IosXeProvisioningAdapterTest.xml": "babc81a376ef2feb13c7d4542066d0297122e9c93354b518971d5631eabd8c18",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.junos.JunosCapabilityProfileTest.xml": "5fd9b480331c8c0764720bc4819a43e23af22639bbacdda94d1f10e70c19c763",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.junos.JunosConfigurationTest.xml": "344fba6a82807d992df8382fddfb011c2e6ecb440dd1a3a906ef6c34ecf2af9c",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.junos.JunosProvisioningAdapterTest.xml": "99d2a50211810ca239162f4ce08a41d2f41927d44a8ac748b93e4f522bc6cf28",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.zte.ZteProfileTest.xml": "787f7d806a00d24d0800ca79ced52e9f231f4c0fd528ae58ff6e3066d8fa099e",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.zte.ZteProvisioningAdapterTest.xml": "6067d27fabb6d7ce62e9aa58c62eb34cc362b50047b74542109ac1ac795b3747",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.adapter.zte.ZteTranscriptTest.xml": "32aebb09449ca698305b6bfa6582fd816b539bc195b620520b41578a4745ab66",
+    "collector/build/test-results/test/TEST-com.duluin.ftth.collector.certification.AdapterCertificationMatrixTest.xml": "55057fe6ee2ed2a7d7f24a8dbfc9a222c6698f15a9c6dee5f4b312ab275f4cf9"
+  },
+  "completeFocusedXmlReports": 0,
+  "completedFocusedGate": false,
+  "fullServerExecuted": false,
+  "historicalUpgradeGatesExecuted": false,
+  "cleanupStepConclusion": "failure",
+  "successfulNonserverJobs": 14,
+  "nonserverRawArtifactsVerifiedInThisProof": false,
+  "localQaExecuted": false,
+  "reviewerCancelledRun": false,
+  "aggregateCiPass": false,
+  "finalF4Approval": false,
+  "limitation": "Protocol reports are complete; cancelled focused binary/log diagnostics are not completed JUnit or a passing server gate. Hosted job cancellation cleanup failure is recorded without assuming a product failure. Nonserver metadata is not transferred to final1306 artifacts."
+}

@@ -93,7 +93,7 @@ class CpeBulkRefreshCapIT {
             ),
             "$.id",
         )
-        post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$s"}""")
+        com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, "SN-$s")
         acs.seedDevice(
             AcsDevice(
                 genieacsId = "genie-${uniq()}",

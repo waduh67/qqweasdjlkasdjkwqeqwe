@@ -1,0 +1,333 @@
+{
+  "status": "VERIFIED_BOUNDED_C7_RECEIPT_AND_WEB_EVIDENCE_NOT_FINAL",
+  "verifiedAtUtc": "2026-09-26T16:20:13.779159+00:00",
+  "checkpointParent": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+  "proofSha256": {
+    "local-draft-expiry-receipt-r1.json": "328f62940f3bda2c3a5b5c0c99076d1f8b0963aba387b0735cdcda53d6e7cb90",
+    "local-draft-expiry-web-r2.json": "f0c38a6cb9479cd68c878d170f790f24b192bf99b1b304f39a6a3e5c6d457ade"
+  },
+  "receiptR1": {
+    "counts": {
+      "tests": 98,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "sha256": "d69db9692f82b100420240b9ecaba882076e71cdaaed323c44c40ae1c998de73",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryReceiptIT",
+        "sha256": "975c1db8706bc32170c9ef116f8fdf6ddcbd4ab43829f54fc36305e40588309d",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITFormState",
+        "sha256": "af2626ed17de4acf116ac96b20c7b5cf59d88d8d6ab0acddc99ca99c154d6bce",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+        "sha256": "3349a4e9e8f27c6b6115ad320d8517c07208a7edf01dfffd82e386dcd7fd2d95",
+        "tests": 62,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "artifactsSha256": {
+      "draft-expiry-receipt-r1-counts.json": "ac667d12e7696ca0851381bee5f3da20c49cc06138bbfeb50b71fda924f0a4ef",
+      "draft-expiry-receipt-r1-inputs.json": "5ef307956fa2439b8ce5d8f5d71d63236902ce2699f1c17d04000f24c24d7d68",
+      "draft-expiry-receipt-r1.sh": "73e6392eb335fcc1f04c63a9e5c38c6acf788032377e7073569fba19669ab359",
+      "draft-expiry-receipt-r1.log": "b829b314425cfa82da3119aa00570c4face975858cee8c98a2e2063826cb08b2"
+    },
+    "sourceComparison": {
+      "recorded": 2607,
+      "current": 2611,
+      "changed": {
+        "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetLossApi.kt": {
+          "captured": "3c54321e365f5993e2d85877e9de351125f9fc03d43d5eb866c777dcc359c2b7",
+          "current": "50404c80d59d1f23ec42169518e385995f083cc5df5b7a6b56da5af79b5d7e5b"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCompensationApi.kt": {
+          "captured": "6a407d5e5c27a40de2e5dc6cb85dc52ddb9addb731ff32d872c5e837c2d5e07a",
+          "current": "86dd9d1d7bf79fa38f69917ac00e9d36059d101f9cc2601847eb1d7248fd88af"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDispositionApi.kt": {
+          "captured": "dcdc2cd23cc0a7c2349c49977c84f00106c26babed9319198b5e3e95b6206df7",
+          "current": "881ffc32533bb2f09bf103c18e62042f3ee3da191fab4956544c0ad48b5f14f0"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryReturnReacquisitionApi.kt": {
+          "captured": "5d9b8fdc78444257842e6f25bce0901846fe47969988584ec6b2b4bd99afd145",
+          "current": "8246b444dd61b59fb6da2d3482859628787ae80babb5ea883b92e4db49f9f9c5"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySupplierReplacementApi.kt": {
+          "captured": "b910741031c4c15f3ef32d3c2e661e55feeae47c75d365dc7588b3f1192a6a6e",
+          "current": "6b245c8a314778aa90f7020c948d54bf2377898a412b92e9d314b9dd10daa9f5"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": {
+          "captured": "e7c6b4e44431c641ee1162a97cd4fa129d9999e734e63cecea0a74b6a41524ee",
+          "current": "81abf645cf8fa6d6a0c86eefadb2caa0847a2fd00c30dc3eb0497908fff7df61"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReturnReacquisitionStore.kt": {
+          "captured": "b24e6b257289e9eb097c52633aa5bf0224f43fb25656994726e5cf07205be593",
+          "current": "de18a13e8f8b5bcb4a56bd5fc4ed85eb88066202988ffe375c3300c9ea5cfc36"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt": {
+          "captured": "78b7ba1474d60b710f69f37b6f62173e2d4795917883856dcdcfc98199e39dd2",
+          "current": "6ac615c353ea4b5afa816648b67c8cf55453734310bc522af9b77525f4cf1519"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt": {
+          "captured": "4b519b5fc86f173b9e3a9264339f63262e8ac0e94a36a74204c4c19f366b191f",
+          "current": "343298120304ee918644ae26572d6ba00ca758375184d744f04bb8702e5df601"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCompensationStore.kt": {
+          "captured": "17c8729279ab3a39d29622040bf3fcb8102026aa19f849425af3e2b1f4ef112d",
+          "current": "fe35ce741db460e35c96e958918006b72ad62d684e2fe803985da3b7bd3de032"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDispositionStore.kt": {
+          "captured": "2b2e33bf0568b6f20e87124c710c8ab772c52e41d05abbba9b0f89f2199930ba",
+          "current": "5f099645fa9b0442e29cee42c24b8d5a2d6148b9b71e36aeb5ad92112c5c21da"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferDiscrepancyStore.kt": {
+          "captured": "832f99ec765db16deea065566e90ef8768b2151beda1af81f86d9704ab2d8210",
+          "current": "e62f4da187060d0b57bd498c8d81442295189d5389e36bc261bfa1b69a6568bb"
+        },
+        "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": {
+          "captured": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d",
+          "current": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00"
+        }
+      },
+      "added": {
+        "server/src/test/kotlin/com/duluin/ftth/fulfillment/MaterialDraftExpiryIT.kt": "2a4f4750740b19289c68bfeb365b3cbf4bfeacae2c9597b9623f9d13babc3ac3",
+        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt": "9e2f0ec957467df72c48c8c10e197c2df1b7828b5c6ae78fa7009f1818f7bd4a",
+        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryApprovalIT.kt": "be4ff05f91c965b9121143428e410e2d8fe77ebc24dc29162f22ac0880f8d61f",
+        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDocumentIT.kt": "ce25e06c621915906b2aa69460c4b7dfc90b789161e3ea6a61d75a7a4cca4a8a"
+      },
+      "missing": []
+    },
+    "independentBuildSuccessMarker": true,
+    "rootRecordedRunnerExitCode": 0,
+    "rootRecordedCleanupExitCode": 0,
+    "coverage": "5 real-database-clock receipt tests, 28 form-state cases, 62 selective scope/catalog cases and 3 module cases. Scheduler-disabled denial, exact replay/no read renewal, pinned policy, one activity per accepted save, application privilege rejection and source-lock wait past deadline are covered."
+  },
+  "migration": {
+    "file": "V178_12__warehouse_idle_draft_expiry.sql",
+    "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+    "matchesAppliedProof": true,
+    "immutable": true,
+    "limit": "Read-only hash verification; no reviewer migration or DB QA."
+  },
+  "webR2": {
+    "counts": {
+      "tests": 88,
+      "passed": 88,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    "files": [
+      {
+        "file": "web/src/api/warehouse/approvalReads.test.ts",
+        "tests": 3,
+        "statuses": {
+          "passed": 3
+        }
+      },
+      {
+        "file": "web/src/api/warehouse/counts.test.ts",
+        "tests": 3,
+        "statuses": {
+          "passed": 3
+        }
+      },
+      {
+        "file": "web/src/api/warehouse/draftExpiry.test.ts",
+        "tests": 5,
+        "statuses": {
+          "passed": 5
+        }
+      },
+      {
+        "file": "web/src/api/warehouse/materialModels.test.ts",
+        "tests": 9,
+        "statuses": {
+          "passed": 9
+        }
+      },
+      {
+        "file": "web/src/api/warehouse/receipts.test.ts",
+        "tests": 2,
+        "statuses": {
+          "passed": 2
+        }
+      },
+      {
+        "file": "web/src/api/warehouse/transfers.test.ts",
+        "tests": 3,
+        "statuses": {
+          "passed": 3
+        }
+      },
+      {
+        "file": "web/src/pages/warehouse/WarehouseApprovalsPage.test.tsx",
+        "tests": 7,
+        "statuses": {
+          "passed": 7
+        }
+      },
+      {
+        "file": "web/src/pages/warehouse/WarehouseCountsPage.test.tsx",
+        "tests": 10,
+        "statuses": {
+          "passed": 10
+        }
+      },
+      {
+        "file": "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx",
+        "tests": 12,
+        "statuses": {
+          "passed": 12
+        }
+      },
+      {
+        "file": "web/src/pages/warehouse/WarehouseRequestsPage.test.tsx",
+        "tests": 11,
+        "statuses": {
+          "passed": 11
+        }
+      },
+      {
+        "file": "web/src/pages/warehouse/WarehouseTransfersPage.test.tsx",
+        "tests": 15,
+        "statuses": {
+          "passed": 15
+        }
+      },
+      {
+        "file": "web/src/components/organisms/workorder/WorkOrderMaterials.test.tsx",
+        "tests": 8,
+        "statuses": {
+          "passed": 8
+        }
+      }
+    ],
+    "artifactsSha256": {
+      "draft-expiry-web-r2-report.json": "ba1fa5d47e2319a5ae1bc8fa73752409487952758a4bb174791793af56449dc9",
+      "draft-expiry-web-r2-inputs.json": "1e0438ff110e2e5264c87486555fdd9869267e34d6df850a49804410a3a017d6",
+      "draft-expiry-web-r2.sh": "854f145a047b8faa5e4472e2bd9b842f7ed606da00a55d3b495d28f3bcba70c4",
+      "draft-expiry-web-r2.log": "c9fd50d63a809bbcb50ec3fba99dcb84bf6ffb087ee773cc8ba2da9d9be52d5a"
+    },
+    "sourceComparison": {
+      "recorded": 523,
+      "current": 523,
+      "changed": {
+        "web/src/api/warehouse/dispositions.ts": {
+          "captured": "a923f8ba27b013b33667ac8661b72f01adfc5013d39d1681ad42b47fe366fb4f",
+          "current": "21d494ef1050ab254b4b59664f955f3627d3299fef0112d154b4fdaa9db40823"
+        },
+        "web/src/api/warehouse/draftExpiry.test.ts": {
+          "captured": "20d09a3d77f3ea2a0f2e36a4d6fdd1af64190d6aad08239c660c40a6efcd3a39",
+          "current": "23c25c4ba9b30f17677de7ef0a50fa52c5f911d82772958a9224ca9e9929936a"
+        },
+        "web/src/api/warehouse/provenanceModels.ts": {
+          "captured": "edc77ab049c374384f962f0a143ed98107a3fa9467efa5f4aabc32063a0e9abb",
+          "current": "d78ddda420a71d6d6e5e334fb013f8f07ba155a229529ef04bd832e3127fe933"
+        },
+        "web/src/api/warehouse/returns.ts": {
+          "captured": "591858aab3717e4538669aa711c3440d5fdd975fb122e2dbaed7efe07446b8b0",
+          "current": "4ce180224295e4fb94e1f9d9fa4f7a0584115a08710a1daef4bcc5b78c5575e9"
+        },
+        "web/src/pages/warehouse/WarehouseProvenanceOpening.tsx": {
+          "captured": "ff3fd12f5f5a6a79d0da7de7fc1986310129450c8da6f1c3d5a6a275a4b7931a",
+          "current": "6766a3bbfb4ac86c120c0c7c13cf1fa2afdd0d6b655fb31a9f23415a36a2db90"
+        },
+        "web/src/pages/warehouse/WarehouseReturnDispositions.test.tsx": {
+          "captured": "8a312778c5eb3f50616e6afd82135e2c32001ac7919b9034911984d87c0341a3",
+          "current": "48c052c617e8cd2142e84964bd10a9e8db6c0d3b1eb323e64e7b9532e74cc7dd"
+        },
+        "web/src/pages/warehouse/WarehouseReturnDispositions.tsx": {
+          "captured": "6b356ce531c6faf2677b479a978e66cb339c71f33d20033a41db8e6e0d58fa86",
+          "current": "eb1caef2b99db60361f8c264c61ec06fbc328b1b62304269612b1a076293682c"
+        },
+        "web/src/pages/warehouse/WarehouseReturnReacquisition.test.tsx": {
+          "captured": "41169a200979289ce72f8f4e820eae339940cf0773fb0ba4783a2112589fffb1",
+          "current": "427824f457fa6e238eab92c2f9bc250dacfa8420519e105a74d1d6513b11b724"
+        },
+        "web/src/pages/warehouse/WarehouseReturnReacquisition.tsx": {
+          "captured": "7638ac596a5bf60ecf2645b9e9a2cd05769a5483661940b762e03a27de61101d",
+          "current": "42e948dac452ec503fed97e437043c3396e265fe8ea385330332c4c61cb30a9b"
+        },
+        "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx": {
+          "captured": "045c188869359c87d279ea38f076d64a462569b1124fa1d1a02031ec2779c687",
+          "current": "63ba790236607e859f657e8edae2dde1439aa8ab8a6897b697a92f40c94229e2"
+        }
+      },
+      "added": {},
+      "missing": []
+    },
+    "capturedProofSubsetMatchesManifest": true,
+    "rootRecordedRunnerExitCode": 0,
+    "rootChecks": {
+      "typecheckWarehouseE2E": "PASS",
+      "lint": "PASS_WITH_EXISTING_WARNINGS",
+      "productionBuild": "PASS"
+    },
+    "independentLogSignals": {
+      "e2eTypecheckCommand": true,
+      "productionBuildCompletion": true,
+      "locatedLintWarningDiagnostics": 101
+    },
+    "limit": "All 523 web/src files were captured for R2; ten changed later. E2E typecheck is command evidence but E2E source files are outside this web/src manifest. Mocked HTTP UI/codec tests are not browser evidence."
+  },
+  "sourceReviewedPendingCases": {
+    "WarehouseDraftExpiryDocumentIT": 4,
+    "WarehouseDraftExpiryApprovalIT": 2,
+    "MaterialDraftExpiryIT": 3,
+    "executionStatus": "Not verified here; root current families run owns QA."
+  },
+  "remainingHighValueRuntimeTests": [
+    {
+      "priority": 1,
+      "test": "Complete current family/approval and specialized web runs",
+      "purpose": "The nine new transfer/count/material/approval cases and ten later specialized web files are outside the verified receipt/web runs. Preserve their independent current-source evidence; do not compose them into an unfiltered gate."
+    },
+    {
+      "priority": 2,
+      "test": "V178.11 to V178.12 real upgrade and old-writer handoff",
+      "purpose": "Seed retained DRAFT documents/plans with old, future and non-finite timestamps, plus DISPATCHED/COUNTING/POSTED/SUBMITTED controls and pending approvals. Verify bounded LEGACY_BASELINE clocks, pinned policy, byte-identical source/snapshot/command history, no physical effects and migration lock serialization with an old writer. The successful fresh V178.12 application does not prove this upgrade branch."
+    },
+    {
+      "priority": 3,
+      "test": "Real-clock specialized-source matrix",
+      "purpose": "Cover each distinct producer/current-reader path: supplier replacement receipt, loss/scrap, disposition reversal, asset loss, title correction, return title, adjustment and opening balance. Assert authorized detail/list terminal EXPIRED, late fresh approval/receive/post denial, exact original replay, immutable source lines/approval/evidence snapshots and no stock/title/assignment/recovery effects. Retain posted/live positive controls; do not waive an uncovered specialized family."
+    },
+    {
+      "priority": 4,
+      "test": "Expiry authorization and decisive race boundaries",
+      "purpose": "Revoke requester permission or warehouse/area access after capture and verify expired reads/replays remain inaccessible. Keep the already-added competing-workers/late-decision case; also cover the admitted-before-deadline positive branch and a save/transition blocked until after deadline for remaining distinct lock paths where not already covered."
+    },
+    {
+      "priority": 5,
+      "test": "Real C7 browser expiry interaction",
+      "purpose": "Open an editable draft, let its real database deadline elapse, then attempt save/transition and reload EXPIRED. Repeat a specialized sealed proposal path and confirm unavailable actions, preserved history and useful create-new route. Mocked HTTP codecs/UI tests alone cannot prove this server-to-browser behavior."
+    }
+  ],
+  "privacy": "Only counts, names, hashes and synthesized findings persisted. No raw XML/system-out, logs, credentials or private traces copied.",
+  "reviewerRanQA": false,
+  "C7Accepted": false,
+  "finalF2Approval": false,
+  "finalF3Approval": false
+}

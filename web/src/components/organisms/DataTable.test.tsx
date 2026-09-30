@@ -53,10 +53,10 @@ describe('DataTable', () => {
     expect(container.querySelector('.resource-data-table-wrap .resource-data-table-grid[role="grid"]')).not.toBeNull()
   })
 
-  it('mengunci wrapper header Fluent resource agar tebal dan rata kiri', async () => {
+  it('mengunci wrapper header Fluent resource agar semibold dan rata kiri', async () => {
     const css = await dataTableCssContract()
 
-    expect(css).toMatch(/\.resource-data-table-grid \.fui-DataGridHeaderCell,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*700 !important;/)
+    expect(css).toMatch(/\.resource-data-table-grid \.fui-DataGridHeaderCell,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*600 !important;/)
   })
 
   it('mengunci kontrak CSS resource pada viewport sempit', async () => {
@@ -85,10 +85,10 @@ describe('DataTable', () => {
     expect(Array.from(cells).map((cell) => cell.getAttribute('data-label'))).toEqual(['Nama', 'Tagihan'])
   })
 
-  it('menambahkan hook resource tanpa mengubah kelas tabel bawaan', () => {
+  it('memakai grid resource yang konsisten untuk tabel bawaan dan eksplisit', () => {
       const { container, rerender } = renderTable()
-      expect(container.querySelector('.resource-data-table-card')).toBeNull()
-      expect(container.querySelector('.resource-data-table-grid')).toBeNull()
+      expect(container.querySelector('.resource-data-table-card')).not.toBeNull()
+      expect(container.querySelector('.resource-data-table-grid')).not.toBeNull()
 
       rerender(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} presentation="resource" />)
       expect(container.querySelector('.resource-data-table-card')).not.toBeNull()

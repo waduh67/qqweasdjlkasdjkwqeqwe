@@ -1,0 +1,103 @@
+{
+  "review": "F1 targeted C7 revised private SQL sketch",
+  "status": "SOURCE_ONLY_RECEIPT_FIELD_BINDING_PENDING",
+  "qa_executed_by_reviewer": false,
+  "final_f1": false,
+  "sql_applied": false,
+  "validation_head": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "initial_reviewed_sketch_sha256": "712566b22148e09a1a1f927f48e574c864c69027ec04fe61fbaecc655dcc2789",
+  "cost_fix_reviewed_sketch_sha256": "ca5527c05bf68614b7d2da4e5b2b90dc6c27609532fb62db89ae61f9584ef3c3",
+  "observed_private_sketch": {
+    "path": ".omo/runtime/warehouse-draft-expiry.sql",
+    "sha256": "ca5527c05bf68614b7d2da4e5b2b90dc6c27609532fb62db89ae61f9584ef3c3",
+    "bytes": 38244,
+    "lines": 534,
+    "matches_latest_reviewed": true
+  },
+  "inputs": [
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "sha256": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
+      "bytes": 10881
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptDraftValidation.kt",
+      "sha256": "7af5e0e5e39dbb8f4ba95a2ec986eb61de99bc5da89fdd277357dae28dd8b956",
+      "bytes": 4627
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCanonicalPayload.kt",
+      "sha256": "019799219b71a46dd95a4ac98da13b432db2c8dd55e9fc2b291fee5cac92430b",
+      "bytes": 1908
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "sha256": "32f5690f22de9cf03a7f7f7c918009a9714fb50fafa1e4bc2ca03684aa6a52ba",
+      "bytes": 5235
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+      "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642",
+      "bytes": 3318
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
+      "bytes": 10179
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptOrigins.kt",
+      "sha256": "31b276132e28668cc86f1a77809c7cfdeffe1e3729e3b60beafac1e7bf8d0850",
+      "bytes": 5688
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174__warehouse_documents_and_balances.sql",
+      "sha256": "b72dc30f5b0c5ccacbc7555c31fadf22201811461d72b67c58636eac4492fb71",
+      "bytes": 41511
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174_12__warehouse_receipt_intake.sql",
+      "sha256": "d0e1dc015cf05a16c4756ca65939adb0036122311051f74c63a4c7078ad03938",
+      "bytes": 6657
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V174_13__warehouse_receipt_evidence_version.sql",
+      "sha256": "ce41336b5f245150467c8efd542afcf4dde7c730d37ed5670929b7e3796f2837",
+      "bytes": 3270
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_3__warehouse_durable_approvals.sql",
+      "sha256": "592043ef4402955d8bb5d6405b0c496f2014976528e6210a7c8c143b5f8aeeed",
+      "bytes": 5533
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_8__warehouse_material_planning.sql",
+      "sha256": "0e81d6a61f60e77a390731d495ad8e875ce94d04f5a1b8d6e0bfe18b88aaf891",
+      "bytes": 6570
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V175_10__warehouse_material_submission_binding.sql",
+      "sha256": "88e9e481dc51c759d43f01407e115705463a6a159cd1cf2080f4d73c3f6c3407",
+      "bytes": 6325
+    },
+    {
+      "source": "validation",
+      "path": "server/src/main/resources/db/migration/V177_7__warehouse_approved_opening_admission.sql",
+      "sha256": "96cfc4248a805342b65b04df3bbe1fc29368de6b6c6da8cac2fa16166ab1c26e",
+      "bytes": 37106
+    }
+  ]
+}

@@ -1,0 +1,223 @@
+{
+  "allOtherApplicationBuildTestWorkflowMigrationInputsUnchanged": true,
+  "ciProofSha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+  "codeCiFullServerStillPending": true,
+  "codeCiRun": 36265279847,
+  "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentChangedPaths": [
+    "deploy/.env.example",
+    "deploy/Caddyfile.shared-proxy",
+    "deploy/DEPLOY.md",
+    "deploy/SHARED-PROXY.md",
+    "deploy/docker-compose.prod.yml",
+    "deploy/docker-compose.shared-proxy.yml",
+    "deploy/postgres-init/10-init-app-db.sh",
+    "docs/backup.md"
+  ],
+  "deploymentConfigCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "deploymentConfigSha256": {
+    "deploy/.env.example": "31f09a7eeab9ba35020b8c3a1481caca62e03bafadfda945980779a78335abfd",
+    "deploy/Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "deploy/DEPLOY.md": "bf3910ce28ad78d1d17bffe428484dc197f393fee1c9d610189081c9a03704e8",
+    "deploy/SHARED-PROXY.md": "502f0efbb5cf9505cf6e0a7350e57d173db4847b0dfc74c4d8e1011aa4d56fde",
+    "deploy/docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "deploy/docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "deploy/postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "docs/backup.md": "051f0034e763ba24526361a6bb903e9c6fa8b3e657efe5480f5d37aaab692595"
+  },
+  "destinationImageIdentityLimitationResolved": true,
+  "destinationReceiptMatchesActualExportBytes": true,
+  "dockerExecutedByReviewer": false,
+  "doesNotClaimNetworkProbePass": true,
+  "doesNotClaimProductionActivation": true,
+  "embeddedJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+  "embeddedMigrationsPreserved": 367,
+  "finalF4Approval": false,
+  "imageRebuildPerformed": false,
+  "images": {
+    "server": {
+      "allRegularBlobsReferencedAndVerified": true,
+      "architecture": "amd64",
+      "ciConfigId": "sha256:fb928f2d384d0397e15e27b12f5eb2e57a9ba14ba0c88aa25e16247f2316b484",
+      "configurationBytesExactlyEqual": true,
+      "destinationManifestBytes": 1620,
+      "destinationOciManifestId": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+      "destinationReexportBytes": 455315456,
+      "destinationReexportSha256": "sha256:0f9df0913bde859f879ce7d7efe0896e069acc98312dfd3bfbc838ec7519959c",
+      "destinationTarMembers": 16,
+      "imageRevisionMatchesCode": true,
+      "layers": [
+        {
+          "destinationBlobBytes": 111544320,
+          "destinationBlobDigest": "sha256:485d137fd3bfb545f1b417ea708e2281594be7a334e8a85ab75c5332db6089e9",
+          "ordinal": 0,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:485d137fd3bfb545f1b417ea708e2281594be7a334e8a85ab75c5332db6089e9"
+        },
+        {
+          "destinationBlobBytes": 10240,
+          "destinationBlobDigest": "sha256:598e8330e2e633ea6b06bbf1e8b80c275553b7c1de53899af154d1f480a7eefa",
+          "ordinal": 1,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:598e8330e2e633ea6b06bbf1e8b80c275553b7c1de53899af154d1f480a7eefa"
+        },
+        {
+          "destinationBlobBytes": 54309376,
+          "destinationBlobDigest": "sha256:6ef140adb005bc29cbfb04d9691e7bcb987d4a88ba5580133b35e7b075a2e447",
+          "ordinal": 2,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:6ef140adb005bc29cbfb04d9691e7bcb987d4a88ba5580133b35e7b075a2e447"
+        },
+        {
+          "destinationBlobBytes": 165497856,
+          "destinationBlobDigest": "sha256:5ed31bb5973d3132c3ccf7df7eb5276c1cf91c1cfb00681ac67875b3855ca14e",
+          "ordinal": 3,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:5ed31bb5973d3132c3ccf7df7eb5276c1cf91c1cfb00681ac67875b3855ca14e"
+        },
+        {
+          "destinationBlobBytes": 2560,
+          "destinationBlobDigest": "sha256:254a3332bf866cbd0fde7f3b48e3c33549d6db64fad35060f230ce330ccebd3a",
+          "ordinal": 4,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:254a3332bf866cbd0fde7f3b48e3c33549d6db64fad35060f230ce330ccebd3a"
+        },
+        {
+          "destinationBlobBytes": 7680,
+          "destinationBlobDigest": "sha256:3be377b6a337ab815dd6bb13eebe7a264c76322c83ebd18e4234c7b78245c279",
+          "ordinal": 5,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:3be377b6a337ab815dd6bb13eebe7a264c76322c83ebd18e4234c7b78245c279"
+        },
+        {
+          "destinationBlobBytes": 1536,
+          "destinationBlobDigest": "sha256:69fe2ead7496e9e6ce48018e5879c9acde7480b6539672e9e8b5fdb8c3b48bb7",
+          "ordinal": 6,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:69fe2ead7496e9e6ce48018e5879c9acde7480b6539672e9e8b5fdb8c3b48bb7"
+        },
+        {
+          "destinationBlobBytes": 11776,
+          "destinationBlobDigest": "sha256:f569c37f3e710296e98c76f3c78408f51e90299bfac4e5b4a6298d70ad5d81b3",
+          "ordinal": 7,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:f569c37f3e710296e98c76f3c78408f51e90299bfac4e5b4a6298d70ad5d81b3"
+        },
+        {
+          "destinationBlobBytes": 123906560,
+          "destinationBlobDigest": "sha256:d9dc6dee9068d6848b4d9457b840a63ff472d4ef33770fac1f7f2183d412ca0a",
+          "ordinal": 8,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:d9dc6dee9068d6848b4d9457b840a63ff472d4ef33770fac1f7f2183d412ca0a"
+        }
+      ],
+      "ociIndexAndManifestDigestsAndSizesVerified": true,
+      "orderedLayerCount": 9,
+      "originalAndDestinationBytesReadIndependently": true,
+      "originalArchiveBytes": 455329280,
+      "originalArchiveSha256": "sha256:a7157859343855feb88a1ee1af24b6756ada270f3adda58a560dfcc89f8696ea",
+      "os": "linux",
+      "sourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "sourceTag": "warehouse-ci-server:1306b65c34167b2d48f4817ce72990fed3b85aa3"
+    },
+    "web": {
+      "allRegularBlobsReferencedAndVerified": true,
+      "architecture": "amd64",
+      "ciConfigId": "sha256:0d12c624b41070cb3f585bd1b6d751d08e6e79863a4bdc6c437822f49fb5d903",
+      "configurationBytesExactlyEqual": true,
+      "destinationManifestBytes": 1762,
+      "destinationOciManifestId": "sha256:ffdf1809281b559bbb3f9021fad2cd829ae5f1220e09e0b376bc35da733063e8",
+      "destinationReexportBytes": 67934720,
+      "destinationReexportSha256": "sha256:0e038f99581b666299e78db8f9cad73104f3a52a1cb54e674aa109dc07dc3332",
+      "destinationTarMembers": 17,
+      "imageRevisionMatchesCode": true,
+      "layers": [
+        {
+          "destinationBlobBytes": 8704000,
+          "destinationBlobDigest": "sha256:74d97c428c51a828f9051a7a40a53ff1fc99e54fc30323ce36760701b0b7f711",
+          "ordinal": 0,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:74d97c428c51a828f9051a7a40a53ff1fc99e54fc30323ce36760701b0b7f711"
+        },
+        {
+          "destinationBlobBytes": 4855808,
+          "destinationBlobDigest": "sha256:379f51bf5b58bf458dfe39fe97ba49d63950929004af1808361bfe01ba73d6d0",
+          "ordinal": 1,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:379f51bf5b58bf458dfe39fe97ba49d63950929004af1808361bfe01ba73d6d0"
+        },
+        {
+          "destinationBlobBytes": 3584,
+          "destinationBlobDigest": "sha256:641b74319bab4250ece7d99c1e71fba36e67931d64b62a1d574a56986d45dae0",
+          "ordinal": 2,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:641b74319bab4250ece7d99c1e71fba36e67931d64b62a1d574a56986d45dae0"
+        },
+        {
+          "destinationBlobBytes": 4608,
+          "destinationBlobDigest": "sha256:2a7ed9afc1c38e245bbe331a4bbf99010cc9ff2ae546ee9507373a3a2dc80f0c",
+          "ordinal": 3,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:2a7ed9afc1c38e245bbe331a4bbf99010cc9ff2ae546ee9507373a3a2dc80f0c"
+        },
+        {
+          "destinationBlobBytes": 2560,
+          "destinationBlobDigest": "sha256:149ab1e5d6caa8add417a7dc26743baa867bf078b3c6aafc96b8197221a87a1c",
+          "ordinal": 4,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:149ab1e5d6caa8add417a7dc26743baa867bf078b3c6aafc96b8197221a87a1c"
+        },
+        {
+          "destinationBlobBytes": 5120,
+          "destinationBlobDigest": "sha256:41473198c04ae23f0434ac3a73f8e52549312be4638d2979bc1df9d209bdb9c0",
+          "ordinal": 5,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:41473198c04ae23f0434ac3a73f8e52549312be4638d2979bc1df9d209bdb9c0"
+        },
+        {
+          "destinationBlobBytes": 7168,
+          "destinationBlobDigest": "sha256:c86f6810da0b81ee848c1e6cc4bc22c0b7bd4f553f81ef3a33c41791b90631a2",
+          "ordinal": 6,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:c86f6810da0b81ee848c1e6cc4bc22c0b7bd4f553f81ef3a33c41791b90631a2"
+        },
+        {
+          "destinationBlobBytes": 50712064,
+          "destinationBlobDigest": "sha256:001b5608a9297e16ed0253a4694ca1cc98fa554c7e39c36ca652742cfc294efc",
+          "ordinal": 7,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:001b5608a9297e16ed0253a4694ca1cc98fa554c7e39c36ca652742cfc294efc"
+        },
+        {
+          "destinationBlobBytes": 4096,
+          "destinationBlobDigest": "sha256:e4192a239b5664cd2eaea973067d4f6cf6c826008d139414c2b96ea378936438",
+          "ordinal": 8,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:e4192a239b5664cd2eaea973067d4f6cf6c826008d139414c2b96ea378936438"
+        },
+        {
+          "destinationBlobBytes": 3608576,
+          "destinationBlobDigest": "sha256:05ea12161e771d7f2f5cf5dba51cc6ea74f9efed96650fb1218c6d8043d25155",
+          "ordinal": 9,
+          "originalAndDestinationLayerHashesMatch": true,
+          "uncompressedDiffId": "sha256:05ea12161e771d7f2f5cf5dba51cc6ea74f9efed96650fb1218c6d8043d25155"
+        }
+      ],
+      "ociIndexAndManifestDigestsAndSizesVerified": true,
+      "orderedLayerCount": 10,
+      "originalAndDestinationBytesReadIndependently": true,
+      "originalArchiveBytes": 67949568,
+      "originalArchiveSha256": "sha256:eaa4792804af1d812417b1898d51ab9308a195abe0eebf40b88caebfb56ad200",
+      "os": "linux",
+      "sourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+      "sourceTag": "warehouse-ci-web:1306b65c34167b2d48f4817ce72990fed3b85aa3"
+    }
+  },
+  "loadedImageReceiptSha256": "13f516643df96885be75bf374ee4dc36ae9979b4058f8aadeb5ebca969b87668",
+  "priorBootstrapAuthenticationSha256": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+  "registryPublicationExecuted": false,
+  "reviewedAtUtc": "2026-09-26T20:50:31.517005+00:00",
+  "sshExecutedByReviewer": false,
+  "status": "DESTINATION_SERVER_AND_WEB_RAW_CONTENT_MATCH_AUTHENTICATED_CI",
+  "supersedesOnly": "The prior bootstrap review limitation that destination re-export bytes were unavailable"
+}

@@ -19,6 +19,12 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import com.duluin.ftth.mobile.data.MaterialHttpPort
+import com.duluin.ftth.mobile.data.MaterialHttpResponse
+import com.duluin.ftth.mobile.domain.MaterialSession
+import com.duluin.ftth.mobile.domain.MaterialSessionPort
+import com.duluin.ftth.mobile.materials.MaterialViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class DiTest {
     @Test
@@ -37,6 +43,8 @@ class DiTest {
             assertNotNull(koin.koin.get<PayrollViewModel>())
             assertNotNull(koin.koin.get<com.duluin.ftth.mobile.attendance.AttendanceViewModel>())
             assertNotNull(koin.koin.get<TechnicianEffectPort>())
+            assertNotNull(koin.koin.get<com.duluin.ftth.mobile.domain.MaterialPort>())
+            assertNotNull(koin.koin.get<MaterialViewModel>())
         } finally {
             stopKoin()
         }
@@ -63,6 +71,14 @@ private fun fakePorts() = TechnicianPlatformPorts(
         override fun requestLocationPermission() = Unit
         override fun announceWorkOrderCompleted() = Unit
     },
+    materialHttp = object : MaterialHttpPort {
+        override suspend fun get(path: String, session: MaterialSession) = MaterialHttpResponse(503, "{}")
+        override suspend fun post(path: String, body: String, idempotencyKey: String, session: MaterialSession) = MaterialHttpResponse(503, "{}")
+    },
+    materialSession = object : MaterialSessionPort {
+        override val state = MutableStateFlow<MaterialSession?>(null)
+        override val connectivity = MutableStateFlow(false)
+    },
 )
 
 private class FakeSecureOutbox : SecureOutboxPort {
@@ -71,4 +87,7 @@ private class FakeSecureOutbox : SecureOutboxPort {
     override fun enqueueSecure(operation: com.duluin.ftth.mobile.domain.SecureOutboxOperation) = com.duluin.ftth.mobile.domain.EnqueueResult.Accepted
     override fun retry(key: String) = false
     override fun purge(userId: String) = Unit
+    override fun entries(identity: com.duluin.ftth.mobile.domain.OutboxIdentity, namespace: String) = emptyList<com.duluin.ftth.mobile.domain.SecureOutboxEntry>()
+    override fun mark(identity: com.duluin.ftth.mobile.domain.OutboxIdentity, namespace: String, key: String, state: com.duluin.ftth.mobile.domain.SecureDeliveryState) = Unit
+    override fun complete(identity: com.duluin.ftth.mobile.domain.OutboxIdentity, namespace: String, key: String) = Unit
 }

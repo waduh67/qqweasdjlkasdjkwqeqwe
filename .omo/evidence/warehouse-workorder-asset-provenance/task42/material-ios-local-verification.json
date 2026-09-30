@@ -1,0 +1,23 @@
+{
+  "sourceCommit": "eef43d2418cf08250688d444a02c6ba09988ca1e",
+  "host": "Linux, repository Kotlin2.3.21 cross-compilation",
+  "result": "BUILD SUCCESSFUL in1m39s",
+  "targets": {
+    "iosArm64": {
+      "task": "compileKotlinIosArm64",
+      "result": "COMPILED, not skipped",
+      "klibFiles": 15,
+      "treeSha256": "0dce6ac2afbc89482b2b99c169eebf54f470a5c1e802b584957548bd329fee7f"
+    },
+    "iosSimulatorArm64": {
+      "task": "compileKotlinIosSimulatorArm64",
+      "result": "COMPILED, not skipped",
+      "klibFiles": 15,
+      "treeSha256": "4f8a003a5352728008440ac93bec069c6274cf714be24ca2c510593f1cf4e715"
+    }
+  },
+  "commonMetadata": "feature/materials compileCommonMainKotlinMetadata executed successfully",
+  "nativeRuntimeOrRelease": false,
+  "cleanup": "Owned services cleaned, volumes retained",
+  "additionalMacosCI": "https://github.com/waduh67/qqweasdjlkasdjkwqeqwe/actions/runs/36074462296 (still running)"
+}

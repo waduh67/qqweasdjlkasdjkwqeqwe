@@ -1,0 +1,118 @@
+{
+  "kind": "read-only-source-review-manifest",
+  "sourceHead": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+  "sourceWorktree": "warehouse-regression-validation",
+  "executedQA": false,
+  "finalF1Approval": false,
+  "sourceNote": "Concurrent count, CI and documentation edits were present; these cited product paths were not reported modified. File hashes pin content independently of HEAD.",
+  "files": [
+    {
+      "path": ".omo/plans/warehouse-workorder-asset-provenance.md",
+      "sha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+      "sha256": "c87460823e4e39fc97a583ba0251cecc9ad8a766b3db8ab014a7446081f69f72"
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetAction.tsx",
+      "sha256": "89a65f6461d743ad32b369be4dd9c58024a18a6e8dcbec6940fcff4b5b1087f2"
+    },
+    {
+      "path": "web/src/api/warehouse/customerAssets.ts",
+      "sha256": "49fdea08459716d9d296a46b19a6613b509f1d9f5ada576efcfc00fa66b17199"
+    },
+    {
+      "path": "web/src/api/warehouse/receipts.ts",
+      "sha256": "dc274a6f3b30d77cdf118a6e5c3bf007e9b64b4d2df8afff96044a521d7807a3"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptsPage.tsx",
+      "sha256": "f2a98d5c41b4a5dd3e4ac24d024aee9d58fe87ae0e3f03a9ca337d894d43c403"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx",
+      "sha256": "050ebd1e6f7805a18ca1ab0b9096047088ed299b27853285889c8b438e242e0b"
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+      "sha256": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0"
+    },
+    {
+      "path": "web/src/pages/warehouse/approvalPresentation.ts",
+      "sha256": "369627c43daebdfa7ee1ad6aa0b469031f4b143687b19f042d8cbe54ecf982bf"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetTitleApi.kt",
+      "sha256": "4c029090b1dc8b8113e1ec13064371b9e5cef6178134ffc373b5291157541d59"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetLossApi.kt",
+      "sha256": "3c54321e365f5993e2d85877e9de351125f9fc03d43d5eb866c777dcc359c2b7"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+      "sha256": "4fb506ae5294f2847e93a38ef1c556f3c7bd4c367119322ad5bb04116b7e1f31"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "sha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt",
+      "sha256": "ab25600de6547b625a56ac8fbfe64e0a8f80e96416bfcfcd4189cbbe920c8799"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
+      "sha256": "c3876128c17c5295b574f7034813f7b9b83c9fd343cf519dad7ab79ec07a44c7"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+      "sha256": "5cf6f8412b73b0cc73837b072f5c2b8dd3ec14b7ada91c300111b903fcadb2eb"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+      "sha256": "0f88052f0b10822ea8c8174360c8865b7ccae5b874cefdbce122f179ea291bca"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderAssetWorkbenchAdapter.kt",
+      "sha256": "3393d073176862fd48a0be5c9b6dd98cd99a890263a8be278f0f131af2ac1a47"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt",
+      "sha256": "07f02035f666c7c77bab337dbbffac00cf387db52b5e23d0780a4e768b6217ee"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/application/service/WorkOrderEvidenceService.kt",
+      "sha256": "381966155341e90e79b5380007d5a2f29f48bb5968a794aa97cfd21ab620f9ee"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/application/port/inbound/WorkOrderQuery.kt",
+      "sha256": "39b82b0386a5004495ee111737793955db8717fa54965ec64e436c656323a91b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "sha256": "fd73bc9d2d359c2846846dc403c53bad84408a73f6a7703ec24bfd4b053c509b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "sha256": "aad286f05f70cf3c91f9d245858f666ede2790478d50c35ea09f7aee286a867b"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
+      "sha256": "78b7ba1474d60b710f69f37b6f62173e2d4795917883856dcdcfc98199e39dd2"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
+      "sha256": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76"
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/SupplierReplacementService.kt",
+      "sha256": "0e0ce488549edf4f8891fd732333f3f64337f7e6f5de0b6ccf6125b6aaf87e11"
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V175_134__warehouse_supplier_replacement_request.sql",
+      "sha256": "6718a8b769b948ebe4a17b6534129f0d634ab45f790e94edd1f88ff6366fa628"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import com.duluin.ftth.mobile.domain.SecureOutboxOperation
 import com.duluin.ftth.mobile.domain.SecureOutboxPort
+import com.duluin.ftth.mobile.domain.SecureDeliveryState
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.Base64
@@ -50,16 +51,18 @@ private class AndroidKeystoreCipher : OutboxCipher {
 
 private class AndroidOutboxRecords(context: Context) : SecureOutboxRecords {
     private val preferences = context.getSharedPreferences("ftth.secure.outbox", Context.MODE_PRIVATE)
-    override fun entries(): List<SecureOutboxRecord> = preferences.all.values.mapNotNull { decode(it as? String ?: return@mapNotNull null) }
-    override fun write(record: SecureOutboxRecord) { preferences.edit().putString(id(record), encode(record)).commit() }
-    override fun delete(userId: String) { preferences.edit().also { editor -> entries().filter { it.operation.userId == userId }.forEach { editor.remove(id(it)) } }.commit() }
+    override fun entries(): List<SecureOutboxRecord> = preferences.all.values.map { decode(it as? String ?: throw OutboxDecryptionException()) ?: throw OutboxDecryptionException() }
+    override fun write(record: SecureOutboxRecord) { check(preferences.edit().putString(id(record), encode(record)).commit()) { "Outbox write failed" } }
+    override fun delete(userId: String) { check(preferences.edit().also { editor -> entries().filter { it.operation.userId == userId }.forEach { editor.remove(id(it)) } }.commit()) { "Outbox purge failed" } }
+    override fun remove(key: String) { check(preferences.edit().remove(key).commit()) { "Outbox completion failed" } }
     override fun retry(key: String): Boolean = entries().firstOrNull { id(it) == key }?.let { write(it.copy(retries = it.retries + 1)); true } ?: false
 
     private fun id(record: SecureOutboxRecord) = "${record.operation.userId}:${record.operation.namespace}:${record.operation.key}"
-    private fun encode(record: SecureOutboxRecord): String = listOf(record.operation.userId, record.operation.deviceId, record.operation.sessionId, record.operation.namespace, record.operation.key, record.operation.payloadHash, record.operation.revision.toString(), record.retries.toString(), record.payload.keyVersion, Base64.getEncoder().encodeToString(record.payload.bytes)).joinToString(".") { Base64.getEncoder().encodeToString(it.encodeToByteArray()) }
+    private fun encode(record: SecureOutboxRecord): String = listOf(record.operation.userId, record.operation.deviceId, record.operation.sessionId, record.operation.namespace, record.operation.key, record.operation.payloadHash, record.operation.revision.toString(), record.retries.toString(), record.payload.keyVersion, Base64.getEncoder().encodeToString(record.payload.bytes), record.state.name).joinToString(".") { Base64.getEncoder().encodeToString(it.encodeToByteArray()) }
     private fun decode(value: String): SecureOutboxRecord? = try {
         val fields = value.split('.').map { Base64.getDecoder().decode(it).decodeToString() }
         val operation = SecureOutboxOperation(fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6].toLong(), byteArrayOf())
-        SecureOutboxRecord(operation, EncryptedBlob(fields[8], Base64.getDecoder().decode(fields[9])), fields[7].toInt())
+        require(fields.size in 10..11)
+        SecureOutboxRecord(operation, EncryptedBlob(fields[8], Base64.getDecoder().decode(fields[9])), fields[7].toInt(), fields.getOrNull(10)?.let(SecureDeliveryState::valueOf) ?: SecureDeliveryState.QUEUED)
     } catch (_: Exception) { null }
 }

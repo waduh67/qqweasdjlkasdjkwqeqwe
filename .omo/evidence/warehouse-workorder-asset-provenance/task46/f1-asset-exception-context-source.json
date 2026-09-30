@@ -1,0 +1,219 @@
+{
+  "kind": "read-only-before-fix-source-review",
+  "sourceHead": "cc47f434e7c2fc58ff0095feb8c643717f889e86",
+  "worktree": "warehouse-regression-validation",
+  "trackedDiffSha256": "a9e6bbd9a8b5fd92b6c21597a283629aca01e55737e3782ac93bd3b13ddffc47",
+  "trackedChangedPaths": [
+    "server/src/main/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipApi.kt",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/AssetHandoverCustomerAdapter.kt",
+    "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/AssetHandoverContextPort.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetTitleApi.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+    "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt",
+    "web/src/components/organisms/customer/CustomerAssetPanel.tsx"
+  ],
+  "newPaths": [
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt",
+    "web/src/api/warehouse/customerAssetExceptions.ts",
+    "web/src/components/organisms/customer/CustomerAssetException.test.tsx",
+    "web/src/components/organisms/customer/CustomerAssetException.tsx"
+  ],
+  "executedQAByReviewer": false,
+  "finalF1Approval": false,
+  "findings": [
+    {
+      "id": "R1",
+      "status": "REQUIRED_FIX_PARENT_ACCEPTED_NOT_YET_REVIEWED",
+      "summary": "Enforce current customer area on fresh proposal POST and historical replay; authorize current title position on fresh title POST."
+    },
+    {
+      "id": "R2",
+      "status": "REQUIRED_FIX_PARENT_ACCEPTED_NOT_YET_REVIEWED",
+      "summary": "Loss UI needs original-requester approval.view continuation; another actor cannot submit that sealed source."
+    }
+  ],
+  "reportedValidation": {
+    "reporter": "parent",
+    "webTestsPassed": 17,
+    "e2eTypecheck": "reported PASS",
+    "lint": "reported PASS",
+    "build": "reported PASS",
+    "backendRunner": 16526,
+    "backendStatusAtReview": "active",
+    "rawReportsIndependentlyValidatedByReviewer": false
+  },
+  "files": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipApi.kt",
+      "sha256": "6c5ef309dbf1f993daac28369a3c96e73cdb9fedaa960b3fc7035b7132e383b4",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+      "sha256": "8bd63f0ecdffc636567428dc461f3a81b216a219579a100a6fbe4b9b8b0d1dc4",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/AssetHandoverCustomerAdapter.kt",
+      "sha256": "7ad61304449ead33a524371c7161bbf21b103d9e4dc577299291e9a5bf36b739",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+      "sha256": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/AssetHandoverContextPort.kt",
+      "sha256": "9552674ad665959d8c978299665ce80d22622348cc4de1bd12b1dbdadde1049b",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetTitleApi.kt",
+      "sha256": "e93bbac4cd22878ab108c87af3b9c05b8257a9eb4d248cc4843f0b17eda60c1f",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt",
+      "sha256": "6e87050a328d4758e3b1a0271bbcbb5e9e0a3c0dfa473703b32b5727800d964a",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+      "sha256": "a3c15024d00c55de28fdb8e13c0c1a7546b423715158e7ed0466a8a7ad92e609",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt",
+      "sha256": "5940a1b18e477dccfc7f2ea5a732de5abd500aba8635a7d34f6ebc834d38dbe9",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt",
+      "sha256": "e56f918986fbeb5222dae1a7d9b55a2e0d3ea9a7be8f02310eb2b9f53c221e32",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetPanel.tsx",
+      "sha256": "e62d365c14e62ad5aa4e258afee6d20434cd80baa99b0d4394f08159a4bd9f5d",
+      "trackedChanged": true,
+      "new": false
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt",
+      "sha256": "467f0a3da49300b589c71bb66a3bc90128e18513433089114b4688bdd3906da2",
+      "trackedChanged": false,
+      "new": true
+    },
+    {
+      "path": "web/src/api/warehouse/customerAssetExceptions.ts",
+      "sha256": "c9605d03a5d7496a0dd90f0d3da619306a285b653bb5b03f603709a1db2d7954",
+      "trackedChanged": false,
+      "new": true
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetException.test.tsx",
+      "sha256": "64d2478d1ebda60ab6d00b45b530bd2c030c55af3bff4eb96ea9b68cffc5e7d0",
+      "trackedChanged": false,
+      "new": true
+    },
+    {
+      "path": "web/src/components/organisms/customer/CustomerAssetException.tsx",
+      "sha256": "69ac25e1d6dbba42da94b5b8422bdfbd0024b5c5ba731974ada4c7ca1104ab42",
+      "trackedChanged": false,
+      "new": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "sha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+      "sha256": "d0520181714ecd845cc3e1accfaedda4f6a452e08d541185170be08557328d5c",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossModels.kt",
+      "sha256": "768771104578117156f651afaf4784ebeb9a7220980c815e1a743f230f3cdbd3",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionModels.kt",
+      "sha256": "535573ef81d4cd47e9d89da7a77d96a20a286c42c0504f3cb39f6baffcbdcbc4",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleCorrectionStore.kt",
+      "sha256": "0da55ed3e01cf98f883613dc817372bb57abeb5ee35af14139e28c80412adec1",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt",
+      "sha256": "4b519b5fc86f173b9e3a9264339f63262e8ac0e94a36a74204c4c19f366b191f",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetHandoverStore.kt",
+      "sha256": "c8f9c04506cc57d36c3e23d283d4a0818f89e9624c3a2a7de896de340e3cb373",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/application/service/WorkOrderEvidenceService.kt",
+      "sha256": "381966155341e90e79b5380007d5a2f29f48bb5968a794aa97cfd21ab620f9ee",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "web/src/components/organisms/warehouse/WarehouseCommandDialog.tsx",
+      "sha256": "801cb75b15882a2bc3e6999e63a63066424dcf68d7d048aed33ef6013fdce80b",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "web/src/api/warehouse/transport.ts",
+      "sha256": "0741eafe46b07d802aa2bad419322d38c637699ea77da8075c56fe947bd2a8d7",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "web/src/api/warehouse/codec.ts",
+      "sha256": "268c7dc6d1cb8048b7ddae831bbd371ef6cb9326120e65082698f2a6b64f3952",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+      "sha256": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0",
+      "trackedChanged": false,
+      "new": false
+    },
+    {
+      "path": "web/src/hooks/useWarehouseQuery.ts",
+      "sha256": "7e8b9e862196f953a56ccaebe84553ab0bb5b5171e5fa0e49b93c3ef2c23195f",
+      "trackedChanged": false,
+      "new": false
+    }
+  ]
+}

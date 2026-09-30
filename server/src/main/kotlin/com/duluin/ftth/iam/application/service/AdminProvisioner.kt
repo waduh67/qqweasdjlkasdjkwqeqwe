@@ -23,6 +23,7 @@ class AdminProvisioner(
     private val userRepository: UserRepository,
     private val permissionRepository: PermissionRepository,
     private val passwordHasher: PasswordHasher,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) {
     /** Role "Tenant Admin" (semua izin non-platform) + admin tenant. */
     fun provisionTenantAdmin(tenantId: UUID, email: String, name: String, password: String): Boolean {
@@ -60,7 +61,9 @@ class AdminProvisioner(
         )
 
     private fun ensureRole(tenantId: UUID, name: String, description: String, permissionIds: Set<UUID>): UUID {
+        val fence = authority.lockForChange()
         val existing = roleRepository.findByName(name)
+        if (existing == null || existing.permissionIds != permissionIds) fence.incrementEpoch()
         return when {
             existing == null ->
                 roleRepository.save(Role.create(tenantId, name, description, systemRole = true, permissionIds)).id
@@ -82,8 +85,10 @@ class AdminProvisioner(
         platformAdmin: Boolean,
         roleIds: Set<UUID>,
     ): Boolean {
+        val fence = authority.lockForChange()
         val parsed = Email.of(email)
         if (userRepository.existsByEmail(parsed)) return false
+        fence.incrementEpoch()
         userRepository.save(
             User.create(
                 tenantId = tenantId,

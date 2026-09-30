@@ -1,3 +1,4 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { KeyRound, Plus, Power, RefreshCw, ShieldOff, Trash2 } from 'lucide-react'
 import { Checkbox, Text } from '@fluentui/react-components'
@@ -33,6 +34,7 @@ export function UsersPage() {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<NewUser | null>(null)
+  const creation = useCreationReview(draft != null)
   const [editing, setEditing] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -75,6 +77,16 @@ export function UsersPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Operasi gagal')
     }
+  }
+
+  async function saveUser() {
+    if (!draft || creation.beforeSave()) return
+    try {
+      setError(null)
+      await api.post('/api/users', { email: draft.email, name: draft.name, password: draft.password, roleIds: [...draft.roleIds], areaIds: [...draft.areaIds] })
+      setDraft(null); await reload()
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Gagal menyimpan pengguna') }
+    finally { creation.finish() }
   }
 
   function toggle(set: Set<string>, id: string): Set<string> {
@@ -237,6 +249,10 @@ export function UsersPage() {
       />
 
       <Blade
+        creation={{ ...creation, prepare: () => void saveUser(), summary: <><CreationSummary rows={[
+          ['Nama', draft?.name], ['Email', draft?.email], ['Peran', roles.filter(role => draft?.roleIds.has(role.id)).map(role => role.name).join(', ')],
+          ['Area', areas.filter(area => draft?.areaIds.has(area.id)).map(area => area.name).join(', ')],
+        ]} />{error && <p role="alert" className="error">{error}</p>}</> }}
         open={draft != null}
         title="Pengguna baru"
         size="sm"
@@ -250,18 +266,7 @@ export function UsersPage() {
             <>
               <Button
                 variant="primary"
-                onClick={() =>
-                  void run(async () => {
-                    await api.post('/api/users', {
-                      email: draft.email,
-                      name: draft.name,
-                      password: draft.password,
-                      roleIds: [...draft.roleIds],
-                      areaIds: [...draft.areaIds],
-                    })
-                    setDraft(null)
-                  })
-                }
+                onClick={() => void saveUser()} disabled={creation.busy}
               >
                 Simpan
               </Button>

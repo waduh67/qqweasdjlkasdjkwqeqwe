@@ -1,0 +1,43 @@
+{
+  "phase": "Final current-source cancellation and redacted conflict verification",
+  "baseCommit": "6d620e9869463c1f4ba93291412bb65436f03b20",
+  "build": "BUILD SUCCESSFUL in 1m 34s",
+  "tests": 7,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentMigrationAdapter.kt": "1e4dbc287718d04d7919a1629c162a1766e65bcdc99ad04225d1d65f792c2b13",
+    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentPersistence.kt": "e88a2b71a69623799fe7c1106935ec316ee312936f8d7752771a5269f2b1e7b1",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMigrationEffectsPort.kt": "d37746d502c14e1c5aa37a720aab3f7ab94d17622d0167936297d57f1a029aab",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningPostingStore.kt": "5d98b51ef48c2ab78adc40d9d008d83e1b38bbd39d96dffb592828f9af549e35",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationOpeningApprovalOwner.kt": "58b39a618fd37afe53456a064dd4436ce439debcdab86b816f233b2d44234366",
+    "server/src/main/resources/db/migration/V177_8__warehouse_legacy_effect_cancellation.sql": "3bd70b2ff029705331a4c453296ad6604524cd18b4c3aa08aea12ab8dc43b180",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "4a9ae8c638e0bf8c76481b8fc84b24980e90138b4a905aa939716bba0b881178"
+  },
+  "priorRegression": "cancellation-regression-verification.json:37 tests PASS3m51s. Only subsequent product change is @Repository exception translation on the fulfillment migration adapter; all other product hashes remain identical.",
+  "checks": [
+    "Current legacy requiredEffects changed after independent review returns HTTP409 SOURCE_NOT_VERIFIED, without SQL/internal details. Entire final decision, admission, inventory and fulfillment cancellation receipts roll back.",
+    "Once the test writer restores the original business binding, original approval proceeds with one winning baseline, exact replay and late-worker permanent cancellation.",
+    "Real source/area, empty baseline, SQL forgery and three rollback-stage checks plus module graph pass on the final sources."
+  ],
+  "remaining": [
+    "All-current identity reservations and obsolete legacy creation closure",
+    "Finalization/M06 with mixed-tenant restart",
+    "Provenance management UI and real browser acceptance",
+    "Tasks44\u201348 and F1\u2013F4"
+  ]
+}

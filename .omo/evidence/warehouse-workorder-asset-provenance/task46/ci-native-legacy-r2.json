@@ -1,0 +1,37 @@
+{
+  "workflowRun": 36116539885,
+  "native": {
+    "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+    "runner": "macos-latest",
+    "tasks": {
+      "compileKotlinIosArm64": "COMPILED",
+      "compileKotlinIosSimulatorArm64": "COMPILED"
+    },
+    "nativeRuntimeOrRelease": false
+  },
+  "legacy": {
+    "legacyHead": "abaecd9e129cdfe12058d777fad3da2a9320c3c2",
+    "currentHead": "c622a85bde9582fd66351957c7b451cc91c8df29",
+    "jars": {
+      "current": "df4523294fe382a9fafa976210a4494a27b0e588f5f21ff32b5284d3434e64f2",
+      "legacy": "e70f76715e6c302a23cf4c101410ea4c777eb29abe9bd45fc8615eec71f6d0d5"
+    },
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ],
+    "phases": [
+      "before",
+      "after",
+      "restart"
+    ],
+    "tests": 6,
+    "preservedCustomers": 2,
+    "preservedOnus": 2,
+    "historicalChecksumsUnchanged": true,
+    "databaseRetained": true,
+    "separateDatabase": true,
+    "sharedFunctionDefinitionsUnchanged": true
+  },
+  "status": "Individual jobs passed; full server regression remains running"
+}

@@ -1,5 +1,7 @@
 package com.duluin.ftth.iam.application.service
 
+import com.duluin.ftth.iam.authorizeChange
+
 import com.duluin.ftth.common.audit.AuditTrailEvent
 import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.ConflictException
@@ -25,9 +27,11 @@ class RoleService(
     private val permissionRepository: PermissionRepository,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageRoleUseCase {
 
     override fun create(command: CreateRoleCommand): RoleView {
+        authority.authorizeChange("iam.role.create").incrementEpoch()
         if (roleRepository.existsByName(command.name.trim())) {
             throw ConflictException("Role '${command.name}' sudah ada")
         }
@@ -46,6 +50,7 @@ class RoleService(
     }
 
     override fun update(id: UUID, command: UpdateRoleCommand): RoleView {
+        authority.authorizeChange("iam.role.update").incrementEpoch()
         val role = load(id)
         val newName = command.name.trim()
         if (!role.name.equals(newName, ignoreCase = false) && roleRepository.existsByName(newName)) {
@@ -61,6 +66,7 @@ class RoleService(
     }
 
     override fun delete(id: UUID) {
+        authority.authorizeChange("iam.role.delete").incrementEpoch()
         val role = load(id)
         if (role.systemRole) throw ValidationException("Role sistem tidak bisa dihapus")
         roleRepository.deleteById(id)
@@ -82,7 +88,7 @@ class RoleService(
         if (ids.isEmpty()) return emptySet()
         val permissions = permissionRepository.findAllByIds(ids)
         if (permissions.size != ids.size) throw ValidationException("Ada permissionId yang tidak dikenal")
-        if (!currentUser.current().platformAdmin && permissions.any { it.platformOnly }) {
+        if (!authority.lockCurrent().platformAdmin && permissions.any { it.platformOnly }) {
             throw AccessDeniedException("Tidak boleh memberikan izin platform")
         }
         return ids

@@ -52,13 +52,13 @@ interface AcsGateway {
      * Melempar bila ACS menolak/tak terjangkau; hasil tak-tuntas dikembalikan sebagai
      * [PingDiagnostic] ber-state (bukan exception) agar pemanggil bisa mencatatnya.
      */
-    fun runPing(genieacsId: String, host: String, count: Int): PingDiagnostic
+    fun runPing(genieacsId: String, host: String, count: Int, beforePost: () -> Unit = {}): PingDiagnostic
 
     /**
      * Menjalankan TR-143 Download/UploadDiagnostics pada [direction]. URL berkas uji
      * berasal dari konfigurasi adapter, bukan parameter — itu detail integrasi ACS.
      */
-    fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic
+    fun runSpeedTest(genieacsId: String, direction: SpeedDirection, beforePost: () -> Unit = {}): SpeedTestDiagnostic
 
     /**
      * Berkas firmware yang tersedia di ACS, disaring ke yang cocok untuk model
@@ -133,6 +133,9 @@ data class AcsDevice(
     val ssid: String? = null,
     /** Suhu (°C) dari parameter vendor yang dikonfigurasi; null bila tak ada/tak dikonfigurasi. */
     val temperatureC: Double? = null,
+    val observedFieldsAt: Instant? = null,
+    val hasInvalidParameterTime: Boolean = false,
+    val knownParameterTime: Instant? = null,
 )
 
 /** Perubahan satu jaringan WiFi. Field null berarti "biarkan apa adanya". */

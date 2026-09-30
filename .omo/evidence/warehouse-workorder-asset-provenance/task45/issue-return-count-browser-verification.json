@@ -1,0 +1,74 @@
+{
+  "runs": [
+    {
+      "run": "task45-matrix-r2-issue",
+      "sourceCommit": "aa22c32e96fdd416453b5b4e222756a9f14cd334",
+      "stats": {
+        "startTime": "2026-09-25T07:22:45.550Z",
+        "duration": 76104.61899999999,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": [
+        "warehouse-desktop",
+        "warehouse-mobile"
+      ],
+      "sha256": {
+        "web/e2e/warehouse/issue.spec.ts": "fe022fb029f4897aac26caa250d388cac7f89a1494c2c4d655a90911f8d45733"
+      }
+    },
+    {
+      "run": "task45-matrix-r3-returns",
+      "sourceCommit": "a3c83602fa823a0435b648d6cd204b70e4401a1d",
+      "stats": {
+        "startTime": "2026-09-25T07:33:05.303Z",
+        "duration": 173197.80299999999,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": [
+        "warehouse-desktop",
+        "warehouse-mobile"
+      ],
+      "sha256": {
+        "web/e2e/warehouse/returns.spec.ts": "59cd125acca494aef7d0b2d5b693f07e323705ac9537b901cb1eed46faf26aca"
+      }
+    },
+    {
+      "run": "task45-matrix-r3-exceptions",
+      "sourceCommit": "71d5cb9f1a69bf54caa3caa2dc5c9ed0e22891f6",
+      "stats": {
+        "startTime": "2026-09-25T07:36:51.355Z",
+        "duration": 142614.42599999998,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": [
+        "warehouse-desktop",
+        "warehouse-mobile"
+      ],
+      "sha256": {
+        "web/e2e/warehouse/exceptions.spec.ts": "1d7381aa72dff144d340c97f346a700532c5f53ce9f30b74fb359face551c4d7",
+        "web/e2e/warehouse/count-journey.ts": "6b76417f8b07def28febf76ada323f9e7d1029a36bf9660ea6e379b6eabcbf73",
+        "web/e2e/warehouse/approvals.ts": "17d1a9f39452f7a4579791258261dfa1672aece2412c199d79d168c5e783ec76"
+      }
+    }
+  ],
+  "executedTests": 8,
+  "backend": "actual built app, non-owner PostgreSQL/MinIO, UI-only business setup",
+  "assertions": [
+    "partial warehouse issue, unpick and dispatch followed by restricted technician acknowledgement",
+    "100m transfer receives60m; independent approval resolves40m discrepancy",
+    "mixed-case unused ONU return, separate warehouse acknowledgement/intake, reset inspection restores same unit;10availableONU and900000MM",
+    "blind counter and approval-only checker; REWORK_REQUIRED posts no stock change",
+    "physical transit acknowledgement makes open count stale; recount appends zero observation without deleting earlier100m observation",
+    "375px mobile,1280px desktop and768px tablet; light/dark and no horizontal overflow in count review"
+  ],
+  "remainingTask45": "drawer screenshots/current assets rerun and historical UI cutover/restart still pending"
+}

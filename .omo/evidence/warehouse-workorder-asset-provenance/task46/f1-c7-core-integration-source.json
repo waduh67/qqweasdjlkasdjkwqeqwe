@@ -1,0 +1,190 @@
+{
+  "review": "F1 bounded C7 core integration source review",
+  "validation_head": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+  "status": "BOUNDED_SOURCE_FINDINGS_ADDRESSED_KNOWN_INTEGRATION_AND_EXECUTED_GATES_PENDING",
+  "final_f1": false,
+  "qa_executed_by_reviewer": false,
+  "flyway_application_independently_verified": false,
+  "findings": [
+    "C7-core-1",
+    "C7-core-2"
+  ],
+  "inputs": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiry.kt",
+      "sha256": "3558761068283d0ac5689fb976a774c634201c7e6630de910f9ff286e2e99455",
+      "bytes": 275
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+      "sha256": "166568bb4e8d451c08f01c050de914b018da0af7e8259855ff3cfe47793bcf88",
+      "bytes": 3544
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDraftExpiryService.kt",
+      "sha256": "5e82db7114b5e19ee60d2d579a889ab893955b1b0d32d6f3e3044e6aadae8356",
+      "bytes": 2657
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "sha256": "a6d40b78167b010da08d54a5f4564b846c582bd724ec37a5520883c01cb656a1",
+      "bytes": 11410
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "sha256": "b04a922d4d4590157d09cc8b79c27a63d3709ce46f4f991775086d7d688bd47d",
+      "bytes": 10560
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptTransitionService.kt",
+      "sha256": "00e85091cf5da3b63a0258dd2c5fd13e99ff1fb9b41cee227b43ca8a5fabd583",
+      "bytes": 6527
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+      "sha256": "51a5515ebff4f41d8fb6d08f66969910c12e2165ddf4c3e46f6db7c34228cf4b",
+      "bytes": 19043
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
+      "sha256": "0bb6d174a17010ee829b3e3bb86bc6bdda531cc4246294246247db559ae1830d",
+      "bytes": 15885
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt",
+      "sha256": "1fd68bff1ea29caf2e0363801670b47f3a5e873753c4cfe76eb9f03413d758cd",
+      "bytes": 4537
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReceiptApprovalPostingGuard.kt",
+      "sha256": "bd6b5a8487e27ce735783ddcf624b53741bc5c25efa9bdbd9dd1c4aecb790e76",
+      "bytes": 5961
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCommandJdbc.kt",
+      "sha256": "2e319f0ab5a43d673214f38e78b679d539fa978d6410430bd04d9feffe8772d4",
+      "bytes": 1931
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
+      "sha256": "8ff776a477d6ff6ee8dfc0081fec9400dea15330c4d328969befa2a7841af1f6",
+      "bytes": 13068
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalQuery.kt",
+      "sha256": "da88bbf9fb23bd12975b0e1c61f9e06808097fa65e10297b876432e0938cca3a",
+      "bytes": 6570
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt",
+      "sha256": "9980e080e6450327f2d49af17e56193df7526040e6a3daf5fad5a05532798413",
+      "bytes": 8263
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt",
+      "sha256": "888185c5b704f79540288398d695b6059e76cea2318acc0a714dabc2d67b4942",
+      "bytes": 12593
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialApi.kt",
+      "sha256": "45b05ce8836306b9cda515a97dfa8bff6559869420d97af560e8c73f50e91a59",
+      "bytes": 5350
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+      "sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
+      "bytes": 13457
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+      "sha256": "bad4ee414e7ff8160e785a3147c5d66a977260f6874d17d7e18e558c9b90999e",
+      "bytes": 6394
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountQuery.kt",
+      "sha256": "f4549a7ebb7bbfc38b4fc7abcc01ca24a71693381d6a8d0ae6b3a58de0c61cff",
+      "bytes": 9570
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt",
+      "sha256": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
+      "bytes": 11141
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferQuery.kt",
+      "sha256": "7ad74a6875fd15921b63fc81f0c41de7249fc5310ec24a2bed4a80394cbf37fc",
+      "bytes": 9187
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "sha256": "88457f956f627f2992058887c519d98d3b6487118fc75800413d73445f9bd3c7",
+      "bytes": 5403
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialPlanningContracts.kt",
+      "sha256": "82e88980aafea09ad73534add6c292f9aa6146ddd44257fcb92fb2e4356f10c6",
+      "bytes": 2720
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCountApi.kt",
+      "sha256": "84b1d42509fc88776c7c3358444348a56a0828800791c6e3420a43b2d814ceef",
+      "bytes": 2557
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryTransferApi.kt",
+      "sha256": "7cd7556b083b4807f57e6f4be9c547ce32f3ee7259693aae05b9e152ab234f84",
+      "bytes": 3165
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryApprovalQueryApi.kt",
+      "sha256": "5a7065902878acc4c8d0dc7d274196e40d180a58717ae74cdad0bcfe7dfa1909",
+      "bytes": 5078
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+      "sha256": "638a23af0cf3dbb0710add7ecf59ec13a642013a02f2e98f92c62ed9058e4438",
+      "bytes": 2255
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseErrors.kt",
+      "sha256": "c8585a3a9325ac08d5776c881e9c9ff2d86d71a2c8664727ec8f847a6cfb896e",
+      "bytes": 834
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/iam/adapter/outbound/persistence/CurrentAuthorityPersistence.kt",
+      "sha256": "2faccf09eab302d7c617e9f37610e5efd77a96694fb89a1dfbbc6244ae433637",
+      "bytes": 6964
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql",
+      "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "bytes": 39372
+    }
+  ],
+  "followup": {
+    "status": "C7_CORE_1_AND_2_ADDRESSED_IN_SOURCE",
+    "qa_executed_by_reviewer": false,
+    "inputs": [
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt",
+        "sha256": "9980e080e6450327f2d49af17e56193df7526040e6a3daf5fad5a05532798413",
+        "bytes": 8263
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt",
+        "sha256": "888185c5b704f79540288398d695b6059e76cea2318acc0a714dabc2d67b4942",
+        "bytes": 12593
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialApi.kt",
+        "sha256": "45b05ce8836306b9cda515a97dfa8bff6559869420d97af560e8c73f50e91a59",
+        "bytes": 5350
+      },
+      {
+        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialCommandStore.kt",
+        "sha256": "6978d5914ff14bec448545a125790aba39e3e32fdee8d4e425a3005ab2cd2181",
+        "bytes": 2326
+      }
+    ]
+  }
+}

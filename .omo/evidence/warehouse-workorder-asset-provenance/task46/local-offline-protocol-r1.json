@@ -1,0 +1,640 @@
+{
+  "status": "PASS_FULL_OFFLINE_MODULES",
+  "commit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+  "command": "./gradlew :contract:test :snmp:test :collector:test --rerun-tasks --no-build-cache --no-daemon --no-parallel --max-workers=2",
+  "modules": [
+    {
+      "module": "contract",
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.contract.CertificationMatrixContractTest",
+          "sha256": "5253cfcbc36d95294be5e4e4ca2883845226bc0ac756c1add49d4eeb546591c2",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "snmp",
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.snmp.GponDocumentedProfileTest",
+          "sha256": "68c6a21b3f687796fca9369bc85501df7da1b3fb807161f9e6cddd6b38c1977e",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.snmp.GponSnmpAdapterTest",
+          "sha256": "0d8c70260ff2e976ac8cbe976dc980462c6fe17860b40ea8c4f242f83dfbe466",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.snmp.HsgqEponSnmpAdapterTest",
+          "sha256": "8e5ca90564e5c6062205635c9bb0c0a194276d534e11b202eed90dee68ad688c",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "collector",
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.collector.CollectorAgentTest",
+          "sha256": "892c7dcdfdc3da5b2d4b02e4c41cae61b81e6d9b5f9246216587e1b2156e900f",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.CollectorProtocolSerializationTest",
+          "sha256": "40b7814ec0dba64f605a8a1a9696a2de847803083d9853a181f6786d8ca73f1d",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.CollectorRuntimeModeTest",
+          "sha256": "3070ae336d345686e5571d39cc9a45ab6cf3d534032d5e3f19e21f9e5e58c5de",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.ObservationRetryTest",
+          "sha256": "2b600f189c58b629d0e8c7f0e26a40c5b06bf557ec1b73f4134a9c142b21bac8",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.ProvisioningWireCompatibilityTest",
+          "sha256": "afd9b986bb124c3950963482cab580acb5b6ecaad40b8541c8621ba175a5358d",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.RuntimeProvisioningAdapterFactoryTest",
+          "sha256": "0f5a2ad4e230163af939249a5026eda6affe74b8f1a8fac77c5a4bd844a32529",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapterTest",
+          "sha256": "921f7bfc4677c85e41c0b628a533eb068263d491830655bbf8cc09fc916a372f",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RadiusDaeTest",
+          "sha256": "16da26c53350feabfa611e2669cc95b2a23cdf41387ba3c670b497bb7f0cea71",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapterTest",
+          "sha256": "d4fe9dd19899c6bef560fb260a704d4b117a0a608ef1d3e06a70afb2e7903bb9",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RouterOsProvisioningLifecycleTest",
+          "sha256": "a7c68a0b7145e07898c0f18252b96947a55ff7305b3ab3e1690ff1a77d8d9073",
+          "tests": 35,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RouterOsProvisioningStateStoreTest",
+          "sha256": "ddcc90e91b02588eda6708e2840b4b69d429ba75352974bb5437ddc55549519a",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.SimulatorBngAdapterTest",
+          "sha256": "d00ed40612ff66c4973d9535c3d58aaf60017098763dfbc95fc3f96a25486695",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqOltTargetContractTest",
+          "sha256": "1b6b6338ff6b1028f2fc0d71bea25f5b4a3886877b74f3daa4a772ac9683ce63",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningFailureTest",
+          "sha256": "6f324cd4e9831d69ae29f942f46358b917a21304ba0d2daeb4f3d9553a5424f8",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningLifecycleTest",
+          "sha256": "55a0269f315462bde9549dd7ae6a32fb1bae50863568d1168a987b7fc8efff0b",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningModelTest",
+          "sha256": "68798e8f347f8555c5dd614951ddfbb7378ef5da061ed66187d20d424a0ebffe",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningPortsTest",
+          "sha256": "55b236ba134913aec85b290b8c8d3cea396a5a1bf37a8e78f000e4e79af613ca",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningStateStoreTest",
+          "sha256": "f4f5d8bb3581d7eeb74d6867a7d91a50d7fd3270ebc576ae80159e689fcd244b",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapterTest",
+          "sha256": "6912ed95b7f9ec1d974cb0aacff5b0b930507e09e22a0a73b0828a4b21d50c62",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.huawei.HuaweiProfileTest",
+          "sha256": "acc5f5b689e2872ba1cb766dd310bd98b77e7e5b6d14c6274b363514e8f58c58",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.huawei.HuaweiProvisioningAdapterTest",
+          "sha256": "223f1bde379c985f8e98412a8028ea05797823fef891cac4e722a600c5cf0d64",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.huawei.HuaweiTranscriptTest",
+          "sha256": "82f9a2799018255d42fa6a6466501ac956acb86319df6bc4acaf37eba2f9e86f",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.iosxe.IosXeProfileTest",
+          "sha256": "a7412221b7dfa231bf6a2a7381aaec4273305be2867b06882539dfd8ec22915e",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.iosxe.IosXeProvisioningAdapterTest",
+          "sha256": "22b001b4edd7723df33e4fc079aa074c094e559f05b277e5531f2501152ac910",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.junos.JunosCapabilityProfileTest",
+          "sha256": "51b3ad5e7a31cc4ff2b79af40231cfb97544e850bf44d6755b6f97bf7ded3f18",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.junos.JunosConfigurationTest",
+          "sha256": "a6fe9edc64eb2d60981d00c03a35283f09fe97f5b2ac6684ffcea6f4e299596b",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.junos.JunosProvisioningAdapterTest",
+          "sha256": "45f925d3c3179ecee238a7e655c7246eafaac1e9f8e03d08b99aa00c71e474e8",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.zte.ZteProfileTest",
+          "sha256": "9685534b74a98f42d7f1fc31bd161dd9e43eee9d8428a7684afc1f8e26f1a8a0",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.zte.ZteProvisioningAdapterTest",
+          "sha256": "3d1ad9997f05258653466cb8e971f537746528bb5df3054a6f08cdb792c15a1e",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.zte.ZteTranscriptTest",
+          "sha256": "537d350212db3bdb0936e2975aa78dff8d47b0dae656250dd0a0e11ff5251a01",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.certification.AdapterCertificationMatrixTest",
+          "sha256": "52b944cb0c91dbe11704f8e92bba815298bcfc53054cfc70248861996684b07d",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "tests": 170,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "tests": 197,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "runnerExitCode": 0,
+  "gradleTasksExecuted": 25,
+  "gradleTasksTotal": 25,
+  "sourceInputCount": 130,
+  "sourceInventorySha256": "2b444e11792e87986cda7800f1e2d02ba5b058f1928509f5e0f2f5d7a3964921",
+  "runnerSha256": "047fbfdce2ff0d3a674e6f13b29c536d72b6cb49898b544b21f903ece9d884a4",
+  "evidenceHelperSha256": "5944a5ab689e02a49d1bd1ebfcd820faa32f471b95c15de9bba7eb56ada72028",
+  "logSha256": "a07409923f4f0b4ec66395bef88ab201040646b3f524587b660fc2e06927c2ed",
+  "validators": {
+    "contract": {
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "tests": 2,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.contract.CertificationMatrixContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "5253cfcbc36d95294be5e4e4ca2883845226bc0ac756c1add49d4eeb546591c2"
+      ]
+    },
+    "snmp": {
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "tests": 25,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.snmp.GponDocumentedProfileTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.snmp.GponSnmpAdapterTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.snmp.HsgqEponSnmpAdapterTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "68c6a21b3f687796fca9369bc85501df7da1b3fb807161f9e6cddd6b38c1977e",
+        "0d8c70260ff2e976ac8cbe976dc980462c6fe17860b40ea8c4f242f83dfbe466",
+        "8e5ca90564e5c6062205635c9bb0c0a194276d534e11b202eed90dee68ad688c"
+      ]
+    },
+    "collector": {
+      "kind": "junit",
+      "status": "PASSED",
+      "commit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+      "tests": 170,
+      "suites": [
+        {
+          "suite": "com.duluin.ftth.collector.CollectorAgentTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.CollectorProtocolSerializationTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.CollectorRuntimeModeTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.ObservationRetryTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.ProvisioningWireCompatibilityTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.RuntimeProvisioningAdapterFactoryTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapterTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RadiusDaeTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapterTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RouterOsProvisioningLifecycleTest",
+          "tests": 35,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.RouterOsProvisioningStateStoreTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.SimulatorBngAdapterTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqOltTargetContractTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningFailureTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningLifecycleTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningModelTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningPortsTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.HsgqProvisioningStateStoreTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapterTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.huawei.HuaweiProfileTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.huawei.HuaweiProvisioningAdapterTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.huawei.HuaweiTranscriptTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.iosxe.IosXeProfileTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.iosxe.IosXeProvisioningAdapterTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.junos.JunosCapabilityProfileTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.junos.JunosConfigurationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.junos.JunosProvisioningAdapterTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.zte.ZteProfileTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.zte.ZteProvisioningAdapterTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.adapter.zte.ZteTranscriptTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.duluin.ftth.collector.certification.AdapterCertificationMatrixTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "reportSha256": [
+        "892c7dcdfdc3da5b2d4b02e4c41cae61b81e6d9b5f9246216587e1b2156e900f",
+        "40b7814ec0dba64f605a8a1a9696a2de847803083d9853a181f6786d8ca73f1d",
+        "3070ae336d345686e5571d39cc9a45ab6cf3d534032d5e3f19e21f9e5e58c5de",
+        "2b600f189c58b629d0e8c7f0e26a40c5b06bf557ec1b73f4134a9c142b21bac8",
+        "afd9b986bb124c3950963482cab580acb5b6ecaad40b8541c8621ba175a5358d",
+        "0f5a2ad4e230163af939249a5026eda6affe74b8f1a8fac77c5a4bd844a32529",
+        "921f7bfc4677c85e41c0b628a533eb068263d491830655bbf8cc09fc916a372f",
+        "16da26c53350feabfa611e2669cc95b2a23cdf41387ba3c670b497bb7f0cea71",
+        "d4fe9dd19899c6bef560fb260a704d4b117a0a608ef1d3e06a70afb2e7903bb9",
+        "a7c68a0b7145e07898c0f18252b96947a55ff7305b3ab3e1690ff1a77d8d9073",
+        "ddcc90e91b02588eda6708e2840b4b69d429ba75352974bb5437ddc55549519a",
+        "d00ed40612ff66c4973d9535c3d58aaf60017098763dfbc95fc3f96a25486695",
+        "1b6b6338ff6b1028f2fc0d71bea25f5b4a3886877b74f3daa4a772ac9683ce63",
+        "6f324cd4e9831d69ae29f942f46358b917a21304ba0d2daeb4f3d9553a5424f8",
+        "55a0269f315462bde9549dd7ae6a32fb1bae50863568d1168a987b7fc8efff0b",
+        "68798e8f347f8555c5dd614951ddfbb7378ef5da061ed66187d20d424a0ebffe",
+        "55b236ba134913aec85b290b8c8d3cea396a5a1bf37a8e78f000e4e79af613ca",
+        "f4f5d8bb3581d7eeb74d6867a7d91a50d7fd3270ebc576ae80159e689fcd244b",
+        "6912ed95b7f9ec1d974cb0aacff5b0b930507e09e22a0a73b0828a4b21d50c62",
+        "acc5f5b689e2872ba1cb766dd310bd98b77e7e5b6d14c6274b363514e8f58c58",
+        "223f1bde379c985f8e98412a8028ea05797823fef891cac4e722a600c5cf0d64",
+        "82f9a2799018255d42fa6a6466501ac956acb86319df6bc4acaf37eba2f9e86f",
+        "a7412221b7dfa231bf6a2a7381aaec4273305be2867b06882539dfd8ec22915e",
+        "22b001b4edd7723df33e4fc079aa074c094e559f05b277e5531f2501152ac910",
+        "51b3ad5e7a31cc4ff2b79af40231cfb97544e850bf44d6755b6f97bf7ded3f18",
+        "a6fe9edc64eb2d60981d00c03a35283f09fe97f5b2ac6684ffcea6f4e299596b",
+        "45f925d3c3179ecee238a7e655c7246eafaac1e9f8e03d08b99aa00c71e474e8",
+        "9685534b74a98f42d7f1fc31bd161dd9e43eee9d8428a7684afc1f8e26f1a8a0",
+        "3d1ad9997f05258653466cb8e971f537746528bb5df3054a6f08cdb792c15a1e",
+        "537d350212db3bdb0936e2975aa78dff8d47b0dae656250dd0a0e11ff5251a01",
+        "52b944cb0c91dbe11704f8e92bba815298bcfc53054cfc70248861996684b07d"
+      ]
+    }
+  },
+  "scope": "All current contract/SNMP/collector tests execute afresh;8documentedGPONprofile cases within25SNMP cover supported/unknown/unavailable field semantics. Includes complete170collector cases rather than historical focused22claim. Shared outerfd8 serialized; no Docker/database/hardware services invoked by runner; source inputs unchanged; final worktree clean.",
+  "limits": "Offline fixtures and loopback simulators do not certify physicalGPONdevices. Currentfullserver/CI and finalF1-F4 remain separate gates."
+}

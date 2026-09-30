@@ -1,0 +1,35 @@
+package com.duluin.ftth.workorder
+
+import com.duluin.ftth.common.security.AuthorityFence
+import java.time.Instant
+import java.util.UUID
+
+interface WorkOrderMaterialContextApi {
+    fun read(workOrderId: UUID): WorkOrderMaterialContext
+    fun lock(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
+    fun lockForIssue(workOrderId: UUID, expectedRevision: Long, authority: AuthorityFence): WorkOrderMaterialContext
+    fun lockForCustody(workOrderId: UUID, authority: AuthorityFence): WorkOrderLifecycleContext
+    fun currentQaState(workOrderId: UUID, authority: AuthorityFence): String?
+}
+
+data class WorkOrderMaterialContext(
+    val workOrderId: UUID,
+    val code: String,
+    val customerId: UUID?,
+    val subscriptionId: UUID?,
+    val orderId: UUID?,
+    val visitId: UUID?,
+    val areaId: UUID?,
+    val activeAssigneeIds: Set<UUID>,
+    val active: Boolean,
+    val cancelled: Boolean,
+    val action: WorkOrderMaterialAction,
+    val workType: String,
+    val workOrderRevision: Long,
+    val scheduledAt: Instant?,
+    val scheduledEndAt: Instant?,
+)
+
+data class WorkOrderLifecycleContext(val material: WorkOrderMaterialContext, val technicalState: String, val qaState: String?)
+
+enum class WorkOrderMaterialAction { INSTALL, REPAIR, REPLACE, REMOVE, NETWORK, PREVENTIVE, RETURN_CUSTOMER_RMA }

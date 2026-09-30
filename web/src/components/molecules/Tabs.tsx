@@ -22,6 +22,7 @@ export function Tabs<T extends string>({
 }) {
   return (
     <TabList
+      className="app-tabs"
       selectedValue={active}
       onTabSelect={(_, data: SelectTabData) => onChange(data.value as T)}
     >

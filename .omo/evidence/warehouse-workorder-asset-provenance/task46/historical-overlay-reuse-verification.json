@@ -1,0 +1,25 @@
+{
+  "status": "SCRIPT_REGRESSION_PASSED_DATABASE_RERUN_PENDING",
+  "modernGate": "241tests/23suites PASS at2c1d8e08; unchanged application and modern test sources",
+  "localHistoricalAttempt": "focusedR4/session91758 exited1 before any historical test; preflight rejected Git-collapsed untracked server/src/test/resources/warehouse/ directory",
+  "privateLogSha256": "ebacafe519ee4f01e4b2b3140cb06e1cd1dd1e7a7ead82b8a73fc5b8643c04a3",
+  "failureReproduced": "Actual overlay Python executed twice against disposable Git repositories; second invocation failed Unexpected historical worktree modifications before the correction.",
+  "correction": "git status --porcelain --untracked-files=all lists exact files. Existing allowed paths and pinned migration byte comparison remain strict. Runner source hash is included in historical inputs.",
+  "tests": {
+    "actualOverlayRegression": 3,
+    "workflowGuards": 5,
+    "shellSyntax": "PASSED",
+    "actionlint": "PASSED"
+  },
+  "controls": [
+    "Repeated recognized helper/migration overlay succeeds.",
+    "An extra untracked file is rejected and preserved.",
+    "A modified pinned migration is rejected without rewriting it."
+  ],
+  "sourceSha256": {
+    "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
+    "scripts/warehouse/test-historical-overlays.py": "914127aeebd2a6382f162264fae5a005948712ba6fc491a6a17849793d092cdc",
+    ".github/actions/warehouse-setup/action.yml": "5bd5fc02a043b90d00a3aa300efe911f93ac28186e0668fd2948ec6be0dcc8d3"
+  },
+  "limitation": "Historical database/application replay still needs a complete7-test pass; no fullserver or release pass."
+}

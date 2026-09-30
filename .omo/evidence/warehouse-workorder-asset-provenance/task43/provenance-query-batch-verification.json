@@ -1,0 +1,63 @@
+{
+  "phase": "M05 authenticated report and durable begin-batch; resolution and admission pending",
+  "apiGate": {
+    "build": "SUCCESSFUL in 51s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "supportingSuites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationInventoryTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "supportingRunNote": "15 support tests passed in preceding expanded run; that run found a query-fixture permission typo. Query suite then passed separately after correcting inventory.item.view; product code was unchanged.",
+  "tests": 17,
+  "files": {
+    "server/src/main/resources/db/migration/V177_1__warehouse_migration_command_receipt.sql": "456b3c169eb30a406629fc52ae520442e130c81d9cb4fd97eb7aeff9861a4023",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt": "7b00f6f37b395d79a68fe65999cd68fd3fa70b866dca1b53d652ca8a04b6bf56",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "adfc5a39c667e744da8ad9a0eed4b6f913000edc3d072102eaff755a36e3801a",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/ProvenanceCustomerAdapter.kt": "26ff70fd9d73ae5b69548b9c285d5ab64e5eb7a4369a7d738731640a1c652bc2",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITQuery.kt": "23f5bc2b38817d946daa7152694ed83e2588769ba79500ec7b38102f0abeadc3"
+  },
+  "checks": [
+    "full packaged Spring Boot from V172 legacy fixture",
+    "deterministic exact-unit report and bounded pages",
+    "current customer area checked independently from warehouse scope",
+    "permission, foreign tenant and revoked old-token denial before counts",
+    "begin batch and exact original response replay",
+    "same key changed body and another actor reject",
+    "one batch and one command, no documents or verified stock created",
+    "ordinary stock still denied in VALIDATING",
+    "existing VALIDATING empty tenant retains original watermark/batch/epoch"
+  ],
+  "notYetProven": [
+    "interactive case resolution/independent approval/baseline/finalization",
+    "real browser reconciliation",
+    "restart after admission"
+  ]
+}

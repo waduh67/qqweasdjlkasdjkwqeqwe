@@ -22,6 +22,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Use jsdom's per-test browser storage; Node's native storage can shadow it in workers.
+    execArgv: process.allowedNodeEnvironmentFlags.has('--no-experimental-webstorage') ? ['--no-experimental-webstorage'] : [],
     // jsdom dipakai untuk SEMUA berkas uji, termasuk yang murni logika: helper klien
     // HTTP menyentuh `localStorage`, dan memisahkan environment per-berkas hanya
     // menambah anotasi tanpa menghemat apa pun yang terasa.

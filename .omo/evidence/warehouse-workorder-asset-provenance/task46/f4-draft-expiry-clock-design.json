@@ -1,0 +1,32 @@
+{
+  "reviewKind": "design only; no implementation or runtime acceptance",
+  "reviewedAtUtc": "2026-09-26T11:02:01.549788+00:00",
+  "validationHead": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+  "sourceSha256": {
+    ".omo/plans/warehouse-workorder-asset-provenance.md": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-draft-expiry-design.md": "59f3d1037c583e28b56e6485c36f288877118dd6fa640d74369ba027943e8d75",
+    "server/src/main/resources/db/migration/V174__warehouse_documents_and_balances.sql": "b72dc30f5b0c5ccacbc7555c31fadf22201811461d72b67c58636eac4492fb71",
+    "server/src/main/resources/db/migration/V174_12__warehouse_receipt_intake.sql": "d0e1dc015cf05a16c4756ca65939adb0036122311051f74c63a4c7078ad03938",
+    "server/src/main/resources/db/migration/V175_3__warehouse_durable_approvals.sql": "592043ef4402955d8bb5d6405b0c496f2014976528e6210a7c8c143b5f8aeeed",
+    "server/src/main/resources/db/migration/V175_7__warehouse_approval_decision_binding.sql": "a7926fcb4a96d743a3490ffc9219ad16516a5e7029e1dac701e1599907d5a828",
+    "server/src/main/resources/db/migration/V175_8__warehouse_material_planning.sql": "0e81d6a61f60e77a390731d495ad8e875ce94d04f5a1b8d6e0bfe18b88aaf891",
+    "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
+    "server/src/main/resources/db/migration/V178_10__warehouse_transfer_draft_revision.sql": "d82891a8941a294bab114069297e931cf8ad6cd0cc7d8a8a7e2f06e736bd4ce2",
+    "server/src/main/resources/db/migration/V178_11__warehouse_count_draft_revision.sql": "e204ad6c111a45e60610cf5338e218b8514fa06d54f3af3d243458c07570dce7",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt": "d0520181714ecd845cc3e1accfaedda4f6a452e08d541185170be08557328d5c",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt": "48d46cc0dc4758b078503de8655337e37c28178c7112f992a87718a3a2623756",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalExpiry.kt": "d55cdee852b10a482567e4970fee5d1e6fbf49d69771a560243a7e73dc8ce340",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt": "dca24d09a63dc348e29598fec6fcdde59bc7045f33e3a44825b8ca949842add5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingDocuments.kt": "1140fca888cde21ce5fa7aa37ef66887ebb497e195c70c747dd7bc302e531824",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt": "8e6b14f57a3975e167bc8a27567f1112fe05ad485053ef63831edef078d1edc0",
+    "scripts/warehouse/test-environment.sh": "165e7a1055c1048dc6f03e61d06b11887ae14fc3f20c79f2090d879f55025e2a",
+    "scripts/warehouse/database-fixture.sh": "9123c3459475dc73c210f7a0e60123714688ac811b7d0f5024637948e6d34983"
+  },
+  "nextMigrationAtReview": "178.12",
+  "localQaExecuted": false,
+  "productEdited": false,
+  "finalF4Approval": false
+}

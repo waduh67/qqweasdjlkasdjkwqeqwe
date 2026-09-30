@@ -115,7 +115,8 @@ class WorkOrderPersistenceAdapter(
     }
 
     override fun findById(id: UUID): WorkOrder? =
-        jpa.findById(id).orElse(null)?.let { it.toDomain(rosterOf(it.id)) }
+        (if (org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly())
+            jpa.findById(id).orElse(null) else jpa.findLockedById(id))?.let { it.toDomain(rosterOf(it.id)) }
 
     override fun search(
         query: String?,

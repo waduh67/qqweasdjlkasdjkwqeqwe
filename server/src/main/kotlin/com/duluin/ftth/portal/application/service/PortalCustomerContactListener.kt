@@ -25,7 +25,7 @@ class PortalCustomerContactListener(
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun on(event: CustomerContactChanged) {
         try {
-            TenantContext.runAs(event.tenantId) { identitySync.sync(event.customerId) }
+            TenantContext.runAs(event.tenantId) { identitySync.syncCommittedContact(event.customerId) }
         } catch (ex: Exception) {
             log.warn("Sinkronisasi identitas portal gagal untuk pelanggan {}", event.customerId, ex)
         }

@@ -1,0 +1,223 @@
+{
+  "allThreeDeploymentFileSnapshotsIdentical": true,
+  "applicationCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "bootstrapProofSha256": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+  "codeCiRun": 36265279847,
+  "deploymentConfigCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "destinationImageProofSha256": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+  "finalF4Approval": false,
+  "fullCodeCiStillPending": true,
+  "limits": [
+    "No TLS handshake or runtime forwarded-scheme proof from simulated HTTP edge",
+    "No independently authenticated live domain/Cloudflare/origin/Drive checks in these bundles",
+    "S3 HTTP payload and HTTP/SQL response bodies not persisted; direct assertions and safe receipts support outcomes",
+    "R3 transient systemd unit is not-found; its default ExecMainStatus=0 is not evidence. PASS and successful deactivation are journal-authenticated; numeric runner0 remains parent-observed",
+    "RADIUS proof is configuration validation, not live subscriber authentication/accounting",
+    "No production backend/web/gateway activation and no final release/full-CI pass"
+  ],
+  "privateFixtureDeltaOnly": {
+    "r1ToR2": "Correct fixed relative OpenAPI expectation and remove unsupported forwarded-scheme claim",
+    "r2ToR3": "Resolve actual FreeRADIUS executable before -XC"
+  },
+  "productionInfrastructure": {
+    "actualExitFileValue": 0,
+    "cwmpAuthenticationEnforced": true,
+    "deviceCount": 0,
+    "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "hostOverlayAndWrapperBytesNotIncludedInThisBundle": true,
+    "intentionallyPublishedPorts": [
+      "1812/udp",
+      "1813/udp",
+      "7547/tcp",
+      "7567/tcp"
+    ],
+    "privateBackendsHaveNoHostPortBindings": true,
+    "productionApplicationStarted": false,
+    "receiptSha256": "b1b4092281bcc1df42e7d13dce234628c406cda53a64b36d7e6c46c49e84d057",
+    "runtimeRadiusCommand": [
+      "freeradius",
+      "-f"
+    ],
+    "runtimeRadiusDebugDisabled": true,
+    "runtimeRadiusImageId": "sha256:8f250816e151415c3e9504efa633b20d371329918d3e4056b36af846fb6dd3f9",
+    "runtimeRadiusReceiptSha256": "1cfdefc693bf572a343c418e51c72a5467047009301771d809ea79ccd659fcf0",
+    "runtimeRadiusRestartCount": 0,
+    "runtimeRadiusState": "running",
+    "serviceRestartCountsAllZero": true,
+    "services": [
+      "freeradius",
+      "genieacs-cwmp",
+      "genieacs-fs",
+      "genieacs-mongo",
+      "genieacs-nbi",
+      "minio",
+      "postgres",
+      "radius-db"
+    ],
+    "sourceSha256": "4b3bb2ea1cf28964423853a7b951314bdada9245724475bc19cd34947e578b40"
+  },
+  "rawPrivateFileManifestSha256": "ed8317bc2da01cea956094f4145d732c74c088c7e094f78fc661798ca39b5abc",
+  "reviewedAtUtc": "2026-09-26T20:58:22.751363+00:00",
+  "reviewerRanDocker": false,
+  "reviewerRanQa": false,
+  "reviewerUsedSsh": false,
+  "runs": {
+    "r1": {
+      "acceptedRuntimePass": false,
+      "allArchiveMembersMatchExtractedFiles": true,
+      "applicationImageIdsMatchAuthenticatedDestination": true,
+      "applicationStarts": 1,
+      "archiveBytes": 33940,
+      "archiveSha256": "6886ef28d0199842afd09f84d44f41ab36daf967305da885cec41c8797516f5c",
+      "authenticatedRegularFiles": 11,
+      "cleanupExitCode": 0,
+      "containerAndComposeNetworkRemovalMarkers": 13,
+      "containerStopMarkers": 12,
+      "deploymentSourceMatchesCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+      "failure": "Fixture expected an absolute OpenAPI server URL, but application explicitly configures /",
+      "finishedAtUtc": "2026-09-26T20:44:25.760600+00:00",
+      "hostPortsPublished": false,
+      "logSha256": {
+        "containers.log": "424b79caa6024ca1dc8d4d31cb1d976db8b14ec1f2b0a91773975feff33c5a5a",
+        "runner.log": "191344587991c9cb5d684cbe503a700d4e4e19ba62f5924e740699fee4c04987"
+      },
+      "privateEdgeNetworkCleanupExitCode": 0,
+      "privateEnvironmentMatchesSuccessfulBootstrapExceptOwnedEdgeNetwork": true,
+      "receiptSha256": "25ebceaee00305cfeacb75edbd750f5864fd75e43404620b8e7e8022aa3709be",
+      "runtimeUnit": {
+        "journalRecords": 5,
+        "journalSha256": "cdbd3fb814a533b1d16806a59751792c903129b49f7132340053baefdbefbb9f",
+        "loadState": "loaded",
+        "missingUnitDefaultExitIgnored": false,
+        "numericExitFromRetainedUnit": 1,
+        "numericExitLimitation": null,
+        "scriptStatusPrintedInJournal": "FAIL",
+        "stateSha256": "52754542c626456604ba9e7897416945f48bcefac4e15b6c0797df2587e15bbf",
+        "successfulDeactivationMarkers": 0
+      },
+      "sourceSha256": {
+        "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+        "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+        "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+        "setup-private/network-storage-probe.py": "63138e256b2d934b9bc5d5c1679157ad45a0bc8b0fcb64347a00da2ea2e15147"
+      },
+      "startedAtUtc": "2026-09-26T20:43:17.953989+00:00",
+      "status": "FAIL",
+      "storageReached": false,
+      "volumesRetained": true
+    },
+    "r2": {
+      "acceptedRuntimePass": false,
+      "allArchiveMembersMatchExtractedFiles": true,
+      "applicationImageIdsMatchAuthenticatedDestination": true,
+      "applicationStarts": 1,
+      "archiveBytes": 33324,
+      "archiveSha256": "079a07b6df4769bb03363f5dc26f121d7104b3f88d07da73f797f7ca4bd0f9a0",
+      "authenticatedRegularFiles": 12,
+      "cleanupExitCode": 0,
+      "containerAndComposeNetworkRemovalMarkers": 13,
+      "containerStopMarkers": 12,
+      "deploymentSourceMatchesCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+      "failure": "Private fixture invoked absent radiusd binary with docker exec; actual daemon was running",
+      "finishedAtUtc": "2026-09-26T20:47:14.560556+00:00",
+      "forwardedHttpsRuntimeClaim": false,
+      "gatewayWebLoginAndRelativeOpenApi": true,
+      "hostPortsPublished": false,
+      "logSha256": {
+        "containers.log": "fe8e7cd1e2445c2f7bca9b4406eece2ba77979eb3259ed79d6213effeed5b45d",
+        "runner.log": "03a08ca504b9c56dfc27418e3745c1820cedeca1de4d4a94f49b2a52b673a0cc"
+      },
+      "openApiServerUrls": [
+        "/"
+      ],
+      "privateEdgeNetworkCleanupExitCode": 0,
+      "privateEnvironmentMatchesSuccessfulBootstrapExceptOwnedEdgeNetwork": true,
+      "radiusAndCwmpGatesAccepted": false,
+      "receiptSha256": "4fcea3a6ee9f4b2ec43e184cabf5de93850979ba129438363f5a5ab992002cad",
+      "runtimeUnit": {
+        "journalRecords": 5,
+        "journalSha256": "aa2950d2f300a8041e7d72e5b627ea5059020617199a49a23457238af7dd62d7",
+        "loadState": "loaded",
+        "missingUnitDefaultExitIgnored": false,
+        "numericExitFromRetainedUnit": 1,
+        "numericExitLimitation": null,
+        "scriptStatusPrintedInJournal": "FAIL",
+        "stateSha256": "d5f35fdfb7a05b5113e74103944e9498bb2bc7f5021b830f7503abb2ad344dff",
+        "successfulDeactivationMarkers": 0
+      },
+      "sourceSha256": {
+        "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+        "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+        "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+        "setup-private/network-storage-probe.py": "263a13f98c7a76f6a4409fc610c2aa5f8c3a9b7d38c693a4eb3e9161fdef7d09"
+      },
+      "startedAtUtc": "2026-09-26T20:46:04.604238+00:00",
+      "status": "FAIL",
+      "storageEvidence": "Executed direct SigV4 HTTP assertions plus safe receipt; response and generated payload bytes not persisted",
+      "storagePutGetDelete": {
+        "bytes": 137,
+        "sha256": "96a28ba69f45fb3fe54bdd3233155015230203d4986ba1c21fd126d57efa0c57"
+      },
+      "volumesRetained": true
+    },
+    "r3": {
+      "acceptedRuntimePass": true,
+      "allArchiveMembersMatchExtractedFiles": true,
+      "applicationImageIdsMatchAuthenticatedDestination": true,
+      "applicationStarts": 1,
+      "archiveBytes": 40865,
+      "archiveSha256": "6d061e7071c5d592f4b278fc04a29680a93a28286f5d2347895b22051fea4ebd",
+      "authenticatedRegularFiles": 12,
+      "cleanupExitCode": 0,
+      "containerAndComposeNetworkRemovalMarkers": 13,
+      "containerStopMarkers": 12,
+      "cwmp401RawLogLines": 1,
+      "cwmpDigestChallengeAndZeroDevices": true,
+      "deploymentSourceMatchesCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+      "finishedAtUtc": "2026-09-26T20:50:33.148511+00:00",
+      "forwardedHttpsRuntimeClaim": false,
+      "gatewayWebLoginAndRelativeOpenApi": true,
+      "hostPortsPublished": false,
+      "internalNbi200EmptyArray": true,
+      "logSha256": {
+        "containers.log": "2124c26bba52868dd435b7e6b44e4284cda4d0c0079fd4e6f4fef69b7a6ff5ce",
+        "runner.log": "65c479b22f6d5a87cc4d5c4526c2304b3658f9f7b5e38892096c66b2fa20a7c8"
+      },
+      "openApiServerUrls": [
+        "/"
+      ],
+      "privateEdgeNetworkCleanupExitCode": 0,
+      "privateEnvironmentMatchesSuccessfulBootstrapExceptOwnedEdgeNetwork": true,
+      "protocolScope": "RADIUS configuration only; unauthenticated CWMP rejection and NBI reachability; no subscriber RADIUS transaction or hardware certification",
+      "radiusConfigurationAcceptedRawLogOccurrences": 1,
+      "receiptSha256": "31df7d257fd5aa3f0ba7ec8aa4a3682838ea12585847782ad76c6648d1e77720",
+      "runtimeUnit": {
+        "journalRecords": 4,
+        "journalSha256": "7bc1294055da610ddef44c527882eba9f6961b6754b2b2e2bca0dcad38b89a2c",
+        "loadState": "not-found",
+        "missingUnitDefaultExitIgnored": true,
+        "numericExitFromRetainedUnit": null,
+        "numericExitLimitation": "R3 transient unit was unloaded; journal records PASS and successful deactivation, while numeric runner0 was parent-observed",
+        "scriptStatusPrintedInJournal": "PASS",
+        "stateSha256": "f1da6b5b8f6591fadd3658f18131e17a76ba87ce3540c1225beb19815c71948a",
+        "successfulDeactivationMarkers": 1
+      },
+      "sourceSha256": {
+        "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+        "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+        "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+        "setup-private/network-storage-probe.py": "7250d9e9d082d09a0c36a563b6f17e7863d52b2aa13ba27510ef38259c16e8d8"
+      },
+      "sourceUnchanged": true,
+      "startedAtUtc": "2026-09-26T20:49:25.605275+00:00",
+      "status": "PASS",
+      "storageEvidence": "Executed direct SigV4 HTTP assertions plus safe receipt; response and generated payload bytes not persisted",
+      "storagePutGetDelete": {
+        "bytes": 137,
+        "sha256": "4b7b92d728dc17ff197dff5784816ed148037e4f5f96f5d469047748d7525142"
+      },
+      "volumesRetained": true
+    }
+  },
+  "status": "NETWORK_R3_RUNTIME_PASS_AUTHENTICATED_R1_R2_FAILURES_PRESERVED"
+}

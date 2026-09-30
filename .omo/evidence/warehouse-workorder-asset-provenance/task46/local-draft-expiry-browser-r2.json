@@ -1,0 +1,37 @@
+{
+  "status": "PASS_FOCUSED",
+  "comparisonBase": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "counts": {
+    "tests": 2,
+    "projects": {
+      "warehouse-desktop": 1,
+      "warehouse-mobile": 1
+    }
+  },
+  "reportSha256": "feb21dee6c241626ff23c6768fdf6e932e824cc071727d1f001e5e078727a10c",
+  "runnerExitCode": 0,
+  "cleanupExitCode": 0,
+  "sourceInputCount": 2437,
+  "sourceInventorySha256": "29319251d346b9c7406d206575a961b4ff5f6611c019d4ec647b2b92666a541d",
+  "runnerSha256": "cb0f54e92bc191989276e74d922857cea626ac97b38132db45412ffbe5fc394f",
+  "artifact": {
+    "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466"
+  },
+  "screenshots": [
+    {
+      "project": "warehouse-desktop",
+      "sha256": "304757d7dce763500f2c15c79dcc2bf18c103317be45e3b9b3eccd1cf150f9ab",
+      "width": 1280,
+      "height": 1344
+    },
+    {
+      "project": "warehouse-mobile",
+      "sha256": "6032f78bcc92ca538ccdfad8f3e010e944c97566edda9badb6e18690589b708b",
+      "width": 984,
+      "height": 4200
+    }
+  ],
+  "visualReview": "Root viewed both complete captures: expired explanation, original3unit line, zero inspected/rejected/putaway, retained revision0history and closed edit/receive actions visible without the earlier scrolled fixed-header capture artifact.",
+  "scope": "Real12second owner policy, UIcreation, openeditor crosses actualDBdeadline, latePUT409DRAFT_EXPIRED, reloadretains originalfields/history, expiredfilter and freshdraft path. Oneattempt perproject, noflaky/skipped. E2Etypecheck and productionbuild passed.",
+  "excludes": "Fullnine-spec independentF3, currentunfilteredCI and finalF1-F4 stillpending."
+}

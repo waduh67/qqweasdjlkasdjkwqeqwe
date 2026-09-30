@@ -114,7 +114,7 @@ export function NotificationBell() {
     <Popover open={open} onOpenChange={onOpenChange} positioning="below-end" withArrow>
       <PopoverTrigger disableButtonEnhancement>
         <span className="inbox-bell">
-          <Button variant="subtle" icon={<IconBell size={18} />} aria-label={label} title={label} />
+          <Button size="medium" variant="subtle" icon={<IconBell size={18} />} aria-label={label} title={label} />
           {unread > 0 && (
             <span className="inbox-badge" aria-hidden>
               {unread > 99 ? '99+' : unread}

@@ -1,0 +1,54 @@
+{
+  "task": 37,
+  "scope": "Approval evidence projection and authenticated review",
+  "backend": {
+    "sourceCommit": "556f435e",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseApprovalEvidenceIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "8ddb399e61bd46bb825481af477c5fb4485f00dc5129428d43d44ee8226488d4"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "717fb7d9593a3c6485cde6b5952546f98b165ec141d7ced7ff1b61d1050bb4a0"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "b56be4ade7343cef1c9e94b7c461a0e61d1faa9ebcd27a07ae3902c536faf2cd"
+      }
+    ],
+    "tests": 6,
+    "result": "BUILD SUCCESSFUL in3m3s",
+    "priorFailure": "7c426e5d product compiled but test JsonNode.map overload failed compile; corrected in556f435e. Old copied XML from failed run is not proof."
+  },
+  "web": {
+    "sourceCommit": "556f435e",
+    "tests": 12,
+    "files": 3,
+    "durationSeconds": 6.82,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "acceptance": [
+    "Receipt attachments from real MinIO require captured intake revision/hash and created_at <= requested_at",
+    "Approver-only access without general receipt/WO permissions",
+    "Current tenant and original WO area gates; changed area denies list/download",
+    "Wrong evidence id and corrupted receipt object rejected",
+    "No raw source, storage key, digest or costs in evidence DTO",
+    "Signed original WO evidence uses public inventory port implemented by workorder",
+    "Authenticated image preview/PDF download with type/size limits and URL cleanup"
+  ],
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

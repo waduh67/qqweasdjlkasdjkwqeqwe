@@ -1,0 +1,138 @@
+{
+  "kind": "junit",
+  "status": "PASSED",
+  "commit": "b36090652b7c33d3b06dc21df9962a6229595f58",
+  "tests": 149,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.AlarmRuleIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.GisImpactedIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.GisUtilizationIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.IncidentIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.NetworkEndToEndIT",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.NotificationIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.OdpPortBoardIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.SurveyCapacityIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "reportSha256": [
+    "e9c78529eff30565b6f4caedb6b97367d6869f91db771c05b3b3240188745229",
+    "3bf2edbe760e9ee054ad947772657f7fdb4f44a12794cdc4e032648db238b2ae",
+    "cb73f04e079ddad064cec5afd8b18a8f541a9bd71a44b3f56dc3e7eb86093a31",
+    "29be127df5e681eea294bdbd588923e12bacee4e64cb6ad045ede4f32655fd2b",
+    "3b71e87fa043518e271f14a7b3ca17eef408584c43539e64f76f00406102c4d7",
+    "97e481f6bcaed6096e402d9335298ad7fcd5b5bceeaaa59cc2a8114d0990e923",
+    "1a5f7f7f670d5ec77c29dbae8b557769a5a146707c821ace43583c556289c29e",
+    "02194c5b59cab56511266d0a480e9cddedecb0b4b653851dd8d910197d5ba9cf",
+    "3f1b0fbf6e5987e874ccabe56b1d45920e54a4eab34b44b293779bdd21324c66",
+    "d9d491623e199e7c6491ad3f8e9546b0e49ef6744b22004cebd148c81ae9020e",
+    "d68d4027801f5e7f94231011e0051d0c49b5653d3fd562b06ece642163a00123",
+    "fbb15550964757845d16baf802c791fd5b67c99770b3caa93b552757e8b39cf5",
+    "f5b9c1b99377641b3bfc78b5cdc88d9229bf70f22d74b22bc0939ac2066db9d9",
+    "835a1e755de174916795d03da16e90802e7f84c9b5a871f5852803633bc2511d",
+    "50dd0f66783221ad20282aaa94acf2e34e92fd2fcb621a7b6d7af97af7cdcd00",
+    "b379ae5702a61dac88efda2b319c30efd6cb1024fb531a2d5b47f1aafde56caf"
+  ]
+}

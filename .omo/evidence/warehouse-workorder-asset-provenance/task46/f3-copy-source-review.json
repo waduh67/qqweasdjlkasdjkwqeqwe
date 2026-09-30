@@ -1,0 +1,30 @@
+{
+  "reviewedAtUtc": "2026-09-26T19:08:34.363537+00:00",
+  "sourceReview": "PASS",
+  "baseBrowserInputSnapshotSha256": "936a9e0e596e3be3ffadded7b93ffd4d9d9b23f73d5f3b93b041836127e383fa",
+  "comparedInputFiles": 2486,
+  "unchangedInputFiles": 2484,
+  "files": [
+    {
+      "path": "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
+      "beforeSha256": "c271e42fedc79d53a487a302711104de5fa7cc9eb0abdbd5ee064c3242106d3a",
+      "afterSha256": "cd9672029475e959cda42d7ddf9e7606aabccb7420eeb46803cf6b7a3cc88755",
+      "beforeText": "Diterima \u2014 dalam pemeriksaan",
+      "afterText": "Diterima untuk pemeriksaan",
+      "exactDisplayedTextReplacementOnly": true
+    },
+    {
+      "path": "web/src/pages/MyMaterialsPage.tsx",
+      "beforeSha256": "8d6d23f3b54b09a7c275d025141869cbc60e8fc28618452f6b823a6f25f03ce3",
+      "afterSha256": "2c54f6ccd89007068bf12c74a9cad28dc4af982532ea2cff5eb4c71a21b34610",
+      "beforeText": "Sudah diterima petugas; masih perlu pemeriksaan. Penerimaan belum berarti stok tersedia.",
+      "afterText": "Sudah diterima petugas gudang. Ketersediaan stok mengikuti hasil pemeriksaan pada dokumen retur.",
+      "exactDisplayedTextReplacementOnly": true
+    }
+  ],
+  "logicDtoStatePredicatesDomAndToneUnchanged": true,
+  "interpretation": "Receipt is a historical handover event. Copy now describes receipt for inspection and directs stock availability to the separate return inspection outcome.",
+  "validationBoundary": "Prior 36 browser cases and eight preflight probes used captured source before these two displayed strings changed. No prior report relabeled; later web verification is separate.",
+  "newBrowserExecutionRequired": false,
+  "newBrowserExecutionReason": "Two displayed string replacements with unchanged DOM, conditions, quantities and behavior; bounded source review plus current full web verification is proportionate."
+}

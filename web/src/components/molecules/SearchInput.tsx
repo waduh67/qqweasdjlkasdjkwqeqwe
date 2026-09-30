@@ -31,7 +31,8 @@ export function SearchInput({
   const s = useStyles()
   return (
     <Input
-      className={s.root}
+      size="small"
+      className={`app-control app-control-compact ${s.root}`}
       type="search"
       value={value}
       onChange={(_, data) => onChange(data.value)}

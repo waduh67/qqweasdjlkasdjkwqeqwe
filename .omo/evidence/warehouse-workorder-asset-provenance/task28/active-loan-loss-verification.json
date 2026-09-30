@@ -1,0 +1,74 @@
+{
+  "recordedAt": "2026-09-24T15:52:47.784179+00:00",
+  "task": 28,
+  "scope": "Independent active ISP loan loss, atomic assignment and customer episode retirement, pending permit retirement and guard matrix",
+  "verifiedProductCommit": "c09c6da9",
+  "verifiedMainTree": "8cca52c9a6861631f360a68ecc25dcb33bbec222",
+  "result": "PASS",
+  "run": "asset-loss-guards",
+  "duration": "3m7s",
+  "counts": {
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 3
+  },
+  "command": "scripts/warehouse/qa.sh server --tests '*WarehouseAssetLoss*IT' --tests '*ModularityTests' --no-parallel",
+  "environment": "Owned isolated PostgreSQL app role NOSUPERUSER NOBYPASSRLS; private MinIO; JDK21; serialized QA lock; retained volumes",
+  "redaction": "Only test names/counts and source/result digests; no raw HTTP logs or credentials",
+  "suites": [
+    {
+      "name": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "cetak peta module()",
+        "hotspot accesses only public BNG and catalog APIs()",
+        "struktur module valid()"
+      ],
+      "xmlSha256": "21e7fd4a3fb7fbf17b0facb5d2429c68e77f983e5c91f2641b4b79a9b844acdb"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseAssetLossGuardsIT",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "loss list applies location scopes before pagination and omits private source details()",
+        "pending replacement authorization is retired when its old loan is independently declared lost()",
+        "real recovery makes pending lost loan approval stale and preserves the recovered device()",
+        "two independently approved loss requests retire a customer loan only once()",
+        "revoked destination scope denies replay of an already committed loan loss()",
+        "rejected loan loss requires a fresh immutable request and fresh approval()",
+        "unknown original loan cost cannot be treated as zero for loss approval()",
+        "requester delegation cannot authorize their own lost loan()",
+        "lost loan ledger rebuild preserves the original deployment and dated telemetry()",
+        "pending approval cannot forge a loss effect or silently close its loan assignment()"
+      ],
+      "xmlSha256": "fc0dd29738644d1e3069cfecc96bd69a4821049402eb62408351c9e2f33706fd"
+    },
+    {
+      "name": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "[1] mode = \"LOAN\"",
+        "[2] mode = \"SALE\""
+      ],
+      "xmlSha256": "ed25b8400da80f2cc95a4e23ed47ff759b381ab594674f42711c2f42b5405bec"
+    }
+  ],
+  "migrations": {
+    "V175_143__warehouse_asset_loss_request.sql": "d613a31245fe294a38113ff109e3fb52b4467d348f2d6d642cae02bc23f57936",
+    "V175_144__warehouse_asset_loss_effect.sql": "41ffc26a006cdc7b55ac1ffd4e07e02bfc1b5abbd52c05d2bdce4bf846089708",
+    "V175_145__warehouse_asset_loss_authorization_names.sql": "95037d52b3ae6acf430c8a5c2c49d9ffafe7b47ac8931cf30812115c87bdeba4",
+    "V175_146__warehouse_asset_loss_evidence_json.sql": "d7126fe6d9ab06ef9415d3ebbebf86de03193a142359d7db31c0bd6c8968f837",
+    "V175_147__warehouse_asset_loss_event_binding.sql": "5da98c83d788aa398a8b70e43e583b2fa1f694e25dd9bf334c27f8f25cccb31f"
+  }
+}

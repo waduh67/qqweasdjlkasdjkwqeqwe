@@ -34,7 +34,7 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class AutoProvisioningIT {
+class AutoProvisioningIT : com.duluin.ftth.customer.CustomerDeploymentFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
 
@@ -46,12 +46,22 @@ class AutoProvisioningIT {
 
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
+    private var reusedTenant: String? = null
+    private var sourceCustomer: String? = null
+    override fun tenant(slug: String): String = reusedTenant ?: super.tenant(slug)
+    override fun installationCustomer(stock: Setup): CustomerIdentity = sourceCustomer?.let {
+        CustomerIdentity(UUID.fromString(it), null, existing = true)
+    } ?: super.installationCustomer(stock)
+
+    private fun issued(token: String, customer: String, serial: String): Installation {
+        reusedTenant = token
+        sourceCustomer = customer
+        return try {
+            installation(extraPermissions = setOf("monitoring.provisioning.manage"), serials = listOf(serial, "$serial-SPARE"))
+        } finally {
+            reusedTenant = null
+            sourceCustomer = null
+        }
     }
 
     /** Tenant baru beserta id-nya — id dibutuhkan untuk menjalankan sapuan lintas-tenant. */
@@ -59,9 +69,8 @@ class AutoProvisioningIT {
 
     private fun onboardTenant(prefix: String): Tenant {
         val slug = "$prefix${uniq()}"
-        val admin = "admin@$slug.test"
-        val result = onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        return Tenant(login(slug, admin), result.tenant.id)
+        val token = super.tenant(slug)
+        return Tenant(token, fixture(token).tenant)
     }
 
     private fun newTenantAdmin(prefix: String): String = onboardTenant(prefix).token
@@ -80,6 +89,7 @@ class AutoProvisioningIT {
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
             post(url).header("Authorization", "Bearer $token")
+                .header("Idempotency-Key", "auto-${UUID.randomUUID()}")
                 .contentType(MediaType.APPLICATION_JSON).content(body),
         ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString
@@ -148,7 +158,7 @@ class AutoProvisioningIT {
         val customer = id(
             post(
                 "/api/customers", token,
-                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.996,"latitude":-6.246}}""",
+                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","areaId":"${area(token)}","location":{"longitude":106.996,"latitude":-6.246}}""",
             ),
         )
         return Triple("OLT-$s", odp, customer)
@@ -202,9 +212,10 @@ class AutoProvisioningIT {
         assertThat(JsonPath.read<Int>(reListed, "$[0].seenCount")).isEqualTo(2)
 
         // Operator menuntaskan: pilih pelanggan + port ODP.
+        val source = issued(token, customer, serial)
         val provisioned = post(
-            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
-            """{"customerId":"$customer","odpId":"$odp","portNumber":1}""",
+            "/api/monitoring/discovered-onus/$discoveredId/provision", source.receipt.receiver.first,
+            """{"customerId":"$customer","odpId":"$odp","portNumber":1,"authorizationId":"${source.authorization}"}""",
             expected = 200,
         )
         assertThat(JsonPath.read<String>(provisioned, "$.state")).isEqualTo("PROVISIONED")
@@ -245,9 +256,10 @@ class AutoProvisioningIT {
         val suggestedCustomer = JsonPath.read<String>(listed, "$[0].suggestion.customerId")
         val suggestedOdp = JsonPath.read<String>(listed, "$[0].suggestion.odpId")
         val suggestedPort = JsonPath.read<Int>(listed, "$[0].suggestion.portNumber")
+        val source = issued(token, customer, serial)
         val provisioned = post(
-            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
-            """{"customerId":"$suggestedCustomer","odpId":"$suggestedOdp","portNumber":$suggestedPort}""",
+            "/api/monitoring/discovered-onus/$discoveredId/provision", source.receipt.receiver.first,
+            """{"customerId":"$suggestedCustomer","odpId":"$suggestedOdp","portNumber":$suggestedPort,"authorizationId":"${source.authorization}"}""",
             expected = 200,
         )
         assertThat(JsonPath.read<String>(provisioned, "$.state")).isEqualTo("PROVISIONED")
@@ -274,7 +286,7 @@ class AutoProvisioningIT {
         )
 
         // Order pasang terbuka justru untuk pelanggan yang lebih jauh.
-        post("/api/work-orders", token, """{"type":"PSB","title":"Pasang baru $s","customerId":"$awaitingFar"}""")
+        post("/api/work-orders", token, """{"type":"PSB","title":"Pasang baru $s","customerId":"$awaitingFar","areaId":"${area(token)}"}""")
 
         postAsCollector(apiKey, batch(reading("SN-${uniq().uppercase()}", oltCode, -22.0)))
         val listed = inbox(token)
@@ -296,7 +308,7 @@ class AutoProvisioningIT {
         val apiKey = newCollector(token)
 
         // Pelanggan satu-satunya dipasangi ONU di port 1 → tak ada lagi yang menunggu instalasi.
-        val existing = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-OLD-${uniq().uppercase()}"}"""))
+        val existing = com.duluin.ftth.customer.LegacyOnuTestFixture.stage(customer, "SN-OLD-${uniq().uppercase()}")
         post("/api/customers/onus/$existing/attach", token, """{"odpId":"$odp","portNumber":1}""", expected = 200)
 
         postAsCollector(apiKey, batch(reading("SN-${uniq().uppercase()}", oltCode, -22.0)))
@@ -394,7 +406,9 @@ class AutoProvisioningIT {
         // Operator justru mendaftarkannya lewat halaman pelanggan (di luar kotak masuk).
         // Registrasi memancarkan OnuRegistered → monitoring menuntaskan barisnya SINKRON,
         // tanpa menunggu poll collector berikutnya menyadari serialnya kini dikenal.
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
+        val source = issued(token, customer, serial)
+        val onu = id(post("/api/customers/$customer/onus", source.receipt.receiver.first,
+            """{"serialNumber":"$serial","deployment":{"authorizationId":"${source.authorization}","expectedRevision":0,"topology":null}}"""))
 
         assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
         assertThat(JsonPath.read<List<String>>(inbox(token, "PROVISIONED"), "$[*].id")).contains(discoveredId)
@@ -415,9 +429,10 @@ class AutoProvisioningIT {
         val discoveredId = JsonPath.read<String>(inbox(token), "$[0].id")
 
         // Operator menuntaskan tanpa memilih ODP: cukup tautkan ke pelanggan dulu.
+        val source = issued(token, customer, serial)
         val provisioned = post(
-            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
-            """{"customerId":"$customer"}""",
+            "/api/monitoring/discovered-onus/$discoveredId/provision", source.receipt.receiver.first,
+            """{"customerId":"$customer","authorizationId":"${source.authorization}"}""",
             expected = 200,
         )
         assertThat(JsonPath.read<String>(provisioned, "$.state")).isEqualTo("PROVISIONED")
@@ -504,6 +519,7 @@ class AutoProvisioningIT {
         postAsCollector(apiKey, batch(reading(serial, oltCode, -22.0)))
         assertThat(JsonPath.read<String>(inbox(tenant.token), "$[0].suggestion.confidence")).isEqualTo("HIGH")
 
+        issued(tenant.token, customer, serial)
         runAutoProvisionSweep(tenant.id)
 
         // Baris kotak masuk dituntaskan sendiri, tanpa operator menekan apa pun.

@@ -1,8 +1,9 @@
+import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { Text, ToggleButton } from '@fluentui/react-components'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { PageResponse, User } from '../api/types'
+import type { Area, PageResponse, User } from '../api/types'
 import type { CustomerView } from '../api/network'
 import type {
   WorkOrderApprovalStatus,
@@ -13,6 +14,7 @@ import type {
   WorkOrderView,
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
+import { useAuth } from '../auth/useAuth'
 import { DataTable, type Column } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
@@ -44,6 +46,7 @@ type Draft = {
   description: string
   priority: WorkOrderPriority
   customerId: string
+  areaId: string
   scheduledAt: string
   assignees: string[]
 }
@@ -54,6 +57,7 @@ const EMPTY_DRAFT: Draft = {
   description: '',
   priority: 'NORMAL',
   customerId: '',
+  areaId: '',
   scheduledAt: '',
   assignees: [],
 }
@@ -91,6 +95,7 @@ export function WorkOrdersPage() {
     setDraft(d)
     setInitialDraft(d)
   }
+  const creation = useCreationReview(draft != null)
   const closeDraft = () => {
     setDraft(null)
     setInitialDraft(null)
@@ -161,24 +166,19 @@ export function WorkOrdersPage() {
     }
   }
 
-  const submitCreate = () =>
+  const submitCreate = () => {
+    if (!draft) return
+    if (!draft.title.trim()) { toast.error('Judul wajib diisi'); return }
+    if (creation.beforeSave()) return
     void run(async () => {
-      if (!draft) return
-      if (!draft.title.trim()) {
-        toast.error('Judul tidak boleh kosong')
-        throw new Error('validasi')
-      }
       await api.post('/api/work-orders', {
-        type: draft.type,
-        title: draft.title.trim(),
-        description: draft.description.trim() || null,
-        priority: draft.priority,
-        customerId: draft.customerId || null,
-        scheduledAt: toInstant(draft.scheduledAt),
-        assignees: draft.assignees,
+        type: draft.type, title: draft.title.trim(), description: draft.description.trim() || null,
+        priority: draft.priority, customerId: draft.customerId || null, areaId: draft.areaId || null,
+        scheduledAt: toInstant(draft.scheduledAt), assignees: draft.assignees,
       })
       closeDraft()
-    }, 'Work order dibuat')
+    }, 'Work order dibuat').finally(creation.finish)
+  }
 
   const columns: Column<WorkOrderView>[] = [
     {
@@ -294,6 +294,9 @@ export function WorkOrdersPage() {
       </Toolbar>
 
       <WorkOrderForm
+        creation={{ ...creation, prepare: submitCreate, summary: <CreationSummary rows={[
+          ['Judul', draft?.title], ['Pelanggan', draftCustomerLabel], ['Jadwal', draft?.scheduledAt || 'Belum dijadwalkan'],
+        ]} /> }}
         open={draft != null}
         draft={draft}
         dirty={dirty}
@@ -452,7 +455,9 @@ function WorkOrderForm({
   onChange,
   onSubmit,
   onCancel,
+  creation,
 }: {
+  creation: CreationFlow
   open: boolean
   draft: Draft | null
   dirty: boolean
@@ -464,8 +469,27 @@ function WorkOrderForm({
   onSubmit: () => void
   onCancel: () => void
 }) {
+  const { can } = useCan()
+  const { user } = useAuth()
+  const [areas, setAreas] = useState<Area[]>([])
+  const [areaError, setAreaError] = useState<string | null>(null)
+  const [areasLoading, setAreasLoading] = useState(false)
+  useEffect(() => {
+    if (!open || !can('iam.area.view')) return
+    let active = true
+    setAreasLoading(true); setAreaError(null)
+    void api.get<Area[]>('/api/areas').then(rows => { if (active) setAreas(rows) }, () => { if (active) setAreaError('Area belum berhasil dimuat. Tutup dan buka kembali formulir untuk mencoba lagi.') }).finally(() => { if (active) setAreasLoading(false) })
+    return () => { active = false }
+  }, [open, can])
+  const areaIds = new Set(user?.areaIds ?? [])
+  for (let pass = 0; pass < areas.length; pass++) {
+    const previous = areaIds.size
+    for (const area of areas) if (area.parentId && areaIds.has(area.parentId)) areaIds.add(area.id)
+    if (previous === areaIds.size) break
+  }
+  const areaChoices = user?.platformAdmin ? areas : areas.filter(area => areaIds.has(area.id))
   return (
-    <Blade
+    <Blade creation={creation}
       open={open}
       title="Buat work order"
       size="lg"
@@ -487,6 +511,12 @@ function WorkOrderForm({
             onChange={(_, data) => onChange({ ...draft, title: data.value })}
             placeholder="mis. Ganti drop core putus"
           />
+          <SelectField label="Area pekerjaan" value={draft.areaId} disabled={areasLoading || !can('iam.area.view')} onChange={(_, data) => onChange({ ...draft, areaId: data.value })}>
+            <option value="">Pilih area pekerjaan…</option>
+            {areaChoices.map(area => <option key={area.id} value={area.id}>{area.name} · {area.code}</option>)}
+          </SelectField>
+          {areaError && <p className="error" role="alert">{areaError}</p>}
+          {!can('iam.area.view') && <p className="muted">Izin lihat area diperlukan untuk memilih area pekerjaan.</p>}
           <div className="row wrap">
             <SelectField
               label="Tipe"

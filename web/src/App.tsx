@@ -15,7 +15,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { PlatformJobsPage } from './pages/PlatformJobsPage'
 import { InventoryPage } from './pages/InventoryPage'
-import { WarehouseOperationsPage } from './pages/WarehouseOperationsPage'
+import { WarehouseRoutes } from './pages/warehouse/WarehouseRoutes'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { InvoicesPage } from './pages/InvoicesPage'
@@ -28,6 +28,7 @@ import { NetworkProvisioningPage } from './pages/NetworkProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { HelpdeskPage } from './pages/HelpdeskPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
+import { MyMaterialsPage } from './pages/MyMaterialsPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
 import { MyVisitsPage } from './pages/MyVisitsPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
@@ -198,11 +199,9 @@ function OperatorApp() {
               }
             />
             <Route
-              path="warehouse"
+              path="warehouse/*"
               element={
-                <RequirePermission permission="inventory.item.view">
-                  <WarehouseOperationsPage />
-                </RequirePermission>
+                <WarehouseRoutes />
               }
             />
             <Route
@@ -364,6 +363,7 @@ function OperatorApp() {
                 </RequirePermission>
               }
             />
+            <Route path="my-materials" element={<RequirePermission permission="workorder.order.field"><MyMaterialsPage /></RequirePermission>} />
             <Route path="my-visits" element={<RequirePermission permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
             <Route
               path="my-work-orders/:id"

@@ -435,10 +435,10 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
         header: 'Device info',
         sortValue: (d) => d.serialNumber,
         cell: (d) => (
-          <div className="stack" style={{ gap: '0.15rem' }}>
+          <span className="table-inline-values">
             <strong>{d.serialNumber}</strong>
             <Text as="span" size={300} className="muted" >{[d.customerName, [d.manufacturer, d.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || '—'}</Text>
-          </div>
+          </span>
         ),
       },
       {
@@ -465,12 +465,12 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
         sortValue: (d) => d.pppoeUsername,
         cell: (d) =>
           d.pppoeUsername ? (
-            <div className="stack" style={{ gap: '0.15rem' }}>
+            <span className="table-inline-values">
               <span>{d.pppoeUsername}</span>
               {d.pppoeOnline != null && (
                 <Text as="span" size={300} className="muted" >{d.pppoeOnline ? 'sesi aktif' : 'tak ada sesi'}</Text>
               )}
-            </div>
+            </span>
           ) : (
             <span className="muted">—</span>
           ),
@@ -558,7 +558,7 @@ function SignalCell({ rx, tx }: { rx: number | null; tx: number | null }) {
       <span style={{ color,  }}>
         {rx != null ? `${rx} dBm` : '—'}
       </span>
-      <Text as="span" size={300} className="muted" >TX {tx != null ? `${tx} dBm` : '—'}</Text>
+      <Text as="span" size={300} className="muted" > · TX {tx != null ? `${tx} dBm` : '—'}</Text>
     </div>
   )
 }

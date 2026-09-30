@@ -1,0 +1,11 @@
+{
+  "status": "PASS_INDEX_INTEGRITY_ONLY_NOT_FINAL_F1",
+  "indexes": 48,
+  "preservedHistoricalBlockComparisons": 192,
+  "uniqueNewReferenceHashesVerified": 7,
+  "mappingSha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d",
+  "sourceHashesRecheckedAgainstC902": true,
+  "qaExecuted": false,
+  "productEdits": false,
+  "finalF1": false
+}

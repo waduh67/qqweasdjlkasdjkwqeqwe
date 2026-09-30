@@ -29,7 +29,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
@@ -162,10 +162,11 @@ class ManualOltPollingControllerTest {
     fun `manual persistence failure returns sanitized 500 without throwable logging`() {
         val sentinel = "persistence-secret password=hunter2 host=10.88.77.66"
         val network = mock(NetworkApi::class.java)
-        val persister = mock(OltReadingPersister::class.java)
+        val persister = mock(OltReadingPersister::class.java) { call ->
+            if (call.method.name == "persist") throw IllegalStateException(sentinel)
+            null
+        }
         `when`(network.findPollingTarget(oltId)).thenReturn(target)
-        doThrow(IllegalStateException(sentinel))
-            .`when`(persister).persist(tenantId, target, true, emptyList(), null)
         val poller = ServerSideOltPoller(network, AdapterRegistry(listOf(ReachableAdapter())), persister)
         val persistenceFailureMvc = MockMvcBuilders.standaloneSetup(ManualOltPollingController(poller))
             .setControllerAdvice(GlobalExceptionHandler())
@@ -187,7 +188,9 @@ class ManualOltPollingControllerTest {
         assertThat(captured.renderedText()).contains("Polling manual OLT OLT-01 gagal disimpan").doesNotContain(sentinel)
         assertThat(captured.events.filter { it.loggerName == ServerSideOltPoller::class.java.name })
             .allSatisfy { event -> assertThat(event.throwableProxy).isNull() }
-        verify(persister).persist(tenantId, target, true, emptyList(), null)
+        val calls = mockingDetails(persister).invocations.filter { it.method.name == "persist" }
+        assertThat(calls).hasSize(1)
+        assertThat(calls.single().arguments.take(5)).containsExactly(tenantId, target, true, emptyList<OnuReading>(), null)
     }
 
     private fun user(permissions: Set<String>) = AuthenticatedUser(

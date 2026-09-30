@@ -1,0 +1,35 @@
+# Only image-smoke.sh creates this project and its private environment file.
+services:
+  server:
+    image: ${WH_SMOKE_SERVER_IMAGE:?}
+    pull_policy: never
+    env_file: ${WH_SMOKE_APPLICATION_ENV:?}
+    mem_limit: 1536m
+    ports: ["127.0.0.1:17880:8080"]
+    labels:
+      warehouse.task: ${WH_MARKER:?}
+      warehouse.image-smoke: ${WH_SMOKE_ID:?}
+    networks: [warehouse]
+  web:
+    image: ${WH_SMOKE_WEB_IMAGE:?}
+    pull_policy: never
+    labels:
+      warehouse.task: ${WH_MARKER:?}
+      warehouse.image-smoke: ${WH_SMOKE_ID:?}
+    networks: [warehouse]
+  gateway:
+    # Reuse the verified web image's Nginx for the task-owned reverse proxy.
+    image: ${WH_SMOKE_WEB_IMAGE:?}
+    pull_policy: never
+    volumes:
+      - ${WH_SMOKE_GATEWAY_CONFIG:?}:/etc/nginx/conf.d/default.conf:ro
+    ports: ["127.0.0.1:14188:80"]
+    depends_on: [server, web]
+    labels:
+      warehouse.task: ${WH_MARKER:?}
+      warehouse.image-smoke: ${WH_SMOKE_ID:?}
+    networks: [warehouse]
+networks:
+  warehouse:
+    external: true
+    name: ${WH_SMOKE_NETWORK:?}

@@ -1,0 +1,8 @@
+{
+  "status": "prepared, not applied or executed",
+  "sourceSha256": "26966c77cfdcf8d9e31c09aa7ea977173cd0a26b18e00f647773047b143e789b",
+  "patchSha256": "0917c8c8744018f45ed6b74b363eaccf6a0573754c5afab6db1aaf12a95fecda",
+  "observed": "Running R3 result binary contains expected STALE_REVISION / actual SOURCE_NOT_VERIFIED for the two already-reported handover denial assertions; complete XML will be preserved at run end",
+  "reason": "CLOSED and INACTIVE fixture mutations invalidate the historical assignment graph, so validated custody rejects before ordinary pending-state revision checks",
+  "preserved": "All 11 cases, HTTP409, exact before/after effects and zero handover/recovery records; no production change"
+}

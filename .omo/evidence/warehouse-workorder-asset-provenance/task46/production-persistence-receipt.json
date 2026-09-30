@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-27T09:17:05.858189+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "hubId": "01a0e224-1c3b-7dda-83e5-b83a23d616fa",
+  "physicalRouterTested": false,
+  "hostRebootTested": false,
+  "sourceSha256": "6a56202f1b64adccd6af231797ebfa030a75a74c9a3220b0509cbb63b11e939d",
+  "before": {
+    "containerId": "0af976a6ccf897910a4ebb11e546de9faa563718b846f370a45e4d672feb7fef",
+    "imageId": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+    "startedAt": "2026-09-27T09:10:58.914511875Z",
+    "userId": "01a0e222-6182-7611-a50d-a3c26d053f8c",
+    "hub": {
+      "id": "01a0e224-1c3b-7dda-83e5-b83a23d616fa",
+      "name": "Azure FTTH",
+      "host": "70.153.16.143",
+      "port": 1194,
+      "protocol": "TCP",
+      "tunnelCidr": "10.8.0.0/24",
+      "pkiReady": true
+    },
+    "peerCount": 0
+  },
+  "after": {
+    "containerId": "0af976a6ccf897910a4ebb11e546de9faa563718b846f370a45e4d672feb7fef",
+    "imageId": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+    "startedAt": "2026-09-27T09:17:06.820108926Z",
+    "userId": "01a0e222-6182-7611-a50d-a3c26d053f8c",
+    "hub": {
+      "id": "01a0e224-1c3b-7dda-83e5-b83a23d616fa",
+      "name": "Azure FTTH",
+      "host": "70.153.16.143",
+      "port": 1194,
+      "protocol": "TCP",
+      "tunnelCidr": "10.8.0.0/24",
+      "pkiReady": true
+    },
+    "peerCount": 0
+  },
+  "sameImageRestartAndPersistedHubPassed": true,
+  "schemaAfterRestart": {
+    "role": "warehouse_app",
+    "migrations": 367,
+    "failed": 0,
+    "latest": "178.12"
+  },
+  "vpnRemainsActiveAndSyncPassed": true,
+  "ftthAndExistingDriveHttpsStatus": 200,
+  "postVpnAppAndRadiusBackupsPassed": true,
+  "finishedAtUtc": "2026-09-27T09:17:46.616511+00:00"
+}

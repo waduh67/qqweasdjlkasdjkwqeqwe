@@ -1,0 +1,19 @@
+{
+  "status": "PASS_PREPARATION_INDEX_INTEGRITY_NOT_FINAL_F1",
+  "indexes": 48,
+  "historicalBlockComparisons": 192,
+  "c902CurrentBlocksPreserved": 48,
+  "newReferenceHashesVerified": true,
+  "referenceResolutionRoots": [
+    "reviewer evidence outputs",
+    "canonical validation evidence checkout"
+  ],
+  "uniqueReferenceHashesVerified": 19,
+  "newMissingAliasReferences": 0,
+  "sourceMappingSha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa",
+  "preparationSha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f",
+  "candidateManifestSha256": "cdff3006e39aa5aaf860a8a64dffa85a754c0670b3c7fb0858c6933f6ab428a8",
+  "currentServer": "PENDING",
+  "F3": "PASS",
+  "qaExecuted": false
+}

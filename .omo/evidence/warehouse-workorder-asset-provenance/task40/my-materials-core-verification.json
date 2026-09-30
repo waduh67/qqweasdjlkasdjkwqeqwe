@@ -1,0 +1,49 @@
+{
+  "sourceCommit": "accompanying Material Saya core checkpoint",
+  "backend": {
+    "tests": 7,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "c35eb75d6fa65a21107c28e2daf9012ccfa4106d57c1966b0cae6eb840b7d74d"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.MyMaterialsRefreshIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "e8d33ee32a14f92f0b30ce8e4271f8daf83222c99672edbcdb7bb6aedc95be75"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "6ddc91be5a6ff0ce4ec8ff1cd8b8b49ff84c90d12fc8cdf0e08b630ebbf41b2f"
+      }
+    ],
+    "result": "BUILD SUCCESSFUL in 4m 15s",
+    "initialFailure": "Fixture used Jackson node.map instead of asSequence().map for role IDs; corrected without changing product guards."
+  },
+  "web": {
+    "targetedTests": 29,
+    "targetedFiles": 7,
+    "durationSeconds": 8.71,
+    "fullTests": 283,
+    "fullFiles": 55,
+    "fullDurationSeconds": 63.65,
+    "typeScript": "PASS",
+    "productionBuild": "PASS; existing large chunk warning",
+    "newProductOxlint": "PASS",
+    "initialFailure": "Use test clicked disabled page action before review resolved; now waits for dialog and targets its confirm button."
+  },
+  "coverage": "Own route and named job/issue/custody/residual pages, partial acknowledgement, exact measured use, current own remainder return after reassignment, scope/revision refresh before review, session-isolated in-tab offline drafts, serial keyboard/camera permission fallback and camera cleanup, immutable body/key replay; independent warehouse return inbox/ACK, quarantine only and canonical return intake continuation.",
+  "browser": "Actual touch/keyboard mobile acceptance remains scheduled for task45.",
+  "remaining": "Task40 OPEN: verify unused serialized return before enabling its UI; finish technician handover dispatch/authorization surface and task41 asset cross-links as applicable. Tasks41-48/F1-F4 remain."
+}

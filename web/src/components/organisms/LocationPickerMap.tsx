@@ -49,6 +49,24 @@ interface NominatimResult {
 /** Enam desimal ≈ presisi 0,1 m — cukup untuk titik rumah pelanggan. */
 const fmt = (n: number): string => n.toFixed(6)
 
+function canInitializeMap(): boolean {
+  // MapLibre retains a global callback before its constructor can throw.
+  // Probe first so unsupported browsers never create that partial instance.
+  const canvas = document.createElement('canvas')
+  const attributes: WebGLContextAttributes = {
+    antialias: false, powerPreference: 'high-performance',
+    alpha: true, depth: true, stencil: true, premultipliedAlpha: true,
+  }
+  try {
+    const gl = canvas.getContext('webgl2', attributes) || canvas.getContext('webgl', attributes)
+    if (!gl) return false
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export default function LocationPickerMap({
   longitude,
   latitude,
@@ -75,17 +93,30 @@ export default function LocationPickerMap({
   const [results, setResults] = useState<NominatimResult[]>([])
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState(false)
+  const [mapUnavailable, setMapUnavailable] = useState(false)
 
   // Inisialisasi peta sekali. Klik di mana pun menaruh/menggeser titik.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: PICKER_STYLE,
-      center: hasCoords ? [lng, lat] : INITIAL_CENTER,
-      zoom: hasCoords ? 16 : 12,
-      attributionControl: { compact: true },
-    })
+    if (!canInitializeMap()) {
+      setMapUnavailable(true)
+      return
+    }
+    let map: MapLibreMap
+    try {
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: PICKER_STYLE,
+        center: hasCoords ? [lng, lat] : INITIAL_CENTER,
+        zoom: hasCoords ? 16 : 12,
+        attributionControl: { compact: true },
+      })
+    } catch {
+      // Browsers without WebGL must still be able to complete the parent form.
+      containerRef.current.replaceChildren()
+      setMapUnavailable(true)
+      return
+    }
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     map.on('click', (e) => onChangeRef.current(fmt(e.lngLat.lng), fmt(e.lngLat.lat)))
     mapRef.current = map
@@ -184,7 +215,7 @@ export default function LocationPickerMap({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Cari alamat lalu pilih untuk taruh pin…"
+          placeholder={mapUnavailable ? 'Cari alamat untuk mengisi koordinat…' : 'Cari alamat lalu pilih untuk taruh pin…'}
         />
         {searching && <Spinner />}
         {query && (
@@ -203,7 +234,10 @@ export default function LocationPickerMap({
         )}
       </div>
 
-      <div ref={containerRef} className="lp-map" style={{ height }} />
+      <div ref={containerRef} className="lp-map" style={{ height }} hidden={mapUnavailable} />
+      {mapUnavailable && (
+        <p role="status" className="muted lp-hint">Peta tidak tersedia. Cari alamat atau isi koordinat di bawah; form tetap bisa disimpan.</p>
+      )}
 
       <div className="row lp-coords">
         <TextField
@@ -222,7 +256,7 @@ export default function LocationPickerMap({
         />
       </div>
 
-      <p className="muted lp-hint">Klik peta atau seret pin untuk menyetel titik — atau cari alamat di atas.</p>
+      {!mapUnavailable && <p className="muted lp-hint">Klik peta atau seret pin untuk menyetel titik — atau cari alamat di atas.</p>}
     </div>
   )
 }

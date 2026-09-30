@@ -1,0 +1,145 @@
+{
+  "authenticatedAtUtc": "2026-09-26T19:00:11.297849+00:00",
+  "scope": "Independent extra edge and actual same-JAR restart; real browser reports and response resources read directly.",
+  "run": "extra-r4",
+  "existingEdgeExecution": {
+    "sourceRun": "/home/fajar/ftth/qqweasdjlkasdjkwqeqwe/.omo/runtime/task46-expiry-quality-review/f3/extra-r3",
+    "copiedExistingPassingEdgeCases": 2,
+    "edgeCasesReexecuted": 0,
+    "sourceRunnerExitCode": 1,
+    "sourceRestartCases": {
+      "passed": 2,
+      "failed": 2
+    },
+    "copiedSha256": {
+      "edge-report.json": "1ad356804e81f69045ca9a2bc4a3b881497dd373d1a8119b56a86717f77a805d",
+      "edge-verification.json": "843f1941491bf4f5b287c428edfd29b3cc7817f60f69a4d980cf64828ce10fba",
+      "edge-backend.pid": "b94466713e0d7358602ff9a74b15ab14b1d0e47b9a34deb3c345395e61b00b31",
+      "edge-web.pid": "de7ef91167a4bbe962448216d945e68d4c95e893079ebdc7a49f3a93317c87f1",
+      "edge-runner.log": "9aaf76e5639528a606aa4ad147b8fb274e51e4a53d26baacf91abfbf8645760e",
+      "edge-warehouse-desktop.json": "ec0b9a1eaafeeee6256fbb81a1e703dc46d6cf6f4e53d0394b73068df0139556",
+      "edge-warehouse-mobile.json": "a586216cf111d20b7f64da3718643aa6d48f9089cdb410346ac825ac64e7a521",
+      "lost-reply-warehouse-desktop.json": "4052e48158acec6faa52a1485b98455496a4dda8a03c541e7716415c53b4b7fa",
+      "lost-reply-warehouse-mobile.json": "fb0f5f6ea6b65a364ed4b9c431319f7d14c26c074b30c78a515059bc1307e0d3"
+    },
+    "sourceSummarySha256": "0b2061ef1fbdfe78cd670a67ac7afd35da6d543e0b2277d0871decac6caf96ea",
+    "sourceRestartReportSha256": "e84def6056475fd8e0abab041fb941b85c3f146eb1b90f371fddb547375564a0",
+    "reason": "Preserve successful R3 edge execution while rerunning only corrected restart fixture; failed R3 report remains unchanged."
+  },
+  "metadataHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "jarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+  "capturedInputs": 2486,
+  "capturedInputsUnchanged": true,
+  "distinctBackendProcessStart": true,
+  "runnerExitCode": 0,
+  "stopExitCode": 0,
+  "downExitCode": 0,
+  "phases": [
+    {
+      "phase": "edge",
+      "cases": [
+        {
+          "project": "warehouse-desktop",
+          "title": "cancelled reassigned work retains sixty metres while an offline retried forty metre return and blind partial count preserve stock",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-mobile",
+          "title": "cancelled reassigned work retains sixty metres while an offline retried forty metre return and blind partial count preserve stock",
+          "status": "passed"
+        }
+      ],
+      "reportSha256": "1ad356804e81f69045ca9a2bc4a3b881497dd373d1a8119b56a86717f77a805d"
+    },
+    {
+      "phase": "restart",
+      "cases": [
+        {
+          "project": "warehouse-desktop",
+          "title": "the completed main numeric tenant retains 917.500 metres, nine warehouse ONUs and one accepted loan installation after restart",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-desktop",
+          "title": "the cancelled partial return retains its exact custody, accepted physical piece and zero-variance count after restart",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-mobile",
+          "title": "the completed main numeric tenant retains 917.500 metres, nine warehouse ONUs and one accepted loan installation after restart",
+          "status": "passed"
+        },
+        {
+          "project": "warehouse-mobile",
+          "title": "the cancelled partial return retains its exact custody, accepted physical piece and zero-variance count after restart",
+          "status": "passed"
+        }
+      ],
+      "reportSha256": "1bd8da40d428867f26cba007e3b7b1a170b067b4ec4bc3932a5ecbd3662bb33a"
+    }
+  ],
+  "projects": [
+    {
+      "project": "warehouse-desktop",
+      "realCommitAndRetryResponses": 2,
+      "abortedBrowserReply": 1,
+      "sameIdempotencyKeyAndBody": true,
+      "sameOriginalResponseBytes": true,
+      "singleReturnQuantityBase": "40000",
+      "retainedCustody": {
+        "MM": "60000",
+        "EA": "1"
+      },
+      "partialCountEntries": 1,
+      "countState": "POSTED",
+      "stockUnchangedByCount": true,
+      "availableAfterReturn": {
+        "MM": "940000",
+        "EA": "9"
+      },
+      "numericRestartAvailable": {
+        "MM": "917500",
+        "EA": "9"
+      },
+      "numericRestartActiveInstallations": 1,
+      "numericRestartOwnership": "ISP / LOAN / ACCEPTED",
+      "edgeTraceSha256": "5e0d38904553203a787067d310cf21c3269dc7a077a52bbfb7afeb7183643f5d",
+      "restartTraceSha256": [
+        "cdce3d7d7896bf4d2313bbbcd0bcc538b34edb952add089f50557f4ea57d2f80",
+        "08ce50aac88531ee2f751e79d28af9e212eb372c02df9dee210dd401b946cbe0"
+      ]
+    },
+    {
+      "project": "warehouse-mobile",
+      "realCommitAndRetryResponses": 2,
+      "abortedBrowserReply": 1,
+      "sameIdempotencyKeyAndBody": true,
+      "sameOriginalResponseBytes": true,
+      "singleReturnQuantityBase": "40000",
+      "retainedCustody": {
+        "MM": "60000",
+        "EA": "1"
+      },
+      "partialCountEntries": 1,
+      "countState": "POSTED",
+      "stockUnchangedByCount": true,
+      "availableAfterReturn": {
+        "MM": "940000",
+        "EA": "9"
+      },
+      "numericRestartAvailable": {
+        "MM": "917500",
+        "EA": "9"
+      },
+      "numericRestartActiveInstallations": 1,
+      "numericRestartOwnership": "ISP / LOAN / ACCEPTED",
+      "edgeTraceSha256": "a1f9458e79f5a03a356604fa7038d55550b6ca93a51e013f7bd04bb2f36ec900",
+      "restartTraceSha256": [
+        "3ee3efc016593aebd69e475884f84a33effe2a5c7f23f08793d2b063ea8e4602",
+        "d913c00e6a178a179fb67a1632d2ae0cdb9ed6986eacbde75899cff197eb374b"
+      ]
+    }
+  ],
+  "rawSummarySha256": "bc1ed3dd5a987f35961f808ca670289df18de708d669fbad39db016c2d6f0bfa",
+  "privateEvidenceOnly": true
+}

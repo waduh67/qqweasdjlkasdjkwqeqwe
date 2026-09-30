@@ -1,3 +1,5 @@
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
+import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { CreditCard, Pause, Play, Trash2 } from 'lucide-react'
@@ -9,7 +11,7 @@ import { Blade } from '@/components/organisms'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { ConfirmDialog, SearchInput } from '@/components/molecules'
-import { PageHeader } from '@/components/molecules'
+import { FormSection, PageHeader } from '@/components/molecules'
 import { IconBuilding, IconPlus } from '@/components/atoms/icons'
 import { TenantSubscriptionModal } from '@/components/organisms/TenantSubscriptionModal'
 
@@ -31,6 +33,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 /** Halaman platform admin: daftar tenant + onboarding tenant baru beserta admin awalnya. */
 export function TenantsPage() {
   const { can } = useCan()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -41,20 +44,27 @@ export function TenantsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [defaultFee, setDefaultFee] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const creation = useCreationReview(draft != null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   async function reload() {
+    setLoading(true)
+    setError(null)
     try {
       const page = await api.get<PageResponse<Tenant>>('/api/platform/tenants?size=50')
       setTenants(page.content)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal memuat daftar tenant. Coba segarkan kembali.')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    void reload().catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat tenant'))
+    void reload()
     // Harga default global untuk ditampilkan sebagai acuan saat onboarding (best-effort).
     if (can('platform.billing.view')) {
       void getPlatformBillingSettings()
@@ -75,6 +85,7 @@ export function TenantsPage() {
 
   // Buka/tutup Blade form dengan snapshot untuk deteksi perubahan (dirty).
   const openDraft = (d: typeof EMPTY) => {
+    setFormError(null)
     setDraft(d)
     setInitialDraft(d)
   }
@@ -82,6 +93,12 @@ export function TenantsPage() {
     setDraft(null)
     setInitialDraft(null)
   }
+  useEffect(() => {
+    if (searchParams.get('onboard') === '1' && can('platform.tenant.create')) {
+      openDraft({ ...EMPTY })
+      setSearchParams(previous => { const next = new URLSearchParams(previous); next.delete('onboard'); return next }, { replace: true })
+    }
+  }, [searchParams, can, setSearchParams])
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   const rows = useMemo(() => {
@@ -94,7 +111,7 @@ export function TenantsPage() {
   }, [tenants, query, statusFilter])
 
   const columns: Column<Tenant>[] = [
-    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <Text as="strong" weight="semibold" >{t.name}</Text> },
+    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <span><Text as="strong" weight="semibold">{t.name}</Text>{t.slug === 'platform' && <span className="muted entity-caption">{' · '}Akun sistem · bukan tenant pelanggan</span>}</span> },
     { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => t.slug },
     {
       key: 'status',
@@ -130,21 +147,22 @@ export function TenantsPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="Tenant"
+        subtitle="Kelola organisasi pelanggan, akses admin, dan status langganannya."
         actions={
           can('platform.tenant.create') && (
             <Button variant="primary" onClick={() => openDraft({ ...EMPTY })}>
-              <IconPlus size={15} /> Onboarding tenant
+              <IconPlus size={15} /> Tambah tenant
             </Button>
           )
         }
       />
 
-      {error && <Text as="p" className="error">{error}</Text>}
-      {notice && <Text as="p" className="muted">{notice}</Text>}
+      {error && <div className="card load-error" role="alert"><p>{error}</p><Button onClick={() => void reload()}>Coba lagi</Button></div>}
+      {notice && <p role="status" className="form-note">{notice}</p>}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
-        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
+        <SelectField aria-label="Filter status tenant" value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -168,81 +186,59 @@ export function TenantsPage() {
       />
 
       <Blade
+        creation={{ ...creation, busy: saving, prepare: () => (document.getElementById('tenant-onboarding') as HTMLFormElement | null)?.requestSubmit(), summary: <><CreationSummary rows={[['Tenant', draft?.name], ['Slug', draft?.slug]]} />{formError && <p className="error" role="alert">{formError}</p>}</> }}
         open={draft != null}
-        title="Onboarding tenant baru"
+        title="Tambah tenant"
         size="sm"
         dirty={dirty}
-        onClose={closeDraft}
+        onClose={() => { if (!saving) closeDraft() }}
         footer={
           <>
+            <Button disabled={saving} onClick={closeDraft}>Batal</Button>
             <Button
               variant="primary"
-              onClick={() =>
-                void run(async () => {
-                  const { monthlyFee, ...rest } = draft!
-                  await api.post('/api/platform/tenants', {
-                    ...rest,
-                    monthlyFee: monthlyFee.trim() === '' ? undefined : Number(monthlyFee),
-                  })
-                  setNotice(`Tenant "${draft!.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
-                  closeDraft()
-                })
-              }
+              type="submit"
+              form="tenant-onboarding"
+              disabled={saving}
             >
-              Simpan
+              {saving ? 'Menyimpan…' : 'Simpan'}
             </Button>
-            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
-          <div className="stack">
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <TextField label="Slug" value={draft.slug} onChange={(_, data) => setDraft({ ...draft, slug: data.value })} placeholder="pt-fiber" />
+          <form id="tenant-onboarding" className="stack" onSubmit={event => {
+            event.preventDefault()
+            if (saving) return
+            if (creation.beforeSave()) return
+            setSaving(true)
+            setFormError(null)
+            const { monthlyFee, ...rest } = draft
+            void api.post('/api/platform/tenants', {
+              ...rest, monthlyFee: monthlyFee.trim() === '' ? undefined : Number(monthlyFee),
+            }).then(async () => {
+              setNotice(`Tenant "${draft.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
+              closeDraft()
+              await reload()
+            }).catch(err => setFormError(err instanceof ApiError ? err.message : 'Gagal menyimpan tenant. Periksa data dan coba lagi.'))
+              .finally(() => { setSaving(false); creation.finish() })
+          }}>
+            {formError && <p className="error" role="alert">{formError}</p>}
+            <FormSection title="Identitas organisasi" description="Nama ditampilkan di aplikasi. Slug dipakai admin saat masuk ke tenant.">
+              <div className="form-grid">
+                <TextField required label="Nama" autoComplete="organization" value={draft.name} onChange={(_, data) => setDraft({ ...draft, name: data.value })} placeholder="PT Fiber Nusantara" />
+                <TextField required label="Slug" hint="Huruf kecil, angka, dan tanda hubung." value={draft.slug} onChange={(_, data) => setDraft({ ...draft, slug: data.value })} placeholder="pt-fiber" />
               </div>
-              <div style={{ flex: 2 }}>
-                <TextField label="Nama" value={draft.name} onChange={(_, data) => setDraft({ ...draft, name: data.value })} />
-              </div>
-            </div>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <TextField label="Nama admin" value={draft.adminName} onChange={(_, data) => setDraft({ ...draft, adminName: data.value })} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Email admin"
-                  type="email"
-                  value={draft.adminEmail}
-                  onChange={(_, data) => setDraft({ ...draft, adminEmail: data.value })}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Password admin"
-                  type="password"
-                  value={draft.adminPassword}
-                  onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })}
-                />
-              </div>
-            </div>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Harga bulanan khusus (Rp)"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={draft.monthlyFee}
-                  onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })}
-                  placeholder={
-                    defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
-                  }
-                />
-              </div>
-              <div style={{ flex: 1 }} />
-            </div>
-          </div>
+            </FormSection>
+            <FormSection title="Admin pertama" description="Akun ini akan mengelola pengguna dan operasional tenant.">
+              <TextField required label="Nama admin" autoComplete="name" value={draft.adminName} onChange={(_, data) => setDraft({ ...draft, adminName: data.value })} />
+              <TextField required label="Email admin" type="email" autoComplete="email" value={draft.adminEmail} onChange={(_, data) => setDraft({ ...draft, adminEmail: data.value })} />
+              <TextField required label="Password admin" type="password" autoComplete="new-password" value={draft.adminPassword} onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })} />
+            </FormSection>
+            <FormSection title="Langganan" description="Biaya khusus bersifat opsional. Kosongkan untuk mengikuti harga platform.">
+              <TextField label="Harga bulanan khusus (Rp)" type="number" min={0} step="any" value={draft.monthlyFee} onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })} placeholder={defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Gunakan harga default'} />
+            </FormSection>
+          </form>
         )}
       </Blade>
 
@@ -269,9 +265,7 @@ export function TenantsPage() {
           }}
           message={
             <Text as="p" style={{ margin: 0 }}>
-              Hapus tenant <Text as="strong" weight="semibold" >{confirmDelete.name}</Text> (<code>{confirmDelete.slug}</code>) beserta
-              <Text as="strong" weight="semibold" > SELURUH datanya</Text> secara permanen? Tindakan ini{' '}
-              <Text as="strong" weight="semibold" >tidak bisa dibatalkan</Text>.
+              Hapus tenant <Text as="strong" weight="semibold">{confirmDelete.name}</Text> (<code>{confirmDelete.slug}</code>) secara permanen? Tenant yang memiliki riwayat transaksi atau aset gudang tidak dapat dihapus; gunakan Suspend. Penghapusan tenant kosong tidak bisa dibatalkan.
             </Text>
           }
         />

@@ -1,0 +1,383 @@
+{
+  "status": "PASS",
+  "atUtc": "2026-09-27T09:18:57.754389+00:00",
+  "sourceSha256": "e753bfb7b77539517e5281eb9131a45110350c6b1a3c7e9512582785c8903101",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "all13ReleaseHostFilesStillMatch": true,
+  "hostConfigurationSha256": {
+    ".env": "1436e9eed0e2b7bb1fd0c3da38efdf21f3336b0c8c6b3cae8a656b6c97fa1dbc",
+    "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "backup/backup.sh": "6e9a90515ec94bf9a7d7f104676ef46347bb68245b937d29d2560a30965903fa",
+    "backup/entrypoint.sh": "cc42d4f098c5756e4069e5132b2979a635f07ee2b6668f1de054421c91890df3",
+    "backup/restore.sh": "6ff2ee903786d0148b6d81e869f843c15aa2d3d084c0c7f5302b1ae26a029df2",
+    "docker-compose.images.json": "95cfddcd991710f1c962ec9e38db9f20d90cb24bdf48351e3cb4147cf177faea",
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "ftth-compose": "d8a9862f43e08e0b2d81277d0ae28440ab536ddd1f0d5f3eed84dd7f1d3d8135",
+    "postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "radius/freeradius/clients.conf": "e091fd4f86797cd10ee749f1da81433ec9359836bb0ae355201b447c5fa7eeef",
+    "radius/freeradius/mods-enabled/sql": "8b44ff313c4fe64002cbe1bb0ef871dd83f2fa28180d36003b5f47c7f94a1993",
+    "setup-private/loaded-image-identities.json": "13f516643df96885be75bf374ee4dc36ae9979b4058f8aadeb5ebca969b87668"
+  },
+  "containers": {
+    "backup": {
+      "containerId": "e79d20799264f902d585d265ae4a5aa060e63bc0f5a2b01ea26a2182b22f166f",
+      "imageId": "sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "backup-radius": {
+      "containerId": "8144aabecac7f63140e0129d14957f895e1d0fdc319a2bc9362fea87145ced01",
+      "imageId": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "caddy": {
+      "containerId": "ea55105bdce3a00e172872792bb671da537e52c7ce31c1fb43fa14e7ab2950bf",
+      "imageId": "sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default",
+        "ruang-foto_default"
+      ],
+      "hostPortBindings": {
+        "8880/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "8880"
+          }
+        ]
+      }
+    },
+    "freeradius": {
+      "containerId": "90b36a7c0c3c25511b97e7098bc1cdefca2f489e4383607ccb85d15f81b1bb93",
+      "imageId": "sha256:8f250816e151415c3e9504efa633b20d371329918d3e4056b36af846fb6dd3f9",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {
+        "1812/udp": [
+          {
+            "HostIp": "",
+            "HostPort": "1812"
+          }
+        ],
+        "1813/udp": [
+          {
+            "HostIp": "",
+            "HostPort": "1813"
+          }
+        ]
+      }
+    },
+    "genieacs-cwmp": {
+      "containerId": "034761a94861895d3ec1e05056d16ef39283909724866d840940fa9f28325264",
+      "imageId": "sha256:38a796736eac1b871b14da4fddb98b491e787c327c4ac423bcc5a3d6f1cd8cb6",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {
+        "7547/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "7547"
+          }
+        ]
+      }
+    },
+    "genieacs-fs": {
+      "containerId": "6519bec24a17132f755262d541b9e6bc97cc7a3c37ea96fed87e861eea2d2fcd",
+      "imageId": "sha256:38a796736eac1b871b14da4fddb98b491e787c327c4ac423bcc5a3d6f1cd8cb6",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {
+        "7567/tcp": [
+          {
+            "HostIp": "",
+            "HostPort": "7567"
+          }
+        ]
+      }
+    },
+    "genieacs-mongo": {
+      "containerId": "39c0ab076f43e442a561f8dfe1b28583db38657bf0e39c7c9592b8e8c2a124d8",
+      "imageId": "sha256:4be76f674fc4b27859816811b8baa3c51830eb1dbf4ca81a51e26b79edd662ef",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": "healthy",
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "genieacs-nbi": {
+      "containerId": "d2d25b022d07579a9cc8c0bd762e695785f6ec77dd1392c2d6dac71e0b488f9d",
+      "imageId": "sha256:38a796736eac1b871b14da4fddb98b491e787c327c4ac423bcc5a3d6f1cd8cb6",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "minio": {
+      "containerId": "d2f60cd3393f05db9274f927dae2ceee9c61290e7302099dc64f3bca06a3cae4",
+      "imageId": "sha256:9513906814091e436ea84f4db1a031bc726f71a2be419c3e5fcf061c237eb35a",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "postgres": {
+      "containerId": "4e51a0fd27f83c6cfef679c2720adf179434b6621596ccaecffb8dfbf7eb935b",
+      "imageId": "sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": "healthy",
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "radius-db": {
+      "containerId": "e40d234f9538206532a183253c38a1455e2ac5f541009b3c5387cac964ea223e",
+      "imageId": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": "healthy",
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "server": {
+      "containerId": "0af976a6ccf897910a4ebb11e546de9faa563718b846f370a45e4d672feb7fef",
+      "imageId": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    },
+    "web": {
+      "containerId": "a3289c5c47e0157130de5bbc091f195b3f87f5211de04ca152997aa3994da1fd",
+      "imageId": "sha256:ffdf1809281b559bbb3f9021fad2cd829ae5f1220e09e0b376bc35da733063e8",
+      "state": "running",
+      "restartCount": 0,
+      "restartPolicy": "unless-stopped",
+      "health": null,
+      "networks": [
+        "ftth_default"
+      ],
+      "hostPortBindings": {}
+    }
+  },
+  "systemd": {
+    "docker.service": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "openvpn-server@server.service": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "ftth-vpn-sync.timer": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "ftth-vpn-firewall.service": {
+      "active": "active",
+      "enabled": "enabled"
+    }
+  },
+  "vpnFiles": {
+    "/usr/local/sbin/ftth-vpn-firewall": {
+      "sha256": "162da7418aae5c50b06eec65b371a7742f1e2a6c3b0b204ff4a1b33b687c95ff",
+      "mode": "0o750"
+    },
+    "/etc/sysctl.d/99-ftth-vpn.conf": {
+      "sha256": "7de9e61bfd3ef0b34bcacfba0fcbd0896611812ed74015f2dac1446c3bacd743",
+      "mode": "0o600"
+    },
+    "/etc/systemd/system/ftth-vpn-firewall.service": {
+      "sha256": "c30f3952644e6534fa9cb8b4dc2489d16dcc130b101c07c71aff629bac7ad642",
+      "mode": "0o600"
+    },
+    "/etc/systemd/system/ftth-vpn-sync.service": {
+      "sha256": "ea79f6ddf87c80e436d9959c94dcd55aa787276c8b1983d40b3957b35e14ad1b",
+      "mode": "0o600"
+    },
+    "/etc/systemd/system/ftth-vpn-sync.timer": {
+      "sha256": "bf3059dff5f7c4df036aeda2ef685f3c76c2280d687e0ed55515ce697ed99178",
+      "mode": "0o600"
+    },
+    "/etc/systemd/system/openvpn-server@server.service.d/ftth-firewall.conf": {
+      "sha256": "a21ea96d64362dcc3fe7ae36b37a4c785e5edd428c6906595ff40fcd1084fe41",
+      "mode": "0o600"
+    },
+    "/etc/openvpn/server/ca.crt": {
+      "sha256": "8cacce5f1612dc685bf606a583c8dfe1e15469ae09355876f10ce2655da945af",
+      "mode": "0o600"
+    },
+    "/etc/openvpn/server/ftth-connect.sh": {
+      "sha256": "147b176a1980dc0d7324fedb7af25806643757972d16f9647a224203d1ecfe47",
+      "mode": "0o755"
+    },
+    "/etc/openvpn/server/ftth-disconnect.sh": {
+      "sha256": "0e655c532291e142bdb2f250cdb07b82ed09cc9415c90fc23d647ac29d8b5569",
+      "mode": "0o755"
+    },
+    "/etc/openvpn/server/ftth-node.env": {
+      "sha256": "e7c03234cd0c285139b9b9933d32a1fbd9db3c6058232029cae30f3b4f4e1c09",
+      "mode": "0o600"
+    },
+    "/etc/openvpn/server/ftth-sync.sh": {
+      "sha256": "10c06c8ee5a70b59d338fd22a3364b49b56501180f3557d18c007b82f635f878",
+      "mode": "0o755"
+    },
+    "/etc/openvpn/server/ftth-verify.sh": {
+      "sha256": "7d0325d4be99bfb72bf70ba5e5e88968a5bb5ebc2d475c171a47e42b4dabd313",
+      "mode": "0o755"
+    },
+    "/etc/openvpn/server/server.conf": {
+      "sha256": "89bcbd09d89af35cef0666cacfe12d40cfeba486bddba0c21d70991f778bb11c",
+      "mode": "0o600"
+    },
+    "/etc/openvpn/server/server.crt": {
+      "sha256": "90dc45abea89eb8648f18a89a226c78bd99a9aa0e99956d48917de2e406df15c",
+      "mode": "0o600"
+    },
+    "/etc/openvpn/server/server.key": {
+      "sha256": "99cc202d14724a57c13385ce378b79557507e2f2c4abb186a290ca81fcddec69",
+      "mode": "0o600"
+    }
+  },
+  "tunnelFirewallRules": [
+    "-A FORWARD -d 10.8.0.0/24 -j ACCEPT",
+    "-A FORWARD -s 10.8.0.0/24 -j ACCEPT",
+    "-A POSTROUTING -d 10.8.0.0/24 -j MASQUERADE"
+  ],
+  "vpnRoutes": [
+    {
+      "dst": "10.8.0.0/24",
+      "dev": "tun0",
+      "protocol": "kernel",
+      "scope": "link",
+      "prefsrc": "10.8.0.1",
+      "flags": []
+    }
+  ],
+  "ipForward": "1",
+  "tcpListeners": "LISTEN 0      32           0.0.0.0:1194  0.0.0.0:*\nLISTEN 0      4096         0.0.0.0:8880  0.0.0.0:*\nLISTEN 0      4096         0.0.0.0:22    0.0.0.0:*\nLISTEN 0      4096         0.0.0.0:80    0.0.0.0:*\nLISTEN 0      4096         0.0.0.0:443   0.0.0.0:*\nLISTEN 0      4096   127.0.0.53%lo:53    0.0.0.0:*\nLISTEN 0      4096      127.0.0.54:53    0.0.0.0:*\nLISTEN 0      4096       127.0.0.1:8080  0.0.0.0:*\nLISTEN 0      4096         0.0.0.0:7567  0.0.0.0:*\nLISTEN 0      4096         0.0.0.0:7547  0.0.0.0:*\nLISTEN 0      4096       127.0.0.1:38007 0.0.0.0:*\nLISTEN 0      4096            [::]:8880     [::]:*\nLISTEN 0      4096            [::]:22       [::]:*\nLISTEN 0      4096            [::]:80       [::]:*\nLISTEN 0      4096            [::]:443      [::]:*\nLISTEN 0      4096            [::]:7567     [::]:*\nLISTEN 0      4096            [::]:7547     [::]:*",
+  "ufw": "Status: active\n\nTo                         Action      From\n--                         ------      ----\n22/tcp                     ALLOW       Anywhere                  \n80/tcp                     ALLOW       Anywhere                  \n443/tcp                    ALLOW       Anywhere                  \n1194/tcp                   ALLOW       Anywhere                   # FTTH OpenVPN hub\n7547/tcp                   ALLOW       Anywhere                   # FTTH ACS CWMP\n7567/tcp                   ALLOW       Anywhere                   # FTTH ACS firmware\n1812/udp                   ALLOW       Anywhere                   # FTTH RADIUS authentication\n1813/udp                   ALLOW       Anywhere                   # FTTH RADIUS accounting\n8880/tcp                   ALLOW       Anywhere                   # FTTH subscriber isolation portal\n22/tcp (v6)                ALLOW       Anywhere (v6)             \n80/tcp (v6)                ALLOW       Anywhere (v6)             \n443/tcp (v6)               ALLOW       Anywhere (v6)             \n1194/tcp (v6)              ALLOW       Anywhere (v6)              # FTTH OpenVPN hub\n7547/tcp (v6)              ALLOW       Anywhere (v6)              # FTTH ACS CWMP\n7567/tcp (v6)              ALLOW       Anywhere (v6)              # FTTH ACS firmware\n1812/udp (v6)              ALLOW       Anywhere (v6)              # FTTH RADIUS authentication\n1813/udp (v6)              ALLOW       Anywhere (v6)              # FTTH RADIUS accounting\n8880/tcp (v6)              ALLOW       Anywhere (v6)              # FTTH subscriber isolation portal",
+  "backupFiles": {
+    "backups/app/ftth-20260927-161147.dump": {
+      "sha256": "029e5f9f6509e4cee15891351338b798e4ce67ca170c56033c7d089af2ad5e1a",
+      "bytes": 3142445,
+      "mode": "0o600"
+    },
+    "backups/app/ftth-20260927-161745.dump": {
+      "sha256": "ab20b398f7254a1d66bee5b0109649e81de5ce8fbeb6bd05f8f7d3c5adcca4c2",
+      "bytes": 3149170,
+      "mode": "0o600"
+    },
+    "backups/app/globals-20260927-161147.sql": {
+      "sha256": "d8d085ea1b2806022b1e7b3d7ddd3871a4367e47806e6243e07535d3c693cc83",
+      "bytes": 1231,
+      "mode": "0o600"
+    },
+    "backups/app/globals-20260927-161745.sql": {
+      "sha256": "f0c357c7e312a8189c5a8029102669825e9b675c3150e40178c287aad51aae41",
+      "bytes": 1231,
+      "mode": "0o600"
+    },
+    "backups/app/last-backup.txt": {
+      "sha256": "2e8c4010f5520ad518b78d8f64d0576aa1ff6bb52b53f4242efac315a46d825e",
+      "bytes": 100,
+      "mode": "0o644"
+    },
+    "backups/radius/globals-20260927-161059.sql": {
+      "sha256": "166bff833fc5c84be3524c31742a5cc8b26a5b279192caf26ffe86971075f562",
+      "bytes": 667,
+      "mode": "0o600"
+    },
+    "backups/radius/globals-20260927-161148.sql": {
+      "sha256": "3f22b8e4ee509a2a0ad89280bdaac681a7378cef86935de4fc76bcb6bcbb6cec",
+      "bytes": 667,
+      "mode": "0o600"
+    },
+    "backups/radius/globals-20260927-161746.sql": {
+      "sha256": "2c1ca1a43f9f264fa7db6e3be9fed94d6c331e2c649529bb4ea4897179674961",
+      "bytes": 667,
+      "mode": "0o600"
+    },
+    "backups/radius/last-backup.txt": {
+      "sha256": "7052226feb0d00087504253d47d81767f3a35bf988aefa728b6483e70f65ecb7",
+      "bytes": 100,
+      "mode": "0o644"
+    },
+    "backups/radius/radius-20260927-161059.dump": {
+      "sha256": "c0b7681f837566ba0a6ecbcd5c7f2f1edbf2e1fd766fc9c25b64e993dbf1f430",
+      "bytes": 21306,
+      "mode": "0o600"
+    },
+    "backups/radius/radius-20260927-161148.dump": {
+      "sha256": "063faa4713ab877fa5f0fb56e9e8112f71f7adbf8573765c1b0805ee38d53ee1",
+      "bytes": 21306,
+      "mode": "0o600"
+    },
+    "backups/radius/radius-20260927-161746.dump": {
+      "sha256": "229f33cbab8916ee506bb7a35dce6927395d027cd713d69fd305cf0cc33635f9",
+      "bytes": 21306,
+      "mode": "0o600"
+    }
+  },
+  "edgeSha256": "347ac78d7990687218ea9ccddbfad2b5236d327608f4c7a2537c6ab4cfcaf0d6",
+  "otherProxyBytesStillPreserved": true,
+  "privateFileModes": {
+    "admin-credentials.txt": "0o600",
+    "connection-settings.txt": "0o600",
+    "vpn-registration.json": "0o600"
+  }
+}

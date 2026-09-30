@@ -1,0 +1,50 @@
+{
+  "task": 36,
+  "sourceCommit": "5dd0f46e",
+  "backend": {
+    "tests": 5,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "3c4f9f21fe87ec74d1885469ab8632e8ec8dbf30c8f781aa1ca61a23e13535ef"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnReacquisitionIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "cd0afd2c6d053afbb2712c61d757a2ac2d0e23b5ba44305bde72262b9bd51afd"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseRmaWorkOrderReadIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "80ab742ff68dbbb0d21248b1cebdb4e7a3f83433342e94a9664b124ccfdb9361"
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "447fee29103c62309cf022c0ac923381d4170cb4d8a406e7ba0c454f8b6bf3ce"
+      }
+    ],
+    "build": "BUILD SUCCESSFUL in 3m36s"
+  },
+  "acceptance": [
+    "Persisted title request page and count across two source documents with exact signed evidence",
+    "Read-only return/approval viewer, original WO area, tenant isolation and revoked location scope",
+    "Independent approval records only the selected request effect and preserves original CUSTOMER assignment owner",
+    "Current RMA revision/receiver reads and supplier repair replay scopes"
+  ],
+  "priorFailure": "8cec4ee8 failed compilation; no test proof claimed for that run",
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

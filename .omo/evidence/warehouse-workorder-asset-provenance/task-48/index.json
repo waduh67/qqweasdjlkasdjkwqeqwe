@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 2,
+  "task": 48,
+  "status": "INDEX_OF_AVAILABLE_EVIDENCE_NOT_FINAL_TASK_ACCEPTANCE",
+  "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+  "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "implementationSource": [
+    {
+      "path": ".github/workflows/warehouse.yml",
+      "sha256": "9477b01cf3a9fa03ac8c1eab27ca3ee9fb38e93604c552b7f9e0e456950304c1"
+    },
+    {
+      "path": ".github/workflows/deploy.yml",
+      "sha256": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20"
+    },
+    {
+      "path": "scripts/warehouse/ci-results.py",
+      "sha256": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912"
+    },
+    {
+      "path": "scripts/warehouse/ci-artifacts.py",
+      "sha256": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f"
+    },
+    {
+      "path": "scripts/warehouse/publish-images.py",
+      "sha256": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e"
+    },
+    {
+      "path": "scripts/warehouse/image-smoke.sh",
+      "sha256": "0b3eb2c7e58ecd62c79d8649043b0abfddc563ca00ffb861812a9fc21a2474ed"
+    },
+    {
+      "path": "docs/warehouse-ci.md",
+      "sha256": "fc7c6c0be00becd2367a861caef8025cabe5fc02bd227bf782d3f9b13e20564c"
+    }
+  ],
+  "requiredSelectors": [],
+  "independentMapping": "f1-1306b65c-source-evidence.json#tasks/47",
+  "historicalEvidence": [
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/ci-foundation-verification.json",
+      "sha256": "66b40cba573ef469ec14fcea0ba4a0d71a077bba32388737fbefb87ee8f16f51",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/current-release-guard-verification.json",
+      "sha256": "268897c49d16ca0ccc0342a2fc21597d087407d94a1ed80ffaf2b6ff732f8ac4",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/docker-image-smoke-verification.json",
+      "sha256": "7c678450de2b466f43ea4e45fb5ee005bfb3914db61a8e984812247c5b2138d5",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/interrupted-gradle-evidence-verification.json",
+      "sha256": "869fda78b5d492d95e78bac6bc9ac29ea69860046ebe59ad7162f3f64c90e571",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    },
+    {
+      "safeReference": ".omo/evidence/warehouse-workorder-asset-provenance/task48/minio-source-verification.json",
+      "sha256": "f731372718b4075617e4e4cac394f8c8c1834c0c1c4cca379419442c6cb96514",
+      "authority": "REFERENCE_ONLY; content/source/command/counts require validation",
+      "availability": "PRESENT_HASH_VERIFIED"
+    }
+  ],
+  "historicalTaskDirectoryWasMissing": false,
+  "verifiedLaterBackend": {
+    "testedCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
+    "proof": "task46/ci-149ecfb2-complete-server-verification.json",
+    "proofSha256": "78496fabf1f5ed9f1bebd3a3841aa56f9e983a2f2151ed9fb5b50ef88ed6628d",
+    "matches": []
+  },
+  "verifiedLaterNonserver": {
+    "testedCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "proof": "task46/ci-e1782718-nonserver-verification.json",
+    "proofSha256": "fe83dde8e4c8e8c2b31baae41c68baf45980966f7afbab394c223c66d572ebc2",
+    "scope": "Aggregate web/browser/shared/native/upgrade/image evidence; see individual reports for selectors."
+  },
+  "limitations": [
+    "All previous historical and c902 source/evidence blocks are preserved with original identities.",
+    "Exact1306 current nonserver and independent F3 source-bound PASS are available; current1306 full server and final F2/F4/F1 remain pending.",
+    "Old1d full pass, failed6b focused run and cancelledc902 run do not establish current full-CI acceptance."
+  ],
+  "priorIndexSha256": "13c79e55d98636e2c71caa487958311b4dd11e49765a6e24ca5f2d7ac85877c5",
+  "priorSourceMapping": {
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+    "implementationSource": [
+      {
+        "path": ".github/workflows/warehouse.yml",
+        "line": 1,
+        "sha256": "3037ccfddecf452380ff4036ed50d3ec0d7368a971900a300f96496ce78c3de5"
+      },
+      {
+        "path": ".github/workflows/deploy.yml",
+        "line": 1,
+        "sha256": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20"
+      },
+      {
+        "path": "scripts/warehouse/ci-results.py",
+        "line": 12,
+        "sha256": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912"
+      },
+      {
+        "path": "scripts/warehouse/ci-artifacts.py",
+        "line": 1,
+        "sha256": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f"
+      },
+      {
+        "path": "scripts/warehouse/publish-images.py",
+        "line": 1,
+        "sha256": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e"
+      },
+      {
+        "path": "scripts/warehouse/image-smoke.sh",
+        "line": 1,
+        "sha256": "0b3eb2c7e58ecd62c79d8649043b0abfddc563ca00ffb861812a9fc21a2474ed"
+      }
+    ],
+    "independentMapping": "f1-compliance-source-evidence.json#tasks/47",
+    "limitations": [
+      "This index preserves source and proof identities; later uncommitted changes are not approved by old tests.",
+      "Missing original task-time evidence was not reconstructed or invented.",
+      "Final acceptance remains subject to current-source regression, remaining C7/C8 corrections and independent F1-F4."
+    ]
+  },
+  "currentEvidence": {
+    "reviewedAtUtc": "2026-09-26T19:38:51.142031+00:00",
+    "reviewedHead": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+    "evidenceHead": "7785fcff091899c684d1dde37ac8254139058f74",
+    "mapping": {
+      "path": "f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa"
+    },
+    "status": "SOURCE_CURRENT_NONSERVER_AND_F3_MAPPED_CURRENT_SERVER_PENDING",
+    "literalSelectors": {},
+    "proofReferences": [
+      {
+        "path": "task46/f1-1306b65c-evidence-preparation.json",
+        "sha256": "7414ab3020f5dbe28da48be679cb03bb1fd65260f70886dd09343c884a30084f"
+      },
+      {
+        "path": "task46/f4-ci-1306b65c-nonserver-recheck.json",
+        "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4"
+      },
+      {
+        "path": "task46/f3-final-verdict.json",
+        "sha256": "023be27141824a59c450d2edf1648c1b109b543fab8bf04f241c6a5576a540dd"
+      }
+    ],
+    "assertionsAndExpectedFailureBehavior": "QA: run CI-equivalent commands locally on isolated environment and inspect generated job dependencies; deliberately fail a test/missing browser/no-tests/migration assertion in test harness and prove publish/deploy cannot run; restore fixture before commit. Save E(48). Commit: `ci(warehouse): wajibkan pengujian alur nyata sebelum rilis`.",
+    "finalAcceptance": false
+  },
+  "priorCurrentEvidenceC902": {
+    "reviewedAtUtc": "2026-09-26T19:05:06.434238+00:00",
+    "reviewedHead": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "mapping": {
+      "path": "f1-final-preliminary-source-evidence.json",
+      "sha256": "3506908253c6ece6f238d34e2e7c0910a8f1798655163f85379470e45b4f386d"
+    },
+    "status": "SOURCE_AND_AVAILABLE_EXECUTION_MAPPED_FINAL_GATES_PENDING",
+    "literalSelectors": {},
+    "proofReferences": [
+      {
+        "path": "task46/f4-ci-1d14f4b9-server-recheck.json",
+        "sha256": "03982da1be863f8d84946650c575374ec8c0f7747b32617307e21894f5e97b26"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-server-recheck.json",
+        "sha256": "c8583a039556a5f2e69a23b6402e839e59db37888b5a932b2e80c82ead7229ea"
+      },
+      {
+        "path": "task46/f4-ci-6bfb1337-nonserver-recheck.json",
+        "sha256": "f8774a425f4314e2e7e31e9f118f7fdec18d329bfe8c7c4cddf88f03cd22e348"
+      },
+      {
+        "path": "task46/local-contract-expiry-r1.json",
+        "sha256": "4e064e704f69d1cd7c2c822b48aa98c700aecf7594f50dd67f66a0bc03d64c1a"
+      },
+      {
+        "path": "task46/f1-current-evidence-recheck-c90250d2.json",
+        "sha256": "10f48984f90cda0a4561a6f7d96546b056657657e89cc1cf9ae95ce193c36253"
+      }
+    ],
+    "focusedEvidenceIds": [],
+    "assertionsAndExpectedFailureBehavior": "QA: run CI-equivalent commands locally on isolated environment and inspect generated job dependencies; deliberately fail a test/missing browser/no-tests/migration assertion in test harness and prove publish/deploy cannot run; restore fixture before commit. Save E(48). Commit: `ci(warehouse): wajibkan pengujian alur nyata sebelum rilis`.",
+    "commands": {
+      "requiredPlanMacros": [],
+      "expansionDefinition": ".omo/plans/warehouse-workorder-asset-provenance.md#verification-strategy",
+      "actualExecution": "Source-bound aggregate CI runs36252487886 and36260966532, and local corrected contract run; see referenced proof scopes and logs by safe hash. A required macro listed here is not claimed as a new historical task-time invocation."
+    },
+    "finalAcceptance": false
+  },
+  "priorSourceMappingC902": {
+    "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+    "implementationSource": [
+      {
+        "path": ".github/workflows/warehouse.yml",
+        "sha256": "9477b01cf3a9fa03ac8c1eab27ca3ee9fb38e93604c552b7f9e0e456950304c1"
+      },
+      {
+        "path": ".github/workflows/deploy.yml",
+        "sha256": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20"
+      },
+      {
+        "path": "scripts/warehouse/ci-results.py",
+        "sha256": "20524c63781c13a6106b5a375e3b6f83181e0ba8ebf25ccb05c345df51ab8912"
+      },
+      {
+        "path": "scripts/warehouse/ci-artifacts.py",
+        "sha256": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f"
+      },
+      {
+        "path": "scripts/warehouse/publish-images.py",
+        "sha256": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e"
+      },
+      {
+        "path": "scripts/warehouse/image-smoke.sh",
+        "sha256": "0b3eb2c7e58ecd62c79d8649043b0abfddc563ca00ffb861812a9fc21a2474ed"
+      },
+      {
+        "path": "docs/warehouse-ci.md",
+        "sha256": "fc7c6c0be00becd2367a861caef8025cabe5fc02bd227bf782d3f9b13e20564c"
+      }
+    ],
+    "independentMapping": "f1-final-preliminary-source-evidence.json#tasks/47",
+    "limitations": [
+      "Original historicalEvidence and verifiedLaterBackend/verifiedLaterNonserver blocks are preserved verbatim with their original identities.",
+      "Current references index actual available execution; they do not invent missing original task-time command/result artifacts.",
+      "1d complete server proof predates178.12. 6b focused CI failed two stale contract expectations and skipped full server/upgrade gates. Current local15 contract/module pass is bounded.",
+      "6b nonserver/offline inputs match c902 relevant source; only WarehouseContractTest.kt changed. This is not an aggregate current-CI PASS.",
+      "Current CI36264069182, independent F3 and final task46–48/F1–F4 closure remain pending in this capture."
+    ]
+  }
+}

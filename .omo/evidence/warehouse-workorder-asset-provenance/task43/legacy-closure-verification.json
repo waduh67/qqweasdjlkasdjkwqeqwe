@@ -1,0 +1,70 @@
+{
+  "phase": "V177.10 legacy write closure and immutable admitted migration review",
+  "baseCommit": "8e84c46476b78c0736d182d5ee76e52d4f678d5a",
+  "build": "BUILD SUCCESSFUL in 3m 38s",
+  "tests": 31,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITConcurrency",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.WarehouseMigrationFulfillmentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "files": {
+    "server/src/main/resources/db/migration/V177_10__warehouse_legacy_write_closure.sql": "7fb239b034ff5fae3469d857d055acdddeb9129c569a74f43eccea860dd3df08",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentIT.kt": "23086b942bc4d5ae05f7c10c234d81ed1d6657b90dc87387884ed239a702e1be",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseMigrationFulfillmentIT.kt": "5bcfb59342d54a36b99b252a292445b739a323078c11c588664bb5910b001202",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "592772a6856b4bbccef5a394453b4399aa6bfa14ae551e2ad43d113f621959be"
+  },
+  "checks": [
+    "Full packaged boot and real HTTP + PostgreSQL + MinIO migration/opening gate pass with original legacy fixtures.",
+    "After cutoff, new legacy WORK_ORDER checkpoints, outbox messages and effect progress reject before writing; current frozen fulfillment remains operational.",
+    "Legacy source/type/hash/required-effect/delivery identity changes and terminal reopen reject. Existing pending legacy processing still records reconciliation without stock; terminal accept/process replay and actual lease/ACK remain valid.",
+    "Application writes to old tombstones are revoked and update/delete history is append-only. Current identity claims remain permanent.",
+    "After independent opening admission, real file upload and new resolution return HTTP409; original case resolution history remains readable and unchanged. The guard serializes on the same batch advisory as admission.",
+    "Normal WO material verification and customer/BNG/order/visit owner effects, concurrency, rollback/retry, original asset baseline, zero baseline and current-source history checks pass.",
+    "The earlier test that changed requiredEffects after review now proves the stronger earlier SQL rejection; immutable business binding never reaches a stale final approval."
+  ],
+  "remaining": [
+    "Finalization/M06 and mixed-tenant restart",
+    "Full provenance management UI and browser acceptance",
+    "Tasks44\u201348/F1\u2013F4"
+  ]
+}

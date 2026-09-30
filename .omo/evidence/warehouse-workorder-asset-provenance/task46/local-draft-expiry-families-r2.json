@@ -1,0 +1,114 @@
+{
+  "status": "FAILED",
+  "parent": "1d14f4b9",
+  "counts": {
+    "tests": 40,
+    "failures": 3,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "d21cbf7c129f7046c0ec83b84ba1c3ee8c4fdd00dcd3bf4a48c890daf456abe7",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.MaterialDraftExpiryIT",
+      "sha256": "47cb32e7a6fa2d3a9ced28e6319cd9992c88cd9567a10e3d2f90ce8c805f1624",
+      "tests": 3,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+      "sha256": "2dfe6fe18c0d0cf9d9d0383610f4c370901db057397f524c820b2a0e1bfad142",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCompensationIT",
+      "sha256": "78ad1dc410419749e44330138b5fd7d78877bd36f52a2f36e07a245be2cbc4db",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftIT",
+      "sha256": "0e070c647869c02da1121ffb96ed3a6095a8d9879d49948d4dc8827a067ceb1d",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+      "sha256": "00c1ae1cdf8e0063e4499576b6e221da5e9609fbd9b8c9ff133909bacc2162e1",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryApprovalIT",
+      "sha256": "f60767f1b14e7c830345064f8c6df55a3ca1808d8ec73509d5dcfb96eaa902e7",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryDocumentIT",
+      "sha256": "e031a54e4f47061993105511c997e047eaeec6c12c41b94c23a38748c32e9efd",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryReceiptIT",
+      "sha256": "a5c5918ea2476c8e20976629c367a745b13bb522d306e529d1b0699b0aeb3d75",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReturnReacquisitionIT",
+      "sha256": "2cf4b140fa560353e1b0284b1e51c78f831dd4a5988dba23493d008fb08e2b73",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementIT",
+      "sha256": "de8b3725cc6bef69e7c1c9663459b68bd598e78a1ce10b8c9c8de103d610d2dc",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftIT",
+      "sha256": "c6d81001a3b771a00ff84139f49938c35dabed2b3bd83a15c722746333b553cb",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 1,
+  "cleanupExitCode": 0,
+  "runnerSha256": "bd012a1fc0e9b92c08b3c5a36c245537c4bd76f17bf5d73f0bbec1438417a324",
+  "sourceInventorySha256": "7da2e0e31a5a6656fc0fb6840d329b59e2492ad6d7602b1f934fb12b1d3af4f6",
+  "explanation": "Three new MaterialDraftExpiryIT tests called nonexistent submit path instead of submit-request. Corrected only those test endpoints; material R1 rerun pending. Remaining37tests passed, including11actual-clock receipt/transfer/count/approval cases. No aggregate pass claim.",
+  "priorAttempt": "FamiliesR1 failed test compilation: JsonNode member map needed asSequence/toList. Zero tests executed."
+}

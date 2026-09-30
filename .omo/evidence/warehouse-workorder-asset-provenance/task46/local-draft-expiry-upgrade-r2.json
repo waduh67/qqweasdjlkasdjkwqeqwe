@@ -1,0 +1,76 @@
+{
+  "status": "PASS_FOCUSED",
+  "parent": "a9cd278f67a9450770869587be764145cd1d7b53",
+  "counts": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "71083f1c3e6794a8237d816dd0390616557419ba956f0e971ac27cc726aa7689",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+      "sha256": "2fd68070f1ab92fe96cb794ec0ea59760a3a45a8290cc648bdb31093fb6349ac",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+      "sha256": "3e4a941b8ec5ccd93bb4dff3fcca09613cb433b23c79c463e5a91c7c5c3aea50",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+      "sha256": "66297e78ee874ff3d67fd221ebb8827f8511457934b7be4a3c239722b1bcb319",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 0,
+  "cleanupExitCode": 0,
+  "sourceInputCount": 2618,
+  "sourceInventorySha256": "37dc672ba1171b89acd5633d059ab7075a5ee4f152f86f9df4c8f802bf5815bf",
+  "runnerSha256": "9dea7d9b6a6479aaadbe339790306272b22fae5e6a466826eda85f96b0a41296",
+  "bootstrapDescriptorSha256": "08ab0d500dcf54cf836f9c76f5b17e7b2a0eac9582f786116b5cc426f8f69732",
+  "handoffs": [
+    {
+      "family": "count",
+      "schemaBefore": "178.10",
+      "pinnedApplication": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+      "seedSha256": "46f46a7f69a258bb2624e1760d45eae06c9f7d294c4c4425b649685bd0719603",
+      "bootstrapDescriptorSha256": "08ab0d500dcf54cf836f9c76f5b17e7b2a0eac9582f786116b5cc426f8f69732",
+      "processExitCode": 0,
+      "oldProcessClosedBeforeCurrentMigration": true
+    },
+    {
+      "family": "transfer",
+      "schemaBefore": "178.9",
+      "pinnedApplication": "1d14f4b9aebcd1c1a9e8c84041259ff56a422005",
+      "seedSha256": "945c72231416e3b5419982e04bd7bc0d9aed29cd72605398f83a98f82ca356f8",
+      "bootstrapDescriptorSha256": "08ab0d500dcf54cf836f9c76f5b17e7b2a0eac9582f786116b5cc426f8f69732",
+      "processExitCode": 0,
+      "oldProcessClosedBeforeCurrentMigration": true
+    }
+  ],
+  "scope": "Two original upgrade tests retained as modern tests; separate JVM compiled from pinned pre-C7 source performs real HTTP setup on owned old-schema database; process closes before full migration and current application context. Original source/replay fingerprints preserved, legacy baseline asserted, draft remains editable while started/posted source remains protected. Two startup failures for old schema and disabled required trigger; three modularity tests. Source inputs stable.",
+  "previousAttempt": "R1 failed before test execution: init script also applied to build-logic without :server; findProject guard fixed. No skipped test claimed as pass.",
+  "workflowValidation": "5 existing acceptance workflow tests pass; added private encrypted capture of all focused/full handoff folders",
+  "excludes": "Aged/nonfinite full backfill matrix, specialized expiry, real C7 browser, current unfiltered CI, finalF1-F4",
+  "laterChange": "qa.sh selector recognition extended to simple/method patterns following bounded reviewer finding;7probes executed against actual selector block passed. R2 captured qa.sh predates this selector-only patch. No product/driver byte changed.",
+  "wireReplayLimit": "Count create/start/submit and transfer create use original raw response strings; transfer dispatch compares parsed JSON plus unchanged durable stored operation fingerprint."
+}

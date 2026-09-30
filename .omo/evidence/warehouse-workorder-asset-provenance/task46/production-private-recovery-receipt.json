@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "createdAtUtc": "2026-09-27T09:20:05.511951+00:00",
+  "archive": "/opt/ftth/setup-private/server-recovery-20260927.tar.gz",
+  "sha256": "ed7cae5b055190d985b39b84fa4f374e36cfa76fce9db1279d731ae534dbe957",
+  "bytes": 921412,
+  "containsSecrets": true,
+  "scope": "Initial configuration/PKI/app+RADIUS DB backup snapshot; no Docker image payload, MinIO object content, Mongo volume or unrelated Drive data",
+  "testedWholeHostRestore": false
+}

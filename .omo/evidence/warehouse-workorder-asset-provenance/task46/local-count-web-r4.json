@@ -1,0 +1,46 @@
+{
+  "status": "PASSED",
+  "completedRunnerExitCode": 0,
+  "baseCommit": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+  "workingTree": "COUNT saved-draft implementation, including25-row editor pages retaining all100 entries",
+  "counts": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reportSha256": "8bb42980479553a03f21a3358ff5baace75f79a4e6a905e1ece2976377128467",
+  "logSha256": "3caa3178783e6c1ac028852d60b51c6643cd9e18b03416324a4692a9e3cca71a",
+  "checks": {
+    "unitTests": "PASSED",
+    "warehouseE2eTypecheck": "PASSED",
+    "lint": "PASSED_WITH_WARNINGS",
+    "productionBuild": "PASSED"
+  },
+  "reportedWarningLines": 99,
+  "sourceSha256": {
+    "web/src/pages/warehouse/WarehouseCountEditor.tsx": "7d8a9813b8b60a30ab73a8cb2ed22fd9fd9c7f219a44e0c52ae50e255ad1cf31",
+    "web/src/pages/warehouse/WarehouseCountEdit.tsx": "189b9c167640f1547b03cf0e4f01efd40df8fad87d4ad8d5539c734fd7f61202",
+    "web/src/pages/warehouse/WarehouseCountsPage.tsx": "968d5a470ad4339379bbbc0a03b7650742b59c88637423955bf3ab3235a8d389",
+    "web/src/pages/warehouse/WarehouseCountsPage.test.tsx": "8adee87766f0c20e6135a409d216176ff2ed207c099c7f7d0b741ff7f70ca9fe",
+    "web/src/api/warehouse/counts.ts": "68e2b4faa9972d4ccc3ff9e69961b7fe3375b9470c8f02a7094f5fd928f96900",
+    "web/e2e/warehouse/count-journey.ts": "92626c27ea0ffa291368085679d401f020360c4bb9e010e8509d05a697d582dd"
+  },
+  "max100CaseSeconds": 1.845382079,
+  "limitation": "Focused UI tests and build only; real browser and full current regression remain required.",
+  "runner": {
+    "shell": "bash",
+    "failFast": "set -e; each command is sequential and unguarded, EXIT trap reports aggregate status",
+    "observedTerminalOutput": "COUNT_WEB_CHECK_EXIT 0",
+    "observedExecExitCode": 0,
+    "execSessionId": 5469,
+    "receiptSource": "Root tool response from write_stdin after this exact inline runner completed; recorded after execution",
+    "commands": [
+      "timeout --kill-after=15s 180s npm test -- --run src/pages/warehouse/WarehouseCountsPage.test.tsx --reporter=default --reporter=junit --outputFile.junit=<private-runtime>/count-web-r4.xml",
+      "timeout --kill-after=15s 180s npm run typecheck:warehouse-e2e",
+      "timeout --kill-after=15s 180s npm run lint",
+      "timeout --kill-after=15s 240s npm run build"
+    ],
+    "logging": "All four commands redirect or append stdout and stderr into count-web-r4.log; EXIT trap emits status to the tool response."
+  }
+}

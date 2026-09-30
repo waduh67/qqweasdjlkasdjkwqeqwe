@@ -29,6 +29,10 @@ interface WorkOrderJpaRepository :
     JpaRepository<WorkOrderJpaEntity, UUID>,
     JpaSpecificationExecutor<WorkOrderJpaEntity> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select workOrder from WorkOrderJpaEntity workOrder where workOrder.id=:id")
+    fun findLockedById(id: UUID): WorkOrderJpaEntity?
+
     @Query("select w.status as status, count(w) as total from WorkOrderJpaEntity w group by w.status")
     fun countGroupedByStatus(): List<WorkOrderStatusCount>
 

@@ -64,6 +64,7 @@ class Subscriber360ServiceTest {
             com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360Access(
                 subscription = true, placement = true, session = true,
                 billing = true, cpe = true, workOrder = true,
+                materialHistory = true, materialHistoryV2 = true,
             ),
         )
     }
@@ -104,7 +105,18 @@ class Subscriber360ServiceTest {
 
     // --- Perkakas uji ---
 
-    private fun service(permissions: Set<String>, customer: CustomerApi) = Subscriber360Service(
+    @Test
+    fun `material query failure propagates while forbidden facet never queries inventory`() {
+        val failure = IllegalStateException("material query unavailable")
+        assertThatThrownBy { service(ALL_FACET_PERMISSIONS, FakeCustomerApi(true), failure).assemble(customerId) }
+            .isSameAs(failure)
+        val denied = service(setOf("customer.customer.view"), FakeCustomerApi(true), failure).assemble(customerId)
+        assertThat(denied.materialHistory).isNull()
+        assertThat(denied.materialHistoryV2).isNull()
+        assertThat(denied.access.materialHistoryV2).isFalse()
+    }
+
+    private fun service(permissions: Set<String>, customer: CustomerApi, materialFailure: RuntimeException? = null) = Subscriber360Service(
         customerApi = customer,
         bngApi = FakeBngApi(),
         billingApi = FakeBillingApi(),
@@ -112,6 +124,18 @@ class Subscriber360ServiceTest {
         workorderApi = FakeWorkorderApi(customerId),
         // Tanpa penjaga kunci baca-saja: kelas ini menguji izin, bukan status langganan.
         authz = AccessChecker(FakeCurrentUser(permissions), FixedObjectProvider(null)),
+        currentUser = FakeCurrentUser(permissions),
+        customerReadAccess = org.mockito.Mockito.mock(com.duluin.ftth.customer.CustomerReadAccessApi::class.java),
+        materialApi = org.mockito.Mockito.mock(com.duluin.ftth.inventory.MaterialConsumptionApi::class.java) { invocation ->
+            if (invocation.method.name == "forCustomer") emptyList<com.duluin.ftth.inventory.CustomerMaterialFactRef>()
+            else throw UnsupportedOperationException(invocation.method.name)
+        },
+        materialApiV2 = object : com.duluin.ftth.inventory.MaterialConsumptionApiV2 {
+            override fun forCustomer(customerId: UUID, page: com.duluin.ftth.inventory.WarehousePageRequest): com.duluin.ftth.inventory.WarehousePage<com.duluin.ftth.inventory.CustomerMaterialFactV2> {
+                materialFailure?.let { throw it }
+                return com.duluin.ftth.inventory.WarehousePage(emptyList(), page.page, page.size, 0)
+            }
+        },
     )
 
     private inner class FakeCurrentUser(private val permissions: Set<String>) : CurrentUserProvider {

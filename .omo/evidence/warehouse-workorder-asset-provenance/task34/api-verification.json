@@ -1,0 +1,24 @@
+{
+  "task": 34,
+  "phase": "typed explorer API foundation",
+  "passed": 63,
+  "failed": 0,
+  "skipped": 0,
+  "checks": [
+    "Position identity distinct from projection ID; consistent quantity units",
+    "Known exact cost vs unknown vs hidden",
+    "Legacy unit remains null;unknownstockneveravailable",
+    "Conservationfalse and childCount beyond first100 retained",
+    "Composite reservation ID and discriminatedtimeline fields",
+    "Server-side bucket serialized beforepaging;minimum fromresponse"
+  ],
+  "typeScript": "PASS",
+  "lint": "PASS; no warning in warehouse changes",
+  "files": {
+    "web/src/api/warehouse/stock.ts": "e5aa1c8daf74a50565ac493fdc488a76def0984e7aec5571d3f7db15b2d74b2e",
+    "web/src/api/warehouse/stock.test.ts": "dae860e753ebc60bc0cc05a4c6bb0959a55aeb8c2b51cd7708501f03c533ef14",
+    "web/src/api/warehouse/models.ts": "db2c6c45465dd227e1fa698aa88ae33f037095a0faf53abd934ecb0ad0e24baa",
+    "web/src/api/warehouse/masters.ts": "5aeb7e8c10e281ae8c6ca139421c252f4e79b7ae5bb399b78e2a02264a2639b8"
+  },
+  "remaining": "Stock UI and browser pending; bucket backend tests pending"
+}

@@ -55,6 +55,9 @@ class CpeService(
     @Value("\${ftth.cpe.online-stale-after:PT15M}") private val onlineStaleAfter: Duration,
     @Value("\${ftth.cpe.diagnostics.ping-host:8.8.8.8}") private val defaultPingHost: String,
     @Value("\${ftth.cpe.diagnostics.ping-count:4}") private val pingCount: Int,
+    private val observations: com.duluin.ftth.customer.CustomerObservationApi,
+    private val operations: CpeOperationGuard,
+    private val eligibility: CpeOwnershipEligibility,
 ) : CpeQuery, ManageCpeUseCase {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -73,24 +76,48 @@ class CpeService(
     @Transactional(readOnly = true)
     override fun liveState(deviceId: UUID): CpeLiveView {
         val device = requireDevice(deviceId)
-        val wifi = acsGateway.wifiNetworks(device.genieacsId)
-            .map { WifiView(it.ref, it.ssid, it.passphrase, it.band, it.enabled) }
-        val hosts = acsGateway.connectedHosts(device.genieacsId)
-            .map { HostView(it.hostName, it.ipAddress, it.macAddress, it.active) }
+        val episode = observations.currentEpisode(device.serialNumber)
+            ?: throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
+        val before = acsGateway.findDevice(device.genieacsId)
+        fun fresh(snapshot: com.duluin.ftth.cpe.application.port.outbound.AcsDevice?): Boolean =
+            snapshot != null && !snapshot.hasInvalidParameterTime && snapshot.serialNumber.trim().uppercase(Locale.ROOT) == device.serialNumber.trim().uppercase(Locale.ROOT) &&
+                (snapshot.knownParameterTime ?: snapshot.observedFieldsAt)?.isBefore(episode.startedAt) != true &&
+                (episode.legacy || (snapshot.lastInformAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true &&
+                    snapshot.observedFieldsAt?.let { !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true))
+        if (!fresh(before)) throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
+        val wifiReadings = acsGateway.wifiNetworks(device.genieacsId)
+        val hostReadings = acsGateway.connectedHosts(device.genieacsId)
+        if (wifiReadings.any { it.hasInvalidParameterTime } || hostReadings.any { it.hasInvalidParameterTime })
+            throw NotFoundException("CPE_PARAMETER_FRESHNESS_REQUIRED")
+        if ((wifiReadings.mapNotNull { it.knownParameterTime ?: it.observedAt } + hostReadings.mapNotNull { it.knownParameterTime ?: it.observedAt }).any { it.isBefore(episode.startedAt) })
+            throw NotFoundException("CPE_PARAMETER_FRESHNESS_REQUIRED")
+        if (!episode.legacy && (wifiReadings.map { it.observedAt } + hostReadings.map { it.observedAt }).any {
+            it == null || it.isBefore(episode.startedAt) || it.isAfter(Instant.now().plusSeconds(300)) })
+            throw NotFoundException("CPE_PARAMETER_FRESHNESS_REQUIRED")
+        val wifi = wifiReadings.map { WifiView(it.ref, it.ssid, it.passphrase, it.band, it.enabled) }
+        val hosts = hostReadings.map { HostView(it.hostName, it.ipAddress, it.macAddress, it.active) }
+        val after = acsGateway.findDevice(device.genieacsId)
+        if (!fresh(after) || after?.lastInformAt != before?.lastInformAt ||
+            observations.currentEpisode(device.serialNumber) != episode || deviceRepository.findById(deviceId) == null)
+            throw NotFoundException("CPE_EPISODE_FRESHNESS_REQUIRED")
+        confirm(device)
         return CpeLiveView(wifi, hosts)
     }
 
     @Transactional(readOnly = true)
     override fun availableFirmware(deviceId: UUID): List<FirmwareFileView> {
         val device = requireDevice(deviceId)
-        return acsGateway.availableFirmware(device.productClass, device.oui)
+        val result = acsGateway.availableFirmware(device.productClass, device.oui)
             .map { FirmwareFileView(it.name, it.version, it.productClass, it.sizeBytes) }
+        confirm(device)
+        return result
     }
 
     override fun reboot(deviceId: UUID): CpeActionView {
         val device = requireDevice(deviceId)
         val actor = currentUser.current()
         val outcome = runCatching { acsGateway.reboot(device.genieacsId) }
+        confirm(device)
         val entry = if (outcome.isSuccess) {
             CpeActionLog.succeeded(deviceId, CpeActionType.REBOOT, "Reboot dijadwalkan", actor.userId, actor.email)
         } else {
@@ -115,6 +142,7 @@ class CpeService(
         val actor = currentUser.current()
         val summary = listOfNotNull(ssid?.let { "SSID→$it" }, passphrase?.let { "password diubah" }).joinToString(", ")
         val outcome = runCatching { acsGateway.applyWifi(device.genieacsId, WifiChange(command.ref, ssid, passphrase)) }
+        confirm(device)
         val entry = if (outcome.isSuccess) {
             CpeActionLog.succeeded(deviceId, CpeActionType.SET_WIFI, summary, actor.userId, actor.email)
         } else {
@@ -134,7 +162,8 @@ class CpeService(
         if (host.length > 256) throw ValidationException("Alamat host maksimal 256 karakter")
 
         val actor = currentUser.current()
-        val outcome = runCatching { acsGateway.runPing(device.genieacsId, host, pingCount) }
+        val outcome = runCatching { acsGateway.runPing(device.genieacsId, host, pingCount) { confirm(device) } }
+        confirm(device)
         val result = outcome.getOrNull()
         val ok = result?.complete == true
         val message = when {
@@ -166,7 +195,8 @@ class CpeService(
     override fun runSpeedTest(deviceId: UUID, direction: SpeedDirection): SpeedTestDiagnosticView {
         val device = requireDevice(deviceId)
         val actor = currentUser.current()
-        val outcome = runCatching { acsGateway.runSpeedTest(device.genieacsId, direction) }
+        val outcome = runCatching { acsGateway.runSpeedTest(device.genieacsId, direction) { confirm(device) } }
+        confirm(device)
         val result = outcome.getOrNull()
         val throughput = result?.throughputMbps
         val ok = result != null && result.complete && throughput != null
@@ -202,7 +232,9 @@ class CpeService(
 
         val actor = currentUser.current()
         val label = "Firmware→${target.name}" + (target.version?.let { " ($it)" } ?: "")
+        confirm(device)
         val outcome = runCatching { acsGateway.pushFirmware(device.genieacsId, target) }
+        confirm(device)
         val entry = if (outcome.isSuccess) {
             CpeActionLog.succeeded(deviceId, CpeActionType.FIRMWARE_UPGRADE, label, actor.userId, actor.email)
         } else {
@@ -220,6 +252,7 @@ class CpeService(
         val device = requireDevice(deviceId)
         val actor = currentUser.current()
         val outcome = runCatching { acsGateway.factoryReset(device.genieacsId) }
+        confirm(device)
         val entry = if (outcome.isSuccess) {
             CpeActionLog.succeeded(deviceId, CpeActionType.FACTORY_RESET, "Reset pabrik dijadwalkan", actor.userId, actor.email)
         } else {
@@ -233,6 +266,7 @@ class CpeService(
         val device = requireDevice(deviceId)
         val actor = currentUser.current()
         val outcome = runCatching { acsGateway.requestConnection(device.genieacsId) }
+        confirm(device)
         val connected = outcome.getOrNull() == true
         val message = when {
             outcome.isFailure -> "gagal menghubungi ACS: ${outcome.exceptionOrNull()?.message?.take(200)}"
@@ -256,8 +290,20 @@ class CpeService(
         actionLogRepository.save(entry)
     }
 
-    private fun requireDevice(id: UUID): CpeDevice =
-        deviceRepository.findById(id) ?: throw NotFoundException("Perangkat CPE $id tidak ditemukan")
+    private fun requireDevice(id: UUID): CpeDevice {
+        eligibility.refresh()
+        val device = deviceRepository.findById(id) ?: throw NotFoundException("Perangkat CPE $id tidak ditemukan")
+        if (operations.lock(device.genieacsId)) return device
+        eligibility.refresh()
+        return deviceRepository.findById(id) ?: throw NotFoundException("CPE_OWNERSHIP_CHANGED")
+    }
+
+    private fun confirm(device: CpeDevice) {
+        eligibility.refresh()
+        val current = deviceRepository.findById(device.id) ?: throw NotFoundException("CPE_OWNERSHIP_CHANGED")
+        if (current.onuId != device.onuId || current.customerId != device.customerId || current.genieacsId != device.genieacsId)
+            throw NotFoundException("CPE_OWNERSHIP_CHANGED")
+    }
 
     private fun CpeDevice.toView(): CpeDeviceView = CpeDeviceView(
         id = id,

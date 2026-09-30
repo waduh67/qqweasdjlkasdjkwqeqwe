@@ -1,7 +1,5 @@
 package com.duluin.ftth
 
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -27,27 +25,16 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class SurveyCapacityIT {
+class SurveyCapacityIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
-
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
 
     private val pass = "secret12345"
     private val lat = -6.24
 
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
-    private fun newTenantAdmin(prefix: String): String {
-        val slug = "$prefix${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$admin","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
+    private fun newTenantAdmin(prefix: String): String = tenant("$prefix${uniq()}")
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -79,11 +66,11 @@ class SurveyCapacityIT {
         val customer = id(
             post(
                 "/api/customers", token,
-                """{"code":"C-$kode","name":"Pelanggan $kode","address":"Jl. Survey",
+                """{"areaId":"${area(token)}","code":"C-$kode","name":"Pelanggan $kode","address":"Jl. Survey",
                     "location":{"longitude":107.0,"latitude":$lat}}""",
             ),
         )
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$kode"}"""))
+        val onu = registerWarehouseOnu(token, customer, "SN-$kode")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
     }
 

@@ -1,0 +1,68 @@
+{
+  "status": "FAILED_ONE_NEW_FIXTURE",
+  "parent": "b29cde332dc18885c30fe329f4807253bc6de01a",
+  "counts": {
+    "tests": 18,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "b0e430a941c075a987e7e96530b30f309041a4c135cbf5302af8f1bdd26d7e6c",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryAdjustmentIT",
+      "sha256": "b24d118099040d01cd5772ff6b9831da90d876ca72d44c2f247793cc241f6dd2",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryAssetIT",
+      "sha256": "01d96e374d5d9c116c4014aeac93b8c29c88ddc1afd5e5ac8fef7ff4f3d36fe2",
+      "tests": 2,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryDispositionIT",
+      "sha256": "fdb1ff495e1e276ce933949b19e8ee86ffbc820f1ecbedcd131f8564719eef90",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryRepairIT",
+      "sha256": "6aeb5e7aaca13a503818a162c4bd01dabf14e8efa95194e84728533023a1a464",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningIT",
+      "sha256": "1f013a43c6d190af1c6bc31b0c0625c8a2a0ce01811ce492e2deee7d80e93e8b",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 1,
+  "cleanupExitCode": 0,
+  "sourceInventorySha256": "9fa4cfd12af16fa8bdde8e4e8485bfb78d23bde08466357151fbf12e6a736779",
+  "runnerSha256": "850674fbeb122a24a0a4c10b2a497634abfafb7ec2db928b58fbfca4b6f44f4a",
+  "scope": "11new actual-clock specialized cases +4existing opening cases +3modules. All run inputs stable. 10new expiry cases passed; title-correction fixture creation rejected SOURCE_NOT_VERIFIED after test superseded its signature but supplied old evidence ID. Corrected to new signature ID; isolated asset retry pending.",
+  "previousAttempt": "R1compilation failed with duplicate local name source in new asset test;0tests. Renamed API variable to sourceView.",
+  "noPhysicalEffects": "Passing cases compare source/header/line and complete tenant physical balance, serialized asset, assignment, movement, title-transfer, return-case and recovery-obligation rows before vs after expiry. Pending discrepancy fresh-report and stale decision guard pass. New proposal remains possible.",
+  "excludes": "Passing title expiry, UI/browser execution, full current regression and finalF1-F4"
+}

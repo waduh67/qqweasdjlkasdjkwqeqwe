@@ -1,0 +1,58 @@
+{
+  "phase": "V177.9 current raw identity reservation at the exclusive tenant cutoff",
+  "baseCommit": "b2d19dbba404347074fcd594c1fd26f954b86f26",
+  "build": "BUILD SUCCESSFUL in 2m 13s",
+  "tests": 13,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationCaptureIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "7f1794a28c4e8a2dd907166a97959382593a1c6461a2b6a1ed83600f3d0253b5",
+    "server/src/main/resources/db/migration/V177_9__warehouse_current_identity_reservations.sql": "b66ace6e025d257171a9a5ceff5aa5d7e5deceaa94f1c9871fc64d1e105e6c69",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationCaptureIT.kt": "8fded6813621d2be29ece6c3853581a1fd915571f697f0e2fa16f2a740637749",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "4f0b848e4867d9cdf875537b16e72a411dac9eca8411edb663424d0db1157e3f"
+  },
+  "checks": [
+    "Full packaged boot accepts colliding legacy data and nullable malformed identities. Candidate uniqueness now retains each original raw version instead of overwriting source history.",
+    "Real HTTP BEGIN captures updated legacy asset serial and invalid MAC plus new original asset, installed ONU and tombstone sources created after boot. Five current serial/MAC claims appear; original candidates/claims and installed ONU identity remain unchanged.",
+    "Invalid MAC stays unclaimed with explicit null canonical value. Current tombstone claim becomes RETIRED; a duplicate asset/ONU canonical serial is CONFLICT. No stock, document or fake receipt is created by reservation.",
+    "Exact BEGIN replay changes no candidates/claims. Application claim promotion and re-running the owner reservation after batch sealing reject; postcutoff asset and ONU raw identity edits reject while ONU status updates remain allowed.",
+    "Independently approved original asset admission succeeds when another current source changed away before cutoff, retaining both old and new candidate history. The changed peer stays LEGACY_UNRESOLVED/LEGACY_RESERVED and original admitted physical UUID/raw serial stay exact.",
+    "Existing current-source capture, blocked legacy writer/exclusive cutoff, scoped reports, empty tenant, independent opening, cancellation, concurrent finals, rollback and module graph tests pass.",
+    "Earlier fixture failure attempted to rename an existing ONU; its pre-existing immutable history guard was preserved, and the test now leaves old ONU identity unchanged."
+  ],
+  "remaining": [
+    "Obsolete legacy pending creation closure and tombstone write closure",
+    "Freeze case mutation after committed admission",
+    "Finalization/M06 and mixed-tenant restart",
+    "Provenance management UI and browser acceptance",
+    "Tasks44\u201348/F1\u2013F4"
+  ]
+}

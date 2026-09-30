@@ -1,0 +1,22 @@
+{
+  "status": "PASSED",
+  "recordedAtUtc": "2026-09-25T10:51:11.532321+00:00",
+  "baseCommit": "b17474d0fdab18776442d8f5cc35bc446e37e459",
+  "files": {
+    "scripts/warehouse/ci-artifacts.py": "d871c9f65d8cb06cd910b0aec0383fe29d4a50a47bfd1fd29bf4e54bc1398f0f",
+    "scripts/warehouse/test-ci-artifacts.py": "ecbd398327fbeef180a873329e716e1d49ed79f002227b08f17580a6ccbe5b5b",
+    "docs/warehouse-ci.md": "7b98a6b07bc1ad34403d4a778cd1153edd90fb139f742578b94430da0cec580c"
+  },
+  "reproducedBeforeFix": "The archive command rejected a Gradle binary-only directory as producing no raw evidence.",
+  "checks": {
+    "encryptedArtifactTests": 4,
+    "failures": 0,
+    "binaryOnlyEncryptionAndDecryption": "exact bytes and archive path preserved",
+    "missingFinalJUnit": "nonzero result and FAILED proof, even though encrypted diagnostics are retained",
+    "environmentAndSymlinkRejection": "preserved"
+  },
+  "limits": [
+    "Runtime CI verification of the changed archiver is pending.",
+    "An encrypted partial result is diagnostic evidence, never a full regression PASS."
+  ]
+}

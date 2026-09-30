@@ -1,0 +1,27 @@
+{
+  "status": "PASS_FULL_WEB",
+  "parentCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "copyOnlyDelta": [
+    "web/src/pages/MyMaterialsPage.tsx",
+    "web/src/components/organisms/warehouse/WarehouseStatus.tsx"
+  ],
+  "tests": 607,
+  "testFiles": 117,
+  "failures": 0,
+  "pending": 0,
+  "runnerExitCode": 0,
+  "warehouseE2ETypecheckExitCode": 0,
+  "lintExitCode": 0,
+  "productionBuildExitCode": 0,
+  "sourceInputCount": 523,
+  "sourcesUnchangedDuringRun": true,
+  "sourceInventorySha256": "5fb3d66377752a3a1eec740b442f366aa45303ecf6e3d697a63745e797ecb820",
+  "reportSha256": "22db81abb82a319766c6326600ed8bec4d4c5901f7d84d451c190ff168a9079b",
+  "runnerSha256": "8f7586b157edc61d18de4c66146b2b3038457fdfd8bd207cfad2c9ec7837d877",
+  "logSha256": "e3e4d9f0e5382788387be06ba4e1f2f6e17051268e42347e0ee6b85783693ded",
+  "copyHashes": {
+    "web/src/pages/MyMaterialsPage.tsx": "2c54f6ccd89007068bf12c74a9cad28dc4af982532ea2cff5eb4c71a21b34610",
+    "web/src/components/organisms/warehouse/WarehouseStatus.tsx": "cd9672029475e959cda42d7ddf9e7606aabccb7420eeb46803cf6b7a3cc88755"
+  },
+  "limits": "Real unfiltered web tests plus typecheck/lint/build; earlier browser execution retains original hashes and needs bounded two-copy delta review. No API/DTO/stock/state change and no new copy-only tests."
+}

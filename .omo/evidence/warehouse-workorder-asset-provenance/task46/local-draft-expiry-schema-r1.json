@@ -1,0 +1,13 @@
+{
+  "run": "draft-expiry-schema-r1",
+  "candidateSha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+  "probeSha256": "152df1bdf70485a19b3d1c5124462e7c7ea8f9fe1d8896e626fe3f9b4478b886",
+  "baseline": "owned warehouse_e2e,366 migrations through178.11",
+  "result": "Candidate DDL and six retained document backfills/current-state reads succeeded. Protected app privileges and FORCE RLS checked. Entire transaction rolled back; highest applied migration unchanged.",
+  "limits": [
+    "No candidate migration applied through Flyway",
+    "No fresh accepted draft-save/effect/worker/real-clock race assertion in this probe",
+    "No C7 acceptance or final review approval"
+  ],
+  "logSha256": "b70c7fc1ced34093b0d42bf837456055791ffdedfb945c417ee1549d70cf2491"
+}

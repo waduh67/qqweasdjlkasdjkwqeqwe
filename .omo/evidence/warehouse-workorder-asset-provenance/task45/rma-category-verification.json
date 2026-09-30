@@ -1,0 +1,159 @@
+{
+  "sourceCheckpoint": "aa22c32e",
+  "migration": "178.7",
+  "migrationSha256": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
+  "red": {
+    "tests": 3,
+    "failed": 1,
+    "case": "NULL category"
+  },
+  "green": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.fulfillment.MyMaterialsRmaIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "populatedUpgradeTests": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "populatedUpgrade": {
+    "existingTenantCount": 2142,
+    "preservedPhysical": {
+      "inventory_document": {
+        "rows": 9739,
+        "digest": "71449cae10baae1119f4239bcd8d42a2"
+      },
+      "inventory_usage_snapshot": {
+        "rows": 565,
+        "digest": "03ac8e6f103c10cfd8a8bb00627cf51a"
+      },
+      "inventory_material_usage": {
+        "rows": 565,
+        "digest": "34d3712d2ada89414008a8f3361d2004"
+      },
+      "inventory_material_usage_line": {
+        "rows": 544,
+        "digest": "ff7262b4d098176f23f13a498053788b"
+      },
+      "inventory_customer_material_fact": {
+        "rows": 550,
+        "digest": "952e4e3ce898a9435e372f4964429d08"
+      },
+      "inventory_movement": {
+        "rows": 18720,
+        "digest": "9528f58ca852dd93a6853de95b2fe913"
+      },
+      "inventory_movement_leg": {
+        "rows": 36470,
+        "digest": "6586c66ffe67bf5f25fc7654a958b44d"
+      },
+      "inventory_balance_projection": {
+        "rows": 18551,
+        "digest": "3c889f2d9cdcf206492ad7a497cda5c7"
+      },
+      "inventory_segment": {
+        "rows": 6861,
+        "digest": "af65c91bfe7f115e362c447125acea2b"
+      },
+      "inventory_serialized_asset": {
+        "rows": 3308,
+        "digest": "f38b616b63bb96272b0645387855203e"
+      },
+      "inventory_asset_assignment": {
+        "rows": 1007,
+        "digest": "93ef6e9d0753e0dd19be023416348fa3"
+      },
+      "inventory_material_settlement": {
+        "rows": 49,
+        "digest": "b476d6fada783d47eae3bd83df4eca62"
+      },
+      "fulfillment_approval_snapshot": {
+        "rows": 57,
+        "digest": "c25aa6454bc2748880851c034d9ee459"
+      },
+      "inventory_return_case": {
+        "rows": 397,
+        "digest": "1c6527b8e898c622b2c21e8fa37558a0"
+      },
+      "inventory_repair_case": {
+        "rows": 142,
+        "digest": "7cd70a288f7545f6303b5e0d52e0edba"
+      },
+      "inventory_rma_handover": {
+        "rows": 70,
+        "digest": "aa5690ebff9cacd2661492bdc5f54af5"
+      },
+      "inventory_asset_removal": {
+        "rows": 405,
+        "digest": "f090a883a1536b7456ab6ffb80d13620"
+      },
+      "inventory_rma_receipt": {
+        "rows": 63,
+        "digest": "2dff18007cc35bfe383b71323a5003c3"
+      },
+      "inventory_deployment_authorization": {
+        "rows": 1069,
+        "digest": "0dba524136657652cfd7b877b818dc86"
+      },
+      "inventory_deployment_execution": {
+        "rows": 1065,
+        "digest": "0d3ea5ee0fb7acd290ab6f54d0a33fb1"
+      },
+      "inventory_deployment_result": {
+        "rows": 1007,
+        "digest": "6cd7086c9ce1ffc60b6cc33bd8ab2f6c"
+      },
+      "customer": {
+        "rows": 910,
+        "digest": "e5d0cff4051888aa8aec8a00d4733ab4"
+      },
+      "onu": {
+        "rows": 1008,
+        "digest": "4fc2424cceb636167afd50180c22fb6d"
+      }
+    },
+    "priorChecksumsUnchanged": true,
+    "appliedDelta": [
+      "178.7"
+    ]
+  },
+  "status": "PASS; no prior migrations or historical business rows rewritten",
+  "nextFreeVersion": "178.8"
+}

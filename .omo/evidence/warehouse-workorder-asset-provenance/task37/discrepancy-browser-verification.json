@@ -1,0 +1,99 @@
+{
+  "productCommit": "c155856b",
+  "browserFixtureCommit": "2b6ff32f",
+  "runCommit": "a51dfd4af7bca65b9e9ea4f874b23b34d95e574a",
+  "command": "scripts/warehouse/qa.sh browser e2e/warehouse/returns.spec.ts",
+  "stats": {
+    "startTime": "2026-09-24T21:24:34.981Z",
+    "duration": 63565.502,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "title": "warehouse receives sixty metres and independently resolves forty metres after partial transfer",
+      "project": "warehouse-desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 29881
+        }
+      ]
+    },
+    {
+      "title": "warehouse receives sixty metres and independently resolves forty metres after partial transfer",
+      "project": "warehouse-mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 30032
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "discrepancy-browser/desktop-policy.png",
+      "sha256": "80c106ef1afee65cf70bf2d331598252857b898e70a6f2d9f96c78ce5ca3219c"
+    },
+    {
+      "path": "discrepancy-browser/desktop-own-denied.png",
+      "sha256": "704082d14d7bf9c60ded02b7232bd12160b8910a8b234d3ba0ae118c53db67e4"
+    },
+    {
+      "path": "discrepancy-browser/desktop-approved.png",
+      "sha256": "08fe43938bcbe1e9506894a5e8d2185dbe9362ee92bebcce9c3ebc028425bfd7"
+    },
+    {
+      "path": "discrepancy-browser/desktop-resolved-transfer.png",
+      "sha256": "a854204a8cc4688d6c19a4456aa05b81568c02f0fe246c6bc800b3f861a52d01"
+    },
+    {
+      "path": "discrepancy-browser/desktop-final-available.png",
+      "sha256": "7b524cf923eea75d01388a68e5635e462e1516d2073e45edbbc699904d0e25b0"
+    },
+    {
+      "path": "discrepancy-browser/desktop-final-lost.png",
+      "sha256": "54001b9af1d549764866a537e46f197125c8834c3e49db5d6c93a0024c37d51d"
+    },
+    {
+      "path": "discrepancy-browser/mobile-policy.png",
+      "sha256": "f6a58362b5507b11055c0719f9ba785a5dcddb5695ea467c7abbdf8b1beb61f7"
+    },
+    {
+      "path": "discrepancy-browser/mobile-own-denied.png",
+      "sha256": "9423b0a2ae5739719e8ff8c256b62a7fe0cab0e96de62e23effb2c33c8751f9b"
+    },
+    {
+      "path": "discrepancy-browser/mobile-approved.png",
+      "sha256": "783e058e650d1bb8fbef1d1b1ce389e92d001696d9be6da3c37d4bc4ee31904b"
+    },
+    {
+      "path": "discrepancy-browser/mobile-resolved-transfer.png",
+      "sha256": "039bf0d120173d204a2078080292a09370c0234f0632645363cb69a46130ee29"
+    },
+    {
+      "path": "discrepancy-browser/mobile-final-available.png",
+      "sha256": "e5532b18026469cda5e64f5cf98bc43775840ca979f336c569e9890dea53bc32"
+    },
+    {
+      "path": "discrepancy-browser/mobile-final-lost.png",
+      "sha256": "c7d226289c31f1a8c047b9a00e3ef00e6499dd9361bdab39a4ea953f58690750"
+    }
+  ],
+  "assertions": [
+    "Actual UI creates receipt, independent user, role, warehouse grants and policy; no API/SQL fixture shortcuts.",
+    "100000 MM dispatched; 60000 MM received and 40000 MM remain in transit before independent approval.",
+    "Maker cannot approve; separate checker login sees no cost property in actual approval response.",
+    "Actual captured decision binds request revision and contains no client tier or movement selection.",
+    "Final approval references persisted effect; transfer revision 4 has received 60000, transit 0, resolved 40000 MM.",
+    "Final available position: physical 60000 and available 60000 MM. LOST position: physical 40000 and available 0 MM."
+  ],
+  "review": "14 discrepancy screenshots visually reviewed. 12 stable screenshots retained; two modal full-page captures caught entrance animation and remain private. Responsive layout readable, mobile table cards and no document overflow asserted.",
+  "cleanup": "Owned API/web processes and containers/network stopped; volumes retained; unrelated processes untouched.",
+  "rawArtifacts": "Private runtime only; traces and raw Playwright JSON excluded."
+}

@@ -25,6 +25,7 @@ interface ManageOnuUseCase {
 data class RegisterOnuCommand(
     val serialNumber: String,
     val model: String?,
+    val deployment: com.duluin.ftth.customer.AuthorizedOnuInstallation? = null,
 )
 
 data class AttachOnuCommand(

@@ -1,0 +1,24 @@
+{
+  "status": "PASSED_WEB_ONLY",
+  "ciRun": 36160896348,
+  "testedCommit": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+  "download": {
+    "run": 36160896348,
+    "artifactId": 10875806197,
+    "name": "warehouse-web-6c6195aecbb785dc5094d382845665e35b8e73ef",
+    "artifactDigest": "sha256:b786f372d0f1317a1641834fdca2b01e5085c3bfee90a499c163cc0b719c7fdc",
+    "encryptedArchiveSha256": "b2778f3cfe597c989a4c5db1004a7d06f35b71ae4f81de5b76dff70ed6ec584f",
+    "downloadedAndDecrypted": true
+  },
+  "actualWebResult": {
+    "kind": "vitest",
+    "status": "PASSED",
+    "commit": "6c6195aecbb785dc5094d382845665e35b8e73ef",
+    "tests": 579,
+    "testFiles": 115,
+    "reportSha256": [
+      "da4d5fd2c47d0821538d922c42c6ef69299587538353450598ecb3df1bf377c1"
+    ]
+  },
+  "limitation": "Transfer server tests did not compile at this commit; nonserver pass is not complete release approval. New COUNT changes are not covered."
+}

@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/molecules/Disclosure'
 import { Text } from '@fluentui/react-components'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '@/api/client'
@@ -162,7 +163,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <LockedSenderAddress address={saved.platformFromAddress} />
 
-      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div className="form-grid">
         <TextField
           label="Nama pengirim"
           value={form.fromName}
@@ -170,7 +171,6 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           placeholder={saved.inheritedFromName}
           disabled={!manage}
           maxLength={100}
-          style={{ minWidth: 220 }}
         />
         <TextField
           label="Alamat balasan"
@@ -181,7 +181,6 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           maxLength={254}
           validationState={addressOk ? 'none' : 'error'}
           validationMessage={addressOk ? undefined : 'Format alamat email tidak sah.'}
-          style={{ minWidth: 260 }}
         />
       </div>
 
@@ -216,8 +215,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <div className="hr" />
 
-      <SectionTitle>Subjek per pemicu</SectionTitle>
-      <EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} />
+      <Disclosure className="settings-disclosure" title={<>Subjek pesan</>}><EmailSubjectFields rows={form.subjects} disabled={!manage} onChange={patchSubject} /></Disclosure>
 
       {manage && (
         <div className="spread" style={{ alignItems: 'center' }}>
@@ -230,14 +228,14 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       <div className="hr" />
 
-      <SectionTitle>Pratinjau &amp; uji kirim</SectionTitle>
+      <Disclosure className="settings-disclosure" title={<>Pratinjau &amp; uji kirim</>}>
       <EmailPreviewPanel
         reloadKey={freshness}
         canSendTest={manage}
         defaultTo={saved.replyToAddress}
         loadPreview={previewTenantEmail}
         sendTest={sendTenantTestEmail}
-      />
+      /></Disclosure>
     </div>
   )
 }

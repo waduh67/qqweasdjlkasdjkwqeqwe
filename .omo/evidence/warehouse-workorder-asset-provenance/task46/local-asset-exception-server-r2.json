@@ -1,0 +1,69 @@
+{
+  "status": "PASSED_FOCUSED",
+  "baseCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "counts": {
+    "tests": 87,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "a3fcd1c713bddc4a2f361a7398512025f1e36a11bfb09ecbc59186f824446f8a",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetExceptionContextIT",
+      "sha256": "44738bfa8d9b88b27916e968bd742debecefab971a5c7ddcf2d649637fc1d6fa",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+      "sha256": "615523f72ff271414baff316204b0908a976bec259aa9570cf30de54220b1299",
+      "tests": 73,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+      "sha256": "2a0862e8c4a924e65337980dfc9805a5a2aba219a0b406c03e715bd8b42f23f7",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "sourceSha256": {
+    "server/src/main/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipApi.kt": "6c5ef309dbf1f993daac28369a3c96e73cdb9fedaa960b3fc7035b7132e383b4",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt": "8bd63f0ecdffc636567428dc461f3a81b216a219579a100a6fbe4b9b8b0d1dc4",
+    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/AssetHandoverCustomerAdapter.kt": "7ad61304449ead33a524371c7161bbf21b103d9e4dc577299291e9a5bf36b739",
+    "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/AssetHandoverContextPort.kt": "9552674ad665959d8c978299665ce80d22622348cc4de1bd12b1dbdadde1049b",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetTitleApi.kt": "e93bbac4cd22878ab108c87af3b9c05b8257a9eb4d248cc4843f0b17eda60c1f",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetTitleStore.kt": "fe79648722c83a0465312c59eda6fdd6d5d7c52ad68c6bb7786be024d5e2c2f9",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt": "442358dac2d837caedfc7ef194a647f8161492423696991f1adaa8a2a186b0a5",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23",
+    "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt": "5940a1b18e477dccfc7f2ea5a732de5abd500aba8635a7d34f6ebc834d38dbe9",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt": "c513c6a75c53a842775b1813bd7d0222f4a08527ace33c4d5a341ea0fc734226"
+  },
+  "allServerInputsUnchangedDuringRun": true,
+  "serverInputCount": 2602,
+  "logSha256": "067ff7db26a5820370b6c5215332172158048c580139727a060a91ffe653c1a6",
+  "runnerSha256": "826fd4a31fd56a8ea5e07fa6954dd51a6c057c6e6913f73742ca79dd89fdae92",
+  "runner": {
+    "sessionId": 41735,
+    "observedExecExitCode": 0,
+    "observedTerminalOutput": "ASSET_EXCEPTION_SERVER_R2_EXIT 0",
+    "applicationRole": "NOSUPERUSER NOBYPASSRLS",
+    "ownedCleanup": "Completed; volumes retained"
+  },
+  "limitation": "Actual9context/area POST/replay cases plus73ownership,2loss,3module tests. No browser/full regression/final F1-F4 claim. Subsequent adjacent legacy ownership read scope fix needs its own targeted validation."
+}

@@ -1,0 +1,46 @@
+{
+  "commit": "c622a85bde9582fd66351957c7b451cc91c8df29",
+  "images": {
+    "server": "sha256:a4d74f30f015a453cf408f75f078f81f955a19564cefd40fd6a9522ff67c7179",
+    "web": "sha256:9f27461280fb60f99101015b8854e16f896ce47249682dd27cb3405ea44cbbc3"
+  },
+  "phases": [
+    {
+      "phase": "before-restart",
+      "staticAssets": 3,
+      "persistedReplays": 14,
+      "persistedReads": 16,
+      "stockKinds": 4,
+      "realHttp": true,
+      "sqlBusinessSeeding": false
+    },
+    {
+      "phase": "after-restart",
+      "staticAssets": 3,
+      "persistedReplays": 14,
+      "persistedReads": 16,
+      "stockKinds": 4,
+      "realHttp": true,
+      "sqlBusinessSeeding": false
+    }
+  ],
+  "sameImagesAfterRestart": true,
+  "appRole": "warehouse_app",
+  "separateDatabase": true,
+  "backendAndGatewayJsonReadiness": true,
+  "databaseRetained": true,
+  "archiveDigests": {
+    "server": "sha256:1aebc39b0696f96914e619c0edb8b7309310e7a2aa648054d17f67700176d766",
+    "web": "sha256:7a883d060bc75f510a7ebdedf58e43dabc8937d3dbcb51ac8c4318b38f2e75cb"
+  },
+  "configDigests": {
+    "server": "sha256:a4d74f30f015a453cf408f75f078f81f955a19564cefd40fd6a9522ff67c7179",
+    "web": "sha256:9f27461280fb60f99101015b8854e16f896ce47249682dd27cb3405ea44cbbc3"
+  },
+  "workflowRun": 36116539885,
+  "imageJobConclusion": "success",
+  "archivesVerifiedLocally": true,
+  "archiveArtifactDigest": "sha256:860cf70a02fc6b22eaddc74b0eb89cf70eb86810d1e4360296e5b5c2bb2811d2",
+  "publicationExecuted": false,
+  "wholeReleaseStatus": "PENDING: full server regression is still running"
+}

@@ -16,77 +16,13 @@ env:
     IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-    # -------------------------------------------------------------------------
-    # 1) Test integrasi di atas Postgres asli (role non-superuser -> RLS teruji).
-    # -------------------------------------------------------------------------
-    # test:
-    #   runs-on: ubuntu-latest
-    #   services:
-    #     postgres:
-    #       image: timescale/timescaledb-ha:pg17
-    #       env:
-    #         POSTGRES_USER: postgres
-    #         POSTGRES_PASSWORD: postgres
-    #       ports:
-    #         - 5432:5432
-    #       options: >-
-    #         --health-cmd "pg_isready -U postgres"
-    #         --health-interval 10s
-    #         --health-timeout 5s
-    #         --health-retries 12
-    #   steps:
-    #     - uses: actions/checkout@v4
+    warehouse-verification:
+        uses: ./.github/workflows/warehouse.yml
+        permissions:
+            contents: read
 
-    #     - name: Siapkan role & database test
-    #       env:
-    #         PGPASSWORD: postgres
-    #       run: |
-    #         psql -h localhost -U postgres -c "CREATE ROLE ftth LOGIN PASSWORD 'ftth' NOSUPERUSER NOCREATEROLE NOBYPASSRLS;"
-    #         psql -h localhost -U postgres -c "CREATE DATABASE ftth_test OWNER ftth;"
-    #         psql -h localhost -U postgres -d ftth_test -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS timescaledb;"
-
-    #     - uses: actions/setup-java@v4
-    #       with:
-    #         distribution: temurin
-    #         java-version: "21"
-
-    #     - uses: gradle/actions/setup-gradle@v4
-
-    #     - name: Jalankan test server
-    #       run: ./gradlew :server:test --no-daemon
-
-    # -------------------------------------------------------------------------
-    # 2) Uji web (vitest). Beda dari test server di atas, job ini tak butuh service
-    #    apa pun dan selesai dalam hitungan detik — jadi ia LAYAK jadi gerbang deploy.
-    # -------------------------------------------------------------------------
-    web-test:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: "22"
-                  cache: npm
-                  cache-dependency-path: web/package-lock.json
-
-            - run: npm ci
-              working-directory: web
-
-            - run: npm run lint
-              working-directory: web
-
-            - run: npm test
-              working-directory: web
-
-    # -------------------------------------------------------------------------
-    # 3) Build kedua image lalu dorong ke GitHub Container Registry.
-    # -------------------------------------------------------------------------
     build-and-push:
-        # `test` server sementara dinonaktifkan (dikomentari di atas) — jangan
-        # `needs: test`, kalau tidak GitHub menolak workflow-nya. Uji web ikut jadi
-        # gerbang: image tak dibangun kalau konsolnya sendiri sudah gagal diuji.
-        needs: web-test
+        needs: warehouse-verification
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -103,36 +39,23 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Build & push ftth-server
-              uses: docker/build-push-action@v6
+            - uses: actions/download-artifact@v4
               with:
-                  context: .
-                  file: server/Dockerfile
-                  push: true
-                  tags: |
-                      ${{ env.IMAGE_PREFIX }}/ftth-server:latest
-                      ${{ env.IMAGE_PREFIX }}/ftth-server:${{ github.sha }}
-                  # Matikan attestation provenance/SBOM: manifest attestation-nya memicu
-                  # 403 saat push blob ke GHCR pada tag kedua (git-sha), dan tak diperlukan
-                  # untuk pipeline deploy privat ini.
-                  provenance: false
-                  sbom: false
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                  name: warehouse-tested-images-${{ github.sha }}
+                  path: .omo/runtime/tested-images
 
-            - name: Build & push ftth-web
-              uses: docker/build-push-action@v6
+            - name: Publish only the exact tested server and web images
+              run: |
+                  set -euo pipefail
+                  python3 scripts/warehouse/publish-images.py .omo/runtime/tested-images \
+                    --commit "$GITHUB_SHA" --prefix "$IMAGE_PREFIX"
+
+            - uses: actions/upload-artifact@v4
               with:
-                  context: ./web
-                  file: web/Dockerfile
-                  push: true
-                  tags: |
-                      ${{ env.IMAGE_PREFIX }}/ftth-web:latest
-                      ${{ env.IMAGE_PREFIX }}/ftth-web:${{ github.sha }}
-                  provenance: false
-                  sbom: false
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                  name: warehouse-published-images-${{ github.sha }}
+                  path: .omo/runtime/tested-images/published.json
+                  if-no-files-found: error
+                  retention-days: 14
 
             # GenieACS (ACS TR-069 untuk modul `cpe`). Isinya cuma `npm i -g
             # genieacs@<versi pin>`, jadi tak berubah tiap commit — tetap ikut
@@ -159,8 +82,30 @@ jobs:
         needs: build-and-push
         runs-on: ubuntu-latest
         steps:
-            - name: Ambil konfigurasi deploy
-              uses: actions/checkout@v4
+            - uses: actions/checkout@v4
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: warehouse-published-images-${{ github.sha }}
+                  path: verified-release
+
+            - name: Read immutable verified registry references
+              run: |
+                  python3 - <<'PY'
+                  import hashlib, json, os, re
+                  from pathlib import Path
+                  proof = json.loads(Path('verified-release/published.json').read_text())
+                  assert proof['commit'] == os.environ['GITHUB_SHA']
+                  assert set(proof['images']) == {'server', 'web'}
+                  with open(os.environ['GITHUB_ENV'], 'a') as output:
+                      for service, image in proof['images'].items():
+                          reference = image['registryDigest']
+                          expected = re.escape(os.environ['IMAGE_PREFIX'] + '/ftth-' + service)
+                          assert re.fullmatch(expected + r'@sha256:[a-f0-9]{64}', reference)
+                          output.write('FTTH_' + service.upper() + '_IMAGE=' + reference + '\n')
+                      checksum = hashlib.sha256(Path('deploy/docker-compose.prod.yml').read_bytes()).hexdigest()
+                      output.write('FTTH_COMPOSE_SHA256=' + checksum + '\n')
+                  PY
 
             - name: Install cloudflared
               run: |
@@ -188,32 +133,47 @@ jobs:
                   EOF
                   chmod 600 ~/.ssh/config
 
-            - name: Sinkronkan Docker Compose ke VPS
+            - name: Upload the reviewed release files through Cloudflare Access
+              env:
+                  VPS_HOST: ${{ secrets.VPS_HOST }}
               run: |
-                  ssh ${{ secrets.VPS_HOST }} "mkdir -p /opt/ftth"
-                  scp deploy/docker-compose.prod.yml deploy/Caddyfile ${{ secrets.VPS_HOST }}:/opt/ftth/
-                  scp -r deploy/postgres-init deploy/radius deploy/backup deploy/monitoring ${{ secrets.VPS_HOST }}:/opt/ftth/
+                  set -euo pipefail
+                  release="/opt/ftth/releases/$GITHUB_SHA"
+                  ssh "$VPS_HOST" "mkdir -p '$release'"
+                  scp deploy/docker-compose.prod.yml "$VPS_HOST:$release/docker-compose.prod.yml"
+                  scp deploy/Caddyfile "$VPS_HOST:$release/Caddyfile"
+                  scp -r deploy/postgres-init deploy/radius deploy/backup deploy/monitoring "$VPS_HOST:$release/"
 
             - name: Deploy lewat SSH
               env:
+                  VPS_HOST: ${{ secrets.VPS_HOST }}
                   GHCR_PAT: ${{ secrets.GHCR_PAT }}
                   GHCR_USER: ${{ secrets.GHCR_USER }}
-                  COMMIT_SHA: ${{ github.sha }}
+                  FTTH_SERVER_IMAGE: ${{ env.FTTH_SERVER_IMAGE }}
+                  FTTH_WEB_IMAGE: ${{ env.FTTH_WEB_IMAGE }}
+                  FTTH_COMPOSE_SHA256: ${{ env.FTTH_COMPOSE_SHA256 }}
               run: |
-                  ssh ${{ secrets.VPS_HOST }} "GHCR_PAT='$GHCR_PAT' GHCR_USER='$GHCR_USER' COMMIT_SHA='$COMMIT_SHA' bash -s" << 'EOF'
-                  set -eu
+                  set -euo pipefail
+                  [[ "$GHCR_USER" =~ ^[A-Za-z0-9_-]+$ ]]
+                  printf '%s\n' "$GHCR_PAT" | ssh "$VPS_HOST" "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+                  # Only validated commit/digest values enter the remote shell command.
+                  [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+                  [[ "$FTTH_SERVER_IMAGE" =~ ^ghcr.io/[a-z0-9_-]+/ftth-server@sha256:[a-f0-9]{64}$ ]]
+                  [[ "$FTTH_WEB_IMAGE" =~ ^ghcr.io/[a-z0-9_-]+/ftth-web@sha256:[a-f0-9]{64}$ ]]
+                  [[ "$FTTH_COMPOSE_SHA256" =~ ^[a-f0-9]{64}$ ]]
+                  ssh "$VPS_HOST" "IMAGE_TAG='$GITHUB_SHA' FTTH_SERVER_IMAGE='$FTTH_SERVER_IMAGE' FTTH_WEB_IMAGE='$FTTH_WEB_IMAGE' FTTH_COMPOSE_SHA256='$FTTH_COMPOSE_SHA256' bash -s" <<'EOF'
+                  set -euo pipefail
                   cd /opt/ftth
-                  echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-                  if grep -q '^IMAGE_TAG=' .env; then
-                      sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$COMMIT_SHA/" .env
-                  else
-                      echo "IMAGE_TAG=$COMMIT_SHA" >> .env
-                  fi
-                  docker compose -f docker-compose.prod.yml config --quiet
-                  docker compose -f docker-compose.prod.yml pull
-                  docker compose -f docker-compose.prod.yml up -d --remove-orphans
-                  docker compose -f docker-compose.prod.yml ps
-                  docker image prune -f
+                  export IMAGE_TAG FTTH_SERVER_IMAGE FTTH_WEB_IMAGE
+                  release="releases/$IMAGE_TAG"
+                  release_compose="$release/docker-compose.prod.yml"
+                  printf '%s  %s\n' "$FTTH_COMPOSE_SHA256" "$release_compose" | sha256sum --check --status
+                  # Preserve existing relative bind mounts while keeping a release copy.
+                  cp "$release/Caddyfile" .
+                  cp -R "$release/postgres-init" "$release/radius" "$release/backup" "$release/monitoring" .
+                  docker compose --project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose" config --quiet
+                  docker compose --project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose" pull
+                  docker compose --project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose" up -d
                   EOF
 
             - name: Verifikasi situs produksi

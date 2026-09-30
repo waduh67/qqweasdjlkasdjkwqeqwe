@@ -1,0 +1,236 @@
+{
+  "phase": "Task44 partial: mixed material QA and conserved numeric controller fixture",
+  "baseCommit": "ee60908b83ec631f34eb24f3c506e1a3fcb7ab73",
+  "overallTask44": "OPEN: remaining workflow gaps, whole-application recovery and concurrency acceptance",
+  "environment": "Owned PostgreSQL/MinIO; application role NOSUPERUSER NOBYPASSRLS; actual Spring MVC controllers; no stock SQL seed",
+  "broadRegression": {
+    "build": "FAILED in12m51s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.MaterialSummaryQaIT",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchReviewIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+        "tests": 3,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITGuards",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITIntegrity",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITRaces",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITUsage",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+        "tests": 38,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITIsolation",
+        "tests": 28,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITLifecycle",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITPostingClosure",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjection",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionRace",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionScope",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionUpgrade",
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseMigrationInventoryTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "tests": 181,
+    "failures": 5,
+    "errors": 0,
+    "skipped": 0
+  },
+  "finalFocused": {
+    "numericBuild": "SUCCESS in2m21s",
+    "isolationBuild": "SUCCESS in2m54s",
+    "tests": 31,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITIsolation",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "migrationApply": {
+    "178": true,
+    "178.1": true,
+    "178.2": true,
+    "nextFree": "178.3"
+  },
+  "totals": {
+    "availableMM": 917500,
+    "consumedMM": 82500,
+    "technicianMM": 0,
+    "availableONU": 9,
+    "activeAssignment": 1,
+    "activeONU": 1,
+    "physicalAssets": 10,
+    "loanHandover": 1,
+    "allBalancesMM": 1000000,
+    "allBalancesEA": 10
+  },
+  "checks": [
+    "Real receipt, putaway, plan, reserve, pick, issue, technician ACK,82,500MM use, serialized install, LOAN signature/handover,17,500MM return inspection, complete proof and independent QA.",
+    "Two concurrent same-key usage requests and two concurrent inspection replays return the exact original result; only one physical effect.",
+    "Precommit failure after the real usage owner returns rolls back movement, cut, facts, usage and operation; same-key retry completes the full numeric flow.",
+    "QA witnesses actual deployment authorization, assignment, asset, issue/plan line, posting, revision and technician. QA leaves stock/movement/asset counts unchanged.",
+    "Real pg_blocking_pids observation proves the assignment shared lock is held until transaction end.",
+    "Test-only public owner decorator omits or forges a deployment before first approval. The actual DB constraint rejects the recomputed frozen snapshot;0 snapshots and PENDING QA remain, then valid approval succeeds.",
+    "Cable use and signed completion without the planned installed ONU still reject QA.",
+    "All28 isolation tests pass, including missing posting/header/snapshot409 SOURCE_NOT_VERIFIED, unchanged accounting and exact-key recovery."
+  ],
+  "failureResolution": [
+    "R4 numeric cloned-snapshot test hit pre-existing duplicate-snapshot guard; corrected to tamper first actual approval without weakening that guard.",
+    "R4 three missing-write isolation assertions expected exceptions; current MaterialWorkflowErrors intentionally returns409. Final tests verify error code, rollback and retry.",
+    "R5 corruption reached the new DB guard but WorkOrderController propagates this injected internal corruption as an SQL exception; test now asserts the actual exception and exact guard message, not a409 claim.",
+    "R6 compile error from runtime-only driver class replaced with java.sql.SQLException; final builds pass."
+  ],
+  "unresolved": [
+    "WorkOrderMaterialUsageITProjectionUpgrade starts the current application at175.21 and fails on missing source.transfer_receiver_id before constructing its historic fixture. Repair version-appropriate fixture in task46; no skip or lowered assertion.",
+    "Install-before-cable and delta-after-deployment shared revision ordering; serial-only material review.",
+    "Actual network response loss and whole app restart, outbox lost ACK/redelivery, remaining combined races, task45 browser and46\u201348/F1\u2013F4."
+  ],
+  "files": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySettlementApi.kt": "f814d1d13e9674c01d0b34a4a1c5ae266b5d774ffe410f293ca45a8f9ad34d31",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialSettlementStore.kt": "aa05444ee45ad27114b009bb306141f64171753254c33d2637427f26c82091ca",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt": "82dcf1af583d05e10992cedc6426a52337793eab996253e380056ec943210e17",
+    "server/src/main/resources/db/migration/V178_1__warehouse_settlement_deployment_sources.sql": "c4b6b169403296df9943ee7f981ef21f215f3e43712f92a02524f57088c832e3",
+    "server/src/main/resources/db/migration/V178_2__warehouse_settlement_assignment_fence.sql": "ff2b6f79215053a7dd6f26ca54796887268e2b5926e5300e3027d270b36f893b",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "7049cd0b212eee0fd5bd7110cd352a4320df13c387da2c93a6693fc5600ed26b",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseLifecycleFailurePort.kt": "1314358efe4f39729e8d1c2d8886ecea717cc956d450c743dcd43cbb29687f11",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "5620ad5bf4c053c40350d27ffaae2d4e8d4f947c229bc0d2458cdf86bed0d85f",
+    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITIsolation.kt": "f096cdcda4f0725200c0c830f3d204015a60d389b40dc59434ea65cca920b5f9"
+  }
+}

@@ -16,6 +16,17 @@ Boundary Spring Modulith ditegakkan `ModularityTests`. Arah dependency:
 `monitoring`, `reporting`, dan `subscriber360` memanggil kontrak publik `WorkorderApi`.
 `workorder` **tak pernah** memanggil balik pemanggilnya.
 
+Perencanaan material dan demand gudang disediakan oleh orchestration `fulfillment`
+melalui kontrak publik workorder/inventory. Lifecycle WO tetap sama. Lihat
+[perencanaan material WO](work-order-materials.md) untuk template versioned,
+deklarasi tanpa material, reserve/release, scope dan riwayat immutable.
+
+Alur operator lengkap ada pada [panduan gudang](warehouse.md) dan
+[demo review](warehouse-review.md). Pemakaian fisik, penutupan sisa material,
+keputusan QA, serah-terima pelanggan, dan provisioning mempunyai status tersendiri.
+Pembatalan atau penggantian teknisi tidak mengembalikan barang secara otomatis;
+gunakan retur atau handover custody dan pengakuan penerima yang sah.
+
 ---
 
 ## Model domain — `WorkOrder`

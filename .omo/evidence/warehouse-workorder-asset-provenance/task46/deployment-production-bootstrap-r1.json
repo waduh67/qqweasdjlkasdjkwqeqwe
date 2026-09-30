@@ -1,0 +1,24 @@
+{
+  "status": "FAIL",
+  "startedAtUtc": "2026-09-26T20:32:18.006362+00:00",
+  "project": "ftth-bootstrap-3ecbc9000361",
+  "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "imageIds": {
+    "server": "sha256:742224b9fa69bd269780f1a7c76c33cfd37a4b033b2032fef553a4c137fb100b",
+    "web": "sha256:ffdf1809281b559bbb3f9021fad2cd829ae5f1220e09e0b376bc35da733063e8",
+    "minio": "sha256:9513906814091e436ea84f4db1a031bc726f71a2be419c3e5fcf061c237eb35a"
+  },
+  "productionEndpointOpened": false,
+  "databaseRetained": true,
+  "sourceSha256": {
+    "docker-compose.prod.yml": "1906dd9975d9f915456c186a73b8aed1dd47fbf1f3dfaee4d2b1849c1565c207",
+    "postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+    "setup-private/production-bootstrap-probe.py": "f7a23422a25f34097526fd3f29b962db7254a42125df73b3e585b3bb81362493"
+  },
+  "negativeOnlyRemovesCanonicalDemoBinding": true,
+  "missingProductionSecretRejected": true,
+  "failureType": "RuntimeError",
+  "failure": "Production JSON readiness timed out",
+  "cleanupExitCode": 0,
+  "finishedAtUtc": "2026-09-26T20:38:20.311742+00:00"
+}

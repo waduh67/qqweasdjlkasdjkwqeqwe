@@ -1,0 +1,70 @@
+{
+  "task": 34,
+  "status": "complete",
+  "sourceCommit": "75f8ba41",
+  "run": "stock-explorer-readable",
+  "browser": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "durationSeconds": 45.481696,
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ]
+  },
+  "webTests": {
+    "passed": 100,
+    "files": 12,
+    "note": "100 baseline passed, followed by8 stock page tests after compilation-only correction; final source differs by cosmetic wrapping/labels"
+  },
+  "serverTests": {
+    "passed": 11,
+    "suites": 7,
+    "sourceCommit": "3046bb05",
+    "proof": "bucket-verification.json"
+  },
+  "checks": [
+    "bootJar passed",
+    "TypeScript and web build passed",
+    "lint passed with existing unrelated warnings",
+    "6 latest synthetic screenshots reviewed; complete location/revision text and no document overflow"
+  ],
+  "acceptance": [
+    "Actual1000m/10ONU receipt and inspection;900m/8ONU available,100m/2ONU quarantined",
+    "Serial GET lookup and five actual receipt/inspection/putaway events, origin receipt navigation",
+    "Reel conservation1000000MM,5segments,3active,2split; parent/child navigation",
+    "Low-stock minimum and exact known versus unknown cost",
+    "Server quarantine/location filter and context-preserving position drilldown",
+    "No warehouse mutation from stock exploration"
+  ],
+  "screenshots": [
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task34/desktop-received-stock.png",
+      "sha256": "9e9c3dd1104a6085e2edff872e7ad7963432151e9ae278e5eda4843c5d5f2971"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task34/desktop-stock-serial-trace.png",
+      "sha256": "207c763207b77ef3a5ea348e85f50c13ea85fe225e0f9ea5c6000d69e6520c97"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task34/desktop-stock-reel-lineage.png",
+      "sha256": "ee770f19cb444fd0627e7eecb17ea29e230ebe528f4c10c02a7ba33f18b76792"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task34/mobile-received-stock.png",
+      "sha256": "c54d6c0c67fd64bc2e07d94ff4a159c9ae585e579681de04095752b122859a2d"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task34/mobile-stock-serial-trace.png",
+      "sha256": "45f1ee90f6d962a411a2b98adff6398d89585a7283fdc5b49c3b6865dc85ab6a"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task34/mobile-stock-reel-lineage.png",
+      "sha256": "f3782034767ab793ca87a4fe1a2fd6e2e30fee99e47ea3823c746fe79b42cfb1"
+    }
+  ],
+  "cleanup": "owned QA processes containers network stopped; volumes retained",
+  "nextTask": 35
+}

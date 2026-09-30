@@ -1,6 +1,8 @@
 package com.duluin.ftth.common.infrastructure.persistence
 
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.NotFoundException
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.hibernate.Session
@@ -13,7 +15,7 @@ import java.sql.SQLException
 import java.util.UUID
 
 /**
- * Menghapus PERMANEN seluruh data satu tenant di semua module, lalu baris `tenant`-nya.
+ * Menghapus data tenant yang tidak mempunyai riwayat terlindungi, lalu baris tenant.
  *
  * Data tenant tersebar di puluhan tabel ber-`tenant_id` tanpa `ON DELETE CASCADE` dari
  * `tenant`, dan mayoritas dilindungi RLS `FORCE`. Alih-alih menghardcode daftar tabel
@@ -45,11 +47,45 @@ class TenantEraser(txManager: PlatformTransactionManager) {
         TenantContext.runAs(tenantId) {
             txTemplate.executeWithoutResult {
                 entityManager.unwrap(Session::class.java).doWork { conn ->
+                    // Block concurrent inserts through tenant FKs before inspecting
+                    // history. No new child may arrive between the check and delete.
+                    conn.prepareStatement("SELECT id FROM tenant WHERE id = ? FOR UPDATE").use { query ->
+                        query.setObject(1, tenantId)
+                        query.executeQuery().use { rows ->
+                            if (!rows.next()) throw NotFoundException("Tenant $tenantId tidak ditemukan")
+                        }
+                    }
                     val tables = tenantScopedTables(conn)
-                    deleteAll(conn, tables, tenantId)
+                    val businessTables = tables.filterNot { it in CASCADE_ONLY_CONTROL_TABLES }
+                    requireDeletableHistory(conn, businessTables, tenantId)
+                    deleteAll(conn, businessTables, tenantId)
                     deleteTenantRow(conn, tenantId)
                 }
             }
+        }
+    }
+
+    private fun hasRows(conn: Connection, table: String, tenantId: UUID): Boolean =
+        conn.prepareStatement("""SELECT EXISTS (SELECT FROM "$table" WHERE tenant_id = ?)""").use { query ->
+            query.setObject(1, tenantId)
+            query.executeQuery().use { rows -> check(rows.next()); rows.getBoolean(1) }
+        }
+
+    /** Check every protected table before deleting anything; keep ordinary RLS and grants intact. */
+    private fun requireDeletableHistory(conn: Connection, tables: List<String>, tenantId: UUID) {
+        val protectedTables = conn.prepareStatement("""
+            SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname='public' AND c.relname=ANY(?) AND (
+                NOT has_table_privilege(current_user,c.oid,'DELETE') OR EXISTS (
+                    SELECT FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid
+                    WHERE t.tgrelid=c.oid AND NOT t.tgisinternal AND (t.tgtype::integer & 8)<>0
+                      AND p.proname='warehouse_append_only'))
+        """.trimIndent()).use { query ->
+            query.setArray(1, conn.createArrayOf("text", tables.toTypedArray()))
+            query.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getString(1)) } }
+        }
+        if (protectedTables.any { hasRows(conn, it, tenantId) }) {
+            throw ConflictException("Tenant memiliki riwayat permanen yang harus dipertahankan. Nonaktifkan tenant melalui aksi Suspend.")
         }
     }
 
@@ -96,6 +132,13 @@ class TenantEraser(txManager: PlatformTransactionManager) {
             val iterator = remaining.iterator()
             while (iterator.hasNext()) {
                 val table = iterator.next()
+                // A protected table can be empty for this tenant while containing
+                // another tenant's history. Do not issue a forbidden DELETE on it.
+                if (!hasRows(conn, table, tenantId)) {
+                    iterator.remove()
+                    progressed = true
+                    continue
+                }
                 val savepoint = conn.setSavepoint()
                 try {
                     // Nama tabel berasal dari katalog (tepercaya) → aman diinterpolasi;
@@ -129,6 +172,10 @@ class TenantEraser(txManager: PlatformTransactionManager) {
     }
 
     private companion object {
+        // Their guards forbid direct deletion/epoch reset while the tenant exists.
+        // They disappear only through the final tenant-row FK cascade.
+        val CASCADE_ONLY_CONTROL_TABLES = setOf("inventory_tenant_cutover", "iam_authorization_epoch", "inventory_draft_policy")
+
         /**
          * Kelas SQLState `23` = integrity_constraint_violation (FK 23503, CHECK 23514, dst).
          * Semua bisa muncul saat urutan hapus belum benar — ditunda & dicoba ulang. Penjaga

@@ -1,0 +1,88 @@
+{
+  "activationHelperSha256": "87f7e0f55c82bad649b3d5ed615b7e5b18227992bfe664ecd649095d5c0c3ed7",
+  "applicationCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "currentCanonicalProofSchemasCompatible": true,
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "f3ReadinessAssessment": {
+    "circular": false,
+    "interpretation": "Bind existing accepted F3 browser evidence to unchanged1306 application and composed release once code CI succeeds; readiness is not post-activation acceptance",
+    "newBrowserRunRequiredBySchema": false,
+    "readinessReceiptsDoNotHashThemselvesOrReleaseApprovalFile": true
+  },
+  "finalF4Approval": false,
+  "findingClosures": {
+    "ACT-F4-01": "CLOSED: exact13 host inventory, six hash-bound source/status proofs, current run/all16 successful jobs, backup outcome, four source/proof/host/helper-bound readiness receipts",
+    "ACT-F4-02": "CLOSED: recover prior owned block after switch failure, preserve current unrelated bytes, validate/reload running proxy even if disk already restored, verify origin TLS503; concurrent owned edit requires manual recovery",
+    "ACT-F4-03": "CLOSED: TERM/INT enter caught failure path; repeat signals ignored during recovery and beginning of finally receipt persistence"
+  },
+  "limitations": [
+    "Synthetic tests do not prove real Caddy reload/TLS/host recovery",
+    "SIGKILL/power loss cannot be intercepted; durable prior Caddy file/stage support manual recovery",
+    "Actual server artifact/current complete CI and readiness receipts remain pending",
+    "This is source approval for staging only, not READY_FOR_ACTIVATION or final F4 approval"
+  ],
+  "parentReportsActivationUnexecuted": true,
+  "requiredCodeCiRun": 36265279847,
+  "requiredDecision": "READY_FOR_ACTIVATION",
+  "requiredHostFiles": [
+    ".env",
+    "Caddyfile.shared-proxy",
+    "backup/backup.sh",
+    "backup/entrypoint.sh",
+    "backup/restore.sh",
+    "docker-compose.images.json",
+    "docker-compose.prod.yml",
+    "docker-compose.shared-proxy.yml",
+    "ftth-compose",
+    "postgres-init/10-init-app-db.sh",
+    "radius/freeradius/clients.conf",
+    "radius/freeradius/mods-enabled/sql",
+    "setup-private/loaded-image-identities.json"
+  ],
+  "requiredIndependentReviewers": [
+    "f1",
+    "f2",
+    "f3",
+    "f4"
+  ],
+  "requiredProofKinds": [
+    "backup",
+    "bootstrap",
+    "images",
+    "network",
+    "nonserver",
+    "server"
+  ],
+  "reviewedAtUtc": "2026-09-26T21:17:09.112771+00:00",
+  "reviewerExecutedActivation": false,
+  "reviewerReranQa": false,
+  "reviewerUsedSshOrDocker": false,
+  "status": "ACTIVATION_HELPER_SOURCE_APPROVED_FOR_STAGING_ONLY",
+  "syntheticExecution": {
+    "actualNamedTests": [
+      "test_complete_synthetic_gate_is_accepted",
+      "test_concurrent_edit_during_validation_not_overwritten",
+      "test_concurrent_owned_edit_requires_manual_recovery",
+      "test_empty_host_inventory_rejected",
+      "test_missing_backup_proof_rejected",
+      "test_missing_job_rejected_even_if_rebound",
+      "test_mutated_host_configuration_rejected",
+      "test_prior_disk_bytes_still_get_reloaded",
+      "test_recovery_preserves_concurrent_unrelated_sites_and_reloads",
+      "test_reload_failure_not_reported_as_recovered",
+      "test_repeated_signals_cannot_interrupt_recovery",
+      "test_stale_independent_binding_rejected",
+      "test_term_and_interrupt_enter_caught_recovery",
+      "test_wrong_ci_rejected_even_if_rebound"
+    ],
+    "exitCode": 0,
+    "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "failures": 0,
+    "logSha256": "dc536e3d03af86281aa76818e123b9df9bb71a0069e4ffa9c20526037e96ef42",
+    "receiptSha256": "1162ef65316598a555f4ad71b6283ab36f93f14d91044813333448c7d36275ec",
+    "scope": "Local synthetic approval rejection and recovery fault injection only; no host/Docker/SSH/runtime activation",
+    "status": "PASS",
+    "tests": 14
+  },
+  "syntheticTestSourceSha256": "1cf358f7963ac2b6a83e0ba3a25643668655a01287be70bf6bf0a4e78ccc66f6"
+}

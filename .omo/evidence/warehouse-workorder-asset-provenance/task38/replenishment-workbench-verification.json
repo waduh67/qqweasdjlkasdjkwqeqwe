@@ -1,0 +1,50 @@
+{
+  "backendSourceCommit": "d874d2d0",
+  "tests": 12,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentIT",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "60f7e1f04cba91a575fa6abac863999ffb322bea7814dc894e9553d5e4d5f89b"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITCommands",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "5338ee2ea0fe0f9d81ed98e219c91a8573951cd8014199463698a3b5289f5102"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITInbound",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "8b13d9222d73ea02621603fd17f2805c9c92eefc649446ef9b3c25fd592a21f5"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentWorkbenchIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "296d7c5244dab88f33337f21f780a3289e62107e2e365db760980bf7f83d6ec4"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in 2m 13s",
+  "web": {
+    "sourceCommit": "accompanying replenishment UI commit",
+    "tests": 16,
+    "files": 3,
+    "durationSeconds": 4.6,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS"
+  },
+  "corrections": "Initial backend compile failed due missing inbound imports; initial new UI tests needed jsdom dialog polyfill, valid role options and required label matcher. Both corrected before green runs.",
+  "scope": "Named current scoped rules/requests, SQL filtered totals, live versus captured position, no GET mutation; immutable revision-bound acceptance/replay, recompute/stale reload, create/edit exact-unit rule, receipt revision binding, read-only and denied views.",
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

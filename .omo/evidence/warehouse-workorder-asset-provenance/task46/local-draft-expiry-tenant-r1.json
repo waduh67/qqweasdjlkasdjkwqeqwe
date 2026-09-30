@@ -1,0 +1,36 @@
+{
+  "status": "PASS_FOCUSED",
+  "parent": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "counts": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "dee699969c4350f9eb5113f39bb0fc62d1326c46c5de458e1e0f7da67f138202",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "sha256": "5a2b7a4ded9203c02ff1087952ece14a4c926fced0abaa003cecda728fa5a8d5",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 0,
+  "cleanupExitCode": 0,
+  "sourceInputCount": 2625,
+  "sourceInventorySha256": "ef334311d524bcc40b4674baa396c89937c96abdc0e9a8f63bafe1f02ecb72e7",
+  "runnerSha256": "298d7c70642aa7fa66fe6bc7008e2b0b349631812d9810bc77ca0bb75cee6831",
+  "scope": "All4DeleteTenantIT cases plus3ModularityTests pass: otherwise-empty tenant with owner-configured policy is deletable and all tenant rows removed; direct app policy DELETE denied; protected ONU-history tenant plus policy rejected with every tenant table unchanged; ordinary empty tenant cleanup preserves unrelated history; platform tenant rejected.",
+  "previousAttempt": "BackfillR2 had12/13passes; only new policy fixture owner INSERT omitted row tenant GUC. Fixed fixture by explicit transaction-local scope, and added policy to protected history case. No SQL guard changes.",
+  "excludes": "Not an unfiltered regression; backfill and scope results remain separate R2 reports."
+}

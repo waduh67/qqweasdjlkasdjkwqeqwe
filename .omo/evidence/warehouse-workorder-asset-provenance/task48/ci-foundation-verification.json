@@ -1,0 +1,27 @@
+{
+  "status": "CI foundation verified; task48 image smoke and full application gates pending",
+  "tests": 17,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "actionlint": "PASS",
+  "encryptedRoundtrip": {
+    "encryptedAndDecryptedReportFiles": 5,
+    "byteIdentical": true,
+    "recipientType": "existing user SSH Ed25519 public key",
+    "privateKeyPrintedOrUploaded": false
+  },
+  "negativeCases": [
+    "empty results",
+    "missing results",
+    "test failure",
+    "skipped test",
+    "flaky browser",
+    "missing browser project",
+    "cancelled prerequisite",
+    "missing prerequisite",
+    "environment archive input",
+    "symlink archive input",
+    "archive overwrite"
+  ]
+}

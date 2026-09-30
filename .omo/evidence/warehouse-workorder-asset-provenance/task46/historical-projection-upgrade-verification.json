@@ -1,0 +1,21 @@
+{
+  "historicalApplication": "c164c4eb4224fb51ebffd669c87caf4fde2af1df",
+  "currentCommit": "ddf494b37cfc8c22f8d522d3e090c487133b1924",
+  "regressionSha256": "1e2b04ecd6c8fa33ed9c4659def41069f6c5e2fe6de69444932e410302de9d45",
+  "migrationSha256": "46268940054dbe1211f477a4d365a18c94b2ecfe1013977138c4a9ccc0296700",
+  "counts": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "schemaBefore": "175.21",
+  "schemaAfter": "175.22",
+  "applicationRole": "warehouse_app",
+  "assertions": [
+    "real receipt, issue, technician acknowledgement and physical use through historical HTTP",
+    "zero and descendant corruption committed before upgrade, both historical replays succeed",
+    "exactly one immutable migration applied; both replays and reads reject with 409",
+    "no accounting changes from denied replay"
+  ]
+}

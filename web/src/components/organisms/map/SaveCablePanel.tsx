@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useMemo, useState } from 'react'
 import { MessageBar, MessageBarBody, Text, ToggleButton } from '@fluentui/react-components'
 import { api } from '@/api/client'
@@ -13,7 +15,6 @@ import type {
 } from '@/api/network'
 import { CABLE_ATTACHMENT_ROLE_LABEL } from '@/api/network'
 import { Button, SelectField, TextField } from '@/components/atoms'
-import { BladeHead } from '@/components/molecules'
 import {
   CODE_MAX,
   DEFAULT_CORES,
@@ -73,7 +74,7 @@ export function SaveCablePanel({
     ownership: CableOwnership
     /** Singgahan di tengah bentang + perannya, urut dari pangkal. */
     waypoints: Array<{ nodeKind: NodeKind; nodeId: string; role: CableAttachmentRole }>
-  }) => void
+  }) => void | Promise<void>
 }) {
   // Jenis kabel hampir selalu tersirat dari sepasang ujungnya, jadi ia datang sebagai
   // prop dan operator tak ditanya hal yang sudah jelas. Pengecualiannya cuma saat
@@ -217,8 +218,7 @@ export function SaveCablePanel({
     setType(next)
   }
 
-  const submit = () =>
-    onSave({
+  const buildPayload = (): Parameters<typeof onSave>[0] => ({
       // Kode yang belum disentuh dikirim KOSONG walau kolomnya terisi: isinya cuma
       // pratinjau dari aturan yang sama, dan membiarkan server yang merakit membuat
       // ruas kedua antara sepasang kotak yang sama dapat akhiran angka — bukan gagal
@@ -235,14 +235,23 @@ export function SaveCablePanel({
       waypoints: waypointCommands(waypoints, roles),
     })
 
+  const creation = useCreationReview(true)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const submit = async () => {
+    if (!canSave || creation.beforeSave()) return
+    setSaveError(null)
+    try { await onSave(buildPayload()) }
+    catch (error) { setSaveError(error instanceof Error ? error.message : 'Gagal menyimpan kabel.') }
+    finally { creation.finish() }
+  }
+
   return (
-    <aside className="map-panel blade">
-      <BladeHead
-        title="Kabel baru"
-        subtitle={`${TYPE_LABEL[type]} · ${from} → ${to} · ${formatLength(lengthMeters)}`}
-        onClose={onCancel}
-        closeLabel="Batal"
-      />
+    <Blade open title="Kabel baru" onClose={onCancel}
+      creation={{ ...creation, prepare: () => void submit(), summary: <><CreationSummary rows={[
+        ['Nama', name], ['Jenis kabel', TYPE_LABEL[type]], ['Rute', `${from} → ${to}`],
+        ['Panjang', formatLength(lengthMeters)], ['Jumlah core', coreCount], ['Kode', codeTouched ? code : 'Otomatis'],
+      ]} />{saveError && <p role="alert">{saveError}</p>}</> }}
+      footer={<><Button disabled={creation.busy} onClick={onCancel}>Batal</Button><Button variant="primary" disabled={!canSave || creation.busy} onClick={() => void submit()}>Simpan kabel</Button></>}>
       <div className="blade-body stack">
         {ambiguousType && (
           <div className="stack" style={{ gap: '0.35rem' }}>
@@ -427,16 +436,9 @@ export function SaveCablePanel({
           </div>
         )}
 
-        <div className="row">
-          <Button variant="primary" disabled={!canSave} onClick={submit}>
-            Simpan kabel
-          </Button>
-          <Button variant="subtle" onClick={onCancel}>
-            Batal
-          </Button>
-        </div>
+
       </div>
-    </aside>
+    </Blade>
   )
 }
 

@@ -1,0 +1,76 @@
+{
+  "task": 36,
+  "status": "transfer browser verified; return screens pending",
+  "sourceCommit": "49e8a1d455f8e2d34ad6fab9feb5ea7336ec5613",
+  "run": "transfer-final",
+  "browser": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "durationSeconds": 38.005451,
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ]
+  },
+  "acceptance": [
+    "Real empty tenant setup,100m receipt and putaway through visible UI",
+    "Named actual position selected; draft uses persisted sourceBalanceId; draft receives0/transit0",
+    "Dispatch100m is transit and not available; receive60m leaves40m actual transit",
+    "Reload discovers saved transfer and revision history",
+    "Real stock UI confirms40m transit/0available and60m destination/60available"
+  ],
+  "checks": [
+    "bootJar and web production build passed",
+    "All10 final synthetic PNG visually reviewed; mobile Diselesaikan label readable, names and quantities wrap without page overflow"
+  ],
+  "relatedEvidence": [
+    "discovery-verification.json",
+    "workbench-verification.json"
+  ],
+  "screenshots": [
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/desktop-transfer-dispatched.png",
+      "sha256": "d61b378beafe464bb3828e8e6485418a5c4740068eca10dfe5069c6b1532b04a"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/desktop-transfer-draft.png",
+      "sha256": "a735614390f97c52bf72012b1d9e575e5e5b05d8c1315ed28fbaed4ef5797f15"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/desktop-transfer-partial.png",
+      "sha256": "22ea87311173bad071f481e7dff35d52b6b9aa865a57c20990fde107db0abdfd"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/desktop-transfer-received-stock.png",
+      "sha256": "ad305e0fc1571bdfd1c55cd38e19a21f096bc5440379f28b73a81fa266625e9d"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/desktop-transfer-transit-stock.png",
+      "sha256": "8a9fa7b26795b6750ae7ef38a6413fdf7a42446797f05d9bc201643828527aac"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/mobile-transfer-dispatched.png",
+      "sha256": "f49b2aff7788e339b388d83bfe7915225032c381822f493902c4fc5c219d9454"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/mobile-transfer-draft.png",
+      "sha256": "8489ab99315e64a0e5618d90cd36db42b54c52fbaaed2da94311f29a8ae63bb5"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/mobile-transfer-partial.png",
+      "sha256": "536e7db535b1958e46bac45d3f1abe015ffae04a525e6d168b13cf8d842e67e9"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/mobile-transfer-received-stock.png",
+      "sha256": "4770589aac99fae7be40714ac784d900516f1cce9e420dae0c13f068f9474395"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task36/mobile-transfer-transit-stock.png",
+      "sha256": "063731cd07e8f689031bfa009ef815ee4fb3f9a10d86fc2f41919a80e76c1c1e"
+    }
+  ],
+  "cleanup": "Owned processes/containers/network stopped; volumes retained",
+  "next": "Return source lookup, named reads, inspection and repair UI; task36 remains open"
+}

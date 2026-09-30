@@ -11,6 +11,12 @@ import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.CustomerObservationApi
+import com.duluin.ftth.customer.ObservationEpisode
+import com.duluin.ftth.customer.ObservationAttribution
+import com.duluin.ftth.network.NetworkObservationApi
+import com.duluin.ftth.monitoring.adapter.outbound.persistence.UnassignedObservationStore
+import com.duluin.ftth.monitoring.application.service.ServerPollWindow
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.monitoring.application.service.AlarmEngine
 import com.duluin.ftth.monitoring.application.service.DiscoveredOnuRecorder
@@ -34,7 +40,6 @@ import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
-import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
@@ -77,7 +82,9 @@ class ManualOltPollerTest {
         assertThat(result.readingCount).isEqualTo(2)
         assertThat(result.failureReason).isNull()
         assertThat(result.checkedAt).isBetween(before, Instant.now())
-        verify(persister).persist(tenantId, target, true, readings, null)
+        val acquisition = verifyPersistence(persister, tenantId, target, true, readings, null)
+        assertThat(acquisition.startedAt).isBetween(before, result.checkedAt)
+        assertThat(acquisition.completedAt).isBetween(acquisition.startedAt, result.checkedAt)
         assertThat(adapter.probeCalls).isEqualTo(1)
         assertThat(adapter.pollCalls).isEqualTo(1)
     }
@@ -149,10 +156,11 @@ class ManualOltPollerTest {
     fun `manual persistence failure is classified safely and releases single flight`() {
         val sentinel = "persistence-secret password=hunter2 host=10.88.77.66"
         val adapter = RecordingAdapter()
-        val persister = mock(OltReadingPersister::class.java)
-        doThrow(IllegalStateException(sentinel))
-            .doNothing()
-            .`when`(persister).persist(tenantId, target, true, emptyList(), null)
+        var attempts = 0
+        val persister = mock(OltReadingPersister::class.java) { call ->
+            if (call.method.name == "persist" && ++attempts == 1) throw IllegalStateException(sentinel)
+            null
+        }
         val poller = poller(target, adapter, persister)
 
         val captured = captureLogs(ServerSideOltPoller::class.java) {
@@ -169,7 +177,7 @@ class ManualOltPollerTest {
 
         assertThat(retry.reachable).isTrue()
         assertThat(adapter.probeCalls).isEqualTo(2)
-        verify(persister, times(2)).persist(tenantId, target, true, emptyList(), null)
+        verifyPersistence(persister, tenantId, target, true, emptyList(), null, count = 2)
     }
 
     @Test
@@ -233,18 +241,19 @@ class ManualOltPollerTest {
         val laterTarget = target.copy(id = UUID.randomUUID(), code = "OLT-02")
         val network = mock(NetworkApi::class.java)
         val adapter = RecordingAdapter()
-        val persister = mock(OltReadingPersister::class.java)
+        val persister = mock(OltReadingPersister::class.java) { call ->
+            if (call.method.name == "persist" && call.arguments[1] == target) throw IllegalStateException(sentinel)
+            null
+        }
         val ids = setOf(target.id, laterTarget.id)
         `when`(network.listAllOltIds()).thenReturn(ids)
         `when`(network.findPollingTargets(ids)).thenReturn(listOf(target, laterTarget))
-        doThrow(IllegalStateException(sentinel))
-            .`when`(persister).persist(tenantId, target, true, emptyList(), null)
         val poller = ServerSideOltPoller(network, AdapterRegistry(listOf(adapter)), persister)
 
         val captured = captureLogs(ServerSideOltPoller::class.java) { poller.pollTenant(tenantId) }
 
         assertThat(adapter.probeCalls).isEqualTo(2)
-        verify(persister).persist(tenantId, laterTarget, true, emptyList(), null)
+        verifyPersistence(persister, tenantId, laterTarget, true, emptyList(), null)
         assertThat(captured.renderedText()).doesNotContain(sentinel)
         assertThat(captured.events).allSatisfy { event -> assertThat(event.throwableProxy).isNull() }
     }
@@ -273,7 +282,7 @@ class ManualOltPollerTest {
             release.countDown()
             scheduled.get(5, TimeUnit.SECONDS)
             assertThat(adapter.probeCalls).isEqualTo(1)
-            verify(persister).persist(tenantId, target, true, emptyList(), null)
+            verifyPersistence(persister, tenantId, target, true, emptyList(), null)
         } finally {
             release.countDown()
             executor.shutdownNow()
@@ -302,7 +311,7 @@ class ManualOltPollerTest {
             release.countDown()
             first.get(5, TimeUnit.SECONDS)
             assertThat(adapter.probeCalls).isEqualTo(2)
-            verify(persister).persist(otherTenant, target, true, emptyList(), null)
+            verifyPersistence(persister, otherTenant, target, true, emptyList(), null)
         } finally {
             release.countDown()
             executor.shutdownNow()
@@ -317,9 +326,10 @@ class ManualOltPollerTest {
         val readings = listOf(reading("TEST001122AA"))
         val persister = OltReadingPersister(ingestion, alarms, ApplicationEventPublisher(events::add))
 
-        persister.persist(tenantId, target, reachable = true, readings = readings, failureReason = null)
+        val window = this.window
+        persister.persist(tenantId, target, reachable = true, readings = readings, failureReason = null, acquisition = window)
 
-        verify(ingestion).ingestReadings(tenantId, readings)
+        verify(ingestion).ingestServerReadings(tenantId, readings, window, false)
         val alarmCall = mockingDetails(alarms).invocations.single { it.method.name == "evaluate" }
         assertThat(alarmCall.arguments.take(6)).containsExactly(
             tenantId, AlarmKind.OLT_UNREACHABLE, oltId, "OLT-01", false, null,
@@ -345,7 +355,14 @@ class ManualOltPollerTest {
             odpId = null,
             status = "ONLINE",
         )
-        `when`(customerApi.findOnusBySerialNumbers(setOf(knownOnu.serialNumber))).thenReturn(listOf(knownOnu))
+        val episode = ObservationEpisode(knownOnu, null, 1, 1, Instant.EPOCH, null, true)
+        val observations = mock(CustomerObservationApi::class.java) { call ->
+            when (call.method.name) {
+                "resolveObservation" -> ObservationAttribution(episode, null, 1)
+                "advanceLiveObservation" -> true
+                else -> null
+            }
+        }
         val ingestion = MetricIngestionService(
             metricRepository,
             batchRepository,
@@ -354,12 +371,25 @@ class ManualOltPollerTest {
             alarms,
             discoveredOnus,
             publisher,
+            observations,
+            mock(UnassignedObservationStore::class.java),
+            mock(NetworkObservationApi::class.java),
         )
         val persister = OltReadingPersister(ingestion, alarms, publisher)
 
-        persister.persist(tenantId, target, reachable = true, readings = listOf(reading(knownOnu.serialNumber)), failureReason = null)
+        persister.persist(tenantId, target, reachable = true, readings = listOf(reading(knownOnu.serialNumber)), failureReason = null, acquisition = window)
 
         assertThat(events).containsExactly(AlarmsChangedEvent(tenantId))
+    }
+
+    private val window get() = Instant.now().let { ServerPollWindow(it, it) }
+
+    private fun verifyPersistence(persister: OltReadingPersister, tenant: UUID, target: OltPollingTarget,
+        reachable: Boolean, readings: List<OnuReading>, reason: String?, count: Int = 1): ServerPollWindow {
+        val calls = mockingDetails(persister).invocations.filter { it.method.name == "persist" && it.arguments[1] == target }
+        assertThat(calls).hasSize(count)
+        calls.forEach { assertThat(it.arguments.take(5)).containsExactly(tenant, target, reachable, readings, reason) }
+        return calls.last().arguments[5] as ServerPollWindow
     }
 
     private fun poller(

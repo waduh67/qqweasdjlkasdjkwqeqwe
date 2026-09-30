@@ -1,0 +1,58 @@
+{
+  "afterSha256": "e9d1177f32385d9a457e1b411b894ae1381d083146c94f051103f49483d912da",
+  "aggregateCiPass": false,
+  "allOther3692InputsUnchangedFrom6b": true,
+  "assertionLogicUnchanged": true,
+  "beforeSha256": "e89411b8a96b314b67d14df7fd2d680643994671d03f27ff0e9872510fbd60d2",
+  "currentHeadAtReview": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
+  "exactlyFourExpectedStringChanges": true,
+  "failedCiCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
+  "file": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt",
+  "finalF4Approval": false,
+  "localExitCode": 0,
+  "localParentCommit": "c122e5a9a4aa283cc4446ab492cc6b54614fbf5e",
+  "localQaExecutedByReviewer": false,
+  "localRawSuites": [
+    {
+      "errors": 0,
+      "failures": 0,
+      "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
+      "skipped": 0,
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3
+    },
+    {
+      "errors": 0,
+      "failures": 0,
+      "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
+      "skipped": 0,
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "tests": 12
+    }
+  ],
+  "parentCommitContainsEvidenceOnlyChanges": true,
+  "priorChangedPaths": [
+    ".omo/evidence/warehouse-workorder-asset-provenance/f1-final-preliminary-evidence-index.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/f1-final-preliminary-matrix.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/f1-final-preliminary-source-evidence.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task-23/index.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f1-offline-protocol-executed-verification.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f1-offline-protocol-executed-verification.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-current-local-evidence-authentication.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-current-source-preliminary.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f2-current-source-preliminary.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f3-asset-wire-authentication.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f3-main-matrix-authentication.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-6bfb1337-source-input-hashes.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-release-6bfb1337-preparation.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/f4-release-6bfb1337-preparation.md",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/local-offline-protocol-r1.json",
+    ".omo/evidence/warehouse-workorder-asset-provenance/task46/offline-protocol-r1-source-hashes.json",
+    ".omo/notepads/warehouse-workorder-asset-provenance/handoff.md",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-23.md"
+  ],
+  "reviewedAtUtc": "2026-09-26T18:53:22.141016+00:00",
+  "sourceInputCount": 3693,
+  "sourceInventorySha256": "e7f067b74430879d7199a81cafc8d11ba58673f66fa63e5b82258ee654e20910",
+  "status": "BOUNDED_CORRECTION_VERIFIED_AND_EXISTING_LOCAL_XML_AUTHENTICATED"
+}

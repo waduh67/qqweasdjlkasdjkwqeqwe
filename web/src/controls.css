@@ -1,0 +1,68 @@
+/* Azure Portal density. Explicit medium/large controls keep their Fluent sizing. */
+.app-control.app-control-compact,
+.app-button.app-button-compact:where(:not(.sidebar *, .topbar *)) {
+  font-size: 13px;
+  line-height: 20px;
+}
+.app-button.app-button-compact:where(:not(.sidebar *, .topbar *)) { min-height: 24px; padding-block: 0; }
+.app-button.app-button-compact:where(:not(.sidebar *, .topbar *)):not(.app-button-icon):not(.cmd-btn) { min-width: 80px; padding-inline: 16px; }
+.app-button.app-button-compact:where(:not(.sidebar *, .topbar *)).app-button-icon { min-width: 24px; padding: 0; }
+.app-button.app-button-default:enabled { border-color: #8a8886; }
+.app-button.app-button-default:enabled:hover { border-color: var(--muted); }
+.app-control:not(:has(:disabled, [aria-invalid='true'])) { border-color: #8a8886; }
+.app-control:not(:has(:disabled, [aria-invalid='true'])):hover { border-color: var(--muted); }
+.app-control::after { display: none; }
+.app-control.app-control:focus-within { outline: 2px solid var(--muted); outline-offset: -2px; }
+.app-field > .fui-Label { font-size: 13px; line-height: 20px; font-weight: 400; }
+.app-control.app-control-compact .fui-Select__select { padding-block: 1px; line-height: 20px; }
+.app-control .app-button-icon { align-self: center; min-height: 20px; height: 20px; }
+.form-section-fields { gap: 12px; }
+
+/* The customer create/edit blade follows the reference's 250px label + 450px input. */
+.azure-resource-form { max-width: 700px; }
+.azure-resource-form .form-section + .form-section { border-top: 0; margin-top: 0; padding-top: 8px; }
+.azure-resource-form .form-section-fields { gap: 20px; }
+.azure-resource-form .form-section-desc { margin-bottom: 20px; line-height: 20px; }
+.azure-resource-form .form-disclosure { border: 0; border-radius: 0; }
+.azure-resource-form .form-disclosure > summary { padding: 0; }
+.azure-resource-form .form-disclosure > .field { padding: 12px 0 0; }
+.azure-resource-form .field-label { font-size: 13px; font-weight: 400; }
+.blade-customer-form .azure-blade-foot { justify-content: flex-start; }
+@media (min-width: 820px) {
+  .azure-resource-form .app-field:where(:not(.form-disclosure *)):has(> .fui-Field__label) {
+    grid-template-columns: 250px minmax(0, 450px);
+    grid-template-rows: auto;
+  }
+  .azure-resource-form .app-field:where(:not(.form-disclosure *)) > .fui-Field__label { grid-column: 1; grid-row: 1 / span 3; padding: 2px 20px 2px 0; margin: 0; }
+  .azure-resource-form .app-field:where(:not(.form-disclosure *)) > :not(.fui-Field__label) { grid-column: 2; }
+  .azure-resource-form .form-disclosure { margin-left: 250px; }
+}
+
+/* One-line records are 32px; descriptions and long values may grow without clipping. */
+.data-table-grid .fui-DataGridRow { min-height: 32px; }
+.data-table-grid .fui-DataGridHeaderCell,
+.data-table-grid .fui-DataGridCell { padding: 4px 12px; font-size: 13px; line-height: 20px; }
+.data-table-grid .fui-DataGridCell { min-height: 32px; height: auto; }
+.data-table-grid .fui-DataGridHeaderCell { color: var(--text); background: var(--surface); }
+.data-table-grid .fui-DataGridHeaderCell .fui-Button { min-height: 24px; font-size: 13px; line-height: 20px; }
+.data-table-grid .fui-DataGridSelectionCell { padding: 0; flex: 0 0 40px; min-width: 40px; }
+.data-table-grid .fui-DataGridSelectionCell .fui-Checkbox { padding: 0; }
+.data-table-grid .fui-DataGridSelectionCell .fui-Checkbox__indicator { margin: 6px; }
+.table-card .data-table-grid .fui-DataGridRow { border-bottom-color: var(--sidebar-border); }
+.data-table-grid .fui-DataGridRow[aria-selected='true'] { background: var(--sidebar-active-bg); }
+
+@media (max-width: 720px) {
+  .mobile-card-table .data-table-grid .fui-DataGridCell { padding: 8px 12px; }
+}
+@media (pointer: coarse) {
+  .app-button.app-button-compact:where(:not(.sidebar *, .topbar *)),
+  .app-control.app-control-compact:not(.fui-Textarea),
+  .app-control .app-button-icon,
+  .data-table-grid .fui-DataGridHeaderCell .fui-Button { min-height: 40px; }
+  .app-control .app-button-icon { height: 40px; min-width: 40px; }
+  .app-control.app-control-compact .fui-Select__select { min-height: 38px; }
+  .data-table-grid .fui-DataGridRow { min-height: 40px; }
+}
+@media (forced-colors: active) {
+  .app-control.app-control:focus-within { outline-color: Highlight; }
+}

@@ -9,9 +9,11 @@ import java.util.UUID
 @Component
 class PermissionPersistenceAdapter(
     private val jpa: PermissionJpaRepository,
+    private val authority: CatalogAuthorityFence,
 ) : PermissionRepository {
 
     override fun save(permission: Permission): Permission {
+        authority.changed()
         val entity = jpa.findById(permission.id).orElse(null)?.apply {
             description = permission.description
             platformOnly = permission.platformOnly

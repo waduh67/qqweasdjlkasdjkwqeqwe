@@ -1,0 +1,68 @@
+{
+  "purpose": "C8 real customer asset exception creation, independent rejection and unchanged later physical history",
+  "baseCommit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+  "run": "asset-exception-browser-r3",
+  "command": "bash scripts/warehouse/qa.sh browser customer-assets.spec.ts",
+  "stats": {
+    "startTime": "2026-09-26T14:47:07.280Z",
+    "duration": 432215.986,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "testcases": [
+    {
+      "case": "sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA",
+      "project": "warehouse-desktop",
+      "status": "passed",
+      "durationMs": 102418
+    },
+    {
+      "case": "loan swap returns and resets the original asset before issuing that same physical unit to another customer",
+      "project": "warehouse-desktop",
+      "status": "passed",
+      "durationMs": 97760
+    },
+    {
+      "case": "sold mixed-case receipt asset keeps customer title through physical removal, vendor repair, reset and original-customer RMA",
+      "project": "warehouse-mobile",
+      "status": "passed",
+      "durationMs": 103263
+    },
+    {
+      "case": "loan swap returns and resets the original asset before issuing that same physical unit to another customer",
+      "project": "warehouse-mobile",
+      "status": "passed",
+      "durationMs": 110087
+    }
+  ],
+  "reportSha256": "1a7a1e6a0478ef45c9f1bf334a9f040730607bf7bbcd07e0db2ebedad8abbd84",
+  "applicationInputCount": 2426,
+  "applicationInputsSha256": "a6e70d6f15e8c8eae8f68b31180253d2ece1dc609649445cf7cf437093f7a6db",
+  "allInputsMatchCurrent": true,
+  "artifact": {
+    "jarSha256": "fbadae89b73777da16018bfbee3d3414ba2b3bfe092c48bbd55e375951037590"
+  },
+  "priorAttempts": [
+    {
+      "run": "r1",
+      "passed": 0,
+      "failed": 4,
+      "cause": "fixture email prefix contained whitespace; corrected to Pengaju"
+    },
+    {
+      "run": "r2",
+      "passed": 2,
+      "failed": 2,
+      "cause": "mobile clicked customer gridcell padding; corrected to actual named customer button"
+    }
+  ],
+  "limits": [
+    "Focused local browser run only; final full current regression and F1-F4 pending",
+    "Raw reports/traces/screenshots retained privately; safe independent visual review has screenshot hashes",
+    "C7 expiry remains unapplied; highest migration is178.11"
+  ],
+  "outerProcessExitCode": 0,
+  "ownedCleanupExitCode": 0
+}

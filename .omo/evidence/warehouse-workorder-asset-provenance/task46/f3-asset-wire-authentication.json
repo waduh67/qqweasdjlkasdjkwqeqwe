@@ -1,0 +1,53 @@
+{
+  "scope": "Independent read of real executed browser trace responses; no API writes or fabricated responses",
+  "cases": [
+    {
+      "scenario": "loan-reuse",
+      "project": "warehouse-desktop",
+      "traceSha256": "6ff2aa8739e0191301a6355455a9ddef2f64fbc0e0d63310ccf175b3e61418d6",
+      "finalAvailableCableBase": "917500",
+      "finalAvailableOnus": 8,
+      "customerHistories": 2,
+      "activeInstallations": 2,
+      "retiredInstallations": 1,
+      "samePhysicalIdentityPreserved": true,
+      "ownershipAndHandoverVerified": true
+    },
+    {
+      "scenario": "loan-reuse",
+      "project": "warehouse-mobile",
+      "traceSha256": "8dcf0e5e0bbdeb311efde374b28292f36bf88fd619682519defab50adc79af84",
+      "finalAvailableCableBase": "917500",
+      "finalAvailableOnus": 8,
+      "customerHistories": 2,
+      "activeInstallations": 2,
+      "retiredInstallations": 1,
+      "samePhysicalIdentityPreserved": true,
+      "ownershipAndHandoverVerified": true
+    },
+    {
+      "scenario": "sold-rma",
+      "project": "warehouse-desktop",
+      "traceSha256": "4d79e43a4ca7216ec2ece6a3376e5f459b0fe6eaa17e6e047171c69808df5648",
+      "finalAvailableCableBase": "917500",
+      "finalAvailableOnus": 9,
+      "customerHistories": 1,
+      "activeInstallations": 1,
+      "retiredInstallations": 1,
+      "samePhysicalIdentityPreserved": true,
+      "ownershipAndHandoverVerified": true
+    },
+    {
+      "scenario": "sold-rma",
+      "project": "warehouse-mobile",
+      "traceSha256": "bc87ae56215ec8513c013f900bf44f6edd01b0bcc9b027554970fb6c50f14cbf",
+      "finalAvailableCableBase": "917500",
+      "finalAvailableOnus": 9,
+      "customerHistories": 1,
+      "activeInstallations": 1,
+      "retiredInstallations": 1,
+      "samePhysicalIdentityPreserved": true,
+      "ownershipAndHandoverVerified": true
+    }
+  ]
+}

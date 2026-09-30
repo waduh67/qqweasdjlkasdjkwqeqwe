@@ -27,6 +27,7 @@ import java.util.UUID
  */
 @Component
 class OnuMetricPersistenceAdapter : OnuMetricRepository {
+    private val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
 
     @PersistenceContext
     private lateinit var entityManager: EntityManager
@@ -51,6 +52,7 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
                         ?: statement.setNull(11, Types.TIMESTAMP)
                     point.lastOnAt?.let { statement.setTimestamp(12, Timestamp.from(it)) }
                         ?: statement.setNull(12, Types.TIMESTAMP)
+                    statement.setString(13, point.attribution?.let(mapper::writeValueAsString))
                     statement.addBatch()
                 }
                 statement.executeBatch()
@@ -236,8 +238,8 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
         val INSERT_SQL = """
             INSERT INTO onu_metric
                 (time, tenant_id, onu_id, olt_id, status, rx_power_dbm, tx_power_dbm, uptime_seconds,
-                 distance_meters, down_cause, last_off_at, last_on_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 distance_meters, down_cause, last_off_at, last_on_at, attribution)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
     }
 }

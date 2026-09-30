@@ -1,8 +1,6 @@
 package com.duluin.ftth
 
 import com.duluin.ftth.contract.CollectorProtocol
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
-import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -28,28 +26,14 @@ import java.util.UUID
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class NotificationIT {
+class NotificationIT : com.duluin.ftth.customer.WarehouseRegisteredOnuFixture() {
 
     @Autowired private lateinit var mockMvc: MockMvc
-    @Autowired private lateinit var onboarding: OnboardTenantUseCase
-
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
-    private fun login(slug: String, email: String): String {
-        val json = mockMvc.perform(
-            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
-        ).andExpect(status().isOk).andReturn().response.contentAsString
-        return JsonPath.read(json, "$.accessToken")
-    }
-
-    private fun newTenantAdmin(prefix: String): String {
-        val slug = "$prefix${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        return login(slug, admin)
-    }
+    private fun newTenantAdmin(prefix: String): String = tenant("$prefix${uniq()}")
+    private val oltCodes = mutableMapOf<String, String>()
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -64,6 +48,7 @@ class NotificationIT {
 
     private fun buildChain(token: String): Chain {
         val s = uniq().uppercase()
+        oltCodes[token] = "OLT-$s"
         val site = id(post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":-6.23}}"""))
         val olt = id(
             post("/api/olts", token, """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE","managementIp":"10.0.0.1","snmpCommunity":"rahasia"}"""),
@@ -84,10 +69,10 @@ class NotificationIT {
         val phoneField = phone?.let { ""","phone":"$it"""" } ?: ""
         val emailField = email?.let { ""","email":"$it"""" } ?: ""
         val customer = id(
-            post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}$phoneField$emailField}"""),
+            post("/api/customers", token, """{"areaId":"${area(token)}","code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}$phoneField$emailField}"""),
         )
         val serial = "SN-$s"
-        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
+        val onu = registerWarehouseOnu(token, customer, "$serial")
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
         return serial
     }
@@ -95,15 +80,17 @@ class NotificationIT {
     private fun newCollector(token: String): String =
         JsonPath.read(post("/api/monitoring/collectors", token, """{"name":"C-${uniq()}","pollIntervalSeconds":60}"""), "$.apiKey")
 
-    private fun reading(serial: String, status: String, rx: Double?) =
-        """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
+    private fun reading(token: String, serial: String, status: String, rx: Double?) =
+        """{"serialNumber":"$serial","oltCode":"${oltCodes.getValue(token)}","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
 
     private fun sendMetrics(apiKey: String, vararg readings: String) {
-        mockMvc.perform(
+        val result = mockMvc.perform(
             post("/api/collector/metrics").header(CollectorProtocol.API_KEY_HEADER, apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"batchId":"b-${uniq()}","collectedAt":"${Instant.now()}","readings":[${readings.joinToString(",")}]}"""),
-        ).andExpect(status().isOk)
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(JsonPath.read<Int>(result, "$.accepted")).isEqualTo(readings.size)
+        assertThat(JsonPath.read<List<String>>(result, "$.unknownSerialNumbers")).isEmpty()
     }
 
     private fun get(url: String, token: String): String =
@@ -144,7 +131,7 @@ class NotificationIT {
         val apiKey = newCollector(token)
 
         // Banjir LOS di bawah ODC → satu insiden berakar ODC.
-        sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null), reading(c, "LOS", null))
+        sendMetrics(apiKey, reading(token, a, "LOS", null), reading(token, b, "LOS", null), reading(token, c, "LOS", null))
         val incidentId = JsonPath.read<String>(get("/api/incidents", token), "$[0].id")
 
         // Siarkan pemberitahuan gangguan. Kanal dibiarkan default (WhatsApp).
@@ -182,7 +169,7 @@ class NotificationIT {
         val b = attachOnu(token, chain.odp, port = 2, phone = "628110000004")
         val apiKey = newCollector(token)
 
-        sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null))
+        sendMetrics(apiKey, reading(token, a, "LOS", null), reading(token, b, "LOS", null))
         val incidentId = JsonPath.read<String>(get("/api/incidents", token), "$[0].id")
 
         val created = post(

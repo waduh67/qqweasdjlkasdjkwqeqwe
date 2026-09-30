@@ -74,4 +74,8 @@ class BngProvisioningApiService(
 
     @Transactional
     override fun terminate(subscriptionId: UUID) = lifecycle.onTerminated(subscriptionId)
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun applyFulfillment(subscriptionId: UUID, action: com.duluin.ftth.bng.BngFulfillmentAction) =
+        lifecycle.applyFulfillment(subscriptionId, action)
 }

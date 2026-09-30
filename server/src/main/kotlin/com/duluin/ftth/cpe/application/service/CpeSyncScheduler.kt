@@ -2,6 +2,7 @@ package com.duluin.ftth.cpe.application.service
 
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.CustomerObservationApi
 import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository
@@ -32,6 +33,8 @@ class CpeSyncScheduler(
     private val acsGateway: AcsGateway,
     private val tenantApi: TenantApi,
     private val syncService: CpeSyncService,
+    private val ownership: CpeOwnershipEligibility,
+    private val unassigned: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeUnassignedObservationStore,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -77,15 +80,32 @@ class CpeSyncScheduler(
             return
         }
 
+        val serials = snapshots.mapTo(sortedSetOf()) { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
+        val owners = try {
+            ownership.census(serials)
+        } catch (failure: Exception) {
+            log.warn("ACS ownership resolution failed: {}", failure.javaClass.simpleName)
+            lastRunAtValue = Instant.now()
+            lastRunOkValue = false
+            return
+        }
+        var successful = true
         tenantApi.findActiveTenantIds().forEach { tenantId ->
+            snapshots.filter { snapshot -> owners[snapshot.serialNumber.trim().uppercase(java.util.Locale.ROOT)]
+                ?.let { tenantId in it && it.size > 1 } == true }.forEach { snapshot ->
+                TenantContext.runAs(tenantId) { unassigned.record(snapshot, "AMBIGUOUS_SERIAL") }
+            }
+            val eligible = snapshots.filter { owners[it.serialNumber.trim().uppercase(java.util.Locale.ROOT)]?.singleOrNull() == tenantId }
+            if (eligible.isEmpty()) return@forEach
             runCatching {
-                TenantContext.runAs(tenantId) { syncService.sync(snapshots) }
+                TenantContext.runAs(tenantId) { syncService.sync(eligible) }
             }.onFailure {
+                successful = false
                 log.warn("Sinkronisasi CPE tenant {} gagal: {}", tenantId, it.message)
             }
         }
         lastRunAtValue = Instant.now()
-        lastRunOkValue = true
+        lastRunOkValue = successful
     }
 }
 
@@ -104,23 +124,37 @@ class CpeSyncScheduler(
 @Component
 class CpeSyncService(
     private val deviceRepository: CpeDeviceRepository,
-    private val customerApi: CustomerApi,
+    private val observations: CustomerObservationApi,
+    private val bindings: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeObservationBindingStore,
+    private val unassigned: com.duluin.ftth.cpe.adapter.outbound.persistence.CpeUnassignedObservationStore,
+    private val eligibility: CpeOwnershipEligibility,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun sync(snapshots: List<AcsDevice>) {
-        val bySerial = snapshots.associateBy { it.serialNumber }
-        val matchedOnus = customerApi.findOnusBySerialNumbers(bySerial.keys)
-
-        val existing = deviceRepository.findAllForCurrentTenant().associateByTo(HashMap()) { it.genieacsId }
-        val keptGenieacsIds = HashSet<String>()
+        val bySerial = snapshots.groupBy { it.serialNumber.trim().uppercase(java.util.Locale.ROOT) }
+            .filterValues { it.size == 1 }.mapValues { it.value.single() }
+        observations.lockEpisodes(bySerial.keys)
+        eligibility.prepareLocked(bySerial.keys)
+        val matchedOnus = bySerial.keys.filter { eligibility.current(it) }.mapNotNull { observations.currentEpisode(it) }.filter { episode ->
+            val snapshot = bySerial.getValue(episode.onu.serialNumber.trim().uppercase(java.util.Locale.ROOT))
+            val inform = snapshot.lastInformAt
+            val fresh = if (snapshot.hasInvalidParameterTime) false else if (inform == null) episode.legacy else
+                !inform.isAfter(Instant.now().plusSeconds(300)) && (episode.legacy || !inform.isBefore(episode.startedAt))
+            if (!fresh) unassigned.record(snapshot, "STALE_INFORM")
+            val fieldsFresh = (snapshot.knownParameterTime ?: snapshot.observedFieldsAt)?.isBefore(episode.startedAt) != true &&
+                (episode.legacy || snapshot.observedFieldsAt?.let {
+                    !it.isBefore(episode.startedAt) && !it.isAfter(Instant.now().plusSeconds(300)) } == true)
+            if (fresh && !fieldsFresh) unassigned.record(snapshot, "STALE_FIELDS")
+            fresh && fieldsFresh
+        }.map { it.onu }
 
         matchedOnus.forEach { onu ->
-            val snapshot = bySerial[onu.serialNumber] ?: return@forEach
-            keptGenieacsIds += snapshot.genieacsId
-            val row = existing[snapshot.genieacsId]
+            val snapshot = bySerial[onu.serialNumber.trim().uppercase(java.util.Locale.ROOT)] ?: return@forEach
+            val row = bindings.existing(snapshot.genieacsId, onu.id)
             if (row != null) {
+                if (row.lastInformAt != null && (snapshot.lastInformAt == null || snapshot.lastInformAt.isBefore(row.lastInformAt))) return@forEach
                 row.applySnapshot(
                     oui = snapshot.oui,
                     productClass = snapshot.productClass,
@@ -133,7 +167,7 @@ class CpeSyncService(
                     temperatureC = snapshot.temperatureC,
                 )
                 row.linkTo(onu.customerId, onu.id)
-                deviceRepository.save(row)
+                deviceRepository.save(row.withObservedFieldsAt(snapshot.observedFieldsAt))
             } else {
                 deviceRepository.save(
                     CpeDevice.link(
@@ -150,17 +184,10 @@ class CpeSyncService(
                         temperatureC = snapshot.temperatureC,
                         customerId = onu.customerId,
                         onuId = onu.id,
-                    ),
+                    ).withObservedFieldsAt(snapshot.observedFieldsAt),
                 )
             }
         }
 
-        // Proyeksi yang serialnya tak lagi cocok ONU tenant ini (ONU dilepas/dipindah,
-        // atau device lenyap dari ACS) dipangkas — proyeksi tak boleh menyimpan hantu.
-        val stale: List<UUID> = existing.values.filterNot { it.genieacsId in keptGenieacsIds }.map { it.id }
-        if (stale.isNotEmpty()) {
-            deviceRepository.deleteByIds(stale)
-            log.debug("{} proyeksi CPE basi dipangkas", stale.size)
-        }
     }
 }

@@ -136,17 +136,34 @@ openssl rand -base64 48    # jalankan beberapa kali untuk JWT, ENCRYPTION, passw
 Yang WAJIB kamu ganti di `.env`:
 - `FTTH_SITE_ADDRESS` → domain kamu (mis. `app.contoh.com`) **atau** `:80` kalau belum punya domain.
 - `IMAGE_PREFIX` → `ghcr.io/<username-github-kamu>` (mis. `ghcr.io/fajarxfce`).
-- `FTTH_DB_PASSWORD`, `POSTGRES_SUPER_PASSWORD` → password kuat (huruf+angka aja).
+- `FTTH_DB_PASSWORD`, `FTTH_DB_OWNER_PASSWORD`, `POSTGRES_SUPER_PASSWORD` → password
+  kuat yang berbeda. Runtime memakai `warehouse_app`; Flyway memakai pemilik
+  `warehouse_owner`. Pertahankan nama runtime ini karena grant migrasi gudang
+  merujuk kepadanya; runtime tidak boleh mempunyai membership role pemilik.
 - `FTTH_JWT_SECRET`, `FTTH_ENCRYPTION_SECRET` → dua hasil `openssl` yang BERBEDA.
 - `FTTH_PLATFORM_ADMIN_EMAIL` / `FTTH_PLATFORM_ADMIN_PASSWORD` → akun login pertamamu.
-- `FTTH_S3_SECRET_KEY` → password MinIO (min. 8 karakter).
+- `FTTH_DEMO_ADMIN_PASSWORD` → secret acak terpisah, tetap diwajibkan validator
+  walaupun `FTTH_SEED_DEMO=false`; ini tidak membuat akun demo. Compose memetakannya
+  ke nama binding Spring `FTTH_BOOTSTRAP_DEMOADMINPASSWORD`.
+- `FTTH_S3_ACCESS_KEY` dan `FTTH_S3_SECRET_KEY` → masing-masing minimal 16 karakter,
+  bukan nilai contoh/development. Nilai `ftth` ditolak validator produksi.
 - `FTTH_CORS_ORIGINS` → `https://domainkamu` (atau `http://<IP>` kalau mode `:80`).
 
 > `.env` ini cuma ada di VPS dan tidak pernah masuk Git. Jaga baik-baik.
 
+Inisialisasi role terpisah di atas hanya berjalan untuk volume PostgreSQL baru.
+Untuk instalasi lama yang memakai akun aplikasi sebagai pemilik, lakukan peninjauan
+dan migrasi kepemilikan tersendiri dengan cadangan terverifikasi; mengganti `.env`
+tidak mengubah role maupun pemilik tabel yang sudah ada. Jangan menjalankan grant
+massal setelah Flyway karena migrasi gudang sengaja membatasi hak tabel tertentu.
+
 ---
 
 ## Bagian E — Domain & HTTPS (boleh dilewati dulu)
+
+Jika VPS sudah memakai reverse proxy untuk aplikasi lain, gunakan
+[panduan proxy bersama](SHARED-PROXY.md). Overlay tersebut menghindari perebutan
+port 80/443 dan menjaga database FTTH tetap di jaringan internalnya sendiri.
 
 **Punya domain?** Di panel DNS domain kamu, bikin **A record**:
 `app.contoh.com  →  20.11.22.33` (IP VPS). Tunggu beberapa menit sampai nyambung.
@@ -1107,8 +1124,9 @@ pemantauanmu (dibatasi firewall) atau lewat terowongan SSH, dengan header
 - **Isi `FTTH_ALERT_EMAIL`** (Bagian N). Pekerjaan latar gagal dengan cara paling jahat:
   diam. Tanpa alamat ini, tagihan yang berhenti terbit baru ketahuan dari keluhan
   pelanggan, berhari-hari kemudian.
-- **Test job di CI** butuh Postgres+Timescale; kalau rewel, bisa longgarin dengan hapus
-  `needs: test` di job `build-and-push` (`.github/workflows/deploy.yml`).
+- **Gate `warehouse-verification` wajib lulus sebelum publikasi/deploy.** Perbaiki
+  dependency atau tes yang gagal dan jalankan kembali gate yang terdampak.
+  Pertahankan rantai `needs` pada workflow deploy.
 
 ---
 
@@ -1164,18 +1182,42 @@ head, guard salah, dan race replace-versus-delete.
 
 ### O.3 Migration preflight dan rollback
 
-Jalankan dari `/opt/ftth` sebelum setiap image server dinaikkan:
+Untuk rilis gudang, baca [panduan operasi](../docs/warehouse.md),
+[review dan probe read-only](../docs/warehouse-review.md), serta
+[manifest migrasi](../docs/warehouse-migrations.md). Versi paket gudang saat ini
+adalah **178.12**. Validasi seluruh checksum lama; bagian V166–V170 di bawah
+mendokumentasikan riwayat retensi bukti dan bukan lagi target versi akhir.
+Hasil gate server, clean/upgrade, browser desktop/mobile, web, dan KMP harus berasal
+dari sumber/image rilis yang sama. Perintah deploy manual juga memerlukan hasil
+gate tersebut; keterbatasan CI tidak membolehkan melewati pemeriksaan gudang.
+Workflow `warehouse` juga mewajibkan kompilasi target iOS dan smoke image nyata.
+Lihat [gate CI dan pemulihan bukti terenkripsi](../docs/warehouse-ci.md).
+
+Pipeline mengunggah Compose yang ditinjau ke
+`/opt/ftth/releases/<commit>/docker-compose.prod.yml`, memeriksa SHA256-nya, lalu
+memakai `FTTH_SERVER_IMAGE` dan `FTTH_WEB_IMAGE` berupa referensi registry `@sha256`.
+Referensi tersebut berasal dari artifact `warehouse-published-images-<commit>`.
+`IMAGE_TAG` memilih commit yang sama untuk GenieACS. Untuk operasi manual yang
+menarik atau mengganti image, gunakan file rilis dan referensi yang sudah diverifikasi;
+perintah dengan `latest` pada bagian setup awal bukan pintasan gate gudang.
+Tetap gunakan `/opt/ftth` sebagai project directory dan `/opt/ftth/.env` sebagai
+sumber konfigurasi agar mount relatif dan nama project `ftth` tetap benar.
+
+Sebelum rollout, jalankan probe read-only dari panduan review dengan kredensial
+role aplikasi dan tenant/SKU yang benar. Pada salinan database yang terisolasi,
+boot image yang akan dirilis untuk menjalankan Flyway, cek readiness JSON dan versi
+migrasi, lalu jalankan probe yang sama. Jangan memakai boot server foreground
+sebagai perintah pemeriksaan baca saja pada database produksi.
+
+Pemeriksaan versi berikut tidak mengubah data; jalankan dari `/opt/ftth` pada
+stack yang sudah aktif:
 
 ```bash
-docker compose -f docker-compose.prod.yml config >/dev/null
-docker compose -f docker-compose.prod.yml up -d postgres
 docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres -d "$FTTH_DB_NAME"
 docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
-docker compose -f docker-compose.prod.yml run --rm server
-docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1;"
 ```
 
-Expected upgraded version is `170`; a clean database must reach the same version. Take
+Expected upgraded version is `178.12`; a clean database must reach the same version. Take
 and verify a restore-capable backup first. Assert non-zero source and destination counts
 for every backfill expected to copy existing rows. Flyway migrations are forward-only:
 never edit an applied version; roll forward with a new version or restore the verified

@@ -1,0 +1,62 @@
+{
+  "status": "CURRENT_CI_AND_PRE_ACTIVATION_READINESS_ADOPTED",
+  "atUtc": "2026-09-27T09:08:15.099373+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "ciRun": 36265279847,
+  "ciSuccessfulJobs": 16,
+  "modernTests": 3850,
+  "modernSuites": 628,
+  "separateFocusedTests": 326,
+  "separateFocusedSuites": 50,
+  "historicalTests": 7,
+  "projectionTests": 1,
+  "offlineProtocolTests": 197,
+  "modularityTests": 3,
+  "authenticatedXmlReports": 721,
+  "authenticatedRawMembers": 761,
+  "serverProofSha256": "4374abfa2aea7a4ad3ae1308055d9991f96e277c440b129d1bf228488a0d1dbc",
+  "proofSha256": {
+    "nonserver": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+    "images": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+    "bootstrap": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+    "network": "46e5ab137f69e80f1eb6564651969c14e88f4a8009e78df7979eece128651cfe",
+    "backup": "543bac2d15e46038d66368904c4ae42bf1db4c374d7157e6542de92c6be963f7",
+    "server": "4374abfa2aea7a4ad3ae1308055d9991f96e277c440b129d1bf228488a0d1dbc"
+  },
+  "activationHelperSha256": "87f7e0f55c82bad649b3d5ed615b7e5b18227992bfe664ecd649095d5c0c3ed7",
+  "readiness": {
+    "f1": {
+      "decision": "READY_FOR_ACTIVATION",
+      "receiptSha256": "3e3b2e8668ca799db04ca4d430c2db1a321e9ee42cedcd56952287c1d91c3e2c",
+      "blockingFindings": []
+    },
+    "f2": {
+      "decision": "READY_FOR_ACTIVATION",
+      "receiptSha256": "9e1a2da5168d3e4923f79c6a364c2266961a1428c151605643946cbaa5b6c166",
+      "blockingFindings": []
+    },
+    "f3": {
+      "decision": "READY_FOR_ACTIVATION",
+      "receiptSha256": "1a93d54369a6c8fb396f39a3c8b33f87e4c50be94989d01206ef3cb51e4b0d71",
+      "blockingFindings": []
+    },
+    "f4": {
+      "decision": "READY_FOR_ACTIVATION",
+      "receiptSha256": "ab280fb1f335e5cc0d72b2e0fcbd3229bc7b376352d880c766f3366e64e1c0dd",
+      "blockingFindings": []
+    }
+  },
+  "hostConfigurationFilesBound": 13,
+  "allHostHashesRecheckedAt": "2026-09-27T09:02:40.762084+00:00",
+  "independentReviewerHandoff": {
+    "oldF4ResumptionAndReplacementRejectedByTool": "agent thread limit reached",
+    "serverArtifactAuthentication": "F2 directly authenticated current archive using source-reviewed F4 helpers; F1 independently reparsed721XML; workflow reviewer independently rehashed/reparsed again",
+    "f3AndF4Readiness": "One workflow reviewer independent of implementing root holds both audit roles, with explicit handoff from prior separateF4 reviews",
+    "fourDistinctLiveReviewersClaimed": false
+  },
+  "productionApplicationActivated": false,
+  "vpnHubCreatedOrInstalled": false,
+  "finalHostAcceptance": false,
+  "overallWarehouseOwnerAcceptance": false
+}

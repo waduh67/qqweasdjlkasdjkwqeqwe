@@ -1,0 +1,68 @@
+{
+  "status": "FAILED_FOCUSED",
+  "counts": {
+    "tests": 9,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "71471a91cc8ecda28e1a607473397609c48735b3795bb2ef9a3e31fb42e0ba84",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+      "sha256": "733c11692377eeae083122cdd7b8a589fc3cd9ebff51d17cf3521aea872f74f6",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryScopeIT",
+      "sha256": "ed14fd444e1e8e267e76687de4c90e7ca9aa10b8e3f42cfa3541d1e184bd3b5d",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
+      "sha256": "156acb2cd40d6fcbd17561530ea01508faa8e50b1e67aae32aaf09ad780ad648",
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+      "sha256": "a45326f1934cedb1df83b639372466d60f8fddfa2036ff4bf9981d2e3c456e08",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+      "sha256": "aaf9b7672e5b4a17db59a0b2c073875e6abff5b0fe98af2a9ce1c5ea78aeff45",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 1,
+  "cleanupExitCode": 0,
+  "sourceInputCount": 2625,
+  "sourceInventorySha256": "0a0db4a8e37cb4e9b1d6fbdcd818a174b5a40687b845bc32b1b4e559df5f65c8",
+  "runnerSha256": "f3bec5141840a41c93c444037dfb2ed3c42ccb674d41426266349282780018cc",
+  "failure": "New backfill fixture attempted owner UPDATE of immutable source without tenant scope; rejected by actual deferred warehouse guard before migration. No product guard loosened. Fixture replaced in R2 with a temporary BEFORE INSERT timestamp trigger around real old-application HTTP setup.",
+  "scope": "Original count/transfer current handoffs, startup refusal, expired scope revocation and modules passed. New backfill did not reach migration.",
+  "comparisonBase": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "sourceIdentity": "Run began before checkpoint a85; exact executed input hashes recorded separately. a85 is a comparison base, not a claim of clean checkout execution."
+}

@@ -34,6 +34,14 @@ class SubscriberAccessLifecycle(
     private val catalogApi: CatalogApi,
     private val bngActions: BngActionService,
 ) {
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun applyFulfillment(subscriptionId: UUID, action: com.duluin.ftth.bng.BngFulfillmentAction) {
+        when (action) {
+            com.duluin.ftth.bng.BngFulfillmentAction.ACTIVATE -> onActivated(subscriptionId)
+            com.duluin.ftth.bng.BngFulfillmentAction.TERMINATE -> onTerminated(subscriptionId)
+        }
+    }
+
     /**
      * Langganan aktif → akun disinkronkan ke ACTIVE, dengan dua jalan berbeda menuju online:
      *  - tadinya PENDING: belum pernah ditulis ke RADIUS (akun dibuat saat langganan masih

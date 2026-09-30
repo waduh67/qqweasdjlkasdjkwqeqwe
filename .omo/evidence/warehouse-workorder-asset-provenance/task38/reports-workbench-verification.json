@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "bd01230b",
+  "backendSourceCommit": "c155856b",
+  "tests": 7,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportExportIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "aed18ef4e7ff774bf46703a1e0899dffcdce97eed77c8f8258dcee82af6b33f2"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "5d86dfb5ef6dbb344078bc2b90b65350e430d4dddd8f390a6e2009f13d19b8cb"
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReportPrivacyIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlSha256": "e306bca5d69e1b0d085742036dff79da9afca030ca5b58818ae080d69c4dc6a6"
+    }
+  ],
+  "result": "BUILD SUCCESSFUL in 2m 1s",
+  "web": {
+    "sourceCommit": "bd01230b",
+    "tests": 18,
+    "files": 3,
+    "durationSeconds": 4.64,
+    "typeScript": "PASS",
+    "targetedOxlint": "PASS after moving presentation constants"
+  },
+  "scope": "Reports/CSV/print privacy and scope, exact use cost, unknown costs, more than 1000 actual ledger rows; report-only UI, pagination/filtered authenticated export, print reauthorization/revocation, malformed URL and empty/denied states.",
+  "cleanup": "Owned processes/containers/network stopped; volumes retained"
+}

@@ -1,0 +1,40 @@
+# F2 deployment addendum at db09c3c2
+
+**No additional blocker was found in the eight deployment/configuration/documentation changes. Final F2 and production activation acceptance remain pending.**
+
+This addendum covers deployment commit `db09c3c2b37ad29b07464b05cd02895265f99a0d`, composed with application/image source `1306b65c34167b2d48f4817ce72990fed3b85aa3`. The user's later authorization permits Azure VPS/domain setup while preserving the unrelated Drive/Caddy installation; it does not authorize main-branch merge or registry publication. This reviewer performed read-only source and safe-receipt analysis, with no QA, SSH, Docker execution or product edits.
+
+## Source and privilege boundaries
+
+Compared with the 3,693-input application CI manifest, exactly five existing tracked paths changed: deploy/.env.example, deploy/DEPLOY.md, deploy/docker-compose.prod.yml, deploy/postgres-init/10-init-app-db.sh and docs/backup.md. Three shared-proxy files are new. All other 3,688 inputs, including application/build/test/workflow inputs and all 367 migration bytes, match. The entire prior manifest is therefore not identical; the release needs both application and deployment identities. The companion JSON records the eight exact current hashes and the independently checked bootstrap/adoption hash chain.
+
+The new-volume init script uses quoted psql identifier/literal variables, rejects a runtime role other than warehouse_app and rejects equal runtime/owner names. It gives runtime NOSUPERUSER/NOBYPASSRLS/NOCREATEDB/NOCREATEROLE, no owner membership or schema CREATE, while Flyway has a distinct database-owning role. Defaults are set before migrations, so V178.12 can restrict the clock side tables to SELECT and receipt commands to SELECT/INSERT. There is no blanket post-migration grant that would undo those restrictions. The separate migration owner's BYPASSRLS is deliberate for the already-reviewed migration/definer behavior and is not granted to runtime.
+
+Compose keeps production=true, supplies separate Flyway credentials and binds the required demo secret through the canonical FTTH_BOOTSTRAP_DEMOADMINPASSWORD key. The actual production validator still rejects blank, weak/default credentials and demo seeding. Storage examples now reflect its minimum and avoid the rejected development key. This changes new-volume initialization only; the docs correctly require separate reviewed ownership migration for existing databases.
+
+Backup uses the same PostgreSQL dependency image as the database and names the migration owner for restored database ownership. The existing restore command preserves archive object ownership and ACLs; the docs now distinguish those from database ownership and require privilege checks after restore. This source review does not certify an executed restore with the new configuration.
+
+The shared-proxy overlay removes FTTH host ports 80/443 using Compose !override, replaces the gateway Caddyfile and joins only that gateway to the explicitly named external edge network. Database, backend, object storage and ACS NBI remain on the FTTH network without published host ports. The gateway trusts only the configured proxy CIDR, with strict forwarded-address parsing. The runbook requires actual private CIDR selection, both Compose files for every operation, preservation/validation of the existing edge configuration and checks of the unrelated site. The existing standalone automated deployment route would omit the overlay; its use on this host is explicitly excluded by the new guide.
+
+The optional health mapping disables only Spring Boot's environment-based mail indicator. Direct source inspection confirms database-backed SMTP settings take precedence over the fixed environment sender, and blank SMTP is supported by the existing application. Production validation, database health, schema guards and tenant protections remain active. Health UP does not prove SMTP delivery; until actual SMTP is configured and delivery verified, email recovery and alerts are unavailable.
+
+## Existing runtime logging item
+
+`deploy/docker-compose.prod.yml:77` still starts FreeRADIUS with `radiusd -X`. This pre-existing debug setting is a deployment hardening item before real subscriber authentication traffic because it enables verbose authentication diagnostics. Root reports that the actual private host image overlay already overrides this with `["freeradius", "-f"]`, and its FTTH wrapper always combines the base, shared-proxy and host-image overlays. Closure of the actual-host item awaits the effective configuration/container-command receipt; no additional tracked source change is requested solely to duplicate that host override. The F4 reviewer confirmed the isolated R3 probe runs configuration validation only and sends no Access-Request/accounting traffic. No actual subscriber credential leakage is claimed, and this is not classified as a new defect introduced by the eight-file delta. A command change receives bounded affected runtime verification; it does not require relabeling or repeating unchanged application CI.
+
+## Bootstrap and image evidence
+
+F4's independently authenticated R2 establishes an isolated production-mode bootstrap PASS using the current Compose/init hashes, no QA profile, missing-secret rejection, 367 successful migrations through 178.12, non-owner runtime flags, clock-table/function restrictions, actual schema CREATE and policy DELETE denials, platform login and a second backend start with unchanged image identity. The private fixture has no demo/customer/stock data and cleanup retains its owned database volume. R1 remains a readiness timeout associated with the optional SMTP health probe; it is not promoted to PASS.
+
+F2 independently matched both adopted receipt hashes, the reviewed Compose/init hashes, all adoption references and the F4 CI proof link. The runtime findings are attributed to F4's archive/log/source-assertion authentication. Standalone raw HTTP/SQL/inspect response files were not captured in these bootstrap bundles, so F2 does not claim an independent reparse of them.
+
+The later `f4-destination-images-1306b65c-authentication` proof closes the earlier destination-export limitation: F4 read both actual destination re-exports and original CI archives, verified exact configuration bytes and all 19 ordered layers, and authenticated the OCI index/manifest/config/layer chain. The destination OCI manifest IDs differ correctly from the classic CI configuration IDs. Application source, embedded JAR, all migrations and web assets remain the authenticated 1306 payload; the deployment commit must not replace that image source identity. F2 relies on this independent F4 artifact authentication and has not loaded or rebuilt images.
+
+## Remaining acceptance evidence
+
+- Current CI 36265279847 complete server/focused/historical/protocol reports, actual nonzero ModularityTests and final F4/F1/F2 reconciliation. The isolated deployment checks do not replace this gate.
+- Completed independent network R1/R2/R3 authentication with failed attempts preserved, and its exact source/settings/image boundaries. Root reports R3 passed; that parent report alone is not promoted here to an independently authenticated network result.
+- Final effective host configuration and image manifest, actual domain/TLS and forwarded-header behavior where asserted, continued operation of the unrelated Drive site, restricted Azure/host exposure and cleanup of task-owned probe resources.
+- Actual final service activation and restart checks for the requested scope, plus bounded verification of any subsequent deployment command/configuration changes. RADIUS configuration syntax is not subscriber authentication/accounting, and an OpenAPI relative URL is not proof of forwarded HTTPS.
+
+Physical GPON certification remains explicitly deferred. Raw environments, credentials, logs and trace payloads remain private. This addendum neither asserts full-CI success nor grants main merge, registry publication or completed production acceptance.

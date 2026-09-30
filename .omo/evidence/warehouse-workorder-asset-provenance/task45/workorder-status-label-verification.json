@@ -1,0 +1,11 @@
+{
+  "baseCommit": "53e9dbff0babb11f482dd9cfaf6c2c5d7e267d6b",
+  "sourceSha256": "c271e42fedc79d53a487a302711104de5fa7cc9eb0abdbd5ee064c3242106d3a",
+  "change": "Translate ASSIGNED, IN_PROGRESS and DONE in the shared warehouse status badge.",
+  "validation": {
+    "MyMaterialsPageTests": 7,
+    "failures": 0,
+    "webLintExitCode": 0
+  },
+  "browserAfterLabelChange": "PENDING"
+}

@@ -1,0 +1,16 @@
+{
+  "task": 35,
+  "phase": "typed material and issue contracts foundation",
+  "tests": 7,
+  "testFiles": 1,
+  "typescriptExitCode": 0,
+  "focusedLintExitCode": 0,
+  "sourceFiles": {
+    "web/src/api/warehouse/materialModels.ts": "4f17c13b316bca9777266655668bf1b34f3cf3766063a006e2a46cf0c7f8b47d",
+    "web/src/api/warehouse/materialModels.test.ts": "7b2b7fddb66ae9abfa88cde47a249ce4df851b7d669218b3ee160dfa4fe3f402",
+    "web/src/api/warehouse/issueModels.ts": "cc7abcee4af894839493060ac1cd9b1056ee34f5b5ce38cf8d2d4fcfe3bf555e",
+    "web/src/api/warehouse/materials.ts": "6df2eb9c2448e0a4bfc345b84935c6d1dbcbeee20b9c9c44f134416470556568"
+  },
+  "backendMetadata": "running separately against2671ff3a; not complete",
+  "remaining": "scoped issue discovery and actual request/picking UI/browser"
+}

@@ -1,0 +1,21 @@
+{
+  "status": "PASS_FULL_WEB",
+  "comparisonBase": "a85b3fda952e16a38913711f03ee8c8819382cc1",
+  "counts": {
+    "tests": 607,
+    "testFiles": 117
+  },
+  "reportSha256": "9cc8f20a0a68eb0f0e055f0a6530bd2736aba155ca498e0b919312f96a34175d",
+  "runnerExitCode": 0,
+  "sourceInputCount": 523,
+  "sourceInventorySha256": "b3d8f01c939ef36e39e5bee8afc74db4408ae54eb96e8724ac2fb7cf80b5453a",
+  "runnerSha256": "7c7cf229a869e2bb3b24bf87fc85c061ba39071c75ed4dc9ffac1b92c578bc55",
+  "checks": [
+    "Complete unfiltered Vitest607tests117files, no failures/skips/todos",
+    "WarehouseE2E TypeScript check",
+    "oxlint exit0 with existing warnings",
+    "production TypeScript/Vite build"
+  ],
+  "scope": "All523web/src inputs stable for full run; current receipt expired-editor recovery included. Alllocal QA serialized under shared fd8.",
+  "excludes": "Fullserver/KMP/native/currentCI and independentF1-F4 approval not implied."
+}

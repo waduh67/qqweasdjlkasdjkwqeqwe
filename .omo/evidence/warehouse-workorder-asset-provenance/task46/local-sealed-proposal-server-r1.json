@@ -1,0 +1,64 @@
+{
+  "status": "PASSED_FOCUSED",
+  "baseCommit": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+  "counts": {
+    "tests": 87,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+      "sha256": "673e176b931b9b5e6039187c16d107740e25f5322c6b25ea2508bff10b6a88c6",
+      "tests": 73,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseReceiptIT",
+      "sha256": "6aa3a7173c77d20fbf93890b79d832d4ec3f40d48c0c77473651703b5c681a6c",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementGuardsIT",
+      "sha256": "c935f2d8881c49f25c3987a5dd5b600d6d30abbf71f69631c1a63f48d755558e",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementIT",
+      "sha256": "a19da775cb44a3252fda998be7ef0098a3c95ddeee14b6b1cc8c3392c52e41eb",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "sourceSha256": {
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt": "32f5690f22de9cf03a7f7f7c918009a9714fb50fafa1e4bc2ca03684aa6a52ba",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt": "d0520181714ecd845cc3e1accfaedda4f6a452e08d541185170be08557328d5c",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt": "79159c7601325504d99ebcd54a79ea85304b2b18b7ea96ce50fedd786c18e9de",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt": "7c7d5775be5873544e1c0d711b7cffa440f2f8a569089a3b5199da53626d7f9c"
+  },
+  "serverInputCount": 2601,
+  "allServerInputsUnchangedDuringRun": true,
+  "logSha256": "243e0400510c9750ed15c0ac1b529a69d42c9ca85e3b619e29d7c3f75548d37f",
+  "runnerSha256": "454039da07f9387836cd8b3c78f3c2cec6f07a4470ad8d900f49a18abbbe00d5",
+  "runner": {
+    "sessionId": 80251,
+    "observedExecExitCode": 0,
+    "observedTerminalOutput": "SEALED_PROPOSAL_SERVER_EXIT 0",
+    "applicationRole": "NOSUPERUSER NOBYPASSRLS",
+    "ownedCleanup": "Completed; volumes retained"
+  },
+  "limitation": "87 actual tests in 4 concrete classes. Two requested selectors (WarehouseReceiptDraftIT, ModularityTest) do not name existing classes and executed no tests; no coverage claimed for them. ModularityTests will run with the next context changes. This is not a full regression or final F1-F4 acceptance."
+}

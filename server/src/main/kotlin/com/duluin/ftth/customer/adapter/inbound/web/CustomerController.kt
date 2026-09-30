@@ -53,6 +53,7 @@ class CustomerController(
     private val manageCustomer: ManageCustomerUseCase,
     private val manageSubscription: ManageSubscriptionUseCase,
     private val manageOnu: ManageOnuUseCase,
+    private val validator: jakarta.validation.Validator,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('customer.customer.view')")
@@ -157,8 +158,15 @@ class CustomerController(
     @PostMapping("/{id}/onus")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('customer.onu.assign')")
-    fun registerOnu(@PathVariable id: UUID, @Valid @RequestBody request: OnuRequest): OnuView =
-        manageOnu.register(id, RegisterOnuCommand(request.serialNumber, request.model))
+    fun registerOnu(@PathVariable id: UUID, @RequestBody body: String,
+        @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key", required = false) key: String?): OnuView {
+        val request = com.duluin.ftth.common.infrastructure.web.StrictCommandJson.decode(body, OnuRequest::class.java)
+        val violations = validator.validate(request)
+        if (violations.isNotEmpty()) throw jakarta.validation.ConstraintViolationException(violations)
+        return manageOnu.register(id, RegisterOnuCommand(request.serialNumber.orEmpty(), request.model, request.deployment?.let {
+            com.duluin.ftth.customer.AuthorizedOnuInstallation(it, key ?: throw com.duluin.ftth.common.domain.error.ConflictException("IDEMPOTENCY_KEY_REQUIRED"))
+        }))
+    }
 
     @PostMapping("/onus/{onuId}/attach")
     @PreAuthorize("@authz.can('customer.onu.assign')")
@@ -233,8 +241,9 @@ data class SubscriptionRequest(
 )
 
 data class OnuRequest(
-    @field:NotBlank @field:Size(max = 60) val serialNumber: String,
+    @field:Size(max = 60) val serialNumber: String? = null,
     @field:Size(max = 80) val model: String? = null,
+    val deployment: com.duluin.ftth.customer.InstallCustomerAssetRequest? = null,
 )
 
 data class AttachOnuRequest(

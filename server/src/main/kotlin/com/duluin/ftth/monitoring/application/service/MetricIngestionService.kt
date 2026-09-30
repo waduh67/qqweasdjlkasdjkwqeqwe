@@ -4,8 +4,13 @@ import com.duluin.ftth.contract.IngestResult
 import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
+import com.duluin.ftth.contract.OnuPathProvenance
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.OnuRef
+import com.duluin.ftth.customer.CustomerObservationApi
+import com.duluin.ftth.customer.ObservationPath
+import com.duluin.ftth.customer.ObservationAttribution
+import com.duluin.ftth.monitoring.adapter.outbound.persistence.UnassignedObservationStore
 import com.duluin.ftth.monitoring.application.port.outbound.IngestBatchRepository
 import com.duluin.ftth.monitoring.application.port.outbound.OnuMetricRepository
 import com.duluin.ftth.monitoring.AlarmsChangedEvent
@@ -17,6 +22,8 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import java.time.Instant
+import java.util.Locale
 
 /**
  * Menerima batch metrik dari collector: memetakannya ke ONU terdaftar, menyimpan
@@ -38,10 +45,37 @@ class MetricIngestionService(
     private val alarmEngine: AlarmEngine,
     private val discoveredOnuRecorder: DiscoveredOnuRecorder,
     private val events: ApplicationEventPublisher,
+    private val observations: CustomerObservationApi,
+    private val unassigned: UnassignedObservationStore,
+    private val networkObservations: com.duluin.ftth.network.NetworkObservationApi,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    fun ingestRaw(collectorId: UUID, tenantId: UUID, batch: com.duluin.ftth.monitoring.application.port.inbound.CollectorObservationBatch): IngestResult {
+        val now = Instant.now()
+        validateBatchId(batch.batchId)
+        if (batch.readings.size > MetricBatch.MAX_READINGS)
+            throw com.duluin.ftth.common.domain.error.ValidationException("Batch exceeds maximum readings")
+        if (!batchRepository.registerIfNew(batch.batchId, collectorId, tenantId, batch.readings.size))
+            return IngestResult(0, emptyList(), true)
+        val collected = com.duluin.ftth.monitoring.application.port.inbound.observationInstant(batch.collectedAt)
+        val readings = mutableListOf<OnuReading>()
+        val invalid = linkedSetOf<String>()
+        val mapper = tools.jackson.module.kotlin.jacksonObjectMapper()
+        for (reading in batch.readings) {
+            val parsed = reading.parsed()
+            if (parsed != null) readings += parsed else {
+                unassigned.appendRaw(reading.serialNumber, null, "MALFORMED_TIMESTAMP", mapper.writeValueAsString(reading))
+                invalid += reading.serialNumber.trim().uppercase(Locale.ROOT)
+            }
+        }
+        val result = process(tenantId, readings, now, collected == null || !trustedTime(collected, now))
+        return result.copy(unknownSerialNumbers = (result.unknownSerialNumbers + invalid).distinct().take(MAX_REPORTED_UNKNOWN))
+    }
+
     fun ingest(collectorId: UUID, tenantId: UUID, batch: MetricBatch): IngestResult {
+        val now = Instant.now()
+        validateBatchId(batch.batchId)
         if (batch.readings.size > MetricBatch.MAX_READINGS) {
             // Collector nakal atau salah versi; ditolak agar tidak membebani ingestion.
             throw com.duluin.ftth.common.domain.error.ValidationException(
@@ -55,11 +89,7 @@ class MetricIngestionService(
             return IngestResult(accepted = 0, unknownSerialNumbers = emptyList(), duplicate = true)
         }
 
-        val result = ingestReadings(tenantId, batch.readings)
-        if (result.accepted > 0) {
-            events.publishEvent(AlarmsChangedEvent(tenantId))
-        }
-        return result
+        return process(tenantId, batch.readings, now, !trustedTime(batch.collectedAt, now))
     }
 
     /**
@@ -78,59 +108,101 @@ class MetricIngestionService(
      * jatuh atau berhasil bersama-sama.
      */
     fun ingestReadings(tenantId: UUID, readings: List<OnuReading>): IngestResult {
-        val serials = readings.mapTo(HashSet()) { it.serialNumber.trim().uppercase() }
-        val knownOnus = customerApi.findOnusBySerialNumbers(serials).associateBy { it.serialNumber }
+        val now = Instant.now()
+        return process(tenantId, readings.map { it.copy(observedAt = now) }, now, false,
+            source = com.duluin.ftth.monitoring.domain.model.MetricSource.SERVER_INSTANT)
+    }
+
+    fun ingestServerReadings(tenantId: UUID, readings: List<OnuReading>, acquisition: ServerPollWindow, publishAlarmChanges: Boolean = true): IngestResult =
+        process(tenantId, readings.map { it.copy(observedAt = acquisition.startedAt) }, Instant.now(),
+            acquisition.completedAt.isBefore(acquisition.startedAt), acquisition.completedAt,
+            com.duluin.ftth.monitoring.domain.model.MetricSource.SERVER_POLL, publishAlarmChanges)
+
+    private fun process(tenantId: UUID, readings: List<OnuReading>, now: Instant, untrustedBatch: Boolean, completedAt: Instant? = null,
+        source: com.duluin.ftth.monitoring.domain.model.MetricSource = com.duluin.ftth.monitoring.domain.model.MetricSource.COLLECTOR, publishAlarmChanges: Boolean = true): IngestResult {
+        val serials = readings.mapTo(sortedSetOf()) { it.serialNumber.trim().uppercase(Locale.ROOT) }
+        networkObservations.lockView()
+        observations.lockEpisodes(serials)
         val oltIdsByCode = resolveOltIds(readings)
-
-        val unknown = serials.filterNot { it in knownOnus }
-        val matched = readings.mapNotNull { reading ->
-            knownOnus[reading.serialNumber.trim().uppercase()]?.let { onu -> reading to onu }
+        val unknown = linkedSetOf<String>()
+        val points = mutableListOf<OnuMetricPoint>()
+        val current = linkedSetOf<String>()
+        var changed = false
+        for (reading in readings.sortedBy { it.observedAt }) {
+            val serial = reading.serialNumber.trim().uppercase(Locale.ROOT)
+            if (untrustedBatch || !trustedTime(reading.observedAt, now)) {
+                unassigned.appendUntrustedTime(reading)
+                unknown += serial
+                continue
+            }
+            if (reading.observedAt.isAfter(now)) {
+                unassigned.append(reading, "FUTURE_OBSERVATION")
+                unknown += serial
+                continue
+            }
+            val storedTime = reading.observedAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS)
+            val oltId = oltIdsByCode[reading.oltCode.uppercase(Locale.ROOT)]
+            val path = ObservationPath(oltId, reading.oltCode, reading.ponPortLabel)
+            val attribution = observations.resolveObservation(serial, storedTime, path)
+            val pathRejection = unverifiedPonRejection(reading.pathProvenance, oltId, attribution)
+            if (pathRejection != null) {
+                unassigned.append(reading, pathRejection)
+                unknown += serial
+                continue
+            }
+            val episode = attribution.episode
+            if (episode != null && completedAt != null) {
+                val completed = observations.resolveObservation(serial, completedAt, path)
+                if (completed.episode?.onu?.id != episode.onu.id || completed.topologyRevision != attribution.topologyRevision ||
+                    completed.networkEdgeIds != attribution.networkEdgeIds) {
+                    unassigned.append(reading, "POLL_SPANS_TRANSITION")
+                    unknown += serial
+                    continue
+                }
+            }
+            if (episode == null) {
+                unassigned.append(reading, requireNotNull(attribution.reason))
+                unknown += serial
+                if (attribution.reason == "NO_EPISODE_AT_TIME" && observations.currentEpisode(serial) == null)
+                    discoveredOnuRecorder.capture(tenantId, listOf(reading), oltIdsByCode)
+                continue
+            }
+            val onu = episode.onu
+            points += OnuMetricPoint(storedTime, tenantId, onu.id, oltId,
+                reading.status.name, reading.rxPowerDbm, reading.txPowerDbm, reading.uptimeSeconds, reading.distanceMeters,
+                reading.lastDownCause?.name, reading.lastOffAt, reading.lastOnAt,
+                com.duluin.ftth.monitoring.domain.model.MetricAttribution(source, now, episode.episodeRevision, episode.assignmentId,
+                    episode.assignmentRevision, requireNotNull(attribution.topologyRevision), attribution.networkEdgeIds,
+                    if (attribution.networkEdgeIds.isEmpty()) "EPISODE_ONLY" else "BOUND"))
+            if (observations.advanceLiveObservation(episode, storedTime)) {
+                customerApi.recordObservedOnuStatuses(mapOf(onu.id to reading.status.toOnuStatus()))
+                evaluateAlarms(tenantId, reading, onu)
+                changed = true
+                current += serial
+            }
         }
+        if (points.isNotEmpty()) metricRepository.saveAll(points)
+        if (changed && publishAlarmChanges) events.publishEvent(AlarmsChangedEvent(tenantId))
+        if (current.isNotEmpty()) discoveredOnuRecorder.resolveKnown(current)
+        return IngestResult(points.size, unknown.take(MAX_REPORTED_UNKNOWN), false)
+    }
 
-        if (matched.isNotEmpty()) {
-            metricRepository.saveAll(
-                matched.map { (reading, onu) ->
-                    OnuMetricPoint(
-                        time = reading.observedAt,
-                        tenantId = tenantId,
-                        onuId = onu.id,
-                        oltId = oltIdsByCode[reading.oltCode.uppercase()],
-                        status = reading.status.name,
-                        rxPowerDbm = reading.rxPowerDbm,
-                        txPowerDbm = reading.txPowerDbm,
-                        uptimeSeconds = reading.uptimeSeconds,
-                        distanceMeters = reading.distanceMeters,
-                        downCause = reading.lastDownCause?.name,
-                        lastOffAt = reading.lastOffAt,
-                        lastOnAt = reading.lastOnAt,
-                    )
-                },
-            )
-
-            customerApi.recordObservedOnuStatuses(
-                matched.associate { (reading, onu) -> onu.id to reading.status.toOnuStatus() },
-            )
-
-            matched.forEach { (reading, onu) -> evaluateAlarms(tenantId, reading, onu) }
-            // Serial yang kini dikenal tapi masih menggantung di kotak masuk
-            // (didaftarkan lewat jalur lain) dituntaskan sendiri.
-            discoveredOnuRecorder.resolveKnown(knownOnus.keys)
+    private fun unverifiedPonRejection(provenance: OnuPathProvenance, oltId: UUID?, attribution: ObservationAttribution): String? {
+        if (provenance != OnuPathProvenance.UNVERIFIED_INDEX) return null
+        val episode = attribution.episode
+        return when {
+            oltId == null -> "UNVERIFIED_OLT"
+            episode == null -> if (attribution.reason == "PATH_MISMATCH") "UNVERIFIED_PON_IDENTITY" else requireNotNull(attribution.reason)
+            !episode.legacy || episode.endedAt != null || episode.onu.odpId != null || attribution.networkEdgeIds.isNotEmpty() -> "UNVERIFIED_PON_IDENTITY"
+            else -> null
         }
+    }
 
-        if (unknown.isNotEmpty()) {
-            // ONU liar ditangkap ke kotak masuk provisioning, bukan sekadar dicatat log:
-            // operator bisa menuntaskannya jadi pelanggan tanpa mengetik ulang serial.
-            val unknownReadings = readings.filterNot { it.serialNumber.trim().uppercase() in knownOnus }
-            discoveredOnuRecorder.capture(tenantId, unknownReadings, oltIdsByCode)
-            log.info("{} serial ONU tidak dikenal ditangkap ke kotak masuk", unknown.size)
-        }
-        return IngestResult(
-            accepted = matched.size,
-            // Dibatasi agar respons tidak membengkak saat OLT baru dipasang dan
-            // seluruh ONU-nya belum didaftarkan.
-            unknownSerialNumbers = unknown.take(MAX_REPORTED_UNKNOWN),
-            duplicate = false,
-        )
+    private fun trustedTime(time: Instant, now: Instant): Boolean =
+        com.duluin.ftth.customer.ObservationTimePolicy.rejection(time, now) == null
+
+    private fun validateBatchId(id: String) {
+        if (id.isBlank() || id.length > 64) throw com.duluin.ftth.common.domain.error.ValidationException("Batch id must contain 1-64 characters")
     }
 
     /**

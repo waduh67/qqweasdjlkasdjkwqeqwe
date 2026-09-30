@@ -49,6 +49,9 @@ data class ProvisionDiscoveredOnuCommand(
     val portNumber: Int?,
     /** Redaman baseline saat instalasi; bila null dipakai redaman terakhir yang teramati. */
     val installRxPowerDbm: Double?,
+    val authorizationId: UUID? = null,
+    val expectedRevision: Long = 0,
+    val operationKey: String = "",
 )
 
 data class DiscoveredOnuView(

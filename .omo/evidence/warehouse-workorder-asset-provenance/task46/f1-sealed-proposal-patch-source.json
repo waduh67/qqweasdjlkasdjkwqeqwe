@@ -1,0 +1,150 @@
+{
+  "kind": "targeted-read-only-review",
+  "sourceHead": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
+  "worktree": "warehouse-regression-validation",
+  "changedPaths": [
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
+    "web/src/api/warehouse/receipts.ts",
+    "web/src/pages/warehouse/WarehouseReceiptEditor.tsx",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx",
+    "web/src/pages/warehouse/WarehouseReceiptsPage.tsx",
+    "web/src/pages/warehouse/WarehouseSupplierReplacement.test.tsx",
+    "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx",
+    "web/src/test/warehouseReceiptFixture.ts"
+  ],
+  "uncommittedDiffSha256": "74f7a0252ea5d271aad0e2b528a8b21460d295d04ea43c87e44be60287d881c6",
+  "executedQAByReviewer": false,
+  "finalF1Approval": false,
+  "finding": "No blocking source defect found in inspected sealed-proposal patch; backend executed evidence and broader final gates remain required.",
+  "validationReport": {
+    "reportedBy": "parent",
+    "webTestsPassed": 14,
+    "webSession": 5409,
+    "typecheck": "reported PASS",
+    "build": "reported PASS",
+    "rawReportsIndependentlyValidatedByReviewer": false,
+    "backendAtRequest": "pending"
+  },
+  "files": [
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "sha256": "32f5690f22de9cf03a7f7f7c918009a9714fb50fafa1e4bc2ca03684aa6a52ba",
+      "changed": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+      "sha256": "d0520181714ecd845cc3e1accfaedda4f6a452e08d541185170be08557328d5c",
+      "changed": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
+      "sha256": "79159c7601325504d99ebcd54a79ea85304b2b18b7ea96ce50fedd786c18e9de",
+      "changed": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "sha256": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
+      "changed": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
+      "sha256": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2",
+      "changed": true
+    },
+    {
+      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
+      "sha256": "7c7d5775be5873544e1c0d711b7cffa440f2f8a569089a3b5199da53626d7f9c",
+      "changed": true
+    },
+    {
+      "path": "web/src/api/warehouse/receipts.ts",
+      "sha256": "5a2c53f3b3910aeb08f41ee0c9c986aa84424aeb09e8c63e2a739c0d174e0e5e",
+      "changed": true
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptEditor.tsx",
+      "sha256": "1b974ef23b0a2d18d7ef1603bcd1d8581d1394fa1e1157281d378539b7917dea",
+      "changed": true
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx",
+      "sha256": "84d6cd3d9db2f96c007423adc3ce345cde8b3d8938271e679ac17d54fe7f7770",
+      "changed": true
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseReceiptsPage.tsx",
+      "sha256": "3f53573e2f9ef0142135e59a3eea41f64ddd5f89e52be9c4e71d2339b5ff5eb7",
+      "changed": true
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseSupplierReplacement.test.tsx",
+      "sha256": "339c316ebbeb17ea03d18b74ff6daadce0d945363fb82f2eeff1026ec85b8953",
+      "changed": true
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx",
+      "sha256": "045c188869359c87d279ea38f076d64a462569b1124fa1d1a02031ec2779c687",
+      "changed": true
+    },
+    {
+      "path": "web/src/test/warehouseReceiptFixture.ts",
+      "sha256": "5eaa796c96a93d195128652612cc5b53c339c48a37a00fffb16912def2ba9c19",
+      "changed": true
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
+      "sha256": "78b7ba1474d60b710f69f37b6f62173e2d4795917883856dcdcfc98199e39dd2",
+      "changed": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
+      "changed": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/SupplierReplacementService.kt",
+      "sha256": "0e0ce488549edf4f8891fd732333f3f64337f7e6f5de0b6ccf6125b6aaf87e11",
+      "changed": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
+      "sha256": "c3876128c17c5295b574f7034813f7b9b83c9fd343cf519dad7ab79ec07a44c7",
+      "changed": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCommandService.kt",
+      "sha256": "701ad5e69fdc0b8846741e71924fbf1b607770b596a9fe3a9e7cffce6342b2e0",
+      "changed": false
+    },
+    {
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseReceiptController.kt",
+      "sha256": "41ca444f1a8b4dbe67677fa73ea3b09edf8863670b271d74074a3910013a9986",
+      "changed": false
+    },
+    {
+      "path": "server/src/main/resources/db/migration/V175_134__warehouse_supplier_replacement_request.sql",
+      "sha256": "6718a8b769b948ebe4a17b6534129f0d634ab45f790e94edd1f88ff6366fa628",
+      "changed": false
+    },
+    {
+      "path": "web/src/api/warehouse/codec.ts",
+      "sha256": "268c7dc6d1cb8048b7ddae831bbd371ef6cb9326120e65082698f2a6b64f3952",
+      "changed": false
+    },
+    {
+      "path": "web/src/pages/warehouse/WarehouseApprovalsPage.tsx",
+      "sha256": "1489ec0641b75cd04cc363a3154476bcb97c3690f22c9acf28de8d66cf632fb0",
+      "changed": false
+    },
+    {
+      "path": "web/src/api/warehouse/receipts.test.ts",
+      "sha256": "c9c69879ef08e56468051a229167b215a2db9ed7b827c7d841a8bb2c2d5997ef",
+      "changed": false
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "accompanying own-material read checkpoint",
+  "backend": {
+    "tests": 9,
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "ed8d48dc9d81edc1601e5d5e3b94c76351f14600b1a352cc5261077d8d26558a"
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITReturns",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xmlSha256": "651c98edae69d272d4b51d7d74b4b9152e043f9770b38062287194280860a552"
+      }
+    ],
+    "result": "BUILD SUCCESSFUL in 3m 41s"
+  },
+  "coverage": "Own pending issue actual revisions and immutable dispatch identities; 60+40m receipt/replay, serialized own custody, no GET posting, actor/tenant/current scope filters before paging; reassigned former custodian current revision, use denied and 17.5m return/warehouse acknowledgement; existing return isolation and replay regression.",
+  "cleanup": "Owned services stopped, volumes retained",
+  "task40": "OPEN: frontend, direct source refresh and warehouse pending return intake, offline/scanner and final verification remain."
+}

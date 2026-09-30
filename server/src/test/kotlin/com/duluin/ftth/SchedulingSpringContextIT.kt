@@ -11,7 +11,7 @@ import org.springframework.scheduling.config.ScheduledTaskHolder
 
 @SpringBootTest(
     properties = [
-        "spring.datasource.url=jdbc:postgresql://localhost:5432/ftth_test",
+        "spring.datasource.url=\${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ftth_test}",
         "ftth.bootstrap.seed-demo-tenant=false",
     ],
 )

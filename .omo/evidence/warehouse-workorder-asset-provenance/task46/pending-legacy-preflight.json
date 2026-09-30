@@ -1,0 +1,8 @@
+{
+  "status": "prepared, not applied or executed",
+  "purpose": "Run actual read-only app-role preflight on V172-upgraded tenants, including wrong version/unit/cutover negatives.",
+  "browser": "After independent zero-opening cutover, create one MM catalog SKU through the actual UI, read it after restart, and still require zero available stock and unchanged customer/ONU identities. Existing six tests retained.",
+  "sql": "Preflight reads only the isolated upgraded database using warehouse_app. Expected SKU IDs are captured by the browser, not seeded by SQL.",
+  "patchSha256": "f590a089b90df2252e876fb5ef68a5d936b4b4cf5cfdbc8525668023249ad642",
+  "staticValidation": "TypeScript compiled in isolated draft directory; bash syntax and git apply --check pass. No browser or SQL run yet."
+}

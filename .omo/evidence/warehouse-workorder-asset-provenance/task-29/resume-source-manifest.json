@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-24T10:26:49.852684+00:00",
+  "base": "c2f4089ca7ba3a4edfd2fe21835bce526a4e00cb",
+  "branch": "work/warehouse-task29",
+  "files": {
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-29.md": "c1ed0f690ab9142bed948a24b2a0fbdc396fda9c1a9b38a4f3213664b0961e02",
+    "deploy/docker-compose.warehouse-test.yml": "229fd77a1f1df09515c518d85acc406459dd33348a2d289076e8fd4fd89e54f9",
+    "docs/warehouse-replenishment.md": "166948da656a4d60af92197689275bee73ad81bab0676f4050e3ae16faba7c2d",
+    "scripts/warehouse/qa.sh": "8d6ced73bb34943498780008b2973cc6316a6f9e063f863808e7349c1e4d5980",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt": "4bf200516774e1ebe273ef90280a407d0892c878654197d91e97b555dcc14d91",
+    "scripts/warehouse/replenishment-http.py": "40ddb171d26d63b559988daf42bffa21f9d545e9fb3764495fd601457ceb1577",
+    "scripts/warehouse/replenishment-smoke.sh": "e768f228bd6ed6aea2aa91458104f82188211e198acbcd04c98bb37ba5661f0b"
+  }
+}

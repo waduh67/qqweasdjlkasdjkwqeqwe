@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "accompanying WO Material UI commit",
+  "tests": 22,
+  "files": 4,
+  "durationSeconds": 3.92,
+  "typeScript": "PASS",
+  "targetedOxlint": "PASS",
+  "backendSource": "e139250a",
+  "task39": "OPEN: frozen approval review, named obligations and rework UI pending",
+  "coverage": "Exact82.500m use, source IDs and revisions, response-loss retry, positive correction stale409, NONE, read-only/reassigned/cancelled states, separate QA/provisioning/material closure, actual close revision, existing10 warehouse request tests."
+}

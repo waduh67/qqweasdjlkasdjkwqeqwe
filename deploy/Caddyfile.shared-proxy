@@ -1,0 +1,22 @@
+{
+	servers {
+		trusted_proxies static {$FTTH_EDGE_PROXY_CIDR}
+		trusted_proxies_strict
+	}
+}
+
+# TLS terminates at the existing edge proxy. This listener has no host port.
+:80 {
+	encode zstd gzip
+	@backend path /api/* /swagger-ui* /v3/api-docs*
+	handle @backend {
+		reverse_proxy server:8080
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}
+
+:8880 {
+	redir {$FTTH_ISOLIR_PORTAL_URL} 302
+}

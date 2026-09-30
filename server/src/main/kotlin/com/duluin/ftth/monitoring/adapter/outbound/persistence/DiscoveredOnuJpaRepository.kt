@@ -9,7 +9,7 @@ import java.util.UUID
 
 interface DiscoveredOnuJpaRepository : JpaRepository<DiscoveredOnuJpaEntity, UUID> {
 
-    fun findBySerialNumber(serialNumber: String): DiscoveredOnuJpaEntity?
+    fun findBySerialNumberAndStateNot(serialNumber: String, state: DiscoveredOnuState): DiscoveredOnuJpaEntity?
 
     fun findByStateOrderByLastSeenAtDesc(state: DiscoveredOnuState): List<DiscoveredOnuJpaEntity>
 
@@ -28,6 +28,6 @@ interface DiscoveredOnuJpaRepository : JpaRepository<DiscoveredOnuJpaEntity, UUI
      * hanya baris tenant aktif (koneksi membawa GUC `app.tenant_id`) yang terhapus.
      */
     @Modifying
-    @Query("delete from DiscoveredOnuJpaEntity d where d.oltId = :oltId")
+    @Query("delete from DiscoveredOnuJpaEntity d where d.oltId = :oltId and d.state <> com.duluin.ftth.monitoring.domain.model.DiscoveredOnuState.PROVISIONED")
     fun deleteByOltId(@Param("oltId") oltId: UUID): Int
 }

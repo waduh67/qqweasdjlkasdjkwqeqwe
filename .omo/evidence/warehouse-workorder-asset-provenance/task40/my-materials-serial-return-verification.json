@@ -1,0 +1,20 @@
+{
+  "sourceCommit": "accompanying unused serial return checkpoint",
+  "backend": {
+    "tests": 1,
+    "failures": 0,
+    "result": "BUILD SUCCESSFUL in 1m 58s",
+    "xmlSha256": "835b6873facd0a2ccdb7b9d4eb7d328b4a3bd69c94b692e2f498ab3e42fbf85d"
+  },
+  "web": {
+    "targetedTests": 31,
+    "targetedFiles": 7,
+    "durationSeconds": 10.11,
+    "typeScript": "PASS",
+    "oxlint": "PASS",
+    "previousCoreFullWeb": "283 tests / 55 files PASS at79381bbe; no additional full rerun for this scoped change"
+  },
+  "coverage": "Real acknowledged ONU returns from former assignee using original stock identity and exact one-unit quantity, same-key dispatch replay, zero customer assignments, receiver ACK keeps device quarantined. UI requires observed matching keyboard/manual serial and revalidates current own source/location/revision; wrong serial and fractional quantity blocked. Canonical material return reused; no backend behavior change or migration.",
+  "cleanup": "Owned services stopped; volumes retained",
+  "remaining": "Task40 OPEN for three-party technician handover authorization/sender dispatch UI and final asset navigation integration with41; actual mobile browser45."
+}

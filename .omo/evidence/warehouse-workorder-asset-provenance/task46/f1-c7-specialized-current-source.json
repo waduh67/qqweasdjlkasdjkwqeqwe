@@ -1,0 +1,239 @@
+{
+  "review": "F1 bounded C7 specialized current projections and recovery",
+  "source_commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+  "status": "NO_ACTIONABLE_SOURCE_FINDING_IN_REVIEWED_DELTAS",
+  "qa_executed_by_reviewer": false,
+  "specialized_short_clock_proof_verified": false,
+  "final_f1": false,
+  "uncommitted_startup_upgrade_changes_excluded": true,
+  "inputs": [
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDispositionStore.kt",
+      "sha256": "5f099645fa9b0442e29cee42c24b8d5a2d6148b9b71e36aeb5ad92112c5c21da",
+      "bytes": 9052
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCompensationStore.kt",
+      "sha256": "fe35ce741db460e35c96e958918006b72ad62d684e2fe803985da3b7bd3de032",
+      "bytes": 7939
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt",
+      "sha256": "343298120304ee918644ae26572d6ba00ca758375184d744f04bb8702e5df601",
+      "bytes": 7384
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReturnReacquisitionStore.kt",
+      "sha256": "de18a13e8f8b5bcb4a56bd5fc4ed85eb88066202988ffe375c3300c9ea5cfc36",
+      "bytes": 11117
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
+      "sha256": "6ac615c353ea4b5afa816648b67c8cf55453734310bc522af9b77525f4cf1519",
+      "bytes": 6162
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt",
+      "sha256": "81abf645cf8fa6d6a0c86eefadb2caa0847a2fd00c30dc3eb0497908fff7df61",
+      "bytes": 7306
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferDiscrepancyStore.kt",
+      "sha256": "e62f4da187060d0b57bd498c8d81442295189d5389e36bc261bfa1b69a6568bb",
+      "bytes": 5126
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt",
+      "sha256": "9980e080e6450327f2d49af17e56193df7526040e6a3daf5fad5a05532798413",
+      "bytes": 8263
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+      "sha256": "166568bb4e8d451c08f01c050de914b018da0af7e8259855ff3cfe47793bcf88",
+      "bytes": 3544
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+      "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1",
+      "bytes": 7039
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+      "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38",
+      "bytes": 7969
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "sha256": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23",
+      "bytes": 6185
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReturnReacquisitionService.kt",
+      "sha256": "db0e29f61e0487fd078e20873f511e238b64190bbded8de2b4506c433b376dfc",
+      "bytes": 5292
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/SupplierReplacementService.kt",
+      "sha256": "0e0ce488549edf4f8891fd732333f3f64337f7e6f5de0b6ccf6125b6aaf87e11",
+      "bytes": 6083
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+      "sha256": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00",
+      "bytes": 7689
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferDiscrepancyService.kt",
+      "sha256": "43d5c80af69fa3debead25120361d3d330f3b3f173b9e6d24bc83c6bbb709827",
+      "bytes": 5450
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferApprovalOwner.kt",
+      "sha256": "2c1783a3785c142f5f062b09755b958e849921c657dfad93f3d76aa3d021c801",
+      "bytes": 5603
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionModels.kt",
+      "sha256": "3816401549df237748e9bd2a20935d8b3350129b3f19e5d43b538e336fe85749",
+      "bytes": 1082
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationModels.kt",
+      "sha256": "32c3f6d589fba69f95f3a34be0c6ba5640a88b5eabf1a630941a5ca114a0efc3",
+      "bytes": 1098
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossModels.kt",
+      "sha256": "768771104578117156f651afaf4784ebeb9a7220980c815e1a743f230f3cdbd3",
+      "bytes": 900
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReturnReacquisitionModels.kt",
+      "sha256": "0e28c3ce00fe629ef7377ee219ed97e021f75de620d9c76f36ae550cad21d85a",
+      "bytes": 825
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDispositionApi.kt",
+      "sha256": "881ffc32533bb2f09bf103c18e62042f3ee3da191fab4956544c0ad48b5f14f0",
+      "bytes": 1661
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCompensationApi.kt",
+      "sha256": "86dd9d1d7bf79fa38f69917ac00e9d36059d101f9cc2601847eb1d7248fd88af",
+      "bytes": 1233
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetLossApi.kt",
+      "sha256": "50404c80d59d1f23ec42169518e385995f083cc5df5b7a6b56da5af79b5d7e5b",
+      "bytes": 1192
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryReturnReacquisitionApi.kt",
+      "sha256": "8246b444dd61b59fb6da2d3482859628787ae80babb5ea883b92e4db49f9f9c5",
+      "bytes": 1223
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySupplierReplacementApi.kt",
+      "sha256": "6b245c8a314778aa90f7020c948d54bf2377898a412b92e9d314b9dd10daa9f5",
+      "bytes": 1352
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialPlanningContracts.kt",
+      "sha256": "82e88980aafea09ad73534add6c292f9aa6146ddd44257fcb92fb2e4356f10c6",
+      "bytes": 2720
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/MaterialWorkflowService.kt",
+      "sha256": "d718c91eba0d8a8228c57530ff7a93b314c995af0edfe0b780ce90968c831a60",
+      "bytes": 3515
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderMaterialContextAdapter.kt",
+      "sha256": "ea8474067d74ee0e70898a80e09403b3851e62585da4b5b6c284d8b8613aa0cb",
+      "bytes": 9901
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/AssetHandoverWorkOrderAdapter.kt",
+      "sha256": "5940a1b18e477dccfc7f2ea5a732de5abd500aba8635a7d34f6ebc834d38dbe9",
+      "bytes": 10869
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql",
+      "sha256": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+      "bytes": 39372
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/api/warehouse/returns.ts",
+      "sha256": "4ce180224295e4fb94e1f9d9fa4f7a0584115a08710a1daef4bcc5b78c5575e9",
+      "bytes": 15656
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/api/warehouse/provenanceModels.ts",
+      "sha256": "d78ddda420a71d6d6e5e334fb013f8f07ba155a229529ef04bd832e3127fe933",
+      "bytes": 11940
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/api/warehouse/materialModels.ts",
+      "sha256": "67c019bdc802eedcc43b4fbf2c9d13a085e531862c79c7c9d91231b66c55c9f9",
+      "bytes": 6084
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/api/warehouse/draftExpiry.ts",
+      "sha256": "f0d6cab27a6d893e67ad2ed479745856b8b2f3fe4bb3b5fde732bb8fdbcb6299",
+      "bytes": 772
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/pages/warehouse/WarehouseReturnReacquisition.tsx",
+      "sha256": "42e948dac452ec503fed97e437043c3396e265fe8ea385330332c4c61cb30a9b",
+      "bytes": 7713
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/pages/warehouse/WarehouseSupplierReplacement.tsx",
+      "sha256": "63ba790236607e859f657e8edae2dde1439aa8ab8a6897b697a92f40c94229e2",
+      "bytes": 8750
+    },
+    {
+      "commit": "a9cd278f67a9450770869587be764145cd1d7b53",
+      "path": "web/src/pages/warehouse/WarehouseProvenanceOpening.tsx",
+      "sha256": "6766a3bbfb4ac86c120c0c7c13cf1fa2afdd0d6b655fb31a9f23415a36a2db90",
+      "bytes": 16291
+    }
+  ]
+}

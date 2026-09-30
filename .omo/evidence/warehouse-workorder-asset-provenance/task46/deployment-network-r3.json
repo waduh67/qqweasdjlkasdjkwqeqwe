@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "startedAtUtc": "2026-09-26T20:49:25.605275+00:00",
+  "project": "ftth-bootstrap-49a78a1d8ef2",
+  "previousEvidence": "/opt/ftth/setup-private/bootstrap-49a78a1d8ef2",
+  "evidence": "/opt/ftth/setup-private/network-823e7da55cf9",
+  "codeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "hostPortsPublished": false,
+  "volumesRetained": true,
+  "sourceSha256": {
+    "docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+    "docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+    "Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+    "setup-private/network-storage-probe.py": "7250d9e9d082d09a0c36a563b6f17e7863d52b2aa13ba27510ef38259c16e8d8"
+  },
+  "edgeCidr": "172.19.0.0/16",
+  "onlyGatewayOnEdge": true,
+  "gatewayWebLoginAndRelativeOpenApi": true,
+  "forwardedHttpsRuntimeClaim": false,
+  "openApiServerUrls": [
+    "/"
+  ],
+  "stage": "storage checked",
+  "storagePutGetDelete": {
+    "bytes": 137,
+    "sha256": "4b7b92d728dc17ff197dff5784816ed148037e4f5f96f5d469047748d7525142"
+  },
+  "radiusConfigurationAccepted": true,
+  "unauthenticatedCwmpRejectedWithoutDeviceCreation": true,
+  "internalNbiReachableWithoutPublicBinding": true,
+  "sourceUnchanged": true,
+  "cleanupExitCode": 0,
+  "edgeNetworkCleanupExitCode": 0,
+  "finishedAtUtc": "2026-09-26T20:50:33.148511+00:00"
+}

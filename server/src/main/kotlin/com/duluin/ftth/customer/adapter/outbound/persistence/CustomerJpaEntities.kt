@@ -97,6 +97,7 @@ class SubscriptionJpaEntity(
 
 @Entity
 @Table(name = "onu")
+@org.hibernate.annotations.SQLRestriction("retired_at IS NULL")
 class OnuJpaEntity(
     id: UUID,
 

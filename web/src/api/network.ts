@@ -298,6 +298,14 @@ export interface ClosureSplitterView {
 export const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
 
 export type CustomerStatus = 'PROSPECT' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED'
+export function customerStatusLabel(status: CustomerStatus): string {
+  return { PROSPECT: 'Prospek', ACTIVE: 'Aktif', SUSPENDED: 'Ditangguhkan', TERMINATED: 'Berhenti' }[status] ?? status
+}
+/** The API uses (0, 0) for customers whose map point has not been set. */
+export function hasCustomerLocation(location: Coordinate): boolean {
+  return Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
+    && (location.latitude !== 0 || location.longitude !== 0)
+}
 export type OnuStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'LOS' | 'DISMANTLED'
 export type OpticalHealth = 'GOOD' | 'WARNING' | 'CRITICAL' | 'UNKNOWN'
 

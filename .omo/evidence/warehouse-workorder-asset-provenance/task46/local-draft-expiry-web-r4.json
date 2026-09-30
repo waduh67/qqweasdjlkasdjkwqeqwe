@@ -1,0 +1,27 @@
+{
+  "status": "PASS_FOCUSED",
+  "parent": "1d14f4b9",
+  "counts": {
+    "tests": 116,
+    "passed": 116,
+    "failed": 0,
+    "skipped": 0,
+    "files": 17
+  },
+  "runnerExitCode": 0,
+  "sourceInputCount": 523,
+  "runnerSha256": "bf5f0873a7ca4f2b3557828008d99e4a9c62f91b0d00582c16ce10754ba0c008",
+  "reportSha256": "85f07fc302c690ea9d0133c648f7999456508d77f826637c466aee76522c8b92",
+  "sourceInventorySha256": "7dfc509177b5905dad8ae7fa901a6231e03ac4df43c912cb853c5f29afadff21",
+  "checks": {
+    "warehouseE2ETypecheck": "PASS",
+    "lint": "PASS_WITH_EXISTING_WARNINGS",
+    "productionBuild": "PASS"
+  },
+  "priorAttempts": [
+    "R1 87/88 pass; duplicate desktop/mobile text assertion corrected to columnheader",
+    "R2 88/88 pass before specialized projections",
+    "R3 115/116 pass; expected retained manifest corrected to decoded original projection"
+  ],
+  "limits": "Mocked HTTP UI/codec coverage, including expired receipt/transfer/count/material/disposition/return-title/opening states. No real C7 browser deadline proof or final F2/F3 acceptance."
+}

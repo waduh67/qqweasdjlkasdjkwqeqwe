@@ -1,0 +1,8 @@
+# Staged activation helper source review
+
+The reviewed helper is unexecuted and needs two corrections before activation. Source hash and exact findings are in the paired JSON.
+
+1. Require a complete approval record. `hostConfigurationSha256={}` currently bypasses all host-file checks; the other guards accept free-form PASS strings and a source-review boolean. Enforce the exact reviewed host inventory and bind the current code CI run/proof hashes, backup drill and required independent final-review evidence. A missing approval file already fails early, but an incomplete file must also fail before mutation.
+2. Add managed-edge failure recovery. After a successful reload, failed HTTPS/login/Drive or initial backups only mark the run failed while the FTTH route stays public. Reload exceptions restore disk bytes without proving restoration of the running proxy configuration. Restore and reload only the previous owned FTTH block on post-switch failure, preserve unrelated concurrent bytes, and record the recovery outcome. Keep migrations/data intact; forward-only rollback does not mean leaving a failed public activation exposed.
+
+The source already checks pinned images, production/no-demo/no-QA settings, private bindings, runtime role,367 migrations and clock ACLs before changing the public route. It validates a candidate shared Caddy configuration, compares the original bytes, checks private/public login and Drive availability, and requests initial backups. Those are appropriate checks; they have not been executed or approved by this review. No product source, migration, QA, SSH or deployment action was performed by F4. Current full CI and final F4 remain pending.

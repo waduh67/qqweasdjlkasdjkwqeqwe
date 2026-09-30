@@ -130,7 +130,7 @@ export function OdpPortBoard({ odpId, reloadKey }: { odpId: string; reloadKey?: 
           <TableCell >{row.legLabel ? (
             <>
               {row.legLabel}
-              <br />
+              {' · '}
               <Text as="span" size={100} className="muted">
                 {row.servedBy ?? 'belum dilas'}
               </Text>
@@ -144,7 +144,7 @@ export function OdpPortBoard({ odpId, reloadKey }: { odpId: string; reloadKey?: 
               <Text as="span" size={100} className="muted tnum">
                 {row.onuSerialNumber}
               </Text>
-              <br />
+              {' · '}
               {row.onuStatus && (
                 <StatusBadge status={row.onuStatus} label={onuStatusLabel(row.onuStatus)} />
               )}

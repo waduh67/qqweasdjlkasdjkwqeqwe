@@ -1,0 +1,54 @@
+package com.duluin.ftth.inventory.adapter.inbound.web
+
+import com.duluin.ftth.inventory.application.service.WarehouseQueryService
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
+import org.springframework.util.MultiValueMap
+import org.springframework.web.bind.annotation.*
+import java.util.UUID
+
+@RestController
+@RequestMapping("/api/v1/warehouse")
+class WarehouseQueryController(private val queries: WarehouseQueryService) {
+    @GetMapping("/assets")
+    fun assets(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.assets(parameters))
+
+    @GetMapping("/assets/{id}")
+    fun asset(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.assets(parameters, id))
+
+    @GetMapping("/assets/{id}/history")
+    fun assetHistory(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.assets(parameters, id, true))
+
+    @GetMapping("/lots")
+    fun lots(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.lots(parameters))
+
+    @GetMapping("/lots/{id}")
+    fun lot(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.lots(parameters, id))
+
+    @GetMapping("/lots/{id}/{part:segments|history}")
+    fun lotPart(@PathVariable id: UUID, @PathVariable part: String, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.lots(parameters, id, part))
+
+    @GetMapping("/lots/{id}/segments/{segmentId}")
+    fun segment(@PathVariable id: UUID, @PathVariable segmentId: UUID, @RequestParam parameters: MultiValueMap<String, String>) =
+        response(queries.lots(parameters, id, "segments", segmentId))
+
+    @GetMapping("/stock")
+    fun stock(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.stock(parameters))
+
+    @GetMapping("/stock/shortages")
+    fun shortages(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.shortages(parameters))
+
+    @GetMapping("/stock/positions")
+    fun positions(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.positions(parameters))
+
+    @GetMapping("/stock/positions/{id}", "/stock/{id}")
+    fun position(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.positions(parameters, id))
+
+    @GetMapping("/stock/positions/{id}/history", "/stock/{id}/history")
+    fun stockHistory(@PathVariable id: UUID, @RequestParam parameters: MultiValueMap<String, String>) = response(queries.stockHistory(parameters, id))
+
+    @GetMapping("/stock/unknown")
+    fun unknown(@RequestParam parameters: MultiValueMap<String, String>) = response(queries.unknown(parameters))
+
+    private fun response(body: String) = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").body(body)
+}

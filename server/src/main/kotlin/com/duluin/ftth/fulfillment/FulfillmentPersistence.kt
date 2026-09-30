@@ -38,6 +38,7 @@ class FulfillmentCheckpointJpaEntity(
 @Component
 class FulfillmentCheckpointPersistenceAdapter(
     @PersistenceContext private val entityManager: EntityManager,
+    private val cutovers: com.duluin.ftth.inventory.InventoryTenantCutoverApi,
 ) : FulfillmentCheckpointRepository, FulfillmentOutboxRepository {
     @Transactional(readOnly = true)
     override fun find(tenantId: UUID, namespace: String, operationKey: String): FulfillmentCheckpoint? = entityManager.createQuery(
@@ -48,6 +49,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun claim(tenantId: UUID, namespace: String, operationKey: String): FulfillmentCheckpoint? {
+        cutoverFence()
         val id = entityManager.createNativeQuery(
             "SELECT id FROM fulfillment_checkpoint WHERE tenant_id = :tenant AND namespace = :namespace AND operation_key = :operation FOR UPDATE",
         ).setParameter("tenant", tenantId).setParameter("namespace", namespace).setParameter("operation", operationKey)
@@ -57,6 +59,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun claimOrCreate(request: FulfillmentRequest): FulfillmentCheckpoint {
+        cutoverFence()
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_checkpoint
                (id, tenant_id, namespace, operation_key, canonical_hash, source, target_id, subscription_id, work_order_id, work_order_kind, required_effects, order_id, approval_actor_id, state, attempts, checkpoint_updated_at)
@@ -75,6 +78,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun save(checkpoint: FulfillmentCheckpoint): FulfillmentCheckpoint {
+        cutoverFence()
         val current = find(checkpoint.tenantId, checkpoint.namespace, checkpoint.operationKey)
         val entity = if (current == null) FulfillmentCheckpointJpaEntity(
             UUID.randomUUID(), checkpoint.namespace, checkpoint.operationKey, checkpoint.canonicalHash,
@@ -97,6 +101,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun enqueueOutbox(checkpoint: FulfillmentCheckpoint) {
+        cutoverFence()
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_outbox (id, tenant_id, fulfillment_id, sequence, event_type, payload_hash, payload)
                SELECT :id, :tenant, id, 1, :eventType, :hash, :payload
@@ -111,19 +116,24 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markOutboxConsumed(checkpoint: FulfillmentCheckpoint) {
+        cutoverFence()
         entityManager.createNativeQuery(
             "UPDATE fulfillment_outbox SET published_at = now() WHERE tenant_id = :tenant AND payload_hash = :hash AND published_at IS NULL",
         ).setParameter("tenant", checkpoint.tenantId).setParameter("hash", checkpoint.canonicalHash).executeUpdate()
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     override fun claimPending(tenantId: UUID, workerId: String, now: Instant, leaseUntil: Instant): FulfillmentOutboxRecord? {
+        cutoverFence()
         val row = entityManager.createNativeQuery(
             """WITH candidate AS (
                    SELECT id FROM fulfillment_outbox
                    WHERE tenant_id = :tenant
                      AND published_at IS NULL
                      AND (lease_until IS NULL OR lease_until <= :now)
+                     AND NOT EXISTS (SELECT FROM fulfillment_migration_cancellation canceled WHERE canceled.tenant_id=fulfillment_outbox.tenant_id
+                         AND ((canceled.source_table='fulfillment_outbox' AND canceled.source_id=fulfillment_outbox.id)
+                             OR (canceled.source_table='fulfillment_checkpoint' AND canceled.source_id=fulfillment_outbox.fulfillment_id)))
                    ORDER BY created_at, id
                    FOR UPDATE SKIP LOCKED LIMIT 1
                )
@@ -131,18 +141,52 @@ class FulfillmentCheckpointPersistenceAdapter(
                SET claimed_by = :worker, lease_until = :lease, attempts = o.attempts + 1
                FROM candidate c
                WHERE o.id = c.id
-               RETURNING o.id, o.tenant_id, o.payload_hash, o.payload""",
+                RETURNING o.id, o.tenant_id, o.payload_hash, o.payload, o.event_type""",
         ).setParameter("tenant", tenantId).setParameter("worker", workerId)
             .setParameter("now", now).setParameter("lease", leaseUntil).resultList.firstOrNull() as? Array<*>
             ?: return null
-        return FulfillmentOutboxRecord(row[0] as UUID, row[1] as UUID, row[2] as String, row[3] as String, workerId, leaseUntil)
+        return FulfillmentOutboxRecord(row[0] as UUID, row[1] as UUID, row[2] as String, row[3] as String, workerId, leaseUntil, row[4] as String)
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    override fun reconcile(delivery: FulfillmentOutboxRecord, reason: String): FulfillmentOutcome {
+        cutoverFence()
+        entityManager.createNativeQuery("""SELECT checkpoint.id FROM fulfillment_checkpoint checkpoint JOIN fulfillment_outbox message
+            ON message.tenant_id=checkpoint.tenant_id AND message.fulfillment_id=checkpoint.id
+            WHERE message.tenant_id=:tenant AND message.id=:id FOR UPDATE OF checkpoint""")
+            .setParameter("tenant", delivery.tenantId).setParameter("id", delivery.id).resultList
+        val canceled = entityManager.createNativeQuery("""SELECT 1 FROM fulfillment_migration_cancellation receipt
+            JOIN fulfillment_outbox message ON message.tenant_id=receipt.tenant_id
+            WHERE message.tenant_id=:tenant AND message.id=:id
+                AND ((receipt.source_table='fulfillment_outbox' AND receipt.source_id=message.id)
+                    OR (receipt.source_table='fulfillment_checkpoint' AND receipt.source_id=message.fulfillment_id))""")
+            .setParameter("tenant", delivery.tenantId).setParameter("id", delivery.id).resultList.isNotEmpty()
+        if (canceled) return FulfillmentOutcome(FulfillmentState.MANUAL_RESOLVED, true, "CANCELED_BY_APPROVED_MIGRATION")
+        entityManager.createNativeQuery("""UPDATE fulfillment_checkpoint checkpoint SET state='REQUIRES_RECONCILIATION',
+            outcome=:reason,checkpoint_updated_at=clock_timestamp() FROM fulfillment_outbox outbox
+            WHERE outbox.tenant_id=:tenant AND outbox.id=:id AND outbox.claimed_by=:worker
+                AND checkpoint.tenant_id=outbox.tenant_id AND checkpoint.id=outbox.fulfillment_id
+                AND checkpoint.state NOT IN ('APPLIED','FAILED_PERMANENT','MANUAL_RESOLVED')""")
+            .setParameter("tenant", delivery.tenantId).setParameter("id", delivery.id).setParameter("worker", delivery.claimedBy)
+            .setParameter("reason", reason).executeUpdate()
+        return FulfillmentOutcome(FulfillmentState.REQUIRES_RECONCILIATION, false, reason)
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     override fun markOutboxConsumed(id: UUID, workerId: String) {
+        cutoverFence()
+        entityManager.createNativeQuery("SELECT id FROM fulfillment_outbox WHERE id=:id AND claimed_by=:worker FOR UPDATE")
+            .setParameter("id", id).setParameter("worker", workerId).resultList
         entityManager.createNativeQuery(
-            "UPDATE fulfillment_outbox SET published_at = now(), claimed_by = NULL, lease_until = NULL WHERE id = :id AND claimed_by = :worker",
+            """UPDATE fulfillment_outbox SET published_at = now(), claimed_by = NULL, lease_until = NULL WHERE id = :id AND claimed_by = :worker
+                AND NOT EXISTS (SELECT FROM fulfillment_migration_cancellation canceled WHERE canceled.tenant_id=fulfillment_outbox.tenant_id
+                    AND ((canceled.source_table='fulfillment_outbox' AND canceled.source_id=fulfillment_outbox.id)
+                        OR (canceled.source_table='fulfillment_checkpoint' AND canceled.source_id=fulfillment_outbox.fulfillment_id)))""",
         ).setParameter("id", id).setParameter("worker", workerId).executeUpdate()
+    }
+
+    private fun cutoverFence() {
+        cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
     }
 
     @Transactional(readOnly = true)
@@ -154,6 +198,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markEffectStarted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
+        cutoverFence()
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_effect_progress (id, tenant_id, fulfillment_id, effect_type, status, attempts, started_at, updated_at)
                SELECT :id, :tenant, id, :effect, 'STARTED', 1, :at, :at FROM fulfillment_checkpoint
@@ -165,6 +210,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markEffectCompleted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
+        cutoverFence()
         entityManager.createNativeQuery(
             "UPDATE fulfillment_effect_progress p SET status = 'COMPLETED', completed_at = :at, updated_at = :at FROM fulfillment_checkpoint c WHERE p.fulfillment_id = c.id AND p.tenant_id = :tenant AND c.namespace = :namespace AND c.operation_key = :operation AND p.effect_type = :effect",
         ).setParameter("tenant", tenantId).setParameter("namespace", namespace).setParameter("operation", operationKey)
@@ -187,9 +233,15 @@ class FulfillmentCheckpointPersistenceAdapter(
         approvalActorId = approvalActorId,
     ).encode()
 
-    private fun FulfillmentCheckpointJpaEntity.toDomain() = FulfillmentCheckpoint(
+    private fun FulfillmentCheckpointJpaEntity.toDomain(): FulfillmentCheckpoint {
+        val canceled = entityManager.createNativeQuery("""SELECT 1 FROM fulfillment_migration_cancellation
+            WHERE tenant_id=:tenant AND source_table='fulfillment_checkpoint' AND source_id=:source""")
+            .setParameter("tenant", tenantId).setParameter("source", id).resultList.isNotEmpty()
+        return FulfillmentCheckpoint(
         tenantId ?: error("FULFILLMENT_TENANT_MISSING"), namespace, operationKey, canonicalHash, source,
-        targetId, state, lastEffect, attempts, outcome, checkpointUpdatedAt, subscriptionId, workOrderId, workOrderKind,
+        targetId, if (canceled) FulfillmentState.MANUAL_RESOLVED else state, lastEffect, attempts,
+        if (canceled) "CANCELED_BY_APPROVED_MIGRATION" else outcome, checkpointUpdatedAt, subscriptionId, workOrderId, workOrderKind,
         requiredEffects.split(',').filter(String::isNotBlank).mapTo(linkedSetOf(), FulfillmentEffectType::valueOf), orderId, approvalActorId,
-    )
+        )
+    }
 }

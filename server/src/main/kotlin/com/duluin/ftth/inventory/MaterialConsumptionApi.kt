@@ -8,14 +8,17 @@ import java.time.Instant
 interface MaterialConsumptionApi {
     fun consume(command: MaterialConsumptionCommand): CustomerMaterialFactRef
     fun returnUnused(command: MaterialConsumptionCommand): CustomerMaterialFactRef
+    @Deprecated("Preserved legacy count facts only; use MaterialConsumptionApiV2 for unit-bearing facts")
     fun forCustomer(tenantId: UUID, customerId: UUID): List<CustomerMaterialFactRef>
 }
 
+@org.springframework.stereotype.Component
 class MaterialConsumptionApiAdapter(
     private val service: MaterialConsumptionService,
 ) : MaterialConsumptionApi {
     override fun consume(command: MaterialConsumptionCommand) = service.consume(command).toRef()
     override fun returnUnused(command: MaterialConsumptionCommand) = service.returnUnused(command).toRef()
+    @Deprecated("Preserved legacy count facts only; use MaterialConsumptionApiV2 for unit-bearing facts")
     override fun forCustomer(tenantId: UUID, customerId: UUID) = service.forCustomer(tenantId, customerId).map { it.toRef() }
 }
 

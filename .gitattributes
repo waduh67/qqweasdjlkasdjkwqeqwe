@@ -1,0 +1,2 @@
+# V178.6 has already been applied. Keep its bytes/checksum, including the final empty line.
+server/src/main/resources/db/migration/V178_6__warehouse_return_canonical_serial.sql whitespace=-blank-at-eof

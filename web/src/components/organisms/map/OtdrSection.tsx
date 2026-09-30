@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useState } from 'react'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import type {
@@ -42,7 +44,7 @@ export function OtdrSection({
   cable: CableView
   tests: OtdrTest[] | null
   canRecord: boolean
-  onRecord: (form: RecordOtdrTest) => void
+  onRecord: (form: RecordOtdrTest) => void | Promise<void>
   onDelete: (testId: string) => void
   onFocus: (test: OtdrTest) => void
 }) {
@@ -55,10 +57,15 @@ export function OtdrSection({
   const distanceNum = Number(distance)
   const canSubmit = distance.trim() !== '' && Number.isFinite(distanceNum) && distanceNum >= 0
 
-  const submit = () => {
-    if (!canSubmit) return
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const creation = useCreationReview(creating)
+  const submit = async () => {
+    if (!canSubmit || creation.beforeSave()) return
+    setError(null)
+    try {
     const loss = Number(lossDb)
-    onRecord({
+    await onRecord({
       distanceMeters: distanceNum,
       measuredFrom,
       eventType,
@@ -67,7 +74,9 @@ export function OtdrSection({
     })
     setDistance('')
     setLossDb('')
-    setNote('')
+    setNote(''); setCreating(false)
+    } catch (error) { setError(error instanceof Error ? error.message : 'Gagal menyimpan hasil ukur.') }
+    finally { creation.finish() }
   }
 
   const list = tests ?? []
@@ -125,7 +134,12 @@ export function OtdrSection({
       )}
 
       {canRecord && (
-        <div className="stack" style={{ gap: '0.4rem' }}>
+        <><Button onClick={() => setCreating(true)}>Catat hasil OTDR</Button>
+        <Blade open={creating} title="Catat hasil OTDR" onClose={() => setCreating(false)}
+          creation={{ ...creation, prepare: () => void submit(), summary: <><CreationSummary rows={[
+            ['Jarak serat (m)', distance], ['Diukur dari', measuredFrom === 'FROM' ? 'Hulu' : 'Hilir'], ['Peristiwa', OTDR_EVENT_LABEL[eventType]], ['Redaman (dB)', lossDb], ['Catatan', note],
+          ]} />{error && <p role="alert">{error}</p>}</> }} footer={<><Button disabled={creation.busy} onClick={() => setCreating(false)}>Batal</Button><Button variant="primary" disabled={!canSubmit || creation.busy} onClick={() => void submit()}>Simpan hasil</Button></>}>
+        <div className="stack">
           <div className="row" style={{ gap: '0.4rem' }}>
             <TextField
               label="Jarak serat (m)"
@@ -175,10 +189,8 @@ export function OtdrSection({
             onChange={(_, data) => setNote(data.value)}
             placeholder="mis. dekat tiang 12"
           />
-          <Button variant="primary" disabled={!canSubmit} onClick={submit}>
-            Plot &amp; simpan
-          </Button>
-        </div>
+
+        </div></Blade></>
       )}
     </div>
   )

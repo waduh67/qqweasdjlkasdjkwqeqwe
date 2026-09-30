@@ -49,7 +49,7 @@ export function CablePanel({
   canViewOtdr: boolean
   canRecordOtdr: boolean
   otdrTests: OtdrTest[] | null
-  onRecordOtdr: (form: RecordOtdrTest) => void
+  onRecordOtdr: (form: RecordOtdrTest) => void | Promise<void>
   onDeleteOtdr: (testId: string) => void
   onFocusOtdr: (test: OtdrTest) => void
   onEdit: () => void

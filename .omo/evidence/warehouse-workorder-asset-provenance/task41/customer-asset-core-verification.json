@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "accompanying customer asset core UI and portal checkpoint",
+  "backend": {
+    "tests": 16,
+    "failures": 0,
+    "result": "BUILD SUCCESSFUL in 2m 51s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "tests": 3,
+        "failures": 0,
+        "sha256": "93f5cba023e1765d2113e340503cabd0f33ca9dcfc6232a40817de52c86efda6"
+      },
+      {
+        "suite": "com.duluin.ftth.customer.PortalCustomerAssetsIT",
+        "tests": 1,
+        "failures": 0,
+        "sha256": "608d076d7fdf98326f57aebc345b4598bdd4d7760ef8a92b5face4ee68287425"
+      },
+      {
+        "suite": "com.duluin.ftth.portal.PortalSelfServiceTest",
+        "tests": 12,
+        "failures": 0,
+        "sha256": "64dccecdf96e048ca78caec4a638ad032890bbaad4ff662c97da1c6540fddcad"
+      }
+    ],
+    "previousReadGate": "52 tests PASS at53c646ef",
+    "initialPortalRun": "15 passed /1 failed; same-tenant customer fixture lacked required location and exceeded code length. Fixture corrected; final16 all PASS."
+  },
+  "web": {
+    "tests": 304,
+    "files": 63,
+    "durationSeconds": 69.01,
+    "typeScript": "PASS",
+    "productionBuild": "PASS, pre-existing large chunk warning",
+    "newProductOxlint": "PASS",
+    "existingPageWarnings": "set-state-in-effect in pre-existing CustomerDetailPage and DiscoveredOnuInbox effects remain"
+  },
+  "coverage": "Eligible received serial review, measured actual revisions and real signature references, canonical install/replace/remove/handover/ODP relocation, source revalidation, wrong serial, exact two-stage authorize/consume replay, offline draft and read-only controls. Customer blade retains ONU observation and replaces free serial/legacy mutation controls. Discovered suggestion opens review and cannot provision before source authorization. Portal principal-only paged projection proven with same-tenant and foreign-tenant accounts; no operational IDs or costs. WO/Material Saya links open existing customer blade through router state.",
+  "cleanup": "Owned services stopped; volumes retained",
+  "remaining": "40/41 OPEN for customer-owned RMA technician receipt and reinstall UI; warehouse RMA dispatch exists. Actual mobile/browser numeric gate45.42-48/F1-F4 remain."
+}

@@ -1,0 +1,75 @@
+{
+  "task": 35,
+  "status": "complete",
+  "sourceCommit": "31b26399",
+  "run": "issue-release-value",
+  "browser": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "durationSeconds": 58.24516,
+    "projects": [
+      "warehouse-desktop",
+      "warehouse-mobile"
+    ]
+  },
+  "webTests": {
+    "distinctVerified": 134,
+    "note": "132 baseline @f2fc7fb4 plus picker and NONE cases verified in affected runs; final14 affected cases+TS+oxlint passed @2dcabb7a. Final browser build @31b26399 includes typecheck. Not one 134-test batch."
+  },
+  "backendEvidence": [
+    "allocation-metadata-verification.json",
+    "issue-list-verification.json",
+    "demand-mapping-verification.json"
+  ],
+  "checks": [
+    "bootJar and web production build passed",
+    "14 affected web cases and TypeScript/focused oxlint passed",
+    "8 current synthetic PNG visually reviewed: named receiver, exact quantities, no page overflow, readable wrapping"
+  ],
+  "acceptance": [
+    "Real empty-tenant UI: receive1000m+10ONU, create technician and scoped work order, explicit100m+2ONU plan and actual distinct demandLineId mapping",
+    "Reserve60m+1ONU; release entire selected cable allocation while ONU remains reserved; re-reserve60m and preserve40m+1unit shortage",
+    "Pick physical cable cut+actual scanned ONU, unpick without rejoining cable, repick same cut into new persisted slip",
+    "Reload discovers current and historical slips; receiver and partial confirmations required before dispatch",
+    "Dispatch persists warehouse custody to WO_TRANSIT:60m+1ONU physical and0available; no inferred technician acceptance",
+    "Print reads latest authorized immutable slip before browser print"
+  ],
+  "screenshots": [
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/desktop-request-partial.png",
+      "sha256": "de7a0bd6f7bde1bab1d538b942e1d7cd8c0937f8e43130218f537e4073f57b80"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/desktop-issue-review.png",
+      "sha256": "9a73bf4634b269f957d8e562373a53fca3c1fa83cfcb3b460aea8fde96ff59ac"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/desktop-issue-dispatched.png",
+      "sha256": "f7675eb69b84c7d5e2c52a63d005745ab6c7013241f0fa6af468f3ce83e2480d"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/desktop-issue-transit.png",
+      "sha256": "20d1e73a1919c381bf0586e23052682a5c56e3f5ff2d3b58041430a918bfde7f"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/mobile-request-partial.png",
+      "sha256": "fbc825c7ae99cc1be329f11e237fbf3108d6aa718864c0d4b6f103735b8f03e5"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/mobile-issue-review.png",
+      "sha256": "b323023111e540153cf684451d77999791ada295d940f4cf1375140779b9b671"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/mobile-issue-dispatched.png",
+      "sha256": "4e31cbd96723c90f228d164e6220d5af80ca683a6dabb561a30b5718fde74bd2"
+    },
+    {
+      "path": ".omo/evidence/warehouse-workorder-asset-provenance/task35/mobile-issue-transit.png",
+      "sha256": "44c397c24e1eef7d069f60ff687e23c4fe9d311a59b1eb8e70dc7728bbbf4631"
+    }
+  ],
+  "cleanup": "Owned QA processes, containers and network stopped; volumes retained",
+  "nextTask": 36
+}

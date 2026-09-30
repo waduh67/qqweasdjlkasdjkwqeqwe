@@ -39,6 +39,7 @@ class CustomerService(
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
     private val events: ApplicationEventPublisher,
+    private val assetRetention: com.duluin.ftth.customer.adapter.outbound.persistence.CustomerAssetRetentionStore,
 ) : ManageCustomerUseCase {
 
     @Transactional(readOnly = true)
@@ -74,7 +75,7 @@ class CustomerService(
         val code = manualCode ?: generateNextCode()
         val customer = customerRepository.save(
             Customer.create(
-                tenantId = currentUser.current().tenantId,
+                tenantId = com.duluin.ftth.common.tenant.TenantContext.tenantId(),
                 code = code,
                 name = command.name,
                 phone = command.phone,
@@ -142,6 +143,7 @@ class CustomerService(
      * teknisi yang datang ke lokasi.
      */
     override fun delete(id: UUID) {
+        assetRetention.assertCustomerRemovable(id)
         val customer = requireCustomer(id)
         val attached = onuRepository.findByCustomerId(id).filter { it.attached }
         if (attached.isNotEmpty()) {

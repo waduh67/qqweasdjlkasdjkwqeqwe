@@ -1,0 +1,101 @@
+{
+  "affectedGateRequirements": [
+    "Task01 and Task48 non-owner application role and separate migration role",
+    "Task47 runbook accuracy, isolated preflight, forward-only rollback and no validation bypass",
+    "Task48 all server/migration/web/shared/browser/native/image prerequisites before release",
+    "F1 mapping/current input identity",
+    "F2 deployment security/configuration review",
+    "F4 exact shipped image plus separately versioned deployment-config identity and executed startup/preflight"
+  ],
+  "changedInputsFrom1306AtReview": [],
+  "codeCiFullServerProof": "PENDING; root monitors active run",
+  "codeCiRun": 36265279847,
+  "conditionalEvidenceReuse": {
+    "all3693InputsEquivalentAtInitialReview": true,
+    "automaticPublishCommitEqualityMustNotBeBypassed": true,
+    "codeReportsRemainBoundTo1306": true,
+    "configurationOnlyDeltaDoesNotRequireUnrelatedFullSuiteRerun": true,
+    "fullCurrentCiStillRequired": true,
+    "futureDeploymentDeltaMustBeEnumerated": true,
+    "productionStartupNotCoveredByExistingImageSmoke": true,
+    "runtimeConfigurationProofRequired": true
+  },
+  "embeddedJarSha256": "d34ddfc9b920794e280d73e44da2c5221bf53a5f2ce324ac15d03c6607130466",
+  "executionByReviewer": {
+    "ciCancellation": false,
+    "imageLoad": false,
+    "localQa": false,
+    "publication": false,
+    "remoteMutation": false,
+    "ssh": false
+  },
+  "finalF4Approval": false,
+  "findings": [
+    {
+      "id": "DEPLOY-F4-01",
+      "requiredCorrection": "Replace bypass advice with stop/fix/rerun all required gates; retain workflow dependency graph.",
+      "severity": "high",
+      "source": "deploy/DEPLOY.md:1110",
+      "status": "confirmed",
+      "subject": "Stale advice explicitly removes a required test dependency"
+    },
+    {
+      "id": "DEPLOY-F4-02",
+      "requiredCorrection": "Compose must bind ftth.bootstrap.demo-admin-password using FTTH_BOOTSTRAP_DEMOADMINPASSWORD (for example mapped from operator FTTH_DEMO_ADMIN_PASSWORD). There is no short-name application.yml placeholder. Keep FTTH_PRODUCTION=true and FTTH_SEED_DEMO=false.",
+      "severity": "high",
+      "source": "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/config/ProductionConfigurationValidator.kt:28",
+      "status": "confirmed",
+      "subject": "Production image rejects omitted demo-admin credential"
+    },
+    {
+      "id": "DEPLOY-F4-03",
+      "requiredCorrection": "New deployment must use warehouse_app as non-owner NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE; separate migration owner and explicit SPRING_FLYWAY credentials. No owner-role membership for app. Preserve restricted V178.12 grants; do not blanket regrant protected tables after migration.",
+      "severity": "high",
+      "source": "deploy/postgres-init/10-init-app-db.sh:13",
+      "status": "confirmed",
+      "subject": "Production initialization uses runtime role as database and migration owner"
+    },
+    {
+      "id": "DEPLOY-F4-04",
+      "requiredCorrection": "Both storage keys need non-placeholder values at least16 characters under current validator; template must accurately describe requirements.",
+      "severity": "medium",
+      "source": "deploy/.env.example:63",
+      "status": "confirmed",
+      "subject": "Object-storage template uses a rejected default and states an insufficient minimum"
+    }
+  ],
+  "imageProof": "f4-ci-1306b65c-nonserver-complete.json",
+  "imageProofSha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+  "inspectedSourceSha256": {
+    ".github/workflows/deploy.yml": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20",
+    ".github/workflows/warehouse.yml": "9477b01cf3a9fa03ac8c1eab27ca3ee9fb38e93604c552b7f9e0e456950304c1",
+    "deploy/.env.example": "d1b43c0e5bb0a5a461b50414a112146987e5a7e1a442f3a5da8041155aaea2b6",
+    "deploy/Caddyfile": "32b4656f4f12cec02d786d1d9c6be99bbc29dad70f7f8c356ee56938fbf70b3e",
+    "deploy/DEPLOY.md": "22342eb68265d2e408add15677e69fa2d00e09663cc809e2dc4d41938b04c382",
+    "deploy/docker-compose.prod.yml": "7426809f60b4ee2adc778b2808264be88a0c194ac7398f1e3fb046391be48c91",
+    "deploy/postgres-init/10-init-app-db.sh": "b9bbf3df0edb753e53f3ef1fad66319e25c81d53c9a054cb741a24cf560c750c",
+    "scripts/warehouse/image-smoke.sh": "0b3eb2c7e58ecd62c79d8649043b0abfddc563ca00ffb861812a9fc21a2474ed",
+    "scripts/warehouse/preflight.sql": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+    "scripts/warehouse/publish-images.py": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e",
+    "server/Dockerfile": "a6d5cc81338536f1eab80ac2667fef6fe406a9d9718a63201c9dac5deaa47093",
+    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/config/BootstrapProperties.kt": "928e1c76575f559cfa8cffb35d7f03ccdad69461e30f725b8386bdd20ee54067",
+    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/config/ProductionConfigurationValidator.kt": "50c041b129a2bdfada90825d5626a1ffe9d5990f3d2e55ee832e5d7f25eba1b4",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
+    "server/src/main/resources/application.yml": "3438a4227c8bbcf21633f27d13a1652b53f726414561662233ed1c116d07b19b",
+    "server/src/main/resources/db/migration/V178_12__warehouse_idle_draft_expiry.sql": "add301336feaf41c740f5d6026206500aed07c6bae7c20f168d7aa4ae11adca3",
+    "web/Dockerfile": "8c8bfd3374ab901973b655a4926615ce7823fa09cf2000096582c990648a0409"
+  },
+  "reviewedAtUtc": "2026-09-26T20:16:26.139623+00:00",
+  "sourceHead": "f276fd0c6e8fb0d880487606872f3899b1363c0d",
+  "sourceInputCount": 3693,
+  "status": "SOURCE_REVIEW_DEPLOYMENT_CORRECTIONS_REQUIRED",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "verifiedArchiveDigests": {
+    "server": "sha256:a7157859343855feb88a1ee1af24b6756ada270f3adda58a560dfcc89f8696ea",
+    "web": "sha256:eaa4792804af1d812417b1898d51ab9308a195abe0eebf40b88caebfb56ad200"
+  },
+  "verifiedImageIdentities": {
+    "server": "sha256:fb928f2d384d0397e15e27b12f5eb2e57a9ba14ba0c88aa25e16247f2316b484",
+    "web": "sha256:0d12c624b41070cb3f585bd1b6d751d08e6e79863a4bdc6c437822f49fb5d903"
+  }
+}

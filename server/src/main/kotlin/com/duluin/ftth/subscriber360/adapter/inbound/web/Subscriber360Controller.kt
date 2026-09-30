@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.RequestParam
+import com.duluin.ftth.inventory.WarehousePageRequest
 import java.util.UUID
 
 /**
@@ -26,5 +28,8 @@ class Subscriber360Controller(
 
     @GetMapping("/{customerId}")
     @PreAuthorize("@authz.can('customer.customer.view')")
-    fun assemble(@PathVariable customerId: UUID): Subscriber360View = query.assemble(customerId)
+    fun assemble(@PathVariable customerId: UUID,
+        @RequestParam(defaultValue = "0") materialPage: Int,
+        @RequestParam(defaultValue = "25") materialSize: Int,
+    ): Subscriber360View = query.assemble(customerId, WarehousePageRequest(materialPage, materialSize))
 }

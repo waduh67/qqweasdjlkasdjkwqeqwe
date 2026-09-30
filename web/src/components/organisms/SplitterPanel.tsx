@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { typographyStyles } from '@fluentui/react-components'
@@ -110,8 +112,9 @@ export function SplitterPanel({
     setNote(splitter.note ?? '')
   }
 
+  const creation = useCreationReview(editing !== null, editing !== 'new')
   const save = async () => {
-    if (!editing || saving) return
+    if (!editing || saving || creation.beforeSave()) return
     setSaving(true)
     try {
       const body = { ratio, note: note.trim() || null }
@@ -124,7 +127,7 @@ export function SplitterPanel({
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan modul splitter')
     } finally {
-      setSaving(false)
+      setSaving(false); creation.finish()
     }
   }
 
@@ -206,63 +209,18 @@ export function SplitterPanel({
           <LegGrid splitter={s} />
           {s.note && <p className="muted" style={{ margin: 0, ...typographyStyles.caption2 }}>{s.note}</p>}
 
-          {editing === s.id && (
-            <div className="core-editor stack" style={{ gap: '0.5rem' }}>
-              <SelectField label="Rasio" value={ratio} onChange={(_, d) => setRatio(d.value)}>
-                {SPLITTER_RATIOS.map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </SelectField>
-              <TextField
-                label={<>Catatan <span className="muted">(opsional)</span></>}
-                value={note}
-                onChange={(_, d) => setNote(d.value)}
-                placeholder="mis. cabang perumahan blok C"
-                maxLength={200}
-              />
-              {/* Menurunkan rasio ditolak server bila ada kaki terpakai di luar rasio
-                  baru — disebutkan di sini supaya penolakannya tak terasa sewenang-wenang. */}
-              <p className="muted" style={{ margin: 0, ...typographyStyles.caption2 }}>
-                Rasio hanya bisa diperkecil selama kaki yang terpakai masih muat di dalamnya.
-              </p>
-              <div className="row" style={{ gap: '0.4rem' }}>
-                <Button variant="primary" onClick={() => void save()} disabled={saving}>
-                  {saving ? 'Menyimpan…' : 'Simpan'}
-                </Button>
-                <Button variant="subtle" onClick={() => setEditing(null)} disabled={saving}>
-                  Batal
-                </Button>
-              </div>
-            </div>
-          )}
+
         </div>
       ))}
 
-      {editing === 'new' && (
-        <div className="core-editor stack" style={{ gap: '0.5rem' }}>
-          <strong style={{ ...typographyStyles.caption1 }}>Modul baru</strong>
-          <SelectField label="Rasio" value={ratio} onChange={(_, d) => setRatio(d.value)}>
-            {SPLITTER_RATIOS.map((r) => (
-              <option key={r}>{r}</option>
-            ))}
-          </SelectField>
-          <TextField
-            label={<>Catatan <span className="muted">(opsional)</span></>}
-            value={note}
-            onChange={(_, d) => setNote(d.value)}
-            placeholder="mis. cabang perumahan blok C"
-            maxLength={200}
-          />
-          <div className="row" style={{ gap: '0.4rem' }}>
-            <Button variant="primary" onClick={() => void save()} disabled={saving}>
-              {saving ? 'Menyimpan…' : 'Tambah'}
-            </Button>
-            <Button variant="subtle" onClick={() => setEditing(null)} disabled={saving}>
-              Batal
-            </Button>
-          </div>
+      <Blade open={editing !== null} title={editing === 'new' ? 'Tambah modul splitter' : 'Ubah modul splitter'} onClose={() => setEditing(null)}
+        creation={{ ...creation, busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[
+          ['Rasio', ratio], ['Catatan', note],
+        ]} /> }} footer={<><Button disabled={saving} onClick={() => setEditing(null)}>Batal</Button><Button variant="primary" disabled={saving} onClick={() => void save()}>Simpan</Button></>}>
+        <div className="stack"><SelectField label="Rasio" value={ratio} onChange={(_, d) => setRatio(d.value)}>{SPLITTER_RATIOS.map(r => <option key={r}>{r}</option>)}</SelectField>
+          <TextField label="Catatan" value={note} onChange={(_, d) => setNote(d.value)} maxLength={200} />
         </div>
-      )}
+      </Blade>
     </div>
   )
 }

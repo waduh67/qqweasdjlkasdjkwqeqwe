@@ -1,3 +1,6 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
+import { CommandBar } from '@/components/molecules/CommandBar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Trash2 } from 'lucide-react'
@@ -15,6 +18,8 @@ export function AreasPage() {
   const { can } = useCan()
   const toast = useToast()
   const [areas, setAreas] = useState<Area[]>([])
+  const [creating, setCreating] = useState(false)
+  const creation = useCreationReview(creating)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [query, setQuery] = useState('')
@@ -47,7 +52,8 @@ export function AreasPage() {
   // Resolusi induk: parentId → nama area induk (fallback ke id bila tak ketemu).
   const parentName = useMemo(() => {
     const byId = new Map(areas.map((a) => [a.id, a.name] as const))
-    return (a: Area) => (a.parentId ? byId.get(a.parentId) ?? a.parentId : null)
+
+  return (a: Area) => (a.parentId ? byId.get(a.parentId) ?? a.parentId : null)
   }, [areas])
 
   const rows = useMemo(() => {
@@ -70,6 +76,15 @@ export function AreasPage() {
     },
   ]
 
+  const saveArea = () => {
+    if (!code.trim() || !name.trim() || creation.beforeSave()) return
+    void run(async () => {
+      await api.post('/api/areas', { code: code.trim(), name: name.trim(), parentId: null })
+      setCode(''); setName(''); setCreating(false)
+    }, 'Area ditambahkan').finally(creation.finish)
+  }
+
+
   // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
   const canDelete = can('iam.area.delete')
   const rowActions = (a: Area): RowAction[] => [
@@ -85,29 +100,14 @@ export function AreasPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader title="Area / Wilayah" />
 
-      {can('iam.area.create') && (
-        <div className="card row" style={{ alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, marginBottom: 0 }}>
-            <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder="BKS" />
-          </div>
-          <div style={{ flex: 2, marginBottom: 0 }}>
-            <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} placeholder="Bekasi" />
-          </div>
-          <Button
-            variant="primary"
-            disabled={!code || !name}
-            onClick={() =>
-              void run(async () => {
-                await api.post('/api/areas', { code, name, parentId: null })
-                setCode('')
-                setName('')
-              }, 'Area ditambahkan')
-            }
-          >
-            Tambah
-          </Button>
-        </div>
-      )}
+      <CommandBar primary={can('iam.area.create') ? { key: 'create', label: 'Tambah area', onClick: () => setCreating(true) } : undefined}
+        actions={[{ key: 'refresh', label: 'Segarkan', onClick: () => void reload() }]} />
+      <Blade open={creating} title="Tambah area" onClose={() => setCreating(false)}
+        creation={{ ...creation, prepare: saveArea, summary: <CreationSummary rows={[["Kode", code], ["Nama", name]]} /> }}
+        footer={<Button variant="primary" disabled={creation.busy} onClick={saveArea}>Simpan</Button>}>
+        <div className="stack"><TextField label="Kode" required value={code} onChange={(_, data) => setCode(data.value)} />
+          <TextField label="Nama" required value={name} onChange={(_, data) => setName(data.value)} /></div>
+      </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode atau nama…" />

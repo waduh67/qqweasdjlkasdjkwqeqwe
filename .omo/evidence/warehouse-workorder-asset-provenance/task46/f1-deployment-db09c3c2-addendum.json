@@ -1,0 +1,273 @@
+{
+  "status": "BOUNDED_F1_DEPLOYMENT_ADDENDUM_NO_ADDITIONAL_SOURCE_BLOCKER_FINAL_PENDING",
+  "reviewedAtUtc": "2026-09-26T20:58:33.356829+00:00",
+  "deploymentConfigCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "applicationImageCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "authorization": {
+    "basis": "Explicit later user authorization conveyed by root in this session; this overrides older no-deployment statements only within the newly authorized scope.",
+    "authorized": "Actual Azure VPS/domain setup while preserving unrelated Drive/Caddy; approved admin credentials prepared privately.",
+    "notAuthorized": [
+      "main branch merge",
+      "registry publication"
+    ],
+    "credentialValuesViewedOrStoredByReviewer": false
+  },
+  "sourceComparison": {
+    "baseCapturedInputs": 3693,
+    "unchangedCapturedInputs": 3688,
+    "changedCapturedInputs": [
+      "deploy/.env.example",
+      "deploy/DEPLOY.md",
+      "deploy/docker-compose.prod.yml",
+      "deploy/postgres-init/10-init-app-db.sh",
+      "docs/backup.md"
+    ],
+    "newDeploymentInputs": [
+      "deploy/Caddyfile.shared-proxy",
+      "deploy/SHARED-PROXY.md",
+      "deploy/docker-compose.shared-proxy.yml"
+    ],
+    "applicationBuildTestWorkflowInputsUnchanged": true,
+    "all367MigrationBytesUnchanged": true,
+    "highestMigration": "178.12",
+    "wholePriorManifestEquivalent": false,
+    "requiresComposedApplicationAndDeploymentIdentity": true,
+    "deploymentSha256": {
+      "deploy/.env.example": "31f09a7eeab9ba35020b8c3a1481caca62e03bafadfda945980779a78335abfd",
+      "deploy/Caddyfile.shared-proxy": "9fbe2280dfce62f08d0e724aded6c2daa9b2ea1b96465187ad405b70c5013805",
+      "deploy/DEPLOY.md": "bf3910ce28ad78d1d17bffe428484dc197f393fee1c9d610189081c9a03704e8",
+      "deploy/SHARED-PROXY.md": "502f0efbb5cf9505cf6e0a7350e57d173db4847b0dfc74c4d8e1011aa4d56fde",
+      "deploy/docker-compose.prod.yml": "3cfccd2887a53ae6d8b7a3b248f14950ac9dc32f1404ee7287d0fb568ed92e66",
+      "deploy/docker-compose.shared-proxy.yml": "c56320d11c27a86610b0770d679991019530b5838ade33982ef68c19d52e846b",
+      "deploy/postgres-init/10-init-app-db.sh": "a1be43aa452525718f4fec8399dd0f61b028568ce70608cb78219c7c31bd0b2c",
+      "docs/backup.md": "051f0034e763ba24526361a6bb903e9c6fa8b3e657efe5480f5d37aaab692595"
+    }
+  },
+  "sourceAndEvidenceMapping": [
+    {
+      "contracts": [
+        "C7",
+        "C10"
+      ],
+      "tasks": [
+        1,
+        4,
+        6,
+        11,
+        12,
+        43,
+        46
+      ],
+      "source": [
+        "deploy/postgres-init/10-init-app-db.sh",
+        "deploy/docker-compose.prod.yml",
+        "deploy/.env.example"
+      ],
+      "conclusion": "New-volume bootstrap separates database/Flyway owner from non-owner runtime. Quoted psql variables, no runtime owner membership/schema CREATE, and no post-Flyway blanket grant preserve RLS and V178.12 clock permissions. Production validation and database health remain active.",
+      "executedEvidence": "F4-authenticated R2 production=true/noQA, missing-secret rejection,367 migrations178.12, role flags, actual schema CREATE/draft policy DELETE denial, login and same-image restart. R1 SMTP timeout stays failed."
+    },
+    {
+      "contracts": [
+        "C8",
+        "C9",
+        "C10"
+      ],
+      "tasks": [
+        31,
+        45,
+        46,
+        47,
+        48
+      ],
+      "source": [
+        "deploy/docker-compose.shared-proxy.yml",
+        "deploy/Caddyfile.shared-proxy",
+        "deploy/SHARED-PROXY.md"
+      ],
+      "conclusion": "Only FTTH gateway joins the named external proxy network. Compose !override removes host80/443; API/docs route to backend and other traffic to web. Strict proxy trust is limited to the configured private edge CIDR. The guide requires preserving/validating existing Caddy and checking the unrelated site; standalone automatic deployment is excluded for this host.",
+      "executedEvidence": "Prior F3 remains application-scoped. Parent reports network R3 PASS; final independent network/effective-host/TLS and preservation proof is pending in this capture."
+    },
+    {
+      "contracts": [
+        "C7",
+        "C10"
+      ],
+      "tasks": [
+        47,
+        48
+      ],
+      "source": [
+        "deploy/docker-compose.prod.yml",
+        "deploy/DEPLOY.md",
+        "docs/backup.md"
+      ],
+      "conclusion": "Backup uses the selected PostgreSQL image and migration database owner; docs retain archive object-owner/ACL semantics and require reviewed ownership migration for existing databases. Mandatory workflow needs chain is unchanged and the old instruction to remove it is deleted.",
+      "executedEvidence": "This source review does not establish a restore rehearsal with the new configuration. Current full server/aggregate CI and final release review remain mandatory."
+    },
+    {
+      "contracts": [
+        "C7"
+      ],
+      "tasks": [
+        46,
+        47,
+        48
+      ],
+      "source": [
+        "deploy/.env.example",
+        "deploy/docker-compose.prod.yml",
+        "deploy/SHARED-PROXY.md"
+      ],
+      "conclusion": "Only optional environment SMTP health is disabled by default; production/default-secret/demo-seed validators and database health are retained. Canonical demo-secret binding and storage-key guidance match the existing validator.",
+      "executedEvidence": "R2 bootstrap establishes health/login, not email delivery. SMTP remains unconfigured; email recovery/alerts require actual configuration and delivery verification."
+    }
+  ],
+  "supportingReferences": [
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/f1-1306b65c-source-evidence.json",
+      "sha256": "859c6e2115052611d9df0d2333633406bb617c72e21b5cd82f286468d085adaa",
+      "authority": "Preserved F1 application/source evidence mapping; not rewritten"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-source-input-hashes.json",
+      "sha256": "4ea854e322b08078177fb1e6678f46a4d21af42f6c84686dfa62a15983f940cb",
+      "authority": "Authenticated 1306 CI input manifest; compared independently in this addendum"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/task46/f4-ci-1306b65c-nonserver-recheck.json",
+      "sha256": "084eb6c2888b00182f20578abd8955d441818b79ef7b07d6f619ef0d65f3b9a4",
+      "authority": "Previously authenticated current-application nonserver proof"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/task46/deployment-bootstrap-adoption.json",
+      "sha256": "1dbaf243dc3791c5977bdd37a4bdc70883a0feacc179d7298ceca16d5524bba1",
+      "authority": "Root adoption and source/proof binding"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/task46/f4-deployment-bootstrap-r1-r2-authentication.json",
+      "sha256": "992e88609d542cf9a737ae284e4e85f3af35067f83d563185b5b6dd54a6c132e",
+      "authority": "Independent F4 bootstrap archive/log/source-assertion authentication; limits preserved"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/task46/deployment-production-bootstrap-r1.json",
+      "sha256": "2e1df768b7e907fbcb98fd8c8c6d897eff1a43c5c57fdd2d71c00021191cbf9a",
+      "authority": "Failed earlier bootstrap receipt; retained as failure"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-regression-validation/.omo/evidence/warehouse-workorder-asset-provenance/task46/deployment-production-bootstrap-r2.json",
+      "sha256": "389e41fa100d85beaa337a3fa5563500a0f02cc1cf3811c679b0a0a26f3600a4",
+      "authority": "Executed successful isolated production bootstrap receipt"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-f4-review/.omo/evidence/warehouse-workorder-asset-provenance/task46/f4-destination-images-1306b65c-authentication.json",
+      "sha256": "a478501083a7b062ab8bcd5adf26fb5843a1b884e0cdb1716da1b5f08423bc46",
+      "authority": "Independent F4 actual destination archive/config/19-layer authentication; private reviewer artifact, canonical copy not assumed"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-final-f2-review/f2-deployment-db09c3c2-addendum.md",
+      "sha256": "7fc525d92eaca5901058c73ce96d635b68fdb878f40688c54e91278773f973f6",
+      "authority": "Independent bounded F2 source addendum; final F2 pending"
+    },
+    {
+      "workspaceRelativePath": ".omo/runtime/warehouse-final-f2-review/f2-deployment-db09c3c2-source-authentication.json",
+      "sha256": "6af475387c2cc4f8e0ef549aeeca9b39275be82468b84d3ec59e1df95a429b49",
+      "authority": "Independent F2 source/hash binding; final F2 pending"
+    }
+  ],
+  "bootstrapEvidenceBoundary": {
+    "r1": "FAIL SMTP-related aggregate readiness timeout; not promoted",
+    "r2": "PASS isolated production bootstrap at exact reviewed Compose/init hashes; no demo/business fixtures and no public endpoint opened",
+    "attribution": "Runtime facts are attributed to F4 archive/log/source-assertion authentication. F1 independently verified safe metadata and source/hash binding, not raw HTTP/SQL payloads.",
+    "retainedLimit": "Standalone raw bootstrap HTTP/SQL/inspect responses were not captured; this addendum does not claim independent reparse of absent files."
+  },
+  "destinationEvidenceBoundary": {
+    "status": "Prior missing destination re-export limit closed by independent F4 authentication",
+    "configurationBytesAndOrderedLayers": 19,
+    "ociManifestVsClassicConfigIdentityPreserved": true,
+    "noApplicationRebuild": true,
+    "F1ReparsedDestinationTar": false,
+    "doesNotEstablishActivationOrNetworkPass": true
+  },
+  "reportedOperationalState": {
+    "authority": "Root session update, not independently observed by F1",
+    "productionInfrastructureServicesRunning": 8,
+    "productionApplicationWebGatewayStarted": false,
+    "networkR3": "Parent reports PASS; F4 authentication in progress",
+    "unrelatedSitePreservationRequired": true
+  },
+  "remainingRequiredEvidence": [
+    "Actual CI36265279847 complete current server/focused/historical/protocol reports and aggregate acceptance; retain failed/cancelled histories.",
+    "Final independent network R1/R2/R3 authentication with failure boundaries, exact settings/source/image hashes, and honest protocol scope.",
+    "Effective actual-host composed configuration, restricted listener/firewall/TLS/forwarded-header checks where asserted, continued unrelated Drive/Caddy operation, and task-owned probe cleanup.",
+    "Final activation and same-image restart/readiness/login checks for the authorized scope after required release gates; infrastructure startup is not application activation.",
+    "Effective production FreeRADIUS command must substantiate the reported private non-debug override; configuration validation does not establish real subscriber authentication/accounting.",
+    "Final F2/F4 and F1 reconciliation of application1306 plus deploymentdb09; any later configuration changes need a bounded affected delta review."
+  ],
+  "nonGatesOrLimits": [
+    "Physical GPON/OLT certification remains explicitly deferred.",
+    "Shared/native compilation is not native runtime or release proof.",
+    "SMTP delivery is unconfigured and not established by healthUP; no fabricated mail capability.",
+    "No restore rehearsal or real subscriber RADIUS/CWMP operation is inferred from source or bootstrap."
+  ],
+  "structure": {
+    "tasks": 48,
+    "contracts": 11,
+    "planSha256": "567ee4651f33300140fa29e94d68e3d6d70e810f122e1a4767438cdddaa0aa3b",
+    "base48IndexesPreserved": {
+      "task-1/index.json": "07c9d1ed632ee8dc35cbae19d49f9e23584e9955c5340976cebb26c7fbf10fa6",
+      "task-2/index.json": "1a9ff6a3080ddcb1ec3b5ff4d3931b28dec272e7467bef9d3d2726aa7676f982",
+      "task-3/index.json": "de13269eaa8ee0202913579fa6667a87ebccc7d6c72817b6b1b37933185641f3",
+      "task-4/index.json": "28d80b8da283d730665369c522b0a0cb416fc3bf550280d47b10376dfc8a43de",
+      "task-5/index.json": "342c8654300cae28c042f70ffda47ca7363b6c2029e4e99b3053c33234992e0f",
+      "task-6/index.json": "23bda9e54dba616383dbe5993d2fe6295c6a34fa99486f25e03e00cfddc36a9e",
+      "task-7/index.json": "b6cdc9ec783515b33e9378296381c03f370e3c1510fb726fe88c2f10ec528cfa",
+      "task-8/index.json": "eff161f06a4908ac0581c003e7181d111588626a3cc39e097c69a3cfa5957e26",
+      "task-9/index.json": "32c38d5f75dc1aa6e4caf6c0d947a5eae1eaac0053f1f2c1c4c8456a2d2c6c6e",
+      "task-10/index.json": "6e2c6a99169d1e3e733a767cd043503eb39294614f6e44001b1c7bbbb32bfb65",
+      "task-11/index.json": "89780fa1e2f9c5ac08869ba988e01c8bba157bb28deb3c98e69ed4193b24326e",
+      "task-12/index.json": "69280c68d27684fce3af29bf810e068458ee6821a324a92c49c4a6d7990cd772",
+      "task-13/index.json": "ecc54e6e928568f97528b7bc0ecc2562f802bbe4f74db7980503fc04c9612aa0",
+      "task-14/index.json": "dbb524c02810df14336695c3146166896d0c27a1a929b6a049611a94ec83d7c1",
+      "task-15/index.json": "e254d71ae9c361eafc2a665e15a2432a877ce0800bbc8c3ca17eecf98ad9362a",
+      "task-16/index.json": "18d1a2c8021bdb9e791f86ad83b93f31e308ebce65cbcce327ff0f1c4375504d",
+      "task-17/index.json": "9cf929f2f23086d2c6cccc92c6655fac6b59a717af167b07bbd3c457c847e778",
+      "task-18/index.json": "f09072d9fc05e279ba5285f4d27bb52d6432c647543e027f18fec61bc336fe4d",
+      "task-19/index.json": "39f2e6529b5e889418b2ddb4461387103e12c6c605a9d5bf0b4debc95a7c9ef3",
+      "task-20/index.json": "eb7e73f62f33c1eeb4e817619e0eead5092a722689f716e0506bcc12bac6c661",
+      "task-21/index.json": "7b2619fa40ebfe01851493b355f44f55d243a02f02d5c6c11e3b2d80b262d0bc",
+      "task-22/index.json": "9710878bbf05989013609cad2d363b2cd5d98ecb718e2411e9e0bdbd484afc32",
+      "task-23/index.json": "89e9ddf8ce9596ee953c65bc9efb1eec0be7949cd8686f055a594ce114ad7534",
+      "task-24/index.json": "9d8702d440604206034bb8b4b19464f77da445186592873049e4922128b2cc1e",
+      "task-25/index.json": "e0c10201d6bb6a00a85454419cb88c7d8f68121d325fe12477d3ed8c7354514d",
+      "task-26/index.json": "689d7989e94fec08120a3074d06a2e7e1ae7a2f3dff8ed0768afe2c5a7fdb8ac",
+      "task-27/index.json": "017e3a1bc6d6004c224012274408d52847cf3d5fdc1383dfd8d4810300823b6c",
+      "task-28/index.json": "b0bd9aec4ede612cd5a65889c7b3ba9c6dc12acf6559b58fae945cd953c6fe70",
+      "task-29/index.json": "1a7ad73b632646042fe0fe6c5686772e813c88c192f00c94f1e498e512d3be06",
+      "task-30/index.json": "63558f8635f6e1799616d4d4e2c1278d6d6e2c71d578ee9cf15150016ac7cf5a",
+      "task-31/index.json": "3f9400b230558d0fbf15e5938d5172da03627d1dc1711eec7dc90ae8aa992fe8",
+      "task-32/index.json": "c85336786fb74b60847645fb59e900f63254e823d702e2a434cfec84405eb087",
+      "task-33/index.json": "3606aed03d0a9b38587a2999836055fd34791db04639f2a6263ae6082041197e",
+      "task-34/index.json": "e03065582815c98f64eeb3f0ac98aa4fa3903a6edee11437fda8ec9d1b5c786c",
+      "task-35/index.json": "01aeb09df6cc4d174fb66bb9ae288a1032954aaad7c3de03e8cccd50d4b5a066",
+      "task-36/index.json": "9bbda6bdaaab90363d1626bdcab9d7883819b47be809af3057fd8746a1f75795",
+      "task-37/index.json": "edc78e3909057c063bc14bbe6902f9e0b1426d45c2d95e911af15bd4d2962264",
+      "task-38/index.json": "eadc6cbc0e10b75cca75a8d29ee4330bc825e088233c967c58bea13c2b4e307c",
+      "task-39/index.json": "6f00d4b41e7b92b1d253b9c1db0f3a90b101f0601b7695dd281dd9eb45a71d13",
+      "task-40/index.json": "9c48034a4238cdce79a5ad58e929f2f0f649c4bf60e60905e6af1a878bfc2c83",
+      "task-41/index.json": "12390e6d2fffd6653f5e611d5d50cc221d281a71a61bcbb82d9bba1e6deb95d5",
+      "task-42/index.json": "28c7a4c5ea0b79432e7af7d64d9f759fbff7377ae760b02ee47bb700ee970904",
+      "task-43/index.json": "e1ea4ad7954b9e3b1fd76eef688a6690ad6f308eb07a679056dd02bdc3b42477",
+      "task-44/index.json": "beb518ed47d56c82cb0309bb646148626e63715bb638df98f727c1b16cea5bcd",
+      "task-45/index.json": "94e186c493d7cd659d87156282ae7d7f956f8cffe0e9d848b619f9688261b634",
+      "task-46/index.json": "21ccf823c22e9507ec4ca53d8a5b01e277e053670dd12cfaa43e77bddf5b8e62",
+      "task-47/index.json": "274ce11a99062dead3902c1f67c670a2b7a52c06da0094018e4989d2f38756ce",
+      "task-48/index.json": "ee46f9f40279f8d4761e3dc7f6fd42888f3ffa4cda0c510f77715d28c76a504b"
+    }
+  },
+  "additionalSourceBlockers": [],
+  "qaExecuted": false,
+  "sshExecuted": false,
+  "productEdits": false,
+  "planOrIndexEdits": false,
+  "finalF1Approval": false
+}

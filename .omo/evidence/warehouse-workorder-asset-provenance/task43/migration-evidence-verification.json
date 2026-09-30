@@ -1,0 +1,64 @@
+{
+  "phase": "M05 private case evidence; resolutions and admission pending",
+  "evidenceGate": {
+    "build": "SUCCESSFUL in 1m 3s",
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseMigrationEvidenceIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "supportingSuites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "supportingRunNote": "The preceding 19-test run passed in 2m12s. After adding object-key ownership, label control-character and epoch bounds guards, the three real storage tests were rerun successfully with added assertions. The 16 supporting tests were not repeated.",
+  "tests": 19,
+  "files": {
+    "server/src/main/resources/db/migration/V177_2__warehouse_migration_evidence.sql": "075be14ca62a9e159ce3bcf15c5eaa3b8f4b8c9b39d7cea712688c33729dca6a",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationEvidenceService.kt": "3c0f4ae3e58e2ab228d316a2c2d7459b5e0a99039654da04e277cd982c80f83c",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationEvidenceReconciler.kt": "b10b67e4433525dde59bf1843927686ede81818d1044230fb462d43e84e56597",
+    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationEvidenceStore.kt": "5fa7fba01aaf19cb2e11ad26ed35484a6c4ec79de69218fe9cee836570b5c85e",
+    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationEvidenceIT.kt": "5433d5050474ae28bee178990a628b93e2d7121559e36c6643091dd8106b73d4"
+  },
+  "checks": [
+    "real HTTP multipart and private MinIO object storage",
+    "content, size, MIME and SHA-256 verified on upload, download and replay",
+    "lost HTTP response replays identical persisted result and one object",
+    "actor/key/body/case/tenant/current authority binding",
+    "database backend terminated after object write: metadata rollback and owned object cleanup",
+    "unsettled batch retains file until fresh transaction confirms absence",
+    "foreign object key refused and preserved",
+    "no new warehouse document or verified stock",
+    "ordinary writes and incomplete approval/baseline/finalization remain closed"
+  ],
+  "notYetProven": [
+    "case resolutions",
+    "independent opening approval and admission",
+    "cutover finalization",
+    "reconciliation browser workflow and restart after admission"
+  ]
+}

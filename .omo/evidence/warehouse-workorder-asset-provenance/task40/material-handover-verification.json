@@ -1,0 +1,77 @@
+{
+  "sourceCommit": "4e877146 plus accompanying test baseline correction",
+  "backend": {
+    "regressionRun": {
+      "tests": 10,
+      "passed": 9,
+      "failures": 1,
+      "failure": "PartiesIT accounting baseline incorrectly included the deliberate location edit; fixed baseline after edit. Production behavior unchanged."
+    },
+    "finalPartiesRun": {
+      "tests": 2,
+      "failures": 0,
+      "result": "BUILD SUCCESSFUL in 2m 12s"
+    },
+    "selectedRegressionSuitesPassed": [
+      "MaterialHandoverWorkbenchIT (2)",
+      "MaterialWorkbenchIT (2)",
+      "MyMaterialsIT (3)",
+      "WorkOrderMaterialLifecycleITHandover (1)"
+    ],
+    "archives": [
+      {
+        "run": "material-handover-parties-final",
+        "suite": "com.duluin.ftth.fulfillment.MaterialHandoverPartiesIT",
+        "tests": 2,
+        "failures": 1,
+        "sha256": "cf4e07c14f0f708a8cbafbacb63a029fcb03825413e78f14b901d1de0ce23518"
+      },
+      {
+        "run": "material-handover-parties-final",
+        "suite": "com.duluin.ftth.fulfillment.MaterialHandoverWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "sha256": "e3d968aeb8e68ec8a20e6ca7d38a425b213722936e2add7681cffd24577de677"
+      },
+      {
+        "run": "material-handover-parties-final",
+        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "sha256": "7aea757e00994f0b6cb828044a478b7bd34faf184409636f7f38729c84f96f4d"
+      },
+      {
+        "run": "material-handover-parties-final",
+        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "tests": 3,
+        "failures": 0,
+        "sha256": "56f1ada572997c376dc5517b02ed00386fb5b556f2178177de7e9abb33515163"
+      },
+      {
+        "run": "material-handover-parties-final",
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITHandover",
+        "tests": 1,
+        "failures": 0,
+        "sha256": "e26739c993811490eeea3d124d00f6fb663bb825d9b592f3f690055152de4ce3"
+      },
+      {
+        "run": "material-handover-parties-verified",
+        "suite": "com.duluin.ftth.fulfillment.MaterialHandoverPartiesIT",
+        "tests": 2,
+        "failures": 0,
+        "sha256": "400e259832916ab52b567a927cee92843f91670e9e516400ec698342ff832ab5"
+      }
+    ]
+  },
+  "web": {
+    "tests": 291,
+    "files": 58,
+    "durationSeconds": 89.48,
+    "typeScript": "PASS",
+    "productionBuild": "PASS, pre-existing chunk-size warning",
+    "newProductOxlint": "PASS"
+  },
+  "coverage": "Named independent dispatcher/sender/receiver; scoped candidates and replay; current target custodian change rejects reviewed stale people; legacy canonical hash compatibility; database forged party and source metadata rejected; full sender dispatch and receiver acknowledgement; exact replay after ambiguous transport.",
+  "cleanup": "Owned services stopped, volumes retained",
+  "remaining": "39/40 await task41 asset cross-links; actual touch/keyboard browser gate45.41 in progress;42-48/F1-F4 remain."
+}

@@ -1,0 +1,621 @@
+{
+  "status": "VERIFIED_FAILED_FOCUSED_RUN",
+  "reviewedAtUtc": "2026-09-26T11:50:38.351545+00:00",
+  "run": 36238196382,
+  "testedCommit": "cc47f434e7c2fc58ff0095feb8c643717f889e86",
+  "ciStatus": "completed",
+  "ciConclusion": "failure",
+  "ciJobs": [
+    {
+      "name": "browser (setup)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (customer-assets)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (returns)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "shared",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (warehouse-empty-tenant)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "legacy-upgrade",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "server",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "browser (exceptions)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "web",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "images",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "native / ios-compile",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (provenance)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (issue)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser (receiving)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "acceptance",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "serverSteps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run ./.github/actions/warehouse-setup",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Compile current server tests before running historical applications",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Check repaired compatibility fixtures before the full regression",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "Full server, fresh migrations and historical upgrade",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Verify executed server results",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "Stop owned QA resources",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Encrypt raw server evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/upload-artifact@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run ./.github/actions/warehouse-setup",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "archive": {
+    "run": 36238196382,
+    "commit": "cc47f434e7c2fc58ff0095feb8c643717f889e86",
+    "artifactId": 10904999174,
+    "name": "warehouse-server-cc47f434e7c2fc58ff0095feb8c643717f889e86",
+    "artifactDigest": "sha256:75e8d72dcd647b9d169783481b268a57088ba8b69823cdb598c12e8d7d22f6e3",
+    "zipBytes": 1074597,
+    "authenticatedDecryption": true,
+    "encryptedArchiveSha256": "e4d748504f0cd764c9cc76a181754c1dcb0c7585f4e7f5876ff8163298969a98",
+    "decryptedTarSha256": "ff5da0f58346f5ac25af798ac556c4ace0cc15fe9c94ad67611255a50bdbe7b5",
+    "rawFiles": 105
+  },
+  "zipMembersCompared": 3,
+  "authenticatedRawMembersCompared": 105,
+  "rawMemberManifestSha256": "600ee73201bdc846a38df5dcf3f40bfff3fea294a9dea5bcb8e22378495c89e4",
+  "focused": {
+    "path": "server/build/test-results/test",
+    "suiteCount": 50,
+    "counts": {
+      "tests": 325,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      {
+        "suite": "com.duluin.ftth.AlarmRuleIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.GisImpactedIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.GisUtilizationIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.IncidentIT",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.ModularityTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.NetworkEndToEndIT",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.NotificationIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.OdpPortBoardIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.SurveyCapacityIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+        "tests": 58,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountDraftIT",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReservationIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseQueryITCompatibility",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReportCsvTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReportExportIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReportJourneyIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReportPrivacyIT",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+        "tests": 62,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftIT",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDurability",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITGuards",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITPositions",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "failures": [
+      {
+        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+        "test": "catalog covers every deferrable warehouse validator with an internal entry assertion()",
+        "type": "java.util.NoSuchElementException",
+        "missingCatalogKeys": [
+          "warehouse_count_draft_final_guard"
+        ],
+        "sourceFrame": "WarehouseSchemaITSelectiveTiming.kt:109",
+        "failureTextSha256": "9039d5c45d5bdd79a8b655895b10c70b6d9ff5f2ab516d49ce92b8b74277c0f7"
+      }
+    ],
+    "xmlSha256": {
+      "TEST-com.duluin.ftth.AlarmRuleIT.xml": "f58363fa45ad4d3febfa14689eb8ab286cca61b39231476fa8a686076a41b597",
+      "TEST-com.duluin.ftth.GisCutBlastRadiusIT.xml": "8c3850feaa7aa54da7bd2b04deca630f50155348885d5d9ab49a73bd27bdbd0c",
+      "TEST-com.duluin.ftth.GisImpactedIT.xml": "2cae5f29465be91e6c6acfde53bf67dc97652743b50d12b93c4bb4d11a14eeb6",
+      "TEST-com.duluin.ftth.GisUtilizationIT.xml": "e14c422e212af6730d91867e5a75763e6c4036d03c642e93d3fe02b79e9075fc",
+      "TEST-com.duluin.ftth.IncidentIT.xml": "dd1758f1dce830b87cdfbaf1bfc05761b9783c5db8635d751eba908c11f6d683",
+      "TEST-com.duluin.ftth.ModularityTests.xml": "71473fccc615b0c0c627aed9ac9ca234c53b21486b22ccbdfe75ac59dfe22d48",
+      "TEST-com.duluin.ftth.NetworkEndToEndIT.xml": "0dcae824237a21d0362f94c9cdbb42b5aaf44bc9abb722f236ccbbc5dd0219ba",
+      "TEST-com.duluin.ftth.NotificationIT.xml": "7e70addea1460b83378456e8a5e84020cab40afb3d5ce972f0da4de97191fa27",
+      "TEST-com.duluin.ftth.OdpPortBoardIT.xml": "0bbe872b5a3fffb6433cf5df668b061342c15afc413ef598292a18a6804e6fcd",
+      "TEST-com.duluin.ftth.PredictiveMaintenanceIT.xml": "9dcb1ba73bf45a44101ed520d26d4dcb3b2f76684dd6730c3a9e169cdb760cc0",
+      "TEST-com.duluin.ftth.SurveyCapacityIT.xml": "ab1e115b9fb46bcafef943fc8bfe12329e3602bc0e7b29c1d3538ce16925af30",
+      "TEST-com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes.xml": "e7899e65c258a942711c6ee1848f2aa8fd52f7b7cbacee8975c65f0bd02ca73d",
+      "TEST-com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT.xml": "f8a8c2514e760c0b61141b539c1dcfe6a82ae0505dbf847d245eeb1090f7aa4f",
+      "TEST-com.duluin.ftth.customer.CustomerDeploymentFinalStateIT.xml": "45cad9c56d5532b86ac5b51d763ffef4ebb4d48880faf991983ac7d51487ecef",
+      "TEST-com.duluin.ftth.fulfillment.WarehouseNumericCountIT.xml": "b720937cccddab5470e25dd1c79d4a36add04950305894cb5ec5cbffee0363d7",
+      "TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions.xml": "204d7c98d428feb2415f0800917d09e2d37d82112ddf588ec18d645e9887ae10",
+      "TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml": "cdcf49fb293fc9133ecd8e433ad3efc0bf335f002d93cf797e77dd2005e22819",
+      "TEST-com.duluin.ftth.inventory.WarehouseCountDraftIT.xml": "7fa2fdb1122af280f4c24d349721f34cae521139bd7233453f13a5b0921f235f",
+      "TEST-com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT.xml": "ce0862b49abd1fcb873f31fdad3bbb6a2fa359921e38875d125bf5f34c2d3e6b",
+      "TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml": "10574e2906794d590d56a31e9a72326267b0def119372bba456fc5eb91429d3d",
+      "TEST-com.duluin.ftth.inventory.WarehouseCountWorkbenchIT.xml": "4e4e35371c40bd29ee80e2478396cd0442b102a2200315ec78f851ca7288e321",
+      "TEST-com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT.xml": "d72b37f1a9b664b7f354bacdba81ceb69b12d3b517bfd56a9268c2d1e933c847",
+      "TEST-com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT.xml": "07ad6910c00157b6299e419271de3909f2b64e08d837becb1055f14617ac730f",
+      "TEST-com.duluin.ftth.inventory.WarehouseLegacyReservationIT.xml": "589712a360a636915721201f2b7de01c620f3eadfe1a886823f97a36a08fe70a",
+      "TEST-com.duluin.ftth.inventory.WarehouseQueryITCompatibility.xml": "c90e5f36c4465b7aef10fc0e8f8b8bf688339b139224fa59c1b35760ea254e84",
+      "TEST-com.duluin.ftth.inventory.WarehouseQueryITPrivacy.xml": "16073a254f116ae851105e4e6c8727ad039409cbf9f59a5b81cfa1beda903e89",
+      "TEST-com.duluin.ftth.inventory.WarehouseReportCsvTest.xml": "acffcb324b1f96c09c93fd005a67218fab9a42c8700e2997edb5443ca8398df7",
+      "TEST-com.duluin.ftth.inventory.WarehouseReportExportIT.xml": "640848ae0194fa5b48e1fa3060a51d8e557d11f9ccf8834e1c578b718a5d6f10",
+      "TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml": "1778f29a5a00bf8f604542ed7136a02235e3dcedce9653cd261467a9cf4d4bad",
+      "TEST-com.duluin.ftth.inventory.WarehouseReportJourneyIT.xml": "4448c370b5258b747fca7051fa0eca86770d0e6f456d8a29bbec862d4758f449",
+      "TEST-com.duluin.ftth.inventory.WarehouseReportPrivacyIT.xml": "b7ebb219b9b971c3d4f3197ccb96879d8495612f041fa65935a744e521d3a8fd",
+      "TEST-com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT.xml": "5b87a6aea266d5687858cd424962406fbe0120b798ba7453f6b4d8ba432e6db8",
+      "TEST-com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT.xml": "fc01ab63659ba49521c473309d78c467c0a123e0952c3bb3baab5294b1390b89",
+      "TEST-com.duluin.ftth.inventory.WarehouseSchemaITPolicy.xml": "946f70c21ab25d6cdb61bf079b93ca232b02a52a30992395f8d89c60a98b8aa6",
+      "TEST-com.duluin.ftth.inventory.WarehouseSchemaITProvenance.xml": "c70b97cc5dec2fb08511ad89bd33ddb134f988d07e74756f7688154b33b6f9f8",
+      "TEST-com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming.xml": "1397400ec7a6dffe66b34d7ba6ef19b4731539526d3f53057aa272bd34821a1a",
+      "TEST-com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT.xml": "63e14c26f69c1fadba8bc85bb2aa7a5ef3f5d7b707f76402bb9b57d0d43fa304",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferContractTest.xml": "36af76c5f31b52e5cdff1d501d1595513551add5f7004d80acbb62c50c77cdf2",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT.xml": "510bdd170141c7d701e6073befdc0cd60661c9686a3f3f332e7e74fab73be2f0",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferDraftIT.xml": "da2cc0cf5389bd750048574e8729776632819aea1084f3d8edb9a988f258337d",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT.xml": "b896e35395b5e6f591a05a323b726a0c0dbe2810f43a22d00b3a38b1aafa930f",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferIT.xml": "aca139b94ea364141b7d3a774e1c81c6a1f0040bee7f8010a397ea9c0903994c",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy.xml": "b644956231f7d8361cedb5509367fa24a394f3b87a74cf63148aa4789508c7fe",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferITDurability.xml": "455f3fc7ec427dc07274b1ee9b5773a731d6106929ed44f4ab61809bc47feeed",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferITGuards.xml": "44dc08a8ddc050d0a04c7980563a3a903afda8268d15b4764efae12caa3bb184",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferITPositions.xml": "0bf16cc29b87690e57d995e2de332c71624468ce8013e3574795e80342b177f1",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferITSerial.xml": "caa5a58ec55cf7e81007edf1113e9de8d3f0e1c01c59c56b7247b668e025ff16",
+      "TEST-com.duluin.ftth.inventory.WarehouseTransferListIT.xml": "2cb19a729d17d627e7634e62ba89972a6a897a078fcce931e46d4e8e8181a411",
+      "TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT.xml": "dd15535a83e68eafb680d85bc902fe8e6a1b1683c6cf6e99c2119bec6e0038ca",
+      "TEST-com.duluin.ftth.tenancy.DeleteTenantIT.xml": "096d72c949dbd9a0586eeec9430c77a117a0c0db0753103b8420bcf8bc3e57c1"
+    }
+  },
+  "focusedCopiedDirectory": ".omo/runtime/ci/compatibility-results",
+  "copiedXmlByteIdentical": true,
+  "uniqueExecutedCounts": {
+    "tests": 325,
+    "passed": 324,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "workflowExactFocusedClasses": 50,
+  "compatibilityLogSha256": "d9882c6d3a57a46c43f65c7b608199aa20d303b7e74dc239356e9c5769482cda",
+  "fullServerExecuted": false,
+  "freshMigrationGateExecuted": false,
+  "historicalUpgradeGatesExecuted": false,
+  "sourceHashManifest": "f4-cc47f434-source-input-hashes.json",
+  "sourceHashManifestSha256": "a153814119c0b6d440302cad02867b94805e83057d84305bb1257fc9a9b9a2ed",
+  "hashedGitSourceFiles": 3282,
+  "catalogFollowup": {
+    "commit": "99ad992db31a6922ec1adf1957af81bf747426e6",
+    "file": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt",
+    "sha256": "e56f918986fbeb5222dae1a7d9b55a2e0d3ea9a7be8f02310eb2b9f53c221e32",
+    "missingKeyNowPresent": true,
+    "runtimeResultInferred": false
+  },
+  "sourceBinding": "GitHub run and artifact API head SHA; immutable source Git hashes; exact workflow class identities. No server JAR was included in this failed server artifact.",
+  "localQaExecuted": false,
+  "aggregateCiPass": false,
+  "finalF4Approval": false
+}

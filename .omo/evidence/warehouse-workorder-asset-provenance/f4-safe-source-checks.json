@@ -1,0 +1,41 @@
+{
+  "commit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
+  "guardResults": {
+    "ciResults": 11,
+    "ciArtifacts": 4,
+    "ciWorkflow": 5,
+    "publishImages": 5,
+    "failures": 0,
+    "actionlintExitCode": 0
+  },
+  "currentWorktreeDiffCheckExitCode": 0,
+  "featureDiffWhitespaceOnly": [
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-39.md:64",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-40.md:134",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-41.md:118",
+    ".omo/notepads/warehouse-workorder-asset-provenance/task-42.md:104",
+    "scripts/warehouse/http_support.py:60",
+    "server/src/main/resources/db/migration/V175_132__warehouse_return_reacquisition_effect.sql:264",
+    "server/src/main/resources/db/migration/V175_132__warehouse_return_reacquisition_effect.sql:450"
+  ],
+  "sourceSha256": {
+    "scripts/warehouse/test-ci-results.py": "fa73ff039840857cbe0bc83ca4cda395f5a7540da705faf7099599f1227fede4",
+    "scripts/warehouse/test-ci-artifacts.py": "ecbd398327fbeef180a873329e716e1d49ed79f002227b08f17580a6ccbe5b5b",
+    "scripts/warehouse/test-ci-workflow.py": "c96d629db2d6bfca9f9af46dd7cda689ceee6ef4fdaf65eed9250082b20d4935",
+    "scripts/warehouse/test-publish-images.py": "05d06676a416d4237ffd9389495111088d49f5de0de785c2aa5c075ad435ec0b",
+    ".github/workflows/warehouse.yml": "3037ccfddecf452380ff4036ed50d3ec0d7368a971900a300f96496ce78c3de5",
+    ".github/workflows/deploy.yml": "66077de543dc348aaf2f2db0316dc48e9a432a59c3c8a816c4f8aaafd0d0af20",
+    ".github/workflows/mobile-materials.yml": "f4db67d3d70126b0d4a4c74e1a51ec006e4eb11db4c00111ca8e6ce1e40bbd1c",
+    "scripts/warehouse/publish-images.py": "60269bf81de47a252bb5a892fa3c51e904a3e0cefb71595c4059b255cba3e99e",
+    "scripts/warehouse/preflight.sql": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338"
+  },
+  "credentialPatternScreen": {
+    "changedFiles": 1920,
+    "matches": 0,
+    "compressedTrackedSourcePatches": 10,
+    "compressedMatches": 0,
+    "limitation": "Pattern screening is supplemental, not exhaustive secret certification."
+  },
+  "inheritedTrackedOmoFiles": 273,
+  "reviewPerformedNoProductMutation": true
+}

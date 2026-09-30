@@ -1,3 +1,5 @@
+import { Navigation16Regular } from '@fluentui/react-icons'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 import { useEffect, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Outlet, useOutletContext } from 'react-router-dom'
@@ -13,16 +15,7 @@ import {
 import { useAppShellNav } from '@/hooks/useAppShellNav'
 import { BrandMark, Button, ThemeToggle } from '@/components/atoms'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
-import {
-  IconChat,
-  IconDashboard,
-  IconLogout,
-  IconReceipt,
-  IconSidebar,
-  IconUsers,
-  IconWifi,
-  IconWorkOrder,
-} from '@/components/atoms/icons'
+import { IconLogout } from '@/components/atoms/icons'
 
 /**
  * Menu portal: satu grup tanpa label (tak ada yang perlu diciutkan pada lima menu) dan
@@ -33,12 +26,12 @@ const PORTAL_NAV: NavGroup[] = [
   {
     label: null,
     items: [
-      { to: '/portal', label: 'Ringkasan', permission: null, icon: IconDashboard, end: true },
-      { to: '/portal/tagihan', label: 'Tagihan', permission: null, icon: IconReceipt },
-      { to: '/portal/koneksi', label: 'Koneksi', permission: null, icon: IconWifi },
-      { to: '/portal/pesanan', label: 'Pesanan saya', permission: null, icon: IconWorkOrder },
-      { to: '/portal/bantuan', label: 'Bantuan', permission: null, icon: IconChat },
-      { to: '/portal/profil', label: 'Profil', permission: null, icon: IconUsers },
+      { to: '/portal', label: 'Ringkasan', permission: null, icon: NavIcons.Dashboard, end: true },
+      { to: '/portal/tagihan', label: 'Tagihan', permission: null, icon: NavIcons.Receipt },
+      { to: '/portal/koneksi', label: 'Koneksi', permission: null, icon: NavIcons.Wifi },
+      { to: '/portal/pesanan', label: 'Pesanan saya', permission: null, icon: NavIcons.WorkOrder },
+      { to: '/portal/bantuan', label: 'Bantuan', permission: null, icon: NavIcons.Chat },
+      { to: '/portal/profil', label: 'Profil', permission: null, icon: NavIcons.Users },
     ],
   },
 ]
@@ -74,7 +67,7 @@ export function usePortalData() {
  */
 export function PortalLayout() {
   const { customer, logout } = usePortalAuth()
-  const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav('ftth.portal.sidebarCollapsed')
+  const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav('ftth.portal.sidebarCollapsed')
 
   const [profile, setProfile] = useState<PortalAccount | null>(null)
   const [billing, setBilling] = useState<PortalBilling | null>(null)
@@ -114,13 +107,16 @@ export function PortalLayout() {
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
           <Button
+            size="medium"
             variant="subtle"
-            icon={<IconSidebar size={18} />}
+            icon={<Navigation16Regular />}
             onClick={toggleNav}
-            aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            aria-expanded={navOpen}
+            ref={toggleButtonRef}
+            aria-label={navLabel}
+            title={navLabel}
+            aria-expanded={navExpanded}
           />
+          <span className="topbar-brand"><BrandMark size={20} /><span>Portal</span></span>
           {/* Chip ISP: pelanggan bisa berlangganan di lebih dari satu tempat, dan portalnya
               satu pintu — jadi "sedang melihat punya siapa" harus selalu terbaca. */}
           <Text as="span" className="badge accent" size={200} weight="semibold">{customer?.tenantSlug}</Text>
@@ -135,6 +131,7 @@ export function PortalLayout() {
             </div>
           </span>
           <Button
+            size="medium"
             variant="subtle"
             icon={<IconLogout size={18} />}
             onClick={() => void logout()}
@@ -147,14 +144,7 @@ export function PortalLayout() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            <BrandMark size={22} />
-          </span>
-          <Text as="span" className="brand-text" weight="semibold">Portal</Text>
-        </div>
-
-        <SidebarNav groups={PORTAL_NAV} can={() => true} storageKey="ftth.navGroups.portal" />
+        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} groups={PORTAL_NAV} can={() => true} storageKey="ftth.navGroups.portal" />
       </aside>
 
       <div className="main">

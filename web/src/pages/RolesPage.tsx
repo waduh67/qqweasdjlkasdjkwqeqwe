@@ -1,3 +1,5 @@
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Eye, Pencil, Trash2 } from 'lucide-react'
@@ -23,6 +25,7 @@ export function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([])
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
+  const creation = useCreationReview(draft != null, !!draft?.id)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -106,7 +109,7 @@ export function RolesPage() {
   }
 
   async function save() {
-    if (!draft) return
+    if (!draft || readOnly || !draft.name.trim() || creation.beforeSave()) return
     setBusy(true)
     setError(null)
     try {
@@ -122,7 +125,7 @@ export function RolesPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal menyimpan role')
     } finally {
-      setBusy(false)
+      setBusy(false); creation.finish()
     }
   }
 
@@ -175,8 +178,17 @@ export function RolesPage() {
       />
 
       {draft && catalog && (
-        <div className="card stack">
-          <Text as="h3" size={400} weight="semibold" style={{ margin: 0 }}>{draft.id ? 'Ubah role' : 'Role baru'}</Text>
+        <Blade open layout="resource" title={draft.id ? 'Ubah role' : 'Role baru'} onClose={() => setDraft(null)}
+          creation={readOnly ? undefined : { ...creation, busy, prepare: () => void save(), summary: <><CreationSummary rows={[
+            ['Nama', draft.name], ['Deskripsi', draft.description], ['Izin dipilih', draft.permissionIds.size],
+          ]} />{error && <p role="alert" className="error">{error}</p>}</> }}
+          footer={<>          <div className="row">
+            <Button variant="primary" onClick={() => void save()} disabled={busy || readOnly || !draft.name}>
+              {busy ? 'Menyimpan…' : 'Simpan'}
+            </Button>
+            <Button onClick={() => setDraft(null)}>Batal</Button>
+          </div></>}>
+
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <TextField
@@ -210,13 +222,8 @@ export function RolesPage() {
             />
           </div>
 
-          <div className="row">
-            <Button variant="primary" onClick={() => void save()} disabled={busy || readOnly || !draft.name}>
-              {busy ? 'Menyimpan…' : 'Simpan'}
-            </Button>
-            <Button onClick={() => setDraft(null)}>Batal</Button>
-          </div>
-        </div>
+
+        </Blade>
       )}
     </div>
   )

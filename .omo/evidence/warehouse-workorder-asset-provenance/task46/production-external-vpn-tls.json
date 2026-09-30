@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "checkedAtUtc": "2026-09-27T09:17:44.449488+00:00",
+  "endpoint": "70.153.16.143:1194/TCP",
+  "scope": "Real external OpenVPN control-channel TLS and negative authentication, no production peer created",
+  "tlsVersion": "TLSv1.3",
+  "caChainVerified": true,
+  "serverNameVerified": "server",
+  "invalidCredentialsRejected": true,
+  "clientExitCode": 0,
+  "exitInterpretation": "OpenVPN2.7.7 returns0 after soft auth-failure; actual AUTH_FAILED log is required, exit0 alone is not a pass",
+  "successfulPeerAuthenticated": false,
+  "hostNetworkChangedByClient": false,
+  "physicalMikrotikTested": false,
+  "filesSha256": {
+    "client.ovpn": "bce1983b6e8fa4d4c4fada405c7bc7ae0e72ba284390b44ad6a379ce240e2f86",
+    "ca.crt": "8cacce5f1612dc685bf606a583c8dfe1e15469ae09355876f10ce2655da945af",
+    "client.log": "f23c5481f805ce4e4d6428bdd2cf528b252b3eea27db1205d2eb9beff8d528ab",
+    "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  }
+}

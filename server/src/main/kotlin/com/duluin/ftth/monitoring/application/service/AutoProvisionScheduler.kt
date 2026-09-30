@@ -99,23 +99,18 @@ class AutoProvisionSweeper(
 @Component
 class AutoProvisioner(
     private val discoveredRepository: DiscoveredOnuRepository,
-    private val customerApi: CustomerApi,
+    private val workflow: com.duluin.ftth.fulfillment.CustomerAssetWorkflowService,
     private val auditor: AuditRecorder,
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun provision(tenantId: UUID, onu: DiscoveredOnu, suggestion: ProvisioningSuggestion) {
-        customerApi.provisionOnu(
-            ProvisionOnuCommand(
-                serialNumber = onu.serialNumber,
-                model = null,
-                customerId = suggestion.customerId!!,
-                odpId = suggestion.odpId!!,
-                portNumber = suggestion.portNumber!!,
-                installRxPowerDbm = onu.lastRxPowerDbm,
-            ),
-        )
-        onu.markProvisioned()
-        discoveredRepository.save(onu)
+        val current = discoveredRepository.findById(onu.id) ?: return
+        if (current.state != DiscoveredOnuState.DISCOVERED) return
+        workflow.installObservedAutomatically(current.serialNumber, requireNotNull(suggestion.customerId),
+            com.duluin.ftth.customer.CustomerAssetTopology(requireNotNull(suggestion.odpId), requireNotNull(suggestion.portNumber), current.lastRxPowerDbm),
+            "discovery:${current.id}")
+        current.markProvisioned()
+        discoveredRepository.save(current)
         auditor.record(
             action = "monitoring.onu.auto_provisioned",
             entityType = "DiscoveredOnu",

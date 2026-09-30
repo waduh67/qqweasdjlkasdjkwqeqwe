@@ -1,0 +1,50 @@
+{
+  "status": "PASSED",
+  "exitCode": 0,
+  "checkoutDuringExecution": "0a14cc2fb3b303424f771a963dc15ffadfa26930",
+  "recordedAtUtc": "2026-09-25T11:05:52.727991+00:00",
+  "readOnly": true,
+  "applicationRole": "warehouse_app",
+  "positiveProbes": 1,
+  "negativeProbes": 3,
+  "rowCounts": {
+    "database": "warehouse_e2e",
+    "schema": "public",
+    "applicationRole": "warehouse_app",
+    "version": "178.7",
+    "cutover": "ENFORCED",
+    "customers": 2,
+    "onus": 3,
+    "positions": 39,
+    "movements": 31,
+    "verifiedQuantityByUnit": {
+      "EA": "10",
+      "MM": "1000000"
+    }
+  },
+  "positiveReportSha256": "9272c8fade25b6928e113ed7d1fde744d4de4d5ece81fa6d5336ad63f0073341",
+  "negativeReports": {
+    "migration": {
+      "expectedRejection": "migration mismatch",
+      "sha256": "7324947a7bcd45ea47a13e3272cfa61e1c561065185db734cdc2ef2dbf2fd027"
+    },
+    "unit": {
+      "expectedRejection": "SKU unit mismatch",
+      "sha256": "3dcb1e2200b236170a97ece138f918ec08e52493d8e09e98b02ae57faf54c771"
+    },
+    "cutover": {
+      "expectedRejection": "cutover mismatch",
+      "sha256": "ecd1ee193b87319d1d5e088e762c288106588d4bf1b69c6c82db24e22410f497"
+    }
+  },
+  "preflightSqlSha256": "3e7574a81d366997bbff606c5d2e3243ccdbe33a75290ee1d001873d4cee8338",
+  "environmentCleanup": "Owned containers/network stopped; volumes retained.",
+  "earlierAttempt": {
+    "session": 47709,
+    "exitCode": 143,
+    "status": "NOT_EXECUTED",
+    "reports": 0,
+    "cause": "not established"
+  },
+  "upgradeFixtureProof": "task47/ci-r3-upgraded-preflight-verification.json separately verifies2positive+6negative probes on actual V172 upgrades."
+}

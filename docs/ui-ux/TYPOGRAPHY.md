@@ -1,0 +1,39 @@
+# Azure typography reference audit — 27 September 2026
+
+User requests closer typography matching Azure Portal and offers browser DevTools access. Reference supplied: https://learn.microsoft.com/en-us/azure/azure-compute-fleet/overview. Microsoft Learn is a documentation surface; its heading/body sizes are not automatically the correct sizes for Azure resource lists.
+
+Fresh Chrome/Linux captures and CDP `CSS.getPlatformFontsForNode` results are private under `.omo/runtime/ui-ux/typography-20260927/`. Same viewport 1440×1000, same browser, loaded fonts awaited. Current public FTTH `/customers` was authenticated read-only; no business form submitted.
+
+| Sample | Computed styling | Actual rendered font in this Linux browser |
+|---|---|---|
+| Learn article title | 40px / 52px, weight600, normal letter spacing | Segoe UI Variable, downloaded webfont |
+| Learn article text | 16px / 28px, weight400 | Segoe UI Variable, downloaded webfont |
+| FTTH customer title | 28px / 36px, weight650, -0.5px spacing | FreeSansBold, local fallback |
+| FTTH description | 14px / 22px, weight400 | FreeSans, local fallback |
+| FTTH command | 14px / 20px, weight400 | FreeSans, local fallback |
+
+FTTH declares Segoe UI in its font stack but currently defines no text `@font-face`; font requests were absent. Learn loads `https://learn.microsoft.com/static/third-party/SegoeUIVariable/SegoeUI-VF.ttf`. Its stylesheet uses the Segoe UI Variable Text alias as a fallback after locally installed Segoe UI. Thus identical font-family names in CSS do not establish identical actual fonts. This browser finding does not establish the user's Windows/macOS font choice.
+
+A temporary browser-only probe applied that reference webfont to the unchanged FTTH page. CDP confirmed Segoe UI Variable was rendered; all original sizes/weights remained, including title650. Paired native-size crops are in `font-comparison.png`. No production stylesheet, application file, deployed font asset or release was changed. This is diagnostic evidence, not a finalized font distribution decision.
+
+The existing title650/negative spacing is a separate candidate for correction once the Portal reference is measured. Antialiasing flags already match Learn; a generic smoothing CSS toggle alone does not solve the demonstrated font fallback. Pixel-level comparison also needs the same OS/browser/zoom/display scale.
+
+Needed from the user's authenticated Azure Portal: one All resources/resource-list screenshot at100% browser zoom; Computed and Rendered Fonts for the page title and one resource-name text; OS, browser and display scale. Useful computed properties: font-family, font-size, font-weight, line-height, letter-spacing, font-variation-settings, font-optical-sizing and color. Public portal.azure.com returned403 from this environment, so no authenticated Portal font measurements are claimed. Keep the released Azure UI intact until the target is measured; then centralize font loading and typography tokens, compare in-browser, and use the existing web-only release/rollback workflow.
+
+## User's Firefox reference received
+
+Three provided screenshots show Azure Portal Compute infrastructure/Virtual machines and Firefox Fonts. `az_font` resolves to Segoe UI, Segoe UI Semibold and Segoe UI Bold, version5.32, with weight400/600/700 separate faces. This supersedes the Learn-variable diagnostic as the product target. Portal font URLs return403 from this environment, but Microsoft's Learn-hosted version5.32 WOFF2 files return200 with CORS and font metadata confirms all three are version348652 (=5.32). No font binary is redistributed in this repository; CSS prefers installed Segoe faces then those Microsoft-hosted files, with swap/fallback for availability.
+
+Implementation unifies Fluent, plain text and numeric family; title650 becomes600 with normal tracking, resource headers700 become600, and compact13px console text matches the supplied resource-list reference visually. Exact title/body computed sizes were not supplied;13px is a visual match, not a claimed DevTools measurement. Firefox153 installed for verification. Build passes and20related tests/3suites pass. The owned browser harness can now select Firefox (default CI Chromium preserved); narrow Firefox viewport exercises responsive layout without unsupported mobile emulation. Audit verifies all three font faces load before accepting screenshots. Real Firefox audit and release remain pending.
+
+Firefox first audit loaded all three faces successfully, then exposed an existing form crash when MapLibre cannot initialize WebGL; the prior live release reproduces the same failure. The picker now preserves the parent form, address search and manual coordinates with a localized unavailable-map status. Regression coverage verifies saving both manual and searched coordinates after initialization failure. Page-error collection now starts before customer creation, so this stage cannot silently escape the browser audit. Independent reviewer found no typography blocker; its missing-italic-face finding is addressed with the matching5.32 italic400 face and included in the font-load assertion. Retry and release remain pending.
+
+Second Firefox audit passes both viewports:44routes each, all four font faces loaded, three customer creations per isolated tenant, customer detail/form and dirty-form keyboard flow. Native-pixel reference/FTTH comparison confirms lighter table/body glyphs and matching regular/semibold shapes. Reviewer identified MapLibre's global callback registration before constructor failure; a WebGL capability probe now avoids constructing known unsupported maps and releases successful probe contexts. The exception fallback remains for unexpected initialization failures. Five regression tests pass across picker/customer behavior, including no constructor call without WebGL; final browser retry follows this lifecycle refinement before web-only activation.
+
+## Released and verified
+
+Final source `3ce5993dc0812d0f3319b8c67fd329c0ded186af` passed the repeated Firefox audit (2/2,44routes per viewport, no skips/failures),25 focused tests in total, build/typecheck and lint. Independent review closed. Runtime Nginx served `/customers` and all14 static files with exact tested hashes; all6 rollback helper checks passed. Only web was replaced;12 other FTTH containers and the Drive proxy retained identical IDs/images/start times/restart counts.
+
+Live image is `sha256:1547355578d16eace408ec8418885c6af9de075b8db03ae7e59e2e800546bd58`; recovery instructions are in [operations](../../deploy/AZURE-FTTH-OPERATIONS.md#rilis-tipografi-azure--27-september-2026). Authenticated production Firefox audit passed14 screens, including the customer's1910×921 reference viewport. All four font faces loaded with HTTP200; customer title computed28px/36px, weight600, normal tracking. No page errors/overflow, no production business forms submitted. Local QA containers stopped; volumes retained. Private evidence is under `.omo/runtime/ui-ux/typography-20260927/`, including `firefox-final-report.json`, final screenshots, live font responses, source-review closure, HTTP runtime proof and activation receipt.
+
+This matches the supplied font family/version and weight pattern. Exact rasterization still follows browser/OS/display settings;13px body size was inferred visually, not read from a selected Azure text node. Font binaries remain Microsoft-hosted, with installed-font and system fallbacks.

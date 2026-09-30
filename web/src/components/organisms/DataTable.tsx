@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import {
   Button,
   DataGrid,
@@ -21,7 +21,7 @@ import {
   tokens,
   type TableColumnDefinition,
 } from '@fluentui/react-components'
-import { MoreHorizontal } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, MoreHorizontal } from 'lucide-react'
 import { EmptyState, SkeletonRows } from '@/components/atoms'
 
 /**
@@ -42,6 +42,7 @@ export type Column<T> = {
   header: ReactNode
   /** Render isi sel dari satu baris. */
   cell: (row: T) => ReactNode
+  description?: (row: T) => ReactNode
   /**
    * Nilai pembanding untuk pengurutan. Bila diisi, kolom jadi bisa diklik-urut.
    * `null`/kosong selalu ditaruh di bawah, apa pun arah urutnya.
@@ -52,6 +53,8 @@ export type Column<T> = {
   align?: 'left' | 'right' | 'center'
   /** Lebar kolom eksplisit (mis. `'1%'` untuk kolom aksi yang menyusut). */
   width?: string
+  /** Minimum readable column width in the scrolling resource grid. */
+  minWidth?: number
   /** Kelas tambahan pada sel grid. */
   className?: string
   /** Membuka detail dari kontrol tautan pada sel kolom ini. */
@@ -63,7 +66,7 @@ export type Column<T> = {
 /** Satu operasi baris di menu aksi kiri (`…`). */
 export type RowAction = {
   key: string
-  label: string
+  label: ReactNode
   icon?: ReactElement
   onClick: () => void
   disabled?: boolean
@@ -79,7 +82,7 @@ export type Selection = {
  * Variasi penyajian daftar. `olt` adalah alias migrasi usang untuk `resource`;
  * pertahankan hingga pemanggil OLT dimigrasikan ke nama semantik.
  */
-export type DataTablePresentation = 'default' | 'resource' | 'olt'
+export type DataTablePresentation = 'default' | 'resource' | 'olt' | 'warehouse'
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 
@@ -96,6 +99,8 @@ const useStyles = makeStyles({
     textAlign: 'left',
   },
   headerSortButton: {
+    minWidth: '0',
+    padding: '0',
     justifyContent: 'flex-start',
     textAlign: 'left',
   },
@@ -110,7 +115,9 @@ const useStyles = makeStyles({
     cursor: 'pointer',
   },
   actionCell: {
-    width: '1%',
+    flex: '0 0 52px',
+    width: '52px',
+    justifyContent: 'center',
   },
   cellLink: {
     color: tokens.colorBrandForegroundLink,
@@ -164,9 +171,20 @@ export function DataTable<T>({
   onSortChange?: () => void
 }) {
   const styles = useStyles()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [scrollable, setScrollable] = useState(false)
+  useEffect(() => {
+    const element = scrollRef.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const measure = () => setScrollable(element.scrollWidth > element.clientWidth + 1)
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    measure()
+    return () => observer.disconnect()
+  }, [loading, rows.length])
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
-  const resourcePresentation = presentation === 'resource' || presentation === 'olt'
+  const warehousePresentation = presentation === 'warehouse'
 
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -192,6 +210,7 @@ export function DataTable<T>({
           const hasInlineControls = !!column.onCellClick || actions.length > 0
           return (
             <>
+              <div className="table-cell-content">
               {column.onCellClick ? (
                 <Link
                   as="button"
@@ -207,6 +226,8 @@ export function DataTable<T>({
               ) : (
                 column.cell(row)
               )}
+              {column.description && <span className="resource-cell-description"> · {column.description(row)}</span>}
+              </div>
               {actions.length > 0 && (
                 <TableCellActions visible={hasInlineControls}>
                   <Menu positioning="below-end">
@@ -248,6 +269,7 @@ export function DataTable<T>({
     if (!rowActions) return contentColumns
 
     return [
+      ...contentColumns,
       createTableColumn<T>({
         columnId: ACTIONS_COLUMN_ID,
         renderHeaderCell: () => 'Aksi',
@@ -282,7 +304,6 @@ export function DataTable<T>({
           )
         },
       }),
-      ...contentColumns,
     ]
   }, [columns, rowActions, styles.cellLink])
 
@@ -309,11 +330,13 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card')}>
-      {!loading && (
-        <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')}>
+    <div className={mergeClasses('table-card', 'resource-data-table-card', warehousePresentation && 'warehouse-data-table-card')}>
+      {!loading && sorted.length > 0 && (
+        <div ref={scrollRef} className={mergeClasses('table-wrap', 'resource-data-table-wrap')} tabIndex={0} role="region" aria-label="Tabel, geser untuk melihat kolom lain">
           <DataGrid
-            className={mergeClasses('data-table-grid', resourcePresentation && 'resource-data-table-grid', styles.grid)}
+            className={mergeClasses('data-table-grid', 'resource-data-table-grid', styles.grid)}
+            style={{ '--data-grid-min-width': `${columns.reduce((width, column) => width + (column.minWidth ?? 168), 0) + (selection ? 40 : 0) + (rowActions ? 52 : 0)}px` } as CSSProperties}
+            size="small"
             aria-label="Tabel data"
             items={sorted}
             columns={dataGridColumns}
@@ -328,7 +351,7 @@ export function DataTable<T>({
               <DataGridRow
                 selectionCell={
                   selection
-                    ? { checkboxIndicator: { 'aria-label': 'Pilih semua baris' } }
+                    ? { checkboxIndicator: { size: 'large', 'aria-label': 'Pilih semua baris' } }
                     : undefined
                 }
               >
@@ -336,17 +359,20 @@ export function DataTable<T>({
                   const column = columns.find((candidate) => candidate.key === columnId)
                   return (
                     <DataGridHeaderCell
-                      className={mergeClasses(styles.headerCell, column?.align === 'right' && styles.numeric)}
-                      style={{ width: columnId === ACTIONS_COLUMN_ID ? '1%' : column?.width, textAlign: column?.align }}
+                      className={mergeClasses(styles.headerCell, columnId === ACTIONS_COLUMN_ID && styles.actionCell, column?.align === 'right' && styles.numeric)}
+                      style={{ flex: columnId === ACTIONS_COLUMN_ID ? undefined : `1 1 ${column?.minWidth ?? 168}px`, width: columnId === ACTIONS_COLUMN_ID ? '52px' : column?.width, justifyContent: column?.align === 'right' ? 'flex-end' : undefined, textAlign: column?.align }}
+                      aria-sort={sort?.key === columnId ? (sort.dir === 'asc' ? 'ascending' : 'descending') : column?.sortValue ? 'none' : undefined}
                     >
                       {column?.sortValue ? (
                         <Button
                           appearance="transparent"
+                          size="small"
                           className={styles.headerSortButton}
                           title={column.sortHint}
                           onClick={() => toggleSort(column)}
                         >
                           {renderHeaderCell()}
+                          {sort?.key === columnId && (sort.dir === 'asc' ? <ArrowUp size={14} aria-hidden /> : <ArrowDown size={14} aria-hidden />)}
                         </Button>
                       ) : (
                         renderHeaderCell()
@@ -380,7 +406,7 @@ export function DataTable<T>({
                     }
                     onKeyDown={clickable ? onKeyDown : undefined}
                     selectionCell={
-                      selection ? { checkboxIndicator: { 'aria-label': 'Pilih baris' } } : undefined
+                      selection ? { checkboxIndicator: { size: 'large', 'aria-label': 'Pilih baris' } } : undefined
                     }
                   >
                     {({ renderCell, columnId }) => {
@@ -402,7 +428,7 @@ export function DataTable<T>({
                               ? (event) => event.stopPropagation()
                               : undefined
                           }
-                          style={{ textAlign: column?.align }}
+                          style={{ flex: isActionCell ? undefined : `1 1 ${column?.minWidth ?? 168}px`, textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
                         >
                           {renderCell(item)}
                         </DataGridCell>
@@ -415,6 +441,7 @@ export function DataTable<T>({
           </DataGrid>
         </div>
       )}
+      {scrollable && !loading && sorted.length > 0 && <p className="table-scroll-hint"><ArrowLeftRight size={14} aria-hidden="true" />Geser tabel untuk melihat kolom lainnya</p>}
       {loading && (
         <div style={{ padding: '1rem' }}>
           <SkeletonRows rows={5} cols={columns.length + leadCols} />

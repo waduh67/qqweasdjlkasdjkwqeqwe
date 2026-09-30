@@ -1,0 +1,147 @@
+{
+  "status": "FINAL_COMPOSED_HOST_EVIDENCE_AUTHENTICATED",
+  "reviewer": "f2",
+  "reviewedAtUtc": "2026-09-27T09:22:54.364238+00:00",
+  "testedCodeCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
+  "deploymentCommit": "db09c3c2b37ad29b07464b05cd02895265f99a0d",
+  "vpnInstall": {
+    "archiveSha256": "8493093575b843a92db4b7ef86ca55c4b7bcec6754db0fe784c9699392672e20",
+    "archiveBytes": 4249,
+    "receiptSha256": "739d22aff4dd41d5ff8781ace238053f44a580dfc3dabc659551ef6a59138f00",
+    "authenticatedRegularFiles": 14,
+    "memberSha256": {
+      "vpn-install-983ef7914be4/routes.response": "58f442f923258a2235a6786dd75c0653d30f84e8f5c264509027b2d0f8606a45",
+      "vpn-install-983ef7914be4/invalid-auth.curl": "d6105e1bc105befe9a1cc168f86d4e69f46f46c7dbe89c4a552bb23d6a0ba3d4",
+      "vpn-install-983ef7914be4/exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "vpn-install-983ef7914be4/routes.form": "8401080ea3a4b3aafb80db91396eaf5634d0ad08609c54b32b8189fc067209c4",
+      "vpn-install-983ef7914be4/invalid-auth.response": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "vpn-install-983ef7914be4/forwards.curl": "e8d4f97e77936cb353761f7db3ed54ff34600117bfaa0f6bd688395ec1f4085a",
+      "vpn-install-983ef7914be4/verification.json": "739d22aff4dd41d5ff8781ace238053f44a580dfc3dabc659551ef6a59138f00",
+      "vpn-install-983ef7914be4/routes.curl": "85607da7dc15869e317e7facb7286e7ea4c4cb8d7947ae959995e9b8528c1308",
+      "vpn-install-983ef7914be4/routes-before.json": "f12b4d30bac558912bff5dd0ce8ddff717bb8b715b975af79d898322fc2ec183",
+      "vpn-install-983ef7914be4/forwards.response": "3879bb705ce1d3d4c7cbad672ee3025a02fa9855c3442daca7e37d3f9ada5243",
+      "vpn-install-983ef7914be4/iptables-before.txt": "58e1055f01a0a0a68271c8fba21ff1e4eb99fa4ebc607f77bac5221670ced26f",
+      "vpn-install-983ef7914be4/runner.log": "4e132bf82292f8f52c0e6b96dc93196d33dfc2d5f2a9185f2df91e7a119e3ea3",
+      "vpn-install-983ef7914be4/forwards.form": "8401080ea3a4b3aafb80db91396eaf5634d0ad08609c54b32b8189fc067209c4",
+      "vpn-install-983ef7914be4/invalid-auth.form": "57bccfe21b3c8955075ddcd8619bb691a48461a42d1eef0063928e1b53c9b33e"
+    },
+    "retainedExitCode": 0,
+    "approvedRenderedInstallerAndHelperHashesMatch": true,
+    "reviewedInstallerApprovalSha256": "89c05227899e34bd9f7bf492d654dc2d20d5653a06a6fcdd1185dedfbc0592d7",
+    "reviewerRoleAttribution": "The independent workflow reviewer covered F3/F4 after prior F4 rate limits; four distinct live reviewer identities are not claimed",
+    "forwardsAndRoutesResponseBodiesParsed": true,
+    "peerCount": 0,
+    "runtimeAssertions": "Executed helper plus retained receipt; separate systemctl/iptables response files not retained"
+  },
+  "persistence": {
+    "archiveSha256": "909b707639c11898dfd4846b052773088f52dfb5fb367f44cf61334ef76d2371",
+    "archiveBytes": 6418,
+    "receiptSha256": "20cc09894c49fa32bf619d5b2b8124bde2c648f74a5deed1e858213b2715a648",
+    "authenticatedRegularFiles": 14,
+    "memberSha256": {
+      "persistence-28410cb0460b/before-hubs.curl": "a6cb3f12c88ce7b199f31dea9d5a6605a1493d60bd12edfb1c30339477ebf1e9",
+      "persistence-28410cb0460b/exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "persistence-28410cb0460b/after-login.response": "67c5c5bd2ec2775ac3d7eebb1b3bf3d32715fa4a2127e103cc81b1ef1b212ff6",
+      "persistence-28410cb0460b/after-login.curl": "611dde4af23aeea1e177b8f559ea337a2b3afba51aba5f42d62dc839bba892c4",
+      "persistence-28410cb0460b/before-login.request": "0e1c5e9cf74d2f57223911e4a2bd02fa7d5cd32a57c6f049b35a0b6e27441fe4",
+      "persistence-28410cb0460b/before-login.response": "8ef98feee72d9f58782cffa0e86172ed5685ed83b81180714b8f43680c7a4a43",
+      "persistence-28410cb0460b/after-login.request": "0e1c5e9cf74d2f57223911e4a2bd02fa7d5cd32a57c6f049b35a0b6e27441fe4",
+      "persistence-28410cb0460b/before-hubs.response": "b7b0221fa0b52c2025f5622cc9e4f392af04cb77726ad7edf15e91484dcd4c1a",
+      "persistence-28410cb0460b/verification.json": "20cc09894c49fa32bf619d5b2b8124bde2c648f74a5deed1e858213b2715a648",
+      "persistence-28410cb0460b/after-hubs.curl": "10d8cbeeedacaf7009ca6e58f5ff7540cd82bb5553b613d23c4b2ffbb9d46865",
+      "persistence-28410cb0460b/after-hubs.response": "b7b0221fa0b52c2025f5622cc9e4f392af04cb77726ad7edf15e91484dcd4c1a",
+      "persistence-28410cb0460b/runner.log": "f58bb2b4f91f7c4e09f6ca75713b7a91e3e2980bc14bd02cb8140e7381f3f8f9",
+      "persistence-28410cb0460b/before-login.curl": "3f893df427078bce817a115b3ee6d9cc358842b5fa65404cc33ad829f3efe4a6",
+      "persistence-28410cb0460b/progress.json": "81ad4d9d1434a3b9194757f118936214b434bd084239794367220268e7a06387"
+    },
+    "retainedExitCode": 0,
+    "sourceSha256": "6a56202f1b64adccd6af231797ebfa030a75a74c9a3220b0509cbb63b11e939d",
+    "durationSeconds": 40.758322,
+    "sameContainerAndImage": true,
+    "differentStartTimes": true,
+    "rawBeforeAfterLoginUsersAndHubBodiesParsed": true,
+    "unchangedAdminHubPkiAndPeerCount": true,
+    "schema": {
+      "role": "warehouse_app",
+      "migrations": 367,
+      "failed": 0,
+      "latest": "178.12"
+    },
+    "rawBackupCompletionMarkers": {
+      "app": 1,
+      "radius": 1
+    },
+    "vpnSyncAndServiceReadiness": "Executed source assertions and retained PASS receipt",
+    "ftthAndDriveHttpsStatus": 200
+  },
+  "hostSnapshot": {
+    "sourceSha256": "e753bfb7b77539517e5281eb9131a45110350c6b1a3c7e9512582785c8903101",
+    "receiptSha256": "e51e21325daed3d9484f929dd46be5208a5612e077a5515ab1e9329925ef59f5",
+    "containerCount": 13,
+    "allRunningWithRestartPolicy": true,
+    "privateServicesUnpublishedAndIsolated": true,
+    "onlyGatewayJoinsExistingEdgeNetwork": true,
+    "serverAndWebDestinationIdentitiesMatch": true,
+    "activeEnabledSystemdServices": [
+      "docker.service",
+      "openvpn-server@server.service",
+      "ftth-vpn-sync.timer",
+      "ftth-vpn-firewall.service"
+    ],
+    "tunnelFirewallRuleCount": 3,
+    "vpnFileCount": 15,
+    "actualPrivateModes0600": true,
+    "otherProxyBytesPreserved": true,
+    "backupSchedule": {
+      "BACKUP_TZ": "Asia/Jakarta",
+      "BACKUP_AT": "02:30",
+      "BACKUP_RADIUS_AT": "03:00",
+      "BACKUP_RETENTION_DAYS": "14"
+    },
+    "hostRebootTested": false
+  },
+  "recoveryCopy": {
+    "archiveSha256": "ed7cae5b055190d985b39b84fa4f374e36cfa76fce9db1279d731ae534dbe957",
+    "archiveBytes": 921412,
+    "regularFiles": 66,
+    "actual13HostFilesMatchReleaseGate": true,
+    "all15VpnFilesMatchFinalSnapshot": true,
+    "allBackupFilesMatchFinalSnapshot": true,
+    "backupFileCount": 12,
+    "customFormatDumpCount": 5,
+    "releaseProofAndApprovalFilesMatch": true,
+    "offHostCopyMatchesRecordedArchiveDigest": true,
+    "secretContentsNeverSerializedInReview": true,
+    "limits": "Initial configuration/PKI/app+RADIUS DB backup snapshot; no Docker image payload, MinIO object content, Mongo volume or unrelated Drive data",
+    "wholeHostRestoreTested": false,
+    "privateMemberHashManifestSha256": "1d7d033515f406eec621b1c08c443345e3dc379045f5b292f3a2cc59f0494b1c"
+  },
+  "externalVpnTls": {
+    "receiptSha256": "bbdc5314b2b061a31cf6a26bc7f920552ea429dd157eaf68c27970504a7bd819",
+    "filesSha256": {
+      "client.ovpn": "bce1983b6e8fa4d4c4fada405c7bc7ae0e72ba284390b44ad6a379ce240e2f86",
+      "ca.crt": "8cacce5f1612dc685bf606a583c8dfe1e15469ae09355876f10ce2655da945af",
+      "client.log": "f23c5481f805ce4e4d6428bdd2cf528b252b3eea27db1205d2eb9beff8d528ab",
+      "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    "actualLogChecks": {
+      "caChain": true,
+      "serverName": true,
+      "serverChain": true,
+      "tls13ControlChannel": true,
+      "actualAuthFailed": true,
+      "softAuthFailureExit": true
+    },
+    "caMatchesInstalledHostAndApprovedPki": true,
+    "clientExitCode": 0,
+    "exitCodeAloneNotUsedAsSuccess": true,
+    "positivePeerAuthenticated": false,
+    "clientConfiguredWithoutHostRouteOrInterfaceMutation": true,
+    "physicalDeviceTested": false
+  },
+  "qaExecutedByReviewer": false,
+  "sshExecutedByReviewer": false,
+  "dockerExecutedByReviewer": false,
+  "productEditsByReviewer": false,
+  "blockingFindings": []
+}

@@ -6,6 +6,8 @@ plugins {
 
 kotlin { sourceSets { commonMain.dependencies {
     implementation(project(":mobile:feature:workorders"))
+    implementation(project(":mobile:feature:materials"))
+    implementation(project(":mobile:data"))
     implementation(project(":mobile:feature:attendance"))
     implementation(project(":mobile:feature:payroll"))
     implementation(project(":mobile:core:ui"))

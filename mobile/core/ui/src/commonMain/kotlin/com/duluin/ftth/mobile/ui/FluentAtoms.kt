@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +81,16 @@ fun FluentFormField(
         FluentMessage(label)
         FluentMessage(value)
         error?.let { FluentMessage(it, critical = true) }
+    }
+}
+
+@Composable
+fun FluentTextInput(label: String, value: String, onValueChange: (String) -> Unit, enabled: Boolean = true) {
+    Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
+        Text(label)
+        BasicTextField(value = value, onValueChange = onValueChange, enabled = enabled, modifier = Modifier.fillMaxWidth()
+            .heightIn(min = FluentTokens.touchTarget).background(Color.White, RoundedCornerShape(4.dp)).padding(8.dp)
+            .semantics { contentDescription = label })
     }
 }
 

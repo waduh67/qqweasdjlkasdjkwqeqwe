@@ -1,0 +1,33 @@
+{
+  "status": "PASS_FOCUSED_CONTRACT_AND_MODULES",
+  "parentCommit": "c122e5a9a4aa283cc4446ab492cc6b54614fbf5e",
+  "change": "Four explicit wire expectations: EXPIRED for receipt/transfer/count and DRAFT_EXPIRED with409; application unchanged",
+  "tests": 15,
+  "suites": [
+    {
+      "suite": "com.duluin.ftth.ModularityTests",
+      "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runnerExitCode": 0,
+  "sourceInputCount": 3693,
+  "sourcesUnchangedDuringRun": true,
+  "sourceInventorySha256": "e7f067b74430879d7199a81cafc8d11ba58673f66fa63e5b82258ee654e20910",
+  "runnerSha256": "32fe27ee04917f8e314a53179265d7be077e069bdbae01baeaf64ba181dcddd1",
+  "helperSha256": "b92a0bacbe36aa12f41042c35b713b7ad59d258b3c30789d15ffacc20040afde",
+  "logSha256": "02493408ae1eab38c365120ae55d825f4196d2362fd29136bda4be8322f06f74",
+  "command": "./gradlew :server:test --tests com.duluin.ftth.inventory.WarehouseContractTest --tests com.duluin.ftth.ModularityTests --no-build-cache --no-daemon --no-parallel --max-workers=2",
+  "limits": "Focused correction only; 6b CI326cases/2fail remains failed and current fullserver/historical must execute. No DB/Docker started."
+}

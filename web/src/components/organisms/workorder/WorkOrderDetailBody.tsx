@@ -37,6 +37,8 @@ import {
 import { AssigneeChips, WoField } from './views'
 import { WorkOrderFiberWork } from './WorkOrderFiberWork'
 import { ProofOfWorkCompletion } from './ProofOfWorkCompletion'
+import { WorkOrderMaterials } from './WorkOrderMaterials'
+import { WorkOrderSignatureUpload } from './WorkOrderSignatureUpload'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -58,6 +60,7 @@ export function WorkOrderDetailBody({
 
   // Satu kolom catatan dipakai bersama: opsional saat menyetujui, wajib saat menolak.
   const [decisionNote, setDecisionNote] = useState('')
+  const [proofVersion, setProofVersion] = useState(0)
 
   const id = wo.id
   const canAssign = can('workorder.order.assign')
@@ -75,7 +78,7 @@ export function WorkOrderDetailBody({
   const awaitingApproval = wo.status === 'DONE' && wo.approvalStatus === 'PENDING'
 
   const showOptical = canRecordOptical || wo.rxBeforeDbm != null || wo.rxAfterDbm != null
-  const showEvidence = can('workorder.evidence.view')
+  const showEvidence = can('workorder.evidence.view') || canField
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
@@ -168,20 +171,6 @@ export function WorkOrderDetailBody({
           </div>
         )}
 
-        {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
-        {canComplete && wo.status === 'IN_PROGRESS' && (
-          <section className="stack" style={{ gap: '0.4rem' }}>
-            <TextareaField
-              label="Catatan penyelesaian (opsional)"
-              rows={2}
-              maxLength={2000}
-              value={note}
-              onChange={(_, data) => setNote(data.value)}
-            />
-            <ProofOfWorkCompletion workOrderId={id} type={wo.type} note={note} onAct={onAct} />
-          </section>
-        )}
-
         {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
         {canApprove && awaitingApproval && (
           <section className="stack" style={{ gap: '0.5rem' }}>
@@ -232,13 +221,31 @@ export function WorkOrderDetailBody({
         )}
       </div>
 
+      <WorkOrderMaterials workOrder={wo} />
+
       {(showOptical || showEvidence) && (
-        <div className="card stack" style={{ gap: '1.1rem' }}>
+        <div className="card stack" id="work-order-evidence" style={{ gap: '1.1rem' }}>
           {/* Redaman optik (bukti kualitas) + foto & tanda tangan pengerjaan. */}
           {showOptical && <OpticalSection wo={wo} canEdit={canRecordOptical} onAct={onAct} />}
-          {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} />}
+          {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} approved={wo.approvalStatus === 'APPROVED'} onChanged={() => setProofVersion(value => value + 1)} />}
         </div>
       )}
+
+        {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
+        {canComplete && wo.status === 'IN_PROGRESS' && (
+          <section className="card stack" id="work-order-completion">
+            <h2 className="settings-section-title">Selesaikan pekerjaan</h2>
+            <p className="muted">Periksa material, pengukuran, dan bukti sebelum mengirim hasil.</p>
+            <TextareaField
+              label="Catatan penyelesaian (opsional)"
+              rows={2}
+              maxLength={2000}
+              value={note}
+              onChange={(_, data) => setNote(data.value)}
+            />
+            <ProofOfWorkCompletion key={proofVersion} workOrderId={id} type={wo.type} note={note} onAct={onAct} />
+          </section>
+        )}
 
       {/* Kerja serat yang dibukukan ke tiket ini — kartunya menampilkan diri sendiri
           hanya bila ada isinya (lihat komponennya). */}
@@ -437,10 +444,10 @@ function AuthedImage({ path, alt, size }: { path: string; alt: string; size: num
  * (teknisi), dan selama work order sudah dikerjakan (bukan draft/batal — server juga
  * menegakkan ini).
  */
-function EvidenceSection({ workOrderId, status }: { workOrderId: string; status: WorkOrderStatus }) {
+function EvidenceSection({ workOrderId, status, approved, onChanged }: { workOrderId: string; status: WorkOrderStatus; approved: boolean; onChanged: () => void }) {
   const { can } = useCan()
   const toast = useToast()
-  const canManage = can('workorder.evidence.manage') || can('workorder.order.field')
+  const canManage = !approved && (can('workorder.evidence.manage') || can('workorder.order.field'))
   const documentable = status !== 'DRAFT' && status !== 'CANCELLED'
 
   const [photos, setPhotos] = useState<EvidenceView[]>([])
@@ -487,6 +494,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
       setCaption('')
       if (fileRef.current) fileRef.current.value = ''
       await reload()
+      onChanged()
       toast.success('Foto bukti diunggah')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengunggah foto')
@@ -499,6 +507,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
     try {
       await api.del(`/api/work-orders/${workOrderId}/evidence/${evidenceId}`)
       await reload()
+      onChanged()
       toast.success('Foto dihapus')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus foto')
@@ -509,6 +518,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
     try {
       await api.del(`/api/work-orders/${workOrderId}/signature`)
       setSignature(null)
+      onChanged()
       toast.success('Tanda tangan dihapus')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus tanda tangan')
@@ -587,12 +597,13 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                   Fluent Input tak mendukung type=file (ref-nya tak menunjuk ke elemen input).
                   `capture` sengaja TAK dipasang — teknisi kerap memotret dulu lalu mengunggah
                   belakangan, dan `capture` mengunci pilihan hanya ke kamera saat itu juga. */}
-              <input ref={fileRef} className="wo-file" type="file" accept="image/*" />
+              <input ref={fileRef} className="wo-file" type="file" accept="image/*" aria-label="Berkas foto bukti" />
               <Button variant="primary" disabled={busy} onClick={() => void upload()}>
                 {busy ? 'Mengunggah…' : 'Unggah foto'}
               </Button>
             </div>
           )}
+          {canManage && (status === 'IN_PROGRESS' || status === 'DONE') && <WorkOrderSignatureUpload workOrderId={workOrderId} existing={signature !== null} onDone={() => { void reload(); onChanged() }} />}
         </>
       )}
     </section>

@@ -1,0 +1,36 @@
+{
+  "scope": "Restore task-owned QA functions after historical sibling-schema migration pollution",
+  "reference": "Fresh dedicated database migrated from all unchanged packaged migrations through178.7",
+  "migrationManifestSha256": "9a913a22736e5809797df1455d64b3131b55fa03606293416d8a00545ca31e59",
+  "migrationFiles": 362,
+  "databases": {
+    "warehouse_test": {
+      "restoredFunctions": [],
+      "currentMigration": "178.7",
+      "referenceFunctionCount": 281,
+      "preservedTables": 322,
+      "preservedRows": 146219,
+      "rowCountsAndDigestsUnchanged": true,
+      "flywayHistoryUnchanged": true,
+      "allDeterministicWarehouseFunctionsMatchFreshMigration": true,
+      "originalActivationCutoffDefinitionPreserved": true
+    },
+    "warehouse_e2e": {
+      "restoredFunctions": [
+        "warehouse_approval_posting_guard",
+        "warehouse_assert_returned_asset",
+        "warehouse_assert_return_repair_step"
+      ],
+      "currentMigration": "178.7",
+      "referenceFunctionCount": 281,
+      "preservedTables": 322,
+      "preservedRows": 31173,
+      "rowCountsAndDigestsUnchanged": true,
+      "flywayHistoryUnchanged": true,
+      "allDeterministicWarehouseFunctionsMatchFreshMigration": true,
+      "originalActivationCutoffDefinitionPreserved": true
+    }
+  },
+  "writeBoundary": "Only the three listed CREATE OR REPLACE FUNCTION definitions in warehouse_e2e; no business rows, Flyway history, activation cutoff or production environment modified",
+  "initialGuard": "First repair attempt stopped before any DDL because the activation cutoff correctly differs between databases; complete function-body comparison confirmed this expected difference and preserved it"
+}

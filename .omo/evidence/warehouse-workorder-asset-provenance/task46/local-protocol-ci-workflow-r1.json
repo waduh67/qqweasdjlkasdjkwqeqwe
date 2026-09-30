@@ -1,0 +1,18 @@
+{
+  "timeUtc": "2026-09-26T17:55:21.494502+00:00",
+  "workflowTestExitCode": 0,
+  "actionlintExitCode": 0,
+  "head": "9d540107fc2fd47a3b02312371c9e65df75acb83",
+  "sha256": {
+    ".github/workflows/warehouse.yml": "9477b01cf3a9fa03ac8c1eab27ca3ee9fb38e93604c552b7f9e0e456950304c1",
+    "scripts/warehouse/test-ci-workflow.py": "3e8ae89ed09013c181d7b942870b2bfc866047ec42b4fa358e304ea3b52608f2"
+  },
+  "logSha256": {
+    "workflow-test.log": "75906c181413ea3be5490f421b2cacff04315f9e440c9300659f11e2645aba22",
+    "actionlint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "status": "PASS_WORKFLOW_GUARDS",
+  "tests": 5,
+  "scope": "Existing dependency/failure/skip/cancel/no-missing-gate assertions and actionlint ran under independent F3 fd8 lease. No actual offline module test execution claimed.",
+  "offlineModules": "Mandatory contract,snmp,collector Test tasks with forced execution and per-module nonzero JUnit verification; actual runtime reports pending."
+}

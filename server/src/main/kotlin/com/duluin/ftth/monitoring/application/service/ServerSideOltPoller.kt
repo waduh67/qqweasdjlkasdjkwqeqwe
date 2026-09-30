@@ -140,7 +140,9 @@ class ServerSideOltPoller(
     }
 
     private fun executePoll(tenantId: UUID, target: OltPollingTarget, adapter: OltAdapter): ManualOltPollResult {
+        val startedAt = Instant.now()
         val outcome = poll(adapter, target.toWire())
+        val acquisition = ServerPollWindow(startedAt, Instant.now())
         try {
             persister.persist(
                 tenantId = tenantId,
@@ -148,6 +150,7 @@ class ServerSideOltPoller(
                 reachable = outcome.reachable,
                 readings = outcome.readings,
                 failureReason = outcome.failureReason,
+                acquisition = acquisition,
             )
         } catch (_: Exception) {
             throw OltPollPersistenceException()
@@ -247,6 +250,7 @@ class OltReadingPersister(
         reachable: Boolean,
         readings: List<OnuReading>,
         failureReason: String?,
+        acquisition: ServerPollWindow,
     ) {
         // Dinilai tiap siklus: OLT yang kini terjangkau menutup alarmnya sendiri.
         alarmEngine.evaluate(
@@ -260,7 +264,8 @@ class OltReadingPersister(
             },
         )
         if (reachable && readings.isNotEmpty()) {
-            ingestion.ingestReadings(tenantId, readings)
+            // The persister announces both reachability and ONU changes once below.
+            ingestion.ingestServerReadings(tenantId, readings, acquisition, publishAlarmChanges = false)
         }
         // Reachability OLT / alarm ONU mungkin berubah → picu korelasi ulang insiden.
         events.publishEvent(AlarmsChangedEvent(tenantId))
