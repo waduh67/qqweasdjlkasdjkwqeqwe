@@ -9,65 +9,56 @@
  * satu baris pun kode interaksi.
  */
 
-// Atribusi gabungan semua penyedia basemap (Carto & Esri) karena pengguna bisa
-// berpindah mode; tetap ditampilkan apa pun mode yang aktif.
-const MAP_ATTRIBUTION =
-  '&copy; Kontributor OpenStreetMap &copy; CARTO &middot; Citra satelit &copy; Esri'
+import type { RasterLayerSpecification, SourceSpecification, StyleSpecification } from 'maplibre-gl'
 
 /** Pusat awal: Bekasi, sekadar titik berangkat sebelum data pertama masuk. */
 export const INITIAL_CENTER: [number, number] = [106.995, -6.243]
 
-/**
- * Mode basemap yang bisa dipilih pengguna. Semua tile raster KEYLESS — memadai untuk
- * pengembangan; untuk PRODUKSI pindah ke penyedia berlangganan / tile sendiri (Carto
- * & Esri membatasi pemakaian komersial). Ganti mode cukup menukar tile & opacity
- * sumber raster `basemap` via `setTiles`, jadi tak menyentuh layer overlay vektor.
- * Catatan skema ubin: Carto memakai {z}/{x}/{y} (XYZ standar), Esri {z}/{y}/{x}.
- */
-export type BasemapMode = 'streets' | 'satellite' | 'dark'
+export type BasemapMode = 'default' | 'google-maps' | 'google-earth'
 
-export const BASEMAPS: Record<BasemapMode, { label: string; tiles: string[]; opacity: number }> = {
-  // Jalan/standar ala Google Maps (Carto Voyager) — enak untuk survei alamat.
-  streets: {
-    label: 'Peta',
-    tiles: [
-      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-      'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-      'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-      'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-    ],
-    opacity: 1,
+function googleTiles(layer: 'm' | 'y'): string[] {
+  return [0, 1, 2, 3].map((host) =>
+    `https://mt${host}.google.com/vt/lyrs=${layer}&x={x}&y={y}&z={z}`,
+  )
+}
+
+export const BASEMAPS: Record<BasemapMode, {
+  label: string
+  tiles: string[]
+  attribution: string
+  maxzoom: number
+}> = {
+  default: {
+    label: 'Default',
+    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">Kontributor OpenStreetMap</a>',
+    maxzoom: 19,
   },
-  // Satelit (Esri World Imagery) — verifikasi tiang/rumah dari citra udara.
-  satellite: {
-    label: 'Satelit',
-    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-    opacity: 1,
+  'google-maps': {
+    label: 'Google Maps',
+    tiles: googleTiles('m'),
+    attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
+    maxzoom: 20,
   },
-  // NOC gelap (bawaan) — aset & kabel bercahaya paling menonjol di sini.
-  dark: {
-    label: 'Gelap',
-    tiles: [
-      'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-      'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-      'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-    ],
-    opacity: 0.85,
+  'google-earth': {
+    label: 'Google Earth',
+    tiles: googleTiles('y'),
+    attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
+    maxzoom: 20,
   },
 }
 
-/** Urutan tampil di pemilih: Peta → Satelit → Gelap. */
-export const BASEMAP_ORDER: BasemapMode[] = ['streets', 'satellite', 'dark']
-
-/** Untuk apa tiap tema dipakai — supaya pilihannya soal pekerjaan, bukan selera. */
+export const BASEMAP_ORDER: BasemapMode[] = ['default', 'google-maps', 'google-earth']
 export const BASEMAP_HINTS: Record<BasemapMode, string> = {
-  streets: 'Nama jalan & alamat terbaca — enak untuk survei dan menuntun teknisi.',
-  satellite: 'Citra udara — memastikan tiang, gang, dan atap rumah yang sebenarnya.',
-  dark: 'Latar gelap; aset & kabel paling menyala — pandangan NOC.',
+  default: 'Peta jalan OpenStreetMap.',
+  'google-maps': 'Peta jalan dan alamat Google Maps.',
+  'google-earth': 'Citra satelit Google dengan label jalan; bukan aplikasi Google Earth 3D.',
 }
+const DEFAULT_BASEMAP: BasemapMode = 'default'
 
-/** Mode awal: tetap gelap (gaya NOC) agar aset & kabel bercahaya paling menonjol. */
-const DEFAULT_BASEMAP: BasemapMode = 'dark'
+export function basemapId(mode: BasemapMode): string {
+  return `basemap-${mode}`
+}
 
 /**
  * Setelan tampilan peta diingat antar-kunjungan. Ini preferensi mata satu orang di
@@ -87,7 +78,16 @@ export const PREF_HIDDEN_LAYERS = 'ftth.map.hidden-layers'
 
 export function savedBasemap(): BasemapMode {
   const saved = localStorage.getItem(PREF_BASEMAP)
-  return BASEMAP_ORDER.includes(saved as BasemapMode) ? (saved as BasemapMode) : DEFAULT_BASEMAP
+  switch (saved) {
+    case 'google-maps':
+    case 'google-earth':
+    case 'default':
+      return saved
+    case 'satellite':
+      return 'google-earth'
+    default:
+      return DEFAULT_BASEMAP
+  }
 }
 
 export function savedHiddenLayers(): Set<string> {
@@ -278,18 +278,11 @@ function glowCircle(id: string, sourceLayer: string, color: any, radius: number)
 /**
  * Gaya peta "NOC" gelap-futuristik. Kabel digambar tiga lapis: halo blur, garis
  * inti tipis, lalu dash beranimasi yang mengalir. Aset digambar sebagai lingkaran
- * bercahaya. Basemap gelap (Carto) membuat semuanya menyala.
+ * bercahaya. Semua basemap digambar di bawah lapisan jaringan ini.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const FUTURISTIC_STYLE: any = {
+export const FUTURISTIC_STYLE: StyleSpecification = {
   version: 8,
   sources: {
-    basemap: {
-      type: 'raster',
-      tiles: BASEMAPS[DEFAULT_BASEMAP].tiles,
-      tileSize: 256,
-      attribution: MAP_ATTRIBUTION,
-    },
     ftth: {
       type: 'vector',
       tiles: [`${window.location.origin}/api/gis/tiles/{z}/{x}/{y}.mvt`],
@@ -298,12 +291,6 @@ export const FUTURISTIC_STYLE: any = {
     },
   },
   layers: [
-    {
-      id: 'basemap',
-      type: 'raster',
-      source: 'basemap',
-      paint: { 'raster-opacity': BASEMAPS[DEFAULT_BASEMAP].opacity },
-    },
     // Kabel: halo → garis inti → dash mengalir
     {
       id: 'cable-glow',
@@ -390,6 +377,29 @@ export const FUTURISTIC_STYLE: any = {
       paint: { 'text-color': '#dbeafe', 'text-halo-color': '#0a0e14', 'text-halo-width': 1.5 },
     },
   ],
+}
+
+export function createMapStyle(mode: BasemapMode): StyleSpecification {
+  const sources: Record<string, SourceSpecification> = { ...FUTURISTIC_STYLE.sources }
+  const layers: RasterLayerSpecification[] = BASEMAP_ORDER.map((option) => {
+    const preset = BASEMAPS[option]
+    const id = basemapId(option)
+    sources[id] = {
+      type: 'raster',
+      tiles: preset.tiles,
+      tileSize: 256,
+      maxzoom: preset.maxzoom,
+      attribution: preset.attribution,
+    }
+    return {
+      id,
+      type: 'raster',
+      source: id,
+      layout: { visibility: option === mode ? 'visible' : 'none' },
+      paint: { 'raster-opacity': 1, 'raster-fade-duration': 0 },
+    }
+  })
+  return { ...FUTURISTIC_STYLE, sources, layers: [...layers, ...FUTURISTIC_STYLE.layers] }
 }
 
 /**

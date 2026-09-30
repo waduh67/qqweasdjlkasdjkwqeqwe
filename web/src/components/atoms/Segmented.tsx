@@ -38,7 +38,7 @@ export function Segmented<T extends string | number>({
   className,
   disabled,
 }: {
-  options: { value: T; label: ReactNode }[]
+  options: { value: T; label: ReactNode; title?: string }[]
   value: T
   onChange: (value: T) => void
   ariaLabel?: string
@@ -59,6 +59,7 @@ export function Segmented<T extends string | number>({
             appearance="subtle"
             checked={active}
             disabled={disabled}
+            title={o.title}
             onClick={() => onChange(o.value)}
             className={active ? mergeClasses(s.btn, s.checked) : s.btn}
           >
