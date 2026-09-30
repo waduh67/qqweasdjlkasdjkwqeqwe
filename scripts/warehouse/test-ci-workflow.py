@@ -22,14 +22,38 @@ class WorkflowGateTest(unittest.TestCase):
     def setUpClass(cls):
         cls.warehouse = yaml.safe_load((ROOT / ".github/workflows/warehouse.yml").read_text())["jobs"]
         cls.deploy = yaml.safe_load((ROOT / ".github/workflows/deploy.yml").read_text())["jobs"]
+        cls.images = yaml.safe_load((ROOT / ".github/workflows/images.yml").read_text())["jobs"]
+        cls.ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
 
-    def test_publish_and_deploy_require_the_entire_reusable_warehouse_workflow(self):
-        self.assertEqual(self.deploy["warehouse-verification"]["uses"], "./.github/workflows/warehouse.yml")
-        self.assertEqual(dependencies(self.deploy["build-and-push"]), {"warehouse-verification"})
+    def test_publish_requires_routine_checks_and_tested_images(self):
+        self.assertEqual(self.deploy["verification"]["uses"], "./.github/workflows/ci.yml")
+        self.assertEqual(self.deploy["image-verification"]["uses"], "./.github/workflows/images.yml")
+        self.assertEqual(dependencies(self.deploy["build-and-push"]), {"verification", "image-verification"})
         self.assertEqual(dependencies(self.deploy["deploy"]), {"build-and-push"})
-        for job in ("build-and-push", "deploy", "warehouse-verification"):
+        for job in ("build-and-push", "deploy", "verification", "image-verification"):
             self.assertNotIn("if", self.deploy[job])
+        self.assertFalse(any(job.get("uses") == "./.github/workflows/warehouse.yml"
+                             for job in self.deploy.values()))
+        self.assertEqual(self.warehouse["images"]["uses"], "./.github/workflows/images.yml")
         self.assertEqual(dependencies(self.warehouse["acceptance"]), REQUIRED)
+
+    def test_warehouse_runs_only_on_manual_requests(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/warehouse.yml").read_text())
+        self.assertEqual(set(workflow.get("on", workflow.get(True, {}))), {"workflow_dispatch"})
+
+    def test_native_compilation_automatically_runs_only_for_mobile_changes(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/mobile-materials.yml").read_text())
+        triggers = workflow.get("on", workflow.get(True, {}))
+        self.assertEqual(set(triggers), {"pull_request", "workflow_dispatch", "workflow_call"})
+        self.assertEqual(triggers["pull_request"]["branches"], ["main"])
+        paths = triggers["pull_request"]["paths"]
+        self.assertIn("mobile/**", paths)
+        self.assertNotIn("web/**", paths)
+        self.assertNotIn("server/**", paths)
+
+    def test_routine_web_checks_keep_all_unit_tests_with_bounded_workers(self) -> None:
+        runs = [step["run"] for step in self.ci["web"]["steps"] if "run" in step]
+        self.assertEqual(runs, ["npm ci", "npm run lint", "npm test -- --maxWorkers=2", "npm run build"])
 
     def test_no_required_gate_can_be_ignored_or_conditionally_skipped(self):
         for name in REQUIRED:
@@ -44,6 +68,11 @@ class WorkflowGateTest(unittest.TestCase):
                     inspect(value)
         inspect(self.warehouse)
         inspect(self.deploy)
+        inspect(self.images)
+        inspect(self.ci)
+        for jobs in (self.images, self.ci):
+            for job in jobs.values():
+                self.assertNotIn("if", job)
 
     def test_all_browser_scenarios_and_native_compilation_are_required(self):
         matrix = self.warehouse["browser"]["strategy"]
@@ -82,7 +111,7 @@ class WorkflowGateTest(unittest.TestCase):
         for step in steps:
             if step.get("uses", "").startswith("docker/build-push-action@"):
                 self.assertEqual(step["with"]["context"], "./docker/genieacs")
-        image_steps = self.warehouse["images"]["steps"]
+        image_steps = self.images["images"]["steps"]
         builds = [step for step in image_steps if step.get("uses", "").startswith("docker/build-push-action@")]
         self.assertEqual(len(builds), 2)
         for step in builds:
