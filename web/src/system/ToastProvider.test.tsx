@@ -22,3 +22,21 @@ it('announces a toast outside the page hidden by an active modal', async () => {
   })
   expect(screen.getByRole('dialog', { name: 'Form terbuka' })).toBeTruthy()
 })
+
+function Feedback({ kind }: { kind: 'success' | 'error' }) {
+  const toast = useToast()
+  return <button onClick={() => toast[kind]('Hasil pemeriksaan')}>Periksa</button>
+}
+
+it.each(['success', 'error'] as const)('announces %s feedback once through the Fluent DOM fallback', async (kind) => {
+  const user = userEvent.setup()
+  render(<FluentProvider theme={webLightTheme}><ToastProvider><Feedback kind={kind} /></ToastProvider></FluentProvider>)
+  await user.click(screen.getByRole('button', { name: 'Periksa' }))
+  await screen.findByText('Hasil pemeriksaan', { exact: true })
+  await waitFor(() => {
+    // Fluent's fallback uses one assertive region when ariaNotify is unavailable.
+    const live = document.body.querySelector<HTMLElement>(':scope > [aria-live="assertive"][data-tabster-never-hide]')
+    expect(live?.querySelector('span')?.innerText).toContain('Hasil pemeriksaan')
+    expect(live?.querySelectorAll('span')).toHaveLength(1)
+  })
+})

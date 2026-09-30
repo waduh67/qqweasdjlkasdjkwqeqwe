@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -104,6 +105,22 @@ class WorkflowGateTest(unittest.TestCase):
         compose = (ROOT / "deploy/docker-compose.prod.yml").read_text()
         self.assertIn("image: ${FTTH_SERVER_IMAGE:-", compose)
         self.assertIn("image: ${FTTH_WEB_IMAGE:-", compose)
+
+    def test_topology_detection_failures_cannot_enter_native_deployment(self):
+        script = next(step['run'] for step in self.deploy['deploy']['steps'] if step.get('name') == 'Deploy lewat SSH')
+        with tempfile.TemporaryDirectory() as folder:
+            stub = Path(folder) / 'ssh'
+            calls = Path(folder) / 'calls'
+            stub.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SSH_CALLS"\nexit "$SSH_EXIT"\n')
+            stub.chmod(0o700)
+            for status in ('1', '255'):
+                with self.subTest(ssh_status=status):
+                    calls.unlink(missing_ok=True)
+                    result = subprocess.run(['bash', '-c', script], capture_output=True,
+                                            env=dict(os.environ, PATH=folder + os.pathsep + os.environ['PATH'],
+                                                     SSH_CALLS=str(calls), SSH_EXIT=status, VPS_HOST='test-host', GHCR_USER='test-user'))
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(calls.read_text().splitlines(), ['test-host sudo -n bash -s'])
 
 
 if __name__ == "__main__":

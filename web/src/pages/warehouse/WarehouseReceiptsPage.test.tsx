@@ -181,7 +181,7 @@ it('keeps the filtered receipt list mounted when create is opened and cancelled'
   const count = fetch.mock.calls.filter(([path]) => path.includes('/receipts?')).length
   await user.click(screen.getByRole('button', { name: 'Buat penerimaan' }))
   await screen.findByRole('textbox', { name: 'Referensi surat jalan' })
-  await user.click(screen.getByRole('button', { name: 'Tutup' }))
+  await user.click(await screen.findByRole('button', { name: 'Tutup' }))
   await screen.findByRole('link', { name: 'SJ-001' })
   expect(screen.getByRole('textbox', { name: 'Serial barang' })).toBe(search)
   expect(search).toHaveProperty('value', 'ONU-KEEP')

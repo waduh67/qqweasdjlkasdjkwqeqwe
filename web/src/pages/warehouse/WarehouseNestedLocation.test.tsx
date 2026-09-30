@@ -25,7 +25,7 @@ it('returns focus to the parent after deferred metadata replaces the loading lay
   await user.click(launcher); await screen.findByRole('dialog', { name: 'Lokasi' })
   await act(async () => { resolve(response([])); await areas })
   const loaded = await screen.findByRole('dialog', { name: 'Tambah lokasi' })
-  await user.click(within(loaded).getByRole('button', { name: 'Tutup' }))
+  await user.click(await within(loaded).findByRole('button', { name: 'Tutup' }))
   await waitFor(() => expect(document.activeElement).toBe(launcher))
   expect(screen.getByRole('textbox', { name: 'Referensi' })).toHaveProperty('value', 'SJ-KEEP')
   await waitFor(() => expect(screen.getAllByRole('dialog')).toHaveLength(1))

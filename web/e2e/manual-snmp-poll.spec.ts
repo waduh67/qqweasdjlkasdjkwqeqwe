@@ -13,7 +13,7 @@ async function openInventoryDetail(page: Page) {
 
 async function openMapDetail(page: Page) {
   await page.goto('/olts/' + olt.id)
-  await page.getByRole('button', { name: 'Lihat di peta' }).click()
+  await (await pollAction(page, 'Lihat di peta')).click()
   await expect(page).toHaveURL(new RegExp('/map$'))
   await page.getByRole('button', { name: 'Buka detail', exact: true }).click()
 }
@@ -30,6 +30,14 @@ async function capture(page: Page, name: string) {
   await page.screenshot({ path: path.join(evidenceDir, name), animations: 'disabled' })
 }
 
+async function pollAction(page: Page, label = 'Cek SNMP') {
+  if ((page.viewportSize()?.width ?? 1280) <= 820) {
+    await page.locator('.command-overflow:visible').last().getByText('Aksi lainnya', { exact: true }).click()
+    return page.getByRole('menuitem', { name: label, exact: true })
+  }
+  return page.getByRole('button', { name: label, exact: true })
+}
+
 for (const width of [375, 768, 1280]) {
   test('Inventory polls immediately and keeps its list mounted at ' + width + 'px', async ({ page }) => {
     const runtimeErrors: string[] = []
@@ -41,11 +49,12 @@ for (const width of [375, 768, 1280]) {
     await page.getByRole('tab', { name: 'ONU di OLT', exact: true }).click()
     await expect(page.getByText('TEST001122AA', { exact: true })).toBeVisible()
     const releasePoll = fixture.deferNextPoll()
-    const pollButton = page.getByRole('button', { name: 'Cek SNMP', exact: true })
+    const pollButton = await pollAction(page)
 
     await pollButton.evaluate((button) => { button.click(); button.click() })
 
-    await expect(page.getByRole('button', { name: 'Memeriksa…', exact: true })).toBeDisabled()
+    await expect(await pollAction(page, 'Memeriksa…')).toBeDisabled()
+    if (width <= 820) await page.keyboard.press('Escape')
     expect(fixture.pollCount()).toBe(1)
     releasePoll()
     await expect(page.getByText('SNMP OLT-QA selesai · 2 ONU terbaca.', { exact: true })).toBeVisible()
@@ -73,7 +82,7 @@ for (const width of [375, 768, 1280]) {
     await expect.poll(() => fixture.impactedReadCount()).toBeGreaterThan(0)
     const impactedBefore = fixture.impactedReadCount()
     const tilesBefore = fixture.tileReadCount()
-    const pollButton = page.getByRole('button', { name: 'Cek SNMP', exact: true })
+    const pollButton = await pollAction(page)
 
     await pollButton.focus()
     await page.keyboard.press('Enter')

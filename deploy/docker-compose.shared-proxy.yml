@@ -24,3 +24,7 @@ networks:
   edge_proxy:
     external: true
     name: ${FTTH_EDGE_PROXY_NETWORK:?set the existing proxy network name}
+
+volumes:
+  caddy_data:
+  caddy_config:

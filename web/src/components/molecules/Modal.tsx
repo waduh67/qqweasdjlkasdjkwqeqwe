@@ -1,5 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle } from '@fluentui/react-components'
+import { useActivateModal } from '@fluentui/react-tabster'
 import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 import { ChevronLeft16Regular, ChevronRight12Regular } from '@fluentui/react-icons'
@@ -27,6 +28,7 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
   useLayoutEffect(() => { activeModals.add(modalId); return () => { activeModals.delete(modalId) } }, [modalId])
   const requestClose = () => { if (modalId === Math.max(...activeModals)) onClose() }
   const surface = useRef<HTMLDivElement>(null)
+  const activateModal = useActivateModal()
   const ancestors = useContext(ResourceAncestors)
   const [pageTitle] = useState(() => document.querySelector('main h1')?.textContent ?? '')
   const trail = useMemo(() => [...ancestors, title], [ancestors, title])
@@ -35,9 +37,14 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
     // all surfaces register, so cleanup cannot leave the new top layer hidden.
     queueMicrotask(() => {
       const current = surface.current
-      if (current?.isConnected && modalId === Math.max(...activeModals) && !current.contains(document.activeElement)) current.focus({ preventScroll: true })
+      if (current?.isConnected && modalId === Math.max(...activeModals)) {
+        // Fluent defers activation until Tabster has registered the new surface.
+        // Focus alone can arrive before that registration when loading is replaced.
+        activateModal(current)
+        if (!current.contains(document.activeElement)) current.focus({ preventScroll: true })
+      }
     })
-  }, [modalId])
+  }, [modalId, activateModal])
   useLayoutEffect(() => () => {
     const closingSurface = surface.current
     const restore = () => {
