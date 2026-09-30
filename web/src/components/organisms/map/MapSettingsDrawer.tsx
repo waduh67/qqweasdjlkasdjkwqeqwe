@@ -1,32 +1,10 @@
 import { useEffect } from 'react'
 import { Checkbox, Text, typographyStyles } from '@fluentui/react-components'
-import { Button, Segmented } from '@/components/atoms'
+import { Button } from '@/components/atoms'
 import { BladeHead } from '@/components/molecules'
-import { BASEMAPS, BASEMAP_HINTS, BASEMAP_ORDER, MAP_LAYER_GROUPS, type BasemapMode } from '@/map/mapStyle'
+import { MAP_LAYER_GROUPS } from '@/map/mapStyle'
 
-/**
- * Toolbar kiri-atas peta: lokasi saya + tarik kabel + tombol taruh perangkat. Tombol
- * tulis (tarik kabel/taruh aset) hanya muncul bila pengguna punya izin terkait; tombol
- * "Lokasi saya" selalu tampil karena geolokasi bukan aksi tulis (semua peran boleh).
- */
-/**
- * Pemilih basemap: segmen kecil di dalam kartu info (kiri-bawah), dikumpulkan bersama
- * toggle heatmap & legenda karena sama-sama mengatur "apa yang ditampilkan peta".
- * Sengaja jauh dari alat-edit (kiri-atas) & panel detail (kanan-atas) agar tak
- * bertabrakan. Pakai atom `Segmented` (Fluent) yang legibel di atas kartu kaca bertema.
- */
-/**
- * Laci setelan peta (kanan). Alasan keberadaannya bukan "tempat menaruh kontrol",
- * melainkan MENGOSONGKAN peta: pemilih tema, saklar heatmap, dan legenda dulu
- * bertumpuk di kartu mengambang yang menemani operator sepanjang hari padahal
- * disentuh sekali-dua. Di laci, semuanya sejangkauan tapi tak ikut menutupi jaringan.
- *
- * Pilihan tema & legenda diingat di [localStorage] (lihat PREF_*) — preferensi mata
- * satu orang di satu perangkat, bukan data tenant.
- */
 export function MapSettingsDrawer({
-  basemap,
-  onBasemap,
   heatmap,
   onHeatmap,
   canHeatmap,
@@ -38,8 +16,6 @@ export function MapSettingsDrawer({
   can,
   onClose,
 }: {
-  basemap: BasemapMode
-  onBasemap: (mode: BasemapMode) => void
   heatmap: boolean
   onHeatmap: (on: boolean) => void
   canHeatmap: boolean
@@ -66,14 +42,6 @@ export function MapSettingsDrawer({
     <aside className="map-panel blade map-settings">
       <BladeHead title="Setelan peta" onClose={onClose} />
       <div className="blade-body stack" style={{ gap: '1.1rem' }}>
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title" style={typographyStyles.subtitle2}>Tema peta</h4>
-          <BasemapSwitcher value={basemap} onChange={onBasemap} />
-          <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
-            {BASEMAP_HINTS[basemap]}
-          </Text>
-        </section>
-
         <section className="stack" style={{ gap: '0.4rem' }}>
           <h4 className="map-settings-title" style={typographyStyles.subtitle2}>Tampilan</h4>
           {canHeatmap && (
@@ -148,17 +116,5 @@ export function MapSettingsDrawer({
         </section>
       </div>
     </aside>
-  )
-}
-
-function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (mode: BasemapMode) => void }) {
-  return (
-    <Segmented
-      className="map-basemap"
-      ariaLabel="Mode peta"
-      value={value}
-      onChange={onChange}
-      options={BASEMAP_ORDER.map((mode) => ({ value: mode, label: BASEMAPS[mode].label }))}
-    />
   )
 }

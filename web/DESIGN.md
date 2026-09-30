@@ -70,6 +70,26 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 - Production apply remains disabled whenever preview validation, capability certification, or management protection is incomplete.
 - Accepted debt: none.
 
+## Map basemap controls
+
+- `/map` keeps MapLibre and uses the existing Fluent `Segmented` control at the top
+  left beside “Lokasi saya”: Default (OpenStreetMap), Google Maps (roads), and
+  Google Earth (Google satellite imagery with road labels). The last option's
+  tooltip explains that it is a satellite view rather than Google Earth 3D.
+- Each raster provider has its own source, tile zoom limit, and attribution. Only
+  the selected basemap is visible; switching preserves the camera and network
+  overlays. Tiles use HTTPS, and external providers receive no application token.
+- The selection persists in `ftth.map.basemap`. Legacy `streets`/`dark` and unknown
+  values become Default; legacy `satellite` becomes Google Earth. The saved mode
+  is used for the initial style. Tile request errors appear beside the switcher
+  with an instruction to choose another view.
+- At mobile widths the switcher and location action form two rows, leaving room
+  for the settings button. The legend leaves room for attribution and navigation
+  controls. Controls retain Fluent focus and pressed states and
+  hide during map editing. The settings drawer contains legend, heatmap, and
+  network layer controls. Google modes use direct raster tile endpoints without
+  an API key; availability follows the providers' responses.
+
 ## 9. Warehouse transaction controls
 
 - Keep the existing flat tables, command bars, Fluent fields, `Modal`, `ConfirmDialog`,

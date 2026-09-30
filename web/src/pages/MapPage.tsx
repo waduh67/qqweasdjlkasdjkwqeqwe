@@ -60,9 +60,10 @@ import { CustomerDetailBlade } from './CustomerDetailPage'
 import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
 import {
-  BASEMAPS,
+  BASEMAP_ORDER,
+  basemapId,
+  createMapStyle,
   DASH_SEQUENCE,
-  FUTURISTIC_STYLE,
   HEATMAP_COLOR,
   INITIAL_CENTER,
   MAP_LAYER_GROUPS,
@@ -194,6 +195,8 @@ export function MapPage() {
   >(null)
   const [error, setError] = useState<string | null>(null)
   const [basemap, setBasemap] = useState<BasemapMode>(savedBasemap)
+  const activeBasemap = useRef(basemap)
+  const [failedBasemap, setFailedBasemap] = useState<BasemapMode | null>(null)
   // Laci setelan (kanan). Satu-satunya penghuni sisi kanan pada satu waktu — panel
   // info menutupnya lewat `clearPanels`, jadi keduanya tak pernah bertumpuk.
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -336,28 +339,21 @@ export function MapPage() {
     [toast],
   )
 
-  // Pindah basemap saat pengguna memilih mode lain: cukup tukar tile & opacity sumber
-  // raster 'basemap'; layer overlay (aset & kabel) tetap. Mode awal (gelap) sudah jadi
-  // default pada gaya, jadi saat mount efek ini no-op (map belum ada → early return).
-  // Gerbang pakai keberadaan sumber 'basemap' — BUKAN isStyleLoaded() — karena tepat
-  // setelah setTiles gaya sempat "belum termuat" sementara ubin menyusul; memakai
-  // once('load') pada kondisi itu akan menggantung selamanya (event 'load' hanya sekali).
+  // Pergantian tampilan tidak mengganti gaya atau sumber jaringan. `style.load` juga
+  // tersedia sebelum seluruh tile selesai, sehingga pilihan tetap bekerja saat tile gagal.
   useEffect(() => {
+    localStorage.setItem(PREF_BASEMAP, basemap)
     const m = map.current
     if (!m) return
-    const preset = BASEMAPS[basemap]
     const apply = () => {
-      const src = m.getSource('basemap') as maplibregl.RasterTileSource | undefined
-      if (!src) return
-      src.setTiles(preset.tiles)
-      m.setPaintProperty('basemap', 'raster-opacity', preset.opacity)
+      for (const mode of BASEMAP_ORDER) {
+        const id = basemapId(mode)
+        if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', mode === basemap ? 'visible' : 'none')
+      }
     }
-    if (m.getSource('basemap')) apply()
-    else m.once('load', apply)
-    localStorage.setItem(PREF_BASEMAP, basemap)
-    // `mapReady` ikut jadi pemicu, bukan hiasan: saat mount efek ini berjalan LEBIH
-    // DULU daripada efek yang membuat petanya, jadi tanpa itu pilihan basemap yang
-    // tersimpan tak pernah terpasang — peta selalu terbuka dengan gaya bawaannya.
+    if (m.getLayer(basemapId(basemap))) apply()
+    else m.once('style.load', apply)
+    return () => { m.off('style.load', apply) }
   }, [basemap, mapReady])
 
   useEffect(() => {
@@ -403,10 +399,7 @@ export function MapPage() {
       // men-zoom, peta melompat tiap kali titik dibuang. Zoom tetap lewat scroll/pinch
       // & kontrol +/−.
       doubleClickZoom: false,
-      // Peta operasi selalu gelap (gaya NOC), lepas dari tema aplikasi — basemap
-      // gelap membuat aset & kabel yang bercahaya menonjol. Carto dark cukup untuk
-      // pengembangan; untuk produksi pakai penyedia berlangganan / tile sendiri.
-      style: FUTURISTIC_STYLE,
+      style: createMapStyle(activeBasemap.current),
       // Endpoint tile ikut dilindungi RBAC, jadi tokennya harus dibawa. MapLibre
       // mengambil tile sendiri sehingga klien HTTP biasa tidak terlibat.
       transformRequest: (url) => {
@@ -414,6 +407,11 @@ export function MapPage() {
         const token = tokenStore.getAccessToken()
         return { url, headers: token ? { Authorization: `Bearer ${token}` } : {} }
       },
+    })
+    instance.on('error', (event) => {
+      if ('sourceId' in event && event.sourceId === basemapId(activeBasemap.current)) {
+        setFailedBasemap(activeBasemap.current)
+      }
     })
 
     // Kontrol zoom di kanan-bawah agar tidak tertimpa panel info yang mengambang
@@ -1585,8 +1583,6 @@ export function MapPage() {
           <div className="map-watermark" aria-hidden="true" style={{ backgroundImage: watermark }} />
         </div>
 
-        {/* Kartu pojok kiri-bawah tinggal legenda — pemilih tema, saklar heatmap, dan
-            petunjuk pindah ke laci setelan. Boleh disembunyikan sekalian dari laci. */}
         {showLegend && (
           <div className="map-info">
             {/* Legenda ikut menyusut saat lapisan disembunyikan: menjelaskan warna
@@ -1598,7 +1594,16 @@ export function MapPage() {
         {/* Toolbar kiri-atas. Tampil saat idle — termasuk state awal sebelum alat
             pernah dipakai (toolState masih null). */}
         {(!toolState || toolState.mode === 'idle') && !placeAt && !relocating && (
-          <MapToolbar onLocate={() => locateMe(true)} />
+          <MapToolbar
+            onLocate={() => locateMe(true)}
+            basemap={basemap}
+            onBasemap={(mode) => {
+              activeBasemap.current = mode
+              setFailedBasemap(null)
+              setBasemap(mode)
+            }}
+            basemapFailed={failedBasemap === basemap}
+          />
         )}
 
         {/* Tombol setelan pojok kanan-atas + lacinya. Disembunyikan selama panel info
@@ -1619,8 +1624,6 @@ export function MapPage() {
         )}
         {settingsOpen && (
           <MapSettingsDrawer
-            basemap={basemap}
-            onBasemap={setBasemap}
             heatmap={heatmap}
             onHeatmap={setHeatmap}
             canHeatmap={can('network.odp.view')}

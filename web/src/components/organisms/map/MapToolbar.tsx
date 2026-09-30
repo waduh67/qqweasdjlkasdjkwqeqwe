@@ -1,17 +1,34 @@
-import { Button } from '@/components/atoms'
+import { Button, Segmented } from '@/components/atoms'
 import { IconCrosshair } from '@/components/atoms/icons'
+import { BASEMAPS, BASEMAP_HINTS, BASEMAP_ORDER, type BasemapMode } from '@/map/mapStyle'
 
-/**
- * Toolbar kiri-atas. Tinggal satu tombol: menambah perangkat kini lewat menu klik
- * kanan / tahan-lama di titik yang dituju, sehingga peta tak lagi dipenuhi tombol
- * yang semuanya berakhir dengan "sekarang klik lokasinya".
- */
-export function MapToolbar({ onLocate }: { onLocate: () => void }) {
+export function MapToolbar({ onLocate, basemap, onBasemap, basemapFailed }: {
+  onLocate: () => void
+  basemap: BasemapMode
+  onBasemap: (mode: BasemapMode) => void
+  basemapFailed: boolean
+}) {
   return (
     <div className="map-toolbar">
-      <Button variant="subtle" onClick={onLocate}>
-        <IconCrosshair size={15} /> Lokasi saya
-      </Button>
+      <div className="map-toolbar-controls">
+        <Segmented
+          className="map-basemap"
+          ariaLabel="Tampilan peta"
+          value={basemap}
+          onChange={onBasemap}
+          options={BASEMAP_ORDER.map((mode) => ({
+            value: mode, label: BASEMAPS[mode].label, title: BASEMAP_HINTS[mode],
+          }))}
+        />
+        <Button variant="subtle" onClick={onLocate}>
+          <IconCrosshair size={15} /> Lokasi saya
+        </Button>
+      </div>
+      {basemapFailed && (
+        <p className="map-basemap-error" role="alert">
+          {BASEMAPS[basemap].label} gagal dimuat. Coba pilih tampilan lain.
+        </p>
+      )}
     </div>
   )
 }
