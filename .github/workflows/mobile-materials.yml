@@ -1,18 +1,26 @@
 name: mobile-materials
 
 on:
-  push:
-    branches: [feat/warehouse-workorder]
+  pull_request:
+    branches: [main]
     paths:
       - 'mobile/**'
       - 'build-logic/**'
       - 'gradle/**'
       - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle.properties'
+      - 'gradlew*'
       - '.github/workflows/mobile-materials.yml'
+  workflow_dispatch:
   workflow_call:
 
 permissions:
   contents: read
+
+concurrency:
+  group: mobile-materials-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   ios-compile:

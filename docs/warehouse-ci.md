@@ -1,15 +1,29 @@
 # Warehouse CI and private evidence
 
-The `warehouse` workflow runs on `feat/warehouse-workorder` and `work/warehouse-*`
-pushes, pull requests to `main`, and manual requests. The deployment workflow calls it as a required dependency before
-publishing application images. Server tests include the historical projection
+The `ci` workflow runs lint, all web unit tests with two workers, the production web
+build, and offline `contract`, `snmp`, and `collector` tests for application pull
+requests to `main`. New pushes cancel superseded PR checks. Documentation-only
+pull requests do not trigger these jobs. The deployment workflow calls the same
+checks on every `main` push and separately requires `image-verification` before
+publishing application images. Production deployments remain serialized.
+
+The full `warehouse` workflow runs only on manual requests from the Actions tab.
+It is no longer a prerequisite for routine PRs or deployment. Its server tests
+include the historical projection
 upgrade, seven additional historical upgrades through the complete current migration
 chain, and the complete current suite. Historical application versions are pinned.
 Browser jobs execute every warehouse spec on desktop and mobile with real PostgreSQL
 and object storage. The legacy browser lane also runs read-only SQL preflight after
 its real V172 upgrade, with two positive and six wrong-version/unit/cutover probes. Web checks, shared
 KMP tests, native iOS compilation, and smoke tests of the actual Docker images
-also have to succeed.
+also have to succeed in that manual run. The `mobile-materials` workflow also runs
+on PRs that change mobile sources or their Gradle configuration, and can be run
+manually; web-only changes do not trigger iOS compilation.
+
+The reusable `image-verification` workflow contains the same image builds, smoke
+checks, and tested-image artifacts used by both deployment and manual warehouse
+QA. Historical migrations, the nine warehouse browser jobs, shared KMP tests, and
+iOS compilation are excluded from the automatic production release prerequisites.
 
 The server job compiles current server tests before running historical applications
 and checks the repaired compatibility fixtures before its unfiltered regression.
