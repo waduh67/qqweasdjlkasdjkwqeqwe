@@ -1,3 +1,6 @@
+import { Plus, RefreshCw } from 'lucide-react'
+import { CommandBar } from '@/components/molecules/CommandBar'
+import { DataTable } from '@/components/organisms/DataTable'
 import { useId } from 'react'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { Disclosure } from '@/components/molecules/Disclosure'
@@ -26,11 +29,11 @@ import { MigrationStockPreview, MigrationSourceDetails } from './WarehouseProven
 
 export function WarehouseProvenanceCase({ id, summary, onClose, onRefresh }: { id: string; summary: MigrationSummary; onClose: () => void; onRefresh: () => void }) {
   const result = useWarehouseQuery(useCallback(async () => getMigrationCase(id), [id]))
-  return <div className="stack"><Button onClick={onClose}>Kembali ke daftar kasus</Button><WarehouseState {...result}>{source => <>
+  return <ResourceForm readOnly title="Pemeriksaan catatan lama" onClose={onClose} onBack={() => {}}><div className="warehouse-record"><WarehouseState {...result}>{source => <>
     <section className="card stack"><h2>{migrationCaseLabel(source)}</h2><MigrationSourceDetails source={source} /></section>
     {summary.batch ? <CaseReview key={source.id} source={source} batch={summary.batch.id} epoch={summary.cutover.epoch}
-      validating={summary.cutover.state === 'VALIDATING'} onRefresh={onRefresh} /> : <p className="card">Mulai pemeriksaan tenant untuk mengunggah bukti dan menyimpan keputusan pada kasus ini.</p>}
-  </>}</WarehouseState></div>
+      validating={summary.cutover.state === 'VALIDATING'} onRefresh={onRefresh} /> : <p className="card">Mulai pemeriksaan gudang untuk menambahkan bukti dan mencatat keputusan.</p>}
+  </>}</WarehouseState></div></ResourceForm>
 }
 function CaseReview({ source, batch, epoch, validating, onRefresh }: { source: MigrationCase; batch: string; epoch: number; validating: boolean; onRefresh: () => void }) {
   const loader = useCallback(async () => {
@@ -66,24 +69,26 @@ function CaseEvidence({ source, batch, epoch, editable, latest, onSaved, onRefre
     finally { if (mounted.current) setDownloading(null) }
   }
   return <><section className="card stack" aria-label="Bukti pemeriksaan kasus"><h3>Bukti pemeriksaan</h3>
-    <p>Gunakan dokumen atau foto asli yang membuktikan identitas, kuantitas, satuan, dan kepemilikan kasus ini.</p>
-    <div className="row wrap"><Button onClick={files.reload}>Muat ulang bukti</Button>{editable && <Button onClick={() => setUpload(!upload)}>{upload ? 'Tutup formulir unggah' : 'Tambah bukti'}</Button>}</div>
+    <p className="warehouse-workspace-note">Pilih bukti untuk keputusan pemeriksaan. Maksimal 10 dokumen.</p>
+    <CommandBar primary={editable ? { key: 'upload', label: 'Tambah bukti', icon: <Plus size={16} />, onClick: () => setUpload(true) } : undefined}
+      actions={[{ key: 'refresh', label: 'Segarkan bukti', icon: <RefreshCw size={16} />, onClick: files.reload }]} />
     {editable && upload && <EvidenceUpload onClose={() => setUpload(false)} source={source} batch={batch} epoch={epoch} onSaved={() => { setUpload(false); setPage(0); files.reload() }} onRefresh={onRefresh} />}
     <WarehouseState {...files}>{data => <>
       {data.items.length === 0 && <p>Belum ada bukti pada halaman ini. Unggah bukti asli sebelum menyimpan keputusan.</p>}
-      <ul className="stack">{data.items.map(file => <li key={file.id} className="stack">
-        {editable ? <Checkbox label={file.label} checked={selected.some(row => row.id === file.id)}
+      <DataTable presentation="warehouse" rows={data.items} rowKey={file => file.id} columns={[
+        ...(editable ? [{ key: 'select', header: 'Pilih', cell: (file: MigrationEvidence) => <Checkbox aria-label={file.label} checked={selected.some(row => row.id === file.id)}
           disabled={selected.length >= 10 && !selected.some(row => row.id === file.id)}
-          onChange={(_, change) => setSelected(rows => change.checked ? [...rows.filter(row => row.id !== file.id), file] : rows.filter(row => row.id !== file.id))} />
-          : <strong>{file.label}</strong>}
-        <p className="muted"><WarehouseTime value={file.createdAt} /> · {file.contentType === 'application/pdf' ? 'PDF' : 'Gambar'} · {Math.ceil(file.sizeBytes / 1024)} KB</p>
-        <Button disabled={downloading !== null} onClick={() => void download(file)}>{downloading === file.id ? 'Memeriksa bukti…' : 'Unduh ' + file.label}</Button>
-      </li>)}</ul>
+          onChange={(_, change) => setSelected(rows => change.checked ? [...rows.filter(row => row.id !== file.id), file] : rows.filter(row => row.id !== file.id))} /> }] : []),
+        { key: 'name', header: 'Bukti', cell: file => file.label, onCellClick: file => { if (!downloading) void download(file) } },
+        { key: 'type', header: 'Format', cell: file => file.contentType === 'application/pdf' ? 'PDF' : 'Gambar' },
+        { key: 'size', header: 'Ukuran', cell: file => Math.ceil(file.sizeBytes / 1024) + ' KB', align: 'right' },
+        { key: 'created', header: 'Diunggah', cell: file => <WarehouseTime value={file.createdAt} /> },
+      ]} />
+      {downloading && <p role="status">Mengunduh bukti…</p>}
       <WarehousePagination page={data.page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>
     {error !== null && <p className="error" role="alert">{warehouseError(error)}</p>}
-    {editable && !!selected.length && <div className="stack"><p>{selected.length} dari maksimal 10 bukti dipilih, termasuk pilihan pada halaman lain.</p>
-      <ul>{selected.map(file => <li key={file.id}>{file.label} <Button variant="subtle" onClick={() => setSelected(rows => rows.filter(row => row.id !== file.id))}>Lepas pilihan {file.label}</Button></li>)}</ul></div>}
+    {editable && !!selected.length && <Disclosure title={<>{selected.length} bukti dipilih</>}><ul>{selected.map(file => <li key={file.id}>{file.label} <Button variant="subtle" onClick={() => setSelected(rows => rows.filter(row => row.id !== file.id))}>Lepas pilihan {file.label}</Button></li>)}</ul></Disclosure>}
   </section>
     {editable && <ResolutionForm source={source} batch={batch} epoch={epoch} latest={latest} files={selected} onSaved={onSaved} onRefresh={onRefresh} />}
   </>
@@ -108,11 +113,13 @@ function EvidenceUpload({ onClose, source, batch, epoch, onSaved, onRefresh }: {
     
   </form></ResourceForm>
 }
-function ResolutionForm({ source, batch, epoch, latest, files, onSaved, onRefresh }: { source: MigrationCase; batch: string; epoch: number;
-  latest: MigrationResolution | null; files: MigrationEvidence[]; onSaved: () => void; onRefresh: () => void;
-}) {
-  const formId = useId()
+type ResolutionProps = { source: MigrationCase; batch: string; epoch: number; latest: MigrationResolution | null; files: MigrationEvidence[]; onSaved: () => void; onRefresh: () => void }
+function ResolutionForm(props: ResolutionProps) {
   const [open, setOpen] = useState(false)
+  return open ? <ResolutionEditor {...props} onClose={() => setOpen(false)} /> : <Button variant="primary" disabled={!props.files.length} onClick={() => setOpen(true)}>Catat keputusan pemeriksaan</Button>
+}
+function ResolutionEditor({ source, batch, epoch, latest, files, onSaved, onRefresh, onClose }: ResolutionProps & { onClose: () => void }) {
+  const formId = useId()
   const { can } = useCan(), pending = migrationPending(source)
   const [kind, setKind] = useState<MigrationResolutionInput['kind']>(pending ? 'CANCEL_PENDING' : 'PROVENANCE_ONLY')
   const [reason, setReason] = useState(''), [sku, setSku] = useState<WarehouseSku | null>(null), [unit, setUnit] = useState(''), [owned, setOwned] = useState(false)
@@ -129,13 +136,12 @@ function ResolutionForm({ source, batch, epoch, latest, files, onSaved, onRefres
       kind, reason, evidenceIds: files.map(file => file.id), stock: kind === 'BASELINE_STOCK' && sku ? { skuId: sku.id, sourceUnit: unit as 'EA' | 'MM' | 'M', legalOwner: 'ISP' } : null,
       duplicateCaseId: kind === 'DUPLICATE' ? duplicate?.id ?? null : null }))
   }
-  if (!open) return <Button disabled={!files.length} onClick={() => setOpen(true)}>Catat keputusan pemeriksaan</Button>
-  return <ResourceForm title="Simpan keputusan pemeriksaan" onClose={() => setOpen(false)} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan keputusan pemeriksaan" command={operation} confirmLabel="Simpan keputusan"
+  return <ResourceForm title="Simpan keputusan pemeriksaan" onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan keputusan pemeriksaan" command={operation} confirmLabel="Simpan keputusan"
       summary={<div className="stack"><p>{resolutionLabels[kind]} untuk {migrationCaseLabel(source)}.</p><p>{reason}</p>
         {kind === 'BASELINE_STOCK' && <MigrationStockPreview source={source} unit={unit} />}
         {kind === 'DUPLICATE' && duplicate && <p>Kasus asli: {migrationCaseLabel(duplicate)}</p>}
         <p>Bukti: {files.map(file => file.label).join(', ')}</p></div>}
-      onClose={() => setOperation(null)} onDone={onSaved} onReload={onRefresh} />} footer={<><Button onClick={() => setOpen(false)}>Batal</Button><Button form={formId} type="submit" variant="primary" disabled={!valid}>Tinjau keputusan</Button></>}><form id={formId} className="stack" onSubmit={submit} aria-label="Keputusan pemeriksaan"><h3>{latest ? 'Tambahkan keputusan pemeriksaan' : 'Catat keputusan pemeriksaan'}</h3>
+      onClose={() => setOperation(null)} onDone={() => { onClose(); onSaved() }} onReload={onRefresh} />} footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary" disabled={!valid}>Tinjau keputusan</Button></>}><form id={formId} className="stack" onSubmit={submit} aria-label="Keputusan pemeriksaan"><h3>{latest ? 'Tambahkan keputusan pemeriksaan' : 'Catat keputusan pemeriksaan'}</h3>
     <p>Saldo awal memerlukan persetujuan terpisah.</p>
     {latest && <p>Keputusan terbaru: {resolutionLabels[latest.kind]} · Revisi {latest.revision}. Keputusan sebelumnya tetap tersimpan.</p>}
     <SelectField label="Hasil pemeriksaan" value={kind} onChange={(_, data) => setKind(data.value as MigrationResolutionInput['kind'])}>

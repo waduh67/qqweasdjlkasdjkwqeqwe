@@ -11,7 +11,7 @@ export const WAREHOUSE_PAGES = [
   { path: 'counts', icon: ClipboardCheck, label: 'Stock Opname', permissions: ['inventory.count.view'] },
   { path: 'approvals', icon: BadgeCheck, label: 'Persetujuan Gudang', permissions: ['inventory.approval.view'] },
   { path: 'reports', icon: ChartNoAxesCombined, label: 'Laporan Gudang', permissions: ['inventory.report.view'] },
-  { path: 'provenance', icon: History, label: 'Rekonsiliasi Data Lama', permissions: ['inventory.provenance.manage'] },
+  { path: 'provenance', icon: History, label: 'Rekonsiliasi Gudang Lama', permissions: ['inventory.provenance.manage'] },
   { path: 'settings', icon: Settings2, label: 'Setelan Gudang', permissions: ['inventory.approval.view', 'inventory.approval.manage', 'inventory.provenance.view', 'inventory.location.manage'] },
 ] as const
 export const WAREHOUSE_VIEW_PERMISSIONS: readonly string[] = [...new Set(WAREHOUSE_PAGES.flatMap(page => [...page.permissions]))]
