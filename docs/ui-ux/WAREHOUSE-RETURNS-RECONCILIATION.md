@@ -22,8 +22,28 @@ Use compact Fluent commands, immediate supported filters, plain single-line tabl
 
 ## Recovery / validation
 
-Current progress: implementation complete; build, frontend regression and Firefox visual/workflow verification in progress. Separate read-only source audit found and verified fixes for list invalidation and discarded-command retention; no remaining P1/P2 in that scope.
+Status: deployed and verified. Separate read-only source audit found and verified fixes for list invalidation, discarded-command retention, and activation of the retained parent through its still-mounted Fluent hook. No remaining P1/P2 in the reviewed scope.
 
 Runtime artifacts: `.omo/runtime/returns-reconciliation-20261001/`. Browser spec: `web/e2e/warehouse-workspaces.spec.ts`. Local Firefox configuration is in `web/node_modules/.cache/warehouse-workspaces.config.mjs` (preview port 14190).
 
-Before release, complete frontend tests/build/lint, inspect the non-empty desktop/mobile screenshots, then record exact results and deployed commit here. Do not restore the full warehouse deploy suite removed intentionally in main PR #45, or overwrite the map basemap switcher from PR #44.
+Validation:
+
+- Full frontend regression: **775 tests / 140 files passed**.
+- TypeScript/Vite production build and lint passed; existing repository lint warnings and large-chunk advisory remain.
+- Firefox: **8 desktop/mobile workflows passed**, including retained filters, exact reception and intake payloads, nested case/opening forms, independent discard, and three-layer focus/draft regression.
+- Runtime image: every static file matched the tested build manifest; all served successfully over HTTP.
+- Guarded release helper: **9 tests passed**.
+- Production Firefox: return tabs, intake close/filter retention, reconciliation, and viewport bounds passed at 1910px and 390px, with zero page/API errors and zero business writes. Non-empty workflows were exercised against controlled fixtures locally.
+
+Release:
+
+- Source commit: `4351430b1f0bbbceeb00b4c2867f871244c36d87`.
+- Web image: `sha256:43f544782d2dbcc382d1cddae7e5110fce1bbc1951893647f6949449664a60c8`.
+- Remote release: `/opt/ftth/setup-private/ui-20261001-returns-4351430b`.
+- Exact static manifest/public index and health verified. All **14 non-web containers unchanged**.
+- Deployment used the existing guarded SSH frontend-release path. Main's previous Actions deployment failed while uploading release files through Cloudflare Access; this UI correction does not change that deployment configuration.
+- Rollback, only when intended: `sudo python3 /opt/ftth/setup-private/ui-20261001-returns-4351430b/deploy-web.py rollback /opt/ftth/setup-private/ui-20261001-returns-4351430b`.
+
+Recovery archive and receipt are retained in the runtime directory and private remote release. They include a verified Git bundle, documentation, screenshots, validation logs, deployment proof and rollback helper; no credentials are included. The exact checkpoint/archive digest is recorded in `recovery-backup.json`.
+
+Keep the full warehouse deploy suite removal from main PR #45 and the map basemap switcher from PR #44.
