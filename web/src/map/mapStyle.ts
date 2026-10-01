@@ -14,11 +14,14 @@ import type { RasterLayerSpecification, SourceSpecification, StyleSpecification 
 /** Pusat awal: Bekasi, sekadar titik berangkat sebelum data pertama masuk. */
 export const INITIAL_CENTER: [number, number] = [106.995, -6.243]
 
-export type BasemapMode = 'default' | 'google-maps' | 'google-earth'
+export type BasemapMode = 'google-maps' | 'google-earth'
 
 function googleTiles(layer: 'm' | 'y'): string[] {
+  const style = layer === 'm'
+    ? '&apistyle=' + encodeURIComponent('s.t:2|s.e:all|p.v:off,s.t:4|s.e:all|p.v:off')
+    : ''
   return [0, 1, 2, 3].map((host) =>
-    `https://mt${host}.google.com/vt/lyrs=${layer}&x={x}&y={y}&z={z}`,
+    `https://mt${host}.google.com/vt?lyrs=${layer}&x={x}&y={y}&z={z}${style}`,
   )
 }
 
@@ -28,12 +31,6 @@ export const BASEMAPS: Record<BasemapMode, {
   attribution: string
   maxzoom: number
 }> = {
-  default: {
-    label: 'Default',
-    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">Kontributor OpenStreetMap</a>',
-    maxzoom: 19,
-  },
   'google-maps': {
     label: 'Google Maps',
     tiles: googleTiles('m'),
@@ -48,13 +45,12 @@ export const BASEMAPS: Record<BasemapMode, {
   },
 }
 
-export const BASEMAP_ORDER: BasemapMode[] = ['default', 'google-maps', 'google-earth']
+export const BASEMAP_ORDER: BasemapMode[] = ['google-maps', 'google-earth']
 export const BASEMAP_HINTS: Record<BasemapMode, string> = {
-  default: 'Peta jalan OpenStreetMap.',
-  'google-maps': 'Peta jalan dan alamat Google Maps.',
+  'google-maps': 'Peta jalan Google Maps tanpa penanda tempat umum.',
   'google-earth': 'Citra satelit Google dengan label jalan; bukan aplikasi Google Earth 3D.',
 }
-const DEFAULT_BASEMAP: BasemapMode = 'default'
+const DEFAULT_BASEMAP: BasemapMode = 'google-maps'
 
 export function basemapId(mode: BasemapMode): string {
   return `basemap-${mode}`
@@ -81,7 +77,6 @@ export function savedBasemap(): BasemapMode {
   switch (saved) {
     case 'google-maps':
     case 'google-earth':
-    case 'default':
       return saved
     case 'satellite':
       return 'google-earth'

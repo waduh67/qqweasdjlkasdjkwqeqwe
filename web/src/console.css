@@ -37,6 +37,14 @@
 .topbar .fui-Button { min-height: 36px; }
 .stat-label { font-size: 13px; text-transform: none; letter-spacing: 0; line-height: 20px; }
 .stat-value { font-variant-numeric: tabular-nums; }
+.tenant-dashboard { width: 100%; gap: 24px; }
+.dashboard-sections { gap: 16px; }
+.dashboard-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 8px 16px; }
+.dashboard-quick-link { display: flex; align-items: center; gap: 12px; padding: 12px; min-width: 0; color: var(--text); border-radius: var(--radius-sm); }
+.dashboard-quick-link:hover { background: var(--surface-hover); text-decoration: none; }
+.dashboard-quick-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.dashboard-quick-link-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.tenant-dashboard :is(.form-note, .load-error) { border-left: 1px solid var(--border); }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
 .section-heading h2 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
 .section-heading p { margin: 4px 0 0; color: var(--muted); line-height: 21px; }

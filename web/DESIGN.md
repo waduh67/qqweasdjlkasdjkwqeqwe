@@ -31,6 +31,9 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - Labels remain programmatically associated with controls, errors retain drafts, saves disable repeated submission, and closing a dirty resource form requires confirmation.
 - Platform ACS distinguishes application API connectivity from ONT Inform connectivity. Passwords are write-only; an empty replacement preserves the saved password. No new visual tokens or accepted accessibility debt.
 
+### Tenant dashboard and map
+- The tenant dashboard fills the workspace. Recent alarms and daily actions occupy separate full-width rows so an empty alarm panel stays compact. Daily actions reflow into columns, with each title above its description.
+
 ## 5. Components
 
 ### Card
@@ -80,14 +83,14 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 ## Map basemap controls
 
 - `/map` keeps MapLibre and uses the existing Fluent `Segmented` control at the top
-  left beside “Lokasi saya”: Default (OpenStreetMap), Google Maps (roads), and
+  left beside “Lokasi saya”: Google Maps (roads, the default view) and
   Google Earth (Google satellite imagery with road labels). The last option's
   tooltip explains that it is a satellite view rather than Google Earth 3D.
 - Each raster provider has its own source, tile zoom limit, and attribution. Only
   the selected basemap is visible; switching preserves the camera and network
   overlays. Tiles use HTTPS, and external providers receive no application token.
 - The selection persists in `ftth.map.basemap`. Legacy `streets`/`dark` and unknown
-  values become Default; legacy `satellite` becomes Google Earth. The saved mode
+  values, including retired `default`, become Google Maps; legacy `satellite` becomes Google Earth. The saved mode
   is used for the initial style. Tile request errors appear beside the switcher
   with an instruction to choose another view.
 - At mobile widths the switcher and location action form two rows, leaving room
@@ -95,7 +98,8 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   controls. Controls retain Fluent focus and pressed states and
   hide during map editing. The settings drawer contains legend, heatmap, and
   network layer controls. Google modes use direct raster tile endpoints without
-  an API key; availability follows the providers' responses.
+  an API key; availability follows the providers' responses. The road view hides
+  points of interest and transit markers while keeping street labels visible.
 
 ## 9. Warehouse transaction controls
 
