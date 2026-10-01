@@ -43,7 +43,8 @@ def verify(path, exercise_controls=False):
     for olt in olts:
         if not olt["code"].startswith("OLT-LAB-"):
             continue
-        result = request("POST", f"/api/monitoring/olts/{olt['id']}/poll")
+        result = await_value(lambda: request("POST", f"/api/monitoring/olts/{olt['id']}/poll"),
+                             lambda value: value["reachable"], "SNMP " + olt["code"])
         inventory = request("GET", f"/api/monitoring/olts/{olt['id']}/onus")
         if not result["reachable"] or len(inventory["onus"]) != 16:
             raise RuntimeError("Unexpected SNMP result for " + olt["code"])
@@ -70,9 +71,10 @@ def verify(path, exercise_controls=False):
     print("PASS: TR-069 device linked to the demo customer", flush=True)
     if exercise_controls:
         request("POST", root + "/reset-login")
-        changed = await_value(lambda: request("GET", root + "/session"),
-            lambda value: value["online"] and value["startedAt"] != session["startedAt"], "DAE reconnect")
-        report["resetLogin"] = {"before": session["startedAt"], "after": changed["startedAt"]}
+        await_value(lambda: request("GET", root + "/session"), lambda value: not value["online"], "DAE disconnect")
+        changed = await_value(lambda: request("GET", root + "/session"), lambda value: value["online"], "DAE reconnect")
+        report["resetLogin"] = {"observedOffline": True, "reconnected": True,
+                                "uptimeBefore": session["uptimeSeconds"], "uptimeAfter": changed["uptimeSeconds"]}
         print("PASS: Reset Login closed and reconnected the virtual NAS session", flush=True)
         reboot = request("POST", f"/api/cpe/devices/{cpe['id']}/reboot")
         if reboot["status"] != "SUCCESS":
