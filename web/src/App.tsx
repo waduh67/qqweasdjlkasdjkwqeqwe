@@ -56,6 +56,7 @@ import { PaymentGatewaySettingsPage } from './pages/PaymentGatewaySettingsPage'
 import { TaxSettingsPage } from './pages/TaxSettingsPage'
 import { PlatformBillingSettingsPage } from './pages/PlatformBillingSettingsPage'
 import { PlatformEmailSettingsPage } from './pages/PlatformEmailSettingsPage'
+import { PlatformAcsSettingsPage } from './pages/PlatformAcsSettingsPage'
 import { PaymentSimulationPage } from './pages/PaymentSimulationPage'
 import { SubscriptionPage } from './pages/SubscriptionPage'
 import { ReportsPage } from './pages/ReportsPage'
@@ -506,6 +507,7 @@ function OperatorApp() {
                 </RequirePermission>
               }
             />
+            <Route path="acs" element={<RequirePermission permission="platform.acs.view"><PlatformAcsSettingsPage /></RequirePermission>} />
             <Route
               path="jobs"
               element={

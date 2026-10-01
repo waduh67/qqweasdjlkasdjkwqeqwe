@@ -251,7 +251,9 @@ services:
       # CPE/TR-069: server memerintah GenieACS lewat NBI internal. SENGAJA tanpa
       # `depends_on` — sinkronisasi CPE tahan ACS mati (sekadar WARN sebaris tiap
       # ronde), jadi tak ada gunanya menyandera startup server pada Mongo.
-      FTTH_CPE_GENIEACS_BASE_URL: http://genieacs-nbi:7557
+      FTTH_CPE_GENIEACS_BASE_URL: ${FTTH_CPE_GENIEACS_BASE_URL:-http://genieacs-nbi:7557}
+      FTTH_CPE_GENIEACS_USERNAME: ${FTTH_CPE_GENIEACS_USERNAME:-}
+      FTTH_CPE_GENIEACS_PASSWORD: ${FTTH_CPE_GENIEACS_PASSWORD:-}
       FTTH_CPE_SYNC_INTERVAL: ${FTTH_CPE_SYNC_INTERVAL:-PT5M}
       FTTH_CPE_ONLINE_STALE_AFTER: ${FTTH_CPE_ONLINE_STALE_AFTER:-PT15M}
       # Alamat CWMP yang DIKETIK KE ONT, dirakit aplikasi jadi `http://<host>:<port>/`.

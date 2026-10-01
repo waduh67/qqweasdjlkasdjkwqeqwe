@@ -1,0 +1,12 @@
+services:
+  genieacs-mongo:
+    profiles: [local-acs]
+  genieacs-cwmp:
+    profiles: [local-acs]
+  genieacs-nbi:
+    profiles: [local-acs]
+  genieacs-fs:
+    profiles: [local-acs]
+  server:
+    environment:
+      FTTH_CPE_GENIEACS_BASE_URL: ${FTTH_CPE_GENIEACS_BASE_URL:?set remote NBI URL}
