@@ -20,26 +20,29 @@ services:
   # extension postgis/timescaledb. Superuser 'postgres' hanya untuk memasang extension;
   # app konek sebagai 'ftth' (NOSUPERUSER, NOBYPASSRLS) → RLS beneran menegakkan isolasi.
   postgres:
-    image: timescale/timescaledb-ha:pg17
+    image: timescale/timescaledb-ha:pg17@sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      FTTH_DB_USER: ftth
+      FTTH_DB_USER: warehouse_app
       FTTH_DB_PASSWORD: ftth
       FTTH_DB_NAME: ftth
+      FTTH_DB_OWNER_USER: warehouse_owner
+      FTTH_DB_OWNER_PASSWORD: warehouse_owner
     volumes:
       - pgdata:/home/postgres/pgdata/data
       - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
       interval: 5s
       timeout: 3s
       retries: 20
 
   # --- Object storage bukti pengerjaan work order (internal) ---
   minio:
-    image: minio/minio
+    image: ftth-minio:lab
+    build: ./deploy/minio-warehouse-test
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -64,8 +67,11 @@ services:
         condition: service_healthy
     environment:
       FTTH_DB_URL: jdbc:postgresql://postgres:5432/ftth
-      FTTH_DB_USER: ftth
+      FTTH_DB_USER: warehouse_app
       FTTH_DB_PASSWORD: ftth
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/ftth
+      SPRING_FLYWAY_USER: warehouse_owner
+      SPRING_FLYWAY_PASSWORD: warehouse_owner
       FTTH_S3_ENDPOINT: http://minio:9000
       FTTH_S3_ACCESS_KEY: ftth
       FTTH_S3_SECRET_KEY: ftthminio

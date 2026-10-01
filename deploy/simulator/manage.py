@@ -2,11 +2,13 @@
 """Install and operate the isolated hosted simulator; never target the production project."""
 import argparse
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
 import secrets
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -15,7 +17,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 SECRET_KEYS = (
-    "POSTGRES_PASSWORD", "DB_PASSWORD", "RADIUS_PASSWORD", "S3_ACCESS_KEY", "S3_SECRET_KEY",
+    "POSTGRES_PASSWORD", "DB_PASSWORD", "DB_OWNER_PASSWORD", "RADIUS_PASSWORD", "S3_ACCESS_KEY", "S3_SECRET_KEY",
     "JWT_SECRET", "ENCRYPTION_SECRET", "WEBHOOK_SECRET", "PLATFORM_PASSWORD",
     "ADMIN_PASSWORD", "DAE_SECRET", "SNMP_COMMUNITY",
 )
@@ -114,6 +116,26 @@ def seed(base, values, compose, env):
         subprocess.run([sys.executable, str(ROOT / "docker/lab" / script)], env=seed_env, check=True)
 
 
+def backup(destination, credentials, compose, env):
+    destination.mkdir(mode=0o700, parents=True, exist_ok=False)
+    shutil.copyfile(credentials, destination / "simulator.env")
+    (destination / "simulator.env").chmod(0o600)
+    snapshots = {
+        "ftth.dump": ["exec", "-T", "postgres", "pg_dump", "-U", "postgres", "-d", "ftth", "-Fc"],
+        "radius.dump": ["exec", "-T", "radius-db", "pg_dump", "-U", "radius", "-d", "radius", "-Fc"],
+        "genieacs.archive.gz": ["exec", "-T", "genieacs-mongo", "mongodump", "--quiet", "--db", "genieacs", "--archive", "--gzip"],
+        "minio.tar.gz": ["run", "--rm", "-T", "--no-deps", "--entrypoint", "tar", "minio", "-czf", "-", "-C", "/data", "."],
+    }
+    for name, command in snapshots.items():
+        with (destination / name).open("xb") as stream:
+            subprocess.run(compose + command, env=env, stdout=stream, check=True)
+        print(f"Saved {name}", flush=True)
+    state = subprocess.run(compose + ["ps", "--format", "json"], env=env, capture_output=True, text=True, check=True)
+    (destination / "containers.jsonl").write_text(state.stdout)
+    (destination / "complete.json").write_text(json.dumps({"project": "ftth-sim", "files": list(snapshots)}))
+    print(f"Private simulator backup complete: {destination}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env.simulator")
@@ -128,6 +150,8 @@ def main():
     commands.add_parser("status")
     commands.add_parser("logs")
     commands.add_parser("stop", help="Stop only this project; volumes are retained")
+    archive = commands.add_parser("backup", help="Save private per-service snapshots and credentials")
+    archive.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     path = args.env_file.resolve()
     if args.command == "init":
@@ -162,6 +186,8 @@ def main():
         run("logs", "--tail=80")
     elif args.command == "stop":
         run("stop")
+    elif args.command == "backup":
+        backup(args.output.resolve(), path, compose, env)
 
 
 if __name__ == "__main__":

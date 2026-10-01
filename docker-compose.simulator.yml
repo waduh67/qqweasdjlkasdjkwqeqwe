@@ -12,9 +12,13 @@ services:
   postgres:
     <<: *runtime
     extends: {file: docker-compose.lab.yml, service: postgres}
+    image: timescale/timescaledb-ha:pg17@sha256:3e3440ab4c2aa585e743b1d8466cda9bbf18b6c598ec7806cf61e02fa5cd1d1a
     environment:
       POSTGRES_PASSWORD: ${FTTH_SIM_POSTGRES_PASSWORD:?Initialize simulator credentials}
       FTTH_DB_PASSWORD: ${FTTH_SIM_DB_PASSWORD:?Initialize simulator credentials}
+      FTTH_DB_OWNER_PASSWORD: ${FTTH_SIM_DB_OWNER_PASSWORD:?Initialize simulator credentials}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
     mem_limit: 1g
 
   radius-db:
@@ -22,6 +26,8 @@ services:
     extends: {file: docker-compose.lab.yml, service: radius-db}
     environment:
       POSTGRES_PASSWORD: ${FTTH_SIM_RADIUS_PASSWORD:?Initialize simulator credentials}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U radius"]
     # Hosted demo starts empty; no legacy sessions/users from the local lab fixture.
     volumes: !override
       - radius_db:/var/lib/postgresql/data
@@ -31,6 +37,10 @@ services:
   minio:
     <<: *runtime
     extends: {file: docker-compose.lab.yml, service: minio}
+    image: ftth-minio:simulator
+    # The former vendor registry no longer serves the public binary. Reuse the
+    # checksum-pinned upstream source build already used by integration tests.
+    build: ./deploy/minio-warehouse-test
     environment:
       MINIO_ROOT_USER: ${FTTH_SIM_S3_ACCESS_KEY:?Initialize simulator credentials}
       MINIO_ROOT_PASSWORD: ${FTTH_SIM_S3_SECRET_KEY:?Initialize simulator credentials}
@@ -46,6 +56,7 @@ services:
       FTTH_PLATFORM_ADMIN_EMAIL: ${FTTH_SIM_PLATFORM_EMAIL:?Initialize simulator credentials}
       FTTH_PLATFORM_ADMIN_PASSWORD: ${FTTH_SIM_PLATFORM_PASSWORD:?Initialize simulator credentials}
       FTTH_DB_PASSWORD: ${FTTH_SIM_DB_PASSWORD:?Initialize simulator credentials}
+      SPRING_FLYWAY_PASSWORD: ${FTTH_SIM_DB_OWNER_PASSWORD:?Initialize simulator credentials}
       FTTH_RADIUS_DB_PASSWORD: ${FTTH_SIM_RADIUS_PASSWORD:?Initialize simulator credentials}
       FTTH_S3_ACCESS_KEY: ${FTTH_SIM_S3_ACCESS_KEY:?Initialize simulator credentials}
       FTTH_S3_SECRET_KEY: ${FTTH_SIM_S3_SECRET_KEY:?Initialize simulator credentials}

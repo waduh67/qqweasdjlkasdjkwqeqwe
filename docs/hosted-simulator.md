@@ -64,13 +64,14 @@ python3 deploy/simulator/manage.py status
 python3 deploy/simulator/manage.py logs
 python3 deploy/simulator/manage.py stop
 python3 deploy/simulator/manage.py up
+python3 deploy/simulator/manage.py backup --output /private/backups/simulator-20261001
 ```
 
 `stop` retains data. Containers restart automatically after a host reboot. Seed
 commands reuse resources by their natural keys and can be repeated. Never use the
 local lab's `make lab-down` to manage this hosted instance.
 
-Back up project `ftth-sim` separately: PostgreSQL database `ftth`, RADIUS database
+The backup command saves private, per-service snapshots of PostgreSQL database `ftth`, RADIUS database
 `radius`, GenieACS Mongo database `genieacs`, MinIO data, plus the private env file.
 The encryption secret is required to recover stored credentials. Preserve the Git
 commit and container image IDs with each deployment. Restore into a fresh simulator
