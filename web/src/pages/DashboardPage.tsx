@@ -51,7 +51,7 @@ export function DashboardPage() {
   const greeting = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam'
 
   return (
-    <div className="stack" style={{ gap: '1.5rem' }}>
+    <div className="stack tenant-dashboard">
       <PageHeader
         title="Dashboard operasional"
         subtitle={<>{greeting}, {user?.name?.split(' ')[0]}. Berikut kondisi layanan {user?.tenantSlug}.</>}
@@ -83,9 +83,9 @@ export function DashboardPage() {
         {counts.customers != null && <Stat label="Pelanggan" value={counts.customers} />}
       </div>
 
-      <div className="row wrap" style={{ alignItems: 'stretch', gap: '1rem' }}>
+      <div className="stack dashboard-sections">
         {monitoring && (
-          <div className="card pad-0 grow" style={{ minWidth: 320 }}>
+          <div className="card pad-0">
             <div className="card-head">
               <Text as="h3" weight="semibold">Alarm terbaru</Text>
               <Link to="/monitoring">
@@ -128,9 +128,9 @@ export function DashboardPage() {
           </div>
         )}
 
-        <div className="card grow" style={{ minWidth: 260 }}>
+        <div className="card">
           <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Pekerjaan sehari-hari</Text>
-          <div className="stack" style={{ gap: '0.5rem' }}>
+          <div className="dashboard-actions">
             <QuickLink to="/my-work-orders" icon={IconWorkOrder} label="Tugas Saya" hint="Jadwal dan pekerjaan lapangan" show={can('workorder.order.field')} />
             <QuickLink to="/warehouse" icon={IconInventory} label="Gudang" hint="Stok, penerimaan, dan pengeluaran barang" show={can('inventory.item.view')} />
             <QuickLink to="/map" icon={IconMap} label="Peta jaringan" hint="Lihat ODP & pelanggan di peta" show={can('gis.map.view')} />
@@ -181,13 +181,12 @@ function QuickLink({
   return (
     <Link
       to={to}
-      className="row"
-      style={{ gap: '0.7rem', padding: '0.55rem 0.6rem', borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
+      className="dashboard-quick-link"
     >
       <span className="avatar" aria-hidden style={{ borderRadius: 8 }}>
         <Icon size={17} />
       </span>
-      <span>
+      <span className="dashboard-quick-link-text">
         <Text as="span" weight="semibold" size={300} >{label}</Text>
         <Text as="span" className="muted" size={200} >
           {hint}
