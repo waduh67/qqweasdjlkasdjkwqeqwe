@@ -82,6 +82,15 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ## Map basemap controls
 
+- All `LocationPicker` forms, including inventory, customers and `/express-psb`,
+  share the same Google basemap presets and Fluent selection control as `/map`.
+  The picker places the switcher above its canvas, below address search, with
+  responsive wrapping and the existing spacing tokens. It loads only raster
+  basemaps and its location pin, without network tile requests or API key setup.
+  Switching preserves the camera, pin and draft coordinates; the shared
+  `ftth.map.basemap` preference applies when either surface opens. Tile errors
+  keep the alternative view selectable, and manual coordinates/search remain
+  usable when WebGL is unavailable.
 - `/map` keeps MapLibre and uses the existing Fluent `Segmented` control at the top
   left beside “Lokasi saya”: Google Maps (roads, the default view) and
   Google Earth (Google satellite imagery with road labels). The last option's

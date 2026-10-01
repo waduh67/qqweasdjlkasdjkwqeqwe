@@ -55,6 +55,7 @@ export function Segmented<T extends string | number>({
         return (
           <ToggleButton
             key={String(o.value)}
+            type="button"
             size="small"
             appearance="subtle"
             checked={active}

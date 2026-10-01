@@ -1,6 +1,7 @@
-import { Button, Segmented } from '@/components/atoms'
+import { Button } from '@/components/atoms'
 import { IconCrosshair } from '@/components/atoms/icons'
-import { BASEMAPS, BASEMAP_HINTS, BASEMAP_ORDER, type BasemapMode } from '@/map/mapStyle'
+import type { BasemapMode } from '@/map/basemaps'
+import { BasemapPicker } from './BasemapPicker'
 
 export function MapToolbar({ onLocate, basemap, onBasemap, basemapFailed }: {
   onLocate: () => void
@@ -11,24 +12,11 @@ export function MapToolbar({ onLocate, basemap, onBasemap, basemapFailed }: {
   return (
     <div className="map-toolbar">
       <div className="map-toolbar-controls">
-        <Segmented
-          className="map-basemap"
-          ariaLabel="Tampilan peta"
-          value={basemap}
-          onChange={onBasemap}
-          options={BASEMAP_ORDER.map((mode) => ({
-            value: mode, label: BASEMAPS[mode].label, title: BASEMAP_HINTS[mode],
-          }))}
-        />
+        <BasemapPicker basemap={basemap} onBasemap={onBasemap} basemapFailed={basemapFailed} />
         <Button variant="subtle" onClick={onLocate}>
           <IconCrosshair size={15} /> Lokasi saya
         </Button>
       </div>
-      {basemapFailed && (
-        <p className="map-basemap-error" role="alert">
-          {BASEMAPS[basemap].label} gagal dimuat. Coba pilih tampilan lain.
-        </p>
-      )}
     </div>
   )
 }

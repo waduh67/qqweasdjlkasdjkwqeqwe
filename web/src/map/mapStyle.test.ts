@@ -1,7 +1,27 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { BASEMAPS, createMapStyle, PREF_BASEMAP, savedBasemap } from './mapStyle'
+import { createBasemapStyle } from './basemaps'
 
 afterEach(() => localStorage.removeItem(PREF_BASEMAP))
+
+it.each(['google-maps', 'google-earth'] as const)('uses the same %s tiles in location forms without loading network data or an API key', mode => {
+  const picker = createBasemapStyle(mode)
+  const network = createMapStyle(mode)
+  expect(Object.keys(picker.sources).sort()).toEqual(['basemap-google-earth', 'basemap-google-maps'])
+  expect(picker.layers.every(layer => layer.type === 'raster')).toBe(true)
+  expect(picker.layers).toEqual(network.layers.filter(layer => layer.type === 'raster'))
+  for (const [id, source] of Object.entries(picker.sources)) {
+    expect(source).toEqual(network.sources[id])
+    expect(source.type).toBe('raster')
+    if (source.type !== 'raster') throw new Error('Unexpected non-raster source')
+    for (const tile of source.tiles ?? []) {
+      const url = new URL(tile)
+      expect(url.protocol).toBe('https:')
+      expect(url.hostname).toMatch(/^mt[0-3]\.google\.com$/)
+      expect(url.searchParams.has('key')).toBe(false)
+    }
+  }
+})
 
 describe('saved basemap', () => {
   it.each([

@@ -4,6 +4,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { LocationPickerProps } from './LocationPicker'
 import { IconClose, IconSearch } from '@/components/atoms/icons'
 import { Button, Spinner, TextField } from '@/components/atoms'
+import { BASEMAP_ORDER, INITIAL_CENTER, PREF_BASEMAP, basemapId, createBasemapStyle, savedBasemap, type BasemapMode } from '@/map/basemaps'
+import { BasemapPicker } from './map/BasemapPicker'
 
 /**
  * Isi berat pemilih lokasi: peta MapLibre + geocoder Nominatim. Dipisah dari
@@ -16,28 +18,6 @@ import { Button, Spinner, TextField } from '@/components/atoms'
  * `onAddress` opsional diisi saat sebuah hasil pencarian dipilih, agar kolom
  * alamat form ikut terisi.
  */
-
-/** Basemap terang (Carto Voyager) — jalan & label alamat terbaca jelas saat menaruh pin. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PICKER_STYLE: any = {
-  version: 8,
-  sources: {
-    basemap: {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '&copy; Kontributor OpenStreetMap &copy; CARTO',
-    },
-  },
-  layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
-}
-
-/** Pusat awal bila belum ada koordinat: Bekasi — sekadar titik berangkat. */
-const INITIAL_CENTER: [number, number] = [106.995, -6.243]
 
 /** Bentuk hasil Nominatim yang kita pakai (subset). */
 interface NominatimResult {
@@ -94,6 +74,9 @@ export default function LocationPickerMap({
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState(false)
   const [mapUnavailable, setMapUnavailable] = useState(false)
+  const [basemap, setBasemap] = useState<BasemapMode>(savedBasemap)
+  const activeBasemap = useRef(basemap)
+  const [failedBasemap, setFailedBasemap] = useState<BasemapMode | null>(null)
 
   // Inisialisasi peta sekali. Klik di mana pun menaruh/menggeser titik.
   useEffect(() => {
@@ -106,7 +89,7 @@ export default function LocationPickerMap({
     try {
       map = new maplibregl.Map({
         container: containerRef.current,
-        style: PICKER_STYLE,
+        style: createBasemapStyle(activeBasemap.current),
         center: hasCoords ? [lng, lat] : INITIAL_CENTER,
         zoom: hasCoords ? 16 : 12,
         attributionControl: { compact: true },
@@ -118,6 +101,11 @@ export default function LocationPickerMap({
       return
     }
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    map.on('error', (event) => {
+      if ('sourceId' in event && event.sourceId === basemapId(activeBasemap.current)) {
+        setFailedBasemap(activeBasemap.current)
+      }
+    })
     map.on('click', (e) => onChangeRef.current(fmt(e.lngLat.lng), fmt(e.lngLat.lat)))
     mapRef.current = map
 
@@ -135,6 +123,21 @@ export default function LocationPickerMap({
     // Sengaja hanya sekali: pusat/zoom awal dibaca dari koordinat saat mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem(PREF_BASEMAP, basemap)
+    const map = mapRef.current
+    if (!map) return
+    const apply = () => {
+      for (const option of BASEMAP_ORDER) {
+        const id = basemapId(option)
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', option === basemap ? 'visible' : 'none')
+      }
+    }
+    if (map.getLayer(basemapId(basemap))) apply()
+    else map.once('style.load', apply)
+    return () => { map.off('style.load', apply) }
+  }, [basemap])
 
   // Sinkronkan pin dengan koordinat terkendali. Pin muncul saat koordinat valid,
   // bisa diseret, dan hilang saat koordinat dikosongkan. Tidak me-recenter di
@@ -234,6 +237,15 @@ export default function LocationPickerMap({
         )}
       </div>
 
+      {!mapUnavailable && <BasemapPicker
+        basemap={basemap}
+        onBasemap={(mode) => {
+          activeBasemap.current = mode
+          setFailedBasemap(null)
+          setBasemap(mode)
+        }}
+        basemapFailed={failedBasemap === basemap}
+      />}
       <div ref={containerRef} className="lp-map" style={{ height }} hidden={mapUnavailable} />
       {mapUnavailable && (
         <p role="status" className="muted lp-hint">Peta tidak tersedia. Cari alamat atau isi koordinat di bawah; form tetap bisa disimpan.</p>
