@@ -1,4 +1,3 @@
-import { clickRowAction } from '@/test/rowAction'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -98,7 +97,7 @@ it('selects original evidence and explicit units without allowing a client-suppl
   await selectControl(screen.getByRole('combobox', { name: 'Hasil pemeriksaan' }), { target: { value: 'BASELINE_STOCK' } })
   fireEvent.click(screen.getByRole('combobox', { name: 'SKU saldo awal' }));
   await screen.findByRole('option', { name: 'Kabel drop lama · DROP' })
-  await selectControl(screen.getByRole('combobox', { name: 'SKU saldo awal' }), { target: { value: id.sku } })
+  await selectControl(await screen.findByRole('combobox', { name: 'SKU saldo awal' }), { target: { value: id.sku } })
   await selectControl(screen.getByRole('combobox', { name: 'Satuan pada bukti asli' }), { target: { value: 'MM' } })
   fireEvent.click(screen.getByRole('checkbox', { name: 'Bukti menunjukkan stok ini milik ISP' }))
   fireEvent.change(screen.getByLabelText(/Alasan dan rujukan bukti/), { target: { value: 'Panjang\u0085belum diperiksa' } })
@@ -115,7 +114,7 @@ it('selects original evidence and explicit units without allowing a client-suppl
 })
 it('rediscovers a saved opening and links its frozen document to independent approval', async () => {
   const fetch = transport(); show('/warehouse/provenance?view=opening')
-  await clickRowAction('Buka OPEN-LEGACY')
+  fireEvent.click(await screen.findByRole('button', { name: 'OPEN-LEGACY' }))
   const link = await screen.findByRole('link', { name: 'Buka persetujuan saldo awal' })
   expect(link.getAttribute('href')).toBe('/warehouse/approvals?sourceDocumentId=' + id.document)
   expect(screen.getByText(/Nilai pembelian dan biaya asal tidak diketahui/)).toBeTruthy()
@@ -132,6 +131,7 @@ it('requires an explicit reviewed zero and actual review location before creatin
   })
   show('/warehouse/provenance?view=opening')
   fireEvent.click(await screen.findByRole('button', { name: 'Tinjau hasil pemeriksaan' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Susun saldo awal' }))
   fireEvent.click(await screen.findByRole('combobox', { name: 'Lokasi pemeriksaan saldo awal' }));
   await screen.findByRole('option', { name: 'Gudang lama · WH' })
   await selectControl(screen.getByRole('combobox', { name: 'Lokasi pemeriksaan saldo awal' }), { target: { value: id.source } })

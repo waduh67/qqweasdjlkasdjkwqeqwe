@@ -7,6 +7,7 @@ import { ChevronLeft16Regular, ChevronRight12Regular } from '@fluentui/react-ico
 
 let modalSequence = 0
 const activeModals = new Set<number>()
+const modalSurfaces = new Map<number, { surface: HTMLDivElement; activate: () => void }>()
 
 const ResourceAncestors = createContext<ReactNode[]>([])
 
@@ -25,10 +26,16 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
   // launcher before the surface moves focus; restore before disposal and after commit.
   const [launcher] = useState(() => returnFocus === undefined ? document.activeElement instanceof HTMLElement ? document.activeElement : null : returnFocus)
   const [modalId] = useState(() => ++modalSequence)
-  useLayoutEffect(() => { activeModals.add(modalId); return () => { activeModals.delete(modalId) } }, [modalId])
-  const requestClose = () => { if (modalId === Math.max(...activeModals)) onClose() }
   const surface = useRef<HTMLDivElement>(null)
   const activateModal = useActivateModal()
+  useLayoutEffect(() => {
+    activeModals.add(modalId)
+    if (surface.current) modalSurfaces.set(modalId, { surface: surface.current, activate: () => {
+      if (surface.current?.isConnected && modalId === Math.max(...activeModals)) activateModal(surface.current)
+    } })
+    return () => { activeModals.delete(modalId); modalSurfaces.delete(modalId) }
+  }, [modalId, activateModal])
+  const requestClose = () => { if (modalId === Math.max(...activeModals)) onClose() }
   const ancestors = useContext(ResourceAncestors)
   const [pageTitle] = useState(() => document.querySelector('main h1')?.textContent ?? '')
   const trail = useMemo(() => [...ancestors, title], [ancestors, title])
@@ -64,6 +71,16 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
         if (previousTabIndex === null) target.removeAttribute('tabindex')
         else target.setAttribute('tabindex', previousTabIndex)
         return document.activeElement === target
+      }
+      // A successful command may remove its launcher while the parent detail
+      // stays mounted. Restore that surviving layer before falling back to the page.
+      const parentId = Math.max(...[...activeModals].filter(id => id !== modalId))
+      const parent = modalSurfaces.get(parentId)
+      if (parent?.surface.isConnected) {
+        // Use the mounted parent's hook; the closing hook cancels its deferred activation.
+        parent.activate()
+        if (!(launcher && parent.surface.contains(launcher) && focus(launcher)) && !parent.surface.contains(document.activeElement)) focus(parent.surface)
+        return
       }
       if (anotherDialogHasFocus()) return
       if (launcher !== document.body && focus(launcher)) return

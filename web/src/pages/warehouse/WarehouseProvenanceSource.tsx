@@ -1,3 +1,5 @@
+import { WarehouseFacts } from '@/components/organisms/warehouse/WarehouseFacts'
+import { DataTable } from '@/components/organisms/DataTable'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import type { MigrationCase } from '@/api/warehouse/provenanceModels'
 import { WarehouseQuantity } from '@/components/organisms/warehouse/WarehouseQuantity'
@@ -10,16 +12,22 @@ export function MigrationStockPreview({ source, unit }: { source: MigrationCase;
 }
 export function MigrationSourceDetails({ source }: { source: MigrationCase }) {
   return <div className="stack" style={{ overflowWrap: 'anywhere' }}>
-    <p>{migrationSourceLabels[source.sourceTable]} · {source.location ? source.location.name || source.location.code : 'Lokasi belum tercatat atau perlu diperiksa'}</p>
-    {source.source.serial !== null && <p>Serial asli: <code style={{ whiteSpace: 'pre-wrap' }}>{source.source.serial || '(kosong)'}</code></p>}
-    {source.source.mac !== null && <p>MAC asli: <code style={{ whiteSpace: 'pre-wrap' }}>{source.source.mac || '(kosong)'}</code></p>}
-    {source.source.legacyQuantity !== null && <p>Jumlah pada catatan lama: <strong>{source.source.legacyQuantity}</strong> · {source.source.baseUnit ? 'Satuan tercatat: ' + source.source.baseUnit : 'Satuan belum terbukti'}</p>}
-    {source.customer && <p>Pelanggan: {source.customer.name || 'Nama belum tercatat'}</p>}
-    {source.workOrder && <p>Pekerjaan: {source.workOrder.code || source.workOrder.name || 'Catatan pekerjaan lama'}</p>}
+    <WarehouseFacts items={[
+      { label: 'Jenis catatan', value: migrationSourceLabels[source.sourceTable] }, { label: 'Lokasi', value: source.location?.name || source.location?.code || 'Belum terverifikasi' },
+      ...(source.source.serial !== null ? [{ label: 'Serial asli', value: <span style={{ whiteSpace: 'pre-wrap' }}>{source.source.serial || '(kosong)'}</span> }] : []),
+      ...(source.source.mac !== null ? [{ label: 'MAC asli', value: <span style={{ whiteSpace: 'pre-wrap' }}>{source.source.mac || '(kosong)'}</span> }] : []),
+      ...(source.source.legacyQuantity !== null ? [{ label: 'Jumlah lama', value: source.source.legacyQuantity }, { label: 'Satuan', value: source.source.baseUnit || 'Belum terverifikasi' }] : []),
+      ...(source.customer ? [{ label: 'Pelanggan', value: source.customer.name || 'Nama belum tercatat' }] : []),
+      ...(source.workOrder ? [{ label: 'Pekerjaan', value: source.workOrder.code || source.workOrder.name || 'Pekerjaan lama' }] : []),
+    ]} />
     <Disclosure title={<>Referensi audit kasus</>}><p>Kasus: {source.id}</p><p>Sumber: {source.sourceId}</p><p>Sidik bukti: {source.sourceHash}</p></Disclosure>
-    {!!source.claims.length && <ul className="stack">{source.claims.map((claim, index) => <li key={index}>
-      <span>{claim.identityType === 'SERIAL' ? 'Serial' : 'MAC'}: <code style={{ whiteSpace: 'pre-wrap' }}>{claim.rawValue || '(kosong)'}</code> · {claim.state ? claimLabels[claim.state] : 'Format identitas perlu diperiksa'}</span>
-      {claim.canonicalValue && <p className="muted">Identitas pembanding: {claim.canonicalValue} · {claim.candidateCount} catatan tersimpan</p>}
-    </li>)}</ul>}
+    {!!source.claims.length && <DataTable presentation="warehouse" rows={source.claims.map((claim, index) => ({ ...claim, index }))} rowKey={row => String(row.index)} columns={[
+      { key: 'type', header: 'Jenis identitas', cell: row => row.identityType === 'SERIAL' ? 'Serial' : 'MAC' },
+      { key: 'value', header: 'Nilai asli', cell: row => <span style={{ whiteSpace: 'pre' }}>{row.rawValue || '(kosong)'}</span> },
+      { key: 'state', header: 'Status', cell: row => row.state ? claimLabels[row.state] : 'Perlu diperiksa' },
+      { key: 'canonical', header: 'Identitas pembanding', cell: row => row.canonicalValue ?? '—' },
+      { key: 'count', header: 'Catatan', cell: row => row.candidateCount, align: 'right' },
+    ]} />}
+
   </div>
 }

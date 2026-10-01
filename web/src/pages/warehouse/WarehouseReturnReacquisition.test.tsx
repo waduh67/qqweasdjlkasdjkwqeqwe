@@ -52,7 +52,7 @@ async function prepare() {
   fireEvent.click(await screen.findByRole('button', { name: 'Siapkan alih kepemilikan' }))
   const form = await screen.findByRole('form', { name: 'Permintaan alih kepemilikan' })
   expect(form.textContent).toContain('Pelanggan asal'); expect(form.textContent).toContain('Teknisi pemasang')
-  fireEvent.change(screen.getByRole('textbox', { name: 'Alasan alih kepemilikan' }), { target: { value: entry.reason } })
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Alasan alih kepemilikan' }), { target: { value: entry.reason } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Referensi persetujuan alih kepemilikan' }), { target: { value: entry.titleTransferReference } })
   expect(screen.getByRole('button', { name: 'Tinjau alih kepemilikan' })).toHaveProperty('disabled', true)
   fireEvent.click(screen.getByRole('checkbox', { name: /Saya telah memeriksa bukti/ }))
