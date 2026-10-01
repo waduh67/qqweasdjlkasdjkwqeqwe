@@ -31,6 +31,10 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - Labels remain programmatically associated with controls, errors retain drafts, saves disable repeated submission, and closing a dirty resource form requires confirmation.
 - Platform ACS distinguishes application API connectivity from ONT Inform connectivity. Passwords are write-only; an empty replacement preserves the saved password. No new visual tokens or accepted accessibility debt.
 
+### Inventory resource forms
+- Field groups in resource flyouts use one complete field per row. Nested grid wrappers and narrow port/version wrappers fill the available width so the existing label and control columns stay readable.
+- Labels stack above controls in narrow flyouts. Identity, SNMP and Web Management fields retain their source order, and the existing flyout body owns scrolling above the review footer.
+
 ### Tenant dashboard and map
 - The tenant dashboard fills the workspace. Recent alarms and daily actions occupy separate full-width rows so an empty alarm panel stays compact. Daily actions reflow into columns, with each title above its description.
 

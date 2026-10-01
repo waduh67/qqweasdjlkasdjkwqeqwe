@@ -92,6 +92,8 @@
 .resource-form-content .form-section-desc { margin: 0 0 16px; }
 .resource-form-content .row:has(.app-field) { flex-direction: column; align-items: stretch; gap: 20px; }
 .resource-form-content .row:has(.app-field) > * { flex: auto !important; width: 100%; }
+.resource-form-content .form-grid:has(.app-field) { grid-template-columns: minmax(0, 1fr); }
+.resource-form-content .form-grid:has(.app-field) > * { width: 100% !important; }
 .resource-summary { max-width: 700px; margin: 0; display: grid; gap: 16px; }
 .resource-summary > div { display: grid; grid-template-columns: 250px minmax(0, 450px); gap: 0; }
 .resource-summary dt { font-weight: 400; padding-right: 20px; }
