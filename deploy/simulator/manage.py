@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install and operate the isolated hosted simulator; never target the production project."""
 import argparse
+import fcntl
 import importlib.util
 import json
 import os
@@ -92,6 +93,7 @@ def wait_ready(base, timeout=240):
 def seed(base, values, compose, env):
     wait_ready(base)
     os.environ.update(env)
+    sys.path.insert(0, str(ROOT / "docker/lab"))
     spec = importlib.util.spec_from_file_location("sim_seed", ROOT / "docker/lab/seed-lab.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -111,13 +113,17 @@ def seed(base, values, compose, env):
     if status not in (200, 201):
         raise RuntimeError(f"Simulator tenant onboarding failed (HTTP {status})")
     print("Simulator tenant ready", flush=True)
-    seed_env = {**env, "BASE": base, "COMPOSE": shlex.join(compose)}
+    seed_env = {**env, "BASE": base, "COMPOSE": shlex.join(compose),
+                "FTTH_SIM_STATE_DIR": str(Path(compose[compose.index("--env-file") + 1]).parent / "seed-state")}
     for script in ("seed-lab.py", "seed-demo-network.py"):
         subprocess.run([sys.executable, str(ROOT / "docker/lab" / script)], env=seed_env, check=True)
 
 
 def backup(destination, credentials, compose, env):
     destination.mkdir(mode=0o700, parents=True, exist_ok=False)
+    state = credentials.parent / "seed-state"
+    if state.exists():
+        shutil.copytree(state, destination / "seed-state")
     shutil.copyfile(credentials, destination / "simulator.env")
     (destination / "simulator.env").chmod(0o600)
     snapshots = {
@@ -179,7 +185,9 @@ def main():
         wait_ready(base)
         print(f"Simulator API ready; public address: https://{values['FTTH_SIM_DOMAIN']}")
     elif args.command == "seed":
-        seed(base, values, compose, env)
+        with (path.parent / "seed.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            seed(base, values, compose, env)
     elif args.command == "status":
         run("ps")
     elif args.command == "logs":

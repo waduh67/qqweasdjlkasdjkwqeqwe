@@ -26,6 +26,10 @@ RUN git clone https://github.com/zaidka/genieacs-sim.git /sim \
 RUN sed -i 's#"SERIAL_NUMBER": #"SERIAL_NUMBER": process.env["SIM_SERIAL"] || #' /sim/genieacs-sim \
     && grep -q 'process.env\["SIM_SERIAL"\]' /sim/genieacs-sim
 
+# Report after a new demo installation within the same polling interval as the app.
+RUN sed -i 's/PeriodicInformInterval,false,true,300,/PeriodicInformInterval,false,true,30,/' /sim/data_model_202BC1-BM632w-8KA8WA1151100043.csv \
+    && grep -q 'PeriodicInformInterval,false,true,30,' /sim/data_model_202BC1-BM632w-8KA8WA1151100043.csv
+
 WORKDIR /sim
 
 # Default: 1 device ke cwmp di jaringan compose. `command:` di compose bisa menimpa

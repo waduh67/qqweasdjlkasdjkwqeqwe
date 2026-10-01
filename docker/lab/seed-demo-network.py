@@ -26,6 +26,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from warehouse_seed import WarehouseSeed
 
 BASE = os.environ.get("BASE", "http://localhost:8000").rstrip("/")
 DATA = Path(__file__).with_name("demo-network.json")
@@ -128,9 +129,11 @@ def by_code(code):
 def main():
     topo = json.loads(DATA.read_text())
     api = Api(BASE)
+    warehouse = WarehouseSeed(api)
 
     say(f"Login {EMAIL} @ {BASE}")
     api.login()
+    warehouse.setup()
     info("token ok")
 
     # ---- katalog -----------------------------------------------------------
@@ -236,7 +239,7 @@ def main():
     for cust in topo["customers"]:
         code = cust["code"]
         cid, created = api.ensure(code, "/api/customers", {
-            "code": code, "name": cust["name"], "phone": cust["phone"],
+            "code": code, "areaId": warehouse.area, "name": cust["name"], "phone": cust["phone"],
             "address": cust["address"],
             "location": {"longitude": cust["location"][0], "latitude": cust["location"][1]},
         }, f"/api/customers?query={code}", by_code(code))
@@ -255,17 +258,9 @@ def main():
             continue
         api.ok("POST", f"/api/customers/subscriptions/{sub}/activate", None, f"aktivasi {code}")
 
-        onus = api.ok("GET", f"/api/customers/{cid}/onus")
-        onu = next((o for o in onus if o["serialNumber"] == cust["serial"]), None)
-        onu_id = onu["id"] if onu else api.ok(
-            "POST", f"/api/customers/{cid}/onus",
-            {"serialNumber": cust["serial"], "model": cust["model"]}, f"ONU {code}")["id"]
-        # Pemasangan ONU-lah yang menentukan "port ODP mana yang terpakai" — kabel drop
-        # cuma menggambar jalurnya. Rx dicatat saat pasang: angka inilah yang nanti
-        # dibandingkan teknisi ketika pelanggan mengeluh lambat.
-        api.ok("POST", f"/api/customers/onus/{onu_id}/attach",
-               {"odpId": node[cust["odp"]], "portNumber": cust["port"],
-                "installRxPowerDbm": cust["rx"]}, f"pasang ONU {code}")
+        onu_id = warehouse.install(cid, cust["serial"], {
+            "odpId": node[cust["odp"]], "portNumber": cust["port"], "installRxPowerDbm": cust["rx"],
+        })
         status = cust.get("onuStatus", "ONLINE")
         api.ok("PUT", f"/api/customers/onus/{onu_id}/status", {"status": status}, f"status ONU {code}")
         if status != "ONLINE":

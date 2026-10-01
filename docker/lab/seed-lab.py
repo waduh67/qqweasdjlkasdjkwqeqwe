@@ -19,6 +19,7 @@ import os
 import subprocess
 import shlex
 import uuid
+from warehouse_seed import WarehouseSeed
 import sys
 import urllib.error
 import urllib.request
@@ -124,6 +125,8 @@ def main():
     say(f"Login {EMAIL}")
     api.login()
     info("token ok")
+    warehouse = WarehouseSeed(api)
+    warehouse.setup()
 
     say("Paket 50/10 (catalog)")
     plan_payload = {
@@ -185,6 +188,7 @@ def main():
     say("Pelanggan Budi Lab")
     cust_payload = {
         "code": "LAB-001",
+        "areaId": warehouse.area,
         "name": "Budi Lab",
         "address": "Jl. Lab No.1",
         "location": {"longitude": 106.8272, "latitude": -6.1751}
@@ -213,18 +217,7 @@ def main():
     info(f"status langganan: {act_status}")
 
     say(f"ONU serial {ONU_SERIAL} (untuk tautan CPE)")
-    status, onus = api.call("GET", f"/api/customers/{cust_id}/onus")
-    onu_id = None
-    if isinstance(onus, list):
-        onu_id = next((o["id"] for o in onus if o.get("serialNumber") == ONU_SERIAL), None)
-    if not onu_id:
-        status, onu_resp = api.call("POST", f"/api/customers/{cust_id}/onus", {
-            "serialNumber": ONU_SERIAL,
-            "model": "SIM-ONT"
-        })
-        if not (200 <= status < 300) or not isinstance(onu_resp, dict) or "id" not in onu_resp:
-            die(f"buat ONU gagal (HTTP {status}) → {onu_resp}")
-        onu_id = onu_resp["id"]
+    onu_id = warehouse.install(cust_id, ONU_SERIAL)
     info(f"onuId={onu_id}  (CPE tertaut otomatis pada siklus sinkron berikutnya, ~30 dtk)")
 
     say(f"BRAS → DAE {SIM_IP}:3799")

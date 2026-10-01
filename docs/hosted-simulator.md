@@ -10,6 +10,7 @@ and the application header identifies it as `simulator`.
 | BRAS | Virtual NAS creates RADIUS accounting sessions and traffic; supports UDP Disconnect/CoA responses |
 | ONT | One TR-069 device reports to GenieACS; linked to Budi Lab by serial number |
 | Topology | POP Tebet, 3 ODC, 10 ODP, 50 customers and street-following fiber routes |
+| Warehouse | Receipt, issue, technician acceptance and installation records for demo ONUs |
 
 This is protocol simulation, not a RouterOS VM or a physical PPPoE access network.
 CoA acknowledges the session command; generated traffic currently follows a synthetic
@@ -70,6 +71,11 @@ python3 deploy/simulator/manage.py backup --output /private/backups/simulator-20
 `stop` retains data. Containers restart automatically after a host reboot. Seed
 commands reuse resources by their natural keys and can be repeated. Never use the
 local lab's `make lab-down` to manage this hosted instance.
+
+The installer journals warehouse commands under `seed-state/` beside the private
+env file, including the original idempotency key inputs and a separate demo
+technician credential. Keep this directory for interrupted installs. The backup
+command includes it. Do not run local lab seeds concurrently against the same tenant.
 
 The backup command saves private, per-service snapshots of PostgreSQL database `ftth`, RADIUS database
 `radius`, GenieACS Mongo database `genieacs`, MinIO data, plus the private env file.
