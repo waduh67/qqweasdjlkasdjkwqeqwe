@@ -58,7 +58,7 @@ class HsgqOltSnmpAgent(
         s.listen()
         dispatcher = disp
         snmp = s
-        log.info("Agen SNMP OLT mendengarkan di {}/{} community='{}'", bindAddress, port, community)
+        log.info("Agen SNMP OLT mendengarkan di {}/{}", bindAddress, port)
     }
 
     fun stop() {
@@ -78,7 +78,7 @@ class HsgqOltSnmpAgent(
             // Untuk v2c, securityName = community string. Tolak diam-diam yang tak cocok.
             val requestCommunity = String(event.securityName ?: ByteArray(0))
             if (requestCommunity != community) {
-                log.debug("Tolak request community '{}' (harusnya '{}')", requestCommunity, community)
+                log.debug("Tolak request: community tidak cocok")
                 return
             }
 

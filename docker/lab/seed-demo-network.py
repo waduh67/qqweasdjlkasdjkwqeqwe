@@ -26,13 +26,14 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from warehouse_seed import WarehouseSeed
 
 BASE = os.environ.get("BASE", "http://localhost:8000").rstrip("/")
 DATA = Path(__file__).with_name("demo-network.json")
 
-TENANT = "demo"
-EMAIL = "admin@demo.ftth"
-PASSWORD = "admin12345"
+TENANT = os.environ.get("FTTH_SIM_TENANT", "demo")
+EMAIL = os.environ.get("FTTH_SIM_ADMIN_EMAIL", "admin@demo.ftth")
+PASSWORD = os.environ.get("FTTH_SIM_ADMIN_PASSWORD", "admin12345")
 
 # BRAS lab (dibuat seed-lab.sh). Ada → akun PPPoE tiap pelanggan ikut dibuat dan
 # virtual-NAS simulator akan mendial-kan sesinya; tak ada → bagian akses dilewati
@@ -128,9 +129,11 @@ def by_code(code):
 def main():
     topo = json.loads(DATA.read_text())
     api = Api(BASE)
+    warehouse = WarehouseSeed(api)
 
     say(f"Login {EMAIL} @ {BASE}")
     api.login()
+    warehouse.setup()
     info("token ok")
 
     # ---- katalog -----------------------------------------------------------
@@ -177,7 +180,7 @@ def main():
         # Kabinet berisi satu modul 1:4 — pola paling lazim: 1:4 di kabinet + 1:8 di
         # kotak = 1:32 per PON, masih di dalam anggaran redaman GPON B+.
         node[odc["code"]] = api.ensure("ODC", "/api/odcs", {
-            "code": odc["code"], "name": odc["name"], "address": odc["address"],
+            "code": odc["code"], "areaId": warehouse.area, "name": odc["name"], "address": odc["address"],
             "location": {"longitude": odc["location"][0], "latitude": odc["location"][1]},
             "ponPortId": pon[odc["ponPort"]], "splitterRatio": "1:4", "capacity": 8,
         }, f"/api/odcs?query={odc['code']}", by_code(odc["code"]))[0]
@@ -186,14 +189,14 @@ def main():
         # Haspel kabel panjangnya terbatas (±2 km); di titik habisnya serat disambung
         # di dalam closure. Karena itu joint box duduk di TENGAH satu feeder, bukan di ujung.
         node[jb["code"]] = api.ensure("Joint box", "/api/joint-boxes", {
-            "code": jb["code"], "name": jb["name"], "address": jb["address"],
+            "code": jb["code"], "areaId": warehouse.area, "name": jb["name"], "address": jb["address"],
             "location": {"longitude": jb["location"][0], "latitude": jb["location"][1]},
             "trayCount": 2, "capacity": 24, "status": "ACTIVE",
         }, f"/api/joint-boxes?query={jb['code']}", by_code(jb["code"]))[0]
 
     for odp in topo["odps"]:
         node[odp["code"]] = api.ensure("ODP", "/api/odps", {
-            "code": odp["code"], "name": odp["name"], "address": odp["address"],
+            "code": odp["code"], "areaId": warehouse.area, "name": odp["name"], "address": odp["address"],
             "location": {"longitude": odp["location"][0], "latitude": odp["location"][1]},
             "odcId": node[odp["odc"]], "splitterRatio": "1:8", "capacity": 8,
         }, f"/api/odps?query={odp['code']}", by_code(odp["code"]))[0]
@@ -236,7 +239,7 @@ def main():
     for cust in topo["customers"]:
         code = cust["code"]
         cid, created = api.ensure(code, "/api/customers", {
-            "code": code, "name": cust["name"], "phone": cust["phone"],
+            "code": code, "areaId": warehouse.area, "name": cust["name"], "phone": cust["phone"],
             "address": cust["address"],
             "location": {"longitude": cust["location"][0], "latitude": cust["location"][1]},
         }, f"/api/customers?query={code}", by_code(code))
@@ -255,17 +258,9 @@ def main():
             continue
         api.ok("POST", f"/api/customers/subscriptions/{sub}/activate", None, f"aktivasi {code}")
 
-        onus = api.ok("GET", f"/api/customers/{cid}/onus")
-        onu = next((o for o in onus if o["serialNumber"] == cust["serial"]), None)
-        onu_id = onu["id"] if onu else api.ok(
-            "POST", f"/api/customers/{cid}/onus",
-            {"serialNumber": cust["serial"], "model": cust["model"]}, f"ONU {code}")["id"]
-        # Pemasangan ONU-lah yang menentukan "port ODP mana yang terpakai" — kabel drop
-        # cuma menggambar jalurnya. Rx dicatat saat pasang: angka inilah yang nanti
-        # dibandingkan teknisi ketika pelanggan mengeluh lambat.
-        api.ok("POST", f"/api/customers/onus/{onu_id}/attach",
-               {"odpId": node[cust["odp"]], "portNumber": cust["port"],
-                "installRxPowerDbm": cust["rx"]}, f"pasang ONU {code}")
+        onu_id = warehouse.install(cid, cust["serial"], {
+            "odpId": node[cust["odp"]], "portNumber": cust["port"], "installRxPowerDbm": cust["rx"],
+        })
         status = cust.get("onuStatus", "ONLINE")
         api.ok("PUT", f"/api/customers/onus/{onu_id}/status", {"status": status}, f"status ONU {code}")
         if status != "ONLINE":

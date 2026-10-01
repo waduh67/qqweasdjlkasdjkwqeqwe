@@ -1,0 +1,11 @@
+# Optional: join only the simulator HTTP gateway to the existing edge proxy.
+services:
+  caddy:
+    networks:
+      default:
+      edge:
+        aliases: [ftth-sim-gateway]
+networks:
+  edge:
+    external: true
+    name: ${FTTH_SIM_EDGE_NETWORK:?Set the existing edge proxy network}

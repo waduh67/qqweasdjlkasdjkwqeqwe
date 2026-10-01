@@ -33,6 +33,7 @@ class VirtualNasEngine(
     /** username → jangan sambungkan lagi sebelum waktu ini (diisi saat Disconnect). */
     private val holdDown = ConcurrentHashMap<String, Instant>()
 
+    @Synchronized
     fun reconcile(now: Instant) {
         dataSource.connection.use { conn ->
             val authorized = authorizedUsers(conn)
@@ -56,15 +57,17 @@ class VirtualNasEngine(
 
     // ---- NasSessionControl (dipanggil DaeResponder) ----
 
+    @Synchronized
     override fun disconnect(username: String, acctSessionId: String?): Boolean =
         dataSource.connection.use { conn ->
-            val closed = closeOpen(conn, username, acctSessionId, "Admin-Reset")
-            if (closed > 0) holdDown[username] = Instant.now().plus(props.reconnectAfter)
+            val scopedUsername = resolveSessionUsername(conn, username, acctSessionId) ?: return false
+            val closed = closeOpen(conn, scopedUsername, acctSessionId, "Admin-Reset")
+            if (closed > 0) holdDown[scopedUsername] = Instant.now().plus(props.reconnectAfter)
             closed > 0
         }
 
     override fun changeRate(username: String, acctSessionId: String?): Boolean =
-        dataSource.connection.use { conn -> hasOpenSession(conn, username) }
+        dataSource.connection.use { conn -> resolveSessionUsername(conn, username, acctSessionId) != null }
 
     // ---- Jalur baca ----
 
@@ -98,10 +101,20 @@ class VirtualNasEngine(
             }
         }
 
-    private fun hasOpenSession(conn: Connection, username: String): Boolean =
-        conn.prepareStatement(SQL_HAS_OPEN).use { st ->
-            st.setString(1, username)
-            st.executeQuery().use { it.next() }
+    /** RADIUS stores tenant:username; DAE carries the NAS-facing username and session ID.
+     * Reject ambiguous matches and never control a session belonging to another NAS. */
+    private fun resolveSessionUsername(conn: Connection, username: String, sessionId: String?): String? =
+        conn.prepareStatement(SQL_RESOLVE_SESSION).use { st ->
+            st.setString(1, props.nasIp)
+            st.setString(2, username)
+            st.setString(3, username)
+            st.setString(4, sessionId)
+            st.setString(5, sessionId)
+            st.executeQuery().use { rs ->
+                if (!rs.next()) return null
+                val scoped = rs.getString(1)
+                if (rs.next()) null else scoped
+            }
         }
 
     // ---- Jalur tulis ----
@@ -154,6 +167,7 @@ class VirtualNasEngine(
             st.setString(2, username)
             st.setString(3, acctSessionId) // null → cabang IS NULL menyapu semua sesi user
             st.setString(4, acctSessionId)
+            st.setString(5, props.nasIp)
             st.executeUpdate()
         }
 
@@ -196,8 +210,10 @@ class VirtualNasEngine(
                 "acctoutputoctets, acctoutputgigawords FROM radacct " +
                 "WHERE acctstoptime IS NULL ORDER BY acctstarttime DESC"
 
-        private const val SQL_HAS_OPEN =
-            "SELECT 1 FROM radacct WHERE acctstoptime IS NULL AND username = ? LIMIT 1"
+        private const val SQL_RESOLVE_SESSION =
+            "SELECT DISTINCT username FROM radacct WHERE acctstoptime IS NULL AND nasipaddress = ?::inet " +
+                "AND (username = ? OR substring(username from position(':' in username) + 1) = ?) " +
+                "AND (CAST(? AS text) IS NULL OR acctsessionid = ?) LIMIT 2"
 
         private const val SQL_CREATE =
             "INSERT INTO radacct (acctsessionid, acctuniqueid, username, nasipaddress, nasporttype, " +
@@ -217,6 +233,7 @@ class VirtualNasEngine(
 
         private const val SQL_CLOSE_OPEN =
             "UPDATE radacct SET acctstoptime = now(), acctterminatecause = ? " +
-                "WHERE acctstoptime IS NULL AND username = ? AND (CAST(? AS text) IS NULL OR acctsessionid = ?)"
+                "WHERE acctstoptime IS NULL AND username = ? AND (CAST(? AS text) IS NULL OR acctsessionid = ?) " +
+                "AND nasipaddress = ?::inet"
     }
 }

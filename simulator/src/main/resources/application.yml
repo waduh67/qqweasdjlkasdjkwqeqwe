@@ -22,25 +22,25 @@ ftth:
           onus-per-pon: ${FTTH_SIM_OLT_ONUS_PER_PON:8}
           mac-slot: 1
         - port: 1162
-          community: public
+          community: ${FTTH_SIM_OLT_COMMUNITY:public}
           sys-descr: HSGQ-E04I EPON OLT-2 (ftth lab)
           pon-count: 2
           onus-per-pon: 8
           mac-slot: 2
         - port: 1163
-          community: public
+          community: ${FTTH_SIM_OLT_COMMUNITY:public}
           sys-descr: HSGQ-E04I EPON OLT-3 (ftth lab)
           pon-count: 2
           onus-per-pon: 8
           mac-slot: 3
         - port: 1164
-          community: public
+          community: ${FTTH_SIM_OLT_COMMUNITY:public}
           sys-descr: HSGQ-E04I EPON OLT-4 (ftth lab)
           pon-count: 2
           onus-per-pon: 8
           mac-slot: 4
         - port: 1165
-          community: public
+          community: ${FTTH_SIM_OLT_COMMUNITY:public}
           sys-descr: HSGQ-E04I EPON OLT-5 (ftth lab)
           pon-count: 2
           onus-per-pon: 8

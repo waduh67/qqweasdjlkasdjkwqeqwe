@@ -17,6 +17,9 @@
 import json
 import os
 import subprocess
+import shlex
+import uuid
+from warehouse_seed import WarehouseSeed
 import sys
 import urllib.error
 import urllib.request
@@ -24,14 +27,15 @@ import urllib.request
 BASE = os.environ.get("BASE", "http://localhost:8000").rstrip("/")
 COMPOSE = os.environ.get("COMPOSE", "docker compose -f docker-compose.lab.yml")
 
-SIM_IP = "172.30.0.10"
+SIM_IP = os.environ.get("FTTH_SIM_IP", "172.30.0.10")
 SIM_OLT_PORTS = [1161, 1162, 1163, 1164, 1165]
-DAE_SECRET = "testing123"
+DAE_SECRET = os.environ.get("FTTH_SIM_DAE_SECRET", "testing123")
+SNMP_COMMUNITY = os.environ.get("FTTH_SIM_SNMP_COMMUNITY", "public")
 ONU_SERIAL = "C0FD84050205"
 
-TENANT = "demo"
-EMAIL = "admin@demo.ftth"
-PASSWORD = "admin12345"
+TENANT = os.environ.get("FTTH_SIM_TENANT", "demo")
+EMAIL = os.environ.get("FTTH_SIM_ADMIN_EMAIL", "admin@demo.ftth")
+PASSWORD = os.environ.get("FTTH_SIM_ADMIN_PASSWORD", "admin12345")
 
 
 def say(msg):
@@ -103,23 +107,26 @@ class Api:
 
 
 def set_reachability(nas_id):
-    cmd = f"{COMPOSE} exec -T postgres psql -U postgres -d ftth -qtAc \"UPDATE nas SET reachability='DIRECT' WHERE id='{nas_id}';\""
-    try:
-        ret = subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if ret.returncode == 0:
-            info("reachability=DIRECT (server layani DAE langsung ke simulator)")
-        else:
-            warn("gagal set reachability=DIRECT via psql — isolir/Reset Login akan tertunda PENDING.")
-    except Exception as e:
-        warn(f"gagal set reachability via psql: {e}")
+    # Only a validated identifier enters SQL; COMPOSE is argv, never shell code.
+    nas_id = str(uuid.UUID(nas_id))
+    cmd = shlex.split(COMPOSE) + [
+        "exec", "-T", "postgres", "psql", "-U", "postgres", "-d", "ftth", "-v", "ON_ERROR_STOP=1", "-qtAc",
+        f"UPDATE nas SET reachability='DIRECT' WHERE id='{nas_id}';",
+    ]
+    ret = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if ret.returncode != 0:
+        die("gagal mengaktifkan DAE langsung ke simulator; periksa akses Compose/Postgres")
+    info("reachability=DIRECT")
 
 
 def main():
     api = Api(BASE)
 
-    say("Login admin@demo.ftth")
+    say(f"Login {EMAIL}")
     api.login()
     info("token ok")
+    warehouse = WarehouseSeed(api)
+    warehouse.setup()
 
     say("Paket 50/10 (catalog)")
     plan_payload = {
@@ -164,7 +171,7 @@ def main():
             "name": name,
             "vendor": "HSGQ",
             "managementIp": SIM_IP,
-            "snmpCommunity": "public",
+            "snmpCommunity": SNMP_COMMUNITY,
             "snmpPort": port,
             "snmpEnabled": True,
             "snmpVersion": "V2C"
@@ -181,6 +188,7 @@ def main():
     say("Pelanggan Budi Lab")
     cust_payload = {
         "code": "LAB-001",
+        "areaId": warehouse.area,
         "name": "Budi Lab",
         "address": "Jl. Lab No.1",
         "location": {"longitude": 106.8272, "latitude": -6.1751}
@@ -209,21 +217,10 @@ def main():
     info(f"status langganan: {act_status}")
 
     say(f"ONU serial {ONU_SERIAL} (untuk tautan CPE)")
-    status, onus = api.call("GET", f"/api/customers/{cust_id}/onus")
-    onu_id = None
-    if isinstance(onus, list):
-        onu_id = next((o["id"] for o in onus if o.get("serialNumber") == ONU_SERIAL), None)
-    if not onu_id:
-        status, onu_resp = api.call("POST", f"/api/customers/{cust_id}/onus", {
-            "serialNumber": ONU_SERIAL,
-            "model": "SIM-ONT"
-        })
-        if not (200 <= status < 300) or not isinstance(onu_resp, dict) or "id" not in onu_resp:
-            die(f"buat ONU gagal (HTTP {status}) → {onu_resp}")
-        onu_id = onu_resp["id"]
+    onu_id = warehouse.install(cust_id, ONU_SERIAL)
     info(f"onuId={onu_id}  (CPE tertaut otomatis pada siklus sinkron berikutnya, ~30 dtk)")
 
-    say(f"BRAS → DAE {SIM_IP}:{DAE_SECRET}@3799")
+    say(f"BRAS → DAE {SIM_IP}:3799")
     bras_payload = {
         "name": "BRAS Lab (simulator)",
         "vendor": "MIKROTIK",

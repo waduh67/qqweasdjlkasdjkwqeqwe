@@ -21,7 +21,7 @@ RUN --mount=type=cache,id=gradle-simulator,target=/root/.gradle \
 FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 RUN groupadd --system ftth && useradd --system --gid ftth --home /app ftth
-COPY --from=build /workspace/simulator/build/install/simulator /app
+COPY --from=build --chown=ftth:ftth /workspace/simulator/build/install/simulator /app
 USER ftth
 # MaxRAMPercentage: hormati batas memori container, bukan seluruh RAM host.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"

@@ -11,9 +11,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Repo praktis tak berubah bertahun-tahun; master stabil. Ganti SIM_REF ke commit
-# tertentu bila mau benar-benar dikunci.
-ARG SIM_REF=master
+# Pin the upstream device implementation so rebuilds preserve protocol behavior.
+ARG SIM_REF=be391cab6d586a1e98cd65e57f7cd7ae715be791
 RUN git clone https://github.com/zaidka/genieacs-sim.git /sim \
     && cd /sim && git checkout "$SIM_REF" && npm install
 
@@ -26,6 +25,10 @@ RUN git clone https://github.com/zaidka/genieacs-sim.git /sim \
 # hanya masuk akal untuk satu device.
 RUN sed -i 's#"SERIAL_NUMBER": #"SERIAL_NUMBER": process.env["SIM_SERIAL"] || #' /sim/genieacs-sim \
     && grep -q 'process.env\["SIM_SERIAL"\]' /sim/genieacs-sim
+
+# Report after a new demo installation within the same polling interval as the app.
+RUN sed -i 's/PeriodicInformInterval,false,true,300,/PeriodicInformInterval,false,true,30,/' /sim/data_model_202BC1-BM632w-8KA8WA1151100043.csv \
+    && grep -q 'PeriodicInformInterval,false,true,30,' /sim/data_model_202BC1-BM632w-8KA8WA1151100043.csv
 
 WORKDIR /sim
 

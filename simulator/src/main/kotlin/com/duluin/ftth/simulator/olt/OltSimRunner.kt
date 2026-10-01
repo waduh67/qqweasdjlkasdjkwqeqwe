@@ -36,9 +36,9 @@ class OltSimRunner(private val props: OltSimProperties) {
             runCatching { olt.agent.start() }
                 .onSuccess {
                     log.info(
-                        "OLT simulator HSGQ aktif: {} PON × {} ONU = {} ONU (community '{}', port {}, macSlot {})",
+                        "OLT simulator HSGQ aktif: {} PON × {} ONU = {} ONU (port {}, macSlot {})",
                         olt.inst.ponCount, olt.inst.onusPerPon, olt.onuCount,
-                        olt.inst.community, olt.inst.port, olt.inst.macSlot,
+                        olt.inst.port, olt.inst.macSlot,
                     )
                 }
                 .onFailure { log.error("Gagal menyalakan agen OLT di port {}: {}", olt.inst.port, it.message) }

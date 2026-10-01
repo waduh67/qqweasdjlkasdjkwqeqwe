@@ -54,7 +54,10 @@ class IncidentCorrelationService(
     }
 
     fun correlate(): List<CorrelatedIncident> {
-        val impacts = monitoringApi.activeImpacts()
+        // Customer/session alerts are still displayed by monitoring, but have no
+        // network-incident root in the persisted incident model. Do not let a new
+        // alert entity type prevent correlation of supported network devices.
+        val impacts = monitoringApi.activeImpacts().filter { it.entityType in INCIDENT_ENTITY_TYPES }
         if (impacts.isEmpty()) return emptyList()
 
         val alarmingDeviceIds = impacts
@@ -179,6 +182,7 @@ class IncidentCorrelationService(
     }
 
     private companion object {
+        val INCIDENT_ENTITY_TYPES = com.duluin.ftth.incident.domain.model.IncidentRootType.entries.map { it.name }.toSet()
         /** Di bawah ini bukan "area": gangguan satu pelanggan tak disimpulkan sebabnya. */
         const val MIN_ONUS_FOR_CAUSE = 2
 
