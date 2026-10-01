@@ -84,12 +84,12 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
       }
       if (anotherDialogHasFocus()) return
       if (launcher !== document.body && focus(launcher)) return
-      // A surviving parent dialog may have selected a new control while saving.
+      // When both layers close together, the parent may already have restored
+      // its launcher. Do not replace that focus with the child's page fallback.
       const current = document.activeElement
-      if (current instanceof HTMLElement) {
-        const dialog = current.closest('[role="dialog"]')
-        if (dialog?.isConnected && dialog !== closingSurface) return
-      }
+      if (current instanceof HTMLElement && current !== document.body && current.isConnected
+        && !current.matches(':disabled, [data-tabster-dummy]')
+        && !closingSurface?.contains(current) && !current.closest('[hidden], [inert]')) return
       const page = document.querySelector<HTMLElement>('main, #root') ?? [...document.body.children].find(
         (node): node is HTMLElement => node instanceof HTMLElement && !node.matches('script, style, link, [data-tabster-dummy], [hidden], [inert], [data-portal-node]') && !node.contains(closingSurface),
       ) ?? null

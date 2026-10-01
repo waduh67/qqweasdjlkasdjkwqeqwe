@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { Modal } from './Modal'
+import { ConfirmDialog } from './ConfirmDialog'
 
 function Example({ disableOnClose = false }: { disableOnClose?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -13,7 +14,42 @@ function Example({ disableOnClose = false }: { disableOnClose?: boolean }) {
   </main>
 }
 
+function NestedExample() {
+  const [open, setOpen] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  return <main aria-label="Pengaturan">
+    <button onClick={() => setOpen(true)}>Tambah sumber daya</button>
+    {open && <>
+      <Modal title="Sumber daya" layout="resource" onClose={() => setConfirm(true)}>Isian belum disimpan.</Modal>
+      {confirm && <ConfirmDialog title="Buang perubahan?" message="Perubahan belum disimpan." confirmLabel="Buang perubahan"
+        onClose={() => setConfirm(false)} onConfirm={() => { setConfirm(false); setOpen(false) }} />}
+    </>}
+  </main>
+}
+
 describe('imperative Fluent dialog focus', () => {
+  it('returns to the original launcher when a confirmation closes both layers', async () => {
+    render(<NestedExample />)
+    const user = userEvent.setup()
+    const launcher = screen.getByRole('button', { name: 'Tambah sumber daya' })
+    await user.click(launcher)
+    await user.click(await screen.findByRole('button', { name: 'Tutup' }))
+    await user.click(await screen.findByRole('button', { name: 'Buang perubahan' }))
+    await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(0))
+    await waitFor(() => expect(document.activeElement).toBe(launcher))
+  })
+
+  it('returns to the surviving resource layer when its confirmation is canceled', async () => {
+    render(<NestedExample />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Tambah sumber daya' }))
+    const close = await screen.findByRole('button', { name: 'Tutup' })
+    await user.click(close)
+    await user.click(await screen.findByRole('button', { name: 'Batal' }))
+    await waitFor(() => expect(document.activeElement).toBe(close))
+    expect(screen.getByRole('dialog', { name: 'Sumber daya' })).toBeTruthy()
+  })
+
   it('returns focus to the launcher when dismissed', async () => {
     render(<Example />)
     const user = userEvent.setup()

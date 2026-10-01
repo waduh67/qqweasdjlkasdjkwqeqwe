@@ -24,6 +24,13 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - Responsive grids use `repeat(auto-fit, minmax(min(..., 100%), 1fr))` so primary content reflows without horizontal scrolling at 375px.
 - The application shell owns document scrolling. Tabs may scroll horizontally using the existing `[role='tablist']` rule.
 
+### Platform infrastructure forms
+- VPN, RADIUS, billing and ACS use the scoped `.horizontal-form` primitive: one complete field per row, a 220px label column and a flexible control column with a 20px gap.
+- Containers below 760px stack labels above controls; controls and hints wrap within the available width. Resource blades retain their existing scroll and review behavior.
+- Billing sections fill the platform workspace. Other settings pages keep their existing width.
+- Labels remain programmatically associated with controls, errors retain drafts, saves disable repeated submission, and closing a dirty resource form requires confirmation.
+- Platform ACS distinguishes application API connectivity from ONT Inform connectivity. Passwords are write-only; an empty replacement preserves the saved password. No new visual tokens or accepted accessibility debt.
+
 ## 5. Components
 
 ### Card
