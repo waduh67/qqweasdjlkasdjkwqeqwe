@@ -66,6 +66,15 @@ jobs:
             done
           fi
           REMOTE
+      - name: Pull the already verified migration rehearsal image
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+        run: |
+          set -euo pipefail
+          [[ "$GHCR_USER" =~ ^[A-Za-z0-9_-]+$ ]]
+          printf '%s\n' "$GHCR_PAT" | ssh -i ~/.ssh/ftth-deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o 'ProxyCommand=cloudflared access ssh --hostname %h' hidupjokowi@ssh67.karuhundeveloper.com "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          ssh -i ~/.ssh/ftth-deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o 'ProxyCommand=cloudflared access ssh --hostname %h' hidupjokowi@ssh67.karuhundeveloper.com 'docker pull ghcr.io/waduh67/ftth-server@sha256:a36872933f7baaa9bbe9136391468702623abe48d7db93ed8825f6168985ce4e'
       - name: Remove temporary deployment identity
         if: always()
         run: rm -f ~/.ssh/ftth-deploy
