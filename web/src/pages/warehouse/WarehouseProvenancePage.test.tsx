@@ -97,7 +97,7 @@ it('selects original evidence and explicit units without allowing a client-suppl
   await selectControl(screen.getByRole('combobox', { name: 'Hasil pemeriksaan' }), { target: { value: 'BASELINE_STOCK' } })
   fireEvent.click(screen.getByRole('combobox', { name: 'SKU saldo awal' }));
   await screen.findByRole('option', { name: 'Kabel drop lama · DROP' })
-  await selectControl(screen.getByRole('combobox', { name: 'SKU saldo awal' }), { target: { value: id.sku } })
+  await selectControl(await screen.findByRole('combobox', { name: 'SKU saldo awal' }), { target: { value: id.sku } })
   await selectControl(screen.getByRole('combobox', { name: 'Satuan pada bukti asli' }), { target: { value: 'MM' } })
   fireEvent.click(screen.getByRole('checkbox', { name: 'Bukti menunjukkan stok ini milik ISP' }))
   fireEvent.change(screen.getByLabelText(/Alasan dan rujukan bukti/), { target: { value: 'Panjang\u0085belum diperiksa' } })

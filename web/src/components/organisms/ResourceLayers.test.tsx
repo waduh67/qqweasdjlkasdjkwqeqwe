@@ -50,3 +50,28 @@ it('contains child form submission and ignores backdrop clicks without losing th
   expect(submitted).toHaveBeenCalledExactlyOnceWith(1)
   expect(screen.getByLabelText('Nama 0')).toHaveProperty('value', 'Tersimpan di induk')
 })
+
+it('restores a retained detail after saving removes the launcher, then activates the next child', async () => {
+  function SavedDetail() {
+    const [saved, setSaved] = useState(false), [child, setChild] = useState(false)
+    return <ResourceForm readOnly title="Detail dokumen" onBack={() => {}} onClose={() => {}}>
+      {!saved ? <button onClick={() => setChild(true)}>Terima dokumen</button> : <button onClick={() => setChild(true)}>Periksa dokumen</button>}
+      {child && <ResourceForm title={saved ? 'Pemeriksaan baru' : 'Penerimaan dokumen'} onBack={() => {}} onClose={() => setChild(false)}>
+        <button onClick={() => { setSaved(true); setChild(false) }}>Simpan penerimaan</button>
+      </ResourceForm>}
+    </ResourceForm>
+  }
+  const user = userEvent.setup()
+  render(<SavedDetail />)
+  await user.click(screen.getByRole('button', { name: 'Terima dokumen' }))
+  await user.click(await screen.findByRole('button', { name: 'Simpan penerimaan' }))
+  const parent = await screen.findByRole('dialog', { name: 'Detail dokumen' })
+  await waitFor(() => expect(parent.contains(document.activeElement)).toBe(true))
+  expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  await user.click(screen.getByRole('button', { name: 'Periksa dokumen' }))
+  await waitFor(() => {
+    expect(parent.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(screen.getByRole('dialog', { name: 'Pemeriksaan baru' })).toBeTruthy()
+  })
+})

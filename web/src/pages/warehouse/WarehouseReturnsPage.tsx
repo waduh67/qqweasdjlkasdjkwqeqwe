@@ -73,6 +73,8 @@ function ReturnWorkspace({ id, view }: { id: string | null; view: 'returns' | 'p
 function ReturnList({ onNew, revision }: { onNew: () => void; revision: number }) {
   const { can } = useCan()
   const [filter, setFilter] = useState<ReturnFilter>({}), [page, setPage] = useState(0)
+  // Invalidate the retained list after a command while preserving its filters and page.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loader = useCallback(() => listReturns({ ...filter, page }), [filter, page, revision]), result = useWarehouseQuery(loader)
   return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
     create={can('inventory.return.manage') ? { label: 'Terima retur baru', onClick: onNew, disabled: !can('inventory.location.view') } : undefined} />
