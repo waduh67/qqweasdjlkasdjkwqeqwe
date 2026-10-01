@@ -11,9 +11,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Repo praktis tak berubah bertahun-tahun; master stabil. Ganti SIM_REF ke commit
-# tertentu bila mau benar-benar dikunci.
-ARG SIM_REF=master
+# Pin the upstream device implementation so rebuilds preserve protocol behavior.
+ARG SIM_REF=be391cab6d586a1e98cd65e57f7cd7ae715be791
 RUN git clone https://github.com/zaidka/genieacs-sim.git /sim \
     && cd /sim && git checkout "$SIM_REF" && npm install
 

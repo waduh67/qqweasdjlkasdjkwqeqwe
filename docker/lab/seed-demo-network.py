@@ -30,9 +30,9 @@ from pathlib import Path
 BASE = os.environ.get("BASE", "http://localhost:8000").rstrip("/")
 DATA = Path(__file__).with_name("demo-network.json")
 
-TENANT = "demo"
-EMAIL = "admin@demo.ftth"
-PASSWORD = "admin12345"
+TENANT = os.environ.get("FTTH_SIM_TENANT", "demo")
+EMAIL = os.environ.get("FTTH_SIM_ADMIN_EMAIL", "admin@demo.ftth")
+PASSWORD = os.environ.get("FTTH_SIM_ADMIN_PASSWORD", "admin12345")
 
 # BRAS lab (dibuat seed-lab.sh). Ada → akun PPPoE tiap pelanggan ikut dibuat dan
 # virtual-NAS simulator akan mendial-kan sesinya; tak ada → bagian akses dilewati

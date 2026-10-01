@@ -1,0 +1,10 @@
+:80 {
+	encode zstd gzip
+	@backend path /api/* /swagger-ui* /v3/api-docs*
+	handle @backend {
+		reverse_proxy server:8080
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}

@@ -170,6 +170,7 @@ services:
       FTTH_SIM_RADIUS_DB_PASSWORD: radius
       # Secret DAE HARUS sama dengan coaSecret BRAS yang di-seed (lihat seed-lab.sh).
       FTTH_SIM_RADIUS_DAE_SECRET: testing123
+      FTTH_SIM_RADIUS_NAS_IP: 172.30.0.10
 
   # --- GenieACS (TR-069) + 1 ONT palsu — modul CPE. Ikut naik dengan lab (bukan profile). ---
   # Server terhubung ke NBI di http://genieacs-nbi:7557. ONT palsu memakai serial yang SAMA

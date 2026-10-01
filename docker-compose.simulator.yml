@@ -1,0 +1,134 @@
+# Hosted, isolated demo. Initialize with deploy/simulator/manage.py before starting.
+# The normal application image is used with production secret validation enabled.
+name: ftth-sim
+
+x-runtime: &runtime
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+
+services:
+  postgres:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: postgres}
+    environment:
+      POSTGRES_PASSWORD: ${FTTH_SIM_POSTGRES_PASSWORD:?Initialize simulator credentials}
+      FTTH_DB_PASSWORD: ${FTTH_SIM_DB_PASSWORD:?Initialize simulator credentials}
+    mem_limit: 1g
+
+  radius-db:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: radius-db}
+    environment:
+      POSTGRES_PASSWORD: ${FTTH_SIM_RADIUS_PASSWORD:?Initialize simulator credentials}
+    # Hosted demo starts empty; no legacy sessions/users from the local lab fixture.
+    volumes: !override
+      - radius_db:/var/lib/postgresql/data
+      - ./docker/radius/initdb/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    mem_limit: 256m
+
+  minio:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: minio}
+    environment:
+      MINIO_ROOT_USER: ${FTTH_SIM_S3_ACCESS_KEY:?Initialize simulator credentials}
+      MINIO_ROOT_PASSWORD: ${FTTH_SIM_S3_SECRET_KEY:?Initialize simulator credentials}
+    mem_limit: 384m
+
+  server:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: server}
+    image: ftth-server:simulator
+    environment:
+      FTTH_PRODUCTION: "true"
+      FTTH_SEED_DEMO: "false"
+      FTTH_PLATFORM_ADMIN_EMAIL: ${FTTH_SIM_PLATFORM_EMAIL:?Initialize simulator credentials}
+      FTTH_PLATFORM_ADMIN_PASSWORD: ${FTTH_SIM_PLATFORM_PASSWORD:?Initialize simulator credentials}
+      FTTH_DB_PASSWORD: ${FTTH_SIM_DB_PASSWORD:?Initialize simulator credentials}
+      FTTH_RADIUS_DB_PASSWORD: ${FTTH_SIM_RADIUS_PASSWORD:?Initialize simulator credentials}
+      FTTH_S3_ACCESS_KEY: ${FTTH_SIM_S3_ACCESS_KEY:?Initialize simulator credentials}
+      FTTH_S3_SECRET_KEY: ${FTTH_SIM_S3_SECRET_KEY:?Initialize simulator credentials}
+      FTTH_JWT_SECRET: ${FTTH_SIM_JWT_SECRET:?Initialize simulator credentials}
+      FTTH_ENCRYPTION_SECRET: ${FTTH_SIM_ENCRYPTION_SECRET:?Initialize simulator credentials}
+      FTTH_BILLING_WEBHOOK_SECRET: ${FTTH_SIM_WEBHOOK_SECRET:?Initialize simulator credentials}
+      FTTH_CORS_ORIGINS: https://${FTTH_SIM_DOMAIN:?Set simulator domain}
+      FTTH_MAIL_PUBLIC_BASE_URL: https://${FTTH_SIM_DOMAIN}
+      FTTH_SITE_ADDRESS: https://${FTTH_SIM_DOMAIN}
+      FTTH_BILLING_PLATFORM_ENABLED: "false"
+      FTTH_PROVISIONING_AUTO_APPLY_ENABLED: "false"
+    mem_limit: 3g
+    cpus: 1.5
+
+  web:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: web}
+    image: ftth-web:simulator
+    mem_limit: 128m
+
+  caddy:
+    <<: *runtime
+    image: caddy:2
+    depends_on: [server, web]
+    ports:
+      - "127.0.0.1:${FTTH_SIM_HTTP_PORT:-18080}:80"
+    volumes:
+      - ./deploy/simulator/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 128m
+
+  simulator:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: simulator}
+    image: ftth-simulator:hosted
+    environment:
+      FTTH_SIM_OLT_COMMUNITY: ${FTTH_SIM_SNMP_COMMUNITY:?Initialize simulator credentials}
+      FTTH_SIM_RADIUS_DB_PASSWORD: ${FTTH_SIM_RADIUS_PASSWORD:?Initialize simulator credentials}
+      FTTH_SIM_RADIUS_NAS_IP: 172.30.0.10
+      FTTH_SIM_RADIUS_DAE_SECRET: ${FTTH_SIM_DAE_SECRET:?Initialize simulator credentials}
+    mem_limit: 384m
+    cpus: 0.5
+
+  genieacs-mongo:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: genieacs-mongo}
+    mem_limit: 384m
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+
+  genieacs-cwmp:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: genieacs-cwmp}
+    environment:
+      GENIEACS_CWMP_WORKER_PROCESSES: "1"
+    mem_limit: 192m
+
+  genieacs-nbi:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: genieacs-nbi}
+    environment:
+      GENIEACS_NBI_WORKER_PROCESSES: "1"
+    mem_limit: 192m
+
+  genieacs-sim:
+    <<: *runtime
+    extends: {file: docker-compose.lab.yml, service: genieacs-sim}
+    mem_limit: 128m
+
+volumes:
+  pgdata:
+  radius_db:
+  miniodata:
+  genieacs_mongo:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    # No outbound route to payment providers, email, or physical network devices.
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          ip_range: 172.30.0.128/25
+          gateway: 172.30.0.1
