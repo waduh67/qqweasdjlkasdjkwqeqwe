@@ -48,6 +48,8 @@ spring:
 
 server:
   port: 8080
+  # Permission-bearing JWTs need room alongside browser and reverse proxy headers.
+  max-http-request-header-size: 32KB
   # Aplikasi selalu berada di belakang reverse proxy (Caddy di prod, Vite saat dev), jadi
   # `remoteAddr` mentah adalah IP proxy — sama untuk SEMUA orang. Rem laju per-IP yang
   # dibangun di atasnya akan salah total: satu penyerang bisa mengunci seluruh dunia, dan

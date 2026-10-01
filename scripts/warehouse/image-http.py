@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import re
 import sys
+from urllib.error import HTTPError
+from urllib.request import Request
 
 import http_support
 
@@ -28,6 +30,21 @@ def main():
         with http_support.HTTP.open(http_support.BASE + asset) as response:
             http_support.check(response.status == 200 and response.headers.get_content_type() != "text/html"
                                and len(response.read()) > 0, "Static asset route returned HTML or empty content")
+    headers = {"Content-Type": "application/json"}
+    headers.update({f"X-Header-Limit-Probe-{index}": "a" * 4000 for index in range(3)})
+    header_request = Request(http_support.BASE + "/api/auth/login", data=b'{"email":"","password":""}',
+                             headers=headers, method="POST")
+    try:
+        header_response = http_support.HTTP.open(header_request, timeout=25)
+    except HTTPError as failure:
+        header_response = failure
+    with header_response:
+        http_support.check(header_response.status == 400
+                           and header_response.headers.get_content_type() == "application/problem+json",
+                           "12 KB request headers were rejected before application validation")
+        header_problem = json.load(header_response)
+    http_support.check({"email", "password"}.issubset(header_problem.get("errors", {})),
+                       "Large-header request did not reach login validation")
     spec = importlib.util.spec_from_file_location("warehouse_wave5", Path(__file__).with_name("wave5-http.py"))
     journey = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(journey)
@@ -43,7 +60,7 @@ def main():
         raise ValueError("Unknown image smoke phase")
     proof = {"phase": phase, "staticAssets": len(assets), "persistedReplays": len(state["replays"]),
              "persistedReads": len(state["reads"]), "stockKinds": len(state["stocks"]),
-             "realHttp": True, "sqlBusinessSeeding": False}
+             "realHttp": True, "sqlBusinessSeeding": False, "largeRequestHeaders": True}
     (run / f"{phase}.json").write_text(json.dumps(proof, indent=2) + "\n")
     print("PASS: image gateway serves the real bundle and warehouse HTTP journey")
 
