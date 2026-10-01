@@ -179,15 +179,14 @@ Caddy bakal otomatis bikin sertifikat HTTPS begitu stack nyala. Pastikan
 ## Bagian F — Daftarkan GitHub Secrets (kunci buat robot CI/CD)
 
 Di GitHub: repo **ftth** → **Settings** → **Secrets and variables** → **Actions** →
-**New repository secret**. Bikin 5 secret ini:
+**New repository secret**. Bikin 4 secret ini (mini PC memakai [panduan Cloudflare](MINIPC-CLOUDFLARE.md)):
 
 | Nama secret | Isinya |
 |---|---|
 | `VPS_HOST` | IP publik VPS, mis. `20.11.22.33` |
 | `VPS_USER` | user SSH, mis. `azureuser` |
 | `VPS_SSH_KEY` | **private key** SSH buat masuk VPS (lihat di bawah) |
-| `GHCR_USER` | username GitHub kamu, mis. `fajarxfce` |
-| `GHCR_PAT` | Personal Access Token buat narik image (lihat di bawah) |
+| `VPS_KNOWN_HOSTS` | baris known_hosts dari host key VPS yang sudah diverifikasi |
 
 ### Bikin SSH key khusus buat robot deploy
 
@@ -203,11 +202,12 @@ cat ~/.ssh/ftth_deploy
 
 `VPS_SSH_KEY` = isi file `ftth_deploy` (private, termasuk baris `-----BEGIN...` s/d `-----END...`).
 
-### Bikin GHCR_PAT (biar VPS boleh narik image privat)
+### Akses registry saat deploy
 
-GitHub → foto profil → **Settings** → **Developer settings** →
-**Personal access tokens** → **Tokens (classic)** → **Generate new token (classic)** →
-centang scope **`read:packages`** → generate → salin token → jadikan isi `GHCR_PAT`.
+Workflow memakai GITHUB_TOKEN dengan izin packages:read untuk menarik image
+privat. Login registry disimpan sementara selama aktivasi lalu dihapus.
+GHCR_PAT/GHCR_USER tidak diperlukan sebagai repository secret. Untuk pull
+manual di luar Actions, gunakan PAT classic dengan scope read:packages.
 
 ---
 
