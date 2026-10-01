@@ -9,59 +9,15 @@
  * satu baris pun kode interaksi.
  */
 
-import type { RasterLayerSpecification, SourceSpecification, StyleSpecification } from 'maplibre-gl'
-
-/** Pusat awal: Bekasi, sekadar titik berangkat sebelum data pertama masuk. */
-export const INITIAL_CENTER: [number, number] = [106.995, -6.243]
-
-export type BasemapMode = 'google-maps' | 'google-earth'
-
-function googleTiles(layer: 'm' | 'y'): string[] {
-  const style = layer === 'm'
-    ? '&apistyle=' + encodeURIComponent('s.t:2|s.e:all|p.v:off,s.t:4|s.e:all|p.v:off')
-    : ''
-  return [0, 1, 2, 3].map((host) =>
-    `https://mt${host}.google.com/vt?lyrs=${layer}&x={x}&y={y}&z={z}${style}`,
-  )
-}
-
-export const BASEMAPS: Record<BasemapMode, {
-  label: string
-  tiles: string[]
-  attribution: string
-  maxzoom: number
-}> = {
-  'google-maps': {
-    label: 'Google Maps',
-    tiles: googleTiles('m'),
-    attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
-    maxzoom: 20,
-  },
-  'google-earth': {
-    label: 'Google Earth',
-    tiles: googleTiles('y'),
-    attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
-    maxzoom: 20,
-  },
-}
-
-export const BASEMAP_ORDER: BasemapMode[] = ['google-maps', 'google-earth']
-export const BASEMAP_HINTS: Record<BasemapMode, string> = {
-  'google-maps': 'Peta jalan Google Maps tanpa penanda tempat umum.',
-  'google-earth': 'Citra satelit Google dengan label jalan; bukan aplikasi Google Earth 3D.',
-}
-const DEFAULT_BASEMAP: BasemapMode = 'google-maps'
-
-export function basemapId(mode: BasemapMode): string {
-  return `basemap-${mode}`
-}
+import type { StyleSpecification } from 'maplibre-gl'
+import { createBasemapStyle, type BasemapMode } from './basemaps'
+export { INITIAL_CENTER, BASEMAPS, BASEMAP_ORDER, BASEMAP_HINTS, PREF_BASEMAP, basemapId, savedBasemap, type BasemapMode } from './basemaps'
 
 /**
  * Setelan tampilan peta diingat antar-kunjungan. Ini preferensi mata satu orang di
  * satu perangkat (tema basemap, legenda ditampilkan atau tidak) — bukan data tenant,
  * jadi rumahnya `localStorage`, bukan server. Nilai asing/rusak jatuh ke bawaan.
  */
-export const PREF_BASEMAP = 'ftth.map.basemap'
 export const PREF_LEGEND = 'ftth.map.legend'
 /**
  * Yang disimpan lapisan yang DISEMBUNYIKAN, bukan yang ditampilkan — dan itu bukan
@@ -71,19 +27,6 @@ export const PREF_LEGEND = 'ftth.map.legend'
  * sekali. Menyimpan yang disembunyikan membuat bawaannya selalu "semua tampak".
  */
 export const PREF_HIDDEN_LAYERS = 'ftth.map.hidden-layers'
-
-export function savedBasemap(): BasemapMode {
-  const saved = localStorage.getItem(PREF_BASEMAP)
-  switch (saved) {
-    case 'google-maps':
-    case 'google-earth':
-      return saved
-    case 'satellite':
-      return 'google-earth'
-    default:
-      return DEFAULT_BASEMAP
-  }
-}
 
 export function savedHiddenLayers(): Set<string> {
   try {
@@ -375,26 +318,12 @@ export const FUTURISTIC_STYLE: StyleSpecification = {
 }
 
 export function createMapStyle(mode: BasemapMode): StyleSpecification {
-  const sources: Record<string, SourceSpecification> = { ...FUTURISTIC_STYLE.sources }
-  const layers: RasterLayerSpecification[] = BASEMAP_ORDER.map((option) => {
-    const preset = BASEMAPS[option]
-    const id = basemapId(option)
-    sources[id] = {
-      type: 'raster',
-      tiles: preset.tiles,
-      tileSize: 256,
-      maxzoom: preset.maxzoom,
-      attribution: preset.attribution,
-    }
-    return {
-      id,
-      type: 'raster',
-      source: id,
-      layout: { visibility: option === mode ? 'visible' : 'none' },
-      paint: { 'raster-opacity': 1, 'raster-fade-duration': 0 },
-    }
-  })
-  return { ...FUTURISTIC_STYLE, sources, layers: [...layers, ...FUTURISTIC_STYLE.layers] }
+  const basemap = createBasemapStyle(mode)
+  return {
+    ...FUTURISTIC_STYLE,
+    sources: { ...basemap.sources, ...FUTURISTIC_STYLE.sources },
+    layers: [...basemap.layers, ...FUTURISTIC_STYLE.layers],
+  }
 }
 
 /**

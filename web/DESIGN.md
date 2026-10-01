@@ -31,6 +31,10 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - Labels remain programmatically associated with controls, errors retain drafts, saves disable repeated submission, and closing a dirty resource form requires confirmation.
 - Platform ACS distinguishes application API connectivity from ONT Inform connectivity. Passwords are write-only; an empty replacement preserves the saved password. No new visual tokens or accepted accessibility debt.
 
+### Inventory resource forms
+- Field groups in resource flyouts use one complete field per row. Nested grid wrappers and narrow port/version wrappers fill the available width so the existing label and control columns stay readable.
+- Labels stack above controls in narrow flyouts. Identity, SNMP and Web Management fields retain their source order, and the existing flyout body owns scrolling above the review footer.
+
 ### Tenant dashboard and map
 - The tenant dashboard fills the workspace. Recent alarms and daily actions occupy separate full-width rows so an empty alarm panel stays compact. Daily actions reflow into columns, with each title above its description.
 
@@ -82,6 +86,15 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ## Map basemap controls
 
+- All `LocationPicker` forms, including inventory, customers and `/express-psb`,
+  share the same Google basemap presets and Fluent selection control as `/map`.
+  The picker places the switcher above its canvas, below address search, with
+  responsive wrapping and the existing spacing tokens. It loads only raster
+  basemaps and its location pin, without network tile requests or API key setup.
+  Switching preserves the camera, pin and draft coordinates; the shared
+  `ftth.map.basemap` preference applies when either surface opens. Tile errors
+  keep the alternative view selectable, and manual coordinates/search remain
+  usable when WebGL is unavailable.
 - `/map` keeps MapLibre and uses the existing Fluent `Segmented` control at the top
   left beside “Lokasi saya”: Google Maps (roads, the default view) and
   Google Earth (Google satellite imagery with road labels). The last option's
