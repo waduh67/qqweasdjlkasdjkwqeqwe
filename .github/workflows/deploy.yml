@@ -1,81 +1,227 @@
-name: mini-pc-access-diagnostic
+name: deploy
 
+# Setiap push ke main: jalankan test -> build image server & web -> push ke
+# GHCR -> SSH ke VPS lalu `docker compose pull && up -d`.
+# Bisa juga dijalankan manual dari tab Actions (workflow_dispatch).
 on:
-  push:
-    branches: [work/minipc-cicd-20261001]
-  workflow_dispatch:
+    push:
+        branches: [main]
+    workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: read
+concurrency:
+    group: deploy-production
+    cancel-in-progress: false
+
+env:
+    IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  diagnose:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Install cloudflared
-        run: |
-          set -euo pipefail
-          curl -fsSL --retry 3 https://github.com/cloudflare/cloudflared/releases/download/2026.9.1/cloudflared-linux-amd64.deb -o cloudflared.deb
-          sudo dpkg -i cloudflared.deb
-          rm cloudflared.deb
-      - name: Configure the existing deployment identity
-        env:
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-        run: |
-          set -euo pipefail
-          umask 077
-          mkdir -p ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/ftth-deploy
-          ssh-keygen -y -f ~/.ssh/ftth-deploy >/dev/null
-          printf '%s\n' 'ssh67.karuhundeveloper.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGscS7giMxy4EY1cyeYRqHs9UXtn6aPJ7hdazpH2MNPu' > ~/.ssh/known_hosts
-      - name: Authorize the workspace key and inspect the mini PC
-        run: |
-          set -euo pipefail
-          ssh -i ~/.ssh/ftth-deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            -o ConnectTimeout=20 -o ServerAliveInterval=15 \
-            -o 'ProxyCommand=cloudflared access ssh --hostname %h' \
-            hidupjokowi@ssh67.karuhundeveloper.com 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          test "$(id -un)" = hidupjokowi
-          umask 077
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIClHE6Bxwg7PTpdFRImt03CUSo6It9ibeuzvTzr/Hl/l bayurifkialgh@gmail.com'
-          touch ~/.ssh/authorized_keys
-          if ! grep -qF "$key" ~/.ssh/authorized_keys; then
-            printf '%s\n' "$key" >> ~/.ssh/authorized_keys
-          fi
-          chmod 600 ~/.ssh/authorized_keys
-          printf 'Workspace SSH public key authorized\n'
-          id
-          uname -m
-          uptime
-          df -h /
-          free -h
-          if sudo -n true 2>/dev/null; then printf 'sudo-passwordless=yes\n'; else printf 'sudo-passwordless=no\n'; fi
-          if command -v docker >/dev/null; then
-            docker version --format '{{.Server.Version}}'
-            docker compose version
-            docker ps --format '{{.Names}} {{.Image}} {{.Status}} {{.Ports}}'
-          fi
-          if test -d /opt/ftth; then
-            ls -ld /opt/ftth /opt/ftth/releases
-            for file in .env docker-compose.prod.yml ftth-compose docker-compose.images.json docker-compose.shared-proxy.yml; do
-              if test -r "/opt/ftth/$file"; then printf '%s readable\n' "$file"; fi
-            done
-          fi
-          REMOTE
-      - name: Pull the already verified migration rehearsal image
-        env:
-          GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
-        run: |
-          set -euo pipefail
-          [[ "$GHCR_USER" =~ ^[A-Za-z0-9_-]+$ ]]
-          printf '%s\n' "$GHCR_PAT" | ssh -i ~/.ssh/ftth-deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o 'ProxyCommand=cloudflared access ssh --hostname %h' hidupjokowi@ssh67.karuhundeveloper.com "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
-          ssh -i ~/.ssh/ftth-deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o 'ProxyCommand=cloudflared access ssh --hostname %h' hidupjokowi@ssh67.karuhundeveloper.com 'docker pull ghcr.io/waduh67/ftth-server@sha256:a36872933f7baaa9bbe9136391468702623abe48d7db93ed8825f6168985ce4e'
-      - name: Remove temporary deployment identity
-        if: always()
-        run: rm -f ~/.ssh/ftth-deploy
+    verification:
+        uses: ./.github/workflows/ci.yml
+        permissions:
+            contents: read
+
+    image-verification:
+        uses: ./.github/workflows/images.yml
+        permissions:
+            contents: read
+
+    build-and-push:
+        needs: [verification, image-verification]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: docker/setup-buildx-action@v3
+
+            - name: Login ke GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: warehouse-tested-images-${{ github.sha }}
+                  path: .omo/runtime/tested-images
+
+            - name: Publish only the exact tested server and web images
+              run: |
+                  set -euo pipefail
+                  python3 scripts/warehouse/publish-images.py .omo/runtime/tested-images \
+                    --commit "$GITHUB_SHA" --prefix "$IMAGE_PREFIX"
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: warehouse-published-images-${{ github.sha }}
+                  path: .omo/runtime/tested-images/published.json
+                  if-no-files-found: error
+                  retention-days: 14
+
+            # GenieACS (ACS TR-069 untuk modul `cpe`). Isinya cuma `npm i -g
+            # genieacs@<versi pin>`, jadi tak berubah tiap commit — tetap ikut
+            # didorong supaya VPS cukup `pull` seperti image lain (tak perlu build
+            # di sana, dan versinya dikunci repo, bukan image pihak ketiga).
+            - name: Build & push ftth-genieacs
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./docker/genieacs
+                  file: docker/genieacs/Dockerfile
+                  push: true
+                  tags: |
+                      ${{ env.IMAGE_PREFIX }}/ftth-genieacs:latest
+                      ${{ env.IMAGE_PREFIX }}/ftth-genieacs:${{ github.sha }}
+                  provenance: false
+                  sbom: false
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+    # -------------------------------------------------------------------------
+    # 4) SSH ke VPS: tarik image terbaru lalu naikkan ulang stack.
+    # -------------------------------------------------------------------------
+    deploy:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: read
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: warehouse-published-images-${{ github.sha }}
+                  path: verified-release
+
+            - name: Read immutable verified registry references
+              run: |
+                  python3 - <<'PY'
+                  import hashlib, json, os, re
+                  from pathlib import Path
+                  proof = json.loads(Path('verified-release/published.json').read_text())
+                  assert proof['commit'] == os.environ['GITHUB_SHA']
+                  assert set(proof['images']) == {'server', 'web'}
+                  with open(os.environ['GITHUB_ENV'], 'a') as output:
+                      for service, image in proof['images'].items():
+                          reference = image['registryDigest']
+                          expected = re.escape(os.environ['IMAGE_PREFIX'] + '/ftth-' + service)
+                          assert re.fullmatch(expected + r'@sha256:[a-f0-9]{64}', reference)
+                          output.write('FTTH_' + service.upper() + '_IMAGE=' + reference + '\n')
+                      checksum = hashlib.sha256(Path('deploy/docker-compose.prod.yml').read_bytes()).hexdigest()
+                      output.write('FTTH_COMPOSE_SHA256=' + checksum + '\n')
+                  PY
+
+            - name: Install cloudflared
+              run: |
+                  curl -fsSL https://github.com/cloudflare/cloudflared/releases/download/2026.9.1/cloudflared-linux-amd64.deb -o cloudflared.deb
+                  sudo dpkg -i cloudflared.deb
+                  rm -f cloudflared.deb
+
+            - name: Konfigurasi SSH & Cloudflare Access
+              env:
+                  VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+                  VPS_HOST: ${{ secrets.VPS_HOST }}
+                  VPS_USER: ${{ secrets.VPS_USER }}
+                  VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+              run: |
+                  mkdir -p ~/.ssh
+                  chmod 700 ~/.ssh
+                  printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_rsa
+                  chmod 600 ~/.ssh/id_rsa
+                  test -n "$VPS_KNOWN_HOSTS"
+                  printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+                  chmod 600 ~/.ssh/known_hosts
+                  cat << 'EOF' > ~/.ssh/config
+                  Host ${{ secrets.VPS_HOST }}
+                      ProxyCommand cloudflared access ssh --hostname %h
+                      User ${{ secrets.VPS_USER }}
+                      IdentityFile ~/.ssh/id_rsa
+                      StrictHostKeyChecking yes
+                      UserKnownHostsFile ~/.ssh/known_hosts
+                  EOF
+                  chmod 600 ~/.ssh/config
+
+            - name: Upload the reviewed release files through Cloudflare Access
+              env:
+                  VPS_HOST: ${{ secrets.VPS_HOST }}
+              run: |
+                  set -euo pipefail
+                  release="/opt/ftth/releases/$GITHUB_SHA"
+                  ssh "$VPS_HOST" "mkdir -p '$release'"
+                  scp verified-release/published.json scripts/deploy/activate-verified.py scripts/deploy/activate-native.py "$VPS_HOST:$release/"
+                  scp deploy/docker-compose.prod.yml "$VPS_HOST:$release/docker-compose.prod.yml"
+                  scp deploy/Caddyfile "$VPS_HOST:$release/Caddyfile"
+                  scp -r deploy/postgres-init deploy/radius deploy/backup deploy/monitoring "$VPS_HOST:$release/"
+
+            - name: Deploy lewat SSH
+              env:
+                  VPS_HOST: ${{ secrets.VPS_HOST }}
+                  GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
+                  GHCR_USER: ${{ github.actor }}
+                  FTTH_SERVER_IMAGE: ${{ env.FTTH_SERVER_IMAGE }}
+                  FTTH_WEB_IMAGE: ${{ env.FTTH_WEB_IMAGE }}
+                  FTTH_COMPOSE_SHA256: ${{ env.FTTH_COMPOSE_SHA256 }}
+              run: |
+                  set -euo pipefail
+                  [[ "$GHCR_USER" =~ ^[A-Za-z0-9_-]+$ ]]
+                  topology="$(ssh "$VPS_HOST" 'bash -s' <<'DETECT'
+                  set -euo pipefail
+                  cd /opt/ftth
+                  test -r .env
+                  test -r docker-compose.prod.yml
+                  if [[ -e ftth-compose || -L ftth-compose ]]; then
+                    test -f ftth-compose
+                    test -x ftth-compose
+                    test -r docker-compose.images.json
+                    printf 'wrapper\n'
+                  elif [[ ! -e docker-compose.images.json && ! -e docker-compose.shared-proxy.yml ]]; then
+                    systemctl is-active --quiet nginx
+                    printf 'native\n'
+                  else
+                    echo 'Unrecognized deployment topology' >&2
+                    exit 1
+                  fi
+                  DETECT
+                  )"
+                  [[ "$topology" == wrapper || "$topology" == native ]]
+                  [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+                  auth="/opt/ftth/releases/$GITHUB_SHA/registry-auth"
+                  ssh "$VPS_HOST" "umask 077; mkdir -p '$auth'"
+                  cleanup() { ssh "$VPS_HOST" "rm -rf '$auth'"; }
+                  trap cleanup EXIT
+                  if [[ "$topology" == wrapper ]]; then
+                    printf '%s\n' "$GHCR_PAT" | ssh "$VPS_HOST" "sudo -n docker --config '$auth' login ghcr.io -u '$GHCR_USER' --password-stdin"
+                    ssh "$VPS_HOST" "sudo -n env DOCKER_CONFIG='$auth' python3 '/opt/ftth/releases/$GITHUB_SHA/activate-verified.py' '/opt/ftth/releases/$GITHUB_SHA' '$GITHUB_SHA'"
+                    exit 0
+                  fi
+                  printf '%s\n' "$GHCR_PAT" | ssh "$VPS_HOST" "docker --config '$auth' login ghcr.io -u '$GHCR_USER' --password-stdin"
+                  # Only validated commit/digest values enter the remote shell command.
+                  [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+                  [[ "$FTTH_SERVER_IMAGE" =~ ^ghcr.io/[a-z0-9_-]+/ftth-server@sha256:[a-f0-9]{64}$ ]]
+                  [[ "$FTTH_WEB_IMAGE" =~ ^ghcr.io/[a-z0-9_-]+/ftth-web@sha256:[a-f0-9]{64}$ ]]
+                  [[ "$FTTH_COMPOSE_SHA256" =~ ^[a-f0-9]{64}$ ]]
+                  ssh "$VPS_HOST" "IMAGE_TAG='$GITHUB_SHA' FTTH_SERVER_IMAGE='$FTTH_SERVER_IMAGE' FTTH_WEB_IMAGE='$FTTH_WEB_IMAGE' FTTH_COMPOSE_SHA256='$FTTH_COMPOSE_SHA256' DOCKER_AUTH='$auth' bash -s" <<'EOF'
+                  set -euo pipefail
+                  cd /opt/ftth
+                  export DOCKER_HOST="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
+                  export DOCKER_CONFIG="$DOCKER_AUTH"
+                  release="releases/$IMAGE_TAG"
+                  release_compose="$release/docker-compose.prod.yml"
+                  printf '%s  %s\n' "$FTTH_COMPOSE_SHA256" "$release_compose" | sha256sum --check --status
+                  docker compose --project-directory /opt/ftth --env-file /opt/ftth/.env -f "$release_compose" config --quiet
+                  python3 "$release/activate-native.py" "/opt/ftth/$release" "$IMAGE_TAG" "$FTTH_COMPOSE_SHA256"
+                  EOF
+
+            - name: Verifikasi situs produksi
+              run: |
+                  curl --fail --silent --show-error \
+                    --retry 24 --retry-delay 5 --retry-all-errors \
+                    https://ftth.karuhundeveloper.com/ > /dev/null
+                  curl --fail --silent --show-error \
+                    --retry 24 --retry-delay 5 --retry-all-errors \
+                    https://ftth.karuhundeveloper.com/actuator/health/readiness | \
+                    python3 -c 'import json,sys; assert json.load(sys.stdin)["status"] == "UP"'
