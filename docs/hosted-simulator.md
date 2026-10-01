@@ -9,13 +9,37 @@ and the application header identifies it as `simulator`.
 | OLT | Five HSGQ SNMP agents, 2 PON × 8 ONU each; healthy, weak signal and offline examples |
 | BRAS | Virtual NAS creates RADIUS accounting sessions and traffic; supports UDP Disconnect/CoA responses |
 | ONT | One TR-069 device reports to GenieACS; linked to Budi Lab by serial number |
-| Topology | POP Tebet, 3 ODC, 10 ODP, 50 customers and street-following fiber routes |
+| Topology | Budi Lab plus 50 Tebet customers, 2 sites, 3 ODC, 10 ODP and street-following fiber routes |
 | Warehouse | Receipt, issue, technician acceptance and installation records for demo ONUs |
 
 This is protocol simulation, not a RouterOS VM or a physical PPPoE access network.
 CoA acknowledges the session command; generated traffic currently follows a synthetic
 profile rather than actual packet shaping. The ZTE device in the map is topology data;
 the five HSGQ devices are the ones backed by SNMP agents.
+
+## Use the hosted demo
+
+Open <https://sim.ftth.karuhundeveloper.com> and sign in as
+`admin@karuhundeveloper.com`. Use tenant `simulator` if a tenant selector is shown.
+The password is separate from the production login. Retrieve only the demo login
+password from the server:
+
+```sh
+ssh -i ~/.ssh/id_ed25519 fajar@70.153.16.143 \
+  "sed -n 's/^FTTH_SIM_ADMIN_PASSWORD=//p' /opt/ftth-simulator/private/simulator.env"
+```
+
+- **Aset jaringan → OLT:** open an `OLT-LAB-*` device to inspect its PONs and ONU readings.
+- **Pelanggan → Budi Lab:** inspect the access session and traffic; **Reset Login**
+  disconnects the virtual NAS session, then it reconnects automatically.
+- **ACS / TR-069:** inspect the linked device `C0FD84050205` and issue a reboot.
+- **Peta:** explore the Tebet customers, fiber routes and distribution devices.
+- **Stok & Perangkat:** inspect the receipt, handover and installation history.
+
+There are 51 customer records and 50 installed warehouse ONTs. The 80 SNMP readings
+belong to the five virtual OLTs; they are a separate monitoring fixture, not 80
+additional customer installations. The seeded installations are provisional, so
+customer lifecycle labels may still show prospect until the normal QA/activation flow.
 
 ## Install
 
@@ -95,3 +119,27 @@ After seeding, allow roughly one minute for polling. Confirm five OLTs have 80 O
 readings, customer PPPoE sessions have increasing counters, the ONT appears in ACS,
 and resetting one demo customer's login closes the session and reconnects it.
 Keep this mutation check strictly within tenant `simulator`.
+
+The hosted deployment was checked on 2026-10-01:
+
+- 18 simulator JVM tests, 6 installer/recovery tests and 2 incident-correlation
+  boundary tests passed. Customer session alarms no longer block network incidents.
+- Live SNMP polling returned 16 ONUs from each of five OLTs. RADIUS accounting
+  produced traffic, Reset Login disconnected/reconnected a session, and TR-069
+  reboot returned success.
+- Repeating the seed preserved 51 customers, 50 installed ONUs and 450 inventory
+  movements without creating duplicates.
+- Firefox opened customers, inventory, BRAS, ACS and warehouse stock without
+  JavaScript errors or HTTP 5xx responses. The map passed in Chromium; this VPS's
+  headless Firefox has no working WebGL driver, so its map was not verified.
+- PostgreSQL backup archives and the compressed Mongo/MinIO snapshots were checked
+  for readability. A complete restore into a fresh host has not been rehearsed.
+
+The source is installed at `/opt/ftth-simulator/source`; private state, deployment
+receipts and backups are under `/opt/ftth-simulator/private`. Use the explicit env
+path for operations on this host:
+
+```sh
+sudo python3 /opt/ftth-simulator/source/deploy/simulator/manage.py \
+  --env-file /opt/ftth-simulator/private/simulator.env status
+```
