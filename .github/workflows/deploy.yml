@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   diagnose:
@@ -68,8 +69,8 @@ jobs:
           REMOTE
       - name: Pull the already verified migration rehearsal image
         env:
-          GHCR_PAT: ${{ secrets.GHCR_PAT }}
-          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
           set -euo pipefail
           [[ "$GHCR_USER" =~ ^[A-Za-z0-9_-]+$ ]]
