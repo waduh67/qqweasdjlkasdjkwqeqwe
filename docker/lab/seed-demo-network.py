@@ -180,7 +180,7 @@ def main():
         # Kabinet berisi satu modul 1:4 — pola paling lazim: 1:4 di kabinet + 1:8 di
         # kotak = 1:32 per PON, masih di dalam anggaran redaman GPON B+.
         node[odc["code"]] = api.ensure("ODC", "/api/odcs", {
-            "code": odc["code"], "name": odc["name"], "address": odc["address"],
+            "code": odc["code"], "areaId": warehouse.area, "name": odc["name"], "address": odc["address"],
             "location": {"longitude": odc["location"][0], "latitude": odc["location"][1]},
             "ponPortId": pon[odc["ponPort"]], "splitterRatio": "1:4", "capacity": 8,
         }, f"/api/odcs?query={odc['code']}", by_code(odc["code"]))[0]
@@ -189,14 +189,14 @@ def main():
         # Haspel kabel panjangnya terbatas (±2 km); di titik habisnya serat disambung
         # di dalam closure. Karena itu joint box duduk di TENGAH satu feeder, bukan di ujung.
         node[jb["code"]] = api.ensure("Joint box", "/api/joint-boxes", {
-            "code": jb["code"], "name": jb["name"], "address": jb["address"],
+            "code": jb["code"], "areaId": warehouse.area, "name": jb["name"], "address": jb["address"],
             "location": {"longitude": jb["location"][0], "latitude": jb["location"][1]},
             "trayCount": 2, "capacity": 24, "status": "ACTIVE",
         }, f"/api/joint-boxes?query={jb['code']}", by_code(jb["code"]))[0]
 
     for odp in topo["odps"]:
         node[odp["code"]] = api.ensure("ODP", "/api/odps", {
-            "code": odp["code"], "name": odp["name"], "address": odp["address"],
+            "code": odp["code"], "areaId": warehouse.area, "name": odp["name"], "address": odp["address"],
             "location": {"longitude": odp["location"][0], "latitude": odp["location"][1]},
             "odcId": node[odp["odc"]], "splitterRatio": "1:8", "capacity": 8,
         }, f"/api/odps?query={odp['code']}", by_code(odp["code"]))[0]

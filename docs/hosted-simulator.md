@@ -88,6 +88,7 @@ project; do not restore any of these volumes over production.
 ```sh
 python3 -m unittest discover -s deploy/simulator -p 'test_*.py'
 ./gradlew :simulator:test --no-daemon --no-parallel --max-workers=2
+python3 deploy/simulator/verify.py --exercise-controls
 ```
 
 After seeding, allow roughly one minute for polling. Confirm five OLTs have 80 ONU
