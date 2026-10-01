@@ -43,6 +43,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/platform/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: NavIcons.Route },
       { to: '/platform/radius-servers', label: 'Server RADIUS', permission: 'radius.server.view', icon: NavIcons.Monitor },
+      { to: '/platform/acs', label: 'Server ACS', permission: 'platform.acs.view', icon: NavIcons.Monitor },
       { to: '/platform/jobs', label: 'Pekerjaan Latar', permission: 'platform.ops.view', icon: NavIcons.Monitor },
     ],
   },

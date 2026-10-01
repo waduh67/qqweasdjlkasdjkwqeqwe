@@ -204,3 +204,25 @@
 
 .warehouse-picker .resource-create-link:hover { color: var(--accent); background: transparent; text-decoration: underline; }
 .resource-form-dialog .fui-DialogActions { flex-direction: row; flex-wrap: wrap; }
+
+.horizontal-form { container-type: inline-size; min-width: 0; }
+.settings-page.platform-billing-page { max-width: none; width: 100%; }
+.resource-form-content form.horizontal-form { max-width: none; }
+.horizontal-form .form-section-fields { max-width: none; }
+.horizontal-form .app-field { min-width: 0; width: 100%; }
+.horizontal-form .app-field > .app-control { width: 100%; min-width: 0; max-width: 100%; }
+.horizontal-form .row:has(> .app-field), .horizontal-form .row:has(> label) { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+.horizontal-form .app-field > :not(.fui-Field__label) { min-width: 0; overflow-wrap: anywhere; }
+.horizontal-form .platform-form-control { min-width: 0; }
+.horizontal-form .app-field:not(:has(> .fui-Field__label)) { display: block; }
+.platform-field-action { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.platform-billing-page label:has(.app-combobox) { min-width: 0 !important; }
+@container (min-width: 760px) {
+  .horizontal-form .app-field { display: grid; grid-template-columns: 220px minmax(0, 1fr); column-gap: 20px; }
+  .horizontal-form .app-field > .fui-Field__label { grid-column: 1; grid-row: 1 / span 3; padding: 2px 0; margin: 0; font-weight: 400; }
+  .horizontal-form .app-field > :not(.fui-Field__label) { grid-column: 2; }
+}
+@container (max-width: 759px) {
+  .horizontal-form .app-field { display: flex; flex-direction: column; }
+  .horizontal-form .app-field > .fui-Field__label { margin-bottom: 4px; padding: 0; }
+}

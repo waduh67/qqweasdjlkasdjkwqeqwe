@@ -112,7 +112,7 @@ it('handles absent committed signature and missing permission without accepting 
   expect(screen.queryByRole('form', { name: 'Permintaan alih kepemilikan' })).toBeNull()
   state.sign(); fireEvent.click(screen.getByRole('button', { name: 'Muat ulang bukti' }))
   const form = await screen.findByRole('form', { name: 'Permintaan alih kepemilikan' })
-  expect(within(form).getAllByRole('textbox')).toHaveLength(2)
+  expect(await within(form).findAllByRole('textbox')).toHaveLength(2)
   mounted.unmount(); mocks.permissions.delete('workorder.evidence.view')
   state.fetch.mockClear(); show()
   expect(await screen.findByRole('button', { name: 'Siapkan alih kepemilikan' })).toHaveProperty('disabled', true)

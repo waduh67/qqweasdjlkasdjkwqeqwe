@@ -1,0 +1,71 @@
+name: ftth-acs
+
+x-genieacs: &genieacs
+  image: ftth-genieacs:1.2.16
+  build:
+    context: ../../docker/genieacs
+  restart: unless-stopped
+  depends_on:
+    mongo:
+      condition: service_healthy
+
+services:
+  mongo:
+    image: mongo:4.4
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  cwmp:
+    <<: *genieacs
+    command: genieacs-cwmp
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/genieacs
+      GENIEACS_FS_HOSTNAME: ${ACS_DEVICE_HOST:?set ACS_DEVICE_HOST}
+      GENIEACS_FS_PORT: "7567"
+      FTTH_CPE_CWMP_AUTH_MODE: ${FTTH_CPE_CWMP_AUTH_MODE:-off}
+      FTTH_CPE_ONT_ACS_USERNAME: ${FTTH_CPE_ONT_ACS_USERNAME:-}
+      FTTH_CPE_ONT_ACS_PASSWORD: ${FTTH_CPE_ONT_ACS_PASSWORD:-}
+    ports:
+      - "7547:7547"
+
+  nbi:
+    <<: *genieacs
+    command: genieacs-nbi
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/genieacs
+
+  fs:
+    <<: *genieacs
+    command: genieacs-fs
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/genieacs
+    ports:
+      - "7567:7567"
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - nbi
+    environment:
+      ACS_API_HOST: ${ACS_API_HOST:?set ACS_API_HOST}
+      ACS_API_USERNAME: ${ACS_API_USERNAME:?set ACS_API_USERNAME}
+      ACS_API_PASSWORD_HASH: ${ACS_API_PASSWORD_HASH:?set ACS_API_PASSWORD_HASH}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  mongo_data:
+  caddy_data:
+  caddy_config:

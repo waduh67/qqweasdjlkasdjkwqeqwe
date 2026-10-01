@@ -123,9 +123,21 @@ function DashboardTab({ canDevices, canManage }: { canDevices: boolean; canManag
   useEffect(() => loadStats(), [loadStats])
   useEffect(() => checkHealth(false), [checkHealth])
   useEffect(() => {
-    void getAcsServerInfo()
-      .then(setInfo)
-      .catch(() => setInfo(null))
+    let cancelled = false
+    let active = false
+    const refresh = async () => {
+      if (active) return
+      active = true
+      try {
+        const latest = await getAcsServerInfo()
+        if (!cancelled) setInfo(latest)
+      } catch { if (!cancelled) setInfo(null) }
+      finally { active = false }
+    }
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 30_000)
+    window.addEventListener("focus", refresh)
+    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("focus", refresh) }
   }, [])
 
   const runBulkRefresh = async () => {

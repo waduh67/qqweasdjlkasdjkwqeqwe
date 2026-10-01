@@ -1,48 +1,52 @@
 package com.duluin.ftth.cpe.adapter.outbound.acs
 
-import java.time.Duration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
+import com.duluin.ftth.cpe.application.port.outbound.AcsConnectionProbe
+import com.duluin.ftth.cpe.application.port.outbound.AcsProbe
+import com.duluin.ftth.cpe.application.port.outbound.AcsSettingsResolver
+import com.duluin.ftth.cpe.domain.model.AcsConnectionSettings
 import org.springframework.http.client.SimpleClientHttpRequestFactory
+import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.HttpClientErrorException
+import java.time.Duration
+import java.util.UUID
 
-/**
- * Merakit [RestClient] khusus GenieACS NBI. Dinonaktifkan di profil `test`: di sana
- * [com.duluin.ftth.cpe.application.port.outbound.AcsGateway] dipenuhi test double
- * in-memory, sehingga uji tak menuntut GenieACS hidup.
- */
-@Configuration
-@Profile("!test")
-class GenieAcsConfig {
+class AcsClientSnapshot(val version: UUID, val client: RestClient, val healthClient: RestClient)
 
-    @Bean
-    fun genieAcsRestClient(properties: GenieAcsProperties): RestClient =
-        build(properties, properties.readTimeout)
+@Component
+class GenieAcsClientProvider(private val settings: AcsSettingsResolver, private val properties: GenieAcsProperties) : AcsConnectionProbe {
+    @Volatile private var cached: AcsClientSnapshot? = null
 
-    /**
-     * Klien KEDUA, hanya untuk probe kesehatan — bedanya cuma `readTimeout` yang jauh lebih
-     * pendek. Memakai ulang klien utama berarti kartu "Health Check" menggantung halaman
-     * selama `readTimeout` (15 detik) tiap kali ACS mati; padahal justru saat itulah
-     * operator paling butuh halamannya cepat merender.
-     */
-    @Bean
-    fun genieAcsHealthRestClient(properties: GenieAcsProperties): RestClient =
-        build(properties, properties.healthTimeout)
+    fun snapshot(): AcsClientSnapshot = snapshot(settings.current())
 
-    private fun build(properties: GenieAcsProperties, readTimeout: Duration): RestClient {
-        val requestFactory = SimpleClientHttpRequestFactory().apply {
-            setConnectTimeout(properties.connectTimeout)
-            setReadTimeout(readTimeout)
-        }
-        return RestClient.builder()
-            .baseUrl(properties.baseUrl)
-            .requestFactory(requestFactory)
-            .apply {
-                if (properties.username.isNotBlank()) {
-                    it.defaultHeaders { headers -> headers.setBasicAuth(properties.username, properties.password) }
-                }
-            }
-            .build()
+    @Synchronized
+    private fun snapshot(config: AcsConnectionSettings): AcsClientSnapshot {
+        cached?.takeIf { it.version == config.version }?.let { return it }
+        return AcsClientSnapshot(config.version, build(config, properties.readTimeout), build(config, properties.healthTimeout)).also { cached = it }
     }
+
+    override fun test(settings: AcsConnectionSettings): AcsProbe {
+        val started = System.nanoTime()
+        return try {
+            snapshot(settings).healthClient.get()
+                .uri { it.path("/devices/").queryParam("projection", "_id").queryParam("limit", 1).build() }
+                .retrieve().toBodilessEntity()
+            AcsProbe(true, (System.nanoTime() - started) / 1_000_000, null)
+        } catch (failure: Exception) {
+            val error = when (failure) {
+                is HttpClientErrorException -> if (failure.statusCode.value() in setOf(401, 403)) "Autentikasi API ditolak" else "HTTP "+failure.statusCode.value()
+                else -> failure.javaClass.simpleName
+            }
+            AcsProbe(false, null, error)
+        }
+    }
+
+    private fun build(config: AcsConnectionSettings, timeout: Duration): RestClient = RestClient.builder()
+        .baseUrl(config.nbiUrl)
+        .requestFactory(SimpleClientHttpRequestFactory().apply {
+            setConnectTimeout(properties.connectTimeout)
+            setReadTimeout(timeout)
+        })
+        .apply { builder -> if (config.username.isNotBlank()) builder.defaultHeaders { it.setBasicAuth(config.username, config.password.orEmpty()) } }
+        .build()
 }

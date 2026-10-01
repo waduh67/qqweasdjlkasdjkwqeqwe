@@ -298,11 +298,10 @@ function ServerForm({
   onCancel: () => void
 }) {
   return (
-    <Blade open title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} onClose={onCancel} creation={creation}
+    <Blade open title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} onClose={onCancel} dirty creation={creation}
       footer={<Button variant="primary" disabled={creation.busy} onClick={onSave}>Simpan</Button>}>
-    <form className="stack" onSubmit={event => { event.preventDefault(); onSave() }}>
+    <form className="stack horizontal-form" onSubmit={event => { event.preventDefault(); onSave() }}>
       <FormSection title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} description="Tentukan alamat publik dan koneksi yang dipakai router.">
-      <div className="form-grid">
         <TextField
           label="Nama hub"
           value={draft.name}
@@ -317,8 +316,6 @@ function ServerForm({
           placeholder="vpn.isp-anda.com"
           required
         />
-      </div>
-      <div className="form-grid form-grid-port">
         <TextField
           label="Port"
           type="number"
@@ -338,7 +335,6 @@ function ServerForm({
             <option value="TCP">TCP — RouterOS v6 dan v7</option>
             <option value="UDP">UDP — RouterOS v7</option>
         </SelectField>
-      </div>
       </FormSection>
 
       {/* Pilihan protokol tak bisa dibalik tanpa mengganggu perangkat: yang sudah men-dial harus
@@ -352,12 +348,12 @@ function ServerForm({
       </Text>
 
       {draft.id === null ? (
-        <div className="form-field-medium"><TextField
+        <TextField
           label="Subnet overlay (CIDR)"
           value={draft.tunnelCidr}
           onChange={(_, data) => setDraft({ ...draft, tunnelCidr: data.value })}
           placeholder="10.8.0.0/24"
-        /></div>
+        />
       ) : (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           CIDR tunnel tidak dapat diubah setelah server dibuat karena IP peer telah dialokasikan.

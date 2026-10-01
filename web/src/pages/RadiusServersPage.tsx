@@ -15,9 +15,10 @@ import {
   type UpdateRadiusServerRequest,
 } from '../api/radiusServer'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column, type RowAction } from '@/components/organisms'
+import { Blade, DataTable, type Column, type RowAction } from '@/components/organisms'
+import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar, type Tone } from '@/components/atoms'
-import { SearchInput } from '@/components/molecules'
+import { FormSection, SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconPlus, IconServer } from '@/components/atoms/icons'
@@ -101,6 +102,8 @@ export function RadiusServersPage() {
   const { items: servers, loading, run } = useResource(listRadiusServers)
 
   const [draft, setDraft] = useState<ServerDraft | null>(null)
+  const [testing, setTesting] = useState(false)
+  const creation = useCreationReview(draft !== null, Boolean(draft?.id))
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
@@ -140,19 +143,18 @@ export function RadiusServersPage() {
   }
 
   const save = async () => {
-    if (!draft) return
-    const authPort = Number.parseInt(draft.authPort, 10)
-    const acctPort = Number.parseInt(draft.acctPort, 10)
-    const coaPort = Number.parseInt(draft.coaPort, 10)
-    const maxTenants = Number.parseInt(draft.maxTenants, 10)
+    if (!draft || creation.busy || testing) return
+    const authPort = Number(draft.authPort)
+    const acctPort = Number(draft.acctPort)
+    const coaPort = Number(draft.coaPort)
+    const maxTenants = Number(draft.maxTenants)
 
-    if (
-      Number.isNaN(authPort) ||
-      Number.isNaN(acctPort) ||
-      Number.isNaN(coaPort) ||
-      Number.isNaN(maxTenants)
-    ) {
-      toast.error('Port dan batas kapasitas harus berupa angka')
+    if (![authPort, acctPort, coaPort].every(port => Number.isInteger(port) && port >= 1 && port <= 65535) || !Number.isInteger(maxTenants) || maxTenants < 1) {
+      toast.error('Port harus 1–65535 dan kapasitas tenant minimal 1')
+      return
+    }
+    if (![draft.name, draft.host, draft.sharedSecret, draft.dbUrl, draft.dbUser].every(value => value.trim())) {
+      toast.error('Nama, host, shared secret, URL dan user database wajib diisi')
       return
     }
 
@@ -161,7 +163,9 @@ export function RadiusServersPage() {
       return
     }
 
-    await run(async () => {
+    if (creation.beforeSave()) return
+    try {
+      await run(async () => {
       if (draft.id) {
         const payload: UpdateRadiusServerRequest = {
           name: draft.name,
@@ -195,6 +199,7 @@ export function RadiusServersPage() {
       }
       setDraft(null)
     }, draft.id ? 'Konfigurasi node RADIUS diperbarui' : 'Node RADIUS baru berhasil didaftarkan')
+    } finally { creation.finish() }
   }
 
   const testConnection = (server: RadiusServerView) => {
@@ -315,7 +320,16 @@ export function RadiusServersPage() {
 
       {draft && (
         <ServerForm
+          creation={{ ...creation, prepare: () => void save(), summary: <CreationSummary rows={[
+            ['Nama node', draft.name], ['Host', draft.host], ['Status', statusLabel(draft.status)],
+            ['Kapasitas tenant', draft.maxTenants], ['Port auth / acct / CoA', [draft.authPort, draft.acctPort, draft.coaPort].join(' / ')],
+            ['JDBC URL', draft.dbUrl], ['Database user', draft.dbUser],
+            ['Password database', draft.dbPassword ? 'Diisi' : 'Pertahankan password tersimpan'],
+          ]} /> }}
           draft={draft}
+          savedServer={servers.find(server => server.id === draft.id)}
+          testing={testing}
+          setTesting={setTesting}
           setDraft={setDraft}
           onSave={save}
           onCancel={() => setDraft(null)}
@@ -364,18 +378,25 @@ export function RadiusServersPage() {
 }
 
 function ServerForm({
+  creation,
   draft,
+  savedServer,
+  testing,
+  setTesting,
   setDraft,
   onSave,
   onCancel,
 }: {
+  creation: CreationFlow
   draft: ServerDraft
+  savedServer?: RadiusServerView
+  testing: boolean
+  setTesting: (testing: boolean) => void
   setDraft: (d: ServerDraft) => void
   onSave: () => void
   onCancel: () => void
 }) {
   const toast = useToast()
-  const [testing, setTesting] = useState(false)
   const isEdit = Boolean(draft.id)
 
   const handleTestConnection = async () => {
@@ -383,9 +404,14 @@ function ServerForm({
       toast.error('URL, User, dan Password database wajib diisi untuk tes koneksi')
       return
     }
+    if (testing || creation.busy) return
+    if (draft.id && !draft.dbPassword && (draft.dbUrl !== savedServer?.dbUrl || draft.dbUser !== savedServer?.dbUser)) {
+      toast.error('Isi password untuk menguji URL atau user database yang berubah')
+      return
+    }
     setTesting(true)
     try {
-      const res = await testRadiusConnection({
+      const res = draft.id && !draft.dbPassword ? await testServerConnection(draft.id) : await testRadiusConnection({
         dbUrl: draft.dbUrl,
         dbUser: draft.dbUser,
         dbPassword: draft.dbPassword,
@@ -403,12 +429,11 @@ function ServerForm({
   }
 
   return (
-    <div className="card stack" style={{ gap: '1rem', border: '1px solid var(--border)' }}>
-      <Text as="h3" size={400} weight="semibold" style={{ margin: 0 }}>
-        {isEdit ? `Ubah Node RADIUS “${draft.name}”` : 'Tambah Node RADIUS Baru'}
-      </Text>
-
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
+    <Blade open title={isEdit ? 'Ubah node RADIUS' : 'Node RADIUS baru'} onClose={onCancel} dirty creation={{ ...creation, busy: creation.busy || testing }}
+      footer={<Button variant="primary" disabled={creation.busy || testing} onClick={onSave}>Simpan node</Button>}>
+      <form className="stack horizontal-form" onSubmit={event => { event.preventDefault(); if (!testing && !creation.busy) onSave() }}>
+      <fieldset className="stack" disabled={testing || creation.busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+      <FormSection title="Identitas node">
         <TextField
           label="Nama Node Server"
           value={draft.name}
@@ -440,9 +465,9 @@ function ServerForm({
           <option value="DRAINING">Draining (Tidak Menerima Tenant Baru)</option>
           <option value="DISABLED">Nonaktif</option>
         </SelectField>
-      </div>
+      </FormSection>
 
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
+      <FormSection title="Endpoint RADIUS">
         <TextField
           label="Port Auth (RFC 2865)"
           type="number"
@@ -470,12 +495,9 @@ function ServerForm({
           onChange={(_, data) => setDraft({ ...draft, sharedSecret: data.value })}
           placeholder="Secret koneksi Mikrotik"
         />
-      </div>
+      </FormSection>
 
-      <div className="stack" style={{ gap: '0.5rem', background: 'var(--surface-sunken)', padding: '0.75rem', borderRadius: '4px' }}>
-        <Text as="h4" size={300} weight="semibold" style={{ margin: 0 }}>
-          Koneksi Database FreeRADIUS (radius-db)
-        </Text>
+      <FormSection title="Database FreeRADIUS">
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Koneksi JDBC ini dipakai aplikasi untuk menulis tabel <code>radcheck</code>, <code>nas</code>, dan membaca <code>radacct</code>.
         </Text>
@@ -487,7 +509,7 @@ function ServerForm({
           placeholder="jdbc:postgresql://203.0.113.10:5432/radius"
         />
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+
           <TextField
             label="Database User"
             value={draft.dbUser}
@@ -502,21 +524,15 @@ function ServerForm({
             onChange={(_, data) => setDraft({ ...draft, dbPassword: data.value })}
             placeholder="Password DB"
           />
-        </div>
 
         <div>
-          <Button size="small" onClick={handleTestConnection} disabled={testing}>
+          <Button type="button" size="small" onClick={handleTestConnection} disabled={testing || creation.busy}>
             <Database size={14} /> {testing ? 'Menguji Koneksi...' : 'Uji Koneksi Database'}
           </Button>
         </div>
-      </div>
-
-      <div className="row" style={{ marginTop: '0.5rem' }}>
-        <Button variant="primary" onClick={onSave}>
-          Simpan Node
-        </Button>
-        <Button onClick={onCancel}>Batal</Button>
-      </div>
-    </div>
+      </FormSection>
+      </fieldset>
+      </form>
+    </Blade>
   )
 }

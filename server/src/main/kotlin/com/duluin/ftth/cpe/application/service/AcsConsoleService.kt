@@ -14,6 +14,7 @@ import com.duluin.ftth.cpe.application.port.inbound.AcsStatsView
 import com.duluin.ftth.cpe.application.port.inbound.AcsStatusFilter
 import com.duluin.ftth.cpe.application.port.inbound.RefreshAcsFleetUseCase
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
+import com.duluin.ftth.cpe.application.port.outbound.AcsSettingsResolver
 import com.duluin.ftth.cpe.application.port.outbound.CpeActionLogRepository
 import com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository
 import com.duluin.ftth.cpe.config.OntAcsProperties
@@ -54,10 +55,7 @@ class AcsConsoleService(
     private val bulkRefreshRunner: AcsBulkRefreshRunner,
     private val currentUser: CurrentUserProvider,
     private val ont: OntAcsProperties,
-    // Alamat NBI dibaca sebagai properti polos, BUKAN dengan menyuntik
-    // `GenieAcsProperties`: kelas itu milik lapisan adapter, dan lapisan application
-    // tak boleh bergantung padanya (arah panahnya justru sebaliknya).
-    @Value("\${ftth.cpe.genieacs.base-url:}") private val nbiBaseUrl: String,
+    private val settings: AcsSettingsResolver,
     @Value("\${ftth.cpe.online-stale-after:PT15M}") private val onlineStaleAfter: Duration,
     @Value("\${ftth.cpe.sync-interval:PT5M}") private val syncInterval: Duration,
     @Value("\${ftth.cpe.bulk-refresh-max:50}") private val bulkRefreshMax: Int,
@@ -75,13 +73,14 @@ class AcsConsoleService(
      * menyegarkan dirinya sendiri, jadi tanpa memoisasi satu ruang kerja berisi sepuluh
      * tab akan menghujani NBI dengan probe yang jawabannya sudah pasti sama.
      */
-    private val cachedProbe = AtomicReference<Pair<Instant, AcsHealthView>?>(null)
+    private data class CachedHealth(val version: UUID, val at: Instant, val view: AcsHealthView)
+    private val cachedProbe = AtomicReference<CachedHealth?>(null)
 
     override fun serverInfo(): AcsServerInfoView {
-        val host = ont.publicHost.trim()
+        val config = settings.current()
         return AcsServerInfoView(
-            nbiBaseUrl = nbiBaseUrl,
-            cwmpUrl = host.takeIf { it.isNotEmpty() }?.let { "http://$it:${ont.cwmpPort}" },
+            nbiBaseUrl = config.nbiUrl,
+            cwmpUrl = config.cwmpUrl,
             acsUsername = ont.acsUsername.takeIf { it.isNotEmpty() },
             acsPassword = ont.acsPassword.takeIf { it.isNotEmpty() },
             connectionRequestUsername = ont.connectionRequestUsername.takeIf { it.isNotEmpty() },
@@ -89,14 +88,15 @@ class AcsConsoleService(
             periodicInformEnabled = true,
             periodicInformIntervalSeconds = ont.periodicInformInterval.seconds,
             syncIntervalSeconds = syncInterval.seconds,
-            configured = host.isNotEmpty(),
+            configured = !config.cwmpUrl.isNullOrBlank(),
         )
     }
 
     override fun health(): AcsHealthView {
         val now = Instant.now()
-        cachedProbe.get()?.let { (at, view) ->
-            if (Duration.between(at, now) < probeTtl) return view
+        val version = settings.current().version
+        cachedProbe.get()?.let { cached ->
+            if (cached.version == version && Duration.between(cached.at, now) < probeTtl) return cached.view
         }
         val probe = acsGateway.probe()
         // Pesan asli exception memuat URI NBI lengkap — ia berhenti di log server.
@@ -111,7 +111,7 @@ class AcsConsoleService(
                 "Server ACS tak terjangkau" + (probe.error?.let { " ($it)" } ?: "")
             },
         )
-        cachedProbe.set(now to view)
+        if (settings.current().version == version) cachedProbe.set(CachedHealth(version, now, view))
         return view
     }
 

@@ -27,6 +27,8 @@ object PermissionCatalog {
         platform("platform.ops.view", "Lihat kesehatan pekerjaan latar server")
         // Relay SMTP + tampilan bawaan email: satu untuk semua tenant, jadi wewenang platform.
         platform("platform.email.view", "Lihat setelan email & template platform")
+        platform("platform.acs.view", "Lihat konfigurasi server ACS platform")
+        platform("platform.acs.manage", "Kelola koneksi server ACS platform")
         platform("platform.email.manage", "Kelola SMTP, logo & template email platform")
 
         // IAM

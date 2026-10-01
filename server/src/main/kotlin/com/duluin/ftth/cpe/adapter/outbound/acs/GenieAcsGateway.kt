@@ -12,9 +12,7 @@ import com.duluin.ftth.cpe.domain.model.WifiNetwork
 import com.duluin.ftth.cpe.application.port.outbound.AcsProbe
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Profile
 import org.springframework.http.MediaType
-import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import tools.jackson.databind.JsonNode
 import java.time.Duration
@@ -33,8 +31,6 @@ import java.time.Instant
  * RestClient; pemanggil ([com.duluin.ftth.cpe.application.service.CpeService]) yang
  * memutuskan mencatatnya ke jejak audit alih-alih menggagalkan transaksi.
  */
-@Component
-@Profile("!test")
 class GenieAcsGateway(
     @Qualifier("genieAcsRestClient") private val restClient: RestClient,
     @Qualifier("genieAcsHealthRestClient") private val healthClient: RestClient,

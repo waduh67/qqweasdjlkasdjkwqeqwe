@@ -10,7 +10,7 @@ import { copyText } from '@/utils/clipboard'
 /**
  * Kartu "Setelan ONT" — daftar nilai TR-069 yang harus diketik operator/teknisi ke
  * halaman ACS di ONT pelanggan (ACS URL, kredensial, connection request, dan interval
- * inform). Nilainya global, berasal dari env deploy platform, jadi sama untuk semua
+ * inform). Nilainya global, berasal dari setelan platform, jadi sama untuk semua
  * pelanggan; kartu ini muncul di halaman `/acs` maupun di tab Ringkasan pelanggan
  * tepat setelah operator mendaftarkan serial ONU.
  *
@@ -18,16 +18,9 @@ import { copyText } from '@/utils/clipboard'
  * pabrik ONT umumnya 3600 detik, sedangkan sinkronisasi konsol ini menganggap
  * perangkat basi jauh lebih cepat. Karenanya barisnya diberi catatan sendiri.
  *
- * Mengambil datanya sendiri (pemanggil cukup memasang komponennya) dan meng-cache
- * promise-nya di tingkat modul: muatannya konstanta env yang tak mungkin berubah
- * dalam satu sesi, jadi berpindah antar pelanggan tak perlu memanggil ulang.
- *
  * Render `null` bila pengguna tak punya `cpe.acs.view`, jadi pemanggil tak perlu
  * memagari sendiri.
  */
-let cached: Promise<AcsServerInfoView> | null = null
-const load = () => (cached ??= getAcsServerInfo())
-
 export function OntAcsSettingsCard() {
   const { can } = useCan()
   const toast = useToast()
@@ -38,16 +31,24 @@ export function OntAcsSettingsCard() {
   useEffect(() => {
     if (!canView) return
     let alive = true
+    let pending = false
+    const load = async () => {
+      if (pending) return
+      pending = true
+      try {
+        const data = await getAcsServerInfo()
+        if (alive) { setInfo(data); setFailed(false) }
+      } catch {
+        if (alive) { setInfo(null); setFailed(true) }
+      } finally { pending = false }
+    }
     void load()
-      .then((data) => alive && setInfo(data))
-      .catch(() => {
-        // Promise gagal jangan disimpan di cache — kalau tidak, satu kegagalan
-        // sesaat membuat kartunya kosong selamanya sampai halaman di-reload.
-        cached = null
-        if (alive) setFailed(true)
-      })
+    const timer = window.setInterval(() => void load(), 30_000)
+    window.addEventListener('focus', load)
     return () => {
       alive = false
+      window.clearInterval(timer)
+      window.removeEventListener('focus', load)
     }
   }, [canView])
 
@@ -105,7 +106,7 @@ export function OntAcsSettingsCard() {
           className="muted"
           style={{ margin: 0, color: 'var(--warning)' }}
         >
-          Alamat CWMP belum dikonfigurasi platform (FTTH_CPE_PUBLIC_HOST kosong). Hubungi
+          Alamat CWMP belum dikonfigurasi platform. Hubungi
           admin platform sebelum menyetel ONT — tanpa alamat itu perangkat tak bisa
           menemukan server ACS.
         </Text>

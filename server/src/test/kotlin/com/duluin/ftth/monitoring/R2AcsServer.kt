@@ -39,7 +39,8 @@ internal class R2AcsServer(downloadUrl: String = "http://owned.test/download") :
         }
         start()
     }
-    private val client = RestClient.builder().baseUrl("http://127.0.0.1:${server.address.port}").build()
+    val baseUrl = "http://127.0.0.1:${server.address.port}"
+    private val client = RestClient.builder().baseUrl(baseUrl).build()
     val gateway = GenieAcsGateway(client, client, "", downloadUrl, "http://owned.test/upload", 1024,
         Duration.ofMillis(150), Duration.ofMillis(5))
     override fun close() = server.stop(0)

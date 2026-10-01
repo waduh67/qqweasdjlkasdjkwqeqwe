@@ -22,9 +22,12 @@ type FieldExtras = {
   validationMessage?: FieldProps['validationMessage']
   validationState?: FieldProps['validationState']
   required?: boolean
+  fieldClassName?: string
+  fieldStyle?: FieldProps['style']
 }
 
 export function TextField({
+  fieldClassName, fieldStyle,
   label,
   hint,
   validationMessage,
@@ -36,7 +39,7 @@ export function TextField({
 }: FieldExtras & InputProps) {
   return (
     <Field
-      className="app-field"
+      className={`app-field${fieldClassName ? ` ${fieldClassName}` : ''}`} style={fieldStyle}
       size={size}
       label={label}
       hint={hint}
@@ -50,6 +53,7 @@ export function TextField({
 }
 
 export function SelectField({
+  fieldClassName, fieldStyle,
   label,
   hint,
   validationMessage,
@@ -62,7 +66,7 @@ export function SelectField({
 }: FieldExtras & SelectProps) {
   return (
     <Field
-      className="app-field"
+      className={`app-field${fieldClassName ? ` ${fieldClassName}` : ''}`} style={fieldStyle}
       size={size}
       label={label}
       hint={hint}
@@ -76,6 +80,7 @@ export function SelectField({
 }
 
 export function TextareaField({
+  fieldClassName, fieldStyle,
   label,
   hint,
   validationMessage,
@@ -87,7 +92,7 @@ export function TextareaField({
 }: FieldExtras & TextareaProps) {
   return (
     <Field
-      className="app-field"
+      className={`app-field${fieldClassName ? ` ${fieldClassName}` : ''}`} style={fieldStyle}
       size={size}
       label={label}
       hint={hint}

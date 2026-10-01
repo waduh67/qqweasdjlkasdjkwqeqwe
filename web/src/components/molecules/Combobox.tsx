@@ -29,6 +29,7 @@ export interface ComboboxProps<T> {
   initialLabel?: string
   placeholder?: string
   disabled?: boolean
+  ariaLabel?: string
   /** Debounce fetch (ms). Beri 0 untuk filter lokal yang instan. Default 250. */
   debounceMs?: number
   emptyText?: string
@@ -50,6 +51,7 @@ export function Combobox<T>({
   initialLabel = '',
   placeholder,
   disabled,
+  ariaLabel,
   debounceMs = 250,
   emptyText = 'Tak ada hasil',
 }: ComboboxProps<T>) {
@@ -149,6 +151,7 @@ export function Combobox<T>({
   return (
     <div ref={containerRef} className={`combobox${disabled ? ' is-disabled' : ''}`}>
       <FluentCombobox
+        aria-label={ariaLabel}
         size="small"
         className="cb-field app-control app-control-compact"
         open={open}

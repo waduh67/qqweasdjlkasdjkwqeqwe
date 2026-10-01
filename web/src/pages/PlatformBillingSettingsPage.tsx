@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Text, tokens } from '@fluentui/react-components'
+import { Field, Text, tokens } from '@fluentui/react-components'
 
 const monospaceToken = `font${'FamilyMonospace'}` satisfies keyof typeof tokens
 const monospaceFont = tokens[monospaceToken]
@@ -65,7 +65,7 @@ export function PlatformBillingSettingsPage() {
   }
 
   return (
-    <div className="stack settings-page" style={{ gap: '1.5rem' }}>
+    <div className="stack settings-page platform-billing-page horizontal-form" style={{ gap: '1.5rem' }}>
       <PageHeader title="Billing Langganan Platform" />
 
       <GlobalPanel settings={settings} manage={manage} onSaved={setSettings} />
@@ -126,18 +126,15 @@ function GlobalPanel({
         <Text as="strong" size={400} weight="semibold">Default global</Text>
       </div>
 
-      <FormRow
+      <TextField
         label="Harga bulanan default (Rp)"
-      >
-        <TextField
-          type="number"
-          min={0}
-          step={1000}
-          value={monthlyFee}
-          onChange={(_, data) => setMonthlyFee(data.value)}
-          disabled={!manage}
-        />
-      </FormRow>
+        type="number"
+        min={0}
+        step={1000}
+        value={monthlyFee}
+        onChange={(_, data) => setMonthlyFee(data.value)}
+        disabled={!manage}
+      />
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
         <TextField
@@ -148,7 +145,7 @@ function GlobalPanel({
           value={dueDays}
           onChange={(_, data) => setDueDays(data.value)}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 140 }}
+          fieldStyle={{ minWidth: 0 }}
         />
         <TextField
           label="Masa tenggang (hari)"
@@ -158,7 +155,7 @@ function GlobalPanel({
           value={graceDays}
           onChange={(_, data) => setGraceDays(data.value)}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 140 }}
+          fieldStyle={{ minWidth: 0 }}
         />
         <TextField
           label="Tanggal tagih"
@@ -168,7 +165,7 @@ function GlobalPanel({
           value={billingDay}
           onChange={(_, data) => setBillingDay(data.value)}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 120 }}
+          fieldStyle={{ minWidth: 0 }}
         />
         <TextField
           label="Mata uang"
@@ -176,7 +173,7 @@ function GlobalPanel({
           onChange={(_, data) => setCurrency(data.value)}
           maxLength={3}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 100 }}
+          fieldStyle={{ minWidth: 0 }}
         />
       </div>
       <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
@@ -341,6 +338,7 @@ function PivotMasterPanel({
 
         <FormRow label="Mode" hint="Sandbox untuk uji coba; produksi untuk transaksi sungguhan.">
           <Segmented
+            ariaLabel="Mode"
             value={sandbox ? 'sandbox' : 'prod'}
             onChange={(v) => setSandbox(v === 'sandbox')}
             disabled={!manage}
@@ -395,7 +393,7 @@ function PivotMasterPanel({
             value={feeType}
             onChange={(_, data) => setFeeType(data.value as PlatformFeeType)}
             disabled={!manage}
-            style={{ flex: 1, minWidth: 180 }}
+            fieldStyle={{ minWidth: 0 }}
           >
             {FEE_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -411,7 +409,7 @@ function PivotMasterPanel({
             value={feeMinor}
             onChange={(_, data) => setFeeMinor(data.value)}
             disabled={!manage}
-            style={{ flex: 1, minWidth: 160 }}
+            fieldStyle={{ minWidth: 0 }}
           />
         </div>
       </div>
@@ -430,7 +428,7 @@ function PivotMasterPanel({
             value={payoutFeeType}
             onChange={(_, data) => setPayoutFeeType(data.value as PlatformFeeType)}
             disabled={!manage}
-            style={{ flex: 1, minWidth: 180 }}
+            fieldStyle={{ minWidth: 0 }}
           >
             {FEE_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -446,7 +444,7 @@ function PivotMasterPanel({
             value={payoutFeeMinor}
             onChange={(_, data) => setPayoutFeeMinor(data.value)}
             disabled={!manage}
-            style={{ flex: 1, minWidth: 160 }}
+            fieldStyle={{ minWidth: 0 }}
           />
         </div>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
@@ -468,7 +466,7 @@ function PivotMasterPanel({
             onChange={(_, data) => setPayoutChannel(data.value)}
             placeholder="mis. BCA, MANDIRI"
             disabled={!manage}
-            style={{ flex: 1, minWidth: 140 }}
+            fieldStyle={{ minWidth: 0 }}
           />
           <TextField
             label="Nomor rekening"
@@ -476,7 +474,7 @@ function PivotMasterPanel({
             onChange={(_, data) => setPayoutAccount(data.value)}
             placeholder="mis. 1234567890"
             disabled={!manage}
-            style={{ flex: 1, minWidth: 160 }}
+            fieldStyle={{ minWidth: 0 }}
           />
         </div>
       </div>
@@ -596,7 +594,7 @@ function SubAccountDefaultsPanel({
           value={defaults.defaultBusinessType}
           onChange={(_, data) => set({ defaultBusinessType: data.value })}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 160 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">— pilih —</option>
           {BUSINESS_TYPE_OPTIONS.map((o) => (
@@ -610,7 +608,7 @@ function SubAccountDefaultsPanel({
           value={defaults.defaultDigitalStatus}
           onChange={(_, data) => set({ defaultDigitalStatus: data.value })}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 160 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">— pilih —</option>
           {DIGITAL_STATUS_OPTIONS.map((o) => (
@@ -624,7 +622,7 @@ function SubAccountDefaultsPanel({
           value={defaults.defaultBusinessStructure}
           onChange={(_, data) => set({ defaultBusinessStructure: data.value })}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 160 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">— pilih —</option>
           {withCurrent(PIVOT_BUSINESS_STRUCTURES, defaults.defaultBusinessStructure).map((o) => (
@@ -644,7 +642,7 @@ function SubAccountDefaultsPanel({
             set({ defaultParentIndustry: data.value, defaultChildIndustry: '', defaultMcc: '' })
           }
           disabled={!manage}
-          style={{ flex: 1, minWidth: 160 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">— pilih —</option>
           {withCurrent(PIVOT_PARENT_INDUSTRIES, defaults.defaultParentIndustry).map((o) => (
@@ -664,7 +662,7 @@ function SubAccountDefaultsPanel({
             })
           }
           disabled={!manage || !defaults.defaultParentIndustry}
-          style={{ flex: 1, minWidth: 160 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">{defaults.defaultParentIndustry ? '— pilih —' : 'pilih induk dahulu'}</option>
           {childOptions.map((c) => (
@@ -685,7 +683,7 @@ function SubAccountDefaultsPanel({
           placeholder="otomatis dari industri"
           title="Terisi otomatis dari anak industri"
           disabled={!manage}
-          style={{ flex: 1, minWidth: 120 }}
+          fieldStyle={{ minWidth: 0 }}
         />
       </div>
 
@@ -695,7 +693,7 @@ function SubAccountDefaultsPanel({
           value={defaults.defaultBusinessCountry}
           onChange={(_, data) => set({ defaultBusinessCountry: data.value })}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 120 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">— pilih —</option>
           {PIVOT_COUNTRIES.map((c) => (
@@ -713,7 +711,7 @@ function SubAccountDefaultsPanel({
           value={defaults.defaultCountryOfEntity}
           onChange={(_, data) => set({ defaultCountryOfEntity: data.value })}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 120 }}
+          fieldStyle={{ minWidth: 0 }}
         >
           <option value="">— pilih —</option>
           {PIVOT_COUNTRIES.map((c) => (
@@ -726,8 +724,7 @@ function SubAccountDefaultsPanel({
               <option value={defaults.defaultCountryOfEntity}>{defaults.defaultCountryOfEntity}</option>
             )}
         </SelectField>
-        <label style={{ flex: 1, minWidth: 200 }}>
-          <Text as="span" >District</Text>
+        <Field className="app-field" label="District" style={{ minWidth: 0 }}>
           {districtLabel === null ? (
             // Tunggu label district ter-resolusi dari nilai tersimpan sebelum merender Combobox,
             // supaya kolomnya tak sempat menampilkan id mentah lalu berkedip ke nama.
@@ -744,9 +741,10 @@ function SubAccountDefaultsPanel({
               debounceMs={0}
               placeholder="Cari district…"
               disabled={!manage}
+              ariaLabel="District"
             />
           )}
-        </label>
+        </Field>
         <TextField
           label="Kode pos"
           value={defaults.defaultPostCode}
@@ -754,7 +752,7 @@ function SubAccountDefaultsPanel({
           placeholder="mis. 40111"
           maxLength={20}
           disabled={!manage}
-          style={{ flex: 1, minWidth: 120 }}
+          fieldStyle={{ minWidth: 0 }}
         />
       </div>
 
@@ -765,7 +763,7 @@ function SubAccountDefaultsPanel({
           onChange={(_, data) => set({ defaultWebsite: data.value })}
           placeholder="https://…"
           disabled={!manage}
-          style={{ flex: 1, minWidth: 200 }}
+          fieldStyle={{ minWidth: 0 }}
         />
         <TextField
           label="URL logo"
@@ -773,7 +771,7 @@ function SubAccountDefaultsPanel({
           onChange={(_, data) => set({ defaultLogoUrl: data.value })}
           placeholder="https://…/logo.png"
           disabled={!manage}
-          style={{ flex: 1, minWidth: 200 }}
+          fieldStyle={{ minWidth: 0 }}
         />
       </div>
     </div>
@@ -815,12 +813,14 @@ function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
           return (
             <div key={product} className="stack" style={{ gap: '0.25rem' }}>
               <Text as="span" size={200} weight="semibold">{label} <Text as="span" className="muted" weight="regular">· {product}</Text></Text>
-              <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
+              <div className="platform-field-action">
                 <TextField
+                  aria-label={`URL callback ${label}`}
                   value={url}
                   readOnly
                   onFocus={(e) => e.target.select()}
-                  style={{ flex: 1, font: `1em ${monospaceFont}` }}
+                  fieldStyle={{ flex: 1, minWidth: 0 }}
+                  style={{ font: `1em ${monospaceFont}`, width: '100%' }}
                 />
                 <Button type="button" variant="subtle" onClick={() => onCopy(url)} style={{ whiteSpace: 'nowrap' }}>
                   Salin
@@ -836,12 +836,8 @@ function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
 
 function FormRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="stack" style={{ gap: '0.35rem' }}>
-      <Text as="span" size={300} weight="semibold">{label}</Text>
-      {children}
-      {hint && (
-        <Text as="span" className="muted" size={200}>{hint}</Text>
-      )}
-    </div>
+    <Field className="app-field" label={label} hint={hint}>
+      <div className="platform-form-control">{children}</div>
+    </Field>
   )
 }

@@ -149,7 +149,43 @@ class WorkflowGateTest(unittest.TestCase):
                                             env=dict(os.environ, PATH=folder + os.pathsep + os.environ['PATH'],
                                                      SSH_CALLS=str(calls), SSH_EXIT=status, VPS_HOST='test-host', GHCR_USER='test-user'))
                     self.assertNotEqual(result.returncode, 0)
-                    self.assertEqual(calls.read_text().splitlines(), ['test-host sudo -n bash -s'])
+                    self.assertEqual(calls.read_text().splitlines(), ['test-host bash -s'])
+
+    def test_native_deploy_does_not_require_passwordless_sudo(self):
+        script = next(step['run'] for step in self.deploy['deploy']['steps'] if step.get('name') == 'Deploy lewat SSH')
+        with tempfile.TemporaryDirectory() as folder:
+            stub = Path(folder) / 'ssh'
+            calls = Path(folder) / 'calls'
+            stub.write_text(
+                '#!/bin/sh\n'
+                'printf "%s\\n" "$*" >> "$SSH_CALLS"\n'
+                'case "$*" in *sudo*) echo "sudo: interactive authentication is required" >&2; exit 1;; esac\n'
+                'if [ "$2" = "bash -s" ]; then cat >/dev/null; printf "native\\n"; fi\n'
+            )
+            stub.chmod(0o700)
+            result = subprocess.run(
+                ['bash', '-c', script], capture_output=True, text=True,
+                env=dict(os.environ, PATH=folder + os.pathsep + os.environ['PATH'],
+                         SSH_CALLS=str(calls), VPS_HOST='test-host', GHCR_USER='test-user',
+                         GHCR_PAT='fixture-token', GITHUB_SHA='a' * 40,
+                         FTTH_SERVER_IMAGE='ghcr.io/team/ftth-server@sha256:' + 'b' * 64,
+                         FTTH_WEB_IMAGE='ghcr.io/team/ftth-web@sha256:' + 'c' * 64,
+                         FTTH_COMPOSE_SHA256='d' * 64),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            commands = calls.read_text().splitlines()
+            self.assertEqual(len(commands), 5)
+            self.assertEqual(commands[0], 'test-host bash -s')
+            self.assertIn('login ghcr.io', commands[2])
+            self.assertIn("IMAGE_TAG='" + 'a' * 40 + "'", commands[3])
+            self.assertIn('registry-auth', commands[4])
+
+    def test_registry_credentials_use_the_scoped_actions_token(self):
+        job = self.deploy['deploy']
+        step = next(step for step in job['steps'] if step.get('name') == 'Deploy lewat SSH')
+        self.assertEqual(job['permissions']['packages'], 'read')
+        self.assertEqual(step['env']['GHCR_PAT'], '${{ secrets.GITHUB_TOKEN }}')
+        self.assertEqual(step['env']['GHCR_USER'], '${{ github.actor }}')
 
 
 if __name__ == "__main__":
