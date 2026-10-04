@@ -6,6 +6,12 @@ name: deploy
 on:
     push:
         branches: [main]
+        # Simulator-only releases use the separate manual deployment workflow.
+        paths-ignore:
+            - 'deploy/simulator/**'
+            - 'docker-compose.simulator.yml'
+            - 'docs/hosted-simulator.md'
+            - '.github/workflows/deploy-simulator.yml'
     workflow_dispatch:
 
 concurrency:

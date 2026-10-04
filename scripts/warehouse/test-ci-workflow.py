@@ -1,5 +1,6 @@
 """Check release dependencies and execute the acceptance gate with failing prerequisites."""
 import json
+import fnmatch
 import os
 import subprocess
 import tempfile
@@ -36,6 +37,19 @@ class WorkflowGateTest(unittest.TestCase):
                              for job in self.deploy.values()))
         self.assertEqual(self.warehouse["images"]["uses"], "./.github/workflows/images.yml")
         self.assertEqual(dependencies(self.warehouse["acceptance"]), REQUIRED)
+
+    def test_simulator_only_changes_do_not_skip_production_code_releases(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/deploy.yml').read_text())
+        triggers = workflow.get('on', workflow.get(True, {}))
+        ignored = triggers['push']['paths-ignore']
+        def excluded(path):
+            return any(fnmatch.fnmatchcase(path, pattern) for pattern in ignored)
+        for path in ('server/src/main/kotlin/App.kt', 'web/src/App.tsx', 'deploy/docker-compose.prod.yml',
+                     '.github/workflows/deploy.yml', 'gradle.properties'):
+            self.assertFalse(excluded(path), path)
+        for path in ('deploy/simulator/install_release.py', 'docker-compose.simulator.yml',
+                     '.github/workflows/deploy-simulator.yml'):
+            self.assertTrue(excluded(path), path)
 
     def test_warehouse_runs_only_on_manual_requests(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/warehouse.yml").read_text())
