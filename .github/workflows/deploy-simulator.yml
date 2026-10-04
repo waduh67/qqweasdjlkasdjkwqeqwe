@@ -1,0 +1,67 @@
+name: deploy-simulator
+
+on:
+  # Bootstrap read-only inspection while developing this new workflow.
+  push:
+    branches: [work/simulator-redeploy-20261004]
+    paths: [.github/workflows/deploy-simulator.yml, deploy/simulator/inspect_host.py]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-simulator
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Cloudflare SSH transport
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/download/2026.9.1/cloudflared-linux-amd64.deb -o cloudflared.deb
+          sudo dpkg -i cloudflared.deb
+          rm cloudflared.deb
+      - name: Configure existing deployment credentials
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          host, user = os.environ['VPS_HOST'], os.environ['VPS_USER']
+          assert re.fullmatch(r'[A-Za-z0-9.-]+', host)
+          assert re.fullmatch(r'[A-Za-z_][A-Za-z0-9_-]*', user)
+          assert os.environ['VPS_KNOWN_HOSTS'].strip()
+          os.umask(0o077)
+          root = Path.home() / '.ssh'
+          root.mkdir(exist_ok=True, mode=0o700)
+          (root / 'id_deploy').write_text(os.environ['VPS_SSH_KEY'] + '\n')
+          (root / 'known_hosts').write_text(os.environ['VPS_KNOWN_HOSTS'] + '\n')
+          (root / 'config').write_text(f'''Host ftth-target
+              HostName {host}
+              User {user}
+              IdentityFile ~/.ssh/id_deploy
+              IdentitiesOnly yes
+              BatchMode yes
+              StrictHostKeyChecking yes
+              UserKnownHostsFile ~/.ssh/known_hosts
+              ProxyCommand cloudflared access ssh --hostname %h
+          ''')
+          PY
+      - name: Inspect simulator prerequisites without changing services
+        run: |
+          mkdir -p evidence
+          ssh ftth-target 'python3 -' < deploy/simulator/inspect_host.py > evidence/host.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulator-host-${{ github.run_id }}
+          path: evidence/host.json
+          if-no-files-found: error
+          retention-days: 3
