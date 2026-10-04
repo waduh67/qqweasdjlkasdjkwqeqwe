@@ -17,7 +17,53 @@ CoA acknowledges the session command; generated traffic currently follows a synt
 profile rather than actual packet shaping. The ZTE device in the map is topology data;
 the five HSGQ devices are the ones backed by SNMP agents.
 
-## Use the hosted demo
+## Deploy through GitHub Actions
+
+Use **Actions → deploy-simulator → Run workflow**. The workflow uses the existing
+`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` and `VPS_KNOWN_HOSTS` secrets; local SSH access
+is not required.
+
+- `inspect` reads host capacity and existing containers without changing services.
+- `prepare` tests the simulator and installer, resolves application images from a
+  successful production run, and builds the four simulator support images.
+- `deploy` additionally installs the isolated `ftth-sim` project, restores or keeps
+  its data, exercises device commands, and tests the public application in Chromium.
+
+The mini PC needs **8 GB allocated to Docker Desktop** and at least 12 GB free disk.
+Changing Docker Desktop's memory setting restarts its containers. Configure this
+before deploying. The installer refuses to start services on an undersized engine.
+
+For Cloudflare Tunnel, publish `sim.karuhundeveloper.com` to
+`http://localhost:18080`. This single-level hostname works with the normal wildcard
+certificate; `sim.ftth.karuhundeveloper.com` needs a certificate covering that deeper
+hostname. No additional inbound router or firewall ports are needed.
+
+On the mini PC, state lives in `~/ftth-simulator/private`, release sources in
+`~/ftth-simulator/releases/<commit>`, and `~/ftth-simulator/current` points to the
+last successful release. The private `compose.json` pins deployed images and is
+automatically used by `manage.py`. Existing simulator data is backed up before an
+update and after successful verification. Containers from other projects are
+checked before and after deployment.
+
+`application_run` selects a successful run of the production `deploy` workflow;
+empty means the latest successful run. Its published-image artifact must still be
+available, and its server/web source must match the selected simulator source.
+Application images are reused by immutable digest, without rebuilding them.
+
+For a new host, `recovery_release` can name a GitHub release containing
+`simulator-backup.tar.gz.age`. Its age identity is stored only in the Actions secret
+`SIMULATOR_RECOVERY_AGE_KEY` and a private operator recovery file. Never upload the
+unencrypted backup or the identity to a release or artifact. The installer journals
+each restored service, refuses recovery after an application container exists,
+and never replays the original backup after an installation is complete.
+
+The 2026-10-01 backup was fully restored into an isolated test project on
+2026-10-04: PostgreSQL, RADIUS, MongoDB and MinIO restored, with 51 customers,
+50 installed ONUs and 450 inventory movements. App SQL helpers require `public`
+in the restore session's search path; the installer retains `pg_catalog` first and
+does not change the stored function definitions.
+
+## Original VPS deployment (2026-10-01)
 
 Open <https://sim.ftth.karuhundeveloper.com> and sign in as
 `admin@karuhundeveloper.com`. Use tenant `simulator` if a tenant selector is shown.
@@ -133,7 +179,7 @@ The hosted deployment was checked on 2026-10-01:
   JavaScript errors or HTTP 5xx responses. The map passed in Chromium; this VPS's
   headless Firefox has no working WebGL driver, so its map was not verified.
 - PostgreSQL backup archives and the compressed Mongo/MinIO snapshots were checked
-  for readability. A complete restore into a fresh host has not been rehearsed.
+  for readability. The subsequent complete restore rehearsal is described above.
 
 The source is installed at `/opt/ftth-simulator/source`; private state, deployment
 receipts and backups are under `/opt/ftth-simulator/private`. Use the explicit env

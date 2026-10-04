@@ -1,15 +1,26 @@
 name: deploy-simulator
 
 on:
-  # Bootstrap read-only inspection while developing this new workflow.
-  push:
-    branches: [work/simulator-redeploy-20261004]
-    paths: [.github/workflows/deploy-simulator.yml, deploy/simulator/inspect_host.py]
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Inspect the host or deploy the isolated simulator
+        type: choice
+        options: [inspect, prepare, deploy]
+        default: inspect
+      domain:
+        description: Cloudflare Tunnel hostname pointing to localhost:18080
+        default: sim.karuhundeveloper.com
+        required: true
+      application_run:
+        description: Successful production run providing verified app images (empty = latest)
+        default: ''
+      recovery_release:
+        description: Release containing the encrypted backup (empty = retain existing data or seed new demo)
+        default: simulator-recovery-20261004
 
 permissions:
   contents: read
-
 concurrency:
   group: deploy-simulator
   cancel-in-progress: false
@@ -31,31 +42,8 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-        run: |
-          python3 - <<'PY'
-          import os, re
-          from pathlib import Path
-          host, user = os.environ['VPS_HOST'], os.environ['VPS_USER']
-          assert re.fullmatch(r'[A-Za-z0-9.-]+', host)
-          assert re.fullmatch(r'[A-Za-z_][A-Za-z0-9_-]*', user)
-          assert os.environ['VPS_KNOWN_HOSTS'].strip()
-          os.umask(0o077)
-          root = Path.home() / '.ssh'
-          root.mkdir(exist_ok=True, mode=0o700)
-          (root / 'id_deploy').write_text(os.environ['VPS_SSH_KEY'] + '\n')
-          (root / 'known_hosts').write_text(os.environ['VPS_KNOWN_HOSTS'] + '\n')
-          (root / 'config').write_text(f'''Host ftth-target
-              HostName {host}
-              User {user}
-              IdentityFile ~/.ssh/id_deploy
-              IdentitiesOnly yes
-              BatchMode yes
-              StrictHostKeyChecking yes
-              UserKnownHostsFile ~/.ssh/known_hosts
-              ProxyCommand cloudflared access ssh --hostname %h
-          ''')
-          PY
-      - name: Inspect simulator prerequisites without changing services
+        run: python3 deploy/simulator/ci_ssh.py
+      - name: Inspect without changing services
         run: |
           mkdir -p evidence
           ssh ftth-target 'python3 -' < deploy/simulator/inspect_host.py > evidence/host.json
@@ -65,3 +53,216 @@ jobs:
           path: evidence/host.json
           if-no-files-found: error
           retention-days: 3
+      - name: Check deployment capacity
+        if: inputs.operation == 'deploy'
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          host = json.loads(Path('evidence/host.json').read_text())
+          assert host['dockerMemoryBytes'] >= 7 * 1024**3, 'Allocate 8 GB to Docker Desktop before deployment'
+          assert host['diskFreeBytes'] >= 12 * 1024**3, 'At least 12 GB free disk is required'
+          assert host['architecture'] == 'x86_64', 'The simulator images target amd64'
+          PY
+
+  verification:
+    if: inputs.operation != 'inspect'
+    needs: inspect
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - uses: gradle/actions/setup-gradle@v4
+      - run: python3 -m unittest discover -s deploy/simulator -p 'test_*.py'
+      - run: ./gradlew :simulator:test --no-daemon --no-parallel --max-workers=2
+
+  application:
+    if: inputs.operation != 'inspect'
+    needs: inspect
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Resolve an existing verified application release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPLICATION_RUN: ${{ inputs.application_run }}
+        run: python3 deploy/simulator/ci_release.py application
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulator-application-${{ github.run_id }}
+          path: application/*.json
+          if-no-files-found: error
+
+  images:
+    if: inputs.operation != 'inspect'
+    needs: [verification, application]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions: {contents: read, packages: write}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {component: agent, context: ., file: simulator/Dockerfile}
+          - {component: storage, context: deploy/minio-warehouse-test, file: deploy/minio-warehouse-test/Dockerfile}
+          - {component: acs, context: docker/genieacs, file: docker/genieacs/Dockerfile}
+          - {component: cpe, context: docker/genieacs-sim, file: docker/genieacs-sim/Dockerfile}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: docker/build-push-action@v6
+        id: image
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/ftth-sim-${{ matrix.component }}:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=simulator-${{ matrix.component }}
+          cache-to: type=gha,scope=simulator-${{ matrix.component }},mode=max
+      - name: Record immutable image reference
+        env:
+          COMPONENT: ${{ matrix.component }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          digest, component = os.environ['DIGEST'], os.environ['COMPONENT']
+          assert re.fullmatch(r'sha256:[a-f0-9]{64}', digest)
+          ref = f"ghcr.io/{os.environ['GITHUB_REPOSITORY_OWNER'].lower()}/ftth-sim-{component}@{digest}"
+          Path('image.json').write_text(json.dumps({component: ref}))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulator-image-${{ matrix.component }}-${{ github.run_id }}
+          path: image.json
+          if-no-files-found: error
+
+  deploy:
+    if: inputs.operation == 'deploy'
+    needs: [application, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions: {contents: read, packages: read}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: simulator-*-${{ github.run_id }}
+          path: artifacts
+      - run: python3 deploy/simulator/ci_release.py manifest
+      - name: Install deployment clients
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/download/2026.9.1/cloudflared-linux-amd64.deb -o cloudflared.deb
+          sudo dpkg -i cloudflared.deb
+          sudo apt-get update -qq
+          sudo apt-get install -y age
+          rm cloudflared.deb
+      - name: Configure existing deployment credentials
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: python3 deploy/simulator/ci_ssh.py
+      - name: Upload source and optional private recovery archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVERY_RELEASE: ${{ inputs.recovery_release }}
+          RECOVERY_KEY: ${{ secrets.SIMULATOR_RECOVERY_AGE_KEY }}
+        run: |
+          # Validated commit/hostname tokens intentionally expand on the runner before SSH.
+          set -euo pipefail
+          umask 077
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          release="ftth-simulator/releases/$GITHUB_SHA"
+          # shellcheck disable=SC2029
+          ssh ftth-target "umask 077; mkdir -p '$release' ftth-simulator/private"
+          # shellcheck disable=SC2029
+          git archive HEAD | ssh ftth-target "tar -x -C '$release'"
+          scp manifest.json "ftth-target:$release/manifest.json"
+          if [[ -n "$RECOVERY_RELEASE" ]]; then
+            [[ "$RECOVERY_RELEASE" =~ ^[A-Za-z0-9_.-]+$ ]]
+            gh release download "$RECOVERY_RELEASE" --pattern simulator-backup.tar.gz.age --dir "$RUNNER_TEMP/recovery"
+            python3 - <<'PY'
+          import os
+          from pathlib import Path
+          key = os.environ['RECOVERY_KEY']
+          assert 'AGE-SECRET-KEY-' in key, 'Recovery identity is missing'
+          Path(os.environ['RUNNER_TEMP'], 'recovery/identity').write_text(key)
+          PY
+            age -d -i "$RUNNER_TEMP/recovery/identity" -o "$RUNNER_TEMP/recovery/backup.tar.gz" "$RUNNER_TEMP/recovery/simulator-backup.tar.gz.age"
+            scp "$RUNNER_TEMP/recovery/backup.tar.gz" ftth-target:ftth-simulator/private/recovery.tar.gz
+            rm -f "$RUNNER_TEMP/recovery/identity" "$RUNNER_TEMP/recovery/backup.tar.gz"
+          fi
+      - name: Activate only the simulator project
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          PUBLIC_DOMAIN: ${{ inputs.domain }}
+          RECOVERY_RELEASE: ${{ inputs.recovery_release }}
+        run: |
+          # Validated commit/hostname tokens intentionally expand on the runner before SSH.
+          set -euo pipefail
+          [[ "$PUBLIC_DOMAIN" =~ ^[a-z0-9]+([.-][a-z0-9]+)*\.[a-z]{2,}$ ]]
+          [[ "$GITHUB_ACTOR" =~ ^[A-Za-z0-9_-]+$ ]]
+          release="ftth-simulator/releases/$GITHUB_SHA"
+          auth="$release/registry-auth"
+          # shellcheck disable=SC2029
+          ssh ftth-target "umask 077; mkdir -p '$auth'"
+          # shellcheck disable=SC2029
+          cleanup() { ssh ftth-target "rm -rf '$auth'"; }
+          trap cleanup EXIT
+          # shellcheck disable=SC2029
+          printf '%s\n' "$REGISTRY_TOKEN" | ssh ftth-target "docker --config '$auth' login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+          recovery=no
+          if [[ -n "$RECOVERY_RELEASE" ]]; then recovery=yes; fi
+          # shellcheck disable=SC2029
+          ssh ftth-target "bash -s -- '$GITHUB_SHA' '$PUBLIC_DOMAIN' '$recovery'" <<'SH'
+          set -euo pipefail
+          release="$HOME/ftth-simulator/releases/$1"
+          export DOCKER_HOST="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
+          export DOCKER_CONFIG="$release/registry-auth"
+          args=(--manifest "$release/manifest.json" --domain "$2")
+          if [[ "$3" == yes ]]; then args+=(--backup "$HOME/ftth-simulator/private/recovery.tar.gz"); fi
+          python3 "$release/deploy/simulator/install_release.py" "${args[@]}"
+          SH
+      - name: Save non-secret deployment evidence
+        if: always()
+        run: |
+          mkdir -p evidence
+          scp ftth-target:ftth-simulator/private/release.json evidence/release.json 2>/dev/null || true
+          scp ftth-target:ftth-simulator/private/failure.json evidence/failure.json 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulator-deployment-${{ github.run_id }}
+          path: evidence/*.json
+          if-no-files-found: ignore
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Check the public simulator in Chromium
+        run: |
+          umask 077
+          scp ftth-target:ftth-simulator/private/simulator.env "$RUNNER_TEMP/simulator.env"
+          trap 'rm -f "$RUNNER_TEMP/simulator.env"' EXIT
+          npm ci --prefix web --no-audit --no-fund
+          cd web
+          npx playwright install --with-deps chromium
+          cd ..
+          node deploy/simulator/browser_check.cjs "$RUNNER_TEMP/simulator.env"

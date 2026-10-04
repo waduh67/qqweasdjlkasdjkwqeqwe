@@ -69,9 +69,13 @@ def read_settings(path):
     return values
 
 
-def compose_args(path, values):
+def compose_args(path, values, use_runtime=True):
     args = ["docker", "compose", "--parallel", "1", "--project-directory", str(ROOT), "--env-file", str(path),
-            "--project-name", "ftth-sim", "-f", str(ROOT / "docker-compose.simulator.yml")]
+            "--project-name", "ftth-sim"]
+    runtime = path.parent / "compose.json"
+    if use_runtime and runtime.is_file():
+        return args + ["-f", str(runtime)]
+    args += ["-f", str(ROOT / "docker-compose.simulator.yml")]
     if values.get("FTTH_SIM_EDGE_NETWORK"):
         args += ["-f", str(ROOT / "deploy/simulator/compose.edge.yml")]
     return args
