@@ -43,7 +43,24 @@ def inspect():
         except OSError:
             pass
     disk = shutil.disk_usage(Path.home())
+    memory = {}
+    for line in Path('/proc/meminfo').read_text().splitlines():
+        key, value = line.split(':', 1)
+        if key in ('MemTotal', 'MemAvailable', 'SwapTotal', 'SwapFree'):
+            memory[key] = int(value.split()[0]) * 1024
+    desktop = {}
+    for path in [Path.home() / '.docker/desktop/settings-store.json', Path.home() / '.docker/desktop/settings.json']:
+        try:
+            values = json.loads(path.read_text())
+            desktop.update({key: value for key, value in values.items()
+                            if re.search(r'memory|cpus|swap', key, re.I) and isinstance(value, (int, float, bool))})
+        except (OSError, ValueError):
+            pass
+    # systemd may embed a token in ExecStart. Inspect only its presence locally.
+    remote_tunnel = '--token' in (run('systemctl', 'show', 'cloudflared', '-p', 'ExecStart', '--value') or '')
     return {"user": run("id", "-un"), "home": str(Path.home()), "architecture": run("uname", "-m"),
+        "hostMemory": memory, "desktopResourceSettings": desktop,
+        "containerMemory": [json.loads(line) for line in (run('docker', 'stats', '--no-stream', '--format', '{{json .}}') or '').splitlines()],
         "dockerContext": context, "dockerMemoryBytes": info.get("MemTotal"), "dockerCPUs": info.get("NCPU"),
         "composeVersion": run("docker", "compose", "version", "--short"), "diskFreeBytes": disk.free,
         "passwordlessSudo": subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0,
@@ -51,7 +68,7 @@ def inspect():
         "simulatorLocations": [{"path": str(p), "exists": p.exists(), "writable": os.access(p, os.W_OK),
             "privateEnvExists": (p / "private/simulator.env").is_file()} for p in roots],
         "cloudflaredService": run("systemctl", "show", "cloudflared", "-p", "ActiveState", "-p", "FragmentPath"),
-        "cloudflaredRoutes": routes}
+        "cloudflaredRoutes": routes, "cloudflaredRemoteManaged": remote_tunnel}
 
 
 if __name__ == "__main__":
