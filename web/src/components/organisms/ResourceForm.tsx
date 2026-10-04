@@ -13,11 +13,11 @@ export function useResourceReviewLock(locked: boolean) {
 }
 
 /** A retained resource layer for details and review; form submission owns validation. */
-export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus }: {
+export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, loading = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus }: {
   returnFocus?: HTMLElement | null;
   title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode;
   onBack: () => void; onClose: () => void; readOnly?: boolean; editing?: boolean;
-  onReview?: () => void; busy?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean
+  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean
 }) {
   const content = useRef<HTMLDivElement>(null)
   const reviewContent = useRef<HTMLDivElement>(null)
@@ -28,7 +28,9 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
     fields: [...content.current?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea') ?? []].map(input => [input.type, input.value, 'checked' in input ? input.checked : null]),
     choices: [...content.current?.querySelectorAll('[aria-pressed], [role=radio], [role=switch]') ?? []].map(choice => [choice.getAttribute('aria-pressed'), choice.getAttribute('aria-checked')]),
   })
-  useLayoutEffect(() => { initialValues.current = values() }, [])
+  useLayoutEffect(() => {
+    if (!loading && initialValues.current === null) initialValues.current = values()
+  }, [loading])
   const requestClose = () => {
     if (locked || busy) return
     if (dirty || (!readOnly && initialValues.current !== null && initialValues.current !== values())) setConfirmClose(true)
@@ -45,6 +47,7 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
   useLayoutEffect(() => { if (reviewing) reviewContent.current?.focus() }, [reviewing])
   const reviewLabel = editing ? 'Tinjau + simpan' : 'Tinjau + buat'
   const toReview = () => {
+    if (loading) return
     const invalid = [...content.current?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea') ?? []]
       .find(input => input.willValidate && !input.validity.valid)
     if (invalid) { invalid.reportValidity(); return }
@@ -53,16 +56,16 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
   }
   return <ReviewLock.Provider value={setLocked}>
     <Modal returnFocus={returnFocus} title={title} onClose={requestClose} layout="resource" className={className} footer={withCancelGuard(review ? reviewFooter : reviewAction ? <>
-      <Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy} onClick={toReview}>{reviewLabel}</Button>
+      <Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy || loading} onClick={toReview}>{reviewLabel}</Button>
     </> : footer)}>
       {!readOnly && <TabList className="resource-form-tabs" selectedValue={review ? 'review' : 'basics'} onTabSelect={(_, data) => {
-        if (locked || busy) return
+        if (locked || busy || loading) return
         if (data.value === 'basics') onBack()
         else if (!review) toReview()
       }}>
-        <Tab value="basics" disabled={locked || busy}>Dasar</Tab><Tab value="review" disabled={locked || busy}>{reviewLabel}</Tab>
+        <Tab value="basics" disabled={locked || busy || loading}>Dasar</Tab><Tab value="review" disabled={locked || busy || loading}>{reviewLabel}</Tab>
       </TabList>}
-      <div ref={content} className="resource-form-content">
+      <div ref={content} className="resource-form-content" aria-busy={loading || undefined}>
         <div hidden={!!review} inert={review ? true : undefined}>{children}</div>
         {review && <div ref={reviewContent} tabIndex={-1} className="resource-review-content">{review}</div>}
       </div>

@@ -1,6 +1,6 @@
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { tokenStore } from '@/api/client'
 import { WarehouseLocationEditor } from './WarehouseLocationEditor'
@@ -37,6 +37,24 @@ beforeEach(() => {
   mocks.toast.mockClear(); tokenStore.clear()
 })
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
+
+it('keeps one named location panel through loading and closes an untouched form without a discard prompt', async () => {
+  let releaseAreas!: (value: Response) => void
+  const areas = new Promise<Response>(resolve => { releaseAreas = resolve })
+  vi.stubGlobal('fetch', vi.fn(async (path: string) => path === '/api/areas' ? areas : directory(path)))
+  const onClose = vi.fn()
+  render(<MemoryRouter><WarehouseLocationEditor row={null} readOnly={false} onClose={onClose} onSaved={vi.fn()} onReload={vi.fn()} /></MemoryRouter>)
+  const panel = screen.getByRole('dialog', { name: 'Tambah lokasi' })
+  expect((screen.getByRole('tab', { name: 'Tinjau + buat' }) as HTMLButtonElement).disabled).toBe(true)
+  expect(screen.queryByRole('textbox', { name: 'Nama lokasi' })).toBeNull()
+  await act(async () => { releaseAreas(directory('/api/areas')) })
+  await screen.findByRole('textbox', { name: 'Nama lokasi' })
+  expect(screen.getByRole('dialog', { name: 'Tambah lokasi' })).toBe(panel)
+  expect((screen.getByRole('tab', { name: 'Tinjau + buat' }) as HTMLButtonElement).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Tutup' }))
+  expect(onClose).toHaveBeenCalledOnce()
+  expect(screen.queryByRole('dialog', { name: 'Buang perubahan?' })).toBeNull()
+})
 
 it('selecting a named bin parent uses its real area and requires review before creation', async () => {
   const fetch = vi.fn(async (path: string, init: RequestInit) => init.method === 'POST' ? response({ ...parent, id: '39f74e3d-0e6b-4a90-a535-9989c74fa043', kind: 'BIN', code: 'BIN-A', name: 'Rak A', parentLocationId: id }) : directory(path))
