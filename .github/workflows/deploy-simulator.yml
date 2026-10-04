@@ -192,7 +192,7 @@ jobs:
           # shellcheck disable=SC2029
           ssh ftth-target "umask 077; mkdir -p '$release' ftth-simulator/private"
           # shellcheck disable=SC2029
-          git archive HEAD | ssh ftth-target "tar -x -C '$release'"
+          git archive HEAD | ssh ftth-target "umask 022; tar -x -C '$release'"
           scp manifest.json "ftth-target:$release/manifest.json"
           if [[ -n "$RECOVERY_RELEASE" ]]; then
             [[ "$RECOVERY_RELEASE" =~ ^[A-Za-z0-9_.-]+$ ]]
