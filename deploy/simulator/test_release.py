@@ -6,10 +6,19 @@ import tempfile
 import unittest
 from unittest.mock import Mock
 
-from install_release import Installer, check_manifest, extract_backup
+from install_release import Installer, check_config, check_manifest, extract_backup
 
 
 class ReleaseBoundaryTest(unittest.TestCase):
+    def test_recovery_cannot_use_a_production_data_volume(self):
+        config = {"name": "ftth-sim", "networks": {"default": {"internal": True}},
+                  "volumes": {"pgdata": {"name": "ftth_pgdata"}}, "services": {}}
+        with self.assertRaisesRegex(ValueError, "own project"):
+            check_config(config)
+        config["volumes"]["pgdata"] = {"name": "ftth-sim_pgdata", "external": True}
+        with self.assertRaisesRegex(ValueError, "own project"):
+            check_config(config)
+
     def test_recovery_rejects_traversal_and_links_before_writing(self):
         for name, kind in [("snapshot/../../escape", tarfile.REGTYPE), ("snapshot/env", tarfile.SYMTYPE)]:
             with self.subTest(name=name), tempfile.TemporaryDirectory() as folder:

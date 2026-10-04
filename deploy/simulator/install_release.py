@@ -81,6 +81,9 @@ def extract_backup(archive, destination):
 def check_config(config):
     if config.get("name") != PROJECT or not config["networks"]["default"].get("internal"):
         raise ValueError("Simulator must use its own internal network")
+    for name, volume in config.get("volumes", {}).items():
+        if volume.get("external") or volume.get("name") != PROJECT + "_" + name:
+            raise ValueError("Simulator volumes must belong to its own project")
     for name, service in config["services"].items():
         if set(service.get("networks", {})) != {"default"}:
             raise ValueError("An unexpected external network is configured")
@@ -90,6 +93,11 @@ def check_config(config):
                 raise ValueError("Gateway must listen only on loopback port 18080")
         elif ports:
             raise ValueError("Device services must not publish ports")
+        for volume in service.get("volumes", []):
+            if volume["type"] == "volume" and volume["source"] not in config["volumes"]:
+                raise ValueError("Unexpected simulator data volume")
+            if volume["type"] == "bind" and (not volume.get("read_only") or not Path(volume["source"]).resolve().is_relative_to(manage.ROOT)):
+                raise ValueError("Only read-only release files may be bind-mounted")
 
 
 class Installer:
