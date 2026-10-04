@@ -17,14 +17,16 @@ function Example() {
     {child && <WarehouseLocationEditor row={null} readOnly={false} onClose={() => setChild(false)} onReload={() => setChild(false)} onSaved={() => setChild(false)} />}
   </ResourceForm></MemoryRouter>
 }
-it('returns focus to the parent after deferred metadata replaces the loading layer', async () => {
+it('keeps the location layer while metadata loads and returns focus to the parent', async () => {
   let resolve!: (value: Response) => void
   const areas = new Promise<Response>(done => { resolve = done })
   vi.stubGlobal('fetch', vi.fn(async (path: string) => path === '/api/areas' ? areas : response({ items: [], page: 0, size: 25, totalElements: 0 })))
   render(<Example />); const user = userEvent.setup(), launcher = screen.getByRole('button', { name: 'Tambah lokasi' })
-  await user.click(launcher); await screen.findByRole('dialog', { name: 'Lokasi' })
+  await user.click(launcher)
+  const loading = await screen.findByRole('dialog', { name: 'Tambah lokasi' })
   await act(async () => { resolve(response([])); await areas })
   const loaded = await screen.findByRole('dialog', { name: 'Tambah lokasi' })
+  expect(loaded).toBe(loading)
   await user.click(await within(loaded).findByRole('button', { name: 'Tutup' }))
   await waitFor(() => expect(document.activeElement).toBe(launcher))
   expect(screen.getByRole('textbox', { name: 'Referensi' })).toHaveProperty('value', 'SJ-KEEP')
