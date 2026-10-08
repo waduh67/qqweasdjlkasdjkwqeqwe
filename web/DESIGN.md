@@ -31,6 +31,13 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - Labels remain programmatically associated with controls, errors retain drafts, saves disable repeated submission, and closing a dirty resource form requires confirmation.
 - Platform ACS distinguishes application API connectivity from ONT Inform connectivity. Passwords are write-only; an empty replacement preserves the saved password. No new visual tokens or accepted accessibility debt.
 
+### Tenant owner administration
+- Tenant rows show owner name, email and account status in a stacked cell with the existing 4px rhythm. Owner cells wrap long identities and grow the row height; mobile users can scroll the table to these columns. Unresolved historical owners are explicitly Belum ditentukan. The platform tenant has no owner controls.
+- The owner panel uses the shared Blade. Its body owns scrolling, following StyleGallery scroll-body-shell; header and footer stay visible. Existing tokens and single-column fields apply at desktop and phone widths.
+- Simpan owner is the primary action. Password reset uses a secondary button within its own labeled form. The shared Blade exposes closeDisabled so its X and dismiss interactions show the same pending state as Batal.
+- Owner selection uses a labeled search and paginated candidate list. Selection stays visible across pages. Inactive candidates cannot be selected. Binding requires an explicit save; password reset names the current owner and requires matching passwords of at least eight characters.
+- Validation keeps inputs. Batal, Escape and X discard the panel when no save is pending. During a save, dismissal, owner selection and both mutations are disabled to prevent conflicting operations. Successful save closes the panel and reloads tenant data. Reset clears password fields and reports that old sessions ended. A changed owner requires refreshing identity before another reset. Loading, errors, empty candidates and unbound owners have visible text. Shared Fluent primitives provide keyboard and screen reader behavior. No new accessibility debt.
+
 ### Inventory resource forms
 - Field groups in resource flyouts use one complete field per row. Nested grid wrappers and narrow port/version wrappers fill the available width so the existing label and control columns stay readable.
 - Labels stack above controls in narrow flyouts. Identity, SNMP and Web Management fields retain their source order, and the existing flyout body owns scrolling above the review footer.

@@ -121,6 +121,10 @@
 
 .table-inline-values > * + *::before { content: ' · '; }
 
+.tenant-admin-page .resource-data-table-grid .fui-DataGridCell { height: auto; padding-block: 8px; }
+.tenant-admin-page .table-cell-content .tenant-owner-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.tenant-admin-page .tenant-owner-cell :is(span, button) { white-space: normal; overflow-wrap: anywhere; }
+
 .table-cell-content .badge.accent:not(:has(.dot)), .fui-TableCell .badge.accent:not(:has(.dot)) { background: transparent; border: 0; padding: 0; }
 
 .public-form-fields { gap: 20px; }
