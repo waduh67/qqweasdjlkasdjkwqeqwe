@@ -94,7 +94,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
     }
 
     private fun getAuthorized(kind: MasterKind, id: UUID, reference: Boolean): MasterSnapshot {
-        val current = authority.lockCurrent(); permission(current, if (reference) "warehouse.catalog.view" else "${kind.permission}.view")
+        val current = authority.lockCurrent(); readPermission(current, kind, reference)
         val result = store.get(kind, id)
         if (result is LocationSnapshot) authorizeLocation(result, current, scopes.currentUnderFence(current.fence))
         return result
@@ -109,7 +109,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         listAuthorized(kind, if (kind == MasterKind.LOCATION) filter.copy(locationKinds = setOf(LocationKind.WAREHOUSE, LocationKind.BIN)) else filter, true)
 
     private fun listAuthorized(kind: MasterKind, filter: MasterFilter, reference: Boolean): WarehousePage<MasterSnapshot> {
-        val current = authority.lockCurrent(); permission(current, if (reference) "warehouse.catalog.view" else "${kind.permission}.view")
+        val current = authority.lockCurrent(); readPermission(current, kind, reference)
         if (filter.page < 0 || filter.size !in 1..100 || filter.sort !in setOf("code", "name") || filter.direction !in setOf("asc", "desc") ||
             listOfNotNull(filter.search, filter.code, filter.name).any { it.length > 200 }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
@@ -131,6 +131,13 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
 
     private fun permission(current: CurrentAuthority, permission: String) {
         if (!current.platformAdmin && permission !in current.permissions) masterFailure(WarehouseErrorCode.FORBIDDEN)
+    }
+
+    private fun readPermission(current: CurrentAuthority, kind: MasterKind, reference: Boolean) {
+        if (reference && kind == MasterKind.SKU && current.permissions.any { it in setOf(
+                "warehouse.material.own", "warehouse.request.own", "warehouse.return.own") }) return
+        if (reference && kind == MasterKind.LOCATION && "warehouse.request.own" in current.permissions) return
+        permission(current, if (reference) "warehouse.catalog.view" else "${kind.permission}.view")
     }
 
     private fun validate(input: MasterInput, action: MasterAction) {

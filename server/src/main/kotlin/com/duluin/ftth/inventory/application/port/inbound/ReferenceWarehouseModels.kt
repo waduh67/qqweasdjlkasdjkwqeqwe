@@ -7,6 +7,7 @@ import java.util.UUID
 
 data class ReferenceActivationInput(val expectedEpoch: Long, val reviewHash: String, val reason: String)
 data class ReferenceDrainInput(val expectedEpoch: Long)
+data class ReferenceWorkflowView(val snapshot: com.duluin.ftth.inventory.TenantCutoverSnapshot, val owner: Boolean)
 data class ReferenceReceiptInput(val warehouseId: UUID, val lines: List<ReceiptLineInput>,
     val notes: String = "", val supplierId: UUID? = null, val reference: String? = null)
 data class ReferenceTransferInput(val sourceWarehouseId: UUID, val warehouseId: UUID,

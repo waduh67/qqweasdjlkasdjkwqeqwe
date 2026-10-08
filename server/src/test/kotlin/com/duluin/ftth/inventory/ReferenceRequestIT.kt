@@ -321,6 +321,34 @@ class ReferenceRequestIT : WarehouseMasterHttpFixture() {
         assertThat(stock(setup).path("positions").asSequence().sumOf { it.path("quantityBase").asString().toLong() }).isEqualTo(9)
     }
 
+    @Test fun `technician material directory contains only own issued stock with scoped catalog and workflow reads`() {
+        val setup = setup()
+        val submitted = approved(setup, "RESTOCK", quantity = "3")
+        ok("POST", "/receipts", setup.admin, """{"warehouseId":"${setup.warehouse}","lines":[{"skuId":"${setup.sku}","quantityBase":"7"}]}""", status = 201)
+        val identity = stock(setup, setup.sku).path("positions").single().path("stockIdentityId").asString()
+        ok("POST", "/requests/${submitted.path("id").asString()}/handovers", setup.admin, handoverBody(setup, submitted, identity, "3"))
+        val own = ok("GET", "/my-materials?size=1", setup.technician)
+        assertThat(own.path("totalElements").asLong()).isEqualTo(1)
+        val position = own.path("items").single()
+        assertThat(position.path("holderId").asString()).isEqualTo(setup.technicianId)
+        assertThat(position.path("quantityBase").asString()).isEqualTo("3")
+        assertThat(position.path("status").asString()).isEqualTo("ISSUED")
+        assertThat(ok("GET", "/my-materials", setup.other).path("totalElements").asLong()).isZero()
+        assertThat(ok("GET", "/my-materials?page=1&size=1", setup.technician).path("items")).isEmpty()
+        assertThat(ok("GET", "/my-materials?search=Konektor", setup.technician).path("items")).hasSize(1)
+        assertThat(ok("GET", "/my-materials?search=absent", setup.technician).path("items")).isEmpty()
+        assertThat(ok("GET", "/skus/${setup.sku}", setup.technician).path("id").asString()).isEqualTo(setup.sku)
+        assertThat(ok("GET", "/locations", setup.technician).path("items").single().path("id").asString()).isEqualTo(setup.warehouse)
+        assertThat(request("GET", "/api/v2/warehouse/suppliers", setup.technician).status).isEqualTo(403)
+        assertThat(request("GET", "/api/v2/warehouse/stock/${setup.sku}", setup.technician).status).isEqualTo(403)
+        assertThat(request("GET", "/api/v2/warehouse/my-materials?size=0", setup.technician).status).isEqualTo(400)
+        val workflow = ok("GET", "/workflow", setup.technician)
+        assertThat(workflow.path("snapshot").path("workflow").asString()).isEqualTo("REFERENCE")
+        assertThat(workflow.path("owner").asBoolean()).isFalse()
+        assertThat(ok("GET", "/workflow", setup.owner).path("owner").asBoolean()).isTrue()
+        assertThat(request("GET", "/api/v2/warehouse/workflow/review", setup.technician).status).isEqualTo(403)
+    }
+
     @Test fun `restock handover cuts cable with retained remnant and serial ownership changes immediately`() {
         val setup = setup()
         val cable = ok("POST", "/skus", setup.owner, """{"code":"CABLE","name":"Kabel","tracking":"LOT","baseUnit":"MM"}""", status = 201).path("id").asString()

@@ -27,6 +27,18 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
     private val posting: WarehousePosting, private val sites: SiteReferenceApi, private val iam: IamApi) {
     private val mapper = jacksonObjectMapper()
 
+    fun workflow(): ReferenceWorkflowView {
+        val current = authority.lockCurrent()
+        return ReferenceWorkflowView(cutovers.read(), owners.findUserId() == current.fence.identity.userId)
+    }
+
+    fun ownMaterials(page: Int, size: Int, search: String?): WarehousePage<ReferenceStockPosition> {
+        if (page < 0 || size !in 1..100 || (search?.length ?: 0) > 200) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val current = authority.lockCurrent()
+        receiptPermission(current, "warehouse.material.own")
+        return store.ownPositions(current.fence.identity.userId, page, size, search)
+    }
+
     fun drain(input: ReferenceDrainInput): TenantCutoverSnapshot {
         val fence = cutovers.lockCurrentForTransition()
         owner(authority.lockCurrent())

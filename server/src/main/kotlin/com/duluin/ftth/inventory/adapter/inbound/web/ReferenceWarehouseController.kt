@@ -11,6 +11,10 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v2/warehouse")
 class ReferenceWarehouseController(private val service: ReferenceWarehouseService) {
+    @GetMapping("/workflow") fun workflow() = ResponseEntity.ok().header("Cache-Control", "no-store").body(service.workflow())
+    @GetMapping("/my-materials") fun ownMaterials(@RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int, @RequestParam(required = false) search: String?) =
+        ResponseEntity.ok().header("Cache-Control", "no-store").body(service.ownMaterials(page, size, search))
     @PostMapping("/workflow/drain") fun drain(@RequestBody body: String) = service.drain(WarehouseReceiptJson.decode(body, ReferenceDrainInput::class.java))
     @GetMapping("/workflow/review") fun review() = json(service.review())
     @PostMapping("/workflow/activate") fun activate(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =

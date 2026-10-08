@@ -83,6 +83,33 @@ class ReferenceWarehouseStore(private val jdbc: WarehouseCommandJdbc) {
             mapper.writeValueAsString(legs))
     }
 
+    fun ownPositions(actor: UUID, page: Int, size: Int, search: String?): WarehousePage<ReferenceStockPosition> = jdbc.execute { sql ->
+        val predicate = """balance.tenant_id=? AND balance.custody_owner_id=? AND balance.custody_owner_kind='TECHNICIAN'
+            AND balance.quantity_base>0 AND balance.warehouse_admission='VERIFIED' AND segment.state='ACTIVE'
+            AND balance.status='ISSUED' AND location.state='ACTIVE'
+            AND (sku.code ILIKE ? OR sku.name ILIKE ? OR coalesce(asset.serial_number,'') ILIKE ?)"""
+        val term = "%${search?.trim().orEmpty()}%"
+        val values = arrayOf<Any?>(sql.tenant, actor, term, term, term)
+        val joins = """FROM inventory_balance_projection balance JOIN inventory_segment segment
+            ON segment.tenant_id=balance.tenant_id AND segment.id=balance.stock_identity_id
+            JOIN inventory_sku sku ON sku.tenant_id=balance.tenant_id AND sku.id=balance.sku_id
+            JOIN inventory_location location ON location.tenant_id=balance.tenant_id AND location.id=balance.location_id
+            LEFT JOIN app_user holder ON holder.tenant_id=balance.tenant_id AND holder.id=balance.custody_owner_id
+            LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=segment.tenant_id AND asset.id=segment.asset_id"""
+        val total = requireNotNull(sql.value("SELECT count(*) $joins WHERE $predicate", *values)).toLong()
+        val rows = sql.query("""SELECT balance.*,sku.code sku_code,sku.name sku_name,sku.tracking,location.name location_name,
+            location.code location_code,holder.name holder_name,holder.email holder_email,asset.serial_number,asset.mac_address
+            $joins WHERE $predicate ORDER BY sku.name,sku.id,segment.id LIMIT ? OFFSET ?""", *values, size, page.toLong() * size) {
+            val locationName = it.getString("location_name") ?: it.getString("location_code")
+            ReferenceStockPosition(it.uuid("stock_identity_id"), it.uuid("sku_id"), it.getString("sku_code"), it.getString("sku_name"),
+                WarehouseTracking.valueOf(it.getString("tracking")), WarehouseBaseUnit.valueOf(it.getString("base_unit")),
+                it.getLong("quantity_base").toString(), it.uuid("location_id"), locationName, it.uuid("custody_owner_id"),
+                it.getString("holder_name") ?: locationName, it.getString("holder_email"), it.getString("custody_owner_kind"),
+                it.getString("status"), it.getString("serial_number"), it.getString("mac_address"), it.getLong("revision"))
+        }
+        WarehousePage(rows, page, size, total)
+    }
+
     fun positions(sku: UUID): List<ReferenceStockPosition> = jdbc.execute { sql ->
         sql.query("""SELECT balance.*,sku.code sku_code,sku.name sku_name,sku.tracking,location.name location_name,
             location.code location_code,holder.name holder_name,holder.email holder_email,asset.serial_number,asset.mac_address
