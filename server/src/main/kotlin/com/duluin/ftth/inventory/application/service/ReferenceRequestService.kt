@@ -14,7 +14,6 @@ import com.duluin.ftth.network.SiteReferenceApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.module.kotlin.jacksonObjectMapper
-import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -52,7 +51,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
             ReferenceRequestLineView(UUID.randomUUID(), line.baseUnit, line.requestedBase, sku?.id,
                 sku?.name ?: requireNotNull(line.proposedName), line.proposedName)
         }
-        val now = Instant.now()
+        val now = referenceTimestamp()
         val requester = iam.findUser(actor) ?: masterFailure(WarehouseErrorCode.FORBIDDEN)
         store.lockSettings()
         val policy = store.settings()
@@ -83,7 +82,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
             line.copy(approvedBase = choice.approvedBase, skuId = mapped?.id, name = mapped?.name ?: line.name)
         }
         if (lines.none { it.approvedBase.toLong() > 0 }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Sisakan minimal satu material")
-        val view = prior.copy(revision = prior.revision + 1, lines = lines, updatedAt = Instant.now(),
+        val view = prior.copy(revision = prior.revision + 1, lines = lines, updatedAt = referenceTimestamp(),
             state = if (prior.requiresManagerApproval) ReferenceRequestState.MANAGER_REVIEW else ReferenceRequestState.APPROVED)
         store.save(view, false)
         return record("REVIEW", key, canonical, access, view, input.notes, "warehouse.request.review")
@@ -100,7 +99,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
         if (prior.state !in setOf(ReferenceRequestState.SUBMITTED, ReferenceRequestState.MANAGER_REVIEW) ||
             input.approved && prior.state != ReferenceRequestState.MANAGER_REVIEW) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         if (!input.approved) receiptText(input.reason, 1000) else notes(input.reason)
-        val view = prior.copy(revision = prior.revision + 1, updatedAt = Instant.now(),
+        val view = prior.copy(revision = prior.revision + 1, updatedAt = referenceTimestamp(),
             state = if (input.approved) ReferenceRequestState.APPROVED else ReferenceRequestState.REJECTED)
         store.save(view, false)
         return record("DECIDE", key, canonical, access, view, input.reason, decisionPermission)

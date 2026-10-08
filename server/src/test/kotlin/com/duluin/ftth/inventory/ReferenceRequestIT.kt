@@ -8,8 +8,24 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import com.duluin.ftth.inventory.application.service.referenceTimestamp
+import com.duluin.ftth.inventory.adapter.outbound.persistence.PostingSql
 
 class ReferenceRequestIT : WarehouseMasterHttpFixture() {
+    @Test fun `snapshot timestamp and JDBC projection agree at rounding boundaries`() {
+        val fixture = fixture(tenant())
+        fixture.transaction {
+            jdbc { connection ->
+                val sql = PostingSql(connection, fixture.tenant)
+                for (nanos in listOf(835998499, 835998500, 835998501, 835999500, 999999500)) {
+                    val stamp = referenceTimestamp(java.time.Instant.ofEpochSecond(1791468590, nanos.toLong()))
+                    assertThat(sql.value("SELECT ?::timestamptz IS NOT DISTINCT FROM ?::timestamptz", stamp, stamp.toString()))
+                        .describedAs("JSON and JDBC timestamp at nanos=%s", nanos).isEqualTo("t")
+                }
+            }
+        }
+    }
+
     private data class Setup(val owner: String, val warehouse: String, val sku: String, val manager: String,
         val admin: String, val technician: String, val technicianId: String, val other: String)
 

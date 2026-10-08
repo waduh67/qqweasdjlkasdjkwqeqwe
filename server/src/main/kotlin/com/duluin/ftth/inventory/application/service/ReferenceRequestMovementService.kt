@@ -5,7 +5,6 @@ import com.duluin.ftth.inventory.adapter.outbound.persistence.ReferenceRequestSt
 import com.duluin.ftth.inventory.application.port.inbound.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -78,7 +77,7 @@ class ReferenceRequestMovementService(private val requests: ReferenceRequestServ
                 ReferenceRequestState.PARTIALLY_RECEIVED else ReferenceRequestState.RECEIVED
             else -> ReferenceRequestState.PARTIALLY_FULFILLED
         }
-        val view = prior.copy(revision = prior.revision + 1, state = state, lines = lines, updatedAt = Instant.now())
+        val view = prior.copy(revision = prior.revision + 1, state = state, lines = lines, updatedAt = referenceTimestamp())
         store.save(view, false)
         return requests.record(action, key, canonical, access, view, notes, permission, movement)
     }
