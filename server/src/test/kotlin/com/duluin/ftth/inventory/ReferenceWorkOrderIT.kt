@@ -10,6 +10,15 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.fulfillment.FulfillmentCoordinator
+import com.duluin.ftth.fulfillment.FulfillmentEffectType
+import com.duluin.ftth.fulfillment.FulfillmentRequest
+import com.duluin.ftth.fulfillment.FulfillmentSource
+import com.duluin.ftth.fulfillment.FulfillmentSqlPhase
+import com.duluin.ftth.fulfillment.FulfillmentSqlProbe
+import com.duluin.ftth.fulfillment.FulfillmentState
+import com.duluin.ftth.fulfillment.decodeFulfillmentRequest
 
 class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
     private data class Setup(val owner: String, val tech: String, val techId: String, val second: String,
@@ -128,14 +137,19 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         val key = UUID.randomUUID().toString()
         val body = completeBody(2, listOf(material.second to "3500"), "\n Selesai di lokasi \n")
         val f = fixture(s.owner)
-        assertThatThrownBy { f.transaction {
+        try { assertThatThrownBy { f.transaction {
             val saved = request("POST", "/api/v2/work-orders/$id/complete", s.tech, body, key)
             assertThat(saved.status).withFailMessage(saved.contentAsString).isEqualTo(200)
             sql("UPDATE work_order SET proof_of_work_hash=repeat('a',64) WHERE id='$id'")
+            org.springframework.security.core.context.SecurityContextHolder.getContext().authentication =
+                com.duluin.ftth.common.infrastructure.security.JwtAuthenticationConverter().convert(
+                    context.getBean(org.springframework.security.oauth2.jwt.JwtDecoder::class.java).decode(s.tech))
         } }.hasMessageContaining("reference completion differs")
+        } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext() }
         assertThat(warehouseOk("GET", "/stock/${material.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("10000")
         assertThat(ok("GET", "/$id", s.owner).path("completion").isNull).isTrue()
         assertThat(f.transaction { scalar("SELECT count(*) FROM inventory_movement WHERE operation_namespace='warehouse.reference.consume'") }).isEqualTo("0")
+        assertThat(f.transaction { scalar("SELECT count(*) FROM fulfillment_approval_snapshot WHERE work_order_id='$id'") }).isEqualTo("0")
         ok("POST", "/$id/complete", s.tech, body, key)
         assertThat(warehouseOk("GET", "/stock/${material.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("6500")
         assertThat(f.transaction { scalar("SELECT resolution_note FROM work_order WHERE id='$id'") }).isEqualTo("Selesai di lokasi")
@@ -157,6 +171,8 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         assertThat(completion.path("documentId").isNull).isTrue()
         assertThat(completion.path("photos")).hasSize(1)
         assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM work_order WHERE id='$id' AND status='DONE' AND completed_by='${s.techId}' AND approval_status IS NULL AND approved_by IS NULL") }).isEqualTo("1")
+        assertReferenceFulfilled(s, id)
+        assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM fulfillment_reference_material_receipt WHERE work_order_id='$id' AND document_id IS NULL") }).isEqualTo("1")
         assertThatThrownBy { fixture(s.owner).transaction { sql("UPDATE work_order SET proof_of_work_hash=repeat('a',64) WHERE id='$id'") } }
             .hasMessageContaining("reference completion differs")
         assertThatThrownBy { fixture(s.owner).transaction { sql("UPDATE work_order_reference_completion SET revision=revision+1 WHERE work_order_id='$id'") } }
@@ -186,9 +202,88 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         assertThat(warehouseOk("GET", "/stock/${cable.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("6500")
         assertThat(warehouseOk("GET", "/stock/${serial.first}", s).path("positions")).isEmpty()
         assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM inventory_movement WHERE operation_namespace='warehouse.reference.consume' AND document_id='${detail.path("completion").path("documentId").asString()}'") }).isEqualTo("1")
+        assertReferenceFulfilled(s, id)
+        assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM fulfillment_reference_material_receipt WHERE work_order_id='$id' AND document_id='${detail.path("completion").path("documentId").asString()}'") }).isEqualTo("1")
         val second = create(s).path("id").asString()
         completePhotos(second, s.tech)
         assertThat(request("POST", "/api/v2/work-orders/$second/complete", s.tech, completeBody(2, listOf(serial.second to "1"))).status).isEqualTo(409)
+    }
+    private fun assertReferenceFulfilled(s: Setup, id: String) {
+        fixture(s.owner).transaction {
+            assertThat(scalar("SELECT state||':'||coalesce(outcome,'') FROM fulfillment_checkpoint WHERE work_order_id='$id'"))
+                .startsWith("APPLIED:")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_approval_snapshot WHERE work_order_id='$id' AND source='REFERENCE_WORK_ORDER' AND approved_by IS NULL AND plan_id IS NULL AND usage_id IS NULL AND fulfillment_actor_id='${s.techId}'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress p JOIN fulfillment_checkpoint c ON c.tenant_id=p.tenant_id AND c.id=p.fulfillment_id WHERE c.work_order_id='$id' AND p.status='COMPLETED'")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM workorder_fulfillment_result WHERE work_order_id='$id' AND source='REFERENCE_WORK_ORDER' AND result='APPLIED'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_material_settlement s JOIN fulfillment_approval_snapshot a ON a.tenant_id=s.tenant_id AND a.id=s.id WHERE a.work_order_id='$id'")).isEqualTo("0")
+        }
+    }
+
+    @Test fun `linked completion activates service and fulfills order once after delivery failure`() {
+        val s = setup()
+        fun post(path: String, input: String, status: Int = 201): JsonNode {
+            val response = request("POST", path, s.owner, input)
+            assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(status)
+            return mapper.readTree(response.contentAsString)
+        }
+        val plan = post("/api/catalog/plans", """{"name":"Reference service","price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""").path("id").asString()
+        val customer = post("/api/customers", """{"code":"REFERENCE","name":"Pelanggan","address":"Lokasi","planId":"$plan","location":{"longitude":106.9,"latitude":-6.2}}""")
+        val customerId = customer.path("id").asString()
+        val subscription = customer.path("subscription").path("id").asString()
+        val nas = post("/api/bng/nas", """{"name":"Reference NAS","vendor":"MIKROTIK"}""").path("id").asString()
+        val access = post("/api/bng/access", """{"subscriptionId":"$subscription","planId":"$plan","nasId":"$nas"}""").path("id").asString()
+        val material = issue(s)
+        var order = post("/api/orders", """{"customerId":"$customerId","lines":[{"catalogItemId":"${material.first}","description":"Pemasangan","quantity":1}],
+            "serviceAddress":{"address":"Lokasi","city":"Kota","postalCode":"10000"},
+            "operation":{"namespace":"test.reference.order","key":"create","payloadHash":"create"}}""")
+        val orderId = order.path("id").asString()
+        for (action in listOf("SUBMIT", "ACCEPT", "SCHEDULE", "START_FULFILLING")) {
+            order = post("/api/orders/$orderId/$action", """{"expectedRevision":${order.path("revision").asLong()},
+                "appointment":{"startsAt":"2030-01-01T10:00:00Z","endsAt":"2030-01-01T11:00:00Z"},
+                "operation":{"namespace":"test.reference.order","key":"$action","payloadHash":"$action"}}""", 200)
+        }
+        val input = body(s).dropLast(1) + ",\"customerId\":\"$customerId\",\"subscriptionId\":\"$subscription\",\"orderId\":\"$orderId\"}"
+        val id = ok("POST", "", s.admin, input, status = 201).path("id").asString()
+        completePhotos(id, s.tech)
+        val key = UUID.randomUUID().toString()
+        val completion = completeBody(2, listOf(material.second to "2"))
+        FulfillmentSqlProbe(context, FulfillmentSqlPhase.COMPLETED_EFFECT) { error("Delivery unavailable") }.use {
+            val result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v2/work-orders/$id/complete")
+                .header("Authorization", "Bearer ${s.tech}").header("Idempotency-Key", key)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(completion)).andReturn()
+            assertThat(result.response.status).withFailMessage(result.resolvedException?.stackTraceToString() ?: result.response.contentAsString).isEqualTo(200)
+        }
+        val frozen = fixture(s.owner).transaction { scalar("SELECT request_payload FROM fulfillment_approval_snapshot WHERE work_order_id='$id'").decodeFulfillmentRequest() }
+        assertThat(frozen.approved).isFalse()
+        val retry = TenantContext.runAs(frozen.tenantId) { context.getBean(FulfillmentCoordinator::class.java).process(frozen) }
+        assertThat(retry.state).withFailMessage(retry.toString()).isEqualTo(FulfillmentState.APPLIED)
+        ok("POST", "/$id/complete", s.tech, completion, key)
+        assertThat(TenantContext.runAs(frozen.tenantId) { context.getBean(FulfillmentCoordinator::class.java).process(frozen) }.replayed).isTrue()
+        assertThat(mapper.readTree(request("GET", "/api/orders/$orderId", s.owner).contentAsString).path("status").asString()).isEqualTo("FULFILLED")
+        assertThat(mapper.readTree(request("GET", "/api/bng/access/$access", s.owner).contentAsString).path("status").asString()).isEqualTo("ACTIVE")
+        fixture(s.owner).transaction {
+            assertThat(scalar("SELECT status FROM subscription WHERE id='$subscription'")).isEqualTo("ACTIVE")
+            assertThat(scalar("SELECT count(*) FROM customer_fulfillment_receipt WHERE namespace='workorder.fulfillment.complete' AND actor_id='${s.techId}'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM order_operation WHERE namespace='workorder.fulfillment.complete'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM inventory_movement WHERE operation_namespace='warehouse.reference.consume'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_effect_progress p JOIN fulfillment_checkpoint c ON c.id=p.fulfillment_id AND c.tenant_id=p.tenant_id WHERE c.work_order_id='$id' AND p.status='COMPLETED'")).isEqualTo("5")
+        }
+    }
+
+    @Test fun `reference coordinator refuses a handoff without completed assignment proof`() {
+        val s = setup()
+        val id = UUID.fromString(create(s).path("id").asString())
+        val tenant = fixture(s.owner).tenant
+        val forged = FulfillmentRequest(tenant, "workorder.fulfillment.complete", "forged", "a".repeat(64),
+            FulfillmentSource.REFERENCE_WORK_ORDER, id, null, id, "PSB", false,
+            setOf(FulfillmentEffectType.INVENTORY, FulfillmentEffectType.WORK_ORDER), approvalActorId = UUID.fromString(s.techId))
+        assertThatThrownBy { TenantContext.runAs(tenant) { context.getBean(FulfillmentCoordinator::class.java).accept(forged) } }
+            .hasStackTraceContaining("legacy fulfillment requires explicit snapshot reconciliation")
+        fixture(s.owner).transaction {
+            assertThat(scalar("SELECT count(*) FROM fulfillment_checkpoint WHERE work_order_id='$id'")).isEqualTo("0")
+            assertThat(scalar("SELECT count(*) FROM fulfillment_outbox")).isEqualTo("0")
+        }
+        assertThat(ok("GET", "/$id", s.tech).path("workOrder").path("state").asString()).isEqualTo("PENDING")
     }
     @Test fun `completion isolates reassignment evidence and storage tampering leaves stock unchanged`() {
         val s = setup()

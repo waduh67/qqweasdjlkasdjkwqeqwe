@@ -19,7 +19,24 @@ import java.util.UUID
 
 @Component
 class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, private val authority: CurrentAuthorityApi,
-    private val cutovers: InventoryTenantCutoverApi, private val users: IamApi, private val customers: CustomerApi) : WorkOrderMaterialContextApi, WorkOrderSettlementApi {
+    private val cutovers: InventoryTenantCutoverApi, private val users: IamApi, private val customers: CustomerApi,
+    private val completions: ReferenceWorkOrderCompletionStore) : WorkOrderMaterialContextApi, WorkOrderSettlementApi {
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun lockCompleted(id: UUID, authority: CurrentAuthority): ReferenceWorkOrderSettlement {
+        authority.fence.assertHeld()
+        if (authority.platformAdmin || "workorder.order.field" !in authority.permissions) fail(WarehouseErrorCode.FORBIDDEN)
+        entityManager.flush()
+        val material = snapshot(id, authority)
+        val completion = completions.get(id) ?: fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (completion.technicianId != authority.fence.identity.userId ||
+            material.activeAssigneeIds != setOf(completion.technicianId)) fail(WarehouseErrorCode.FORBIDDEN)
+        entityManager.createNativeQuery("SELECT warehouse_assert_reference_completion(:tenant,:id)")
+            .setParameter("tenant", TenantContext.tenantId()).setParameter("id", id).singleResult
+        val hash = entityManager.createNativeQuery("SELECT proof_hash FROM work_order_reference_completion WHERE tenant_id=:tenant AND work_order_id=:id", String::class.java)
+            .setParameter("tenant", TenantContext.tenantId()).setParameter("id", id).singleResult as String
+        return ReferenceWorkOrderSettlement(ApprovedWorkOrderContext(material, null, completion.technicianId, hash), completion)
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockApproved(id: UUID, authority: CurrentAuthority): ApprovedWorkOrderContext {
         authority.fence.assertHeld()

@@ -17,13 +17,22 @@ import org.springframework.transaction.annotation.Transactional
 class WorkOrderFulfillmentApiService(
     private val workOrders: WorkOrderRepository,
     private val outcomes: WorkOrderFulfillmentResultJpaRepository,
+    private val entityManager: jakarta.persistence.EntityManager,
 ) : WorkOrderFulfillmentApi {
 
     override fun validateFulfillment(command: WorkOrderFulfillmentCommand) {
         val workOrder = workOrders.findById(command.workOrderId)
             ?: throw NotFoundException("Work order tidak ditemukan")
         if (workOrder.tenantId != command.tenantId) throw NotFoundException("Work order tidak ditemukan")
-        if (workOrder.approvalStatus != WorkOrderApprovalStatus.APPROVED) {
+        if (command.source == "REFERENCE_WORK_ORDER") {
+            val id = entityManager.createNativeQuery("""SELECT id FROM fulfillment_approval_snapshot WHERE tenant_id=:tenant AND work_order_id=:wo
+                AND namespace=:namespace AND operation_key=:key AND payload_hash=:hash AND source='REFERENCE_WORK_ORDER'""")
+                .setParameter("tenant", command.tenantId).setParameter("wo", command.workOrderId).setParameter("namespace", command.namespace)
+                .setParameter("key", command.operationKey).setParameter("hash", command.payloadHash).resultList.singleOrNull()
+                ?: throw ConflictException("FULFILLMENT_COMPLETION_REQUIRED")
+            entityManager.createNativeQuery("SELECT warehouse_assert_reference_fulfillment_snapshot(:tenant,:id,true)")
+                .setParameter("tenant", command.tenantId).setParameter("id", id).singleResult
+        } else if (workOrder.approvalStatus != WorkOrderApprovalStatus.APPROVED) {
             throw ConflictException("Work order fulfillment requires approval")
         }
     }
@@ -36,12 +45,7 @@ class WorkOrderFulfillmentApiService(
             if (prior.payloadHash != command.payloadHash || prior.workOrderId != command.workOrderId) throw ConflictException("Operation key was used with a different payload")
             return WorkOrderFulfillmentResult(command.tenantId, command.workOrderId, prior.result, replayed = true)
         }
-        val workOrder = workOrders.findById(command.workOrderId)
-            ?: throw NotFoundException("Work order tidak ditemukan")
-        if (workOrder.tenantId != command.tenantId) throw NotFoundException("Work order tidak ditemukan")
-        if (workOrder.approvalStatus != WorkOrderApprovalStatus.APPROVED) {
-            throw ConflictException("Work order fulfillment requires approval")
-        }
+        validateFulfillment(command)
         val inserted = outcomes.insertIfAbsent(UUID.randomUUID(), command.tenantId, command.workOrderId, command.namespace, command.operationKey, command.payloadHash, command.source, command.result)
         if (inserted == 0) {
             val replay = outcomes.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)

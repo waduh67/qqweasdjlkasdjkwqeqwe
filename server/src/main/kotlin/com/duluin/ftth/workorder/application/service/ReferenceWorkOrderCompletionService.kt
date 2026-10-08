@@ -30,7 +30,7 @@ class ReferenceWorkOrderCompletionService(private val orders: ReferenceWorkOrder
     private val proofs: ReferenceWorkOrderEvidenceService, private val completions: ReferenceWorkOrderCompletionStore,
     private val workOrders: WorkOrderRepository, private val warehouse: ReferenceWarehouseStore, private val stock: WarehouseTransferStock,
     private val posting: WarehousePosting, private val operations: WarehouseOperationStore, private val cutovers: InventoryTenantCutoverApi,
-    private val entityManager: EntityManager) {
+    private val entityManager: EntityManager, private val events: org.springframework.context.ApplicationEventPublisher) {
     private val mapper = jacksonObjectMapper()
 
     fun complete(id: UUID, input: ReferenceWorkOrderCompletionInput, key: String): WarehouseOperationReceipt {
@@ -99,6 +99,8 @@ class ReferenceWorkOrderCompletionService(private val orders: ReferenceWorkOrder
         entityManager.flush()
         val view = prior.copy(revision = completion.revision, state = ReferenceWorkOrderState.COMPLETED, lastActivityAt = now, blockedReason = null)
         store.save(view, false)
-        return orders.record("COMPLETE", key, canonical, access, id, "WO", view.revision, view, input.notes, "workorder.order.field")
+        val receipt = orders.record("COMPLETE", key, canonical, access, id, "WO", view.revision, view, input.notes, "workorder.order.field")
+        events.publishEvent(com.duluin.ftth.workorder.ReferenceWorkOrderCompleted(access.current.fence.identity.tenantId, id))
+        return receipt
     }
 }

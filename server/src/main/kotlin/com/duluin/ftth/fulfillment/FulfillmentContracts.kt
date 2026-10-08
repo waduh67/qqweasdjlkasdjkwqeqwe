@@ -3,7 +3,7 @@ package com.duluin.ftth.fulfillment
 import java.time.Instant
 import java.util.UUID
 
-enum class FulfillmentSource { WORK_ORDER, MIGRATION }
+enum class FulfillmentSource { WORK_ORDER, MIGRATION, REFERENCE_WORK_ORDER }
 enum class FulfillmentState { READY, DISPATCHED, APPLYING, APPLIED, FAILED_RETRYABLE, REQUIRES_RECONCILIATION, MANUAL_RESOLVED, FAILED_PERMANENT }
 enum class FulfillmentEffectType { SUBSCRIPTION, PROVISIONING, INVENTORY, ORDER, WORK_ORDER, VISIT }
 
@@ -24,7 +24,11 @@ data class FulfillmentRequest(
 ) {
     init {
         require(namespace.isNotBlank() && operationKey.isNotBlank() && canonicalHash.matches(Regex("[0-9a-f]{64}")))
-        require(approved) { "FULFILLMENT_APPROVAL_REQUIRED" }
+        if (source == FulfillmentSource.REFERENCE_WORK_ORDER) {
+            require(!approved && namespace == "workorder.fulfillment.complete" && workOrderId == targetId && approvalActorId != null) {
+                "FULFILLMENT_COMPLETION_REQUIRED"
+            }
+        } else require(approved) { "FULFILLMENT_APPROVAL_REQUIRED" }
     }
 }
 

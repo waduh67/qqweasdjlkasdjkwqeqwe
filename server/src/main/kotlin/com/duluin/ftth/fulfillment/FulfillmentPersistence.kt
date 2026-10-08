@@ -70,7 +70,7 @@ class FulfillmentCheckpointPersistenceAdapter(
             .setParameter("hash", request.canonicalHash).setParameter("source", request.source.name)
             .setParameter("target", request.targetId).setParameter("subscription", request.subscriptionId)
             .setParameter("workOrder", request.workOrderId).setParameter("workOrderKind", request.workOrderKind)
-            .setParameter("effects", request.requiredEffects.joinToString(",") { it.name })
+            .setParameter("effects", request.requiredEffects.sortedBy { it.name }.joinToString(",") { it.name })
             .setParameter("orderId", request.orderId).setParameter("actorId", request.approvalActorId).executeUpdate()
         return claim(request.tenantId, request.namespace, request.operationKey)
             ?: error("FULFILLMENT_CLAIM_LOST")
@@ -83,7 +83,7 @@ class FulfillmentCheckpointPersistenceAdapter(
         val entity = if (current == null) FulfillmentCheckpointJpaEntity(
             UUID.randomUUID(), checkpoint.namespace, checkpoint.operationKey, checkpoint.canonicalHash,
             checkpoint.source, checkpoint.targetId, checkpoint.subscriptionId, checkpoint.workOrderId,
-            checkpoint.workOrderKind, checkpoint.requiredEffects.joinToString(",") { it.name }, checkpoint.orderId, checkpoint.approvalActorId, checkpoint.state, checkpoint.lastEffect,
+            checkpoint.workOrderKind, checkpoint.requiredEffects.sortedBy { it.name }.joinToString(",") { it.name }, checkpoint.orderId, checkpoint.approvalActorId, checkpoint.state, checkpoint.lastEffect,
             checkpoint.attempts, checkpoint.outcome, checkpoint.updatedAt,
         ) else entityManager.createQuery(
             "select c from FulfillmentCheckpointJpaEntity c where c.tenantId = :tenant and c.namespace = :namespace and c.operationKey = :operation",
@@ -186,9 +186,11 @@ class FulfillmentCheckpointPersistenceAdapter(
     }
 
     private fun cutoverFence(source: FulfillmentSource? = null) {
-        cutovers.lockForCommand(cutovers.read().epoch, if (source == FulfillmentSource.WORK_ORDER)
-            com.duluin.ftth.inventory.WarehouseOperationClass.LEGACY_FULFILLMENT
-            else com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+        cutovers.lockForCommand(cutovers.read().epoch, when (source) {
+            FulfillmentSource.WORK_ORDER -> com.duluin.ftth.inventory.WarehouseOperationClass.LEGACY_FULFILLMENT
+            FulfillmentSource.REFERENCE_WORK_ORDER -> com.duluin.ftth.inventory.WarehouseOperationClass.REFERENCE_WORK_ORDER
+            else -> com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE
+        }).assertHeld()
     }
 
     private fun effectFence(tenantId: UUID, namespace: String, operationKey: String) {
@@ -238,7 +240,7 @@ class FulfillmentCheckpointPersistenceAdapter(
         subscriptionId = subscriptionId,
         workOrderId = workOrderId,
         workOrderKind = workOrderKind,
-        approved = true,
+        approved = source != FulfillmentSource.REFERENCE_WORK_ORDER,
         requiredEffects = requiredEffects,
         orderId = orderId,
         approvalActorId = approvalActorId,

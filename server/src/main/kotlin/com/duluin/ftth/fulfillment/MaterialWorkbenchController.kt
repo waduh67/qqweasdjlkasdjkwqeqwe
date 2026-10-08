@@ -44,10 +44,11 @@ class MaterialWorkbenchService(private val authority: CurrentAuthorityApi, priva
     fun review(id: UUID): MaterialApprovalReviewResponse {
         val context = locked(id)
         val frozen = approvals.forWorkOrder(id)?.snapshot ?: return MaterialApprovalReviewResponse(null)
-        val usage = frozen.material.usageId?.let { inventory.usageDetails(context, it) }
-        if (usage != null && (usage.planId != frozen.material.planId || usage.planRevision != frozen.material.planRevision || usage.useRevision != frozen.material.useRevision))
+        val material = frozen.material ?: return MaterialApprovalReviewResponse(null)
+        val usage = material.usageId?.let { inventory.usageDetails(context, it) }
+        if (usage != null && (usage.planId != material.planId || usage.planRevision != material.planRevision || usage.useRevision != material.useRevision))
             throw WarehouseContractException(WarehouseError(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Frozen usage binding changed"))
-        val deployments = inventory.deploymentDetails(context, frozen.material.deployments)
+        val deployments = inventory.deploymentDetails(context, material.deployments)
         return MaterialApprovalReviewResponse(MaterialApprovalReview(frozen.id, frozen.workOrder.material.workOrderRevision, usage, deployments))
     }
     private fun locked(id: UUID): MaterialPlanningContext {

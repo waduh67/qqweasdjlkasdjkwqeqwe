@@ -23,7 +23,7 @@ class PublicApiFulfillmentEffectExecutor(private val customer: CustomerApi, priv
     override fun preflight(request: FulfillmentRequest) {
         if (request.requiredEffects.isEmpty()) fail("FULFILLMENT_APPLICABILITY_REQUIRED")
         when (request.source) {
-            FulfillmentSource.WORK_ORDER -> approvals.preflight(request)
+            FulfillmentSource.WORK_ORDER, FulfillmentSource.REFERENCE_WORK_ORDER -> approvals.preflight(request)
             FulfillmentSource.MIGRATION -> {
                 val subscription = request.subscriptionId ?: fail("SUBSCRIPTION_LINK_NOT_FOUND")
                 if (customer.findSubscription(subscription) == null) fail("SUBSCRIPTION_NOT_FOUND")
@@ -48,7 +48,7 @@ class PublicApiFulfillmentEffectExecutor(private val customer: CustomerApi, priv
             FulfillmentEffectType.SUBSCRIPTION -> {
                 val subscription = request.subscriptionId ?: fail("SUBSCRIPTION_LINK_NOT_FOUND")
                 when (request.source) {
-                    FulfillmentSource.WORK_ORDER -> customerOwner.apply(com.duluin.ftth.customer.CustomerFulfillmentCommand(reference(request),
+                    FulfillmentSource.WORK_ORDER, FulfillmentSource.REFERENCE_WORK_ORDER -> customerOwner.apply(com.duluin.ftth.customer.CustomerFulfillmentCommand(reference(request),
                         approvals.require(request).snapshot.workOrder.material.customerId ?: fail("SUBSCRIPTION_LINK_NOT_FOUND"),subscription,
                         if (request.workOrderKind == "DISMANTLE") com.duluin.ftth.customer.CustomerFulfillmentAction.TERMINATE
                         else com.duluin.ftth.customer.CustomerFulfillmentAction.ACTIVATE),approvals.currentAuthority(request))
@@ -60,7 +60,7 @@ class PublicApiFulfillmentEffectExecutor(private val customer: CustomerApi, priv
                 val action = if (request.workOrderKind == "DISMANTLE") com.duluin.ftth.bng.BngFulfillmentAction.TERMINATE
                     else com.duluin.ftth.bng.BngFulfillmentAction.ACTIVATE
                 when (request.source) {
-                    FulfillmentSource.WORK_ORDER -> bngOwner.apply(com.duluin.ftth.bng.BngFulfillmentCommand(reference(request),
+                    FulfillmentSource.WORK_ORDER, FulfillmentSource.REFERENCE_WORK_ORDER -> bngOwner.apply(com.duluin.ftth.bng.BngFulfillmentCommand(reference(request),
                         approvals.require(request).snapshot.bngBinding ?: fail("FULFILLMENT_BNG_BINDING"),action),approvals.currentAuthority(request))
                     FulfillmentSource.MIGRATION -> bng.applyFulfillment(subscriptionId,action)
                 }

@@ -17,14 +17,21 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
     private val customerLocks: com.duluin.ftth.customer.CustomerFulfillmentLockApi,
     private val bngOwner: com.duluin.ftth.bng.BngFulfillmentApi) {
 
-    fun freeze(event: FulfillmentApproved): FulfillmentRequest {
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_FULFILLMENT)
+    fun freeze(event: FulfillmentApproved): FulfillmentRequest = freeze(event.workOrderId, false)
+
+    fun freezeReference(id: UUID): FulfillmentRequest = freeze(id, true)
+
+    private fun freeze(id: UUID, reference: Boolean): FulfillmentRequest {
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, if (reference)
+            WarehouseOperationClass.REFERENCE_WORK_ORDER else WarehouseOperationClass.LEGACY_FULFILLMENT)
         val current = authority.lockCurrent()
-        val approved = workOrders.lockApproved(event.workOrderId, current)
+        val completed = if (reference) workOrders.lockCompleted(id, current) else null
+        val approved = completed?.workOrder ?: workOrders.lockApproved(id, current)
         val workOrder = approved.material
         val key = "${workOrder.workOrderId}:${workOrder.workOrderRevision}:${approved.proofHash}"
         store.forWorkOrder(workOrder.workOrderId)?.let {
-            if (it.snapshot.workOrder != approved) throw WarehouseContractException(WarehouseError(WarehouseErrorCode.STALE_REVISION, "FULFILLMENT_SNAPSHOT_STALE"))
+            if (it.snapshot.workOrder != approved || it.snapshot.referenceCompletion != completed?.completion)
+                throw WarehouseContractException(WarehouseError(WarehouseErrorCode.STALE_REVISION, "FULFILLMENT_SNAPSHOT_STALE"))
             return it.request
         }
         val linkedVisits = visits.visitsByWorkOrder(workOrder.workOrderId)
@@ -50,18 +57,20 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
         }
         val context = MaterialPlanningContext(workOrder.workOrderId, workOrder.code, workOrder.workType, workOrder.action.name,
             workOrder.workOrderRevision, workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover)
-        val material = inventory.freeze(context)
+        val material = if (reference) null else inventory.freeze(context)
         return store.save(FulfillmentApprovalSnapshot(UUID.randomUUID(), current.fence.identity, cutover.snapshot.epoch,
-            approved, material, effects, orderRevision, visit, subscription, bngAccessId, customerBinding, orderBinding, bngBinding), key).request
+            approved, material, effects, orderRevision, visit, subscription, bngAccessId, customerBinding, orderBinding, bngBinding, completed?.completion), key).request
     }
 
     fun lock(request: FulfillmentRequest) {
         val frozen = store.find(request.namespace, request.operationKey) ?: return
-        deliveryFence(frozen.snapshot.cutoverEpoch)
+        deliveryFence(frozen.snapshot.cutoverEpoch, frozen.snapshot.referenceCompletion != null)
         val current = deliveryAuthority.lockActor(frozen.snapshot.identity)
-        val workOrder = workOrders.lockApproved(frozen.snapshot.workOrder.material.workOrderId, current)
+        val completed = if (frozen.snapshot.referenceCompletion != null)
+            workOrders.lockCompleted(frozen.snapshot.workOrder.material.workOrderId, current) else null
+        val workOrder = completed?.workOrder ?: workOrders.lockApproved(frozen.snapshot.workOrder.material.workOrderId, current)
         store.lock(frozen.snapshot.id)
-        if (request != frozen.request || workOrder != frozen.snapshot.workOrder)
+        if (request != frozen.request || workOrder != frozen.snapshot.workOrder || completed?.completion != frozen.snapshot.referenceCompletion)
             fail("FULFILLMENT_SNAPSHOT_STALE")
         store.validateOwners(frozen.snapshot.id)
     }
@@ -80,12 +89,14 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
             workOrder.subscriptionId?.let(customers::findSubscription) != snapshot.subscription ||
             snapshot.subscription?.let { bngOwner.lock(it.id,workOrder.customerId ?: fail("FULFILLMENT_BNG_BINDING")) } != snapshot.bngBinding)
             fail("FULFILLMENT_LINK_STALE")
-        if (inventory.freeze(context(snapshot)) != snapshot.material) fail("FULFILLMENT_USAGE_STALE")
+        if (snapshot.referenceCompletion != null) store.validateReference(snapshot.id)
+        else if (inventory.freeze(context(snapshot)) != snapshot.material) fail("FULFILLMENT_USAGE_STALE")
     }
 
     fun verify(request: FulfillmentRequest) {
         val snapshot = require(request).snapshot
-        inventory.verify(context(snapshot), MaterialSettlementApproval(snapshot.id, request.canonicalHash, snapshot.material))
+        if (snapshot.referenceCompletion != null) store.verifyReference(snapshot.id)
+        else inventory.verify(context(snapshot), MaterialSettlementApproval(snapshot.id, request.canonicalHash, requireNotNull(snapshot.material)))
     }
 
     fun currentAuthority(request: FulfillmentRequest): com.duluin.ftth.common.security.AuthorityFence =
@@ -105,10 +116,11 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
             workOrder.workOrderRevision, workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover)
     }
 
-    private fun deliveryFence(expectedEpoch: Long): TenantCutoverFence {
-        val fence = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_FULFILLMENT)
+    private fun deliveryFence(expectedEpoch: Long, reference: Boolean = false): TenantCutoverFence {
+        val fence = cutovers.lockForCommand(cutovers.read().epoch, if (reference)
+            WarehouseOperationClass.REFERENCE_WORK_ORDER else WarehouseOperationClass.LEGACY_FULFILLMENT)
         val snapshot = fence.snapshot
-        if (snapshot.epoch != expectedEpoch && !(snapshot.workflow == WarehouseWorkflow.DRAINING &&
+        if (snapshot.epoch != expectedEpoch && !(!reference && snapshot.workflow == WarehouseWorkflow.DRAINING &&
                 snapshot.state == WarehouseCutoverState.ENFORCED && snapshot.drainingFromEpoch == expectedEpoch &&
                 expectedEpoch < Long.MAX_VALUE && snapshot.epoch == expectedEpoch + 1))
             fail("FULFILLMENT_SNAPSHOT_STALE")
