@@ -149,7 +149,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
         masters.lockTopology()
         return Access(current, cutover, if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence))
     }
-    private fun readAccess(): Access {
+    internal fun readAccess(): Access {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val current = authority.lockCurrent()
         masters.lockTopology()
@@ -189,7 +189,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
     internal fun record(action: String, key: String, canonical: WarehouseCanonicalPayload, access: Access, view: ReferenceRequestView,
         notes: String, permission: String, movement: UUID? = null): WarehouseOperationReceipt = store.command(action, key, view.id, view.revision,
         access.current.fence.identity.userId, access.current.fence.epoch, access.cutover.snapshot.epoch, canonical.json, canonical.hash, view, notes, permission, movement)
-    private fun visibleWarehouses(access: Access): Set<UUID> {
+    internal fun visibleWarehouses(access: Access): Set<UUID> {
         val areas = if (access.current.platformAdmin) AuthorityScope.Unrestricted else access.current.areaScope
         val visibleSites = sites.visibleAreas(areas)
         val ids = mutableSetOf<UUID>()

@@ -193,6 +193,54 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
         return post(command, source.id, destination, "HANDOVER", canonical, access)
     }
 
+    internal fun receiveReturn(input: ReferenceTechnicianReturnInput, key: String): WarehouseOperationReceipt {
+        val access = access("warehouse.return.manage", key)
+        notes(input.notes)
+        val destination = warehouse(input.warehouseId, access)
+        if (input.lines.size !in 1..100 || input.lines.distinctBy { it.stockIdentityId }.size != input.lines.size)
+            masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
+        val namespace = "warehouse.reference.return"
+        replay(namespace, key, canonical, access)?.let { return it }
+        val lines = input.lines.map { selection ->
+            val piece = stock.get(selection.stockIdentityId, input.sourceWarehouseId)
+            stock.assertUnallocated(selection.stockIdentityId)
+            stock.assertTechnician(piece, input.technicianId)
+            if (piece.dimension.skuId != input.skuId) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            val quantity = transferQuantity(selection.quantityBase)
+            if (quantity > piece.quantity) masterFailure(WarehouseErrorCode.INSUFFICIENT_STOCK)
+            if (piece.tracking == WarehouseTracking.SERIAL && quantity != 1L) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            TransferLine(UUID.randomUUID(), piece, quantity)
+        }
+        val id = UUID.randomUUID()
+        store.transferDraft(id, input.sourceWarehouseId, destination.id, lines, access.current.fence.identity.userId,
+            access.current.fence.epoch, access.cutover.snapshot.epoch, input.notes)
+        val legs = mutableListOf<PostingLeg>()
+        val splits = mutableListOf<PostingSplit>()
+        lines.forEach { line ->
+            val piece = line.source
+            val rest = piece.quantity - line.quantity
+            val split = piece.unit == WarehouseBaseUnit.MM && rest > 0
+            val targetId = if (split) UUID.randomUUID() else piece.dimension.stockIdentityId
+            val unit = StockUnit.valueOf(piece.unit.name)
+            legs += PostingLeg(LegDirection.OUT, piece.dimension, StockQuantity.of(if (split) piece.quantity else line.quantity, unit), line.id, piece.status)
+            legs += PostingLeg(LegDirection.IN, piece.dimension.copy(stockIdentityId = targetId, locationId = destination.id,
+                custodianId = destination.id, custodianKind = OwnerKind.WAREHOUSE), StockQuantity.of(line.quantity, unit), line.id, InventoryStatus.AVAILABLE)
+            if (split) {
+                val remainderId = UUID.randomUUID()
+                legs += PostingLeg(LegDirection.IN, piece.dimension.copy(stockIdentityId = remainderId), StockQuantity.of(rest, unit), line.id, piece.status)
+                splits += PostingSplit(piece.dimension.stockIdentityId, piece.revision, listOf(
+                    SegmentChild(targetId, StockQuantity.of(line.quantity, unit), SegmentKind.CUT),
+                    SegmentChild(remainderId, StockQuantity.of(rest, unit), SegmentKind.REMNANT)))
+            }
+        }
+        val view = ReferenceMovementView(id, UUID.randomUUID(), 1, "RETURN", "RECEIVED", destination.id, input.sourceWarehouseId,
+            input.notes, java.time.Instant.now(), input.technicianId)
+        val command = WarehousePost(id, 0, "RECEIVED", operation(view, namespace, key, canonical, access), MovementKind.RETURN,
+            input.notes.ifBlank { "Retur material teknisi" }, legs, splits = splits)
+        return post(command, input.sourceWarehouseId, destination.id, "RETURN", canonical, access)
+    }
+
     fun stock(skuId: UUID): ReferenceSkuStock {
         val current = authority.lockCurrent()
         receiptPermission(current, "warehouse.stock.view")

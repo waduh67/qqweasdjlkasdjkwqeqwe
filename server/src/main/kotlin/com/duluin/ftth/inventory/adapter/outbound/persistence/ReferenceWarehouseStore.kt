@@ -56,9 +56,9 @@ class ReferenceWarehouseStore(private val jdbc: WarehouseCommandJdbc) {
             lines.forEachIndexed { index, line ->
                 sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,document_revision,line_number,sku_id,stock_identity_id,lot_id,
                     base_unit,tracking,quantity_base,location_id,destination_location_id,custodian_id,custodian_kind,condition,legal_owner)
-                    VALUES (?,?,?,0,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE','SERVICEABLE','ISP')""", line.id, sql.tenant, id, index + 1,
+                    VALUES (?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,'SERVICEABLE','ISP')""", line.id, sql.tenant, id, index + 1,
                     line.source.dimension.skuId, line.source.dimension.stockIdentityId, line.source.dimension.lotId, line.source.unit,
-                    line.source.tracking, line.quantity, source, destination, source)
+                    line.source.tracking, line.quantity, source, destination, line.source.dimension.custodianId, line.source.dimension.custodianKind)
             }
         }
 
