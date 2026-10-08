@@ -4,7 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.JsonNode
+import org.springframework.mock.web.MockMultipartFile
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
     private data class Setup(val owner: String, val tech: String, val techId: String, val second: String,
@@ -44,6 +49,12 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
     }
     private fun body(setup: Setup, technician: String = setup.techId) = """{"typeId":"${setup.type}","title":"Pasang pelanggan","technicianId":"$technician","areaId":"${area(setup.owner)}","description":"Datang sesuai jadwal"}"""
     private fun create(setup: Setup) = ok("POST", "", setup.admin, body(setup), status = 201)
+    private val png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+    private fun upload(id: String, token: String, revision: Long, slot: String = "Bukti Pasang", bytes: ByteArray = png,
+        key: String = UUID.randomUUID().toString(), contentType: String = "image/png") = mvc.perform(
+        multipart("/api/v2/work-orders/$id/evidence").file(MockMultipartFile("file", "proof.png", contentType, bytes))
+            .param("expectedRevision", revision.toString()).param("slot", slot)
+            .header("Authorization", "Bearer $token").header("Idempotency-Key", key)).andReturn().response
 
     @Test fun `defaults preserve customized inactive types and only owner may change types`() {
         val s = setup()
@@ -112,6 +123,107 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         val revoked = request("PUT", "/api/users/${s.techId}/access", s.owner, """{"roleIds":["$role"],"areaIds":[]}""")
         assertThat(revoked.status).isEqualTo(200)
         assertThat(ok("GET", "", s.tech).path("totalElements").asLong()).isZero()
+    }
+    @Test fun `named photos are verified immutable and exact retry stores once`() {
+        val s = setup()
+        val id = create(s).path("id").asString()
+        val key = UUID.randomUUID().toString()
+        val saved = upload(id, s.tech, 0, key = key)
+        assertThat(saved.status).withFailMessage(saved.contentAsString).isEqualTo(201)
+        val replay = upload(id, s.tech, 0, key = key)
+        assertThat(replay.status).isEqualTo(saved.status)
+        assertThat(mapper.readTree(replay.contentAsString)).isEqualTo(mapper.readTree(saved.contentAsString))
+        assertThat(upload(id, s.tech, 0, bytes = png + byteArrayOf(1), key = key).status).isEqualTo(409)
+        val photos = ok("GET", "/$id/evidence", s.tech)
+        assertThat(photos).hasSize(1)
+        val photoId = photos.single().path("id").asString()
+        assertThat(photos.single().path("current").asBoolean()).isTrue()
+        val content = request("GET", "/api/v2/work-orders/$id/evidence/$photoId/content", s.tech)
+        assertThat(content.status).isEqualTo(200)
+        assertThat(content.contentAsByteArray).isEqualTo(png)
+        assertThat(content.getHeader("X-Content-Type-Options")).isEqualTo("nosniff")
+        assertThat(ok("GET", "/$id", s.owner).path("timeline")).hasSize(2)
+        assertThatThrownBy { fixture(s.owner).transaction {
+            sql("UPDATE wo_evidence SET sha256=repeat('a',64) WHERE id='$photoId'")
+        } }.hasMessageContaining("photo identity is immutable")
+        assertThatThrownBy { fixture(s.owner).transaction {
+            sql("UPDATE work_order_reference_photo SET slot='Palsu' WHERE evidence_id='$photoId'")
+        } }.hasMessageContaining("permission denied")
+        val storage = context.getBean(com.duluin.ftth.common.storage.ObjectStorage::class.java)
+        val objectKey = fixture(s.owner).transaction { scalar("SELECT object_key FROM work_order_reference_photo WHERE evidence_id='$photoId'") }
+        storage.put(objectKey, "image/png", png + byteArrayOf(9))
+        assertThat(request("GET", "/api/v2/work-orders/$id/evidence/$photoId/content", s.tech).status).isEqualTo(409)
+    }
+    @Test fun `photos enforce slots revisions scope and current assignment generation`() {
+        val s = setup()
+        val id = create(s).path("id").asString()
+        assertThat(upload(id, s.second, 0).status).isEqualTo(404)
+        assertThat(upload(id, s.admin, 0).status).isEqualTo(403)
+        assertThat(upload(id, s.tech, 0, slot = "Tidak ada").status).isEqualTo(400)
+        assertThat(upload(id, s.tech, 0, contentType = "image/svg+xml").status).isEqualTo(400)
+        assertThat(upload(id, s.tech, 0, bytes = "invalid".toByteArray()).status).isEqualTo(400)
+        val key = UUID.randomUUID().toString()
+        assertThat(upload(id, s.tech, 0, key = key).status).isEqualTo(201)
+        assertThat(upload(id, s.tech, 0, slot = "Bukti Kedatangan").status).isEqualTo(409)
+        assertThat(upload(id, s.tech, 1).status).isEqualTo(201)
+        assertThat(ok("GET", "/$id/evidence", s.tech).count { it.path("current").asBoolean() }).isEqualTo(1)
+        ok("POST", "/$id/assignment", s.admin, """{"expectedRevision":2,"technicianId":"${s.secondId}"}""")
+        assertThat(upload(id, s.tech, 0, key = key).status).isEqualTo(404)
+        assertThat(ok("GET", "/$id/evidence", s.second).none { it.path("current").asBoolean() }).isTrue()
+        assertThat(upload(id, s.second, 3).status).isEqualTo(201)
+        val current = ok("GET", "/$id/evidence", s.second).single { it.path("current").asBoolean() }
+        assertThat(current.path("uploadedBy").asString()).isEqualTo(s.secondId)
+        assertThat(current.path("assignmentGeneration").asLong()).isEqualTo(1)
+        val neighbor = tenant()
+        assertThat(request("GET", "/api/v2/work-orders/$id/evidence", neighbor).status).isEqualTo(404)
+    }
+    @Test fun `concurrent photo retries store one object and competing revisions preserve first upload`() {
+        val s = setup()
+        val id = create(s).path("id").asString()
+        val key = UUID.randomUUID().toString()
+        fun race(actions: List<() -> org.springframework.mock.web.MockHttpServletResponse>) =
+            Executors.newFixedThreadPool(actions.size).use { pool ->
+                val ready = CountDownLatch(actions.size)
+                val start = CountDownLatch(1)
+                val pending = actions.map { action -> pool.submit<org.springframework.mock.web.MockHttpServletResponse> {
+                    ready.countDown()
+                    check(start.await(20, TimeUnit.SECONDS))
+                    action()
+                } }
+                check(ready.await(20, TimeUnit.SECONDS))
+                start.countDown()
+                pending.map { it.get(30, TimeUnit.SECONDS) }
+            }
+        val replay = race(List(2) { { upload(id, s.tech, 0, key = key) } })
+        assertThat(replay.map { it.status }).withFailMessage(replay.joinToString("\n") { it.contentAsString }).containsOnly(201)
+        assertThat(mapper.readTree(replay[0].contentAsString)).isEqualTo(mapper.readTree(replay[1].contentAsString))
+        val competing = race(List(2) { { upload(id, s.tech, 1, slot = "Bukti Kedatangan") } })
+        assertThat(competing.map { it.status }).containsExactlyInAnyOrder(201, 409)
+        assertThat(ok("GET", "/$id/evidence", s.owner)).hasSize(2)
+        assertThat(ok("GET", "/$id", s.owner).path("workOrder").path("revision").asLong()).isEqualTo(2)
+        val f = fixture(s.owner)
+        val storage = context.getBean(com.duluin.ftth.common.storage.ObjectStorage::class.java)
+        assertThat(storage.list(f.tenant.toString(), "${f.tenant}/wo/$id/evidence/").objects).hasSize(2)
+    }
+    @Test fun `failed commit removes uploaded object and leaves revision retryable`() {
+        val s = setup()
+        val id = create(s).path("id").asString()
+        val f = fixture(s.owner)
+        val storage = context.getBean(com.duluin.ftth.common.storage.ObjectStorage::class.java)
+        val prefix = "${f.tenant}/wo/$id/evidence/"
+        val key = UUID.randomUUID().toString()
+        assertThatThrownBy { f.transaction {
+            val saved = upload(id, s.tech, 0, key = key)
+            assertThat(saved.status).withFailMessage(saved.contentAsString).isEqualTo(201)
+            assertThat(storage.list(tenant.toString(), prefix).objects).hasSize(1)
+            sql("UPDATE work_order SET title='Commit must fail' WHERE id='$id'")
+        } }.hasMessageContaining("work order projection differs from source")
+        assertThat(storage.list(f.tenant.toString(), prefix).objects).isEmpty()
+        assertThat(ok("GET", "/$id/evidence", s.owner)).isEmpty()
+        assertThat(ok("GET", "/$id", s.owner).path("workOrder").path("revision").asLong()).isZero()
+        val retried = upload(id, s.tech, 0, key = key)
+        assertThat(retried.status).withFailMessage(retried.contentAsString).isEqualTo(201)
+        assertThat(storage.list(f.tenant.toString(), prefix).objects).hasSize(1)
     }
     @Test fun `database refuses projection forgery and command mutation`() {
         val s = setup()
