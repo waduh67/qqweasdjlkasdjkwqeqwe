@@ -78,13 +78,21 @@ class WarehouseReplenishmentITCommands : WarehouseReplenishmentFixture() {
 
     @Test fun `current scope and role revocation deny both reads and stored replay`() {
         val (token, fixture) = prepare()
-        val rule = createRule(token, fixture, key = "scoped")
-        val user = mapper.readTree(request("GET", "/api/me", token).contentAsString).path("id").asString()
-        val revoke = request("PUT", "/api/v1/warehouse/settings/scopes/$user/${fixture.warehouse}", token,
-            """{"expectedRevision":0,"active":false}""")
+        val operator = user(token, setOf("inventory.request.view", "inventory.request.manage"))
+        val principal = mapper.readTree(request("GET", "/api/users/${operator.second}", token).contentAsString)
+        assertThat(request("PUT", "/api/users/${operator.second}/access", token, mapper.writeValueAsString(mapOf(
+            "roleIds" to principal.path("roleIds").asSequence().map { it.asString() }.toList(),
+            "areaIds" to listOf(area(token))))).status).isEqualTo(200)
+        val grant = request("PUT", "/api/v1/warehouse/settings/scopes/${operator.second}/${fixture.warehouse}", token,
+            """{"expectedRevision":0,"active":true}""")
+        assertThat(grant.status).isEqualTo(200)
+        val scopeRevision = mapper.readTree(grant.contentAsString).path("revision").asLong()
+        val rule = createRule(operator.first, fixture, key = "scoped")
+        val revoke = request("PUT", "/api/v1/warehouse/settings/scopes/${operator.second}/${fixture.warehouse}", token,
+            """{"expectedRevision":$scopeRevision,"active":false}""")
         assertThat(revoke.status).withFailMessage(revoke.contentAsString).isEqualTo(200)
-        assertThat(request("POST", "$root/rules", token, ruleBody(fixture), "scoped").status).isEqualTo(404)
-        assertThat(request("GET", "$root/rules/${rule.path("id").asString()}", token).status).isEqualTo(404)
-        assertThat(read(token, "rules").path("items").size()).isZero()
+        assertThat(request("POST", "$root/rules", operator.first, ruleBody(fixture), "scoped").status).isEqualTo(404)
+        assertThat(request("GET", "$root/rules/${rule.path("id").asString()}", operator.first).status).isEqualTo(404)
+        assertThat(read(operator.first, "rules").path("items").size()).isZero()
     }
 }

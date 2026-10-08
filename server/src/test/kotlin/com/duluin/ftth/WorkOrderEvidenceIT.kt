@@ -88,7 +88,7 @@ class WorkOrderEvidenceIT {
         val roles = get("/api/roles", token)
         val names = JsonPath.read<List<String>>(roles, "$[*].name")
         val ids = JsonPath.read<List<String>>(roles, "$[*].id")
-        val roleId = ids[names.indexOf("Teknisi")]
+        val roleId = ids[names.indexOf("Teknisi FO")]
         return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"Teknisi $s","password":"$pass","roleIds":["$roleId"]}"""))
     }
 
@@ -297,7 +297,7 @@ class WorkOrderEvidenceIT {
         val roles = get("/api/roles", admin)
         val names = JsonPath.read<List<String>>(roles, "$[*].name")
         val ids = JsonPath.read<List<String>>(roles, "$[*].id")
-        val technicianRole = ids[names.indexOf("Teknisi")]
+        val technicianRole = ids[names.indexOf("Teknisi NE")]
         val oneEmail = "one-${uniq()}@x.test"
         val twoEmail = "two-${uniq()}@x.test"
         val one = id(post("/api/users", admin, """{"email":"$oneEmail","name":"Satu","password":"$pass","roleIds":["$technicianRole"]}"""))

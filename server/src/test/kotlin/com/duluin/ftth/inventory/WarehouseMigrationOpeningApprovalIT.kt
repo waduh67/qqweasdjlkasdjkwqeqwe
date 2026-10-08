@@ -630,7 +630,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             val (disabler, _) = user(batch.token, setOf("iam.user.update"))
             assertThat(request("POST", "/api/users/${batch.actor}/disable", disabler).status).isEqualTo(200)
             val denied = send(batch.token, path, payload, completed.first)
-            assertThat(denied.statusCode()).isEqualTo(403)
+            assertThat(denied.statusCode()).isEqualTo(401)
             assertThat(denied.body()).doesNotContain("finalizedBy", "reviewHash", "baselineTotals")
         } finally { cleanup(batch) }
     }

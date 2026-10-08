@@ -38,8 +38,9 @@ internal object WorkOrderSettlementTestSetup {
             return mapper.readTree(response.contentAsString)
         }
         val me = call(HttpMethod.GET, "/api/me")
-        val area = me.path("areaIds")[0].asString()
         val job = call(HttpMethod.GET, "/api/work-orders/$workOrder").path("workOrder")
+        val area = job.path("areaId").asString()
+        assertThat(area).isNotBlank()
         val technician = job.path("assignees")[0].path("id").asString()
         val user = call(HttpMethod.GET, "/api/users/$technician")
         for (principal in listOf(me, user)) {
