@@ -20,7 +20,7 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
     }
 
     fun saveDraft(id: UUID, intake: ReceiptIntake, revision: Long, actor: UUID, epoch: Long, cutover: Long, creating: Boolean,
-        source: ReceiptDraftContext? = null) = jdbc.execute { sql ->
+        source: ReceiptDraftContext? = null, condition: WarehouseCondition = WarehouseCondition.QUARANTINE) = jdbc.execute { sql ->
         require(source == null || creating)
         if (creating) sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,supplier_id,source_reference,cutover_epoch,authority_epoch,
             customer_id,work_order_id,work_order_revision)
@@ -39,9 +39,9 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
             sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,document_revision,line_number,sku_id,base_unit,tracking,quantity_base,
                 location_id,destination_location_id,custodian_id,custodian_kind,condition,legal_owner,inspection_required_snapshot,
                 cost_total_minor,cost_basis_quantity_base,currency,conversion_numerator,conversion_denominator,package_quantity)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE','QUARANTINE',?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE',?,?,?,?,?,?,?,?,?)""",
                 line.id, sql.tenant, id, revision, index + 1, line.sku.id, line.sku.baseUnit, line.sku.tracking, line.quantityBase.toLong(),
-                intake.inspection.id, intake.source.id, intake.inspection.id, source?.legalOwner ?: AssetLegalOwner.ISP, line.sku.inspectionRequired,
+                intake.inspection.id, intake.source.id, intake.inspection.id, condition, source?.legalOwner ?: AssetLegalOwner.ISP, line.sku.inspectionRequired,
                 line.cost?.totalMinor?.toLong(), line.cost?.costBasisQuantityBase?.toLong(), line.cost?.currency,
                 conversion?.numerator?.toLong(), conversion?.denominator?.toLong(), conversion?.packageQuantity?.toLong())
         }

@@ -20,9 +20,14 @@ class ReceiptDraftValidation(private val masters: WarehouseMasterStore) {
         if (listOf(supplier.state, source.state, inspection.state).any { it != WarehouseMasterState.ACTIVE }) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (source.code != "RECEIPT_SOURCE" || source.kind != LocationKind.TRANSIT || inspection.kind != LocationKind.QUARANTINE || inspection.issueEligible)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        return ReceiptIntake(supplier, input.externalReference, source, inspection, prepareLines(input.lines))
+    }
+
+    internal fun prepareLines(inputs: List<ReceiptLineInput>): List<ReceiptIntakeLine> {
+        if (inputs.isEmpty() || inputs.size > 100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val serials = mutableSetOf<String>()
         val macs = mutableSetOf<String>()
-        val lines = input.lines.flatMapIndexed { index, line ->
+        val lines = inputs.flatMapIndexed { index, line ->
             val sku = masters.get(MasterKind.SKU, line.skuId, true) as SkuSnapshot
             if (sku.state != WarehouseMasterState.ACTIVE) masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             val quantity = positiveReceiptQuantity(line.quantityBase, sku.baseUnit)
@@ -54,7 +59,7 @@ class ReceiptDraftValidation(private val masters: WarehouseMasterStore) {
             }
         }
         if (lines.size > 500) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        return ReceiptIntake(supplier, input.externalReference, source, inspection, lines)
+        return lines
     }
 }
 
