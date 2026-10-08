@@ -53,10 +53,12 @@ class WorkOrderEvidenceService(
     private val iamApi: IamApi,
     private val currentUser: CurrentUserProvider,
     private val registry: EvidenceObjectRegistryRepository,
+    private val cutovers: com.duluin.ftth.inventory.InventoryTenantCutoverApi,
 ) : ManageWorkOrderEvidenceUseCase, WorkOrderEvidenceQuery {
 
     @Transactional
     override fun attachPhoto(workOrderId: UUID, command: AttachEvidenceCommand): EvidenceView {
+        mutationFence()
         val workOrder = requireDocumentable(workOrderId)
         requireFieldAccess(workOrder)
         validateImage(command.contentType, command.bytes)
@@ -88,6 +90,7 @@ class WorkOrderEvidenceService(
 
     @Transactional
     override fun removePhoto(workOrderId: UUID, evidenceId: UUID) {
+        mutationFence()
         val photo = evidence.findById(evidenceId)?.takeIf {
             it.workOrderId == workOrderId && it.revisionState == EvidenceRevisionState.COMMITTED
         }
@@ -100,6 +103,7 @@ class WorkOrderEvidenceService(
 
     @Transactional
     override fun captureSignature(workOrderId: UUID, command: CaptureSignatureCommand): SignatureView {
+        mutationFence()
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder)
         if (workOrder.status != WorkOrderStatus.IN_PROGRESS && workOrder.status != WorkOrderStatus.DONE) {
@@ -139,6 +143,7 @@ class WorkOrderEvidenceService(
 
     @Transactional
     override fun removeSignature(workOrderId: UUID) {
+        mutationFence()
         val signature = signatures.findByWorkOrder(workOrderId)
             ?: throw NotFoundException("Work order $workOrderId belum punya tanda tangan")
         val workOrder = require(workOrderId)
@@ -197,6 +202,10 @@ class WorkOrderEvidenceService(
         val stored = storage.get(signature.storageKey)
         verifyHash(signature.sha256, stored.bytes)
         return DownloadedContent(safeContentType(signature.contentType, stored.bytes), stored.bytes)
+    }
+
+    private fun mutationFence() {
+        cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE).assertHeld()
     }
 
     private fun require(id: UUID): WorkOrder =

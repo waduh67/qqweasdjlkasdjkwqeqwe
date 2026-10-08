@@ -30,7 +30,7 @@ class WarehousePolicyService(private val cutovers: InventoryTenantCutoverApi, pr
     fun replace(input: WarehousePolicyInput, key: String): String {
         receiptKey(key)
         validate(input)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_CONFIGURATION)
         val change = authority.lockForChange()
         val current = authority.lockCurrent()
         access.permission(current, "inventory.approval.manage")

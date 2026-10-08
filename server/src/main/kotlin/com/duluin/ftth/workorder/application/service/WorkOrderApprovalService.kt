@@ -22,7 +22,7 @@ class WorkOrderApprovalService(private val repository: WorkOrderRepository, priv
     private val cutovers: InventoryTenantCutoverApi, private val events: ApplicationEventPublisher) {
     @Transactional(propagation = Propagation.MANDATORY)
     fun approve(id: UUID, note: String?): WorkOrder {
-        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE).assertHeld()
         val current = authority.lockCurrent()
         if (!current.platformAdmin && "workorder.order.approve" !in current.permissions) throw AccessDeniedException("Current approval permission required")
         val workOrder = repository.findById(id) ?: throw NotFoundException("Work order not found")

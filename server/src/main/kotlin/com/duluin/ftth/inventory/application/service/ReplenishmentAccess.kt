@@ -25,7 +25,10 @@ class ReplenishmentAccess(private val cutovers: InventoryTenantCutoverApi, priva
         receiptKey(key)
         store.deadline()
         val fence = cutovers.lockForCommand(cutovers.read().epoch,
-            if (controlPlane) WarehouseOperationClass.CONTROL_PLANE else WarehouseOperationClass.ORDINARY_STOCK)
+            if (controlPlane && action == "rule.archive") WarehouseOperationClass.LEGACY_MAINTENANCE
+            else if (controlPlane) WarehouseOperationClass.LEGACY_CONFIGURATION
+            else if (action == "rule.recompute") WarehouseOperationClass.LEGACY_STOCK_CREATE
+            else WarehouseOperationClass.ORDINARY_STOCK)
         authority.lockForChange().assertHeld()
         val current = reader(true)
         masters.lockTopology()

@@ -25,7 +25,7 @@ class MaterialTemplateService(private val authority: CurrentAuthorityApi, privat
                 "DISMANTLE" to "REMOVE", "PREVENTIVE" to "PREVENTIVE", "REPAIR" to "RETURN_CUSTOMER_RMA") || request.expectedRevision !in 0 until Long.MAX_VALUE || request.lines.any { it.substitution != null })
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         receiptKey(metadata.idempotencyKey)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_STOCK_CREATE)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.request.manage")
         receiptPermission(current, "workorder.order.assign")

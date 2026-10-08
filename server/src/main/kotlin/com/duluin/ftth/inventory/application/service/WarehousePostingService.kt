@@ -19,8 +19,14 @@ class WarehousePostingService(
         check(TransactionSynchronizationManager.isActualTransactionActive())
         cutover.assertHeld()
         check(cutover.snapshot.tenantId == TenantContext.tenantId())
+        val reference = cutover.operation == WarehouseOperationClass.REFERENCE_STOCK
+        if ((cutover.snapshot.workflow == WarehouseWorkflow.REFERENCE) != reference ||
+            command.operation.namespace.startsWith("warehouse.reference.") != reference) fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         val opening = command.kind == MovementKind.OPENING_BALANCE && command.approval?.kind == ApprovalPostingKind.OPENING_BALANCE &&
             command.operation.namespace == "warehouse.approval.effect"
+        if (!reference && cutover.operation !in (if (opening) setOf(WarehouseOperationClass.MIGRATION_APPROVAL)
+            else setOf(WarehouseOperationClass.ORDINARY_STOCK, WarehouseOperationClass.ASSET_ASSIGNMENT)))
+            fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         if (cutover.snapshot.state != WarehouseCutoverState.ENFORCED && !(opening && cutover.snapshot.state == WarehouseCutoverState.VALIDATING))
             fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         if (opening && cutover.snapshot.state != WarehouseCutoverState.VALIDATING) fail(WarehouseErrorCode.CUTOVER_REQUIRED)

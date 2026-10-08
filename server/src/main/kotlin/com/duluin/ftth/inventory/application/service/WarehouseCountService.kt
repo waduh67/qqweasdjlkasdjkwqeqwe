@@ -23,7 +23,7 @@ class WarehouseCountService(private val cutovers: InventoryTenantCutoverApi, pri
     override fun create(input: WarehouseCountDraft, key: String): WarehouseOperationReceipt {
         validateKey(key)
         validateDraft(input)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_STOCK_CREATE)
         val current = authority.lockCurrent()
         access.permission(current, "inventory.count.manage")
         access.permission(current, "inventory.count.view")

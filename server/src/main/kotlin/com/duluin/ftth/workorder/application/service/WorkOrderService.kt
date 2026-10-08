@@ -50,7 +50,7 @@ class WorkOrderService(
 
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
-        val current = commandFence("workorder.order.create")
+        val current = commandFence("workorder.order.create", operation = com.duluin.ftth.inventory.WarehouseOperationClass.LEGACY_WORK_ORDER_CREATE)
         requireArea(command.areaId, current)
         requireCustomerExists(command.customerId)
         command.assignees.forEach { requireActiveTechnician(it) }
@@ -188,8 +188,9 @@ class WorkOrderService(
         repository.deleteById(id)
     }
 
-    private fun commandFence(vararg permissions: String): CurrentAuthority {
-        cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+    private fun commandFence(vararg permissions: String,
+        operation: com.duluin.ftth.inventory.WarehouseOperationClass = com.duluin.ftth.inventory.WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE): CurrentAuthority {
+        cutovers.lockForCommand(cutovers.read().epoch, operation).assertHeld()
         val current = authority.lockCurrent()
         if (!current.platformAdmin && permissions.none { it in current.permissions }) throw AccessDeniedException("Current work order permission required")
         return current

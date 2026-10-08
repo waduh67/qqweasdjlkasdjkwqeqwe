@@ -27,7 +27,7 @@ class WarehouseTransferService(private val cutovers: InventoryTenantCutoverApi, 
 
     override fun create(request: WarehouseTransferDraft, metadata: WarehouseMutationMetadata): WarehouseOperationReceipt {
         receiptKey(metadata.idempotencyKey)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_STOCK_CREATE)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.transfer.manage")
         access.authorize(request, current, requireReceiver = false)

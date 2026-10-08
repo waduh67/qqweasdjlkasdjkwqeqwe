@@ -34,7 +34,8 @@ class WarehouseReceiptService(private val cutovers: InventoryTenantCutoverApi, p
         receiptKey(key)
         if ((id == null) != (input.expectedRevision == null) || (input.expectedRevision ?: 0) !in 0 until Long.MAX_VALUE)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch,
+            if (id == null && source == null) WarehouseOperationClass.LEGACY_STOCK_CREATE else WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         receiptPermission(current, "inventory.receipt.manage")
         masters.lockTopology()

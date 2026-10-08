@@ -15,7 +15,7 @@ class MaterialWorkflowService(private val workOrders: WorkOrderMaterialContextAp
     fun summary(id: UUID): MaterialSummary = materials.summary(context(id, null))
     fun history(id: UUID, page: WarehousePageRequest) = materials.history(context(id, null), page)
     fun replacePlan(id: UUID, request: MaterialPlanningRequest, key: String) =
-        materials.replacePlan(context(id, request.workOrderRevision), request, WarehouseMutationMetadata(key))
+        materials.replacePlan(context(id, request.workOrderRevision, create = request.expectedRevision == 0L), request, WarehouseMutationMetadata(key))
     fun submitRequest(id: UUID, request: MaterialPlanCommand, key: String) =
         materials.submitRequest(context(id, request.workOrderRevision), request, WarehouseMutationMetadata(key))
     fun reserve(id: UUID, request: MaterialPlanCommand, key: String) =
@@ -25,12 +25,13 @@ class MaterialWorkflowService(private val workOrders: WorkOrderMaterialContextAp
     fun pick(id: UUID, request: WarehousePickRequest, key: String) =
         issues.pick(context(id, request.workOrderRevision, true), request, WarehouseMutationMetadata(key))
     fun issueTransition(id: UUID, request: WarehouseIssueRequest, key: String, dispatch: Boolean) =
-        issues.transition(context(id, if (dispatch) request.workOrderRevision else null, true), request, WarehouseMutationMetadata(key), dispatch)
+        issues.transition(context(id, if (dispatch) request.workOrderRevision else null, true, mutation = true), request, WarehouseMutationMetadata(key), dispatch)
     fun issueSlip(id: UUID, issueId: UUID) = issues.slip(context(id, null), issueId)
     fun issueList(id: UUID, page: WarehousePageRequest, state: WarehouseIssueState?) = issues.list(context(id, null), page, state)
-    private fun context(id: UUID, revision: Long?, issue: Boolean = false): MaterialPlanningContext {
+    private fun context(id: UUID, revision: Long?, issue: Boolean = false, create: Boolean = false, mutation: Boolean = false): MaterialPlanningContext {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch,
-            if (revision == null) WarehouseOperationClass.CONTROL_PLANE else WarehouseOperationClass.ORDINARY_STOCK)
+            if (create) WarehouseOperationClass.LEGACY_STOCK_CREATE
+            else if (revision == null && !mutation) WarehouseOperationClass.CONTROL_PLANE else WarehouseOperationClass.ORDINARY_STOCK)
         val current = authority.lockCurrent()
         val workOrder = if (revision == null) workOrders.read(id) else if (issue) workOrders.lockForIssue(id, revision, current.fence)
             else workOrders.lock(id, revision, current.fence)

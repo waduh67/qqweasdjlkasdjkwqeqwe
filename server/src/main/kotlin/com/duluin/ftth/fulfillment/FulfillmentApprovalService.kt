@@ -18,7 +18,7 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
     private val bngOwner: com.duluin.ftth.bng.BngFulfillmentApi) {
 
     fun freeze(event: FulfillmentApproved): FulfillmentRequest {
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_FULFILLMENT)
         val current = authority.lockCurrent()
         val approved = workOrders.lockApproved(event.workOrderId, current)
         val workOrder = approved.material
@@ -57,11 +57,11 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
 
     fun lock(request: FulfillmentRequest) {
         val frozen = store.find(request.namespace, request.operationKey) ?: return
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        deliveryFence(frozen.snapshot.cutoverEpoch)
         val current = deliveryAuthority.lockActor(frozen.snapshot.identity)
         val workOrder = workOrders.lockApproved(frozen.snapshot.workOrder.material.workOrderId, current)
         store.lock(frozen.snapshot.id)
-        if (request != frozen.request || workOrder != frozen.snapshot.workOrder || cutover.snapshot.epoch != frozen.snapshot.cutoverEpoch)
+        if (request != frozen.request || workOrder != frozen.snapshot.workOrder)
             fail("FULFILLMENT_SNAPSHOT_STALE")
         store.validateOwners(frozen.snapshot.id)
     }
@@ -98,11 +98,21 @@ class FulfillmentApprovalService(private val store: FulfillmentApprovalStore, pr
     }
 
     private fun context(snapshot: FulfillmentApprovalSnapshot): MaterialPlanningContext {
-        val cutover = cutovers.lockForCommand(snapshot.cutoverEpoch, WarehouseOperationClass.CONTROL_PLANE)
+        val cutover = deliveryFence(snapshot.cutoverEpoch)
         val current = deliveryAuthority.lockActor(snapshot.identity)
         val workOrder = snapshot.workOrder.material
         return MaterialPlanningContext(workOrder.workOrderId, workOrder.code, workOrder.workType, workOrder.action.name,
             workOrder.workOrderRevision, workOrder.customerId, workOrder.areaId, workOrder.activeAssigneeIds, current.fence, cutover)
+    }
+
+    private fun deliveryFence(expectedEpoch: Long): TenantCutoverFence {
+        val fence = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_FULFILLMENT)
+        val snapshot = fence.snapshot
+        if (snapshot.epoch != expectedEpoch && !(snapshot.workflow == WarehouseWorkflow.DRAINING &&
+                snapshot.state == WarehouseCutoverState.ENFORCED && snapshot.drainingFromEpoch == expectedEpoch &&
+                expectedEpoch < Long.MAX_VALUE && snapshot.epoch == expectedEpoch + 1))
+            fail("FULFILLMENT_SNAPSHOT_STALE")
+        return fence
     }
 
     private fun fail(code: String): Nothing = throw FulfillmentExecutionFailure.ReconciliationRequired(code)
