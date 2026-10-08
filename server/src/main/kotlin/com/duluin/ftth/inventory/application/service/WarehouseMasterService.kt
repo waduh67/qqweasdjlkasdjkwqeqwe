@@ -88,7 +88,10 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         return getAuthorized(kind, id, false)
     }
 
-    internal fun getReference(kind: MasterKind, id: UUID): MasterSnapshot = getAuthorized(kind, id, true)
+    internal fun getReference(kind: MasterKind, id: UUID): MasterSnapshot = getAuthorized(kind, id, true).also {
+        if (it is LocationSnapshot && it.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN))
+            masterFailure(WarehouseErrorCode.NOT_FOUND)
+    }
 
     private fun getAuthorized(kind: MasterKind, id: UUID, reference: Boolean): MasterSnapshot {
         val current = authority.lockCurrent(); permission(current, if (reference) "warehouse.catalog.view" else "${kind.permission}.view")
@@ -102,7 +105,8 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         return listAuthorized(kind, filter, false)
     }
 
-    internal fun listReference(kind: MasterKind, filter: MasterFilter): WarehousePage<MasterSnapshot> = listAuthorized(kind, filter, true)
+    internal fun listReference(kind: MasterKind, filter: MasterFilter): WarehousePage<MasterSnapshot> =
+        listAuthorized(kind, if (kind == MasterKind.LOCATION) filter.copy(locationKinds = setOf(LocationKind.WAREHOUSE, LocationKind.BIN)) else filter, true)
 
     private fun listAuthorized(kind: MasterKind, filter: MasterFilter, reference: Boolean): WarehousePage<MasterSnapshot> {
         val current = authority.lockCurrent(); permission(current, if (reference) "warehouse.catalog.view" else "${kind.permission}.view")

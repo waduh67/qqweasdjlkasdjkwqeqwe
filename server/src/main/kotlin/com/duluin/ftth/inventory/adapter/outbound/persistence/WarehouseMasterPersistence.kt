@@ -31,6 +31,10 @@ class WarehouseMasterPersistence(private val jdbc: WarehouseCommandJdbc) : Wareh
         if (filter.search != null) { predicates += "(position(lower(?) in lower(code))>0 OR position(lower(?) in lower(name))>0)"; values += filter.search; values += filter.search }
         if (filter.state != null) { predicates += "state=?"; values += filter.state.name }
         if (kind == MasterKind.LOCATION) {
+            filter.locationKinds?.let { kinds ->
+                predicates += if (kinds.isEmpty()) "false" else "kind IN (${kinds.joinToString(",") { "?" }})"
+                values.addAll(kinds.sortedBy { it.name }.map { it.name })
+            }
             scoped(predicates, values, "id", locations); scoped(predicates, values, "area_id", areas)
             predicates += siteVisibility("master", values, sites)
         }

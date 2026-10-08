@@ -103,6 +103,12 @@ class ReferenceWarehouseIT : WarehouseMasterHttpFixture() {
         assertThat(initial.path("warehouses").all { it.path("quantityBase").asString() == "0" }).isTrue()
         ok("POST", "/receipts", setup.token,
             """{"warehouseId":"${default.path("id").asString()}","lines":[{"skuId":"${setup.bulk}","quantityBase":"9"}]}""", status = 201)
+        val locations = ok("GET", "/locations?size=1", setup.token)
+        assertThat(locations.path("totalElements").asLong()).isEqualTo(3)
+        assertThat(ok("GET", "/locations?page=2&size=1", setup.token).path("items")).hasSize(1)
+        assertThat(ok("GET", "/locations?page=3&size=1", setup.token).path("items").isEmpty).isTrue()
+        val internal = fixture(setup.token).transaction { scalar("SELECT id FROM inventory_location WHERE tenant_id='$tenant' AND code='RECEIPT_SOURCE'") }
+        assertThat(request("GET", "/api/v2/warehouse/locations/$internal", setup.token).status).isEqualTo(404)
         assertThat(stock(setup, setup.bulk).path("warehouses").single { it.path("warehouseName").asString() == "Gudang Utama" }
             .path("quantityBase").asString()).isEqualTo("9")
         assertThat(ok("GET", "/stock/${setup.bulk}/history", setup.token).path("items").single()
