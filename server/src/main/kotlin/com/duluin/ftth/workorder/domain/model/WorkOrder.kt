@@ -227,6 +227,14 @@ class WorkOrder private constructor(
         record(WorkOrderEventType.STARTED, "Pengerjaan dimulai", at, actorId)
     }
 
+    fun reassignReference(technicianId: UUID, at: Instant, actorId: UUID) {
+        val previous = assignees.singleOrNull()
+        assign(setOf(technicianId), at, actorId)
+        status = WorkOrderStatus.ASSIGNED
+        startedAt = null
+        record(WorkOrderEventType.UPDATED, "Penugasan $previous diganti ke $technicianId", at, actorId)
+    }
+
     /**
      * Menyelesaikan pekerjaan. Hanya dari IN_PROGRESS. Hasilnya masuk antrean
      * persetujuan ([WorkOrderApprovalStatus.PENDING]); keputusan penyelia

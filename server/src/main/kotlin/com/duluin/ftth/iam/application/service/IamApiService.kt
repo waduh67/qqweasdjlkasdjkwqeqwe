@@ -41,6 +41,9 @@ class IamApiService(
         technician = roleRepository.findAllByIds(roleIds).any {
             it.defaultKey in setOf("TECHNICIAN_LEGACY", "TECHNICIAN_NE", "TECHNICIAN_FO") || it.name == "Teknisi"
         },
+        pureTechnician = !platformAdmin && roleIds.isNotEmpty() && roleRepository.findAllByIds(roleIds).all {
+            it.defaultKey in setOf("TECHNICIAN_NE", "TECHNICIAN_FO")
+        },
     )
 
     private fun Area.toRef() = AreaRef(id = id, code = code, name = name)
