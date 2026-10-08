@@ -11,6 +11,9 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v2/warehouse")
 class ReferenceCatalogController(private val service: ReferenceCatalogService) {
+    @GetMapping("/areas")
+    fun areas() = ResponseEntity.ok().header("Cache-Control", "no-store").body(service.areas())
+
     @PostMapping("/{resource:skus|locations|suppliers}")
     fun create(@PathVariable resource: String, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         command(resource, MasterAction.CREATE, null, body, key)

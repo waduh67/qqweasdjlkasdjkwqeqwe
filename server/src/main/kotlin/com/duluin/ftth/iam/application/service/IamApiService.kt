@@ -1,6 +1,8 @@
 package com.duluin.ftth.iam.application.service
 
 import com.duluin.ftth.iam.AreaRef
+import com.duluin.ftth.iam.AreaReferenceApi
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.iam.application.port.outbound.AreaRepository
@@ -20,7 +22,7 @@ class IamApiService(
     private val userDirectory: UserDirectory,
     private val areaRepository: AreaRepository,
     private val roleRepository: RoleRepository,
-) : IamApi {
+) : IamApi, AreaReferenceApi {
 
     override fun findUser(id: UUID): UserRef? = userRepository.findById(id)?.toRef()
 
@@ -32,6 +34,11 @@ class IamApiService(
 
     override fun areasByIds(ids: Set<UUID>): List<AreaRef> =
         if (ids.isEmpty()) emptyList() else areaRepository.findAllByIds(ids).map { it.toRef() }
+
+    override fun areasInScope(scope: AuthorityScope): List<AreaRef> = when (scope) {
+        AuthorityScope.Unrestricted -> areaRepository.findAll().map { it.toRef() }
+        is AuthorityScope.Restricted -> areasByIds(scope.ids)
+    }.sortedBy { it.name }
 
     private fun User.toRef() = UserRef(
         id = id,
