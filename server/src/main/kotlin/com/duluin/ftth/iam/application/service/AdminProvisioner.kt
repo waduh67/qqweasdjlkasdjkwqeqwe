@@ -24,25 +24,39 @@ class AdminProvisioner(
     private val permissionRepository: PermissionRepository,
     private val passwordHasher: PasswordHasher,
     private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
+    private val owners: com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore,
 ) {
-    /** Role "Tenant Admin" (semua izin non-platform) + admin tenant. */
     fun provisionTenantAdmin(tenantId: UUID, email: String, name: String, password: String): Boolean {
-        val roleId = ensureTenantAdminRole(tenantId)
-        return ensureAdminUser(tenantId, email, name, password, platformAdmin = false, roleIds = setOf(roleId))
+        val roleId = ensureOperationalRoles(tenantId)
+        val created = ensureAdminUser(tenantId, email, name, password, platformAdmin = false, roleIds = setOf(roleId))
+        if (created && owners.bindIfMissing(requireNotNull(userRepository.findByEmail(Email.of(email))).id)) {
+            authority.lockForChange().incrementEpoch()
+        }
+        return created
     }
 
     /**
-     * Role bawaan "Tenant Admin": semua izin non-platform yang berlaku SAAT INI.
-     * Dipisah dari [provisionTenantAdmin] agar bisa dipanggil sebagai backfill untuk
-     * tenant lama — saat izin baru ditambahkan ke katalog, [ensureRole] menyetel ulang
-     * set izin role ini (replacePermissions) sehingga menu baru ikut terbuka. Idempotent.
+     * Role historis tetap dapat ditemukan tanpa menulis ulang izin tenant.
      */
     fun ensureTenantAdminRole(tenantId: UUID): UUID =
-        ensureRole(tenantId, TENANT_ADMIN_ROLE_NAME, "Akses penuh dalam tenant", tenantPermissionIds())
+        ensureRole(tenantId, "TENANT_OWNER_LEGACY", TENANT_ADMIN_ROLE_NAME, "Akses penuh dalam tenant", tenantPermissionIds())
+
+    fun ensureOperationalRoles(tenantId: UUID): UUID {
+        val admin = ensureRole(tenantId, "ADMIN", "Admin", "Kelola gudang, work order dan akun teknisi", permissionIdsForCodes(ADMIN_PERMISSION_CODES))
+        ensureRole(tenantId, "MANAGER", "Manager", "Persetujuan pengajuan material", permissionIdsForCodes(MANAGER_PERMISSION_CODES))
+        ensureRole(tenantId, "TECHNICIAN_NE", "Teknisi NE", "Teknisi Network Equipment", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
+        ensureRole(tenantId, "TECHNICIAN_FO", "Teknisi FO", "Teknisi Fiber Optic", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
+        return admin
+    }
+
+    fun backfillOwner() {
+        val fence = authority.lockForChange()
+        if (owners.backfillInitialAdmin()) fence.incrementEpoch()
+    }
 
     /** Role "Super Admin" (semua izin termasuk platform) + platform admin. */
     fun provisionPlatformAdmin(tenantId: UUID, email: String, name: String, password: String): Boolean {
-        val roleId = ensureRole(tenantId, "Super Admin", "Akses penuh platform", allPermissionIds())
+        val roleId = ensureRole(tenantId, "PLATFORM_ADMIN", "Super Admin", "Akses penuh platform", allPermissionIds())
         return ensureAdminUser(tenantId, email, name, password, platformAdmin = true, roleIds = setOf(roleId))
     }
 
@@ -55,26 +69,21 @@ class AdminProvisioner(
     fun ensureTechnicianRole(tenantId: UUID): UUID =
         ensureRole(
             tenantId,
+            "TECHNICIAN_LEGACY",
             TECHNICIAN_ROLE_NAME,
             "Teknisi lapangan: kerjakan work order yang ditugaskan",
             permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES),
         )
 
-    private fun ensureRole(tenantId: UUID, name: String, description: String, permissionIds: Set<UUID>): UUID {
+    private fun ensureRole(tenantId: UUID, key: String, name: String, description: String, permissionIds: Set<UUID>): UUID {
         val fence = authority.lockForChange()
-        val existing = roleRepository.findByName(name)
-        if (existing == null || existing.permissionIds != permissionIds) fence.incrementEpoch()
-        return when {
-            existing == null ->
-                roleRepository.save(Role.create(tenantId, name, description, systemRole = true, permissionIds)).id
-
-            existing.permissionIds != permissionIds -> {
-                existing.replacePermissions(permissionIds)
-                roleRepository.save(existing).id
-            }
-
-            else -> existing.id
-        }
+        roleRepository.findByDefaultKey(key)?.let { return it.id }
+        var availableName = name
+        var suffix = 1
+        while (roleRepository.existsByName(availableName)) availableName = "$name (Bawaan ${suffix++})"
+        fence.incrementEpoch()
+        return roleRepository.save(Role.create(tenantId, availableName, description, systemRole = true,
+            permissionIds = permissionIds, defaultKey = key)).id
     }
 
     private fun ensureAdminUser(
@@ -124,6 +133,25 @@ class AdminProvisioner(
             // harus menanyakan URL CWMP & interval inform lewat chat tiap pemasangan.
             // Hanya info server (nilai env global), bukan daftar perangkat tenant.
             "cpe.acs.view",
+            "warehouse.material.own",
+            "warehouse.request.own",
+            "warehouse.return.own",
+        )
+
+        val ADMIN_PERMISSION_CODES = setOf(
+            "iam.user.view", "iam.user.create", "iam.user.update", "iam.user.assign",
+            "customer.customer.view", "customer.subscription.view",
+            "workorder.order.view", "workorder.dashboard.view", "workorder.order.create",
+            "workorder.order.update", "workorder.order.assign", "workorder.evidence.view",
+            "warehouse.catalog.view", "warehouse.catalog.manage", "warehouse.stock.view",
+            "warehouse.stock.manage", "warehouse.request.view", "warehouse.request.review",
+            "warehouse.request.receive", "warehouse.request.handover", "warehouse.return.manage",
+            "warehouse.count.manage", "warehouse.technician.manage",
+        )
+
+        val MANAGER_PERMISSION_CODES = setOf(
+            "warehouse.catalog.view", "warehouse.stock.view", "warehouse.request.view",
+            "warehouse.request.approve", "workorder.order.view", "workorder.dashboard.view",
         )
     }
 }

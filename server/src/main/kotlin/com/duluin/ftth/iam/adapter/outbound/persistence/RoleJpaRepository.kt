@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface RoleJpaRepository : JpaRepository<RoleJpaEntity, UUID> {
     fun findByName(name: String): RoleJpaEntity?
+    fun findByDefaultKey(defaultKey: String): RoleJpaEntity?
     fun existsByName(name: String): Boolean
 }

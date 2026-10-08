@@ -20,6 +20,8 @@ class WarehouseScopePersistence(
         authority.assertHeld()
         return jdbc.execute { sql ->
             check(sql.tenant == authority.identity.tenantId)
+            if (sql.value("SELECT user_id FROM iam_tenant_owner WHERE tenant_id=? AND user_id=?",
+                    sql.tenant, authority.identity.userId) != null) return@execute AuthorityScope.Unrestricted
             AuthorityScope.Restricted(sql.query("""WITH RECURSIVE scoped(id) AS (
                 SELECT location_id FROM inventory_warehouse_scope WHERE tenant_id=? AND user_id=? AND state='ACTIVE'
                 UNION SELECT location.id FROM inventory_location location JOIN scoped ON location.parent_location_id=scoped.id

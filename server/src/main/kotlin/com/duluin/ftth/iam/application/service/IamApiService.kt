@@ -38,7 +38,9 @@ class IamApiService(
         name = name,
         email = email.value,
         active = active,
-        technician = roleRepository.findAllByIds(roleIds).any { it.name == "Teknisi" },
+        technician = roleRepository.findAllByIds(roleIds).any {
+            it.defaultKey in setOf("TECHNICIAN_LEGACY", "TECHNICIAN_NE", "TECHNICIAN_FO") || it.name == "Teknisi"
+        },
     )
 
     private fun Area.toRef() = AreaRef(id = id, code = code, name = name)

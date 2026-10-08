@@ -18,4 +18,12 @@ interface TenantRepository {
 
     /** Id seluruh tenant berstatus ACTIVE — untuk pemindaian terjadwal lintas-tenant. */
     fun findActiveIds(): List<UUID>
+
+    fun findAllIds(): List<UUID> = buildList {
+        var page = 0
+        do {
+            val batch = findAll(PageRequest(page++, 200))
+            addAll(batch.content.map { it.id })
+        } while (page < batch.totalPages)
+    }
 }

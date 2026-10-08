@@ -30,4 +30,7 @@ class RoleJpaEntity(
     @Column(name = "permission_id", nullable = false)
     @BatchSize(size = 50)
     var permissionIds: MutableSet<UUID> = mutableSetOf(),
+
+    @Column(name = "default_key", length = 40)
+    var defaultKey: String? = null,
 ) : TenantAwareJpaEntity(id)

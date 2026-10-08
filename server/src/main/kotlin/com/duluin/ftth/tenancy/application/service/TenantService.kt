@@ -55,6 +55,9 @@ class TenantService(
     @Transactional(readOnly = true)
     override fun findActiveTenantIds(): List<UUID> = tenantRepository.findActiveIds()
 
+    @Transactional(readOnly = true)
+    override fun findAllTenantIds(): List<UUID> = tenantRepository.findAllIds()
+
     override fun ensureTenant(slug: String, name: String): TenantRef {
         val normalized = slug.trim().lowercase()
         tenantRepository.findBySlug(normalized)?.let { return it.toRef() }

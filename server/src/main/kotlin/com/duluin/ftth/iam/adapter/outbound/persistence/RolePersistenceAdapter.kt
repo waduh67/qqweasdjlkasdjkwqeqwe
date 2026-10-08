@@ -22,6 +22,7 @@ class RolePersistenceAdapter(
             description = role.description,
             systemRole = role.systemRole,
             permissionIds = role.permissionIds.toMutableSet(),
+            defaultKey = role.defaultKey,
         )
         return jpa.save(entity).toDomain()
     }
@@ -29,6 +30,8 @@ class RolePersistenceAdapter(
     override fun findById(id: UUID): Role? = jpa.findById(id).orElse(null)?.toDomain()
 
     override fun findByName(name: String): Role? = jpa.findByName(name)?.toDomain()
+
+    override fun findByDefaultKey(key: String): Role? = jpa.findByDefaultKey(key)?.toDomain()
 
     override fun findAll(): List<Role> = jpa.findAll().map { it.toDomain() }
 
@@ -49,4 +52,5 @@ private fun RoleJpaEntity.toDomain(): Role =
         description = description,
         systemRole = systemRole,
         permissionIds = permissionIds.toSet(),
+        defaultKey = defaultKey,
     )

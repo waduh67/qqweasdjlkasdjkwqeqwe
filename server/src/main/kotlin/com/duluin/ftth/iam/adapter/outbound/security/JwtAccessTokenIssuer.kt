@@ -21,6 +21,7 @@ import java.time.Instant
 class JwtAccessTokenIssuer(
     private val jwtEncoder: JwtEncoder,
     private val securityProperties: SecurityProperties,
+    private val owners: com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore,
 ) : AccessTokenIssuer {
 
     override fun issue(user: User, permissionCodes: Set<String>): IssuedToken {
@@ -36,7 +37,7 @@ class JwtAccessTokenIssuer(
             .claim(JwtClaims.NAME, user.name)
             .claim(JwtClaims.PLATFORM_ADMIN, user.platformAdmin)
             .claim(JwtClaims.PERMISSIONS, permissionCodes.sorted())
-            .claim(JwtClaims.AREAS, user.areaIds.map { it.toString() })
+            .claim(JwtClaims.AREAS, if (owners.findUserId() == user.id) emptyList<String>() else user.areaIds.map { it.toString() })
             .build()
 
         val header = JwsHeader.with(MacAlgorithm.HS256).build()

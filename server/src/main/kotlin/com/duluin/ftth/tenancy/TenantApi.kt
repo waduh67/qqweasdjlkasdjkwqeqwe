@@ -25,6 +25,8 @@ interface TenantApi {
      */
     fun findActiveTenantIds(): List<UUID>
 
+    fun findAllTenantIds(): List<UUID> = findActiveTenantIds()
+
     /** Buat tenant bila slug belum ada; idempotent. Mengembalikan tenant (baru atau lama). */
     fun ensureTenant(slug: String, name: String): TenantRef
 

@@ -38,6 +38,8 @@ class TenantPersistenceAdapter(
         jpa.findAll(pageRequest.toPageable()).map(TenantJpaEntity::toDomain).toDomainPage()
 
     override fun findActiveIds(): List<UUID> = jpa.findIdsByStatus(TenantStatus.ACTIVE)
+
+    override fun findAllIds(): List<UUID> = jpa.findAllIds()
 }
 
 private fun TenantJpaEntity.toDomain(): Tenant =

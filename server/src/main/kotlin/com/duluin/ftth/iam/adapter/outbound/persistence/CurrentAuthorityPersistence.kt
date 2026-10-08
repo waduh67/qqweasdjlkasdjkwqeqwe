@@ -35,9 +35,12 @@ class CurrentAuthorityPersistence(
         entityManager.flush()
         val platform = query("SELECT platform_admin FROM app_user WHERE tenant_id=? AND id=? AND status='ACTIVE'",
             user.tenantId, user.userId) { it.getBoolean(1) }.singleOrNull() ?: denied()
+        val owner = query("SELECT EXISTS(SELECT FROM iam_tenant_owner WHERE tenant_id=? AND user_id=?)",
+            user.tenantId, user.userId) { it.getBoolean(1) }.single()
         val roles = query("""SELECT role.id FROM user_role link JOIN role ON role.id=link.role_id
             WHERE link.user_id=? AND role.tenant_id=?""", user.userId, user.tenantId) { it.getObject(1, UUID::class.java) }.toSet()
-        val permissions = query("""SELECT DISTINCT permission.code FROM user_role link
+        val permissions = if (owner && !platform) query("SELECT code FROM permission WHERE active AND NOT platform_only") { it.getString(1) }.toSet()
+        else query("""SELECT DISTINCT permission.code FROM user_role link
             JOIN role ON role.id=link.role_id AND role.tenant_id=?
             JOIN role_permission grant_row ON grant_row.role_id=role.id
             JOIN permission ON permission.id=grant_row.permission_id
@@ -56,7 +59,7 @@ class CurrentAuthorityPersistence(
             }
         }
         return CurrentAuthority(fence, roles, permissions,
-            if (platform) AuthorityScope.Unrestricted else AuthorityScope.Restricted(areas), platform)
+            if (platform || owner) AuthorityScope.Unrestricted else AuthorityScope.Restricted(areas), platform)
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
