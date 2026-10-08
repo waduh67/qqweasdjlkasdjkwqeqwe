@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.common.domain.identity.MacIdentity
 import com.duluin.ftth.common.domain.identity.SerialIdentity
+import com.duluin.ftth.common.infrastructure.security.AccessChecker
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.CurrentAuthorityApi
@@ -20,7 +21,8 @@ import java.util.UUID
 @Service
 class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val store: WarehouseMasterStore,
-    private val operations: WarehouseOperationStore, private val iam: IamApi, private val sites: SiteReferenceApi) {
+    private val operations: WarehouseOperationStore, private val iam: IamApi, private val sites: SiteReferenceApi,
+    private val accessChecker: AccessChecker) {
     private val mapper = jacksonObjectMapper()
 
     fun execute(kind: MasterKind, action: MasterAction, id: UUID?, input: MasterInput, key: String): WarehouseOperationReceipt {
@@ -36,6 +38,7 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
         val change = if (kind == MasterKind.LOCATION) authority.lockForChange() else null
         val current = authority.lockCurrent()
         permission(current, if (reference) "warehouse.catalog.manage" else "${kind.permission}.manage")
+        accessChecker.assertWritable()
         if (kind == MasterKind.LOCATION) store.lockTopology()
         val allowed = scopes.currentUnderFence(current.fence)
         validate(input, action)

@@ -1,5 +1,7 @@
 package com.duluin.ftth.workorder.application.service
 
+import com.duluin.ftth.common.infrastructure.security.AccessChecker
+
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.iam.CurrentAuthority
@@ -31,7 +33,7 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
     private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi, private val owners: TenantOwnerStore,
     private val iam: IamApi, private val customers: CustomerApi, private val settings: ReferenceRequestStore,
     private val entityManager: EntityManager, private val events: ApplicationEventPublisher,
-    private val completions: ReferenceWorkOrderCompletionStore) {
+    private val completions: ReferenceWorkOrderCompletionStore, private val accessChecker: AccessChecker) {
     private val mapper = jacksonObjectMapper()
     internal data class Access(val current: CurrentAuthority, val cutover: TenantCutoverFence)
 
@@ -172,7 +174,9 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
     internal fun access(key: String): Access {
         if (key.length !in 1..240 || key.any { it.code !in 33..126 }) malformed()
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.REFERENCE_WORK_ORDER)
-        return Access(authority.lockCurrent(), cutover)
+        val current = authority.lockCurrent()
+        accessChecker.assertWritable()
+        return Access(current, cutover)
     }
     internal fun readAccess(): Access {
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)

@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.common.security.AuthorityScope
+import com.duluin.ftth.common.infrastructure.security.AccessChecker
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.iam.IamApi
@@ -24,7 +25,8 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
     private val validation: ReceiptDraftValidation, private val receipts: WarehouseReceiptPersistence,
     private val origins: WarehouseReceiptOrigins, private val stock: WarehouseTransferStock,
     private val store: ReferenceWarehouseStore, private val operations: WarehouseOperationStore,
-    private val posting: WarehousePosting, private val sites: SiteReferenceApi, private val iam: IamApi) {
+    private val posting: WarehousePosting, private val sites: SiteReferenceApi, private val iam: IamApi,
+    private val accessChecker: AccessChecker) {
     private val mapper = jacksonObjectMapper()
 
     fun workflow(): ReferenceWorkflowView {
@@ -42,6 +44,7 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
     fun drain(input: ReferenceDrainInput): TenantCutoverSnapshot {
         val fence = cutovers.lockCurrentForTransition()
         owner(authority.lockCurrent())
+        accessChecker.assertWritable()
         if (input.expectedEpoch != fence.snapshot.epoch) masterFailure(WarehouseErrorCode.STALE_CUTOVER)
         return cutovers.beginDraining(input.expectedEpoch)
     }
@@ -57,6 +60,7 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
         cutovers.lockCurrentForTransition()
         val current = authority.lockCurrent()
         owner(current)
+        accessChecker.assertWritable()
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
         store.activation(key)?.let { prior ->
             if (prior.first != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN)
@@ -322,6 +326,7 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
         val fence = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.REFERENCE_STOCK)
         val current = authority.lockCurrent()
         receiptPermission(current, permission)
+        accessChecker.assertWritable()
         masters.lockTopology()
         return Access(current, scopes.currentUnderFence(current.fence), fence)
     }

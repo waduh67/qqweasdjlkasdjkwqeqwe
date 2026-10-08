@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.common.security.AuthorityScope
+import com.duluin.ftth.common.infrastructure.security.AccessChecker
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.CurrentAuthorityApi
 import com.duluin.ftth.iam.IamApi
@@ -21,7 +22,7 @@ import java.util.UUID
 class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val owners: TenantOwnerStore, private val scopes: InventoryWarehouseScopeApi, private val iam: IamApi,
     private val masters: WarehouseMasterStore, private val catalog: WarehouseMasterService, private val store: ReferenceRequestStore,
-    private val sites: SiteReferenceApi) {
+    private val sites: SiteReferenceApi, private val accessChecker: AccessChecker) {
     private val mapper = jacksonObjectMapper()
     internal data class Access(val current: CurrentAuthority, val cutover: TenantCutoverFence, val scope: AuthorityScope)
 
@@ -146,6 +147,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
         receiptKey(key)
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.REFERENCE_STOCK)
         val current = authority.lockCurrent()
+        accessChecker.assertWritable()
         masters.lockTopology()
         return Access(current, cutover, if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence))
     }
