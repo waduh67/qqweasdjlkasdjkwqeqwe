@@ -57,13 +57,22 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
     fun receive(input: ReferenceReceiptInput, key: String): WarehouseOperationReceipt = receive(input, key, "warehouse.stock.manage")
 
     internal fun receiveForRequest(input: ReferenceReceiptInput, key: String): WarehouseOperationReceipt = receive(input, key, "warehouse.request.receive")
+    internal fun receiveForCount(input: ReferenceReceiptInput, key: String, countId: UUID): WarehouseOperationReceipt =
+        receive(input, key, "warehouse.count.manage", countId)
 
-    private fun receive(input: ReferenceReceiptInput, key: String, permission: String): WarehouseOperationReceipt {
+    private fun receive(input: ReferenceReceiptInput, key: String, permission: String, countId: UUID? = null): WarehouseOperationReceipt {
         val access = access(permission, key)
         notes(input.notes)
-        val destination = warehouse(input.warehouseId, access)
+        val destination = if (countId == null) warehouse(input.warehouseId, access) else {
+            val location = masters.get(MasterKind.LOCATION, input.warehouseId, true) as LocationSnapshot
+            if (!store.countLocationVisible(access.current.fence.identity.userId, location.id)) masterFailure(WarehouseErrorCode.NOT_FOUND)
+            if (location.state != WarehouseMasterState.ACTIVE || location.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN, LocationKind.TECHNICIAN))
+                masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            location
+        }
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))
-        val namespace = "warehouse.reference.receipt"
+        val action = if (countId == null) "RECEIPT" else "COUNT_RECEIPT"
+        val namespace = "warehouse.reference.${action.lowercase()}"
         replay(namespace, key, canonical, access)?.let { return it }
         val id = UUID.randomUUID()
         val operationId = UUID.randomUUID()
@@ -79,13 +88,14 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
         }
         val intake = ReceiptIntake(supplier, reference, source, destination, validation.prepareLines(lines))
         receipts.saveDraft(id, intake, 0, access.current.fence.identity.userId, access.current.fence.epoch,
-            access.cutover.snapshot.epoch, true, condition = WarehouseCondition.SERVICEABLE)
-        val legs = origins.admit(receipts.get(id), operationId, WarehouseCondition.SERVICEABLE)
-        val view = ReferenceMovementView(id, operationId, 1, "RECEIPT", "PUTAWAY", destination.id, null,
-            input.notes, java.time.Instant.now())
+            access.cutover.snapshot.epoch, true, condition = WarehouseCondition.SERVICEABLE, technicianCustody = destination.kind == LocationKind.TECHNICIAN)
+        val legs = origins.admit(receipts.get(id), operationId, WarehouseCondition.SERVICEABLE, technicianCustody = destination.kind == LocationKind.TECHNICIAN)
+        val view = ReferenceMovementView(id, operationId, 1, action, "PUTAWAY", destination.id, null,
+            input.notes, referenceTimestamp())
         val command = WarehousePost(id, 0, "PUTAWAY", operation(view, namespace, key, canonical, access), MovementKind.RECEIVE,
             input.notes.ifBlank { "Penerimaan barang" }, legs)
-        return post(command, source.id, destination.id, "RECEIPT", canonical, access)
+        if (countId != null) store.bindCountReceipt(countId, id)
+        return post(command, source.id, destination.id, action, canonical, access)
     }
 
     fun transfer(input: ReferenceTransferInput, key: String): WarehouseOperationReceipt {

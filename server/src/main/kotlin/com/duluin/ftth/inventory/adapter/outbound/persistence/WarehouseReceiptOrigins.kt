@@ -20,7 +20,11 @@ class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc, private va
                 sql.value("SELECT pg_advisory_xact_lock(hashtextextended(?,0))", "${sql.tenant}|receipt-identity|$type|$value")
             }
     }
-    fun admit(record: ReceiptRecord, operationId: UUID, condition: WarehouseCondition = WarehouseCondition.QUARANTINE): List<PostingLeg> = jdbc.execute { sql ->
+    fun admit(record: ReceiptRecord, operationId: UUID, condition: WarehouseCondition = WarehouseCondition.QUARANTINE, technicianCustody: Boolean = false): List<PostingLeg> = jdbc.execute { sql ->
+        require(!technicianCustody || record.intake.inspection.kind == LocationKind.TECHNICIAN && record.intake.inspection.custodianId != null)
+        val custodian = if (technicianCustody) requireNotNull(record.intake.inspection.custodianId) else record.intake.inspection.id
+        val custodyKind = if (technicianCustody) OwnerKind.TECHNICIAN else OwnerKind.WAREHOUSE
+        val status = if (technicianCustody) InventoryStatus.ISSUED else if (condition == WarehouseCondition.SERVICEABLE) InventoryStatus.AVAILABLE else InventoryStatus.QUARANTINE
         lockIdentityKeys(record)
         val replacement = replacements.forReceipt(record.id)
         val owner = replacement?.view?.legalOwner ?: AssetLegalOwner.ISP
@@ -42,10 +46,9 @@ class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc, private va
                 }
                 sql.update("""INSERT INTO inventory_serialized_asset(id,tenant_id,sku_id,warehouse_sku_id,serial_number,mac_address,canonical_serial,canonical_mac,
                     status,location_id,custody_owner_id,custody_owner_kind,quantity_base,base_unit,condition,legal_owner,origin_document_line_id)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE',1,'EA',?,?,?)""", identity, sql.tenant, line.sku.id,
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,'EA',?,?,?)""", identity, sql.tenant, line.sku.id,
                     line.sku.id, line.serial, line.mac, serial, mac,
-                    if (condition == WarehouseCondition.SERVICEABLE) InventoryStatus.AVAILABLE else InventoryStatus.QUARANTINE,
-                    record.intake.inspection.id, record.intake.inspection.id, condition, owner, line.id)
+                    status, record.intake.inspection.id, custodian, custodyKind, condition, owner, line.id)
                 sql.update("INSERT INTO inventory_segment(id,tenant_id,sku_id,asset_id,kind,base_unit,quantity_base) VALUES (?,?,?,?,'SERIAL','EA',1)",
                     identity, sql.tenant, line.sku.id, identity)
             } else {
@@ -59,12 +62,11 @@ class WarehouseReceiptOrigins(private val jdbc: WarehouseCommandJdbc, private va
             sql.update("UPDATE inventory_document_line SET stock_identity_id=?,lot_id=?,revision=revision+1,document_revision=? WHERE tenant_id=? AND id=?",
                 identity, lot, record.revision, sql.tenant, line.id)
             replacement?.let { replacements.register(it, identity, operationId) }
-            val inspection = PostingDimension(line.sku.id, identity, lot, record.intake.inspection.id, record.intake.inspection.id,
-                OwnerKind.WAREHOUSE, condition, owner)
+            val inspection = PostingDimension(line.sku.id, identity, lot, record.intake.inspection.id, custodian,
+                custodyKind, condition, owner)
             listOf(PostingLeg(LegDirection.OUT, inspection.copy(locationId = record.intake.source.id, custodianId = record.intake.source.id,
                 custodianKind = OwnerKind.TRANSIT), quantity, line.id, InventoryStatus.IN_TRANSIT, PostingEndpoint.RECEIPT_SOURCE),
-                PostingLeg(LegDirection.IN, inspection, quantity, line.id,
-                    if (condition == WarehouseCondition.SERVICEABLE) InventoryStatus.AVAILABLE else InventoryStatus.QUARANTINE))
+                PostingLeg(LegDirection.IN, inspection, quantity, line.id, status))
         }
     }
 }

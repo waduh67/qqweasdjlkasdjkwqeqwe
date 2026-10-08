@@ -10,6 +10,9 @@ import java.util.UUID
 
 @Repository
 class ReferenceWarehouseStore(private val jdbc: WarehouseCommandJdbc) {
+    fun countLocationVisible(actor: UUID, location: UUID): Boolean = jdbc.execute { sql ->
+        sql.value("SELECT warehouse_reference_count_visible(?,?,?)", sql.tenant, actor, location) == "t"
+    }
     private val mapper = jacksonObjectMapper()
 
     fun review(): String = jdbc.execute { sql -> requireNotNull(sql.value("SELECT warehouse_reference_review(?)::text", sql.tenant)) }
@@ -37,6 +40,11 @@ class ReferenceWarehouseStore(private val jdbc: WarehouseCommandJdbc) {
         existing ?: UUID.randomUUID().also { id ->
             sql.update("INSERT INTO inventory_supplier(id,tenant_id,code,name) VALUES (?,?,'REFERENCE-INTERNAL','Penerimaan langsung')", id, sql.tenant)
         }
+    }
+
+    fun bindCountReceipt(count: UUID, document: UUID) = jdbc.execute { sql ->
+        sql.update("INSERT INTO inventory_reference_count_movement(tenant_id,count_id,document_id,direction) VALUES (?,?,?,'SURPLUS')", sql.tenant, count, document)
+        Unit
     }
 
     fun technicianLocation(technician: UUID, name: String): UUID = jdbc.execute { sql ->
