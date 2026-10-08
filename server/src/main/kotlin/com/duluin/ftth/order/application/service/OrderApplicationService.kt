@@ -72,7 +72,7 @@ class OrderApplicationService(
     @Transactional
     override fun applyFulfillment(command: OrderFulfillmentCommand): OrderFulfillmentResult {
         val user = currentUser.current()
-        return fulfill(command, com.duluin.ftth.common.security.SessionIdentity(user.tenantId, user.userId, user.sessionId))
+        return fulfill(command, com.duluin.ftth.common.security.SessionIdentity(user.tenantId, user.userId, user.sessionId, user.credentialVersion))
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)

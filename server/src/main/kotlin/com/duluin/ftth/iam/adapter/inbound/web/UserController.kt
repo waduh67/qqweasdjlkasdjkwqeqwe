@@ -33,6 +33,7 @@ import java.util.UUID
 class UserController(
     private val manageUser: ManageUserUseCase,
     private val twoFactor: ManageTwoFactorUseCase,
+    private val technicianPasswords: com.duluin.ftth.iam.application.service.TechnicianPasswordService,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('iam.user.view')")
@@ -87,7 +88,15 @@ class UserController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@authz.can('iam.user.update')")
     fun resetTwoFactor(@PathVariable id: UUID) = twoFactor.resetFor(id)
+
+    @PostMapping("/{id}/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('warehouse.technician.manage')")
+    fun resetPassword(@PathVariable id: UUID, @Valid @RequestBody request: TechnicianPasswordRequest) =
+        technicianPasswords.reset(id, request.newPassword)
 }
+
+data class TechnicianPasswordRequest(@field:NotBlank val newPassword: String)
 
 data class CreateUserRequest(
     @field:NotBlank val email: String,

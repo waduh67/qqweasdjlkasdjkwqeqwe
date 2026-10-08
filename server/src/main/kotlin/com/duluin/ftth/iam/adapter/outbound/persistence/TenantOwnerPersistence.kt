@@ -3,11 +3,28 @@ package com.duluin.ftth.iam.adapter.outbound.persistence
 import com.duluin.ftth.common.infrastructure.persistence.TenantTransactionJdbc
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore
+import com.duluin.ftth.iam.TenantOwnerRef
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
 class TenantOwnerPersistence(private val jdbc: TenantTransactionJdbc) : TenantOwnerStore {
+    override fun findProfiles(tenantIds: Set<UUID>): Map<UUID, TenantOwnerRef?> = tenantIds.associateWith { tenantId ->
+        var owner: TenantOwnerRef? = null
+        jdbc.withinTenant(tenantId) { connection ->
+            connection.prepareStatement("""SELECT u.id,u.name,u.email,u.status FROM iam_tenant_owner o
+                JOIN app_user u ON u.tenant_id=o.tenant_id AND u.id=o.user_id
+                WHERE o.tenant_id=?""").use { query ->
+                query.setObject(1, tenantId)
+                query.executeQuery().use { rows ->
+                    if (rows.next()) owner = TenantOwnerRef(rows.getObject(1, UUID::class.java),
+                        rows.getString(2), rows.getString(3), rows.getString(4))
+                }
+            }
+        }
+        owner
+    }
+
     override fun backfillInitialAdmin(): Boolean {
         var inserted = false
         jdbc.withinTenant(TenantContext.tenantId()) { connection ->

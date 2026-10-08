@@ -26,7 +26,10 @@ class User private constructor(
     totpSecret: String? = null,
     totpEnabledAt: Instant? = null,
     totpLastStep: Long? = null,
+    credentialVersion: Long = 0,
 ) {
+    var credentialVersion: Long = credentialVersion
+        private set
     var email: Email = email
         private set
 
@@ -72,7 +75,12 @@ class User private constructor(
 
     fun changePasswordHash(newHash: String) {
         require(newHash.isNotBlank()) { "Hash password kosong" }
+        invalidateSessions()
         passwordHash = newHash
+    }
+
+    fun invalidateSessions() {
+        credentialVersion = Math.addExact(credentialVersion, 1)
     }
 
     fun enable() {
@@ -166,9 +174,10 @@ class User private constructor(
             totpSecret: String? = null,
             totpEnabledAt: Instant? = null,
             totpLastStep: Long? = null,
+            credentialVersion: Long = 0,
         ): User = User(
             id, tenantId, email, name, passwordHash, status, platformAdmin, roleIds, areaIds, createdAt,
-            totpSecret, totpEnabledAt, totpLastStep,
+            totpSecret, totpEnabledAt, totpLastStep, credentialVersion,
         )
 
         private fun validateName(name: String): String {

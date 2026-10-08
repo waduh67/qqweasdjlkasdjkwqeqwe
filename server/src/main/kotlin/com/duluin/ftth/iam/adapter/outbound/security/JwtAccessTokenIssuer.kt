@@ -36,6 +36,7 @@ class JwtAccessTokenIssuer(
             .claim(JwtClaims.EMAIL, user.email.value)
             .claim(JwtClaims.NAME, user.name)
             .claim(JwtClaims.PLATFORM_ADMIN, user.platformAdmin)
+            .claim(JwtClaims.CREDENTIAL_VERSION, user.credentialVersion)
             .claim(JwtClaims.PERMISSIONS, permissionCodes.sorted())
             .claim(JwtClaims.AREAS, if (owners.findUserId() == user.id) emptyList<String>() else user.areaIds.map { it.toString() })
             .build()

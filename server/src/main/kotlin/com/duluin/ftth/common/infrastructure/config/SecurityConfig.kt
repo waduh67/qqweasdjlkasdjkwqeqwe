@@ -42,9 +42,10 @@ class SecurityConfig {
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
     @Bean
-    fun jwtDecoder(securityProperties: SecurityProperties): JwtDecoder {
+    fun jwtDecoder(securityProperties: SecurityProperties, sessions: com.duluin.ftth.common.security.CredentialSessionVerifier): JwtDecoder {
         val key = SecretKeySpec(securityProperties.jwtSecret.toByteArray(), "HmacSHA256")
-        return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build()
+        return com.duluin.ftth.common.infrastructure.security.CredentialJwtDecoder(
+            NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build(), sessions)
     }
 
     @Bean

@@ -12,4 +12,5 @@ object JwtClaims {
     const val PLATFORM_ADMIN = "padm"
     const val PERMISSIONS = "perms"
     const val AREAS = "areas"
+    const val CREDENTIAL_VERSION = "cv"
 }

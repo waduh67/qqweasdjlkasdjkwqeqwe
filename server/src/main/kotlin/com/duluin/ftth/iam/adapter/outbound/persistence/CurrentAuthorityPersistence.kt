@@ -24,7 +24,7 @@ class CurrentAuthorityPersistence(
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockCurrent(): CurrentAuthority {
         val user = users.currentOrNull() ?: throw com.duluin.ftth.common.domain.error.AuthenticationException("Authentication required")
-        return lockActor(SessionIdentity(user.tenantId, user.userId, user.sessionId))
+        return lockActor(SessionIdentity(user.tenantId, user.userId, user.sessionId, user.credentialVersion))
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -33,8 +33,10 @@ class CurrentAuthorityPersistence(
         if (user.tenantId != TenantContext.tenantId()) denied()
         val transaction = lock(false)
         entityManager.flush()
-        val platform = query("SELECT platform_admin FROM app_user WHERE tenant_id=? AND id=? AND status='ACTIVE'",
-            user.tenantId, user.userId) { it.getBoolean(1) }.singleOrNull() ?: denied()
+        val actor = query("SELECT platform_admin,credential_version FROM app_user WHERE tenant_id=? AND id=? AND status='ACTIVE'",
+            user.tenantId, user.userId) { it.getBoolean(1) to it.getLong(2) }.singleOrNull() ?: denied()
+        if (user.credentialVersion != null && user.credentialVersion != actor.second) denied()
+        val platform = actor.first
         val owner = query("SELECT EXISTS(SELECT FROM iam_tenant_owner WHERE tenant_id=? AND user_id=?)",
             user.tenantId, user.userId) { it.getBoolean(1) }.single()
         val roles = query("""SELECT role.id FROM user_role link JOIN role ON role.id=link.role_id

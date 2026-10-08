@@ -2,7 +2,7 @@ package com.duluin.ftth.common.security
 
 import java.util.UUID
 
-data class SessionIdentity(val tenantId: UUID, val userId: UUID, val sessionId: String?)
+data class SessionIdentity(val tenantId: UUID, val userId: UUID, val sessionId: String?, val credentialVersion: Long? = null)
 
 interface AuthorityFence {
     val identity: SessionIdentity
