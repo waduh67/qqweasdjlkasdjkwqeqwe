@@ -25,4 +25,14 @@ data class ReferenceWorkOrderView(val id: UUID, val code: String, val revision: 
 data class ReferenceWorkOrderEvent(val id: UUID, val revision: Long, val action: String, val actorName: String,
     val notes: String, val recordedAt: Instant)
 data class ReferenceWorkOrderDetail(val workOrder: ReferenceWorkOrderView, val overdue: Boolean, val overdueAt: Instant,
-    val timeline: List<ReferenceWorkOrderEvent>)
+    val timeline: List<ReferenceWorkOrderEvent>, val completion: ReferenceWorkOrderCompletionView? = null)
+data class ReferenceWorkOrderMaterialInput(val stockIdentityId: UUID, val quantityBase: String)
+data class ReferenceWorkOrderCompletionInput(val expectedRevision: Long, val notes: String = "",
+    val materials: List<ReferenceWorkOrderMaterialInput> = emptyList())
+data class ReferenceCompletionPhoto(val id: UUID, val slot: String, val sha256: String, val sizeBytes: Long, val contentType: String)
+data class ReferenceCompletionMaterial(val lineId: UUID, val stockIdentityId: UUID, val consumedIdentityId: UUID,
+    val skuId: UUID, val skuName: String, val quantityBase: String, val baseUnit: String, val tracking: String,
+    val serial: String?, val mac: String?)
+data class ReferenceWorkOrderCompletionView(val workOrderId: UUID, val revision: Long, val assignmentGeneration: Long,
+    val technicianId: UUID, val notes: String, val completedAt: Instant, val photos: List<ReferenceCompletionPhoto>,
+    val materials: List<ReferenceCompletionMaterial>, val documentId: UUID?)

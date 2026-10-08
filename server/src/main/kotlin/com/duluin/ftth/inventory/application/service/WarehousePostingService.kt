@@ -85,7 +85,10 @@ class WarehousePostingService(
         if(command.kind in setOf(MovementKind.CONSUME, MovementKind.DEPLOY)) {
             require(command.legs.any { it.endpoint in setOf(PostingEndpoint.CONSUMED, PostingEndpoint.CUSTOMER_INSTALLED) })
             require(command.legs.filter { it.direction==LegDirection.OUT }.all { it.status==InventoryStatus.ISSUED && it.dimension.custodianKind==OwnerKind.TECHNICIAN })
-            require(command.legs.filter { it.endpoint==PostingEndpoint.CONSUMED }.all { leg -> command.facts.any { it.stockIdentityId==leg.dimension.stockIdentityId && it.installed } })
+            if (command.operation.namespace == "warehouse.reference.consume") {
+                require(command.kind == MovementKind.CONSUME && command.facts.isEmpty() && command.usage == null &&
+                    command.reservations.isEmpty() && command.compensatesPostingId == null && command.approval == null)
+            } else require(command.legs.filter { it.endpoint==PostingEndpoint.CONSUMED }.all { leg -> command.facts.any { it.stockIdentityId==leg.dimension.stockIdentityId && it.installed } })
         }
         command.facts.forEach { fact ->
             require(fact.useRevision > 0 && fact.installed != fact.returned)

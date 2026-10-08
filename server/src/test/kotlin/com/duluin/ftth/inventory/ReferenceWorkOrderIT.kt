@@ -55,6 +55,158 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         multipart("/api/v2/work-orders/$id/evidence").file(MockMultipartFile("file", "proof.png", contentType, bytes))
             .param("expectedRevision", revision.toString()).param("slot", slot)
             .header("Authorization", "Bearer $token").header("Idempotency-Key", key)).andReturn().response
+    private fun warehouseOk(method: String, path: String, s: Setup, token: String = s.owner, body: String? = null, status: Int = 200): JsonNode {
+        val response = request(method, "/api/v2/warehouse$path", token, body)
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(status)
+        return mapper.readTree(response.contentAsString)
+    }
+    private fun issue(s: Setup, unit: String = "EA", tracking: String = "BULK", quantity: String = "9"): Pair<String, String> {
+        val warehouse = create("locations", s.owner, """{"code":"WH-${UUID.randomUUID().toString().uppercase()}","name":"Gudang","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        val sku = create("skus", s.owner, """{"code":"SKU-${UUID.randomUUID().toString().uppercase()}","name":"Material kerja","tracking":"$tracking","baseUnit":"$unit"}""").path("id").asString()
+        warehouseOk("POST", "/receipts", s, body = mapper.writeValueAsString(mapOf("warehouseId" to warehouse,
+            "lines" to listOf(mapOf("skuId" to sku, "quantityBase" to quantity, "serials" to if (tracking == "SERIAL")
+                listOf(mapOf("serial" to "ONT-${UUID.randomUUID()}", "mac" to "02:AA:BB:CC:DD:01")) else emptyList<Map<String, String>>())))), status = 201)
+        val identity = warehouseOk("GET", "/stock/$sku", s).path("positions").single().path("stockIdentityId").asString()
+        var view = warehouseOk("POST", "/requests", s, s.tech, mapper.writeValueAsString(mapOf("kind" to "RESTOCK", "reason" to "Persediaan kerja",
+            "lines" to listOf(mapOf("skuId" to sku, "baseUnit" to unit, "requestedBase" to quantity)))), 201)
+        val id = view.path("id").asString()
+        val line = view.path("lines")[0].path("id").asString()
+        view = warehouseOk("POST", "/requests/$id/review", s, body = """{"expectedRevision":0,"lines":[{"lineId":"$line","approvedBase":"$quantity"}]}""")
+        if (view.path("state").asString() == "MANAGER_REVIEW") view = warehouseOk("POST", "/requests/$id/decision", s,
+            body = """{"expectedRevision":${view.path("revision").asLong()},"approved":true}""")
+        warehouseOk("POST", "/requests/$id/handovers", s, body = mapper.writeValueAsString(mapOf("expectedRevision" to view.path("revision").asLong(),
+            "lineId" to line, "warehouseId" to warehouse, "lines" to listOf(mapOf("stockIdentityId" to identity, "quantityBase" to quantity)))))
+        return sku to warehouseOk("GET", "/stock/$sku", s).path("positions").single { it.path("holderKind").asString() == "TECHNICIAN" }.path("stockIdentityId").asString()
+    }
+    private fun completeBody(revision: Long, materials: List<Pair<String, String>> = emptyList(), notes: String = "Selesai di lokasi") =
+        mapper.writeValueAsString(mapOf("expectedRevision" to revision, "notes" to notes,
+            "materials" to materials.map { (identity, quantity) -> mapOf("stockIdentityId" to identity, "quantityBase" to quantity) }))
+    private fun completePhotos(id: String, token: String, revision: Long = 0) {
+        val first = upload(id, token, revision)
+        assertThat(first.status).withFailMessage(first.contentAsString).isEqualTo(201)
+        val second = upload(id, token, revision + 1, slot = "Bukti Kedatangan")
+        assertThat(second.status).withFailMessage(second.contentAsString).isEqualTo(201)
+    }
+    private fun race(actions: List<() -> org.springframework.mock.web.MockHttpServletResponse>) =
+        Executors.newFixedThreadPool(actions.size).use { pool ->
+            val ready = CountDownLatch(actions.size)
+            val start = CountDownLatch(1)
+            val pending = actions.map { action -> pool.submit<org.springframework.mock.web.MockHttpServletResponse> {
+                ready.countDown()
+                check(start.await(20, TimeUnit.SECONDS))
+                action()
+            } }
+            check(ready.await(20, TimeUnit.SECONDS))
+            start.countDown()
+            pending.map { it.get(30, TimeUnit.SECONDS) }
+        }
+
+    @Test fun `concurrent completions replay once and competing orders cannot overspend stock`() {
+        val s = setup()
+        val material = issue(s)
+        val id = create(s).path("id").asString()
+        completePhotos(id, s.tech)
+        val body = completeBody(2, listOf(material.second to "3"))
+        val key = UUID.randomUUID().toString()
+        val replay = race(List(2) { { request("POST", "/api/v2/work-orders/$id/complete", s.tech, body, key) } })
+        assertThat(replay.map { it.status }).withFailMessage(replay.joinToString("\n") { it.contentAsString }).containsOnly(200)
+        assertThat(mapper.readTree(replay[0].contentAsString)).isEqualTo(mapper.readTree(replay[1].contentAsString))
+        val ids = List(2) { create(s).path("id").asString().also { completePhotos(it, s.tech) } }
+        val competing = race(ids.map { target -> { request("POST", "/api/v2/work-orders/$target/complete", s.tech,
+            completeBody(2, listOf(material.second to "4"))) } })
+        assertThat(competing.map { it.status }).withFailMessage(competing.joinToString("\n") { it.contentAsString }).containsExactlyInAnyOrder(200, 409)
+        assertThat(warehouseOk("GET", "/stock/${material.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("2")
+        assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM inventory_movement WHERE operation_namespace='warehouse.reference.consume'") }).isEqualTo("2")
+        val unresolved = ids[competing.indexOfFirst { it.status == 409 }]
+        assertThat(ok("GET", "/$unresolved", s.owner).path("completion").isNull).isTrue()
+    }
+    @Test fun `deferred completion failure rolls back consumption and same key remains retryable`() {
+        val s = setup()
+        val material = issue(s, "MM", "LOT", "10000")
+        val id = create(s).path("id").asString()
+        completePhotos(id, s.tech)
+        val key = UUID.randomUUID().toString()
+        val body = completeBody(2, listOf(material.second to "3500"), "\n Selesai di lokasi \n")
+        val f = fixture(s.owner)
+        assertThatThrownBy { f.transaction {
+            val saved = request("POST", "/api/v2/work-orders/$id/complete", s.tech, body, key)
+            assertThat(saved.status).withFailMessage(saved.contentAsString).isEqualTo(200)
+            sql("UPDATE work_order SET proof_of_work_hash=repeat('a',64) WHERE id='$id'")
+        } }.hasMessageContaining("reference completion differs")
+        assertThat(warehouseOk("GET", "/stock/${material.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("10000")
+        assertThat(ok("GET", "/$id", s.owner).path("completion").isNull).isTrue()
+        assertThat(f.transaction { scalar("SELECT count(*) FROM inventory_movement WHERE operation_namespace='warehouse.reference.consume'") }).isEqualTo("0")
+        ok("POST", "/$id/complete", s.tech, body, key)
+        assertThat(warehouseOk("GET", "/stock/${material.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("6500")
+        assertThat(f.transaction { scalar("SELECT resolution_note FROM work_order WHERE id='$id'") }).isEqualTo("Selesai di lokasi")
+    }
+
+    @Test fun `optional material completion requires all current photos and preserves no approval`() {
+        val s = setup()
+        val type = ok("GET", "/types", s.owner).single { it.path("name").asString() == "Maintenance" }.path("id").asString()
+        val id = ok("POST", "", s.admin, body(s).replace(s.type, type), status = 201).path("id").asString()
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.tech, completeBody(0)).status).isEqualTo(400)
+        assertThat(upload(id, s.tech, 0, slot = "Bukti").status).isEqualTo(201)
+        val key = UUID.randomUUID().toString()
+        val saved = ok("POST", "/$id/complete", s.tech, completeBody(1), key)
+        assertThat(saved.path("state").asString()).isEqualTo("COMPLETED")
+        assertThat(ok("POST", "/$id/complete", s.tech, completeBody(1), key)).isEqualTo(saved)
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.tech, completeBody(1, notes = "Berubah"), key).status).isEqualTo(409)
+        val completion = ok("GET", "/$id", s.owner).path("completion")
+        assertThat(completion.path("materials")).isEmpty()
+        assertThat(completion.path("documentId").isNull).isTrue()
+        assertThat(completion.path("photos")).hasSize(1)
+        assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM work_order WHERE id='$id' AND status='DONE' AND completed_by='${s.techId}' AND approval_status IS NULL AND approved_by IS NULL") }).isEqualTo("1")
+        assertThatThrownBy { fixture(s.owner).transaction { sql("UPDATE work_order SET proof_of_work_hash=repeat('a',64) WHERE id='$id'") } }
+            .hasMessageContaining("reference completion differs")
+        assertThatThrownBy { fixture(s.owner).transaction { sql("UPDATE work_order_reference_completion SET revision=revision+1 WHERE work_order_id='$id'") } }
+            .hasMessageContaining("permission denied")
+    }
+    @Test fun `required materials consume own bulk cable and serial once and freeze visible history`() {
+        val s = setup()
+        val bulk = issue(s)
+        val cable = issue(s, "MM", "LOT", "10000")
+        val serial = issue(s, tracking = "SERIAL", quantity = "1")
+        val id = create(s).path("id").asString()
+        completePhotos(id, s.tech)
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.tech, completeBody(2)).status).isEqualTo(400)
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.admin, completeBody(2, listOf(bulk.second to "3"))).status).isEqualTo(403)
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.second, completeBody(2, listOf(bulk.second to "3"))).status).isEqualTo(404)
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.tech, completeBody(2, listOf(bulk.second to "10"))).status).isEqualTo(409)
+        val body = completeBody(2, listOf(serial.second to "1", bulk.second to "3", cable.second to "3500"))
+        val key = UUID.randomUUID().toString()
+        val saved = ok("POST", "/$id/complete", s.tech, body, key)
+        assertThat(ok("POST", "/$id/complete", s.tech, body, key)).isEqualTo(saved)
+        val detail = ok("GET", "/$id", s.owner)
+        assertThat(detail.path("completion").path("photos")).hasSize(2)
+        val materials = detail.path("completion").path("materials")
+        assertThat(materials).hasSize(3)
+        assertThat(materials.single { it.path("tracking").asString() == "SERIAL" }.path("serial").asString()).startsWith("ONT-")
+        assertThat(warehouseOk("GET", "/stock/${bulk.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("6")
+        assertThat(warehouseOk("GET", "/stock/${cable.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("6500")
+        assertThat(warehouseOk("GET", "/stock/${serial.first}", s).path("positions")).isEmpty()
+        assertThat(fixture(s.owner).transaction { scalar("SELECT count(*) FROM inventory_movement WHERE operation_namespace='warehouse.reference.consume' AND document_id='${detail.path("completion").path("documentId").asString()}'") }).isEqualTo("1")
+        val second = create(s).path("id").asString()
+        completePhotos(second, s.tech)
+        assertThat(request("POST", "/api/v2/work-orders/$second/complete", s.tech, completeBody(2, listOf(serial.second to "1"))).status).isEqualTo(409)
+    }
+    @Test fun `completion isolates reassignment evidence and storage tampering leaves stock unchanged`() {
+        val s = setup()
+        val material = issue(s)
+        val id = create(s).path("id").asString()
+        completePhotos(id, s.tech)
+        ok("POST", "/$id/assignment", s.admin, """{"expectedRevision":2,"technicianId":"${s.secondId}"}""")
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.second, completeBody(3, listOf(material.second to "1"))).status).isEqualTo(400)
+        completePhotos(id, s.second, 3)
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.second, completeBody(5, listOf(material.second to "1"))).status).isEqualTo(409)
+        ok("POST", "/$id/assignment", s.admin, """{"expectedRevision":5,"technicianId":"${s.techId}"}""")
+        completePhotos(id, s.tech, 6)
+        val objectKey = fixture(s.owner).transaction { scalar("SELECT object_key FROM work_order_reference_photo WHERE work_order_id='$id' AND assignment_generation=2 ORDER BY work_order_revision DESC LIMIT 1") }
+        context.getBean(com.duluin.ftth.common.storage.ObjectStorage::class.java).put(objectKey, "image/png", png + byteArrayOf(1))
+        assertThat(request("POST", "/api/v2/work-orders/$id/complete", s.tech, completeBody(8, listOf(material.second to "1"))).status).isEqualTo(409)
+        assertThat(warehouseOk("GET", "/stock/${material.first}", s).path("positions").single().path("quantityBase").asString()).isEqualTo("9")
+        assertThat(ok("GET", "/$id", s.owner).path("completion").isNull).isTrue()
+    }
 
     @Test fun `defaults preserve customized inactive types and only owner may change types`() {
         val s = setup()
@@ -181,19 +333,6 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         val s = setup()
         val id = create(s).path("id").asString()
         val key = UUID.randomUUID().toString()
-        fun race(actions: List<() -> org.springframework.mock.web.MockHttpServletResponse>) =
-            Executors.newFixedThreadPool(actions.size).use { pool ->
-                val ready = CountDownLatch(actions.size)
-                val start = CountDownLatch(1)
-                val pending = actions.map { action -> pool.submit<org.springframework.mock.web.MockHttpServletResponse> {
-                    ready.countDown()
-                    check(start.await(20, TimeUnit.SECONDS))
-                    action()
-                } }
-                check(ready.await(20, TimeUnit.SECONDS))
-                start.countDown()
-                pending.map { it.get(30, TimeUnit.SECONDS) }
-            }
         val replay = race(List(2) { { upload(id, s.tech, 0, key = key) } })
         assertThat(replay.map { it.status }).withFailMessage(replay.joinToString("\n") { it.contentAsString }).containsOnly(201)
         assertThat(mapper.readTree(replay[0].contentAsString)).isEqualTo(mapper.readTree(replay[1].contentAsString))

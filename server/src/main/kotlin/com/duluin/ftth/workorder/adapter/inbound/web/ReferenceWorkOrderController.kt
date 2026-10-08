@@ -4,6 +4,7 @@ import com.duluin.ftth.inventory.WarehouseOperationReceipt
 import com.duluin.ftth.inventory.adapter.inbound.web.WarehouseReceiptJson
 import com.duluin.ftth.workorder.application.port.inbound.*
 import com.duluin.ftth.workorder.application.service.ReferenceWorkOrderService
+import com.duluin.ftth.workorder.application.service.ReferenceWorkOrderCompletionService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -11,7 +12,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v2/work-orders")
-class ReferenceWorkOrderController(private val service: ReferenceWorkOrderService) {
+class ReferenceWorkOrderController(private val service: ReferenceWorkOrderService, private val completions: ReferenceWorkOrderCompletionService) {
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
         @RequestParam(required = false) state: ReferenceWorkOrderState?, @RequestParam(required = false) search: String?,
         @RequestParam(defaultValue = "false") overdue: Boolean) = fresh(service.list(page, size, state, search, overdue))
@@ -31,6 +32,8 @@ class ReferenceWorkOrderController(private val service: ReferenceWorkOrderServic
         result(service.assign(id, WarehouseReceiptJson.decode(body, ReferenceWorkOrderAssignment::class.java), key))
     @PostMapping("/{id}/progress") fun progress(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         result(service.progress(id, WarehouseReceiptJson.decode(body, ReferenceWorkOrderProgress::class.java), key))
+    @PostMapping("/{id}/complete") fun complete(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        result(completions.complete(id, WarehouseReceiptJson.decode(body, ReferenceWorkOrderCompletionInput::class.java), key))
     private fun <T> fresh(body: T) = ResponseEntity.ok().header("Cache-Control", "no-store").body(body)
     private fun result(receipt: WarehouseOperationReceipt) = ResponseEntity.status(receipt.originalStatus)
         .header("Cache-Control", "no-store").contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)
