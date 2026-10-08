@@ -15,7 +15,8 @@ data class ReferenceRequestReviewLine(val lineId: UUID, val approvedBase: String
 data class ReferenceRequestDecision(val expectedRevision: Long, val approved: Boolean, val reason: String = "")
 data class ReferenceRequestReceipt(val expectedRevision: Long, val lineId: UUID, val warehouseId: UUID,
     val quantityBase: String, val serials: List<ReceiptSerialInput> = emptyList(), val supplierId: UUID? = null,
-    val reference: String? = null, val notes: String = "")
+    val reference: String? = null, val notes: String = "", val lotCode: String? = null,
+    val conversion: ReceiptPackageInput? = null, val cost: ReceiptCostInput? = null)
 data class ReferenceRequestHandover(val expectedRevision: Long, val lineId: UUID, val warehouseId: UUID,
     val lines: List<ReferenceTransferLine>, val notes: String = "")
 data class ReferenceRequestLineView(val id: UUID, val baseUnit: WarehouseBaseUnit, val requestedBase: String,

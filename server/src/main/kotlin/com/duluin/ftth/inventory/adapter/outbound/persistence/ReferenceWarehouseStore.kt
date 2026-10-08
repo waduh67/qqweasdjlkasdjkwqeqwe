@@ -39,6 +39,16 @@ class ReferenceWarehouseStore(private val jdbc: WarehouseCommandJdbc) {
         }
     }
 
+    fun technicianLocation(technician: UUID, name: String): UUID = jdbc.execute { sql ->
+        val locations = sql.query("SELECT id FROM inventory_location WHERE tenant_id=? AND custodian_id=? AND kind='TECHNICIAN' AND state='ACTIVE' ORDER BY id FOR UPDATE",
+            sql.tenant, technician) { it.uuid("id") }
+        if (locations.size > 1) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        locations.singleOrNull() ?: UUID.randomUUID().also { id ->
+            sql.update("INSERT INTO inventory_location(id,tenant_id,code,name,kind,custodian_id) VALUES (?,?,?,?,'TECHNICIAN',?)",
+                id, sql.tenant, "TECH-$technician", name, technician)
+        }
+    }
+
     fun transferDraft(id: UUID, source: UUID, destination: UUID, lines: List<TransferLine>, actor: UUID, authority: Long, epoch: Long, notes: String) =
         jdbc.execute { sql ->
             sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,cutover_epoch,authority_epoch,reason)

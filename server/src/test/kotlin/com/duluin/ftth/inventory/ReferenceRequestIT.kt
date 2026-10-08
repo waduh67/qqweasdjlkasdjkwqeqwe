@@ -5,6 +5,9 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.JsonNode
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class ReferenceRequestIT : WarehouseMasterHttpFixture() {
     private data class Setup(val owner: String, val warehouse: String, val sku: String, val manager: String,
@@ -171,5 +174,161 @@ class ReferenceRequestIT : WarehouseMasterHttpFixture() {
             sql("UPDATE inventory_reference_command SET notes='Changed' WHERE tenant_id='$tenant' AND resource_id='$id'")
         } }.hasMessageContaining("append-only")
         assertThat(ok("GET", "/requests/$id", setup.owner).path("request").path("revision").asLong()).isZero()
+    }
+
+    private fun approved(setup: Setup, kind: String, sku: String = setup.sku, unit: String = "EA", quantity: String = "9", warehouse: Boolean = false): JsonNode {
+        val submitted = ok("POST", "/requests", if (warehouse) setup.admin else setup.technician, mapper.writeValueAsString(mapOf(
+            "kind" to kind, "reason" to "Persediaan lapangan", "warehouseId" to if (warehouse) setup.warehouse else null,
+            "lines" to listOf(mapOf("skuId" to sku, "baseUnit" to unit, "requestedBase" to quantity)))), status = 201)
+        val id = submitted.path("id").asString()
+        ok("POST", "/requests/$id/review", setup.admin,
+            """{"expectedRevision":0,"lines":[{"lineId":"${submitted.path("lines")[0].path("id").asString()}","approvedBase":"$quantity"}]}""")
+        return ok("POST", "/requests/$id/decision", setup.manager, """{"expectedRevision":1,"approved":true}""")
+    }
+
+    private fun receiveBody(setup: Setup, view: JsonNode, quantity: String) = mapper.writeValueAsString(mapOf(
+        "expectedRevision" to view.path("revision").asLong(), "lineId" to view.path("lines")[0].path("id").asString(),
+        "warehouseId" to setup.warehouse, "quantityBase" to quantity, "notes" to "Pembelian diterima"))
+
+    private fun handoverBody(setup: Setup, view: JsonNode, identity: String, quantity: String) = mapper.writeValueAsString(mapOf(
+        "expectedRevision" to view.path("revision").asLong(), "lineId" to view.path("lines")[0].path("id").asString(),
+        "warehouseId" to setup.warehouse, "lines" to listOf(mapOf("stockIdentityId" to identity, "quantityBase" to quantity)), "notes" to "Material diserahkan"))
+
+    private fun stock(setup: Setup, sku: String = setup.sku) = ok("GET", "/stock/$sku", setup.owner)
+
+    private fun race(actions: List<() -> org.springframework.mock.web.MockHttpServletResponse>) =
+        Executors.newFixedThreadPool(actions.size).use { pool ->
+            val ready = CountDownLatch(actions.size)
+            val start = CountDownLatch(1)
+            val pending = actions.map { action -> pool.submit<org.springframework.mock.web.MockHttpServletResponse> {
+                ready.countDown()
+                check(start.await(20, TimeUnit.SECONDS))
+                action()
+            } }
+            check(ready.await(20, TimeUnit.SECONDS))
+            start.countDown()
+            pending.map { it.get(30, TimeUnit.SECONDS) }
+        }
+
+    @Test fun `concurrent receipt retries post once and competing revisions preserve approved limit`() {
+        val setup = setup()
+        var view = approved(setup, "PROCUREMENT")
+        val id = view.path("id").asString()
+        val body = receiveBody(setup, view, "4")
+        val key = UUID.randomUUID().toString()
+        val retry = race(List(2) { { request("POST", "/api/v2/warehouse/requests/$id/receipts", setup.admin, body, key) } })
+        assertThat(retry.map { it.status }).withFailMessage(retry.joinToString("\n") { it.contentAsString }).containsOnly(200)
+        assertThat(mapper.readTree(retry[0].contentAsString)).isEqualTo(mapper.readTree(retry[1].contentAsString))
+        view = mapper.readTree(retry[0].contentAsString)
+        val remaining = receiveBody(setup, view, "5")
+        val competing = race(List(2) { { request("POST", "/api/v2/warehouse/requests/$id/receipts", setup.admin, remaining) } })
+        assertThat(competing.map { it.status }).withFailMessage(competing.joinToString("\n") { it.contentAsString }).containsExactlyInAnyOrder(200, 409)
+        assertThat(ok("GET", "/requests/$id", setup.owner).path("request").path("lines")[0].path("receivedBase").asString()).isEqualTo("9")
+        assertThat(stock(setup).path("positions").sumOf { it.path("quantityBase").asString().toLong() }).isEqualTo(9)
+        fixture(setup.owner).transaction {
+            assertThat(scalar("SELECT count(*) FROM inventory_reference_command WHERE tenant_id='$tenant' AND resource_id='$id' AND action='RECEIVE'")).isEqualTo("2")
+        }
+    }
+
+    @Test fun `competing restock handovers cannot spend the same stock twice and revoked scope prevents replay`() {
+        val setup = setup()
+        ok("POST", "/receipts", setup.admin, """{"warehouseId":"${setup.warehouse}","lines":[{"skuId":"${setup.sku}","quantityBase":"9"}]}""", status = 201)
+        val identity = stock(setup).path("positions").single().path("stockIdentityId").asString()
+        val views = List(2) { approved(setup, "RESTOCK", quantity = "6") }
+        val keys = List(2) { UUID.randomUUID().toString() }
+        val results = race(views.mapIndexed { index, view -> { request("POST", "/api/v2/warehouse/requests/${view.path("id").asString()}/handovers",
+            setup.admin, handoverBody(setup, view, identity, "6"), keys[index]) } })
+        assertThat(results.map { it.status }).withFailMessage(results.joinToString("\n") { it.contentAsString }).containsExactlyInAnyOrder(200, 409)
+        val positions = stock(setup).path("positions")
+        assertThat(positions.single { it.path("holderKind").asString() == "WAREHOUSE" }.path("quantityBase").asString()).isEqualTo("3")
+        assertThat(positions.single { it.path("holderKind").asString() == "TECHNICIAN" }.path("quantityBase").asString()).isEqualTo("6")
+        val winner = results.indexOfFirst { it.status == 200 }
+        val adminId = mapper.readTree(request("GET", "/api/me", setup.admin).contentAsString).path("id").asString()
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/$adminId/${setup.warehouse}", setup.owner,
+            """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+        val view = views[winner]
+        assertThat(request("POST", "/api/v2/warehouse/requests/${view.path("id").asString()}/handovers",
+            setup.admin, handoverBody(setup, view, identity, "6"), keys[winner]).status).isEqualTo(404)
+        assertThat(ok("GET", "/requests/${views[1 - winner].path("id").asString()}", setup.owner).path("request").path("state").asString()).isEqualTo("APPROVED")
+    }
+
+    @Test fun `partial procurement receipts and immediate technician handover conserve counters and replay`() {
+        val setup = setup()
+        var view = approved(setup, "PROCUREMENT")
+        val id = view.path("id").asString()
+        val first = receiveBody(setup, view, "4")
+        assertThat(request("POST", "/api/v2/warehouse/requests/$id/receipts", setup.manager, first).status).isEqualTo(403)
+        val receiptKey = UUID.randomUUID().toString()
+        view = ok("POST", "/requests/$id/receipts", setup.admin, first, receiptKey)
+        assertThat(ok("POST", "/requests/$id/receipts", setup.admin, first, receiptKey)).isEqualTo(view)
+        assertThat(view.path("state").asString()).isEqualTo("PARTIALLY_RECEIVED")
+        assertThat(view.path("lines")[0].path("receivedBase").asString()).isEqualTo("4")
+        assertThat(view.path("lines")[0].path("fulfilledBase").asString()).isEqualTo("0")
+        var positions = stock(setup).path("positions")
+        val identity = positions.single().path("stockIdentityId").asString()
+        val before = fixture(setup.owner).transaction { counts() }
+        assertThat(request("POST", "/api/v2/warehouse/requests/$id/handovers", setup.admin, handoverBody(setup, view, identity, "5")).status).isEqualTo(400)
+        assertThat(request("POST", "/api/v2/warehouse/requests/$id/receipts", setup.admin, receiveBody(setup, view, "6")).status).isEqualTo(400)
+        assertThat(fixture(setup.owner).transaction { counts() }).isEqualTo(before)
+        val handover = handoverBody(setup, view, identity, "3")
+        val handoverKey = UUID.randomUUID().toString()
+        view = ok("POST", "/requests/$id/handovers", setup.admin, handover, handoverKey)
+        assertThat(ok("POST", "/requests/$id/handovers", setup.admin, handover, handoverKey)).isEqualTo(view)
+        assertThat(view.path("state").asString()).isEqualTo("PARTIALLY_FULFILLED")
+        positions = stock(setup).path("positions")
+        assertThat(positions.single { it.path("holderKind").asString() == "TECHNICIAN" }.path("quantityBase").asString()).isEqualTo("3")
+        assertThat(positions.single { it.path("holderKind").asString() == "WAREHOUSE" }.path("quantityBase").asString()).isEqualTo("1")
+        view = ok("POST", "/requests/$id/receipts", setup.admin, receiveBody(setup, view, "5"))
+        view = ok("POST", "/requests/$id/handovers", setup.admin, handoverBody(setup, view, identity, "1"))
+        val lastIdentity = stock(setup).path("positions").single { it.path("holderKind").asString() == "WAREHOUSE" }.path("stockIdentityId").asString()
+        view = ok("POST", "/requests/$id/handovers", setup.admin, handoverBody(setup, view, lastIdentity, "5"))
+        assertThat(view.path("state").asString()).isEqualTo("FULFILLED")
+        assertThat(view.path("lines")[0].path("receivedBase").asString()).isEqualTo("9")
+        assertThat(view.path("lines")[0].path("fulfilledBase").asString()).isEqualTo("9")
+        assertThat(stock(setup).path("positions").all { it.path("holderId").asString() == setup.technicianId }).isTrue()
+        assertThat(ok("GET", "/requests/$id", setup.technician).path("timeline")).hasSize(8)
+        assertThat(request("POST", "/api/v2/warehouse/requests/$id/handovers", setup.admin, handoverBody(setup, view, lastIdentity, "1")).status).isEqualTo(400)
+    }
+
+    @Test fun `warehouse procurement receives directly to destination and fulfills without technician action`() {
+        val setup = setup()
+        var view = approved(setup, "PROCUREMENT", warehouse = true)
+        val id = view.path("id").asString()
+        val other = create("locations", setup.owner, """{"code":"OTHER","name":"Lain","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        assertThat(request("POST", "/api/v2/warehouse/requests/$id/receipts", setup.owner, receiveBody(setup, view, "2").replace(setup.warehouse, other)).status).isEqualTo(400)
+        view = ok("POST", "/requests/$id/receipts", setup.admin, receiveBody(setup, view, "2"))
+        assertThat(view.path("state").asString()).isEqualTo("PARTIALLY_RECEIVED")
+        assertThat(view.path("lines")[0].path("fulfilledBase").asString()).isEqualTo("2")
+        view = ok("POST", "/requests/$id/receipts", setup.admin, receiveBody(setup, view, "7"))
+        assertThat(view.path("state").asString()).isEqualTo("FULFILLED")
+        assertThat(stock(setup).path("positions").all { it.path("holderKind").asString() == "WAREHOUSE" }).isTrue()
+        assertThat(stock(setup).path("positions").asSequence().sumOf { it.path("quantityBase").asString().toLong() }).isEqualTo(9)
+    }
+
+    @Test fun `restock handover cuts cable with retained remnant and serial ownership changes immediately`() {
+        val setup = setup()
+        val cable = ok("POST", "/skus", setup.owner, """{"code":"CABLE","name":"Kabel","tracking":"LOT","baseUnit":"MM"}""", status = 201).path("id").asString()
+        val onu = ok("POST", "/skus", setup.owner, """{"code":"ONU","name":"ONU","tracking":"SERIAL","baseUnit":"EA"}""", status = 201).path("id").asString()
+        ok("POST", "/receipts", setup.admin, """{"warehouseId":"${setup.warehouse}","lines":[{"skuId":"$cable","quantityBase":"10000"},{"skuId":"$onu","quantityBase":"1","serials":[{"serial":"ONU-REFERENCE","mac":"02:11:22:33:44:55"}]}]}""", status = 201)
+        var view = approved(setup, "RESTOCK", cable, "MM", "3000")
+        val cableId = view.path("id").asString()
+        val original = stock(setup, cable).path("positions").single().path("stockIdentityId").asString()
+        assertThat(request("POST", "/api/v2/warehouse/requests/$cableId/receipts", setup.admin, receiveBody(setup, view, "1")).status).isEqualTo(400)
+        view = ok("POST", "/requests/$cableId/handovers", setup.admin, handoverBody(setup, view, original, "3000"))
+        assertThat(view.path("state").asString()).isEqualTo("FULFILLED")
+        val cableStock = stock(setup, cable).path("positions")
+        assertThat(cableStock).hasSize(2)
+        assertThat(cableStock.single { it.path("holderKind").asString() == "TECHNICIAN" }.path("quantityBase").asString()).isEqualTo("3000")
+        assertThat(cableStock.single { it.path("holderKind").asString() == "WAREHOUSE" }.path("quantityBase").asString()).isEqualTo("7000")
+        assertThat(cableStock.none { it.path("stockIdentityId").asString() == original }).isTrue()
+        view = approved(setup, "RESTOCK", onu, quantity = "1")
+        val onuId = view.path("id").asString()
+        val identity = stock(setup, onu).path("positions").single().path("stockIdentityId").asString()
+        ok("POST", "/requests/$onuId/handovers", setup.admin, handoverBody(setup, view, identity, "1"))
+        val owned = stock(setup, onu).path("positions").single()
+        assertThat(owned.path("holderId").asString()).isEqualTo(setup.technicianId)
+        assertThat(owned.path("status").asString()).isEqualTo("ISSUED")
+        assertThat(owned.path("serial").asString()).isEqualTo("ONU-REFERENCE")
+        assertThat(fixture(setup.owner).transaction { scalar("SELECT custody_owner_id FROM inventory_serialized_asset WHERE tenant_id='$tenant' AND id='$identity'") }).isEqualTo(setup.technicianId)
     }
 }

@@ -12,8 +12,11 @@ data class ReferenceReceiptInput(val warehouseId: UUID, val lines: List<ReceiptL
 data class ReferenceTransferInput(val sourceWarehouseId: UUID, val warehouseId: UUID,
     val lines: List<ReferenceTransferLine>, val notes: String = "")
 data class ReferenceTransferLine(val stockIdentityId: UUID, val quantityBase: String)
+data class ReferenceTechnicianHandoverInput(val sourceWarehouseId: UUID, val technicianId: UUID, val skuId: UUID,
+    val lines: List<ReferenceTransferLine>, val notes: String = "")
 data class ReferenceMovementView(val id: UUID, val operationId: UUID, val revision: Long, val kind: String,
-    val state: String, val warehouseId: UUID, val sourceWarehouseId: UUID?, val notes: String, val recordedAt: Instant)
+    val state: String, val warehouseId: UUID, val sourceWarehouseId: UUID?, val notes: String, val recordedAt: Instant,
+    val technicianId: UUID? = null)
 data class ReferenceStockPosition(val stockIdentityId: UUID, val skuId: UUID, val skuCode: String, val skuName: String,
     val tracking: WarehouseTracking, val baseUnit: WarehouseBaseUnit, val quantityBase: String,
     val locationId: UUID, val locationName: String, val holderId: UUID, val holderName: String, val holderEmail: String?,
