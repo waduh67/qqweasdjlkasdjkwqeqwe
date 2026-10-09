@@ -13,7 +13,8 @@ import { Breadcrumbs } from '@/components/molecules'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
 import { IconAlert, IconLogout } from '@/components/atoms/icons'
 import { HOTSPOT_VIEW_PERMISSIONS } from '@/api/hotspot'
-import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from '@/pages/warehouse/navigation'
+import { warehousePages } from '@/pages/warehouse/navigation'
+import { useWarehouseWorkflow } from '@/pages/warehouse/WarehouseWorkflowContext'
 /**
  * Navigasi dikelompokkan menurut alur kerja (operasi jaringan vs administrasi),
  * bukan sekadar daftar datar — pada belasan menu, pengelompokan membuat operator
@@ -59,10 +60,7 @@ const GROUPS: NavGroup[] = [
   },
   {
     label: 'Gudang',
-    items: [
-      { to: '/warehouse', label: 'Ringkasan Gudang', permission: WAREHOUSE_VIEW_PERMISSIONS, icon: NavIcons.PackageCheck, end: true },
-      ...WAREHOUSE_PAGES.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: NavIcons.warehouse[page.path] })),
-    ],
+    items: [],
   },
   {
     label: 'Lapangan',
@@ -100,6 +98,13 @@ const FLUSH_ROUTES = new Set(['/map'])
 export function Layout() {
   const { user, logout, readOnly, subscriptionLock } = useAuth()
   const { can, hasPermission, isPlatformAdmin } = useCan()
+  const { state: workflow } = useWarehouseWorkflow()
+  const pages = workflow.status === 'ready' ? warehousePages(workflow.data.workflow) : []
+  const groups: NavGroup[] = GROUPS.map(group => group.label === 'Gudang' ? { ...group, items: [
+    ...(pages.length ? [{ to: '/warehouse', label: 'Ringkasan Gudang', permission: pages.flatMap(page => [...page.permissions]), icon: NavIcons.PackageCheck, end: true, access: 'read' as const }] : []),
+    ...pages.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: NavIcons.warehouse[page.path], access: 'read' as const })),
+  ] } : group)
+  const warehouseLabels = Object.fromEntries(pages.map(page => [`/warehouse/${page.path}`, page.label]))
   const location = useLocation()
   const navigate = useNavigate()
   const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
@@ -200,7 +205,7 @@ export function Layout() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
-        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} compact groups={GROUPS} can={can} hasPermission={hasPermission} storageKey="ftth.navGroups.tenant" />
+        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} compact groups={groups} can={can} hasPermission={hasPermission} storageKey="ftth.navGroups.tenant" />
       </aside>
 
       <div className="main">
@@ -239,7 +244,7 @@ export function Layout() {
         <main className={flush ? 'content content-flush' : 'content'}>
           {!flush && (
             <div className="breadcrumb-bar">
-              <Breadcrumbs />
+              <Breadcrumbs labels={warehouseLabels} />
             </div>
           )}
           <Outlet />

@@ -64,8 +64,8 @@ export async function createUser(page: Page, role: string, options: { areas?: st
 }
 
 export async function openWarehouseMenu(page: Page) {
-  const section = page.getByRole('button', { name: 'Gudang', exact: true })
-  const toggle = page.getByRole('button', { name: /sidebar|Buka menu|Tutup menu/ })
+  const section = page.getByRole('complementary').getByRole('button', { name: 'Gudang', exact: true })
+  const toggle = page.getByRole('banner').getByRole('button', { name: /sidebar|Buka menu|Tutup menu/ })
   const mobile = (page.viewportSize()?.width ?? 1280) <= 820
   // A drawer translated offscreen still satisfies isVisible(); use its actual open state.
   if (mobile && (await toggle.getAttribute('aria-expanded')) === 'false') await toggle.tap()

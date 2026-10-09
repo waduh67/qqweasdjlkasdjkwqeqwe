@@ -15,3 +15,11 @@ export const WAREHOUSE_PAGES = [
   { path: 'settings', icon: Settings2, label: 'Setelan Gudang', permissions: ['inventory.approval.view', 'inventory.approval.manage', 'inventory.provenance.view', 'inventory.location.manage'] },
 ] as const
 export const WAREHOUSE_VIEW_PERMISSIONS: readonly string[] = [...new Set(WAREHOUSE_PAGES.flatMap(page => [...page.permissions]))]
+
+export const REFERENCE_WAREHOUSE_PAGES = [
+  { path: 'catalog', label: 'Barang, Gudang & Pemasok', permissions: ['warehouse.catalog.view'] },
+] as const
+
+export function warehousePages(workflow: 'LEGACY' | 'DRAINING' | 'REFERENCE') {
+  return workflow === 'REFERENCE' ? REFERENCE_WAREHOUSE_PAGES : WAREHOUSE_PAGES
+}

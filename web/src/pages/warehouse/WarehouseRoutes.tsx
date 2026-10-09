@@ -1,8 +1,8 @@
 import type { ComponentType, ReactNode } from 'react'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useCan } from '@/auth/useCan'
 import { EmptyState } from '@/components/atoms'
-import { WarehouseDenied } from '@/components/organisms/warehouse/WarehouseState'
+import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
 import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from './navigation'
 import { WarehouseCatalogPage } from './WarehouseCatalogPage'
 import { WarehouseReceiptsPage } from './WarehouseReceiptsPage'
@@ -17,6 +17,9 @@ import { WarehouseReportsPage } from './WarehouseReportsPage'
 import { WarehouseReplenishmentPage } from './WarehouseReplenishmentPage'
 import { WarehouseOverviewPage } from './WarehouseOverviewPage'
 import { WarehouseProvenancePage } from './WarehouseProvenancePage'
+import { ReferenceCatalogPage } from './ReferenceCatalogPage'
+import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
+import { REFERENCE_WAREHOUSE_PAGES } from './navigation'
 
 const pages = {
   catalog: WarehouseCatalogPage, receipts: WarehouseReceiptsPage, approvals: WarehouseApprovalsPage,
@@ -26,11 +29,26 @@ const pages = {
 } satisfies Record<typeof WAREHOUSE_PAGES[number]['path'], ComponentType>
 
 function WarehouseGate({ permissions, children }: { permissions: readonly string[]; children: ReactNode }) {
-  const { can } = useCan()
-  return permissions.some(can) ? children : <WarehouseDenied />
+  const { hasPermission } = useCan()
+  return permissions.some(hasPermission) ? children : <WarehouseDenied />
 }
 
 export function WarehouseRoutes() {
+  const workflow = useWarehouseWorkflow()
+  return <WarehouseState {...workflow}>{data => data.workflow === 'REFERENCE' ? <ReferenceRoutes /> : <LegacyRoutes />}</WarehouseState>
+}
+
+function ReferenceRoutes() {
+  const { hasPermission } = useCan()
+  const first = REFERENCE_WAREHOUSE_PAGES.find(page => page.permissions.some(hasPermission))
+  return <Routes>
+    <Route index element={first ? <Navigate replace to={first.path} /> : <WarehouseDenied />} />
+    <Route path="catalog" element={<WarehouseGate permissions={['warehouse.catalog.view']}><ReferenceCatalogPage /></WarehouseGate>} />
+    <Route path="*" element={<WarehouseUnavailable />} />
+  </Routes>
+}
+
+function LegacyRoutes() {
   return <Routes>
     <Route index element={<WarehouseGate permissions={WAREHOUSE_VIEW_PERMISSIONS}><WarehouseOverviewPage /></WarehouseGate>} />
     {WAREHOUSE_PAGES.map(page => {

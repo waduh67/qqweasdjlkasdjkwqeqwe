@@ -65,7 +65,7 @@ function labelFor(segment: string): string {
   return segment.charAt(0).toUpperCase() + segment.slice(1)
 }
 
-export function Breadcrumbs() {
+export function Breadcrumbs({ labels = {} }: { readonly labels?: Readonly<Record<string, string>> }) {
   const location = useLocation()
   const navigate = useNavigate()
   const segments = location.pathname.split('/').filter(Boolean)
@@ -75,7 +75,7 @@ export function Breadcrumbs() {
   let acc = ''
   for (const seg of segments) {
     acc += `/${seg}`
-    crumbs.push({ label: WAREHOUSE_LABELS[acc] ?? labelFor(seg), path: acc })
+    crumbs.push({ label: labels[acc] ?? WAREHOUSE_LABELS[acc] ?? labelFor(seg), path: acc })
   }
 
   return (
