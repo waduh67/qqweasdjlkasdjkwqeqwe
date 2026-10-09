@@ -126,6 +126,13 @@ class ReferenceCountService(private val accessService: ReferenceRequestService, 
         return store.list(page, size, store.visibleLocations(access.current.fence.identity.userId))
     }
 
+    fun locations(search: String?, page: Int, size: Int): WarehousePage<ReferenceCountLocation> {
+        if (page < 0 || size !in 1..100 || search != null && search.length > 200) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val access = accessService.readAccess()
+        admin(access)
+        return store.locations(access.current.fence.identity.userId, search, page, size)
+    }
+
     private fun admin(access: ReferenceRequestService.Access) {
         val actor = access.current.fence.identity.userId
         if (owners.findUserId() != actor) {

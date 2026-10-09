@@ -26,6 +26,22 @@ class ReferenceCountStore(private val jdbc: WarehouseCommandJdbc) {
             sql.tenant, actor) { it.uuid("id") }.toSet()
     }
 
+    fun locations(actor: UUID, search: String?, page: Int, size: Int): WarehousePage<ReferenceCountLocation> = jdbc.execute { sql ->
+        val joins = """FROM inventory_location location LEFT JOIN app_user technician
+            ON technician.tenant_id=location.tenant_id AND technician.id=location.custodian_id"""
+        val where = """location.tenant_id=? AND warehouse_reference_count_visible(location.tenant_id,?,location.id)
+            AND (location.code ILIKE ? OR coalesce(location.name,'') ILIKE ? OR coalesce(technician.name,'') ILIKE ?)"""
+        val term = "%${search?.trim().orEmpty()}%"
+        val values = arrayOf<Any>(sql.tenant, actor, term, term, term)
+        val total = requireNotNull(sql.value("SELECT count(*) $joins WHERE $where", *values)).toLong()
+        val rows = sql.query("""SELECT location.id,location.code,coalesce(location.name,location.code) name,location.kind,
+            CASE WHEN location.kind='TECHNICIAN' THEN technician.name END technician_name $joins WHERE $where
+            ORDER BY location.code,location.id LIMIT ? OFFSET ?""", *values, size, page.toLong() * size) {
+            ReferenceCountLocation(it.uuid("id"), it.getString("code"), it.getString("name"), it.getString("kind"), it.getString("technician_name"))
+        }
+        WarehousePage(rows, page, size, total)
+    }
+
     fun positions(state: String): List<ReferenceCountPosition> {
         val location = mapper.readTree(state).path("location")
         val technician = location.path("kind").asString() == "TECHNICIAN"

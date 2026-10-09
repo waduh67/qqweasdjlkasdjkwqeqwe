@@ -161,15 +161,19 @@ class ReferenceCountIT : WarehouseMasterHttpFixture() {
         val (technician, _) = member(s, "Teknisi NE")
         val (delegate, _) = user(s.owner, setOf("warehouse.count.manage"))
         val loaded = snapshot(s, actor = admin)
-        for (actor in listOf(manager, technician, delegate))
+        assertThat(ok("GET", "/counts/locations?size=1&search=WH", admin).path("items")[0].path("id").asString()).isEqualTo(s.warehouse)
+        for (actor in listOf(manager, technician, delegate)) {
             assertThat(request("POST", "/api/v2/warehouse/counts/snapshot", actor,
                 mapper.writeValueAsString(mapOf("skuId" to s.sku, "locationId" to s.warehouse))).status).isEqualTo(403)
+            assertThat(request("GET", "/api/v2/warehouse/counts/locations", actor).status).isEqualTo(403)
+        }
         val key = UUID.randomUUID().toString()
         save(s, loaded, "2", key = key, actor = admin)
         val revoke = request("PUT", "/api/v1/warehouse/settings/scopes/$adminId/" + s.warehouse, s.owner, """{"expectedRevision":1,"active":false}""")
         assertThat(revoke.status).isEqualTo(200)
         assertThat(request("POST", "/api/v2/warehouse/counts", admin, body(loaded, "2"), key).status).isEqualTo(404)
         assertThat(ok("GET", "/counts?size=1", admin).path("totalElements").asLong()).isZero()
+        assertThat(ok("GET", "/counts/locations?search=WH", admin).path("totalElements").asLong()).isZero()
     }
 
     @Test fun `owner counts technician stock and surplus keeps immediate technician custody`() {
@@ -201,6 +205,9 @@ class ReferenceCountIT : WarehouseMasterHttpFixture() {
             "lineId" to line, "warehouseId" to s.warehouse, "lines" to listOf(mapOf("stockIdentityId" to identity, "quantityBase" to "3")))))
         val location = fixture(s.owner).transaction { scalar("SELECT id FROM inventory_location WHERE tenant_id='$tenant' AND code='TECH-$technicianId' AND area_id IS NULL") }
         val loaded = snapshot(s, location, admin)
+        val selected = ok("GET", "/counts/locations?search=Teknisi", admin)
+        assertThat(selected.path("items").single().path("id").asString()).isEqualTo(location)
+        assertThat(selected.path("items").single().path("technicianName").asString()).isEqualTo("Teknisi NE")
         val key = UUID.randomUUID().toString()
         val count = save(s, loaded, "2", key = key, actor = admin)
         assertThat(snapshot(s, location, admin).path("bookBase").asString()).isEqualTo("2")
@@ -212,6 +219,33 @@ class ReferenceCountIT : WarehouseMasterHttpFixture() {
         assertThat(request("POST", "/api/v2/warehouse/counts", admin, body(loaded, "2"), key).status).isEqualTo(404)
         assertThat(request("GET", "/api/v2/warehouse/counts/" + count.path("id").asString(), admin).status).isEqualTo(404)
         assertThat(ok("GET", "/counts", admin).path("totalElements").asLong()).isZero()
+        assertThat(ok("GET", "/counts/locations?search=Teknisi", admin).path("totalElements").asLong()).isZero()
+    }
+
+    @Test fun `count location directory scopes before paging and excludes hidden archived and foreign locations`() {
+        val s = setup()
+        val (admin, _) = member(s, "Admin")
+        val (_, technicianId) = member(s, "Teknisi FO")
+        create("locations", s.owner, """{"code":"BIN","name":"Rak Gudang","kind":"BIN","parentLocationId":"${s.warehouse}","areaId":"${area(s.owner)}"}""")
+        create("locations", s.owner, """{"code":"HIDDEN","name":"Lokasi karantina","kind":"QUARANTINE","issueEligible":false}""")
+        val elsewhere = create("locations", s.owner, """{"code":"ELSE","name":"Gudang lain","kind":"WAREHOUSE"}""")
+        val technician = create("locations", s.owner, """{"code":"TECH","name":"Teknisi pribadi","kind":"TECHNICIAN","custodianId":"$technicianId"}""")
+        val ownerRows = ok("GET", "/counts/locations", s.owner).path("items")
+        assertThat(ownerRows.asSequence().map { it.path("id").asString() }.toList()).contains(elsewhere.path("id").asString(), technician.path("id").asString())
+        assertThat(ownerRows.asSequence().map { it.path("kind").asString() }.toList()).doesNotContain("QUARANTINE")
+        val first = ok("GET", "/counts/locations?size=1", admin)
+        val second = ok("GET", "/counts/locations?size=1&page=1", admin)
+        assertThat(first.path("totalElements").asLong()).isEqualTo(2)
+        assertThat(first.path("items")[0].path("code").asString()).isEqualTo("BIN")
+        assertThat(second.path("items")[0].path("id").asString()).isEqualTo(s.warehouse)
+        assertThat(ok("GET", "/counts/locations?size=1&page=2", admin).path("items").isEmpty).isTrue()
+        val archived = request("POST", "/api/v2/warehouse/locations/" + elsewhere.path("id").asString() + "/archive", s.owner, """{"expectedRevision":0}""")
+        assertThat(archived.status).withFailMessage(archived.contentAsString).isEqualTo(200)
+        assertThat(ok("GET", "/counts/locations?search=ELSE", s.owner).path("totalElements").asLong()).isZero()
+        val foreign = setup()
+        assertThat(ok("GET", "/counts/locations?search=" + s.warehouse, foreign.owner).path("items").isEmpty).isTrue()
+        for (query in listOf("size=0", "page=-1", "size=101", "search=" + "x".repeat(201)))
+            assertThat(request("GET", "/api/v2/warehouse/counts/locations?$query", s.owner).status).isEqualTo(400)
     }
 
     @Test fun `same snapshot cannot create a second unchanged count`() {

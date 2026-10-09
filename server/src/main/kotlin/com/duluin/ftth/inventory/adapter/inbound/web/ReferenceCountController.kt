@@ -13,6 +13,8 @@ class ReferenceCountController(private val service: ReferenceCountService) {
     @PostMapping fun save(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         fresh(201, service.save(WarehouseReceiptJson.decode(body, ReferenceCountInput::class.java), key))
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) = fresh(200, service.list(page, size))
+    @GetMapping("/locations") fun locations(@RequestParam(required = false) search: String?,
+        @RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) = fresh(200, service.locations(search, page, size))
     @GetMapping("/{id}") fun detail(@PathVariable id: UUID) = fresh(200, service.detail(id))
     private fun <T> fresh(status: Int, body: T) = ResponseEntity.status(status).header("Cache-Control", "no-store").body(body)
 }
