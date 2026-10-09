@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
-import { signup } from '../warehouse/helpers'
+import { signupLegacy } from './signup'
 import { confirmOperation } from '../warehouse/fulfillment'
 import { legacyHead, legacyPhase, saveLegacyFixture } from './fixture'
 
 test('the historical V172 application creates a customer and ONU entirely through its UI', async ({ page }, testInfo) => {
   expect(legacyPhase).toBe('before')
-  const admin = await signup(page)
+  const admin = await signupLegacy(page)
   const name = `Pelanggan lama ${randomUUID().slice(0, 8)}`
   await page.goto('/customers')
   await page.getByRole('button', { name: 'Tambah pelanggan', exact: true }).click()

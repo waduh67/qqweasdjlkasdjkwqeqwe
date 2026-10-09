@@ -8,7 +8,7 @@ const schema = process.env.WAREHOUSE_LEGACY_SCHEMA
 const database = process.env.WAREHOUSE_E2E_DATABASE
 const runtime = resolve(import.meta.dirname, '../../../.omo/runtime')
 if (!run || !new RegExp(`^${runtime}/warehouse-legacy-[a-f0-9]{32}$`).test(run) ||
-  schema !== 'public' || !database || !/^warehouse_fixture_[a-f0-9]{32}$/.test(database) || !['before', 'after', 'restart'].includes(legacyPhase ?? '')) {
+  schema !== 'public' || !database || !/^warehouse_fixture_[a-f0-9]{32}$/.test(database) || !['before', 'after', 'restart', 'transition', 'reference-restart'].includes(legacyPhase ?? '')) {
   throw new Error('Run the legacy browser journey through its isolated upgrade harness.')
 }
 export const legacyRunDirectory = run
@@ -23,6 +23,11 @@ export interface LegacyFixture {
   onu: { id: string; serialNumber: string }
   catalogSku?: { id: string; code: string; unit: 'MM' }
   finalized?: { batchId: string; openingDocumentId: string; reviewHash: string; epoch: number }
+  workflowJourney?: {
+    receiptId: string; receiptReference: string; evidenceId: string; transferId: string; transferCode: string;
+    cableId: string; lotId: string; serial: string; destinationId: string; epoch: number;
+    reader: { name: string; email: string; password: string }
+  }
 }
 
 function path(project: string) {
