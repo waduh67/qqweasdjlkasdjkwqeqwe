@@ -131,6 +131,87 @@ class ReferenceWarehouseIT : WarehouseMasterHttpFixture() {
         assertThat(ok("GET", "/stock/${setup.onu}?includePositions=false", manager).path("warehouses").isEmpty).isTrue()
     }
 
+    @Test fun `saved receipts reopen immutable physical lines with bounded pagination and restricted costs`() {
+        val setup = setup()
+        val (manager, _) = member(setup, "Manager", listOf(setup.warehouse))
+        activate(setup.token)
+        val serials = (1..31).map { mapOf("serial" to "DOCUMENT-${it.toString().padStart(3, '0')}") }
+        val body = mapper.writeValueAsString(mapOf("warehouseId" to setup.warehouse, "reference" to "SJ-READ-001",
+            "notes" to "Barang diterima", "lines" to listOf(
+                mapOf("skuId" to setup.onu, "quantityBase" to "31", "serials" to serials, "cost" to mapOf("totalMinor" to "620000", "currency" to "IDR")),
+                mapOf("skuId" to setup.cable, "quantityBase" to "82501", "conversion" to mapOf("numerator" to "82501", "denominator" to "1", "packageQuantity" to "1")))))
+        val saved = ok("POST", "/receipts", setup.token, body, status = 201)
+        val id = saved.path("id").asString()
+        val detail = ok("GET", "/movements/$id", setup.token)
+        assertThat(detail.path("operationId")).isEqualTo(saved.path("operationId"))
+        assertThat(detail.path("reference").asString()).isEqualTo("SJ-READ-001")
+        assertThat(detail.path("warehouseName").asString()).isEqualTo("Gudang A")
+        assertThat(detail.path("state").asString()).isEqualTo("PUTAWAY")
+        assertThat(detail.path("notes").asString()).isEqualTo("Barang diterima")
+        val first = ok("GET", "/movements/$id/lines?size=25", setup.token)
+        val second = ok("GET", "/movements/$id/lines?page=1&size=25", setup.token)
+        assertThat(first.path("totalElements").asLong()).isEqualTo(32)
+        assertThat(first.path("items")).hasSize(25)
+        assertThat(second.path("items")).hasSize(7)
+        val all = first.path("items").toList() + second.path("items").toList()
+        assertThat(all.map { it.path("id").asString() }.distinct()).hasSize(32)
+        assertThat(all.filter { it.path("tracking").asString() == "SERIAL" }.map { it.path("serial").asString() })
+            .containsExactlyInAnyOrderElementsOf(serials.map { requireNotNull(it["serial"]) })
+        assertThat(all.first().path("cost").path("totalMinor").asString()).isEqualTo("620000")
+        val cable = all.single { it.path("skuId").asString() == setup.cable }
+        assertThat(cable.path("quantityBase").asString()).isEqualTo("82501")
+        assertThat(cable.path("conversion").path("numerator").asString()).isEqualTo("82501")
+        assertThat(cable.path("lotCode").asString()).startsWith("RCV-")
+        assertThat(ok("GET", "/movements/$id", manager).path("costVisible").asBoolean()).isFalse()
+        assertThat(ok("GET", "/movements/$id/lines?size=100", manager).path("items").all { it.path("cost").isNull }).isTrue()
+        ok("PUT", "/skus/${setup.onu}", setup.token,
+            """{"code":"ONU","name":"Nama barang diubah","tracking":"SERIAL","baseUnit":"EA","expectedRevision":0}""")
+        assertThat(ok("GET", "/movements/$id/lines?size=1", manager).path("items")[0].path("skuName").asString()).isEqualTo("ONU")
+        assertThat(ok("GET", "/movements?kind=RECEIPT&search=SJ-READ", manager).path("totalElements").asLong()).isEqualTo(1)
+        assertThat(ok("GET", "/movements?kind=TRANSFER", manager).path("items").isEmpty).isTrue()
+        for (query in listOf("size=0", "size=101", "page=-1", "kind=ISSUE"))
+            assertThat(request("GET", "/api/v2/warehouse/movements?$query", manager).status).isEqualTo(400)
+        assertThat(request("GET", "/api/v2/warehouse/movements/$id/lines?size=0", manager).status).isEqualTo(400)
+    }
+
+    @Test fun `movement reads filter both transfer warehouses before paging and recheck revoked tenant scope`() {
+        val setup = setup()
+        val (manager, managerId) = member(setup, "Manager", listOf(setup.warehouse))
+        activate(setup.token)
+        val received = receipt(setup, """{"skuId":"${setup.cable}","quantityBase":"90000"},{"skuId":"${setup.onu}","quantityBase":"1","serials":[{"serial":"MOVEMENT-ONU","mac":"AA:BB:CC:DD:EF:01"}]}""")
+        val receiptId = received.path("id").asString()
+        val cable = stock(setup, setup.cable).path("positions").single().path("stockIdentityId").asString()
+        val onu = stock(setup, setup.onu).path("positions").single().path("stockIdentityId").asString()
+        val transferred = ok("POST", "/transfers", setup.token,
+            """{"sourceWarehouseId":"${setup.warehouse}","warehouseId":"${setup.destination}","lines":[{"stockIdentityId":"$cable","quantityBase":"12501"},{"stockIdentityId":"$onu","quantityBase":"1"}],"notes":"Pindah gudang"}""", status = 201)
+        val transferId = transferred.path("id").asString()
+        assertThat(ok("GET", "/movements?size=1", manager).path("totalElements").asLong()).isEqualTo(1)
+        assertThat(ok("GET", "/movements?size=1", manager).path("items")[0].path("id").asString()).isEqualTo(receiptId)
+        assertThat(request("GET", "/api/v2/warehouse/movements/$transferId", manager).status).isEqualTo(404)
+        assertThat(request("GET", "/api/v2/warehouse/movements/$transferId/lines", manager).status).isEqualTo(404)
+        val grant = request("PUT", "/api/v1/warehouse/settings/scopes/$managerId/${setup.destination}", setup.token,
+            """{"expectedRevision":0,"active":true}""")
+        assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
+        val detail = ok("GET", "/movements/$transferId", manager)
+        assertThat(detail.path("sourceWarehouseName").asString()).isEqualTo("Gudang A")
+        assertThat(detail.path("warehouseName").asString()).isEqualTo("Gudang B")
+        val lines = ok("GET", "/movements/$transferId/lines", manager).path("items")
+        assertThat(lines.single { it.path("skuId").asString() == setup.cable }.path("quantityBase").asString()).isEqualTo("12501")
+        val serial = lines.single { it.path("skuId").asString() == setup.onu }
+        assertThat(serial.path("serial").asString()).isEqualTo("MOVEMENT-ONU")
+        assertThat(serial.path("mac").asString()).isEqualTo("AA:BB:CC:DD:EF:01")
+        assertThat(ok("GET", "/movements?size=1", manager).path("totalElements").asLong()).isEqualTo(2)
+        val otherTenant = tenant()
+        assertThat(request("GET", "/api/v2/warehouse/movements/$receiptId", otherTenant).status).isEqualTo(404)
+        assertThat(request("GET", "/api/v2/warehouse/movements/$transferId/lines", otherTenant).status).isEqualTo(404)
+        val revoke = request("PUT", "/api/v1/warehouse/settings/scopes/$managerId/${setup.warehouse}", setup.token,
+            """{"expectedRevision":1,"active":false}""")
+        assertThat(revoke.status).withFailMessage(revoke.contentAsString).isEqualTo(200)
+        assertThat(ok("GET", "/movements", manager).path("totalElements").asLong()).isZero()
+        assertThat(request("GET", "/api/v2/warehouse/movements/$receiptId", manager).status).isEqualTo(404)
+        assertThat(request("GET", "/api/v2/warehouse/movements/$transferId/lines", manager).status).isEqualTo(404)
+    }
+
     @Test fun `new tenant default warehouse receives immediately and every warehouse has an explicit zero balance`() {
         val setup = setup()
         activate(setup.token)

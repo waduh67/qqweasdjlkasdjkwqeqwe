@@ -4,6 +4,7 @@ import com.duluin.ftth.inventory.WarehouseOperationReceipt
 import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.service.ReferenceWarehouseService
 import com.duluin.ftth.inventory.application.service.ReferenceStockService
+import com.duluin.ftth.inventory.application.service.ReferenceMovementService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -11,7 +12,8 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v2/warehouse")
-class ReferenceWarehouseController(private val service: ReferenceWarehouseService, private val stock: ReferenceStockService) {
+class ReferenceWarehouseController(private val service: ReferenceWarehouseService, private val stock: ReferenceStockService,
+    private val movements: ReferenceMovementService) {
     @GetMapping("/workflow") fun workflow() = ResponseEntity.ok().header("Cache-Control", "no-store").body(service.workflow())
     @GetMapping("/my-materials") fun ownMaterials(@RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "25") size: Int, @RequestParam(required = false) search: String?) =
@@ -24,6 +26,15 @@ class ReferenceWarehouseController(private val service: ReferenceWarehouseServic
         result(service.receive(WarehouseReceiptJson.decode(body, ReferenceReceiptInput::class.java), key))
     @PostMapping("/transfers") fun transfer(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         result(service.transfer(WarehouseReceiptJson.decode(body, ReferenceTransferInput::class.java), key))
+    @GetMapping("/movements") fun movements(@RequestParam(required = false) kind: String?,
+        @RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
+        @RequestParam(required = false) search: String?) =
+        ResponseEntity.ok().header("Cache-Control", "no-store").body(movements.list(kind, page, size, search))
+    @GetMapping("/movements/{id}") fun movement(@PathVariable id: UUID) =
+        ResponseEntity.ok().header("Cache-Control", "no-store").body(movements.get(id))
+    @GetMapping("/movements/{id}/lines") fun movementLines(@PathVariable id: UUID,
+        @RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) =
+        ResponseEntity.ok().header("Cache-Control", "no-store").body(movements.lines(id, page, size))
     @GetMapping("/stock/{skuId}") fun stock(@PathVariable skuId: UUID, @RequestParam(defaultValue = "true") includePositions: Boolean) =
         ResponseEntity.ok().header("Cache-Control", "no-store").body(stock.stock(skuId, includePositions))
     @GetMapping("/stock/{skuId}/positions") fun positions(@PathVariable skuId: UUID, @RequestParam(defaultValue = "0") page: Int,
