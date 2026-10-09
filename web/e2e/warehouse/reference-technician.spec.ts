@@ -3,9 +3,9 @@ import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import type { TokenResponse, Role, User } from '../../src/api/types'
 import type { PlatformTenant } from '../../src/api/tenant'
-import { pageOf, record, text, uuid } from '../../src/api/warehouse/codec'
+import { pageOf, record, uuid } from '../../src/api/warehouse/codec'
 import { location, sku } from '../../src/api/warehouse/models'
-import { referencePosition, referenceStock, referenceWorkOrder, workType } from '../../src/api/warehouse/reference'
+import { referencePosition, referenceStock, referenceWorkOrder, workflow, workType } from '../../src/api/warehouse/reference'
 import { identity, login } from './helpers'
 
 async function capture(page: Page, info: TestInfo, name: string) {
@@ -64,9 +64,9 @@ test('technician follows instructions, uploads named evidence and completes with
   }
   const assigned = members[0]
   if (!assigned) throw new Error('Assigned technician missing')
-  await command('/api/v2/warehouse/workflow/drain', { expectedEpoch: 0 })
-  const review = record(await get('/api/v2/warehouse/workflow/review'))
-  await command('/api/v2/warehouse/workflow/activate', { expectedEpoch: 1, reviewHash: text(review.reviewHash), reason: 'Real technician QA' })
+  const currentWorkflow = workflow(await get('/api/v2/warehouse/workflow'))
+  expect(currentWorkflow.workflow).toBe('REFERENCE')
+  expect(currentWorkflow.epoch).toBe(1)
   const material = sku(await command('/api/v2/warehouse/skus', { code: 'CONNECTOR', name: 'Konektor teknisi', tracking: 'BULK', baseUnit: 'EA' }))
   await command('/api/v2/warehouse/receipts', { warehouseId: warehouse.id, lines: [{ skuId: material.id, quantityBase: '18' }] })
   for (const member of members) {
