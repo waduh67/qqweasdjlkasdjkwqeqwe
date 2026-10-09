@@ -7,7 +7,6 @@ import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Component
 class WarehouseTenantCreatedListener(private val jdbc: TenantTransactionJdbc) {
@@ -15,19 +14,9 @@ class WarehouseTenantCreatedListener(private val jdbc: TenantTransactionJdbc) {
     @Order(10)
     @Transactional(propagation = Propagation.MANDATORY)
     fun on(event: TenantCreatedEvent) = jdbc.withinTenant(event.tenantId) { connection ->
-        val existing = connection.prepareStatement("SELECT id FROM inventory_tenant_cutover WHERE tenant_id=? FOR SHARE").use {
+        connection.prepareStatement("SELECT warehouse_initialize_reference_tenant(?)").use {
             it.setObject(1, event.tenantId)
-            it.executeQuery().use { rows -> rows.next() }
-        }
-        if (!existing) {
-            connection.prepareStatement("""
-                INSERT INTO inventory_tenant_cutover(id,tenant_id,state,initialization_kind,activation_at)
-                VALUES (?,?,'ENFORCED','NEW_EMPTY',warehouse_activation_at()) ON CONFLICT (tenant_id) DO NOTHING
-            """.trimIndent()).use {
-                it.setObject(1, UUID.randomUUID())
-                it.setObject(2, event.tenantId)
-                it.executeUpdate()
-            }
+            it.execute()
         }
     }
 }

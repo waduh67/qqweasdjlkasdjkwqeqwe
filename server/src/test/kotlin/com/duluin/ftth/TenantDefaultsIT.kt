@@ -76,6 +76,9 @@ class TenantDefaultsIT {
                 .containsExactly("Gudang Utama")
             assertThat(jdbc.queryForObject("SELECT count(*) FROM inventory_serialized_asset WHERE tenant_id=?", Long::class.java, tenant)).isZero()
             assertThat(users.search(null, com.duluin.ftth.common.domain.PageRequest(0, 100)).content).hasSize(1)
+            assertThat(jdbc.queryForObject("SELECT workflow_mode FROM inventory_tenant_cutover WHERE tenant_id=?", String::class.java, tenant)).isEqualTo("REFERENCE")
+            assertThat(jdbc.queryForObject("SELECT epoch FROM inventory_tenant_cutover WHERE tenant_id=?", Long::class.java, tenant)).isEqualTo(1L)
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM inventory_reference_bootstrap WHERE tenant_id=?", Long::class.java, tenant)).isEqualTo(1L)
         }
     }
 

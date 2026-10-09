@@ -24,7 +24,7 @@ internal fun postingContext(database: WarehouseSchemaDatabase, migrationTarget: 
     )
 
 internal class WarehousePostingFixture(val context: ConfigurableApplicationContext, val tenant: UUID =
-    context.getBean(com.duluin.ftth.tenancy.TenantApi::class.java).ensureTenant("post-${UUID.randomUUID()}", "Posting").id) {
+    historicalWarehouseTenant(context, "post-${UUID.randomUUID()}", "Posting")) {
     val actor = UUID.randomUUID()
     val customer = UUID.randomUUID()
     val workOrder = UUID.randomUUID()

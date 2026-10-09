@@ -183,6 +183,7 @@ class TenantEraser(txManager: PlatformTransactionManager) {
         val CASCADE_ONLY_CONTROL_TABLES = setOf(
             "inventory_tenant_cutover", "iam_authorization_epoch", "inventory_draft_policy",
             "inventory_location_topology_fence", "inventory_location",
+            "inventory_reference_bootstrap",
         )
 
         /**
