@@ -18,6 +18,7 @@ import { WarehouseReplenishmentPage } from './WarehouseReplenishmentPage'
 import { WarehouseOverviewPage } from './WarehouseOverviewPage'
 import { WarehouseProvenancePage } from './WarehouseProvenancePage'
 import { ReferenceCatalogPage } from './ReferenceCatalogPage'
+import { ReferenceStockPage } from './ReferenceStockPage'
 import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
 import { REFERENCE_WAREHOUSE_PAGES } from './navigation'
 
@@ -44,6 +45,7 @@ function ReferenceRoutes() {
   return <Routes>
     <Route index element={first ? <Navigate replace to={first.path} /> : <WarehouseDenied />} />
     <Route path="catalog" element={<WarehouseGate permissions={['warehouse.catalog.view']}><ReferenceCatalogPage /></WarehouseGate>} />
+    <Route path="stock" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceStockPage /></WarehouseGate>} />
     <Route path="*" element={<WarehouseUnavailable />} />
   </Routes>
 }
