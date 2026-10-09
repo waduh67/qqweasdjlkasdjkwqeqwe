@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { tokenStore } from '../client'
-import { workAreas, workCustomers } from './referenceWorkManagement'
+import { workAreas, workCustomers, workTypes } from './referenceWorkManagement'
 import { deleteWorkType } from './referenceWorkTypes'
 import { WarehouseDataError } from './codec'
 
@@ -20,6 +20,14 @@ it('reads the scoped second area page without treating it as the whole directory
 it('fails visibly when choice counts disagree with the page metadata', async () => {
   fetchMock.mockResolvedValue(response({ content: [area], page: 0, size: 25, totalElements: 26, totalPages: 1 }))
   await expect(workAreas('', 0)).rejects.toBeInstanceOf(WarehouseDataError)
+})
+it('filters matching active work kinds before paginating the choices', async () => {
+  const matching = Array.from({ length: 27 }, (_, index) => ({ ...type, id: '00000000-0000-4000-8000-' + String(index + 1).padStart(12, '0'), name: 'Ukur ' + index }))
+  fetchMock.mockResolvedValue(response([{ ...type, workType: 'PSB' }, ...matching, { ...type, active: false }, { ...type, deleted: true }]))
+  const page = await workTypes('', 1, 'PREVENTIVE')
+  expect(page).toMatchObject({ page: 1, totalElements: 27, items: matching.slice(25) })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+  expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v2/work-orders/types')
 })
 it('parses optional customer areas and rejects an unknown customer status', async () => {
   fetchMock.mockResolvedValueOnce(response({ content: [{ ...area, status: 'PROSPECT', areaId: null }], page: 0, size: 25, totalElements: 1, totalPages: 1 }))

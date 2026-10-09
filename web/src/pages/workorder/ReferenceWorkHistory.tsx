@@ -4,7 +4,7 @@ import { WarehouseQuantity } from '@/components/organisms/warehouse/WarehouseQua
 import { WarehouseTime } from '@/components/organisms/warehouse/WarehouseLines'
 import { ReferencePhotoContent } from './ReferencePhotos'
 
-const actions: Readonly<Record<string, string>> = { CREATE: 'Tugas dibuat', UPDATE: 'Instruksi diperbarui', ASSIGN: 'Teknisi ditugaskan', REASSIGN: 'Teknisi diganti', PENDING: 'Pekerjaan dilanjutkan', BLOCKED: 'Kendala dicatat', COMPLETE: 'Pekerjaan selesai', CANCEL: 'Tugas dibatalkan', PHOTO: 'Foto diunggah' }
+const actions: Readonly<Record<string, string>> = { CREATE: 'Tugas dibuat', UPDATE: 'Instruksi diperbarui', ASSIGN: 'Teknisi ditugaskan', DISPATCH: 'Teknisi ditugaskan', REASSIGN: 'Teknisi diganti', PENDING: 'Pekerjaan dilanjutkan', BLOCKED: 'Kendala dicatat', COMPLETE: 'Pekerjaan selesai', CANCEL: 'Tugas dibatalkan', PHOTO: 'Foto diunggah' }
 export function ReferenceWorkHistory({ detail }: { detail: ReferenceWorkDetail }) {
   const completed = detail.completion
   return <section className="stack" aria-labelledby="reference-history-title"><h2 id="reference-history-title">Riwayat pekerjaan</h2>

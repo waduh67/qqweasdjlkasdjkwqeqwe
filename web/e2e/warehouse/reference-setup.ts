@@ -32,8 +32,9 @@ export async function referenceTenant(page: Page, prefix: string) {
   }
   const root = await authenticate({ email: 'root@ftth.local', password: 'rootadmin123' })
   const owner = identity('Owner')
+  const slug = prefix + '-' + randomUUID().slice(0, 8)
   const onboard = await page.request.post('/api/platform/tenants', { headers: root, data: {
-    slug: prefix + '-' + randomUUID().slice(0, 8), name: prefix + ' QA',
+    slug, name: prefix + ' QA',
     adminName: owner.name, adminEmail: owner.email, adminPassword: owner.password,
   } })
   expect(onboard.status()).toBe(201)
@@ -78,5 +79,5 @@ export async function referenceTenant(page: Page, prefix: string) {
     const review = record(await get('/api/v2/warehouse/workflow/review'))
     await command('/api/v2/warehouse/workflow/activate', { expectedEpoch: current.epoch + 1, reviewHash: text(review.reviewHash), reason: 'Real reference browser QA' })
   }
-  return { owner, tenantId, headers, get, command, warehouse, areaId, createMember, activate }
+  return { owner, slug, tenantId, headers, get, command, warehouse, areaId, createMember, activate }
 }

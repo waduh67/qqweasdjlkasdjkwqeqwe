@@ -23,8 +23,8 @@ export const workAreas = (search: string, page: number) => query(root + '/areas'
 export const getWorkArea = (id: string) => query(root + '/areas/' + uuid(id), workArea)
 export const workCustomers = (search: string, page: number) => query('/api/customers' + parameters({ query: search, page, size: 25 }), contentPage(workCustomer))
 export const getWorkCustomer = (id: string) => query('/api/customers/' + uuid(id), workCustomer)
-export const workTypes = async (search: string, page: number) => {
-  const rows = (await referenceTypes()).filter(row => row.active && !row.deleted && row.name.toLocaleLowerCase('id').includes(search.toLocaleLowerCase('id')))
+export const workTypes = async (search: string, page: number, kind?: ReferenceWorkOrder['type']['workType']) => {
+  const rows = (await referenceTypes()).filter(row => row.active && !row.deleted && (!kind || row.workType === kind) && row.name.toLocaleLowerCase('id').includes(search.toLocaleLowerCase('id')))
   return { items: rows.slice(page * 25, (page + 1) * 25), page, size: 25, totalElements: rows.length }
 }
 export type WorkDetailsInput = { readonly title: string; readonly description: string; readonly areaId: string;

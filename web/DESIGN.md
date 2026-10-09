@@ -125,6 +125,17 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Operator Work Order separates Belum ditugaskan source requests from assigned
+  tasks using the shared Tabs. Source details show the customer, instructions,
+  area and schedule. Tugaskan teknisi opens the shared resource form with only
+  matching active work types and one active NE/FO technician. The review preserves
+  source identity and uses the existing retry and conflict controls. Pending source
+  details are operator-only; technicians see the task after dispatch.
+- In reference mode PSB Express creates the customer and pending installation
+  together. It explains that technician assignment is the next step and links the
+  success document directly to that installation. The legacy technician picker is
+  shown only after the server confirms the legacy workflow. Workflow failures are
+  visible and creation stays unavailable until the workflow is known.
 - Owner-only Jenis Pekerjaan lists named photo slots, material requirements and
   active state. The resource form reviews 1–12 unique photo names before saving.
   Editing or deactivating affects new assignments; existing WO retain their

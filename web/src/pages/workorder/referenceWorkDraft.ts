@@ -18,7 +18,7 @@ export function localSchedule(instant: string | null): string {
   const date = new Date(instant), pad = (value: number, width = 2) => String(value).padStart(width, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`
 }
-function scheduledAt(value: string, previous?: string | null): string | null {
+export function scheduledAt(value: string, previous?: string | null): string | null {
   if (!value) return null
   if (previous && value === localSchedule(previous)) return previous
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(value)) throw new WorkDraftError('Isi jadwal berupa tanggal dan waktu setempat.')

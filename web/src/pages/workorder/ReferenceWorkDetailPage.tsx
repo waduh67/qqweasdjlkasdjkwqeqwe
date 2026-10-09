@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { captureCommandSession, type WarehouseCommand } from '@/api/warehouse/transport'
 import { completeReferenceWork, getReferenceWork, readWorkflow, referencePhotos, referenceProgress, uploadReferencePhoto, type ReferenceWorkDetail } from '@/api/warehouse/reference'
+import { loadReferenceWorkDocument } from '@/api/warehouse/referenceWorkIntake'
+import { WarehouseDataError } from '@/api/warehouse/codec'
 import { warehouseError } from '@/api/warehouse/errors'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
@@ -19,9 +21,11 @@ import { ReferenceMaterialsEditor } from './ReferenceMaterialsEditor'
 import { ReferenceWorkHistory } from './ReferenceWorkHistory'
 import { ReferenceWorkEditor } from './ReferenceWorkEditor'
 import { ReferenceWorkAssignment } from './ReferenceWorkAssignment'
+import { ReferenceWorkPending } from './ReferenceWorkPending'
 import { assertCompletionEvidence, completionMaterials, freshOwnPosition, ReferenceDraftError, type ReferenceMaterialDraft } from './referenceCompletionDraft'
 
 type Review = { readonly title: string; readonly summary: ReactNode; readonly command: WarehouseCommand<unknown>; readonly label: string }
+function assertNever(document: never): never { throw new WarehouseDataError(String(document)) }
 export function ReferenceWorkDetailPage({ field = true }: { field?: boolean }) {
   const { id = '' } = useParams(), { user } = useAuth()
   return <ReferenceWorkDetail key={`${id}:${user?.id}:${user?.tenantId}`} id={id} field={field} />
@@ -34,9 +38,8 @@ function ReferenceWorkDetail({ id, field }: { id: string; field: boolean }) {
   const working = useRef(false)
   const load = useCallback(async () => {
     await refreshProfile()
-    const [detail, photos] = await Promise.all([getReferenceWork(id), referencePhotos(id)])
-    return { detail, photos }
-  }, [id, refreshProfile])
+    return loadReferenceWorkDocument(id, field)
+  }, [id, field, refreshProfile])
   const result = useWarehouseQuery(load, `${user?.id}:${user?.tenantId}`)
   const { reload } = result
   const connected = useRef(online)
@@ -96,7 +99,13 @@ function ReferenceWorkDetail({ id, field }: { id: string; field: boolean }) {
     {readOnly && <p role="status">Akun sedang baca saja. Hasil pekerjaan belum dapat dikirim.</p>}
     {error !== null && <p role="alert" className="error">{error instanceof ReferenceDraftError ? error.message : warehouseError(error)}</p>}
     {preparing && <p role="status">Memeriksa akses, tugas dan material terbaru…</p>}
-    <WarehouseState {...result}>{({ detail, photos }) => {
+    <WarehouseState {...result}>{document => {
+      switch (document.kind) {
+        case 'intake': return <ReferenceWorkPending intake={document.intake} enabled={online && !readOnly} reload={result.reload} />
+        case 'assigned': break
+        default: return assertNever(document)
+      }
+      const { detail, photos } = document
       const work = detail.workOrder, active = work.state === 'PENDING' || work.state === 'BLOCKED'
       const assigned = work.technicianId === user?.id
       const enabled = assigned && active && online && !readOnly && !preparing && !review

@@ -75,6 +75,7 @@ for (const theme of ['light', 'dark']) {
     await expect(page.getByText('Teknisi: ' + replacement.user.name, { exact: true })).toBeVisible()
     await page.goto('/work-orders')
     const overdueRead = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v2/work-orders' && new URL(response.url()).searchParams.get('overdue') === 'true')
+    await page.getByRole('tab', { name: 'Sudah ditugaskan', exact: true }).click()
     await page.getByRole('checkbox', { name: 'Hanya tugas terlambat', exact: true }).check()
     expect((await overdueRead).ok()).toBeTruthy()
     await expect(page.getByRole('link', { name: created.code + ' · Periksa dan ukur sambungan', exact: true })).toHaveCount(0)
