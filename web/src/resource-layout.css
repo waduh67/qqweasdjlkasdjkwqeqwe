@@ -36,6 +36,7 @@
 .fui-TableCell { white-space: nowrap; overflow-wrap: normal; }
 .table-card .data-table-grid .fui-DataGridRow { min-height: 32px; }
 .table-card .data-table-grid .fui-DataGridCell { height: 32px; min-height: 32px; overflow: hidden; }
+.table-card.warehouse-data-table-card .data-table-grid .fui-DataGridCell { height: auto; }
 .table-cell-content { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-cell-content :is(div, p, small, code, pre, strong, .badge, .pill, .tag, .fui-Badge, .resource-cell-description),
 .fui-TableCell :is(p, small, code, pre, .badge, .pill, .tag, .fui-Badge) {
