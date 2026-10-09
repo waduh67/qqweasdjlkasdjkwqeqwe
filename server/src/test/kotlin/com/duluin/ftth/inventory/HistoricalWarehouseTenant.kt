@@ -1,12 +1,14 @@
 package com.duluin.ftth.inventory
 
 import com.duluin.ftth.common.infrastructure.persistence.TenantTransactionJdbc
+import com.duluin.ftth.tenancy.TenantApi
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
 
 internal fun historicalWarehouseTenant(context: ConfigurableApplicationContext, slug: String, name: String): UUID {
+    context.getBean(TenantApi::class.java).findBySlug(slug)?.let { return it.id }
     val tenant = UUID.randomUUID()
     TransactionTemplate(context.getBean(PlatformTransactionManager::class.java)).executeWithoutResult {
         context.getBean(TenantTransactionJdbc::class.java).withinTenant(tenant) { connection ->
