@@ -124,6 +124,7 @@ class TicketService(
         val workOrder = workorderApi.raiseRepair(
             RaiseRepairCommand(
                 customerId = ticket.customerId,
+                ticketId = ticket.id,
                 // Judul WO membawa kode tiketnya supaya teknisi & dispatcher bisa merunut balik
                 // ke keluhan aslinya tanpa membuka helpdesk.
                 title = "[${ticket.code}] ${ticket.subject}",

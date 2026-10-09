@@ -32,7 +32,7 @@ export function parseReceiptSerials(input: string): ReceiptSerialInput[] {
   })
 }
 
-export function buildReceiptLines(rows: ReceiptDraftRow[], includeCost: boolean): ReceiptDraftLineInput[] {
+export function buildReceiptLines(rows: ReceiptDraftRow[], includeCost: boolean, optionalLot = false): ReceiptDraftLineInput[] {
   if (rows.length < 1 || rows.length > 100) throw new Error('Penerimaan membutuhkan 1–100 baris barang.')
   const allSerials: string[] = [], allMacs: string[] = []
   let physicalLines = 0
@@ -41,7 +41,7 @@ export function buildReceiptLines(rows: ReceiptDraftRow[], includeCost: boolean)
     const quantityBase = quantityFromInput(row.quantity, row.sku.baseUnit)
     const serials = row.sku.tracking === 'SERIAL' ? parseReceiptSerials(row.serials) : []
     if (row.sku.tracking === 'SERIAL' && BigInt(serials.length) !== BigInt(quantityBase)) throw new Error(`Jumlah serial ${row.sku.name} harus sama dengan jumlah barang.`)
-    if (row.sku.tracking !== 'SERIAL' && (!row.lotCode.trim() || row.lotCode.length > 120)) throw new Error(`Isi kode lot / reel ${row.sku.name}.`)
+    if (row.sku.tracking !== 'SERIAL' && ((!optionalLot && !row.lotCode.trim()) || row.lotCode.length > 120)) throw new Error(`Isi kode lot / reel ${row.sku.name}.`)
     allSerials.push(...serials.map(s => s.serial.toUpperCase()))
     allMacs.push(...serials.flatMap(s => s.mac ? [s.mac.replace(/[-:.]/g, '').toUpperCase()] : []))
     physicalLines += row.sku.tracking === 'SERIAL' ? serials.length : 1
@@ -49,7 +49,7 @@ export function buildReceiptLines(rows: ReceiptDraftRow[], includeCost: boolean)
     if (conversion && BigInt(conversion.numerator) * BigInt(conversion.packageQuantity) !== BigInt(quantityBase) * BigInt(conversion.denominator)) throw new Error(`Konversi kemasan ${row.sku.name} harus tepat sama dengan jumlah aktual.`)
     const cost = includeCost && row.useCost ? { totalMinor: quantityFromInput(row.totalMinor, 'EA', true), currency: row.currency.trim().toUpperCase() } : null
     if (cost && !/^[A-Z]{3}$/.test(cost.currency)) throw new Error('Mata uang harus berupa kode tiga huruf, misalnya IDR.')
-    return { skuId: row.sku.id, quantityBase, serials, lotCode: row.sku.tracking === 'SERIAL' ? null : row.lotCode.trim(), conversion, cost }
+    return { skuId: row.sku.id, quantityBase, serials, lotCode: row.sku.tracking === 'SERIAL' ? null : row.lotCode.trim() || null, conversion, cost }
   })
   if (new Set(allSerials).size !== allSerials.length || new Set(allMacs).size !== allMacs.length) throw new Error('Serial atau MAC ganda ditemukan antarbaris barang.')
   if (physicalLines > 500) throw new Error('Maksimal 500 unit serial / baris fisik per penerimaan.')

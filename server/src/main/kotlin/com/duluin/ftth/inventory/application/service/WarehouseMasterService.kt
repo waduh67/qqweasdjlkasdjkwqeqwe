@@ -2,6 +2,7 @@ package com.duluin.ftth.inventory.application.service
 
 import com.duluin.ftth.common.domain.identity.MacIdentity
 import com.duluin.ftth.common.domain.identity.SerialIdentity
+import com.duluin.ftth.common.infrastructure.security.AccessChecker
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.CurrentAuthority
 import com.duluin.ftth.iam.CurrentAuthorityApi
@@ -20,15 +21,24 @@ import java.util.UUID
 @Service
 class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
     private val scopes: InventoryWarehouseScopeApi, private val store: WarehouseMasterStore,
-    private val operations: WarehouseOperationStore, private val iam: IamApi, private val sites: SiteReferenceApi) {
+    private val operations: WarehouseOperationStore, private val iam: IamApi, private val sites: SiteReferenceApi,
+    private val accessChecker: AccessChecker) {
     private val mapper = jacksonObjectMapper()
 
     fun execute(kind: MasterKind, action: MasterAction, id: UUID?, input: MasterInput, key: String): WarehouseOperationReceipt {
+        return executeAuthorized(kind, action, id, input, key, false)
+    }
+
+    internal fun executeReference(kind: MasterKind, action: MasterAction, id: UUID?, input: MasterInput, key: String): WarehouseOperationReceipt =
+        executeAuthorized(kind, action, id, input, key, true)
+
+    private fun executeAuthorized(kind: MasterKind, action: MasterAction, id: UUID?, input: MasterInput, key: String, reference: Boolean): WarehouseOperationReceipt {
         if (key.length !in 1..240 || key.any { it.code !in 33..126 }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         val change = if (kind == MasterKind.LOCATION) authority.lockForChange() else null
         val current = authority.lockCurrent()
-        permission(current, "${kind.permission}.manage")
+        permission(current, if (reference) "warehouse.catalog.manage" else "${kind.permission}.manage")
+        accessChecker.assertWritable()
         if (kind == MasterKind.LOCATION) store.lockTopology()
         val allowed = scopes.currentUnderFence(current.fence)
         validate(input, action)
@@ -78,7 +88,16 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
 
     @Transactional
     fun get(kind: MasterKind, id: UUID): MasterSnapshot {
-        val current = authority.lockCurrent(); permission(current, "${kind.permission}.view")
+        return getAuthorized(kind, id, false)
+    }
+
+    internal fun getReference(kind: MasterKind, id: UUID): MasterSnapshot = getAuthorized(kind, id, true).also {
+        if (it is LocationSnapshot && it.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN))
+            masterFailure(WarehouseErrorCode.NOT_FOUND)
+    }
+
+    private fun getAuthorized(kind: MasterKind, id: UUID, reference: Boolean): MasterSnapshot {
+        val current = authority.lockCurrent(); readPermission(current, kind, reference)
         val result = store.get(kind, id)
         if (result is LocationSnapshot) authorizeLocation(result, current, scopes.currentUnderFence(current.fence))
         return result
@@ -86,7 +105,14 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
 
     @Transactional
     fun list(kind: MasterKind, filter: MasterFilter): WarehousePage<MasterSnapshot> {
-        val current = authority.lockCurrent(); permission(current, "${kind.permission}.view")
+        return listAuthorized(kind, filter, false)
+    }
+
+    internal fun listReference(kind: MasterKind, filter: MasterFilter): WarehousePage<MasterSnapshot> =
+        listAuthorized(kind, if (kind == MasterKind.LOCATION) filter.copy(locationKinds = setOf(LocationKind.WAREHOUSE, LocationKind.BIN)) else filter, true)
+
+    private fun listAuthorized(kind: MasterKind, filter: MasterFilter, reference: Boolean): WarehousePage<MasterSnapshot> {
+        val current = authority.lockCurrent(); readPermission(current, kind, reference)
         if (filter.page < 0 || filter.size !in 1..100 || filter.sort !in setOf("code", "name") || filter.direction !in setOf("asc", "desc") ||
             listOfNotNull(filter.search, filter.code, filter.name).any { it.length > 200 }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
@@ -108,6 +134,13 @@ class WarehouseMasterService(private val cutovers: InventoryTenantCutoverApi, pr
 
     private fun permission(current: CurrentAuthority, permission: String) {
         if (!current.platformAdmin && permission !in current.permissions) masterFailure(WarehouseErrorCode.FORBIDDEN)
+    }
+
+    private fun readPermission(current: CurrentAuthority, kind: MasterKind, reference: Boolean) {
+        if (reference && kind == MasterKind.SKU && current.permissions.any { it in setOf(
+                "warehouse.material.own", "warehouse.request.own", "warehouse.return.own") }) return
+        if (reference && kind == MasterKind.LOCATION && "warehouse.request.own" in current.permissions) return
+        permission(current, if (reference) "warehouse.catalog.view" else "${kind.permission}.view")
     }
 
     private fun validate(input: MasterInput, action: MasterAction) {

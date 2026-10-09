@@ -30,6 +30,12 @@ import { HelpdeskPage } from './pages/HelpdeskPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyMaterialsPage } from './pages/MyMaterialsPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
+import { WorkflowSurface } from './pages/warehouse/WorkflowSurface'
+import { WarehouseWorkflowProvider } from './pages/warehouse/WarehouseWorkflowContext'
+import { ReferenceMyMaterials } from './pages/warehouse/ReferenceMyMaterials'
+import { ReferenceWorkList } from './pages/workorder/ReferenceWorkList'
+import { ReferenceWorkDetailPage } from './pages/workorder/ReferenceWorkDetailPage'
+import { ReferenceWorkTypesPage } from './pages/workorder/ReferenceWorkTypesPage'
 import { MyVisitsPage } from './pages/MyVisitsPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
@@ -78,9 +84,9 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 /** Guard berbasis izin — server tetap penegak sebenarnya, ini demi UX. */
-export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
-  const { can } = useCan()
-  if (!can(permission)) return <ForbiddenPermission permission={permission} />
+export function RequirePermission({ permission, children, access = 'write' }: { permission: string; children: ReactNode; access?: 'read' | 'write' }) {
+  const { can, hasPermission } = useCan()
+  if (!(access === 'read' ? hasPermission(permission) : can(permission))) return <ForbiddenPermission permission={permission} />
   return <>{children}</>
 }
 
@@ -172,7 +178,7 @@ function OperatorApp() {
           <Route
             element={
               <RequireAuth>
-                <Layout />
+                <WarehouseWorkflowProvider><Layout /></WarehouseWorkflowProvider>
               </RequireAuth>
             }
           >
@@ -344,7 +350,15 @@ function OperatorApp() {
               path="work-orders"
               element={
                 <RequirePermission permission="workorder.dashboard.view">
-                  <WorkOrdersPage />
+                  <WorkflowSurface reference={<ReferenceWorkList field={false} />} legacy={<WorkOrdersPage />} />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="work-orders/types"
+              element={
+                <RequirePermission permission="workorder.order.view">
+                  <WorkflowSurface reference={<ReferenceWorkTypesPage />} legacy={<WorkOrdersPage />} />
                 </RequirePermission>
               }
             />
@@ -352,25 +366,25 @@ function OperatorApp() {
               path="work-orders/:id"
               element={
                 <RequirePermission permission="workorder.order.view">
-                  <WorkOrderDetailPage backTo="/work-orders" backLabel="Work Order" />
+                  <WorkflowSurface reference={<ReferenceWorkDetailPage field={false} />} legacy={<WorkOrderDetailPage backTo="/work-orders" backLabel="Work Order" />} />
                 </RequirePermission>
               }
             />
             <Route
               path="my-work-orders"
               element={
-                <RequirePermission permission="workorder.order.field">
-                  <MyWorkOrdersPage />
+                <RequirePermission access="read" permission="workorder.order.field">
+                  <WorkflowSurface reference={<ReferenceWorkList />} legacy={<MyWorkOrdersPage />} />
                 </RequirePermission>
               }
             />
-            <Route path="my-materials" element={<RequirePermission permission="workorder.order.field"><MyMaterialsPage /></RequirePermission>} />
-            <Route path="my-visits" element={<RequirePermission permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
+            <Route path="my-materials" element={<RequirePermission access="read" permission="workorder.order.field"><WorkflowSurface reference={<ReferenceMyMaterials />} legacy={<MyMaterialsPage />} /></RequirePermission>} />
+            <Route path="my-visits" element={<RequirePermission access="read" permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
             <Route
               path="my-work-orders/:id"
               element={
-                <RequirePermission permission="workorder.order.view">
-                  <WorkOrderDetailPage backTo="/my-work-orders" backLabel="Tugas Saya" />
+                <RequirePermission access="read" permission="workorder.order.field">
+                  <WorkflowSurface reference={<ReferenceWorkDetailPage />} legacy={<WorkOrderDetailPage backTo="/my-work-orders" backLabel="Tugas Saya" />} />
                 </RequirePermission>
               }
             />

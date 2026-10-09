@@ -1,6 +1,11 @@
 package com.duluin.ftth.iam.adapter.outbound.persistence
 
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.common.domain.Page
+import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.common.security.AuthorityScope
+import com.duluin.ftth.common.infrastructure.persistence.toDomainPage
+import com.duluin.ftth.common.infrastructure.persistence.toPageable
 import com.duluin.ftth.iam.application.port.outbound.AreaRepository
 import com.duluin.ftth.iam.domain.model.Area
 import org.springframework.stereotype.Component
@@ -29,6 +34,19 @@ class AreaPersistenceAdapter(
     override fun findAll(): List<Area> = jpa.findAll().map { it.toDomain() }
 
     override fun findAllByIds(ids: Set<UUID>): List<Area> = jpa.findAllById(ids).map { it.toDomain() }
+
+    override fun search(scope: AuthorityScope, query: String, page: PageRequest): Page<Area> {
+        val ids = when (scope) {
+            AuthorityScope.Unrestricted -> setOf(UUID(0, 0))
+            is AuthorityScope.Restricted -> {
+                if (scope.ids.isEmpty()) return Page(emptyList(), page.page, page.size, 0)
+                scope.ids
+            }
+        }
+        val escaped = query.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        return jpa.search(TenantContext.tenantId(), scope == AuthorityScope.Unrestricted, ids, escaped, page.toPageable())
+            .toDomainPage().map { it.toDomain() }
+    }
 
     override fun existsByCode(code: String): Boolean = jpa.existsByCode(code)
 

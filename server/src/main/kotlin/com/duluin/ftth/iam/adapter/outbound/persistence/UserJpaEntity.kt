@@ -58,4 +58,7 @@ class UserJpaEntity(
     /** Langkah waktu TOTP terakhir yang terpakai — penangkal pemakaian ulang kode. */
     @Column(name = "totp_last_step")
     var totpLastStep: Long? = null,
+
+    @Column(name = "credential_version", nullable = false)
+    var credentialVersion: Long = 0,
 ) : TenantAwareJpaEntity(id)

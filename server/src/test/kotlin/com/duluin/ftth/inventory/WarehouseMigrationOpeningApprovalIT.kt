@@ -36,6 +36,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
     companion object {
         private var restart: Restart? = null
         private val legacy = List(5) { WarehouseMigrationLegacyFixture() }
+        private val history = List(2) { Triple(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()) }
         private val checkpoints = List(2) { UUID.randomUUID() }
         private val messages = List(2) { UUID.randomUUID() }
         private val orders = List(2) { UUID.randomUUID() }
@@ -44,6 +45,13 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             setOf(FulfillmentEffectType.INVENTORY, FulfillmentEffectType.WORK_ORDER))
         private val database = WarehouseSchemaDatabase("172").also { db -> db.ownerFixture { connection ->
             legacy.forEach { it.seed(connection) }
+            history.forEach { (tenant, customer, onu) -> connection.createStatement().use { sql ->
+                sql.execute("INSERT INTO tenant(id,slug,name) VALUES ('$tenant','migration-$tenant','Historical ONU')")
+                sql.execute("""INSERT INTO customer(id,tenant_id,code,name,address,location,location_status)
+                    VALUES ('$customer','$tenant','HISTORY','Historical customer','Original address',ST_SetSRID(ST_MakePoint(106,-6),4326),'LOCATED')""")
+                sql.execute("""INSERT INTO onu(id,tenant_id,customer_id,serial_number,model,status,installed_at)
+                    VALUES ('$onu','$tenant','$customer',' History-$onu ','Old ONU','ONLINE','2020-01-02T03:04:05Z')""")
+            } }
             repeat(2) { index ->
                 val old = legacy[index]
                 val actor = UUID.randomUUID()
@@ -523,6 +531,68 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
                 assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
         }
     }
+    @Test fun `finalized provenance only ONU permits reference activation while unreviewed history and serial reuse stay blocked`() {
+        history.forEachIndexed { index, (tenantId, customer, onu) ->
+            val token = tenant("migration-$tenantId")
+            database.ownerFixture { connection -> connection.createStatement().use { sql ->
+                sql.execute("SET app.tenant_id='$tenantId'")
+                sql.execute("UPDATE customer SET area_id='${area(token)}' WHERE id='$customer'")
+            } }
+            val place = create("locations", token, """{"code":"HISTORY","name":"Historical review","kind":"WAREHOUSE"}""")
+            val report = mapper.readTree(request("GET", "/api/v1/warehouse/provenance", token).contentAsString)
+            val started = send(token, "/api/v1/warehouse/provenance/batches", mapper.writeValueAsString(mapOf(
+                "expectedEpoch" to 0, "expectedPreservationHash" to report.path("preservationHash").asString())))
+            assertThat(started.statusCode()).withFailMessage(started.body()).isEqualTo(201)
+            val batchId = mapper.readTree(started.body()).path("batch").path("id").asString()
+            val root = "/api/v1/warehouse/provenance/batches/$batchId"
+            val cases = mapper.readTree(request("GET", "/api/v1/warehouse/provenance/cases", token).contentAsString).path("items").asSequence().toList()
+            val batch = Batch(token, "", legacy[0], batchId, cases, "", "")
+            try {
+                if (index == 0) resolve(batch, onu, "PROVENANCE_ONLY")
+                val reviewed = review(batch)
+                val opened = send(token, "$root/opening", mapper.writeValueAsString(mapOf(
+                    "expectedEpoch" to 1, "expectedReviewHash" to reviewed.path("reviewHash").asString(),
+                    "reviewLocationId" to place.path("id").asString(), "expectedReviewLocationRevision" to place.path("revision").asLong(),
+                    "migrationReference" to "Installed ONU is historical only", "reason" to "No physical opening stock")))
+                assertThat(opened.statusCode()).withFailMessage(opened.body()).isEqualTo(201)
+                val document = mapper.readTree(opened.body()).path("id").asString()
+                val checker = tiers(token, place.path("id").asString(), 1).single()
+                val approved = decide(checker.first, pending(token, document))
+                assertThat(approved.statusCode()).withFailMessage(diagnostic(approved)).isEqualTo(200)
+                finalized(token, batchId, document)
+                val drained = request("POST", "/api/v2/warehouse/workflow/drain", token, """{"expectedEpoch":2}""")
+                assertThat(drained.status).withFailMessage(drained.contentAsString).isEqualTo(200)
+                val activation = request("GET", "/api/v2/warehouse/workflow/review", token)
+                assertThat(activation.status).withFailMessage(activation.contentAsString).isEqualTo(200)
+                val snapshot = mapper.readTree(activation.contentAsString)
+                val issues = snapshot.path("issues").asSequence().map { it.asString() }.toList()
+                val payload = mapper.writeValueAsString(mapOf("expectedEpoch" to 3, "reviewHash" to snapshot.path("reviewHash").asString(),
+                    "reason" to "Historical identity remains reserved"))
+                val result = request("POST", "/api/v2/warehouse/workflow/activate", token, payload)
+                if (index == 1) {
+                    assertThat(issues).containsExactly("UNRESOLVED_STOCK_OR_IDENTITIES")
+                    assertThat(result.status).isEqualTo(409)
+                } else {
+                    assertThat(issues).withFailMessage(activation.contentAsString).isEmpty()
+                    assertThat(result.status).withFailMessage(result.contentAsString).isEqualTo(200)
+                    val serial = create("skus", token, """{"code":"NEW-ONU","name":"New ONU","tracking":"SERIAL","baseUnit":"EA"}""")
+                    val reused = request("POST", "/api/v2/warehouse/receipts", token, """{"warehouseId":"${place.path("id").asString()}",
+                        "lines":[{"skuId":"${serial.path("id").asString()}","quantityBase":"1","serials":[{"serial":"history-$onu"}]}]}""")
+                    assertThat(reused.status).withFailMessage(reused.contentAsString).isEqualTo(409)
+                }
+                fixture(token).transaction {
+                    assertThat(scalar("SELECT state FROM inventory_identity_claim WHERE canonical_value=warehouse_canonical_serial('History-$onu')")).isEqualTo("LEGACY_RESERVED")
+                    assertThat(scalar("SELECT serial_number FROM onu WHERE id='$onu'")).isEqualTo(" History-$onu ")
+                    for (table in listOf("inventory_balance_projection", "inventory_segment", "inventory_serialized_asset"))
+                        assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
+                }
+            } finally {
+                val prefix = "$tenantId/warehouse/migrations/$batchId/"
+                storage.list(tenantId.toString(), prefix).objects.forEach { storage.delete(it.key) }
+            }
+        }
+    }
+
     @Order(1)
     @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test fun `approved original asset admission retains obsolete candidate history while changed peer remains reserved`() {
@@ -567,6 +637,8 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             assertThat(finalizedBody.path("baselineTotals").path("EA").asString()).isEqualTo("1")
             assertThat(finalizedBody.path("cancellationCount").asInt()).isEqualTo(1)
             assertThat(finalizedBody.path("retainedIdentityCount").asInt()).isPositive()
+            val activationReview = mapper.readTree(request("GET", "/api/v2/warehouse/workflow/review", batch.token).contentAsString)
+            assertThat(activationReview.path("issues").asSequence().map { it.asString() }.toList()).contains("UNRESOLVED_STOCK_OR_IDENTITIES")
             val payload = finalizationInput(batch.id, document, finalizedBody.path("reviewHash").asString())
             assertThat(runInFailure(batch) { sql("DELETE FROM inventory_migration_finalization") }).isEqualTo("42501")
             val closed = java.util.concurrent.atomic.AtomicBoolean()
@@ -630,7 +702,7 @@ class WarehouseMigrationOpeningApprovalIT : WarehouseApprovalHttpFixture() {
             val (disabler, _) = user(batch.token, setOf("iam.user.update"))
             assertThat(request("POST", "/api/users/${batch.actor}/disable", disabler).status).isEqualTo(200)
             val denied = send(batch.token, path, payload, completed.first)
-            assertThat(denied.statusCode()).isEqualTo(403)
+            assertThat(denied.statusCode()).isEqualTo(401)
             assertThat(denied.body()).doesNotContain("finalizedBy", "reviewHash", "baselineTotals")
         } finally { cleanup(batch) }
     }

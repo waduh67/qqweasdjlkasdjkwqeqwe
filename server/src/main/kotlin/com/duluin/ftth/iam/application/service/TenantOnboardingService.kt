@@ -30,8 +30,6 @@ class TenantOnboardingService(
                 name = command.adminName,
                 password = command.adminPassword,
             )
-            // Role sistem "Teknisi" untuk aplikasi teknisi mobile — tersedia sejak onboarding.
-            provisioner.ensureTechnicianRole(tenant.id)
             created
         }
         // Provisioning langganan SaaS lewat event (bukan panggilan langsung) agar iam tak

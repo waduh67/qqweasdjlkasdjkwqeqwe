@@ -1,6 +1,6 @@
 import type { StockEvent } from '@/api/warehouse/stock'
 
-export const stockLink = (values: Readonly<Record<string, string>>) => `/warehouse/stock?${new URLSearchParams(values)}`
+export const stockLink = (values: Readonly<Record<string, string>>, archive = false) => `${archive ? '/warehouse/archive?section=stock&' : '/warehouse/stock?'}${new URLSearchParams(values)}`
 export const custodianLabels: Record<string, string> = { WAREHOUSE: 'Gudang', VEHICLE: 'Kendaraan', TECHNICIAN: 'Teknisi', CUSTOMER: 'Pelanggan', REPAIR: 'Servis', TRANSIT: 'Dalam perjalanan', LOST: 'Hilang', DISPOSED: 'Dihapuskan' }
 export const segmentLabels: Record<string, string> = { REEL: 'Reel asal', CUT: 'Potongan', REMNANT: 'Sisa potongan', BULK: 'Curah', SERIAL: 'Unit serial' }
 export const segmentStateLabels: Record<string, string> = { ACTIVE: 'Bagian aktif', SPLIT: 'Sudah dipecah', RETIRED: 'Selesai / dihentikan' }

@@ -19,7 +19,7 @@ class AndroidSecureOutbox(context: Context, userId: String) : SecureOutboxPort b
     userId,
 )
 
-private class AndroidKeystoreCipher : OutboxCipher {
+internal class AndroidKeystoreCipher : OutboxCipher {
     private val alias = "ftth.mobile.outbox.v1"
     private val version = "v1"
 

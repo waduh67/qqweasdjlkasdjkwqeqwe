@@ -17,13 +17,20 @@ class AuthViewAssembler(
     private val roleRepository: RoleRepository,
     private val permissionRepository: PermissionRepository,
     private val tenantApi: TenantApi,
+    private val owners: com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore,
 ) {
     fun permissionCodesFor(user: User): Set<String> {
+        if (!user.platformAdmin && owners.findUserId() == user.id) {
+            return permissionRepository.findAll().filter { it.active && !it.platformOnly }
+                .mapTo(HashSet()) { it.code.value }
+        }
         if (user.roleIds.isEmpty()) return emptySet()
         val permissionIds = roleRepository.findAllByIds(user.roleIds)
             .flatMapTo(HashSet()) { it.permissionIds }
         if (permissionIds.isEmpty()) return emptySet()
-        return permissionRepository.findAllByIds(permissionIds).mapTo(HashSet()) { it.code.value }
+        return permissionRepository.findAllByIds(permissionIds)
+            .filter { it.active && (user.platformAdmin || !it.platformOnly) }
+            .mapTo(HashSet()) { it.code.value }
     }
 
     fun toAuthUserView(user: User, permissionCodes: Set<String>): AuthUserView {
@@ -37,7 +44,7 @@ class AuthViewAssembler(
             platformAdmin = user.platformAdmin,
             roleIds = user.roleIds.toList(),
             permissions = permissionCodes.sorted(),
-            areaIds = user.areaIds.toList(),
+            areaIds = if (owners.findUserId() == user.id) emptyList() else user.areaIds.toList(),
             twoFactorEnabled = user.twoFactorEnabled,
         )
     }

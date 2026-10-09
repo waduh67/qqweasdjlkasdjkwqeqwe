@@ -24,7 +24,7 @@ class WarehouseDelegationService(private val cutovers: InventoryTenantCutoverApi
     fun create(input: WarehouseDelegationInput, key: String): String {
         receiptKey(key)
         if (input.expectedRevision != 0L || input.approverId == input.delegateId) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
+        val cutover = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_CONFIGURATION)
         val change = authority.lockForChange()
         val current = authority.lockCurrent()
         access.permission(current, "inventory.approval.manage")

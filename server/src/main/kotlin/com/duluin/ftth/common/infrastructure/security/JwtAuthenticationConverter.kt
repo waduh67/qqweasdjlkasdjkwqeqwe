@@ -10,8 +10,8 @@ import java.util.UUID
 
 /**
  * Mengubah [Jwt] yang sudah tervalidasi menjadi [FtthAuthenticationToken] dengan
- * principal [AuthenticatedUser] — membaca izin & area dari klaim, bukan dari DB,
- * sehingga request tetap stateless (staleness dibatasi TTL access-token).
+ * principal [AuthenticatedUser]. Decoder memeriksa versi kredensial; mutasi
+ * memeriksa ulang otoritas terkini di bawah IAM fence.
  */
 @Component
 class JwtAuthenticationConverter : Converter<Jwt, AbstractAuthenticationToken> {
@@ -26,6 +26,7 @@ class JwtAuthenticationConverter : Converter<Jwt, AbstractAuthenticationToken> {
             permissions = jwt.getClaimAsStringList(JwtClaims.PERMISSIONS)?.toSet() ?: emptySet(),
             areaIds = jwt.getClaimAsStringList(JwtClaims.AREAS)?.map(UUID::fromString)?.toSet() ?: emptySet(),
             sessionId = jwt.id,
+            credentialVersion = jwt.credentialVersion(),
         )
         return FtthAuthenticationToken(user)
     }

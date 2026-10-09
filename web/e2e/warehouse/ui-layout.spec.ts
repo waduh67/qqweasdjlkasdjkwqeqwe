@@ -6,7 +6,7 @@ import { signup } from './helpers'
 test.use({ serviceWorkers: 'allow' })
 
 test('operator pages remain readable and form controls fit the viewport', async ({ page }, testInfo) => {
-  test.setTimeout(360_000)
+  test.setTimeout(480_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   const admin = await signup(page)
@@ -30,6 +30,8 @@ test('operator pages remain readable and form controls fit the viewport', async 
     await page.getByLabel(/^Nama\s*\*?$/).fill(name)
     await page.getByLabel('Telepon', { exact: true }).fill(phone)
     await page.getByLabel(/^Alamat\s*\*?$/).fill(address)
+    await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
+    await expect(page.getByRole('dialog').getByText(name, { exact: true })).toBeVisible()
     const response = page.waitForResponse(response => response.url().endsWith('/api/customers') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Simpan', exact: true }).click()
     expect((await response).ok()).toBeTruthy()
@@ -50,11 +52,15 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   const routes = ['/', '/customers', '/inventory', '/invoices', '/catalog', '/helpdesk', '/my-work-orders', '/my-materials', '/work-orders', '/warehouse', '/warehouse/catalog', '/warehouse/stock', '/warehouse/receipts', '/warehouse/requests', '/warehouse/transfers', '/warehouse/returns', '/warehouse/counts', '/warehouse/reports', '/monitoring', '/bras', '/acs', '/vpn', '/roles', '/users', '/areas', '/notifications', '/subscription', '/express-psb', '/import-customers', '/import-pppoe', '/hotspot', '/network-provisioning', '/provisioning', '/incidents', '/my-visits', '/audit', '/payment-gateway', '/tax-settings', '/reports', '/account/security', '/warehouse/approvals', '/warehouse/replenishment', '/warehouse/provenance', '/warehouse/settings']
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(value => localStorage.setItem('ftth.theme', value), theme)
   for (const route of routes) {
     await page.goto(route)
     await expect(page.getByRole('button', { name: 'Keluar', exact: true })).toBeVisible()
-    await page.waitForLoadState('networkidle')
-    expect(new URL(page.url()).pathname, `${route} reached its own page`).toBe(route)
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
+    await expect(page.getByRole('status', { name: 'Memuat', exact: true })).toHaveCount(0)
+    const destination = route === '/notifications' ? '/notifications/whatsapp' : route
+    expect(new URL(page.url()).pathname, `${route} reached its own page`).toBe(destination)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} page overflow`).toBeTruthy()
     if (route === '/subscription') {
       const renew = page.getByRole('button', { name: /^Perpanjang/ })
@@ -72,11 +78,15 @@ test('operator pages remain readable and form controls fit the viewport', async 
       await expect(action).toBeInViewport()
       await grid.evaluate(element => { element.scrollLeft = 0 })
     }
-    await page.screenshot({ path: testInfo.outputPath(`${route === '/' ? 'dashboard' : route.slice(1).replaceAll('/', '-')}.png`), fullPage: true, animations: 'disabled' })
+    await page.screenshot({ path: testInfo.outputPath(`${theme}-${route === '/' ? 'dashboard' : route.slice(1).replaceAll('/', '-')}.png`), fullPage: true, animations: 'disabled' })
+  }
   }
   await page.goto('/customers')
   await page.getByRole('button', { name: 'Tambah pelanggan', exact: true }).click()
   await expect(page.getByLabel(/^Nama\s*\*?$/)).toBeVisible()
+  await page.locator('.resource-form-dialog').evaluate(async element => {
+    await Promise.allSettled(element.getAnimations({ subtree: true }).filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished))
+  })
   if (page.viewportSize()!.width >= 820) {
     const control = page.locator('.blade-customer-form .app-control').first()
     const bounds = await control.boundingBox()
@@ -89,7 +99,7 @@ test('operator pages remain readable and form controls fit the viewport', async 
     const bounds = await page.getByLabel(label, { exact: true }).boundingBox()
     expect(bounds!.width, `${label} remains readable in the nested location form`).toBeGreaterThan(140)
   }
-  for (const field of await page.locator('.azure-blade input:visible, .azure-blade select:visible, .azure-blade textarea:visible').all()) {
+  for (const field of await page.locator('.resource-form-dialog input:visible, .resource-form-dialog select:visible, .resource-form-dialog textarea:visible').all()) {
     await field.scrollIntoViewIfNeeded()
     const bounds = await field.boundingBox()
     expect(bounds, 'field has a layout box').not.toBeNull()
@@ -100,9 +110,9 @@ test('operator pages remain readable and form controls fit the viewport', async 
   const name = page.getByLabel(/^Nama\s*\*?$/)
   await name.fill('Perubahan belum disimpan')
   await name.press('Escape')
-  const confirmation = page.getByRole('dialog', { name: 'Tutup panel?' })
+  const confirmation = page.getByRole('dialog', { name: 'Buang perubahan?' })
   await expect(confirmation).toBeVisible()
-  const cancel = confirmation.getByRole('button', { name: 'Batal', exact: true })
+  const cancel = confirmation.getByRole('button', { name: 'Lanjutkan pengisian', exact: true })
   await cancel.focus()
   await expect(cancel).toBeFocused()
   await page.keyboard.press('Enter')
@@ -110,8 +120,8 @@ test('operator pages remain readable and form controls fit the viewport', async 
   await expect(name).toBeFocused()
   await expect(name).toHaveValue('Perubahan belum disimpan')
   await name.press('Escape')
-  await confirmation.getByRole('button', { name: 'Tutup tanpa simpan' }).click()
-  await expect(page.locator('.azure-blade')).not.toBeVisible()
+  await confirmation.getByRole('button', { name: 'Buang perubahan', exact: true }).click()
+  await expect(page.locator('.resource-form-dialog')).not.toBeVisible()
   await page.getByRole('button', { name: 'Budi Santoso', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Budi Santoso', exact: true })).toBeVisible()
   await page.waitForLoadState('networkidle')

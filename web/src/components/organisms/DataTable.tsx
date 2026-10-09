@@ -208,6 +208,7 @@ export function DataTable<T>({
         renderCell: (row) => {
           const actions = column.inlineActions?.(row) ?? []
           const hasInlineControls = !!column.onCellClick || actions.length > 0
+          const description = column.description?.(row)
           return (
             <>
               <div className="table-cell-content">
@@ -226,7 +227,7 @@ export function DataTable<T>({
               ) : (
                 column.cell(row)
               )}
-              {column.description && <span className="resource-cell-description"> · {column.description(row)}</span>}
+              {description && <span className="resource-cell-description"> · {description}</span>}
               </div>
               {actions.length > 0 && (
                 <TableCellActions visible={hasInlineControls}>
@@ -430,7 +431,7 @@ export function DataTable<T>({
                           }
                           style={{ flex: isActionCell ? undefined : `1 1 ${column?.minWidth ?? 168}px`, textAlign: column?.align, justifyContent: column?.align === 'right' ? 'flex-end' : undefined }}
                         >
-                          {renderCell(item)}
+                          {warehousePresentation ? <><span className="warehouse-mobile-label" aria-hidden="true">{column?.header ?? 'Aksi'}</span><div className="warehouse-cell-value">{renderCell(item)}</div></> : renderCell(item)}
                         </DataGridCell>
                       )
                     }}

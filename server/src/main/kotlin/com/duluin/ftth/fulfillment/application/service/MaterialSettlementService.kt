@@ -28,7 +28,7 @@ class MaterialSettlementService(
     private val reworkContext: WorkOrderMaterialReworkApi,
 ) : WorkOrderMaterialLifecyclePort {
     override fun beforeChange(workOrderId: UUID, change: MaterialLifecycleChange) {
-        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE).assertHeld()
         authority.lockCurrent().fence.assertHeld()
         if (!inventory.participates(workOrderId)) return
         val context = context(workOrderId).second

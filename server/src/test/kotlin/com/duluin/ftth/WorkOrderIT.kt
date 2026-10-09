@@ -119,18 +119,18 @@ class WorkOrderIT {
         val roles = get("/api/roles", token)
         val names = JsonPath.read<List<String>>(roles, "$[*].name")
         val ids = JsonPath.read<List<String>>(roles, "$[*].id")
-        val roleId = ids[names.indexOf("Teknisi")]
+        val roleId = ids[names.indexOf("Teknisi NE")]
         return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"$name","password":"$pass","roleIds":["$roleId"]}"""))
     }
 
-    private fun newApprover(token: String): String {
-        val roles = get("/api/roles", token)
-        val names = JsonPath.read<List<String>>(roles, "$[*].name")
-        val ids = JsonPath.read<List<String>>(roles, "$[*].id")
-        val roleIndex = names.indexOfFirst { it.contains("Admin", ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+    private fun newApprover(token: String, workOrderId: String): String {
+        val permissions = JsonPath.read<List<String>>(get("/api/permissions", token), "$[?(@.platformOnly==false)].id")
+        val permissionIds = permissions.joinToString(",") { "\"$it\"" }
+        val roleId = id(post("/api/roles", token, """{"name":"Legacy approver ${uniq()}","permissionIds":[$permissionIds]}"""))
         val email = "approver-${uniq()}@x.test"
-        val areas = JsonPath.read<List<String>>(get("/api/me", token), "$.areaIds").joinToString(",") { "\"$it\"" }
-        post("/api/users", token, "{\"email\":\"$email\",\"name\":\"Approver\",\"password\":\"$pass\",\"roleIds\":[\"${ids[roleIndex]}\"],\"areaIds\":[$areas]}", 201)
+        val area = JsonPath.read<String>(get("/api/work-orders/$workOrderId", token), "$.workOrder.areaId")
+        val areas = "\"$area\""
+        post("/api/users", token, "{\"email\":\"$email\",\"name\":\"Approver\",\"password\":\"$pass\",\"roleIds\":[\"$roleId\"],\"areaIds\":[$areas]}", 201)
         val slug = JsonPath.read<String>(get("/api/me", token), "$.tenantSlug")
         return login(slug, email)
     }
@@ -382,7 +382,7 @@ class WorkOrderIT {
         WorkOrderSettlementTestSetup.prepare(mockMvc, token, woId)
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
-        return woId to newApprover(token)
+        return woId to newApprover(token, woId)
     }
 
     @Test
@@ -507,7 +507,7 @@ class WorkOrderIT {
 
         post("/api/work-orders/$woId/complete", token, completionBody(woId, token, "Terpasang"), 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
-        post("/api/work-orders/$woId/approve", newApprover(token), "{\"note\":\"Disetujui\"}", 200)
+        post("/api/work-orders/$woId/approve", newApprover(token, woId), "{\"note\":\"Disetujui\"}", 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
 
     }
@@ -532,7 +532,7 @@ class WorkOrderIT {
         post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
 
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
-        post("/api/work-orders/$woId/approve", newApprover(token), "{\"note\":\"Disetujui\"}", 200)
+        post("/api/work-orders/$woId/approve", newApprover(token, woId), "{\"note\":\"Disetujui\"}", 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("TERMINATED")
     }
 
@@ -563,12 +563,11 @@ class WorkOrderIT {
         onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", adminEmail, "Admin", pass))
         val adminToken = login(slug, adminEmail)
 
-        // Role sistem "Teknisi" tersedia sejak onboarding.
         val roles = get("/api/roles", adminToken)
         val roleNames = JsonPath.read<List<String>>(roles, "$[*].name")
         val roleIds = JsonPath.read<List<String>>(roles, "$[*].id")
-        assertThat(roleNames).contains("Teknisi")
-        val teknisiRoleId = roleIds[roleNames.indexOf("Teknisi")]
+        assertThat(roleNames).contains("Teknisi NE", "Teknisi FO")
+        val teknisiRoleId = roleIds[roleNames.indexOf("Teknisi NE")]
 
         // Dua teknisi ber-role Teknisi.
         val tech1Email = "tech1-${uniq()}@x.test"
@@ -613,7 +612,7 @@ class WorkOrderIT {
         val roles = get("/api/roles", adminToken)
         val roleNames = JsonPath.read<List<String>>(roles, "$[*].name")
         val roleIds = JsonPath.read<List<String>>(roles, "$[*].id")
-        val teknisiRoleId = roleIds[roleNames.indexOf("Teknisi")]
+        val teknisiRoleId = roleIds[roleNames.indexOf("Teknisi FO")]
 
         fun teknisi(name: String): Pair<String, String> {
             val email = "tech-${uniq()}@x.test"
@@ -673,7 +672,7 @@ class WorkOrderIT {
         val roles = get("/api/roles", adminToken)
         val roleNames = JsonPath.read<List<String>>(roles, "$[*].name")
         val roleIds = JsonPath.read<List<String>>(roles, "$[*].id")
-        val technicianRoleId = roleIds[roleNames.indexOf("Teknisi")]
+        val technicianRoleId = roleIds[roleNames.indexOf("Teknisi NE")]
         val technicianEmail = "visit-tech-${uniq()}@x.test"
         val technicianId = id(post("/api/users", adminToken, """{"email":"$technicianEmail","name":"Visit Tech","password":"$pass","roleIds":["$technicianRoleId"]}"""))
         val technicianToken = login(JsonPath.read<String>(get("/api/me", adminToken), "$.tenantSlug"), technicianEmail)

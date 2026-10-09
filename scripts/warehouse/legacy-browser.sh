@@ -4,6 +4,9 @@ set -euo pipefail
 source "$(dirname -- "${BASH_SOURCE[0]}")/test-environment.sh"
 umask 077
 [[ $# == 0 ]] || refuse 'legacy-browser.sh takes no arguments; uses a new owned database each run'
+for dependency in jq python3 node npm curl flock; do
+    command -v "$dependency" >/dev/null || refuse "missing QA dependency: $dependency"
+done
 reject_overrides
 load_environment
 exec 9>"$RUNTIME/warehouse.lock"
@@ -47,6 +50,15 @@ npm --prefix "$LEGACY_BASE/web" run build
 (cd "$ROOT" && timeout --kill-after=30s 1800s ./gradlew :server:bootJar --no-parallel)
 npm --prefix "$ROOT/web" run typecheck:warehouse-e2e
 npm --prefix "$ROOT/web" run build
+CURRENT_SCHEMA_VERSION=$(python3 - "$ROOT/server/src/main/resources/db/migration" <<'PY'
+from pathlib import Path
+import re, sys
+versions = [int(match.group(1)) for path in Path(sys.argv[1]).glob('V*__*.sql')
+            if (match := re.fullmatch(r'V(\d+)__.+\.sql', path.name))]
+assert versions and len(versions) == len(set(versions))
+print(max(versions))
+PY
+)
 read -r CURRENT_JAR < "$ROOT/server/build/warehouse/boot-jar-path.txt"
 [[ -f "$CURRENT_JAR" && "$CURRENT_JAR" == "$ROOT/server/build/libs/"*.jar && "$CURRENT_JAR" != *-plain.jar ]] || refuse 'invalid current bootJar metadata'
 LEGACY_JARS=()
@@ -188,12 +200,12 @@ WHERE sku.id=:'sku_id'::uuid AND customer.id=:'customer_id'::uuid AND sku.code='
 SQL
 )
     [[ "$preflight_tenant" =~ ^[a-f0-9-]{36}$ ]] || refuse 'Upgraded browser SKU/customer tenant identity mismatch'
-    legacy_preflight_probe 179 MM ENFORCED > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-positive.txt"
+    legacy_preflight_probe "$CURRENT_SCHEMA_VERSION" MM ENFORCED > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-positive.txt"
     for gate in migration unit cutover; do
         case "$gate" in
             migration) version=170; unit=MM; cutover=ENFORCED; message='migration mismatch' ;;
-            unit) version=179; unit=EA; cutover=ENFORCED; message='SKU unit mismatch' ;;
-            cutover) version=179; unit=MM; cutover=LEGACY; message='cutover mismatch' ;;
+            unit) version=$CURRENT_SCHEMA_VERSION; unit=EA; cutover=ENFORCED; message='SKU unit mismatch' ;;
+            cutover) version=$CURRENT_SCHEMA_VERSION; unit=MM; cutover=LEGACY; message='cutover mismatch' ;;
         esac
         if legacy_preflight_probe "$version" "$unit" "$cutover" > "$WAREHOUSE_LEGACY_RUN_DIR/preflight-$preflight_index-$gate.txt" 2>&1; then
             refuse "Wrong $gate passed upgraded-database preflight"
@@ -202,7 +214,7 @@ SQL
     done
     preflight_index=$((preflight_index + 1))
 done
-python3 - "$WAREHOUSE_LEGACY_RUN_DIR" "$ROOT/scripts/warehouse/preflight.sql" <<'PY'
+python3 - "$WAREHOUSE_LEGACY_RUN_DIR" "$ROOT/scripts/warehouse/preflight.sql" "$CURRENT_SCHEMA_VERSION" <<'PY'
 from pathlib import Path
 import hashlib, json, sys
 root = Path(sys.argv[1])
@@ -213,23 +225,33 @@ for index in range(2):
     assert len(rows) == 1
     row = rows[0]
     assert row['applicationRole'] == 'warehouse_app' and row['schema'] == 'public'
-    assert row['version'] == '179' and row['cutover'] == 'ENFORCED'
+    assert row['version'] == sys.argv[3] and row['cutover'] == 'ENFORCED'
     assert row['customers'] == row['onus'] == 1 and row['positions'] == 0 and row['verifiedQuantityByUnit'] == {}
     probes.append(row)
 (root / 'preflight-verification.json').write_text(json.dumps({'status': 'PASSED', 'schemaBefore': '172',
-    'schemaAfter': '179', 'readOnly': True, 'positiveProbes': 2, 'negativeProbes': 6,
+    'schemaAfter': sys.argv[3], 'readOnly': True, 'positiveProbes': 2, 'negativeProbes': 6,
     'negativeReasons': ['migration mismatch', 'SKU unit mismatch', 'cutover mismatch'], 'rows': probes,
     'preflightSqlSha256': hashlib.sha256(Path(sys.argv[2]).read_bytes()).hexdigest(),
     'reports': {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in root.glob('preflight-*.txt')}}, indent=2) + '\n')
 print('PASS: upgraded database preflight, two positive and six negative probes, zero invented stock')
 PY
 
+browser_phase transition
+snapshot transition
+stop_owned
+start_owned backend java -jar "$CURRENT_JAR"
+await_json "$WAREHOUSE_E2E_BACKEND_URL/actuator/health"
+preview_web "$ROOT"
+await_json "$WAREHOUSE_E2E_WEB_URL/actuator/health"
+browser_phase reference-restart
+snapshot reference-restart
+
 [[ $(shared_function_fingerprint) == "$SHARED_FUNCTIONS_BEFORE" ]] || refuse 'legacy fixture changed shared QA function definitions'
 python3 - "$WAREHOUSE_LEGACY_RUN_DIR" "$LEGACY_HEAD" "$CURRENT_JAR" "${LEGACY_JARS[0]}" <<'PY'
 from pathlib import Path
 import hashlib,json,sys,subprocess
 run=Path(sys.argv[1]); before=json.loads((run/'before-database.json').read_text())
-for phase in ['after','restart']:
+for phase in ['after','restart','transition','reference-restart']:
     current=json.loads((run/f'{phase}-database.json').read_text())
     assert current['customers']==before['customers'] and current['onus']==before['onus']
     versions={m['version']:m['checksum'] for m in current['migrations']}
@@ -237,8 +259,8 @@ for phase in ['after','restart']:
 assert len(before['customers'])==2 and len(before['onus'])==2
 (run/'verification.json').write_text(json.dumps({'legacyHead':sys.argv[2], 'currentHead':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
     'jars':{kind:hashlib.sha256(Path(p).read_bytes()).hexdigest() for kind,p in zip(['current','legacy'],sys.argv[3:])},
-    'projects':['warehouse-desktop','warehouse-mobile'],'phases':['before','after','restart'],'tests':6,
+    'projects':['warehouse-desktop','warehouse-mobile'],'phases':['before','after','restart','transition','reference-restart'],'tests':10,
     'upgradedCatalogSkus':2,'readOnlyPreflight':json.loads((run/'preflight-verification.json').read_text()),
     'preservedCustomers':2,'preservedOnus':2,'historicalChecksumsUnchanged':True,'databaseRetained':True,'separateDatabase':True,'sharedFunctionDefinitionsUnchanged':True},indent=2)+'\n')
-print('PASS: historical UI, independent cutover, restart, preserved identities and applied migration checksums (6 real browser tests)')
+print('PASS: historical UI, independent cutover, writer activation, archive, exact stock and restarts (10 real browser tests)')
 PY

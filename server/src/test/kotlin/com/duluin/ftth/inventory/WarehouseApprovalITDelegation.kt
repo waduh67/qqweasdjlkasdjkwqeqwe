@@ -27,11 +27,14 @@ class WarehouseApprovalITDelegation : WarehouseApprovalHttpFixture() {
         val setup = setupReceipt()
         val checker = approver(setup.token, listOf(setup.source, setup.inspection))
         val delegate = approver(setup.token, listOf(setup.source, setup.inspection))
-        val maker = mapper.readTree(request("GET", "/api/me", setup.token).contentAsString).path("id").asString()
-        configure(setup.token, policyBody(listOf(setup.inspection), listOf(checker.second, maker, delegate.second)))
-        val grant = request("POST", "/api/v1/warehouse/settings/delegations", setup.token, delegation(maker, delegate.second, setup.inspection))
+        val maker = approver(setup.token, listOf(setup.source, setup.inspection), setOf(
+            "inventory.approval.view", "inventory.approval.decide", "inventory.approval.request",
+            "inventory.receipt.view", "inventory.receipt.manage"))
+        configure(setup.token, policyBody(listOf(setup.inspection), listOf(checker.second, maker.second, delegate.second)))
+        val grant = request("POST", "/api/v1/warehouse/settings/delegations", setup.token, delegation(maker.second, delegate.second, setup.inspection))
         assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
-        val case = submit(setup, checker, draft(setup, costLine(setup)).path("id").asString())
+        val requested = setup.copy(token = maker.first)
+        val case = submit(requested, checker, draft(requested, costLine(requested)).path("id").asString())
         assertThat(decide(case, delegate.first).status).isEqualTo(403)
         counts(case, 0, 0)
     }

@@ -35,7 +35,10 @@ internal class PostingDocuments(private val sql: PostingSql) {
                 LockedDocument(it.getLong("revision"),it.getLong("cutover_epoch"),it.getString("kind"),it.optionalUuid("customer_id"),it.optionalUuid("work_order_id"))
             }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
             if(id == command.documentId && row.revision != command.expectedRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
-            if(id == command.documentId && row.epoch != epoch) sql.fail(WarehouseErrorCode.STALE_CUTOVER)
+            if(id == command.documentId && row.epoch != epoch && sql.value("""SELECT 1 FROM inventory_tenant_cutover
+                WHERE tenant_id=? AND state='ENFORCED' AND workflow_mode='DRAINING' AND epoch=?
+                    AND draining_from_epoch=? AND epoch=draining_from_epoch+1""",sql.tenant,epoch,row.epoch)==null)
+                sql.fail(WarehouseErrorCode.STALE_CUTOVER)
             if(source != null && id == source.first && row.revision != source.second) sql.fail(WarehouseErrorCode.STALE_REVISION)
             locked[id]=row
         }

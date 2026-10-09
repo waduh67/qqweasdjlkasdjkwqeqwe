@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event'
 import { selectControl } from '@/test/selectControl'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { tokenStore } from '@/api/client'
 import { receiptFixture, receiptIds, receiptPieceFixture } from '@/test/warehouseReceiptFixture'
@@ -194,11 +194,12 @@ it('creates a supplier in a child layer and selects it without submitting or rep
   render(<MemoryRouter><WarehouseReceiptEditor onClose={vi.fn()} onSaved={saved} onReload={vi.fn()} /></MemoryRouter>)
   const user = userEvent.setup(); await user.type(screen.getByRole('textbox', { name: 'Referensi surat jalan' }), 'SJ-KEEP')
   await user.click(screen.getByRole('button', { name: 'Tambah pemasok' }))
-  await user.type(screen.getByRole('textbox', { name: 'Kode pemasok' }), 'NEW')
-  await user.type(screen.getByRole('textbox', { name: 'Nama pemasok' }), 'Pemasok baru')
-  await user.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+  const child = await screen.findByRole('dialog', { name: 'Tambah pemasok' })
+  await user.type(await within(child).findByRole('textbox', { name: 'Kode pemasok' }), 'NEW')
+  await user.type(within(child).getByRole('textbox', { name: 'Nama pemasok' }), 'Pemasok baru')
+  await user.click(within(child).getByRole('button', { name: 'Tinjau + buat' }))
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
-  await user.click(screen.getByRole('button', { name: 'Simpan pemasok' }))
+  await user.click(within(child).getByRole('button', { name: 'Simpan pemasok' }))
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Pemasok' })).toHaveProperty('value', 'Pemasok baru · NEW'))
   expect(screen.getByRole('textbox', { name: 'Referensi surat jalan' })).toHaveProperty('value', 'SJ-KEEP')
   expect(saved).not.toHaveBeenCalled()

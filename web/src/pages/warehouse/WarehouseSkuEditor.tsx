@@ -10,7 +10,7 @@ import { WarehouseCommandDialog } from '@/components/organisms/warehouse/Warehou
 import { WarehouseQuantityField } from '@/components/organisms/warehouse/WarehouseQuantity'
 
 const TRACKING_LABELS = { SERIAL: 'Per perangkat (serial)', LOT: 'Per lot / gulungan', BULK: 'Curah / jumlah' }
-export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }: { row: WarehouseSku | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseSku) => void; onReload: () => void }) {
+export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload, save = saveSku, reference = false }: { row: WarehouseSku | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseSku) => void; onReload: () => void; save?: typeof saveSku; reference?: boolean }) {
   const formId = useId()
   const [code, setCode] = useState(row?.code ?? '')
   const [name, setName] = useState(row?.name ?? '')
@@ -19,7 +19,7 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
   const [category, setCategory] = useState(row?.category ?? '')
   const [model, setModel] = useState(row?.model ?? '')
   const [ownership, setOwnership] = useState<WarehouseSku['allowedOwnershipModes']>(row?.allowedOwnershipModes ?? ['LOAN', 'SALE'])
-  const [inspection, setInspection] = useState(row?.inspectionRequired ?? true)
+  const [inspection, setInspection] = useState(row?.inspectionRequired ?? !reference)
   const [minimum, setMinimum] = useState(row ? formatBaseQuantity(row.minimumQuantityBase, row.baseUnit) : '0')
   const [error, setError] = useState<string | null>(null)
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseSku> | null>(null)
@@ -28,7 +28,7 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
     try {
       if (ownership.length === 0) throw new Error('Pilih sedikitnya satu cara penyerahan.')
       const quantity = quantityFromInput(minimum, unit, true)
-      setOperation(saveSku({ code: code.trim(), name: name.trim(), tracking, baseUnit: unit, category: category.trim() || null,
+      setOperation(save({ code: code.trim(), name: name.trim(), tracking, baseUnit: unit, category: category.trim() || null,
         model: model.trim() || null, allowedOwnershipModes: ownership, inspectionRequired: inspection, minimumQuantityBase: quantity,
         ...(row ? { expectedRevision: row.revision } : {}) }, row?.id))
       setError(null)
@@ -37,7 +37,7 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
   return <>
     <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan barang" command={operation} confirmLabel="Simpan barang" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{TRACKING_LABELS[tracking]} · {displayUnit(unit)} · Minimum {minimum} {displayUnit(unit)}</p>
-        <p>{inspection ? 'Wajib pemeriksaan' : 'Pemeriksaan sesuai penerimaan'} · {ownership.map(mode => mode === 'LOAN' ? 'Pinjaman' : 'Penjualan').join(', ')}</p></>} />)} title={readOnly ? 'Detail barang' : row ? 'Ubah barang' : 'Tambah barang'} onClose={onClose} footer={<>
+        <p>{reference ? 'Katalog ini belum menambah stok fisik.' : inspection ? 'Wajib pemeriksaan' : 'Pemeriksaan sesuai penerimaan'} · {ownership.map(mode => mode === 'LOAN' ? 'Pinjaman' : 'Penjualan').join(', ')}</p></>} />)} title={readOnly ? 'Detail barang' : row ? 'Ubah barang' : 'Tambah barang'} onClose={onClose} footer={<>
       <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
     </>}>
       <form id={formId} className="stack" onSubmit={prepare}>
@@ -57,7 +57,7 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload }
         </div>
         <fieldset className="resource-choice-group" disabled={readOnly}><legend>Kepemilikan</legend><div>{(['LOAN', 'SALE'] as const).map(mode => <Checkbox key={mode} label={mode === 'LOAN' ? 'Pinjaman (milik ISP)' : 'Penjualan (milik pelanggan)'} checked={ownership.includes(mode)}
           onChange={(_, data) => setOwnership(current => data.checked === true ? [...current, mode] : current.filter(item => item !== mode))} />)}</div></fieldset>
-        <Checkbox className="resource-choice-control" label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />
+        {reference ? <p className="muted">Stok bertambah saat penerimaan. Minimum dihitung pada setiap gudang, terpisah dari material di tangan teknisi.</p> : <Checkbox className="resource-choice-control" label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />}
         {row && <p className="muted">Satuan dan pelacakan tidak dapat diubah setelah barang memiliki riwayat.</p>}
         {error && <p role="alert" className="error">{error}</p>}
       </form>

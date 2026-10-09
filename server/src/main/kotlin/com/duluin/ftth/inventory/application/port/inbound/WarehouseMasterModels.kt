@@ -38,7 +38,7 @@ data class IdentityLookupSnapshot(val assetId: UUID, val skuId: UUID?, val seria
     val mac: String?, val locationId: UUID, val legacyUnresolved: Boolean)
 data class MasterFilter(val page: Int = 0, val size: Int = 25, val search: String? = null,
     val code: String? = null, val name: String? = null, val state: WarehouseMasterState? = null,
-    val sort: String = "code", val direction: String = "asc")
+    val sort: String = "code", val direction: String = "asc", val locationKinds: Set<LocationKind>? = null)
 
 fun masterFailure(code: WarehouseErrorCode, message: String = code.name): Nothing =
     throw WarehouseContractException(WarehouseError(code, message))

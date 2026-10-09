@@ -90,6 +90,8 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         masters.lockTopology()
         eligibility.view(preview, current)
         val source = store.source(preview.snapshot.evaluation.sourceDocumentId)
+        val effectCutover = cutovers.lockForCommand(cutover.snapshot.epoch, if (source.kind == "OPENING_BALANCE")
+            WarehouseOperationClass.MIGRATION_APPROVAL else WarehouseOperationClass.ORDINARY_STOCK)
         val record = store.get(input.requestId, true)
         val hash = hash(input)
         replay("decide", key, hash, current)?.let { return it }
@@ -120,7 +122,10 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
         val invalid = when {
             lifetime.document(attempt.sourceDocumentId) != null -> WarehouseApprovalStatus.EXPIRED
             now >= record.expiresAt -> WarehouseApprovalStatus.EXPIRED
-            cutover.snapshot.epoch != record.snapshot.cutoverEpoch || cutover.snapshot.state !=
+            (cutover.snapshot.epoch != record.snapshot.cutoverEpoch && !(source.kind != "OPENING_BALANCE" &&
+                cutover.snapshot.workflow == WarehouseWorkflow.DRAINING &&
+                cutover.snapshot.drainingFromEpoch == record.snapshot.cutoverEpoch &&
+                cutover.snapshot.epoch == record.snapshot.cutoverEpoch + 1)) || cutover.snapshot.state !=
                 (if (source.kind == "OPENING_BALANCE") WarehouseCutoverState.VALIDATING else WarehouseCutoverState.ENFORCED) -> WarehouseApprovalStatus.STALE
             source.revision != record.snapshot.evaluation.sourceRevision || WarehouseCanonicalPayload.parse(source.content).hash != record.snapshot.sourceHash -> WarehouseApprovalStatus.STALE
             else -> null
@@ -153,7 +158,7 @@ class DurableApprovalService(private val cutovers: InventoryTenantCutoverApi, pr
             val operation = PostingOperation(requireNotNull(operationId), "warehouse.approval.effect", record.id.toString(), current.fence.identity.userId,
                 record.snapshot.evaluation.sourceDocumentId, "approval:${record.id}", record.snapshot.sourceHash,
                 when (source.kind) { "TITLE_CORRECTION", "RETURN_TITLE" -> "TITLE_REACQUISITION"; "ADJUSTMENT" -> "TRANSFER_REMAINDER"; "COUNT" -> "COUNT_VARIANCE"; "LOSS", "SCRAP", "OPENING_BALANCE" -> source.kind; "ASSET_LOSS" -> "LOSS"; "DISPOSITION_REVERSAL" -> "DISPOSITION_REVERSED"; else -> "RECEIVE" }, 200, result, current.fence.epoch)
-            owner(source.kind).apply(record, operation, current, cutover, requireNotNull(postingApproval))
+            owner(source.kind).apply(record, operation, current, effectCutover, requireNotNull(postingApproval))
             probe(WarehouseApprovalStage.OWNER_EFFECT, record.id)
             val event = store.event(operation.id)
             check(inbox.consume(event, "warehouse.approval.receipt") { })

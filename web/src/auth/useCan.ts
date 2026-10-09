@@ -25,22 +25,23 @@ const ALWAYS_ALLOWED = ['billing.subscription.renew']
  */
 export function useCan() {
   const { user, readOnly } = useAuth()
+  const hasPermission = useCallback((permission: string): boolean =>
+    !!user && (user.platformAdmin || user.permissions.includes(permission)), [user])
 
   const can = useCallback(
     (permission: string): boolean => {
-      if (!user) return false
-      if (!user.platformAdmin && !user.permissions.includes(permission)) return false
+      if (!hasPermission(permission)) return false
       if (readOnly && isWrite(permission) && !ALWAYS_ALLOWED.includes(permission)) return false
       return true
     },
-    [user, readOnly],
+    [hasPermission, readOnly],
   )
 
   const canAny = useCallback((...permissions: string[]): boolean => permissions.some(can), [can])
 
   return useMemo(
-    () => ({ can, canAny, isPlatformAdmin: user?.platformAdmin ?? false }),
-    [can, canAny, user],
+    () => ({ can, canAny, hasPermission, isPlatformAdmin: user?.platformAdmin ?? false }),
+    [can, canAny, hasPermission, user],
   )
 }
 

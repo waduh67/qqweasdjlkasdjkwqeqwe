@@ -7,4 +7,5 @@ interface InventoryTenantPolicyRepository {
     fun lock(exclusive: Boolean): TenantCutoverSnapshot?
     fun initialize(newEmptyTenant: Boolean): TenantCutoverSnapshot
     fun beginValidation(expectedEpoch: Long): TenantCutoverSnapshot
+    fun beginDraining(expectedEpoch: Long): TenantCutoverSnapshot
 }

@@ -1,0 +1,40 @@
+name: FTTHTechnician
+options:
+  bundleIdPrefix: com.duluin.ftth
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    ARCHS: arm64
+    SWIFT_VERSION: "5.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+    OTHER_LDFLAGS: "$(inherited) -framework TechnicianApp"
+targets:
+  FTTHTechnician:
+    type: application
+    platform: iOS
+    sources:
+      - TechnicianApp.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.duluin.ftth.technician
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Teknisi FTTH
+        UILaunchScreen: {}
+        NSCameraUsageDescription: Ambil foto bukti pada slot pekerjaan yang Anda pilih.
+        NSPhotoLibraryUsageDescription: Pilih foto bukti untuk pekerjaan yang ditugaskan kepada Anda.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    preBuildScripts:
+      - name: Build shared technician framework
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          cd "$SRCROOT/../.."
+          ./gradlew :mobile:app:embedAndSignAppleFrameworkForXcode --no-daemon --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process

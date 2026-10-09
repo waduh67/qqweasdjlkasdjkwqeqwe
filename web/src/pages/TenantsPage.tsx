@@ -5,22 +5,19 @@ import { Text } from '@fluentui/react-components'
 import { CreditCard, Pause, Play, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
+import type { PlatformTenant as Tenant } from '../api/tenant'
 import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
-import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, StatusBadge, Toolbar } from '@/components/atoms'
 import { ConfirmDialog, SearchInput } from '@/components/molecules'
-import { FormSection, PageHeader } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
 import { IconBuilding, IconPlus } from '@/components/atoms/icons'
 import { TenantSubscriptionModal } from '@/components/organisms/TenantSubscriptionModal'
-
-interface Tenant {
-  id: string
-  slug: string
-  name: string
-  status: string
-}
+import { TenantOwnerPanel } from '@/components/organisms/TenantOwnerPanel'
+import { TenantOwnerCell } from '@/components/organisms/TenantOwnerCell'
+import { TenantOnboardingFields } from '@/components/organisms/TenantOnboardingFields'
 
 const EMPTY = { slug: '', name: '', adminEmail: '', adminName: '', adminPassword: '', monthlyFee: '' }
 
@@ -41,6 +38,7 @@ export function TenantsPage() {
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
   const [initialDraft, setInitialDraft] = useState<typeof EMPTY | null>(null)
   const [subscription, setSubscription] = useState<{ id: string; name: string } | null>(null)
+  const [ownerTenant, setOwnerTenant] = useState<Tenant | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [defaultFee, setDefaultFee] = useState<number | null>(null)
@@ -113,6 +111,7 @@ export function TenantsPage() {
   const columns: Column<Tenant>[] = [
     { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <span><Text as="strong" weight="semibold">{t.name}</Text>{t.slug === 'platform' && <span className="muted entity-caption">{' · '}Akun sistem · bukan tenant pelanggan</span>}</span> },
     { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => t.slug },
+    { key: 'owner', header: 'Owner', minWidth: 280, sortValue: (t) => t.owner?.name ?? '', cell: (t) => <TenantOwnerCell tenant={t} editable={can('platform.tenant.manage')} onSelect={setOwnerTenant} /> },
     {
       key: 'status',
       header: 'Status',
@@ -144,7 +143,7 @@ export function TenantsPage() {
   }
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
+    <div className="stack tenant-admin-page" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="Tenant"
         subtitle="Kelola organisasi pelanggan, akses admin, dan status langganannya."
@@ -224,20 +223,7 @@ export function TenantsPage() {
               .finally(() => { setSaving(false); creation.finish() })
           }}>
             {formError && <p className="error" role="alert">{formError}</p>}
-            <FormSection title="Identitas organisasi" description="Nama ditampilkan di aplikasi. Slug dipakai admin saat masuk ke tenant.">
-              <div className="form-grid">
-                <TextField required label="Nama" autoComplete="organization" value={draft.name} onChange={(_, data) => setDraft({ ...draft, name: data.value })} placeholder="PT Fiber Nusantara" />
-                <TextField required label="Slug" hint="Huruf kecil, angka, dan tanda hubung." value={draft.slug} onChange={(_, data) => setDraft({ ...draft, slug: data.value })} placeholder="pt-fiber" />
-              </div>
-            </FormSection>
-            <FormSection title="Admin pertama" description="Akun ini akan mengelola pengguna dan operasional tenant.">
-              <TextField required label="Nama admin" autoComplete="name" value={draft.adminName} onChange={(_, data) => setDraft({ ...draft, adminName: data.value })} />
-              <TextField required label="Email admin" type="email" autoComplete="email" value={draft.adminEmail} onChange={(_, data) => setDraft({ ...draft, adminEmail: data.value })} />
-              <TextField required label="Password admin" type="password" autoComplete="new-password" value={draft.adminPassword} onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })} />
-            </FormSection>
-            <FormSection title="Langganan" description="Biaya khusus bersifat opsional. Kosongkan untuk mengikuti harga platform.">
-              <TextField label="Harga bulanan khusus (Rp)" type="number" min={0} step="any" value={draft.monthlyFee} onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })} placeholder={defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Gunakan harga default'} />
-            </FormSection>
+            <TenantOnboardingFields draft={draft} defaultFee={defaultFee} onChange={setDraft} />
           </form>
         )}
       </Blade>
@@ -249,6 +235,9 @@ export function TenantsPage() {
           onClose={() => setSubscription(null)}
         />
       )}
+
+      {ownerTenant && <TenantOwnerPanel key={ownerTenant.id} tenant={ownerTenant} onClose={() => setOwnerTenant(null)}
+        onSaved={message => { setNotice(message); setOwnerTenant(null); void reload() }} />}
 
       {confirmDelete && (
         <ConfirmDialog

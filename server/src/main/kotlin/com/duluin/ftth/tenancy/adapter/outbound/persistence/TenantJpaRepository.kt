@@ -10,4 +10,7 @@ interface TenantJpaRepository : JpaRepository<TenantJpaEntity, UUID> {
 
     @Query("SELECT t.id FROM TenantJpaEntity t WHERE t.status = :status")
     fun findIdsByStatus(status: TenantStatus): List<UUID>
+
+    @Query("SELECT t.id FROM TenantJpaEntity t ORDER BY t.id")
+    fun findAllIds(): List<UUID>
 }

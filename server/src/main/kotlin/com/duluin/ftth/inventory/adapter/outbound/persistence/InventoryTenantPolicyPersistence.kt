@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.inventory.TenantCutoverSnapshot
 import com.duluin.ftth.inventory.WarehouseCutoverState
+import com.duluin.ftth.inventory.WarehouseWorkflow
 import com.duluin.ftth.inventory.application.port.outbound.InventoryTenantPolicyRepository
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -25,8 +26,10 @@ class InventoryTenantCutoverJpaEntity(
     var migrationBatchId: UUID? = null,
     @Column(columnDefinition = "text") var snapshotWatermark: String? = null,
     @Column(nullable = false, columnDefinition = "uuid[]") var pendingLegacyEffectIds: Array<UUID> = emptyArray(),
+    @Enumerated(EnumType.STRING) @Column(name = "workflow_mode", nullable = false) var workflow: WarehouseWorkflow = WarehouseWorkflow.LEGACY,
+    var drainingFromEpoch: Long? = null,
 ) : WarehouseVersionedEntity(id) {
-    fun snapshot() = TenantCutoverSnapshot(requireNotNull(tenantId), state, epoch, migrationBatchId, snapshotWatermark)
+    fun snapshot() = TenantCutoverSnapshot(requireNotNull(tenantId), state, epoch, migrationBatchId, snapshotWatermark, workflow, drainingFromEpoch)
 }
 
 @Repository
@@ -67,6 +70,15 @@ class InventoryTenantPolicyPersistence(private val entityManager: EntityManager)
         """.trimIndent()).setParameter("batch", UUID.randomUUID()).setParameter("tenant", TenantContext.tenantId())
             .setParameter("epoch", expectedEpoch).executeUpdate()
         check(changed == 1) { "Locked cutover row changed unexpectedly" }
+        return requireNotNull(lock(exclusive = true))
+    }
+
+    override fun beginDraining(expectedEpoch: Long): TenantCutoverSnapshot {
+        val changed = entityManager.createNativeQuery("""
+            UPDATE inventory_tenant_cutover SET workflow_mode='DRAINING',draining_from_epoch=epoch,epoch=epoch+1,revision=revision+1,
+                updated_at=clock_timestamp() WHERE tenant_id=:tenant AND epoch=:epoch AND workflow_mode='LEGACY'
+        """.trimIndent()).setParameter("tenant", TenantContext.tenantId()).setParameter("epoch", expectedEpoch).executeUpdate()
+        check(changed == 1) { "Locked warehouse workflow changed unexpectedly" }
         return requireNotNull(lock(exclusive = true))
     }
 }

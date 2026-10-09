@@ -35,8 +35,8 @@ interface WorkorderApi {
 
     /**
      * Helpdesk: buka WO perbaikan (REPAIR) dari keluhan pelanggan yang butuh kunjungan
-     * teknisi. Lahir tanpa roster (dispatcher yang menugaskan) dan tanpa area — WO ini
-     * datang dari meja bantuan, bukan dari peta.
+     * teknisi. Dispatcher menugaskan teknisinya setelah WO dibuat. Pada alur referensi,
+     * area mengikuti pelanggan agar antrean hanya terlihat oleh operator yang berwenang.
      */
     fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef
 
@@ -135,6 +135,7 @@ data class RaiseRepairCommand(
     val description: String?,
     val priority: String = "NORMAL",
     val scheduledAt: Instant? = null,
+    val ticketId: UUID? = null,
 )
 
 /** Pandangan ringkas sebuah work order untuk konsumen lintas-module. */

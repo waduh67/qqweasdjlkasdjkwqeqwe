@@ -32,7 +32,7 @@ export async function setupDiscrepancyApprover(page: Page, areaLabel: string, sc
   await selectNamed(page, 'Pemeriksa aturan 1 tahap 1', checker.name)
   await page.getByRole('button', { name: 'Tambah pemeriksa aturan 1 tahap 1', exact: true }).click()
   await page.getByRole('button', { name: 'Tinjau kebijakan', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: 'Konfirmasi perubahan kebijakan', exact: true })).toContainText(checker.name)
+  await expect(page.getByRole('region', { name: 'Konfirmasi perubahan kebijakan', exact: true })).toContainText(checker.name)
   const policy = await confirmOperation(page, '/api/v1/warehouse/settings/policy', 'Simpan kebijakan', 'PUT')
   expect(policy).toMatchObject({ revision: 1, warehouseIds: policyLocations.map(row => row.id), rules: [{ operation, tiers: [{ minimumMinor: '1', userIds: [checkerId], roleIds: [] }] }] })
   await expect(page.getByRole('region', { name: 'Kebijakan tersimpan', exact: true })).toContainText('Versi 1')

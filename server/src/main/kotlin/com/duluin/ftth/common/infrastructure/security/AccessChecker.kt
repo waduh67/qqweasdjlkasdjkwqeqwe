@@ -57,6 +57,10 @@ class AccessChecker(
 
     fun isPlatformAdmin(): Boolean = currentUser.currentOrNull()?.platformAdmin ?: false
 
+    fun assertWritable() {
+        if (lockGuard.getIfAvailable()?.isReadOnly() == true) throw SubscriptionLockedException()
+    }
+
     /**
      * MELEMPAR, bukan mengembalikan false. Dua keadaan ini menuntut jawaban berbeda dari
      * pengguna: "izinmu kurang" (403) berarti hubungi admin, "langgananmu menunggak" (402)
@@ -66,7 +70,7 @@ class AccessChecker(
     private fun assertNotLocked(permissionCode: String) {
         if (!isWrite(permissionCode)) return
         if (permissionCode in ALWAYS_ALLOWED) return
-        if (lockGuard.getIfAvailable()?.isReadOnly() == true) throw SubscriptionLockedException()
+        assertWritable()
     }
 
     private fun isWrite(permissionCode: String): Boolean = !permissionCode.endsWith(VIEW_SUFFIX)

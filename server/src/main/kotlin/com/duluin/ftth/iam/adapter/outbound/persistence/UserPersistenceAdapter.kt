@@ -22,6 +22,7 @@ class UserPersistenceAdapter(
             email = user.email.value
             name = user.name
             passwordHash = user.passwordHash
+            credentialVersion = user.credentialVersion
             status = user.status
             roleIds = user.roleIds.toMutableSet()
             areaIds = user.areaIds.toMutableSet()
@@ -33,6 +34,7 @@ class UserPersistenceAdapter(
             email = user.email.value,
             name = user.name,
             passwordHash = user.passwordHash,
+            credentialVersion = user.credentialVersion,
             status = user.status,
             platformAdmin = user.platformAdmin,
             roleIds = user.roleIds.toMutableSet(),
@@ -84,6 +86,7 @@ private fun UserJpaEntity.toDomain(): User =
         email = Email.of(email),
         name = name,
         passwordHash = passwordHash,
+        credentialVersion = credentialVersion,
         status = status,
         platformAdmin = platformAdmin,
         roleIds = roleIds.toSet(),

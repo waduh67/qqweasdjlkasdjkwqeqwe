@@ -25,12 +25,13 @@ class WarehouseSchemaITRestart {
             val sku = UUID.randomUUID()
             val document = UUID.randomUUID()
             start(database).use { context ->
-                tenant = context.getBean(com.duluin.ftth.tenancy.TenantApi::class.java)
-                    .ensureTenant("restart-${UUID.randomUUID()}", "Restart").id
+                tenant = historicalWarehouseTenant(context, "restart-${UUID.randomUUID()}", "Restart")
                 transaction(context, tenant) {
                     val provisioner = context.getBean(com.duluin.ftth.iam.application.service.AdminProvisioner::class.java)
                     provisioner.ensureTenantAdminRole(tenant)
                     provisioner.ensureTechnicianRole(tenant)
+                    provisioner.ensureOperationalRoles(tenant)
+                    context.getBean(com.duluin.ftth.inventory.application.service.WarehouseTenantDefaults::class.java).ensureWarehouse()
                     assertThat(context.getBean(InventoryTenantPolicyService::class.java).read().state).isEqualTo(WarehouseCutoverState.ENFORCED)
                     val entityManager = requireNotNull(EntityManagerFactoryUtils.getTransactionalEntityManager(context.getBean(EntityManagerFactory::class.java)))
                     entityManager.persist(WarehouseSkuJpaEntity(sku, "restart-cable", "Restart cable", WarehouseTracking.LOT, WarehouseBaseUnit.MM))

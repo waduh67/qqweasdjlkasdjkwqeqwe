@@ -1,6 +1,18 @@
 import { expect, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 
+export async function selectNamed(page: Page, name: string, label: string) {
+  const control = page.getByRole('combobox', { name, exact: true })
+  await expect(control).toBeEnabled()
+  if (await control.evaluate(element => element.tagName === 'SELECT')) {
+    await expect(control.getByRole('option', { name: label, exact: true })).toBeAttached()
+    await control.selectOption({ label })
+  } else {
+    await control.click()
+    await page.getByRole('option', { name: label, exact: true }).click()
+  }
+}
+
 export function identity(prefix: string) {
   const suffix = randomUUID().slice(0, 8)
   return { name: `${prefix} ${suffix}`, email: `${prefix.toLowerCase()}-${suffix}@example.test`, password: `Warehouse-${randomUUID()}!` }
@@ -13,6 +25,8 @@ export async function signup(page: Page) {
   await page.getByLabel('Nama admin').fill(admin.name)
   await page.getByLabel('Email admin').fill(admin.email)
   await page.getByLabel('Password (min. 8 karakter)').fill(admin.password)
+  await page.getByRole('button', { name: 'Tinjau pendaftaran', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Tinjau pendaftaran', exact: true })).toBeVisible()
   const response = page.waitForResponse(response => response.url().endsWith('/api/signup') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Daftar', exact: true }).click()
   expect((await response).ok()).toBeTruthy()
@@ -26,7 +40,9 @@ export async function login(page: Page, user: { email: string; password: string 
   if (!page.url().endsWith('/login')) await page.goto('/login')
   await page.getByLabel('Email').fill(user.email)
   await page.getByLabel('Password').fill(user.password)
+  const authenticated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/auth/login' && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Masuk', exact: true }).click()
+  expect((await authenticated).ok()).toBeTruthy()
   await expect(page).not.toHaveURL(/\/login$/)
   await expect(page.getByRole('button', { name: 'Keluar', exact: true })).toBeVisible()
 }
@@ -36,6 +52,7 @@ export async function createRole(page: Page, name: string, permissions: string[]
   await page.getByRole('button', { name: 'Role baru', exact: true }).click()
   await page.getByLabel('Nama').fill(name)
   for (const permission of permissions) await page.getByRole('checkbox', { name: permission, exact: true }).check()
+  await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   const response = page.waitForResponse(response => response.url().endsWith('/api/roles') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Simpan', exact: true }).click()
   expect((await response).ok()).toBeTruthy()
@@ -52,6 +69,7 @@ export async function createUser(page: Page, role: string, options: { areas?: st
   await page.getByRole('checkbox', { name: role, exact: true }).check()
   for (const extra of options.additionalRoles ?? []) await page.getByRole('checkbox', { name: extra, exact: true }).check()
   for (const area of options.areas ?? []) await page.getByRole('checkbox', { name: area, exact: true }).check()
+  await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   const response = page.waitForResponse(response => response.url().endsWith('/api/users') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Simpan', exact: true }).click()
   expect((await response).ok()).toBeTruthy()
@@ -60,8 +78,8 @@ export async function createUser(page: Page, role: string, options: { areas?: st
 }
 
 export async function openWarehouseMenu(page: Page) {
-  const section = page.getByRole('button', { name: 'Gudang', exact: true })
-  const toggle = page.getByRole('button', { name: /sidebar|Buka menu|Tutup menu/ })
+  const section = page.getByRole('complementary').getByRole('button', { name: 'Gudang', exact: true })
+  const toggle = page.getByRole('banner').getByRole('button', { name: /sidebar|Buka menu|Tutup menu/ })
   const mobile = (page.viewportSize()?.width ?? 1280) <= 820
   // A drawer translated offscreen still satisfies isVisible(); use its actual open state.
   if (mobile && (await toggle.getAttribute('aria-expanded')) === 'false') await toggle.tap()

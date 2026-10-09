@@ -227,6 +227,14 @@ class WorkOrder private constructor(
         record(WorkOrderEventType.STARTED, "Pengerjaan dimulai", at, actorId)
     }
 
+    fun reassignReference(technicianId: UUID, at: Instant, actorId: UUID) {
+        val previous = assignees.singleOrNull()
+        assign(setOf(technicianId), at, actorId)
+        status = WorkOrderStatus.ASSIGNED
+        startedAt = null
+        record(WorkOrderEventType.UPDATED, "Penugasan $previous diganti ke $technicianId", at, actorId)
+    }
+
     /**
      * Menyelesaikan pekerjaan. Hanya dari IN_PROGRESS. Hasilnya masuk antrean
      * persetujuan ([WorkOrderApprovalStatus.PENDING]); keputusan penyelia
@@ -245,6 +253,22 @@ class WorkOrder private constructor(
         completedBy = actorId
         proofOfWorkHash = packet.canonicalHash()
         record(WorkOrderEventType.COMPLETED, "Pekerjaan selesai", at, actorId)
+    }
+
+    fun completeReference(note: String?, verifiedProofHash: String, at: Instant, technicianId: UUID) {
+        if (status != WorkOrderStatus.ASSIGNED && status != WorkOrderStatus.IN_PROGRESS) {
+            throw ConflictException("Work order harus ditugaskan sebelum diselesaikan")
+        }
+        if (assignees != setOf(technicianId)) throw ConflictException("Hanya teknisi yang ditugaskan boleh menyelesaikan work order")
+        if (approvalStatus != null || !verifiedProofHash.matches(Regex("[0-9a-f]{64}"))) {
+            throw ConflictException("Bukti penyelesaian work order tidak valid")
+        }
+        status = WorkOrderStatus.DONE
+        completedAt = at
+        resolutionNote = note?.trim()?.ifBlank { null }
+        completedBy = technicianId
+        proofOfWorkHash = verifiedProofHash
+        record(WorkOrderEventType.COMPLETED, "Pekerjaan selesai", at, technicianId)
     }
 
     /** Penyelia menyetujui hasil kerja. Hanya untuk WO selesai yang masih menunggu persetujuan. */

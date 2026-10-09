@@ -10,7 +10,7 @@ data class FulfillmentApprovalSnapshot(
     val identity: SessionIdentity,
     val cutoverEpoch: Long,
     val workOrder: ApprovedWorkOrderContext,
-    val material: MaterialSettlementSource,
+    val material: MaterialSettlementSource?,
     val effects: Set<FulfillmentEffectType>,
     val orderRevision: Long?,
     val visit: com.duluin.ftth.fieldservice.VisitRef?,
@@ -19,6 +19,7 @@ data class FulfillmentApprovalSnapshot(
     val customerBinding: com.duluin.ftth.customer.CustomerFulfillmentBinding?,
     val orderBinding: com.duluin.ftth.order.OrderFulfillmentBinding? = null,
     val bngBinding: com.duluin.ftth.bng.BngFulfillmentBinding? = null,
+    val referenceCompletion: com.duluin.ftth.workorder.application.port.inbound.ReferenceWorkOrderCompletionView? = null,
 )
 
 data class FrozenFulfillment(val snapshot: FulfillmentApprovalSnapshot, val request: FulfillmentRequest)

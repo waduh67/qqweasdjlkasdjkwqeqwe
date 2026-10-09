@@ -6,7 +6,7 @@ import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { Button, TextField } from '@/components/atoms'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 
-export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onReload }: { row: WarehouseSupplier | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseSupplier) => void; onReload: () => void }) {
+export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onReload, save = saveSupplier }: { row: WarehouseSupplier | null; readOnly: boolean; onClose: () => void; onSaved: (row: WarehouseSupplier) => void; onReload: () => void; save?: typeof saveSupplier }) {
   const formId = useId()
   const [code, setCode] = useState(row?.code ?? '')
   const [name, setName] = useState(row?.name ?? '')
@@ -14,7 +14,7 @@ export function WarehouseSupplierEditor({ row, readOnly, onClose, onSaved, onRel
   const [operation, setOperation] = useState<WarehouseCommand<WarehouseSupplier> | null>(null)
   function prepare(event: FormEvent) {
     event.preventDefault(); if (readOnly) return
-    setOperation(saveSupplier({ code: code.trim(), name: name.trim(), contactReference: contact.trim() || null, ...(row ? { expectedRevision: row.revision } : {}) }, row?.id))
+    setOperation(save({ code: code.trim(), name: name.trim(), contactReference: contact.trim() || null, ...(row ? { expectedRevision: row.revision } : {}) }, row?.id))
   }
   return <>
     <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan pemasok" command={operation} confirmLabel="Simpan pemasok" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}

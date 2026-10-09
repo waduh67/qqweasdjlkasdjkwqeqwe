@@ -26,7 +26,7 @@ class WarehouseReplenishmentScan(private val cutovers: InventoryTenantCutoverApi
     @Transactional(timeout = 30, rollbackFor = [Exception::class])
     fun batch(): Int {
         store.deadline()
-        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.ORDINARY_STOCK).assertHeld()
+        cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.LEGACY_STOCK_CREATE).assertHeld()
         authority.lockForChange().assertHeld()
         masters.lockTopology()
         val scope = AuthorityScope.Unrestricted

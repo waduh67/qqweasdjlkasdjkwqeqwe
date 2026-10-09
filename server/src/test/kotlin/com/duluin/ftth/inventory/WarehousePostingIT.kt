@@ -16,6 +16,30 @@ class WarehousePostingIT {
     @BeforeAll fun start() { database=WarehouseSchemaDatabase(); context=postingContext(database) }
     @AfterAll fun stop() { context.close(); database.close() }
 
+    @Test fun `posting rejects read authority and a reference namespace on the legacy writer`() {
+        val fixture = WarehousePostingFixture(context).also { it.setup() }
+        val command = fixture.transaction {
+            val received = receipt(StockQuantity.each("1"))
+            move(received, received.copy(locationId=technician,custodianId=actor,custodianKind=OwnerKind.TECHNICIAN),StockQuantity.each("1"))
+        }
+        val before = fixture.transaction { counts() }
+        assertThatThrownBy { fixture.transaction {
+            val fence = context.getBean(com.duluin.ftth.inventory.application.service.InventoryTenantPolicyService::class.java)
+                .lockForCommand(0, WarehouseOperationClass.CONTROL_PLANE)
+            context.getBean(WarehousePosting::class.java).post(command, fence)
+        } }.hasMessageContaining("CUTOVER_REQUIRED")
+        val reference = command.copy(operation=command.operation.copy(namespace="warehouse.reference.transfer"))
+        assertThatThrownBy { fixture.transaction { post(reference) } }.hasMessageContaining("CUTOVER_REQUIRED")
+        assertThatThrownBy { fixture.transaction {
+            context.getBean(WarehousePostingStore::class.java).write(reference, 0)
+        } }.hasStackTraceContaining("stock writer does not match the tenant warehouse workflow")
+        fixture.transaction {
+            assertThat(counts()).isEqualTo(before)
+            assertThat(total(warehouse, StockUnit.EA)).isEqualTo(1)
+            assertThat(total(technician, StockUnit.EA)).isZero()
+        }
+    }
+
     @Test fun `receive issue consume return inspect conserve exact physical quantities`() {
         val fixture=WarehousePostingFixture(context).also { it.setup() }
         fixture.transaction {

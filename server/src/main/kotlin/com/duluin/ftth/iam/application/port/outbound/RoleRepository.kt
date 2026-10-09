@@ -11,6 +11,8 @@ interface RoleRepository {
 
     fun findByName(name: String): Role?
 
+    fun findByDefaultKey(key: String): Role? = findAll().singleOrNull { it.defaultKey == key }
+
     fun findAll(): List<Role>
 
     fun findAllByIds(ids: Set<UUID>): List<Role>

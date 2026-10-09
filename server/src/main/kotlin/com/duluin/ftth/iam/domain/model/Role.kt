@@ -18,6 +18,7 @@ class Role private constructor(
     description: String?,
     val systemRole: Boolean,
     permissionIds: Set<UUID>,
+    val defaultKey: String? = null,
 ) {
     var name: String = name
         private set
@@ -47,6 +48,7 @@ class Role private constructor(
             description: String? = null,
             systemRole: Boolean = false,
             permissionIds: Set<UUID> = emptySet(),
+            defaultKey: String? = null,
         ): Role = Role(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -54,6 +56,7 @@ class Role private constructor(
             description = description?.trim()?.takeIf(String::isNotEmpty),
             systemRole = systemRole,
             permissionIds = permissionIds,
+            defaultKey = defaultKey,
         )
 
         fun rehydrate(
@@ -63,7 +66,8 @@ class Role private constructor(
             description: String?,
             systemRole: Boolean,
             permissionIds: Set<UUID>,
-        ): Role = Role(id, tenantId, name, description, systemRole, permissionIds)
+            defaultKey: String? = null,
+        ): Role = Role(id, tenantId, name, description, systemRole, permissionIds, defaultKey)
 
         private fun validateName(name: String): String {
             val trimmed = name.trim()

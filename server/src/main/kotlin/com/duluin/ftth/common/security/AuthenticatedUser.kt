@@ -20,6 +20,7 @@ data class AuthenticatedUser(
     val permissions: Set<String>,
     val areaIds: Set<UUID>,
     val sessionId: String? = null,
+    val credentialVersion: Long? = null,
 ) {
     fun hasPermission(code: String): Boolean = platformAdmin || code in permissions
 

@@ -15,3 +15,24 @@ export const WAREHOUSE_PAGES = [
   { path: 'settings', icon: Settings2, label: 'Setelan Gudang', permissions: ['inventory.approval.view', 'inventory.approval.manage', 'inventory.provenance.view', 'inventory.location.manage'] },
 ] as const
 export const WAREHOUSE_VIEW_PERMISSIONS: readonly string[] = [...new Set(WAREHOUSE_PAGES.flatMap(page => [...page.permissions]))]
+
+export const REFERENCE_WAREHOUSE_PAGES = [
+  { path: 'catalog', label: 'Barang, Gudang & Pemasok', permissions: ['warehouse.catalog.view'] },
+  { path: 'stock', label: 'Stok & Riwayat', permissions: ['warehouse.stock.view'] },
+  { path: 'receipts', label: 'Penerimaan', permissions: ['warehouse.stock.view'] },
+  { path: 'transfers', label: 'Transfer', permissions: ['warehouse.stock.view'] },
+  { path: 'requests', label: 'Permintaan Material', permissions: ['warehouse.request.view', 'warehouse.request.own'] },
+  { path: 'returns', label: 'Retur Material', permissions: ['warehouse.return.own', 'warehouse.return.manage'] },
+  { path: 'counts', label: 'Stock Opname', permissions: ['warehouse.count.manage'] },
+  { path: 'settings', label: 'Setelan Gudang', permissions: ['warehouse.request.view'], ownerOnly: true },
+] as const
+
+export const SHARED_WAREHOUSE_PAGES = [
+  { path: 'transition', label: 'Perpindahan Gudang', permissions: [], ownerOnly: true },
+  { path: 'archive', label: 'Arsip Gudang', permissions: ['inventory.receipt.view', 'inventory.transfer.view', 'inventory.item.view'] },
+] as const
+
+export function warehousePages(workflow: 'LEGACY' | 'DRAINING' | 'REFERENCE', owner = false) {
+  const pages = workflow === 'REFERENCE' ? REFERENCE_WAREHOUSE_PAGES : WAREHOUSE_PAGES
+  return [...pages, ...SHARED_WAREHOUSE_PAGES].filter(page => !('ownerOnly' in page) || owner)
+}

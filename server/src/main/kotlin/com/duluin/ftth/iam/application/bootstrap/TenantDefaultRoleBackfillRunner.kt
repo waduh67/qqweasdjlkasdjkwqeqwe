@@ -9,16 +9,9 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
-/**
- * Pastikan role sistem "Teknisi" ada di SETIAP tenant yang sudah terlanjur dibuat
- * sebelum role ini diperkenalkan. Tenant baru mendapatkannya lewat onboarding;
- * runner ini menutup tenant lama. Idempotent (ensureTechnicianRole cek by-name),
- * jadi aman dijalankan tiap startup. Berjalan setelah katalog izin tersinkron
- * ([IamBootstrapRunner], `@Order(0)`) agar id izin sudah tersedia untuk dirangkai.
- */
 @Component
 @Order(1)
-class TechnicianRoleBackfillRunner(
+class TenantDefaultRoleBackfillRunner(
     private val tenantApi: TenantApi,
     private val provisioner: AdminProvisioner,
 ) : ApplicationRunner {
@@ -26,10 +19,10 @@ class TechnicianRoleBackfillRunner(
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun run(args: ApplicationArguments) {
-        val tenantIds = tenantApi.findActiveTenantIds()
+        val tenantIds = tenantApi.findAllTenantIds().filter { it != tenantApi.platformTenantId() }
         tenantIds.forEach { tenantId ->
-            TenantContext.runAs(tenantId) { provisioner.ensureTechnicianRole(tenantId) }
+            TenantContext.runAs(tenantId) { provisioner.ensureOperationalRoles(tenantId) }
         }
-        log.info("Role 'Teknisi' dipastikan ada di {} tenant.", tenantIds.size)
+        log.info("Role operasional bawaan dipastikan ada di {} tenant.", tenantIds.size)
     }
 }

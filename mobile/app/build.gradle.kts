@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+
 plugins {
     id("ftth.mobile.kmp")
     alias(libs.plugins.kotlin.compose.compiler)
@@ -24,5 +26,16 @@ kotlin { sourceSets { commonMain.dependencies {
     commonTest.dependencies {
         implementation(kotlin("test"))
         implementation(libs.koin.test)
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    }
+    findByName("androidMain")?.dependencies {
+        implementation("androidx.activity:activity-compose:1.12.4")
     }
 } }
+
+kotlin.targets.withType<KotlinNativeTarget>().configureEach {
+    binaries.framework {
+        baseName = "TechnicianApp"
+        isStatic = true
+    }
+}

@@ -19,6 +19,9 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 import com.duluin.ftth.common.infrastructure.persistence.TenantTransactionJdbc
 import com.duluin.ftth.tenancy.TenantCreatedEvent
@@ -62,6 +65,12 @@ class WarehouseSchemaITPolicy {
         val created = tenants.ensureTenant("creation-${UUID.randomUUID()}", "Created tenant")
         transaction(created.id) {
             assertThat(policy.read().state).isEqualTo(WarehouseCutoverState.ENFORCED)
+            assertThat(policy.read().workflow).isEqualTo(WarehouseWorkflow.REFERENCE)
+            assertThat(policy.read().epoch).isEqualTo(1L)
+            policy.lockForCommand(1, WarehouseOperationClass.REFERENCE_STOCK).assertHeld()
+            policy.lockForCommand(1, WarehouseOperationClass.REFERENCE_WORK_ORDER).assertHeld()
+            assertThat(entityManager.createNativeQuery("SELECT count(*) FROM inventory_reference_bootstrap WHERE tenant_id=:tenant", Long::class.java)
+                .setParameter("tenant",created.id).singleResult).isEqualTo(1L)
             assertThat(entityManager.createNativeQuery("SELECT count(*) FROM iam_authorization_epoch WHERE tenant_id=:tenant", Long::class.java)
                 .setParameter("tenant",created.id).singleResult).isEqualTo(1L)
         }
@@ -77,7 +86,7 @@ class WarehouseSchemaITPolicy {
         val failedTenant=requireNotNull(probe.tenantId)
         dataSource.connection.use { connection -> connection.createStatement().use { statement ->
             statement.execute("SET app.tenant_id='$failedTenant'")
-            for (table in listOf("inventory_tenant_cutover","iam_authorization_epoch","inventory_document")) {
+            for (table in listOf("inventory_tenant_cutover","inventory_reference_bootstrap","iam_authorization_epoch","inventory_document")) {
                 statement.executeQuery("SELECT count(*) FROM $table WHERE tenant_id='$failedTenant'").use {
                     it.next(); assertThat(it.getInt(1)).describedAs(table).isZero()
                 }
@@ -94,7 +103,9 @@ class WarehouseSchemaITPolicy {
             entityManager.createNativeQuery("UPDATE iam_authorization_epoch SET epoch=1,revision=1 WHERE tenant_id=:tenant").setParameter("tenant",created.id).executeUpdate()
             events.publishEvent(TenantCreatedEvent(created.id))
             events.publishEvent(TenantCreatedEvent(created.id))
-            assertThat(policy.read().epoch).isZero()
+            assertThat(policy.read().epoch).isEqualTo(1L)
+            assertThat(entityManager.createNativeQuery("SELECT count(*) FROM inventory_reference_bootstrap WHERE tenant_id=:tenant", Long::class.java)
+                .setParameter("tenant",created.id).singleResult).isEqualTo(1L)
             assertThat(entityManager.createNativeQuery("SELECT epoch FROM iam_authorization_epoch WHERE tenant_id=:tenant",Long::class.java)
                 .setParameter("tenant",created.id).singleResult).isEqualTo(1L)
         }
@@ -125,6 +136,46 @@ class WarehouseSchemaITPolicy {
         }
         assertThatThrownBy { events.publishEvent(TenantCreatedEvent(original)) }
             .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException::class.java)
+    }
+
+    @Test
+    fun `committed tenant cannot claim a fresh bootstrap or rewrite its creation transaction`() {
+        val existing = tenant()
+        assertThatThrownBy { transaction(existing) {
+            entityManager.createNativeQuery("SELECT warehouse_initialize_reference_tenant(:tenant)")
+                .setParameter("tenant", existing).singleResult
+        } }.hasStackTraceContaining("newly inserted empty tenant")
+        assertThatThrownBy { transaction(existing) {
+            entityManager.createNativeQuery("UPDATE tenant SET warehouse_created_xid=pg_current_xact_id() WHERE id=:tenant")
+                .setParameter("tenant", existing).executeUpdate()
+        } }.hasStackTraceContaining("tenant creation transaction is immutable")
+        transaction(existing) {
+            assertThat(entityManager.createNativeQuery("SELECT count(*) FROM inventory_reference_bootstrap", Long::class.java).singleResult).isEqualTo(0L)
+            assertThat(entityManager.createNativeQuery("SELECT count(*) FROM inventory_tenant_cutover", Long::class.java).singleResult).isEqualTo(0L)
+        }
+    }
+
+    @Test
+    fun `bootstrap receipt is tenant isolated immutable and cannot be forged by application role`() {
+        val created = tenants.ensureTenant("bootstrap-${UUID.randomUUID()}", "Bootstrap").id
+        val other = tenants.ensureTenant("bootstrap-${UUID.randomUUID()}", "Other bootstrap").id
+        transaction(other) {
+            assertThat(entityManager.createNativeQuery("SELECT count(*) FROM inventory_reference_bootstrap WHERE tenant_id=:tenant", Long::class.java)
+                .setParameter("tenant", created).singleResult).isEqualTo(0L)
+        }
+        for (sql in listOf("UPDATE inventory_reference_bootstrap SET resulting_epoch=1", "DELETE FROM inventory_reference_bootstrap",
+            "INSERT INTO inventory_reference_bootstrap(tenant_id,resulting_epoch) VALUES ('$created',1)")) {
+            assertThatThrownBy { transaction(created) { entityManager.createNativeQuery(sql).executeUpdate() } }
+                .hasStackTraceContaining("permission denied for table inventory_reference_bootstrap")
+        }
+        assertThatThrownBy { transaction(other) {
+            entityManager.createNativeQuery("SELECT warehouse_initialize_reference_tenant(:tenant)")
+                .setParameter("tenant", created).singleResult
+        } }.hasStackTraceContaining("tenant")
+        transaction(created) {
+            assertThat(entityManager.createNativeQuery("SELECT count(*) FROM inventory_reference_bootstrap", Long::class.java).singleResult).isEqualTo(1L)
+            assertThat(policy.read().workflow).isEqualTo(WarehouseWorkflow.REFERENCE)
+        }
     }
 
     private fun tenant(old: Boolean = false): UUID {
@@ -187,15 +238,109 @@ class WarehouseSchemaITPolicy {
     fun `C10 allowlist is explicit for every state and operation class`() {
         for (state in WarehouseCutoverState.entries) {
             for (operation in WarehouseOperationClass.entries) {
-                val expected = operation in when (state) {
+                val expected = operation in (when (state) {
                     WarehouseCutoverState.LEGACY -> setOf(WarehouseOperationClass.CONTROL_PLANE, WarehouseOperationClass.MIGRATION_REPORT)
                     WarehouseCutoverState.VALIDATING -> setOf(WarehouseOperationClass.CONTROL_PLANE, WarehouseOperationClass.MIGRATION_REPORT,
                         WarehouseOperationClass.PROVENANCE_RESOLUTION, WarehouseOperationClass.MIGRATION_APPROVAL,
                         WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.CUTOVER_FINALIZATION)
                     WarehouseCutoverState.ENFORCED -> setOf(WarehouseOperationClass.CONTROL_PLANE, WarehouseOperationClass.MIGRATION_REPORT,
                         WarehouseOperationClass.ORDINARY_STOCK, WarehouseOperationClass.ASSET_ASSIGNMENT)
-                }
+                } + setOf(WarehouseOperationClass.LEGACY_WORK_ORDER_CREATE, WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE,
+                    WarehouseOperationClass.LEGACY_FULFILLMENT, WarehouseOperationClass.LEGACY_CONFIGURATION,
+                    WarehouseOperationClass.LEGACY_MAINTENANCE) +
+                    if (state == WarehouseCutoverState.ENFORCED) setOf(WarehouseOperationClass.LEGACY_STOCK_CREATE) else emptySet())
                 assertThat(policy.allows(state, operation)).describedAs("%s/%s", state, operation).isEqualTo(expected)
+            }
+        }
+    }
+
+    @Test
+    fun `draining rejects old creation preserves finish and reads and fences stale commands`() {
+        val tenant = tenant()
+        transaction(tenant) { policy.initializeNewEmptyTenant() }
+        val draining = requireNotNull(transaction(tenant) { policy.beginDraining(0) })
+        assertThat(draining.workflow).isEqualTo(WarehouseWorkflow.DRAINING)
+        assertThat(draining.epoch).isEqualTo(1)
+        assertThat(draining.drainingFromEpoch).isZero()
+        for (operation in listOf(WarehouseOperationClass.CONTROL_PLANE, WarehouseOperationClass.ORDINARY_STOCK,
+                WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE, WarehouseOperationClass.LEGACY_FULFILLMENT)) {
+            transaction(tenant) { policy.lockForCommand(1, operation).assertHeld() }
+        }
+        for (operation in listOf(WarehouseOperationClass.LEGACY_STOCK_CREATE, WarehouseOperationClass.LEGACY_WORK_ORDER_CREATE,
+                WarehouseOperationClass.REFERENCE_STOCK, WarehouseOperationClass.REFERENCE_WORK_ORDER)) {
+            val denied = assertThrows<WarehouseContractException> { transaction(tenant) { policy.lockForCommand(1, operation) } }
+            assertThat(denied.error.code).isEqualTo(WarehouseErrorCode.CUTOVER_REQUIRED)
+        }
+        val stale = assertThrows<WarehouseContractException> { transaction(tenant) { policy.lockForCommand(0, WarehouseOperationClass.ORDINARY_STOCK) } }
+        assertThat(stale.error.code).isEqualTo(WarehouseErrorCode.STALE_CUTOVER)
+        assertThatThrownBy { transaction(tenant) {
+            entityManager.createNativeQuery("UPDATE inventory_tenant_cutover SET workflow_mode='REFERENCE',epoch=2,revision=2").executeUpdate()
+        } }.hasStackTraceContaining("reference activation receipt required")
+        assertThat(transaction(tenant) { policy.read() }).isEqualTo(draining)
+    }
+
+    @Test
+    fun `draining waits for the active writer transaction then rejects its old epoch`() {
+        val tenant = tenant()
+        transaction(tenant) { policy.initializeNewEmptyTenant() }
+        val held = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val transitionStarted = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val writer = pool.submit<Int> {
+                requireNotNull(transaction(tenant) {
+                    policy.lockForCommand(0, WarehouseOperationClass.LEGACY_STOCK_CREATE).assertHeld()
+                    held.countDown()
+                    check(release.await(30, TimeUnit.SECONDS))
+                    1
+                })
+            }
+            check(held.await(30, TimeUnit.SECONDS))
+            val transition = pool.submit<TenantCutoverSnapshot> {
+                requireNotNull(transaction(tenant) {
+                    transitionStarted.countDown()
+                    policy.beginDraining(0)
+                })
+            }
+            check(transitionStarted.await(30, TimeUnit.SECONDS))
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            var blocked = false
+            while (!blocked && System.nanoTime() < deadline) {
+                blocked = transaction(tenant) {
+                    entityManager.createNativeQuery("""SELECT count(*) FROM pg_stat_activity
+                        WHERE datname=current_database() AND usename=current_user
+                        AND wait_event_type='Lock' AND query LIKE '%inventory_tenant_cutover%'
+                        AND cardinality(pg_blocking_pids(pid))>0""", Long::class.java).singleResult.let { (it as Number).toLong() > 0 }
+                } == true
+            }
+            assertThat(blocked).isTrue()
+            assertThat(transition.isDone).isFalse()
+            release.countDown()
+            assertThat(writer.get(30, TimeUnit.SECONDS)).isEqualTo(1)
+            assertThat(transition.get(30, TimeUnit.SECONDS).epoch).isEqualTo(1)
+            val stale = assertThrows<WarehouseContractException> {
+                transaction(tenant) { policy.lockForCommand(0, WarehouseOperationClass.LEGACY_STOCK_CREATE) }
+            }
+            assertThat(stale.error.code).isEqualTo(WarehouseErrorCode.STALE_CUTOVER)
+            transaction(tenant) { policy.lockForCommand(1, WarehouseOperationClass.ORDINARY_STOCK).assertHeld() }
+        } finally {
+            release.countDown()
+            pool.shutdownNow()
+            assertThat(pool.awaitTermination(15, TimeUnit.SECONDS)).isTrue()
+        }
+    }
+
+    @Test
+    fun `reference mode admits only reference writes and keeps the archive readable`() {
+        for (state in WarehouseCutoverState.entries) {
+            for (operation in WarehouseOperationClass.entries) {
+                val expected = operation in setOf(WarehouseOperationClass.CONTROL_PLANE, WarehouseOperationClass.MIGRATION_REPORT) ||
+                    state == WarehouseCutoverState.ENFORCED && operation in setOf(WarehouseOperationClass.REFERENCE_STOCK,
+                        WarehouseOperationClass.REFERENCE_WORK_ORDER) ||
+                    state == WarehouseCutoverState.VALIDATING && operation in setOf(WarehouseOperationClass.PROVENANCE_RESOLUTION,
+                        WarehouseOperationClass.MIGRATION_APPROVAL, WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.CUTOVER_FINALIZATION)
+                assertThat(policy.allows(state, operation, WarehouseWorkflow.REFERENCE)).describedAs("%s/%s",state,operation).isEqualTo(expected)
             }
         }
     }

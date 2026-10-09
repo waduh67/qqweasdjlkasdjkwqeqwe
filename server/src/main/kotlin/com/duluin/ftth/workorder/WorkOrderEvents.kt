@@ -35,3 +35,5 @@ data class FulfillmentApproved(
     val applicableEffects: Set<String> = emptySet(),
     val verifiedMaterialRequired: Boolean = false,
 )
+
+data class ReferenceWorkOrderCompleted(val tenantId: UUID, val workOrderId: UUID)

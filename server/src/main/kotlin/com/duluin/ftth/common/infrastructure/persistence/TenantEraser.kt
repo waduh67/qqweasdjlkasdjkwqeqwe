@@ -57,6 +57,12 @@ class TenantEraser(txManager: PlatformTransactionManager) {
                     }
                     val tables = tenantScopedTables(conn)
                     val businessTables = tables.filterNot { it in CASCADE_ONLY_CONTROL_TABLES }
+                    if (conn.prepareStatement("SELECT EXISTS(SELECT FROM inventory_location WHERE tenant_id=? AND NOT tenant_default)").use { query ->
+                            query.setObject(1, tenantId)
+                            query.executeQuery().use { rows -> check(rows.next()); rows.getBoolean(1) }
+                        }) {
+                        throw ConflictException("Tenant memiliki riwayat permanen yang harus dipertahankan. Nonaktifkan tenant melalui aksi Suspend.")
+                    }
                     requireDeletableHistory(conn, businessTables, tenantId)
                     deleteAll(conn, businessTables, tenantId)
                     deleteTenantRow(conn, tenantId)
@@ -174,7 +180,11 @@ class TenantEraser(txManager: PlatformTransactionManager) {
     private companion object {
         // Their guards forbid direct deletion/epoch reset while the tenant exists.
         // They disappear only through the final tenant-row FK cascade.
-        val CASCADE_ONLY_CONTROL_TABLES = setOf("inventory_tenant_cutover", "iam_authorization_epoch", "inventory_draft_policy")
+        val CASCADE_ONLY_CONTROL_TABLES = setOf(
+            "inventory_tenant_cutover", "iam_authorization_epoch", "inventory_draft_policy",
+            "inventory_location_topology_fence", "inventory_location",
+            "inventory_reference_bootstrap",
+        )
 
         /**
          * Kelas SQLState `23` = integrity_constraint_violation (FK 23503, CHECK 23514, dst).

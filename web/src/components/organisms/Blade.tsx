@@ -29,6 +29,7 @@ export function Blade({
   subtitle,
   size = 'sm',
   dirty = false,
+  closeDisabled = false,
   onClose,
   footer,
   children,
@@ -42,6 +43,7 @@ export function Blade({
   size?: BladeSize
   /** Bila true, ESC/klik-luar/tombol tutup meminta konfirmasi sebelum menutup. */
   dirty?: boolean
+  closeDisabled?: boolean
   onClose: () => void
   footer?: ReactNode
   children: ReactNode
@@ -52,6 +54,7 @@ export function Blade({
 }) {
   const confirm = useConfirm()
   const requestClose = () => {
+    if (closeDisabled) return
     if (!dirty) {
       onClose()
       return
@@ -100,6 +103,7 @@ export function Blade({
             <Button
               appearance="subtle"
               aria-label="Tutup"
+              disabled={closeDisabled}
               icon={<X size={18} />}
               onClick={requestClose}
             />

@@ -37,6 +37,26 @@ class WorkOrderFulfillmentListener(
 }
 
 @Component
+class ReferenceWorkOrderFulfillmentListener(private val coordinator: FulfillmentCoordinator,
+    private val worker: FulfillmentOutboxWorker, private val approvals: FulfillmentApprovalService) {
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @Transactional
+    fun on(event: com.duluin.ftth.workorder.ReferenceWorkOrderCompleted) {
+        TenantContext.runAs(event.tenantId) {
+            val request = try { approvals.freezeReference(event.workOrderId) } catch (failure: FulfillmentExecutionFailure) {
+                throw com.duluin.ftth.common.domain.error.ConflictException(failure.message ?: "FULFILLMENT_SOURCE_CONFLICT")
+            }
+            coordinator.accept(request)
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun afterCommit(event: com.duluin.ftth.workorder.ReferenceWorkOrderCompleted) {
+        TenantContext.runAs(event.tenantId) { worker.processNext(event.tenantId, "reference-${event.workOrderId}") }
+    }
+}
+
+@Component
 class MigrationFulfillmentListener(
     private val coordinator: FulfillmentCoordinator,
     private val worker: FulfillmentOutboxWorker,

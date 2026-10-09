@@ -59,7 +59,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun claimOrCreate(request: FulfillmentRequest): FulfillmentCheckpoint {
-        cutoverFence()
+        cutoverFence(request.source)
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_checkpoint
                (id, tenant_id, namespace, operation_key, canonical_hash, source, target_id, subscription_id, work_order_id, work_order_kind, required_effects, order_id, approval_actor_id, state, attempts, checkpoint_updated_at)
@@ -70,7 +70,7 @@ class FulfillmentCheckpointPersistenceAdapter(
             .setParameter("hash", request.canonicalHash).setParameter("source", request.source.name)
             .setParameter("target", request.targetId).setParameter("subscription", request.subscriptionId)
             .setParameter("workOrder", request.workOrderId).setParameter("workOrderKind", request.workOrderKind)
-            .setParameter("effects", request.requiredEffects.joinToString(",") { it.name })
+            .setParameter("effects", request.requiredEffects.sortedBy { it.name }.joinToString(",") { it.name })
             .setParameter("orderId", request.orderId).setParameter("actorId", request.approvalActorId).executeUpdate()
         return claim(request.tenantId, request.namespace, request.operationKey)
             ?: error("FULFILLMENT_CLAIM_LOST")
@@ -78,12 +78,12 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun save(checkpoint: FulfillmentCheckpoint): FulfillmentCheckpoint {
-        cutoverFence()
+        cutoverFence(checkpoint.source)
         val current = find(checkpoint.tenantId, checkpoint.namespace, checkpoint.operationKey)
         val entity = if (current == null) FulfillmentCheckpointJpaEntity(
             UUID.randomUUID(), checkpoint.namespace, checkpoint.operationKey, checkpoint.canonicalHash,
             checkpoint.source, checkpoint.targetId, checkpoint.subscriptionId, checkpoint.workOrderId,
-            checkpoint.workOrderKind, checkpoint.requiredEffects.joinToString(",") { it.name }, checkpoint.orderId, checkpoint.approvalActorId, checkpoint.state, checkpoint.lastEffect,
+            checkpoint.workOrderKind, checkpoint.requiredEffects.sortedBy { it.name }.joinToString(",") { it.name }, checkpoint.orderId, checkpoint.approvalActorId, checkpoint.state, checkpoint.lastEffect,
             checkpoint.attempts, checkpoint.outcome, checkpoint.updatedAt,
         ) else entityManager.createQuery(
             "select c from FulfillmentCheckpointJpaEntity c where c.tenantId = :tenant and c.namespace = :namespace and c.operationKey = :operation",
@@ -101,7 +101,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun enqueueOutbox(checkpoint: FulfillmentCheckpoint) {
-        cutoverFence()
+        cutoverFence(checkpoint.source)
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_outbox (id, tenant_id, fulfillment_id, sequence, event_type, payload_hash, payload)
                SELECT :id, :tenant, id, 1, :eventType, :hash, :payload
@@ -185,8 +185,21 @@ class FulfillmentCheckpointPersistenceAdapter(
         ).setParameter("id", id).setParameter("worker", workerId).executeUpdate()
     }
 
-    private fun cutoverFence() {
-        cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+    private fun cutoverFence(source: FulfillmentSource? = null) {
+        cutovers.lockForCommand(cutovers.read().epoch, when (source) {
+            FulfillmentSource.WORK_ORDER -> com.duluin.ftth.inventory.WarehouseOperationClass.LEGACY_FULFILLMENT
+            FulfillmentSource.REFERENCE_WORK_ORDER -> com.duluin.ftth.inventory.WarehouseOperationClass.REFERENCE_WORK_ORDER
+            else -> com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE
+        }).assertHeld()
+    }
+
+    private fun effectFence(tenantId: UUID, namespace: String, operationKey: String) {
+        cutoverFence()
+        val source = entityManager.createNativeQuery("""SELECT source FROM fulfillment_checkpoint
+            WHERE tenant_id=:tenant AND namespace=:namespace AND operation_key=:operation""", String::class.java)
+            .setParameter("tenant", tenantId).setParameter("namespace", namespace).setParameter("operation", operationKey)
+            .resultList.singleOrNull()
+        source?.let { cutoverFence(FulfillmentSource.valueOf(it as String)) }
     }
 
     @Transactional(readOnly = true)
@@ -198,7 +211,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markEffectStarted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
-        cutoverFence()
+        effectFence(tenantId, namespace, operationKey)
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_effect_progress (id, tenant_id, fulfillment_id, effect_type, status, attempts, started_at, updated_at)
                SELECT :id, :tenant, id, :effect, 'STARTED', 1, :at, :at FROM fulfillment_checkpoint
@@ -210,7 +223,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun markEffectCompleted(tenantId: UUID, namespace: String, operationKey: String, effect: FulfillmentEffectType, at: Instant) {
-        cutoverFence()
+        effectFence(tenantId, namespace, operationKey)
         entityManager.createNativeQuery(
             "UPDATE fulfillment_effect_progress p SET status = 'COMPLETED', completed_at = :at, updated_at = :at FROM fulfillment_checkpoint c WHERE p.fulfillment_id = c.id AND p.tenant_id = :tenant AND c.namespace = :namespace AND c.operation_key = :operation AND p.effect_type = :effect",
         ).setParameter("tenant", tenantId).setParameter("namespace", namespace).setParameter("operation", operationKey)
@@ -227,7 +240,7 @@ class FulfillmentCheckpointPersistenceAdapter(
         subscriptionId = subscriptionId,
         workOrderId = workOrderId,
         workOrderKind = workOrderKind,
-        approved = true,
+        approved = source != FulfillmentSource.REFERENCE_WORK_ORDER,
         requiredEffects = requiredEffects,
         orderId = orderId,
         approvalActorId = approvalActorId,

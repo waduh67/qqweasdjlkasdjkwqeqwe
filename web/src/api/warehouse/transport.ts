@@ -15,7 +15,7 @@ export function captureCommandSession() {
   return () => { if (tokenStore.getSessionVersion() !== version) throw new ApiError(409, 'Sesi berubah. Muat ulang sebelum membuat transaksi baru.') }
 }
 
-export function command<T>(path: string, method: 'POST' | 'PUT', input: unknown, decode: Decoder<T>, key = crypto.randomUUID()): WarehouseCommand<T> {
+export function command<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', input: unknown, decode: Decoder<T>, key = crypto.randomUUID()): WarehouseCommand<T> {
   if (!path.startsWith('/api/') || path.includes('\\') || !/^[\x21-\x7e]{1,240}$/.test(key)) throw new Error('Transaksi gudang tidak valid.')
   const body = JSON.stringify(input)
   if (body === undefined) throw new Error('Transaksi gudang wajib berisi data.')
@@ -33,15 +33,16 @@ export async function query<T>(path: string, decode: Decoder<T>): Promise<T> {
 }
 
 /** Capture immutable bytes, filename, revision and key; rebuild only the multipart envelope. */
-export function uploadCommand<T>(path: string, revision: number, file: File, decode: Decoder<T>, key = crypto.randomUUID()): WarehouseCommand<T> {
+export function uploadCommand<T>(path: string, revision: number, file: File, decode: Decoder<T>, key = crypto.randomUUID(), slot?: string): WarehouseCommand<T> {
   if (!path.startsWith('/api/') || path.includes('\\') || !/^[\x21-\x7e]{1,240}$/.test(key) || !Number.isSafeInteger(revision) || revision < 0) throw new Error('Unggahan gudang tidak valid.')
   const bytes = file.slice(0, file.size, file.type), filename = file.name
-  const body = JSON.stringify({ expectedRevision: revision, filename, size: bytes.size, contentType: bytes.type })
+  const body = JSON.stringify({ expectedRevision: revision, filename, size: bytes.size, contentType: bytes.type, slot })
   let pending: Promise<T> | null = null
   return Object.freeze({ key, body, path, execute() {
     if (pending) return pending
     const data = new FormData()
     data.append('expectedRevision', String(revision)); data.append('file', bytes, filename)
+    if (slot !== undefined) data.append('slot', slot)
     pending = api.request<unknown>(path, { method: 'POST', body: data, headers: { 'Idempotency-Key': key } })
       .then(value => decode(value)).finally(() => { pending = null })
     return pending

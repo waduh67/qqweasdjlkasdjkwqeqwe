@@ -11,6 +11,7 @@ import com.duluin.ftth.inventory.WarehouseCutoverState
 import com.duluin.ftth.inventory.WarehouseError
 import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.WarehouseOperationClass
+import com.duluin.ftth.inventory.WarehouseWorkflow
 import com.duluin.ftth.inventory.application.port.outbound.InventoryTenantPolicyRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -26,8 +27,8 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockForCommand(expectedEpoch: Long, operation: WarehouseOperationClass): TenantCutoverFence {
         val snapshot = locked(expectedEpoch, false)
-        if (!allows(snapshot.state, operation)) fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Operasi memerlukan cutover gudang yang sesuai")
-        return Fence(snapshot)
+        if (!allows(snapshot.state, operation, snapshot.workflow)) fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Operasi memerlukan alur gudang yang sesuai")
+        return Fence(snapshot, operation)
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -50,12 +51,26 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
         return repository.beginValidation(expectedEpoch)
     }
 
-    fun allows(state: WarehouseCutoverState, operation: WarehouseOperationClass): Boolean = when (state) {
-        WarehouseCutoverState.LEGACY -> operation in controlOperations
-        WarehouseCutoverState.VALIDATING -> operation in controlOperations || operation in approvalOperations
-        WarehouseCutoverState.ENFORCED -> operation in controlOperations || operation in setOf(
-            WarehouseOperationClass.ORDINARY_STOCK, WarehouseOperationClass.ASSET_ASSIGNMENT,
-        )
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun beginDraining(expectedEpoch: Long): TenantCutoverSnapshot {
+        val snapshot = locked(expectedEpoch, true)
+        if (snapshot.workflow != WarehouseWorkflow.LEGACY) fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Alur lama sudah dihentikan")
+        return repository.beginDraining(expectedEpoch)
+    }
+
+    fun allows(state: WarehouseCutoverState, operation: WarehouseOperationClass, workflow: WarehouseWorkflow = WarehouseWorkflow.LEGACY): Boolean {
+        if (operation in controlOperations) return true
+        if (operation in legacyCreateOperations) return workflow == WarehouseWorkflow.LEGACY
+        if (operation in legacyWorkOperations) return workflow != WarehouseWorkflow.REFERENCE
+        if (operation == WarehouseOperationClass.LEGACY_STOCK_CREATE)
+            return state == WarehouseCutoverState.ENFORCED && workflow == WarehouseWorkflow.LEGACY
+        if (operation in referenceOperations) return state == WarehouseCutoverState.ENFORCED && workflow == WarehouseWorkflow.REFERENCE
+        if (operation in stockOperations && workflow == WarehouseWorkflow.REFERENCE) return false
+        return when (state) {
+            WarehouseCutoverState.LEGACY -> false
+            WarehouseCutoverState.VALIDATING -> operation in approvalOperations
+            WarehouseCutoverState.ENFORCED -> operation in stockOperations
+        }
     }
 
     private fun locked(expectedEpoch: Long, exclusive: Boolean): TenantCutoverSnapshot {
@@ -67,7 +82,8 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
     private fun missing(): Nothing = fail(WarehouseErrorCode.CUTOVER_REQUIRED, "Kebijakan cutover tenant belum diinisialisasi")
     private fun fail(code: WarehouseErrorCode, message: String): Nothing = throw WarehouseContractException(WarehouseError(code, message))
 
-    private class Fence(override val snapshot: TenantCutoverSnapshot) : TenantCutoverFence, TenantCutoverChangeFence {
+    private class Fence(override val snapshot: TenantCutoverSnapshot,
+        override val operation: WarehouseOperationClass = WarehouseOperationClass.CONTROL_PLANE) : TenantCutoverFence, TenantCutoverChangeFence {
         private val transactionResources = TransactionSynchronizationManager.getResourceMap().toMap()
         private val thread = Thread.currentThread()
         private var active = true
@@ -89,6 +105,11 @@ class InventoryTenantPolicyService(private val repository: InventoryTenantPolicy
     }
 
     private val controlOperations = setOf(WarehouseOperationClass.CONTROL_PLANE, WarehouseOperationClass.MIGRATION_REPORT)
+    private val legacyCreateOperations = setOf(WarehouseOperationClass.LEGACY_WORK_ORDER_CREATE, WarehouseOperationClass.LEGACY_CONFIGURATION)
+    private val legacyWorkOperations = setOf(WarehouseOperationClass.LEGACY_WORK_ORDER_CHANGE,
+        WarehouseOperationClass.LEGACY_FULFILLMENT, WarehouseOperationClass.LEGACY_MAINTENANCE)
+    private val stockOperations = setOf(WarehouseOperationClass.ORDINARY_STOCK, WarehouseOperationClass.ASSET_ASSIGNMENT)
+    private val referenceOperations = setOf(WarehouseOperationClass.REFERENCE_STOCK, WarehouseOperationClass.REFERENCE_WORK_ORDER)
     private val approvalOperations = setOf(
         WarehouseOperationClass.PROVENANCE_RESOLUTION, WarehouseOperationClass.MIGRATION_APPROVAL,
         WarehouseOperationClass.MIGRATION_BASELINE, WarehouseOperationClass.CUTOVER_FINALIZATION,

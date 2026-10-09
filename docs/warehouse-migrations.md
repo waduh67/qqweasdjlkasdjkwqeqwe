@@ -1,7 +1,7 @@
 # Warehouse migration and cutover manifest
 
-The current highest packaged version is **178.12**; the next available version is
-**178.13**. Applied migrations are immutable. Historical sections below record the
+The current highest packaged version on 2026-10-09 is **211**; the next available
+integer version is **212**. Applied migrations are immutable. Historical sections below record the
 version reservations at their original checkpoints, not the current next version.
 Operational steps are in [the warehouse runbook](warehouse.md), with an application
 role read-only preflight in [the review guide](warehouse-review.md).
@@ -11,13 +11,39 @@ migrations explicitly qualify function names with `public`; a sibling schema in
 the shared QA database does not isolate those statements. The historical projection
 gate uses its pinned V175.21 application and replays V175.22. The legacy browser gate
 creates customer/ONU records through the V172 UI, upgrades that same database, performs
-independent cutover approval, and restarts. IDs, raw serials and old Flyway checksums
+independent cutover approval, restarts, activates the reference workflow with
+real positive stock and completed legacy documents, then restarts again.
+IDs, raw serials and old Flyway checksums
 must survive. A provenance-only resolution or a zero opening balance creates no stock.
 
 Take and test a consistent database/object-storage backup before an authorized rollout.
 After cutover, remediation is forward-only, or a coordinated restore during maintenance.
 Do not edit ledger rows, rewrite migration checksums, downgrade to a binary unaware of
 the new records, or disable guards to make an old fixture boot.
+
+## V181–V211: tenant defaults and the reference workflow
+
+| Versions | Purpose |
+| --- | --- |
+| V181, V181.1, V182 | Default role identities, explicit tenant owner, empty-default warehouse cleanup and credential version fencing |
+| V183–V188 | Exclusive warehouse writer epochs, draining/activation review and direct reference receipts/transfers with immutable command binding |
+| V189–V195 | Requests, partial procurement receipts, direct handover, returns and snapshot counts with epoch/serial integrity |
+| V196–V200 | Named work types, one current technician assignment, source/scope binding and immutable private photo evidence |
+| V201–V206 | Direct completion, exact own-material consumption and source-aware customer installation/fulfillment |
+| V207–V208 | New tenants start in REFERENCE; legacy work creation is fenced after bootstrap |
+| V209–V210 | Automatic work intake and helpdesk source binding for reviewed reference dispatch |
+| V211 | Activation of historical ONU serial claims backed by finalized, approved provenance-only proof; no stock is invented |
+
+Reference operations read the existing `inventory_balance_projection` ledger.
+Workflow activation does not copy or manufacture stock. The safety state
+LEGACY/VALIDATING/ENFORCED is distinct from the writer workflow
+LEGACY/DRAINING/REFERENCE. Historical documents remain readable in the archive
+after activation; their authorized frozen writers can finish during draining.
+
+The browser gate checks two viewports in all five phases and validates two
+positive and six negative read-only preflight probes on the upgraded database.
+The runner derives the highest integer migration from the reviewed checkout.
+Older checkpoints below retain their original version references and evidence.
 
 ## V178.12: retain expired drafts without creating physical effects
 

@@ -1,15 +1,17 @@
 import { expect, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
-import { login } from './helpers'
+import { login, selectNamed } from './helpers'
 
 export async function setupOwnArea(page: Page, admin: { email: string; password: string }) {
   const code = `A-${randomUUID().slice(0, 6).toUpperCase()}`
   const name = 'Area gudang uji'
   await page.goto('/areas')
+  await page.getByRole('button', { name: 'Tambah area', exact: true }).click()
   await page.getByRole('textbox', { name: 'Kode', exact: true }).fill(code)
   await page.getByRole('textbox', { name: 'Nama', exact: true }).fill(name)
+  await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   const response = page.waitForResponse(res => new URL(res.url()).pathname === '/api/areas' && res.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Tambah', exact: true }).click()
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click()
   expect((await response).ok()).toBeTruthy()
   await page.goto('/users')
   const self = page.getByRole('row').filter({ has: page.getByRole('gridcell', { name: admin.email, exact: true }) })
@@ -33,24 +35,21 @@ export async function addLocation(page: Page, input: { code: string; name: strin
   await page.getByRole('textbox', { name: 'Nama lokasi', exact: true }).fill(input.name)
   if (input.kind) await page.getByRole('combobox', { name: 'Jenis lokasi', exact: true }).selectOption(input.kind)
   if (input.parent) {
-    await expect(page.getByRole('option', { name: input.parent, exact: true })).toBeAttached()
-    await page.getByRole('combobox', { name: 'Lokasi induk', exact: true }).selectOption({ label: input.parent })
+    await selectNamed(page, 'Lokasi induk', input.parent)
   } else {
     await page.getByRole('combobox', { name: 'Area lokasi', exact: true }).selectOption({ label: input.area })
   }
   if (input.custodian) {
-    const control = page.getByRole('combobox', { name: 'Penanggung jawab', exact: true })
-    await expect(control.getByRole('option', { name: input.custodian, exact: true })).toBeAttached()
-    await control.selectOption({ label: input.custodian })
+    await selectNamed(page, 'Penanggung jawab', input.custodian)
   }
-  await page.getByRole('button', { name: 'Tinjau perubahan', exact: true }).click()
+  await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   const response = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/locations' && res.request().method() === 'POST')
   await page.getByRole('button', { name: 'Simpan lokasi', exact: true }).click()
   const saved = await response
   expect(saved.status()).toBe(201)
   const body = await saved.json()
   expect(body).toMatchObject({ code: input.code, name: input.name, revision: 0, state: 'ACTIVE' })
-  await expect(page.getByRole('gridcell', { name: `${input.name} ${input.code}`, exact: true })).toBeVisible()
+  await expect(page.getByRole('row').filter({ has: page.getByRole('gridcell', { name: input.name, exact: true }) }).getByRole('gridcell', { name: input.code, exact: true })).toBeVisible()
   return { id: body.id as string, code: input.code, name: input.name, label: `${input.name} · ${input.code}`, areaId: body.areaId as string }
 }
 
@@ -64,14 +63,14 @@ export async function addSku(page: Page, input: { code: string; name: string; tr
   if (input.tracking !== 'SERIAL') await page.getByRole('combobox', { name: 'Satuan', exact: true }).selectOption(input.unit ?? 'EA')
   if (input.minimum) await page.getByRole('textbox', { name: /^Stok minimum/ }).fill(input.minimum)
   if (input.inspectionRequired === false) await page.getByRole('checkbox', { name: 'Wajib diperiksa sebelum tersedia', exact: true }).uncheck()
-  await page.getByRole('button', { name: 'Tinjau perubahan', exact: true }).click()
+  await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   const response = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/skus' && res.request().method() === 'POST')
   await page.getByRole('button', { name: 'Simpan barang', exact: true }).click()
   const saved = await response
   expect(saved.status()).toBe(201)
   const body = await saved.json()
   expect(body).toMatchObject({ code: input.code, name: input.name, tracking: input.tracking, revision: 0, state: 'ACTIVE' })
-  await expect(page.getByRole('gridcell', { name: `${input.name} ${input.code}`, exact: true })).toBeVisible()
+  await expect(page.getByRole('row').filter({ has: page.getByRole('gridcell', { name: input.name, exact: true }) }).getByRole('gridcell', { name: input.code, exact: true })).toBeVisible()
   return { id: body.id as string, ...input, minimumQuantityBase: body.minimumQuantityBase as string }
 }
 
@@ -80,18 +79,18 @@ export async function addSupplier(page: Page, code: string, name: string) {
   await page.getByRole('button', { name: 'Tambah pemasok', exact: true }).click()
   await page.getByRole('textbox', { name: 'Kode pemasok', exact: true }).fill(code)
   await page.getByRole('textbox', { name: 'Nama pemasok', exact: true }).fill(name)
-  await page.getByRole('button', { name: 'Tinjau perubahan', exact: true }).click()
+  await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   const response = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v1/warehouse/suppliers' && res.request().method() === 'POST')
   await page.getByRole('button', { name: 'Simpan pemasok', exact: true }).click()
   const saved = await response
   expect(saved.status()).toBe(201)
   const body = await saved.json()
-  await expect(page.getByRole('gridcell', { name: `${name} ${code}`, exact: true })).toBeVisible()
+  await expect(page.getByRole('row').filter({ has: page.getByRole('gridcell', { name, exact: true }) }).getByRole('gridcell', { name: code, exact: true })).toBeVisible()
   return { id: body.id as string, code, name }
 }
 
 export async function masterAction(page: Page, name: string, code: string, action: string) {
-  const row = page.getByRole('row').filter({ has: page.getByRole('gridcell', { name: `${name} ${code}`, exact: true }) })
+  const row = page.getByRole('row').filter({ has: page.getByRole('gridcell', { name, exact: true }) }).filter({ has: page.getByRole('gridcell', { name: code, exact: true }) })
   await row.getByRole('button', { name: 'Aksi baris' }).click()
   await page.getByRole('menuitem', { name: action, exact: true }).click()
 }

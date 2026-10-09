@@ -19,8 +19,14 @@ class WarehousePostingService(
         check(TransactionSynchronizationManager.isActualTransactionActive())
         cutover.assertHeld()
         check(cutover.snapshot.tenantId == TenantContext.tenantId())
+        val reference = cutover.operation == WarehouseOperationClass.REFERENCE_STOCK
+        if ((cutover.snapshot.workflow == WarehouseWorkflow.REFERENCE) != reference ||
+            command.operation.namespace.startsWith("warehouse.reference.") != reference) fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         val opening = command.kind == MovementKind.OPENING_BALANCE && command.approval?.kind == ApprovalPostingKind.OPENING_BALANCE &&
             command.operation.namespace == "warehouse.approval.effect"
+        if (!reference && cutover.operation !in (if (opening) setOf(WarehouseOperationClass.MIGRATION_APPROVAL)
+            else setOf(WarehouseOperationClass.ORDINARY_STOCK, WarehouseOperationClass.ASSET_ASSIGNMENT)))
+            fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         if (cutover.snapshot.state != WarehouseCutoverState.ENFORCED && !(opening && cutover.snapshot.state == WarehouseCutoverState.VALIDATING))
             fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         if (opening && cutover.snapshot.state != WarehouseCutoverState.VALIDATING) fail(WarehouseErrorCode.CUTOVER_REQUIRED)
@@ -79,7 +85,10 @@ class WarehousePostingService(
         if(command.kind in setOf(MovementKind.CONSUME, MovementKind.DEPLOY)) {
             require(command.legs.any { it.endpoint in setOf(PostingEndpoint.CONSUMED, PostingEndpoint.CUSTOMER_INSTALLED) })
             require(command.legs.filter { it.direction==LegDirection.OUT }.all { it.status==InventoryStatus.ISSUED && it.dimension.custodianKind==OwnerKind.TECHNICIAN })
-            require(command.legs.filter { it.endpoint==PostingEndpoint.CONSUMED }.all { leg -> command.facts.any { it.stockIdentityId==leg.dimension.stockIdentityId && it.installed } })
+            if (command.operation.namespace == "warehouse.reference.consume") {
+                require(command.kind == MovementKind.CONSUME && command.facts.isEmpty() && command.usage == null &&
+                    command.reservations.isEmpty() && command.compensatesPostingId == null && command.approval == null)
+            } else require(command.legs.filter { it.endpoint==PostingEndpoint.CONSUMED }.all { leg -> command.facts.any { it.stockIdentityId==leg.dimension.stockIdentityId && it.installed } })
         }
         command.facts.forEach { fact ->
             require(fact.useRevision > 0 && fact.installed != fact.returned)

@@ -3,6 +3,7 @@ package com.duluin.ftth.inventory.adapter.outbound.persistence
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.port.inbound.*
 import com.duluin.ftth.inventory.application.port.outbound.PostingOperation
+import com.duluin.ftth.inventory.domain.model.LocationKind
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
@@ -20,8 +21,9 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
     }
 
     fun saveDraft(id: UUID, intake: ReceiptIntake, revision: Long, actor: UUID, epoch: Long, cutover: Long, creating: Boolean,
-        source: ReceiptDraftContext? = null) = jdbc.execute { sql ->
+        source: ReceiptDraftContext? = null, condition: WarehouseCondition = WarehouseCondition.QUARANTINE, technicianCustody: Boolean = false) = jdbc.execute { sql ->
         require(source == null || creating)
+        require(!technicianCustody || creating && intake.inspection.kind == LocationKind.TECHNICIAN && intake.inspection.custodianId != null)
         if (creating) sql.update("""INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,supplier_id,source_reference,cutover_epoch,authority_epoch,
             customer_id,work_order_id,work_order_revision)
             VALUES (?,?,?,'RECEIPT',?,?,?,?,?,?,?,?)""", id, sql.tenant, "RCV-$id", actor, intake.supplier.id, intake.externalReference, cutover, epoch,
@@ -39,9 +41,10 @@ class WarehouseReceiptPersistence(private val jdbc: WarehouseCommandJdbc) {
             sql.update("""INSERT INTO inventory_document_line(id,tenant_id,document_id,document_revision,line_number,sku_id,base_unit,tracking,quantity_base,
                 location_id,destination_location_id,custodian_id,custodian_kind,condition,legal_owner,inspection_required_snapshot,
                 cost_total_minor,cost_basis_quantity_base,currency,conversion_numerator,conversion_denominator,package_quantity)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'WAREHOUSE','QUARANTINE',?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 line.id, sql.tenant, id, revision, index + 1, line.sku.id, line.sku.baseUnit, line.sku.tracking, line.quantityBase.toLong(),
-                intake.inspection.id, intake.source.id, intake.inspection.id, source?.legalOwner ?: AssetLegalOwner.ISP, line.sku.inspectionRequired,
+                intake.inspection.id, intake.source.id, if (technicianCustody) intake.inspection.custodianId else intake.inspection.id,
+                if (technicianCustody) "TECHNICIAN" else "WAREHOUSE", condition, source?.legalOwner ?: AssetLegalOwner.ISP, line.sku.inspectionRequired,
                 line.cost?.totalMinor?.toLong(), line.cost?.costBasisQuantityBase?.toLong(), line.cost?.currency,
                 conversion?.numerator?.toLong(), conversion?.denominator?.toLong(), conversion?.packageQuantity?.toLong())
         }

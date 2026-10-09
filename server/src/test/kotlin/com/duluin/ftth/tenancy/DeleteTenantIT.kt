@@ -279,4 +279,33 @@ class DeleteTenantIT {
         // Data platform tetap ada (mis. akun root masih bisa login setelah penolakan).
         assertThat(countFor("app_user", platformId)).isGreaterThan(0)
     }
+
+    @Test
+    fun `gudang bawaan hanya hilang lewat hapus tenant dan lokasi tambahan tetap terlindungi`() {
+        val slug = "default${uniq()}"
+        val victim = onboarding.onboard(OnboardTenantCommand(slug, "Default ISP", "admin@$slug.test", "Admin", pass)).tenant
+        assertThat(countFor("inventory_location", victim.id)).isEqualTo(1)
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            TenantContext.runAs(victim.id) { tx.executeWithoutResult {
+                em.createNativeQuery("DELETE FROM inventory_location WHERE tenant_id=:tenant")
+                    .setParameter("tenant", victim.id).executeUpdate()
+            } }
+        }.hasRootCauseInstanceOf(java.sql.SQLException::class.java)
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            TenantContext.runAs(victim.id) { tx.executeWithoutResult {
+                em.createNativeQuery("UPDATE inventory_location SET tenant_default=false WHERE tenant_id=:tenant")
+                    .setParameter("tenant", victim.id).executeUpdate()
+            } }
+        }.hasRootCauseInstanceOf(java.sql.SQLException::class.java)
+        TenantContext.runAs(victim.id) { tx.executeWithoutResult {
+            em.createNativeQuery("INSERT INTO inventory_location(id,tenant_id,code,name,kind) VALUES (:id,:tenant,'EXTRA','Gudang Tambahan','WAREHOUSE')")
+                .setParameter("id", UUID.randomUUID()).setParameter("tenant", victim.id).executeUpdate()
+        } }
+        val tables = tenantScopedTables()
+        val before = tables.associateWith { countFor(it, victim.id) }
+        val root = login("platform", "root@ftth.local", "rootadmin123")
+        mockMvc.perform(delete("/api/platform/tenants/${victim.id}").header("Authorization", "Bearer $root"))
+            .andExpect(status().isConflict)
+        tables.forEach { table -> assertThat(countFor(table, victim.id)).describedAs(table).isEqualTo(before[table]) }
+    }
 }

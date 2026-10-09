@@ -210,4 +210,58 @@ class WorkOrderTest {
         assertThat(wo.status).isEqualTo(WorkOrderStatus.IN_PROGRESS)
         assertThat(wo.completedAt).isNull()
     }
+
+    @Test
+    fun `reference selesai dari penugasan atau pengerjaan tanpa keputusan penyelia`() {
+        listOf(false, true).forEach { started ->
+            val wo = draft()
+            val technician = UuidV7.generate()
+            val now = Instant.parse("2026-10-08T04:00:00Z")
+            val hash = "a".repeat(64)
+            wo.assign(setOf(technician), now, null)
+            if (started) wo.start(now, technician)
+            wo.clearPending()
+
+            wo.completeReference("  Kabel diganti  ", hash, now, technician)
+
+            assertThat(wo.status).isEqualTo(WorkOrderStatus.DONE)
+            assertThat(wo.completedBy).isEqualTo(technician)
+            assertThat(wo.completedAt).isEqualTo(now)
+            assertThat(wo.proofOfWorkHash).isEqualTo(hash)
+            assertThat(wo.resolutionNote).isEqualTo("Kabel diganti")
+            assertThat(wo.approvalStatus).isNull()
+            assertThat(wo.approvedBy).isNull()
+            assertThat(wo.approvedAt).isNull()
+            assertThat(wo.approvalNote).isNull()
+            assertThat(wo.pendingEvents()).extracting<WorkOrderEventType> { it.type }.containsExactly(WorkOrderEventType.COMPLETED)
+            assertThatThrownBy { wo.approve(null, now, UuidV7.generate()) }.isInstanceOf(ConflictException::class.java)
+            assertThatThrownBy { wo.reject("Ulangi", now, UuidV7.generate()) }.isInstanceOf(ConflictException::class.java)
+            assertThatThrownBy { wo.completeReference(null, hash, now, technician) }.isInstanceOf(ConflictException::class.java)
+        }
+    }
+
+    @Test
+    fun `reference menolak pembuktian dan teknisi yang tidak cocok tanpa mengubah pekerjaan`() {
+        val now = Instant.parse("2026-10-08T04:00:00Z")
+        val wo = draft()
+        val technician = UuidV7.generate()
+        val other = UuidV7.generate()
+        val hash = "a".repeat(64)
+        assertThatThrownBy { wo.completeReference(null, hash, now, technician) }.isInstanceOf(ConflictException::class.java)
+        wo.assign(setOf(technician), now, null)
+        wo.clearPending()
+        assertThatThrownBy { wo.completeReference(null, hash, now, other) }.isInstanceOf(ConflictException::class.java)
+        listOf("", "a".repeat(63), "G".repeat(64)).forEach { invalid ->
+            assertThatThrownBy { wo.completeReference(null, invalid, now, technician) }.isInstanceOf(ConflictException::class.java)
+        }
+        assertThat(wo.status).isEqualTo(WorkOrderStatus.ASSIGNED)
+        assertThat(wo.completedAt).isNull()
+        assertThat(wo.completedBy).isNull()
+        assertThat(wo.proofOfWorkHash).isNull()
+        assertThat(wo.pendingEvents()).isEmpty()
+        wo.assign(setOf(technician, other), now, null)
+        assertThatThrownBy { wo.completeReference(null, hash, now, technician) }.isInstanceOf(ConflictException::class.java)
+        wo.cancel(null, now, null)
+        assertThatThrownBy { wo.completeReference(null, hash, now, technician) }.isInstanceOf(ConflictException::class.java)
+    }
 }

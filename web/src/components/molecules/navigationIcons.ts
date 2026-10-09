@@ -16,13 +16,13 @@ import {
   ClipboardCheckmark16Filled, CheckmarkCircle16Filled, ChartMultiple16Filled,
   History16Filled, Settings16Filled,
 } from '@fluentui/react-icons'
-import type { WAREHOUSE_PAGES } from '@/pages/warehouse/navigation'
+import type { WAREHOUSE_PAGES, SHARED_WAREHOUSE_PAGES } from '@/pages/warehouse/navigation'
 import type { NavItem } from './SidebarNav'
 
-export const warehouse: Record<typeof WAREHOUSE_PAGES[number]['path'], NavItem['icon']> = {
+export const warehouse: Record<typeof WAREHOUSE_PAGES[number]['path'] | typeof SHARED_WAREHOUSE_PAGES[number]['path'], NavItem['icon']> = {
   catalog: Library16Filled, stock: Stack16Filled, receipts: ArrowDownload16Filled,
   requests: ClipboardBulletList16Filled, replenishment: ArrowUpload16Filled,
   transfers: ArrowBidirectionalLeftRight16Filled, returns: Toolbox16Filled,
   counts: ClipboardCheckmark16Filled, approvals: CheckmarkCircle16Filled,
-  reports: ChartMultiple16Filled, provenance: History16Filled, settings: Settings16Filled,
+  reports: ChartMultiple16Filled, provenance: History16Filled, settings: Settings16Filled, transition: ArrowBidirectionalLeftRight16Filled, archive: History16Filled,
 }

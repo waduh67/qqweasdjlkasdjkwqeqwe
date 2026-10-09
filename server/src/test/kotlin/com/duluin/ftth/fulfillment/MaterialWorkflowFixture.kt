@@ -52,7 +52,7 @@ abstract class MaterialWorkflowFixture : WarehouseReceiptHttpFixture() {
     protected fun technician(admin: String, extraPermissions: Set<String> = emptySet()): Pair<String, String> {
         val user = user(admin, setOf("workorder.order.field", "inventory.request.view", "inventory.request.manage", "inventory.sku.view") + extraPermissions)
         val roles = mapper.readTree(request("GET", "/api/roles", admin).contentAsString)
-        val techRole = roles.single { it.path("name").asString() == "Teknisi" }.path("id").asString()
+        val techRole = roles.single { it.path("name").asString() == "Teknisi NE" }.path("id").asString()
         val current = mapper.readTree(request("GET", "/api/me", user.first).contentAsString)
         val roleIds = current.path("roleIds").asSequence().map { it.asString() }.toList() + techRole
         assertThat(request("PUT", "/api/users/${user.second}/access", admin,

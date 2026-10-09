@@ -11,6 +11,7 @@ export type NavItem = {
   permission: string | readonly string[] | null
   icon: ComponentType<IconProps>
   end?: boolean
+  access?: 'read' | 'write'
 }
 export type NavGroup = { label: string | null; items: NavItem[] }
 
@@ -22,9 +23,10 @@ function loadClosed(key: string, defaults: string[]): Set<string> {
 }
 
 /** Groups open independently; saved choices survive navigation and refresh. */
-export function SidebarNav({ groups, can, storageKey, compact = false, onToggle, expanded = true }: {
+export function SidebarNav({ groups, can, hasPermission = can, storageKey, compact = false, onToggle, expanded = true }: {
   groups: NavGroup[]
   can: (permission: string) => boolean
+  hasPermission?: (permission: string) => boolean
   storageKey: string
   compact?: boolean
   onToggle?: () => void
@@ -61,7 +63,8 @@ export function SidebarNav({ groups, can, storageKey, compact = false, onToggle,
   })
   const search = query.trim().toLocaleLowerCase('id')
   const visibleGroups = groups.map(group => ({ ...group, items: group.items.filter(item => {
-    const permitted = item.permission === null || (typeof item.permission === 'string' ? can(item.permission) : item.permission.some(can))
+    const check = item.access === 'read' ? hasPermission : can
+    const permitted = item.permission === null || (typeof item.permission === 'string' ? check(item.permission) : item.permission.some(check))
     return permitted && (!search || `${group.label ?? ''} ${item.label}`.toLocaleLowerCase('id').includes(search))
   }) })).filter(group => group.items.length)
 

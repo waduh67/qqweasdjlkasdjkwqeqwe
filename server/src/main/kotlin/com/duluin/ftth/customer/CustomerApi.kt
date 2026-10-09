@@ -375,6 +375,7 @@ data class CustomerRef(
     val location: Coordinate?,
     val status: String,
     val locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
+    val areaId: UUID? = null,
 )
 
 /** Pandangan ringkas sebuah langganan untuk konsumen lintas-module (mis. bng). */

@@ -47,7 +47,7 @@ internal fun assertReceiptApproval(sql: PostingSql, guard: ReceiptPostingApprova
     val states = sql.query("""SELECT approval.status,approval.revision,approval.expires_at,approval.policy_snapshot_hash,
         approval.policy_version_id,approval.source_snapshot_hash,approval.source_document_id,approval.source_document_revision,
         policy.snapshot_hash,document.kind,document.state document_state,document.revision document_revision,
-        cutover.epoch,cutover.state cutover_state,clock_timestamp() checked_at,
+        cutover.epoch,cutover.state cutover_state,cutover.workflow_mode,cutover.draining_from_epoch,clock_timestamp() checked_at,
         warehouse_document_draft_expired_at(document.tenant_id,document.id) draft_expiry
         FROM inventory_approval approval JOIN inventory_approval_policy_version policy ON policy.tenant_id=approval.tenant_id AND policy.id=approval.policy_version_id
         JOIN inventory_document document ON document.tenant_id=approval.tenant_id AND document.id=approval.source_document_id
@@ -62,7 +62,9 @@ internal fun assertReceiptApproval(sql: PostingSql, guard: ReceiptPostingApprova
                 row.getString("policy_snapshot_hash") != guard.policyHash || row.getString("source_snapshot_hash") != guard.sourceHash -> WarehouseApprovalStatus.STALE
             row.uuid("source_document_id") != attempt.sourceDocumentId || row.getLong("source_document_revision") != attempt.sourceRevision ||
                 row.getLong("document_revision") != documentRevision || row.getString("kind") != guard.kind.name || row.getString("document_state") != documentState -> WarehouseApprovalStatus.STALE
-            row.getLong("epoch") != guard.cutoverEpoch || row.getString("cutover_state") !=
+            (row.getLong("epoch") != guard.cutoverEpoch && !(guard.kind != ApprovalPostingKind.OPENING_BALANCE &&
+                row.getString("workflow_mode") == "DRAINING" && row.getObject("draining_from_epoch") == guard.cutoverEpoch &&
+                row.getLong("epoch") - guard.cutoverEpoch == 1L)) || row.getString("cutover_state") !=
                 (if (guard.kind == ApprovalPostingKind.OPENING_BALANCE) "VALIDATING" else "ENFORCED") -> WarehouseApprovalStatus.STALE
             else -> null
         }

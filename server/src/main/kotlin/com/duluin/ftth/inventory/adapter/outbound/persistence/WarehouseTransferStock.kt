@@ -62,4 +62,17 @@ class WarehouseTransferStock(private val jdbc: WarehouseCommandJdbc) {
             AND state='OPEN' AND (reserved_unpicked_base>0 OR reserved_picked_base>0) LIMIT 1""", sql.tenant, identity) != null)
             sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
     }
+
+    fun assertTechnician(piece: TransferStock, technician: UUID) = jdbc.execute { sql ->
+        if (piece.status != InventoryStatus.ISSUED || piece.dimension.custodianKind != OwnerKind.TECHNICIAN ||
+            piece.dimension.custodianId != technician || piece.dimension.condition != WarehouseCondition.SERVICEABLE ||
+            piece.dimension.legalOwner != AssetLegalOwner.ISP || sql.value("""SELECT id FROM inventory_location
+                WHERE tenant_id=? AND id=? AND kind='TECHNICIAN' AND state='ACTIVE' AND custodian_id=?""",
+                sql.tenant, piece.dimension.locationId, technician) == null) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        if (piece.tracking == WarehouseTracking.SERIAL && sql.value("""SELECT id FROM inventory_serialized_asset
+            WHERE tenant_id=? AND id=? AND location_id=? AND custody_owner_id=? AND custody_owner_kind='TECHNICIAN'
+                AND status='ISSUED' AND condition='SERVICEABLE' AND legal_owner='ISP' AND warehouse_admission='VERIFIED' FOR UPDATE""",
+            sql.tenant, piece.dimension.stockIdentityId, piece.dimension.locationId, technician) == null)
+            sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+    }
 }

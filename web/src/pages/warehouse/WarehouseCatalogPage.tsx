@@ -9,6 +9,7 @@ import { WarehouseSkuEditor } from './WarehouseSkuEditor'
 import { WarehouseSupplierEditor } from './WarehouseSupplierEditor'
 import { WarehouseLocationEditor } from './WarehouseLocationEditor'
 import { WarehouseScopePanel } from './WarehouseScopePanel'
+import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
 
 const tabs = [
   { key: 'locations', label: 'Lokasi', permission: 'inventory.location.view' },
@@ -20,11 +21,12 @@ const tabs = [
 export function WarehouseCatalogPage() {
   const { can } = useCan()
   const { user } = useAuth()
+  const workflow = useWarehouseWorkflow()
   const [params, setParams] = useSearchParams()
   const visible = tabs.filter(tab => can(tab.permission))
   const selected = visible.find(tab => tab.key === params.get('tab'))?.key ?? visible[0]?.key
   return <div className="stack"><PageHeader title="Katalog & Lokasi" />
-    {!user?.platformAdmin && user?.areaIds.length === 0 && <p role="status">Belum ada area gudang untuk akun Anda. {can('iam.user.view') && <Link to="/users">Atur area pengguna</Link>}</p>}
+    {workflow.state.status === 'ready' && !workflow.state.data.owner && !user?.platformAdmin && user?.areaIds.length === 0 && <p role="status">Belum ada area gudang untuk akun Anda. {can('iam.user.view') && <Link to="/users">Atur area pengguna</Link>}</p>}
     <Tabs tabs={visible.map(({ key, label }) => ({ key, label }))} active={selected ?? 'locations'} onChange={tab => setParams({ tab })} />
     {selected === 'locations' && <WarehouseMasterPanel title="Lokasi" load={listLocations} archive={archiveLocation} canManage={can('inventory.location.manage')}
       emptyHint="Hanya lokasi dalam cakupan gudang dan area Anda yang ditampilkan. Gunakan Tambah lokasi untuk memulai."
