@@ -125,6 +125,18 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Material requests use a named recipient, reason and exact material quantities.
+  Technicians submit for themselves; Admin can select a technician or warehouse
+  with searchable paginated choices. Proposed materials are available only for
+  procurement. Current scoped warehouse and technician balances remain visible
+  through submission and quantity review, including zero-stock warehouses.
+- Request detail separates original, approved, received and fulfilled quantities
+  from the actor timeline. Admin may reduce quantities; Manager decisions follow
+  the policy captured at submission. Partial receipt and handover use reviewed
+  resource forms. Uncertain responses retain the command and lock dismissal until
+  retry resolves it. Material Saya links to requests; only the tenant owner sees
+  approval and overdue settings. Lists, material lines and timelines paginate at
+  25 rows and retain readable labels at phone widths.
 - Reference receipts require a named destination and material lines. Supplier,
   delivery reference, lot/reel code and costs are optional. Review states that
   saving immediately adds available stock. Reference transfers select named

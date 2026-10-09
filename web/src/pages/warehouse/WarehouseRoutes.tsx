@@ -20,6 +20,8 @@ import { WarehouseProvenancePage } from './WarehouseProvenancePage'
 import { ReferenceCatalogPage } from './ReferenceCatalogPage'
 import { ReferenceStockPage } from './ReferenceStockPage'
 import { ReferenceReceiptsPage, ReferenceTransfersPage } from './ReferenceMovementsPage'
+import { ReferenceRequestsPage } from './ReferenceRequestsPage'
+import { ReferenceSettingsPage } from './ReferenceSettingsPage'
 import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
 import { REFERENCE_WAREHOUSE_PAGES } from './navigation'
 
@@ -49,6 +51,8 @@ function ReferenceRoutes() {
     <Route path="stock" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceStockPage /></WarehouseGate>} />
     <Route path="receipts" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceReceiptsPage /></WarehouseGate>} />
     <Route path="transfers" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceTransfersPage /></WarehouseGate>} />
+    <Route path="requests" element={<WarehouseGate permissions={['warehouse.request.view', 'warehouse.request.own']}><ReferenceRequestsPage /></WarehouseGate>} />
+    <Route path="settings" element={<ReferenceSettingsPage />} />
     <Route path="*" element={<WarehouseUnavailable />} />
   </Routes>
 }

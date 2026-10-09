@@ -21,8 +21,10 @@ export const REFERENCE_WAREHOUSE_PAGES = [
   { path: 'stock', label: 'Stok & Riwayat', permissions: ['warehouse.stock.view'] },
   { path: 'receipts', label: 'Penerimaan', permissions: ['warehouse.stock.view'] },
   { path: 'transfers', label: 'Transfer', permissions: ['warehouse.stock.view'] },
+  { path: 'requests', label: 'Permintaan Material', permissions: ['warehouse.request.view', 'warehouse.request.own'] },
+  { path: 'settings', label: 'Setelan Gudang', permissions: ['warehouse.request.view'], ownerOnly: true },
 ] as const
 
-export function warehousePages(workflow: 'LEGACY' | 'DRAINING' | 'REFERENCE') {
-  return workflow === 'REFERENCE' ? REFERENCE_WAREHOUSE_PAGES : WAREHOUSE_PAGES
+export function warehousePages(workflow: 'LEGACY' | 'DRAINING' | 'REFERENCE', owner = false) {
+  return workflow === 'REFERENCE' ? REFERENCE_WAREHOUSE_PAGES.filter(page => !('ownerOnly' in page) || owner) : WAREHOUSE_PAGES
 }

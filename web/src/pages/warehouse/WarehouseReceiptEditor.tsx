@@ -76,12 +76,12 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
   </>
 }
 
-export function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove, reference = false }: { readonly row: ReceiptDraftRow; readonly number: number; readonly costVisible: boolean; readonly onChange: (patch: Partial<ReceiptDraftRow>) => void; readonly onRemove?: () => void; readonly reference?: boolean }) {
+export function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove, reference = false, fixedSku = false }: { readonly row: ReceiptDraftRow; readonly number: number; readonly costVisible: boolean; readonly onChange: (patch: Partial<ReceiptDraftRow>) => void; readonly onRemove?: () => void; readonly reference?: boolean; readonly fixedSku?: boolean }) {
   const [scan, setScan] = useState(''), [creatingSku, setCreatingSku] = useState(false)
   const { can } = useCan()
   function addScan() { if (scan.trim()) { onChange({ serials: [row.serials.trim(), scan.trim()].filter(Boolean).join('\n') }); setScan('') } }
   return <><fieldset className="card stack receipt-line" style={{ minWidth: 0 }}><legend>Barang {number}</legend>
-    <WarehousePicker<ReceiptSkuChoice> create={can(reference ? 'warehouse.catalog.manage' : 'inventory.sku.manage') ? { label: 'Tambah barang baru', onClick: () => setCreatingSku(true) } : undefined} label={`Barang ${number}`} load={reference ? referenceSkus : receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />
+    {fixedSku ? <p>Barang: <strong>{row.sku?.name}</strong> · {row.sku?.code}</p> : <WarehousePicker<ReceiptSkuChoice> create={can(reference ? 'warehouse.catalog.manage' : 'inventory.sku.manage') ? { label: 'Tambah barang baru', onClick: () => setCreatingSku(true) } : undefined} label={`Barang ${number}`} load={reference ? referenceSkus : receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />}
     {row.sku && <>
       <WarehouseQuantityField label={row.sku.baseUnit === 'MM' ? 'Panjang reel aktual' : 'Jumlah aktual'} unit={row.sku.baseUnit} value={row.quantity} onChange={quantity => onChange({ quantity })} />
       {row.sku.tracking === 'SERIAL' ? <>

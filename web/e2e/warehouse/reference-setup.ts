@@ -11,6 +11,18 @@ export async function captureReference(page: Page, info: TestInfo, name: string)
   await page.screenshot({ path: info.outputPath(name + '.png'), animations: 'disabled' })
 }
 
+export async function captureReferenceDocument(page: Page, info: TestInfo, name: string) {
+  const theme = await page.locator('html').getAttribute('data-theme')
+  for (const end of [false, true]) {
+    await page.evaluate(atEnd => {
+      const body = document.querySelector('.resource-form-dialog .fui-DialogContent')
+      if (body) body.scrollTop = atEnd ? body.scrollHeight : 0
+      window.scrollTo(0, atEnd && !body ? document.documentElement.scrollHeight : 0)
+    }, end)
+    await captureReference(page, info, theme + '-' + name + (end ? '-end' : ''))
+  }
+}
+
 export async function referenceTenant(page: Page, prefix: string) {
   const authenticate = async (account: { readonly email: string; readonly password: string }) => {
     const response = await page.request.post('/api/auth/login', { data: account })

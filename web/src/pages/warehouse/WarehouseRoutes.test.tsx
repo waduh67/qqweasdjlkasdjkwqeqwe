@@ -12,6 +12,7 @@ vi.mock('@/api/warehouse/reference', () => ({ readWorkflow: vi.fn() }))
 vi.mock('./ReferenceCatalogPage', () => ({ ReferenceCatalogPage: () => <h1>Reference catalog</h1> }))
 vi.mock('./ReferenceStockPage', () => ({ ReferenceStockPage: () => <h1>Reference stock</h1> }))
 vi.mock('./ReferenceMovementsPage', () => ({ ReferenceReceiptsPage: () => <h1>Reference receipts</h1>, ReferenceTransfersPage: () => <h1>Reference transfers</h1> }))
+vi.mock('./ReferenceRequestsPage', () => ({ ReferenceRequestsPage: () => <h1>Reference requests</h1> }))
 vi.mock('./WarehouseCatalogPage', () => ({ WarehouseCatalogPage: () => <h1>Legacy catalog</h1> }))
 vi.mock('./WarehouseReceiptsPage', () => ({ WarehouseReceiptsPage: () => <h1>Legacy receipts</h1> }))
 const read = vi.mocked(readWorkflow)
@@ -60,4 +61,17 @@ it('does not redirect an account without any warehouse grant into a protected pa
   await screen.findByRole('alert')
   expect(screen.queryByText('Reference catalog')).toBeNull()
   expect(screen.queryByText('Legacy catalog')).toBeNull()
+})
+
+it.each(['/warehouse', '/warehouse/requests'])('lets an own-only technician reach requests at %s', async path => {
+  read.mockResolvedValue(reference); access.permissions.add('warehouse.request.own')
+  route(path)
+  await screen.findByRole('heading', { name: 'Reference requests' })
+})
+
+it('denies owner settings to nonowners even with warehouse grants', async () => {
+  read.mockResolvedValue(reference); access.permissions.add('warehouse.request.view')
+  route('/warehouse/settings')
+  await screen.findByRole('alert')
+  expect(screen.queryByRole('heading', { name: 'Setelan Gudang' })).toBeNull()
 })

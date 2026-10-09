@@ -13,6 +13,7 @@ export const listReferenceSkus = (filter: MasterFilter = {}) => query(`${root}/s
 export const listReferenceLocations = (filter: MasterFilter = {}) => query(`${root}/locations${parameters({ ...filter })}`, pageOf(location))
 export const listReferenceSuppliers = (filter: MasterFilter = {}) => query(`${root}/suppliers${parameters({ ...filter })}`, pageOf(supplier))
 export const getReferenceLocation = (id: string) => query(`${root}/locations/${uuid(id)}`, location)
+export const getReferenceSku = (id: string) => query(`${root}/skus/${uuid(id)}`, sku)
 export const saveReferenceSku = (input: SkuInput, id?: string) => referenceCommand(`${root}/skus${id ? `/${uuid(id)}` : ''}`, id ? 'PUT' : 'POST', input, sku)
 export const saveReferenceLocation = (input: LocationInput, id?: string) => referenceCommand(`${root}/locations${id ? `/${uuid(id)}` : ''}`, id ? 'PUT' : 'POST', input, location)
 export const saveReferenceSupplier = (input: SupplierInput, id?: string) => referenceCommand(`${root}/suppliers${id ? `/${uuid(id)}` : ''}`, id ? 'PUT' : 'POST', input, supplier)
