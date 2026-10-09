@@ -2,6 +2,8 @@ package com.duluin.ftth.iam.application.service
 
 import com.duluin.ftth.iam.AreaRef
 import com.duluin.ftth.iam.AreaReferenceApi
+import com.duluin.ftth.common.domain.Page
+import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.iam.UserRef
@@ -39,6 +41,9 @@ class IamApiService(
         AuthorityScope.Unrestricted -> areaRepository.findAll().map { it.toRef() }
         is AuthorityScope.Restricted -> areasByIds(scope.ids)
     }.sortedBy { it.name }
+
+    override fun searchAreas(scope: AuthorityScope, query: String, page: PageRequest): Page<AreaRef> =
+        areaRepository.search(scope, query, page).map { it.toRef() }
 
     private fun User.toRef() = UserRef(
         id = id,
