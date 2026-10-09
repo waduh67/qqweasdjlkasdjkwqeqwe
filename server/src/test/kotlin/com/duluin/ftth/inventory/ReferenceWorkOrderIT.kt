@@ -114,6 +114,7 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         val s = setup()
         val material = issue(s)
         val id = create(s).path("id").asString()
+        assertThat(ok("GET", "/$id", s.owner).path("customerLocked").asBoolean()).isFalse()
         completePhotos(id, s.tech)
         val body = completeBody(2, listOf(material.second to "3"))
         val key = UUID.randomUUID().toString()
@@ -244,6 +245,7 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         }
         val input = body(s).dropLast(1) + ",\"customerId\":\"$customerId\",\"subscriptionId\":\"$subscription\",\"orderId\":\"$orderId\"}"
         val id = ok("POST", "", s.admin, input, status = 201).path("id").asString()
+        assertThat(ok("GET", "/$id", s.admin).path("customerLocked").asBoolean()).isTrue()
         completePhotos(id, s.tech)
         val key = UUID.randomUUID().toString()
         val completion = completeBody(2, listOf(material.second to "2"))

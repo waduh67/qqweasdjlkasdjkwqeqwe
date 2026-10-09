@@ -162,7 +162,8 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
         val access = readAccess()
         val view = authorized(store.get(id), access)
         val deadline = view.lastActivityAt.plusSeconds(settings.settings().overdueDays.toLong() * 86400)
-        return ReferenceWorkOrderDetail(view, view.state == ReferenceWorkOrderState.PENDING && !Instant.now().isBefore(deadline), deadline, store.timeline(id), completions.get(id))
+        val order = workOrders.findById(id) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+        return ReferenceWorkOrderDetail(view, view.state == ReferenceWorkOrderState.PENDING && !Instant.now().isBefore(deadline), deadline, store.timeline(id), completions.get(id), order.subscriptionId != null)
     }
     fun list(page: Int, size: Int, state: ReferenceWorkOrderState?, search: String?, overdue: Boolean): WarehousePage<ReferenceWorkOrderView> {
         if (page < 0 || size !in 1..100 || search != null && search.length > 200) malformed()

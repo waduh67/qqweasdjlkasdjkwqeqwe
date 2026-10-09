@@ -76,6 +76,7 @@ export function referenceCompletion(value: unknown) {
 export function referenceWorkDetail(value: unknown) {
   const row = record(value)
   return { workOrder: referenceWorkOrder(row.workOrder), overdue: boolean(row.overdue), overdueAt: timestamp(row.overdueAt),
+    customerLocked: boolean(row.customerLocked),
     completion: nullable(row.completion, referenceCompletion, 'completion'), timeline: array(row.timeline, value => {
       const event = record(value)
       return { id: uuid(event.id), revision: integer(event.revision), action: text(event.action), actorName: text(event.actorName),
