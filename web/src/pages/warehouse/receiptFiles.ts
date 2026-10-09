@@ -1,6 +1,6 @@
 import type { ReceiptEvidence } from '@/api/warehouse/receipts'
 
-export const receiptLink = (id: string) => `/warehouse/receipts?id=${encodeURIComponent(id)}`
+export const receiptLink = (id: string, archive = false) => `${archive ? '/warehouse/archive?section=receipts&' : '/warehouse/receipts?'}id=${encodeURIComponent(id)}`
 export function saveReceiptFile(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob), anchor = document.createElement('a')
   anchor.href = url; anchor.download = filename; anchor.click()
