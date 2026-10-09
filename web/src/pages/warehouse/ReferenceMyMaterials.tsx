@@ -17,7 +17,8 @@ export function ReferenceMyMaterials() {
   const load = useCallback(() => ownMaterials(search.trim(), page), [search, page])
   const result = useWarehouseQuery(load, `${user?.id}:${user?.tenantId}`)
   return <div className="stack"><PageHeader title="Material Saya" subtitle="Barang yang sudah diserahkan ke Anda. Pemakaian dicatat saat menyelesaikan tugas." actions={<Button onClick={result.reload}>Muat ulang</Button>} />
-    <div className="row wrap"><Link to="/my-work-orders">Buka tugas untuk mencatat pemakaian</Link>{hasPermission('warehouse.request.own') && <Link to="/warehouse/requests">Ajukan atau pantau permintaan material</Link>}</div>
+    <div className="row wrap"><Link to="/my-work-orders">Buka tugas untuk mencatat pemakaian</Link>{hasPermission('warehouse.request.own') && <Link to="/warehouse/requests">Ajukan atau pantau permintaan material</Link>}
+      {hasPermission('warehouse.return.own') && <Link to="/warehouse/returns">Ajukan atau pantau retur material</Link>}</div>
     <TextField label="Cari material" placeholder="Nama, kode barang, atau serial" value={search} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.stockIdentityId} empty={<EmptyState title="Belum ada material di tangan Anda" hint="Material muncul di sini setelah admin gudang menyerahkannya ke Anda." />} columns={[

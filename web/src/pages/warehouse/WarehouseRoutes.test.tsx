@@ -13,6 +13,8 @@ vi.mock('./ReferenceCatalogPage', () => ({ ReferenceCatalogPage: () => <h1>Refer
 vi.mock('./ReferenceStockPage', () => ({ ReferenceStockPage: () => <h1>Reference stock</h1> }))
 vi.mock('./ReferenceMovementsPage', () => ({ ReferenceReceiptsPage: () => <h1>Reference receipts</h1>, ReferenceTransfersPage: () => <h1>Reference transfers</h1> }))
 vi.mock('./ReferenceRequestsPage', () => ({ ReferenceRequestsPage: () => <h1>Reference requests</h1> }))
+vi.mock('./ReferenceReturnsPage', () => ({ ReferenceReturnsPage: () => <h1>Reference returns</h1> }))
+vi.mock('./WarehouseReturnsPage', () => ({ WarehouseReturnsPage: () => <h1>Legacy returns</h1> }))
 vi.mock('./WarehouseCatalogPage', () => ({ WarehouseCatalogPage: () => <h1>Legacy catalog</h1> }))
 vi.mock('./WarehouseReceiptsPage', () => ({ WarehouseReceiptsPage: () => <h1>Legacy receipts</h1> }))
 const read = vi.mocked(readWorkflow)
@@ -74,4 +76,18 @@ it('denies owner settings to nonowners even with warehouse grants', async () => 
   route('/warehouse/settings')
   await screen.findByRole('alert')
   expect(screen.queryByRole('heading', { name: 'Setelan Gudang' })).toBeNull()
+})
+
+it.each(['warehouse.return.own', 'warehouse.return.manage'])('opens reference returns with %s', async permission => {
+  read.mockResolvedValue(reference); access.permissions.add(permission)
+  route('/warehouse/returns')
+  await screen.findByRole('heading', { name: 'Reference returns' })
+})
+
+it('never opens legacy returns with an old return grant in reference workflow', async () => {
+  read.mockResolvedValue(reference); access.permissions.add('inventory.return.view')
+  route('/warehouse/returns')
+  await screen.findByRole('alert')
+  expect(screen.queryByText('Legacy returns')).toBeNull()
+  expect(screen.queryByText('Reference returns')).toBeNull()
 })

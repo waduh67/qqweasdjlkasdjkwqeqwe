@@ -125,6 +125,12 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Retur Material links from Material Saya and shows named own stock, exact quantities,
+  destination and reason before submission. Submission and rejection leave custody
+  unchanged; Admin explicitly confirms physical receipt before stock moves. Saved
+  details paginate serial positions at 25 rows and show submission and decision
+  with the actor and timestamp in the timeline.
+  Conflicts retain the pending document and offer a reload of current stock.
 - Material requests use a named recipient, reason and exact material quantities.
   Technicians submit for themselves; Admin can select a technician or warehouse
   with searchable paginated choices. Proposed materials are available only for

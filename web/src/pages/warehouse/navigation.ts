@@ -22,6 +22,7 @@ export const REFERENCE_WAREHOUSE_PAGES = [
   { path: 'receipts', label: 'Penerimaan', permissions: ['warehouse.stock.view'] },
   { path: 'transfers', label: 'Transfer', permissions: ['warehouse.stock.view'] },
   { path: 'requests', label: 'Permintaan Material', permissions: ['warehouse.request.view', 'warehouse.request.own'] },
+  { path: 'returns', label: 'Retur Material', permissions: ['warehouse.return.own', 'warehouse.return.manage'] },
   { path: 'settings', label: 'Setelan Gudang', permissions: ['warehouse.request.view'], ownerOnly: true },
 ] as const
 
