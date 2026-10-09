@@ -56,7 +56,7 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
         store.lockTypes()
         store.ensureDefaults()
         val prior = id?.let { store.type(it) }
-        if (prior?.deleted == true || input.expectedRevision != (prior?.revision ?: 0)) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        if (prior?.deleted == true || input.expectedRevision != (prior?.revision ?: 0L)) masterFailure(WarehouseErrorCode.STALE_REVISION)
         if (store.types().any { it.id != id && it.name.equals(input.name, true) }) malformed("Nama jenis sudah digunakan")
         val view = ReferenceWorkOrderTypeView(id ?: UUID.randomUUID(), prior?.revision?.plus(1) ?: 0, input.name,
             input.workType, input.materialRequired, input.photoSlots, input.active)
