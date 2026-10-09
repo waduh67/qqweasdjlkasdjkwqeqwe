@@ -125,6 +125,11 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Stock Opname starts with a named material and location, followed by an immutable
+  book snapshot. Physical quantity starts blank and accepts zero. Review shows
+  book, physical and exact difference before adjustment. Serial book positions
+  and saved physical serials paginate at 25 rows. A stock conflict requires a fresh
+  snapshot; a saved audit remains read-only with actor, time and reason.
 - Retur Material links from Material Saya and shows named own stock, exact quantities,
   destination and reason before submission. Submission and rejection leave custody
   unchanged; Admin explicitly confirms physical receipt before stock moves. Saved

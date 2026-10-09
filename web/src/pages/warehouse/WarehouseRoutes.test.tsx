@@ -14,6 +14,8 @@ vi.mock('./ReferenceStockPage', () => ({ ReferenceStockPage: () => <h1>Reference
 vi.mock('./ReferenceMovementsPage', () => ({ ReferenceReceiptsPage: () => <h1>Reference receipts</h1>, ReferenceTransfersPage: () => <h1>Reference transfers</h1> }))
 vi.mock('./ReferenceRequestsPage', () => ({ ReferenceRequestsPage: () => <h1>Reference requests</h1> }))
 vi.mock('./ReferenceReturnsPage', () => ({ ReferenceReturnsPage: () => <h1>Reference returns</h1> }))
+vi.mock('./ReferenceCountsPage', () => ({ ReferenceCountsPage: () => <h1>Reference counts</h1> }))
+vi.mock('./WarehouseCountsPage', () => ({ WarehouseCountsPage: () => <h1>Legacy counts</h1> }))
 vi.mock('./WarehouseReturnsPage', () => ({ WarehouseReturnsPage: () => <h1>Legacy returns</h1> }))
 vi.mock('./WarehouseCatalogPage', () => ({ WarehouseCatalogPage: () => <h1>Legacy catalog</h1> }))
 vi.mock('./WarehouseReceiptsPage', () => ({ WarehouseReceiptsPage: () => <h1>Legacy receipts</h1> }))
@@ -90,4 +92,18 @@ it('never opens legacy returns with an old return grant in reference workflow', 
   await screen.findByRole('alert')
   expect(screen.queryByText('Legacy returns')).toBeNull()
   expect(screen.queryByText('Reference returns')).toBeNull()
+})
+
+it('opens reference counts with the count management grant', async () => {
+  read.mockResolvedValue(reference); access.permissions.add('warehouse.count.manage')
+  route('/warehouse/counts')
+  await screen.findByRole('heading', { name: 'Reference counts' })
+})
+
+it.each(['inventory.count.view', 'warehouse.stock.view', 'warehouse.request.own'])('denies reference counts with only %s', async permission => {
+  read.mockResolvedValue(reference); access.permissions.add(permission)
+  route('/warehouse/counts')
+  await screen.findByRole('alert')
+  expect(screen.queryByText('Legacy counts')).toBeNull()
+  expect(screen.queryByText('Reference counts')).toBeNull()
 })
