@@ -125,6 +125,17 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Reference receipts require a named destination and material lines. Supplier,
+  delivery reference, lot/reel code and costs are optional. Review states that
+  saving immediately adds available stock. Reference transfers select named
+  source/destination and available warehouse positions; saving immediately moves
+  the exact quantity. Saved receipt/transfer documents are read-only, show the
+  actor and local timestamp, and paginate physical serial lines. Shared resource
+  forms retain drafts and lock dismissal during pending or uncertain commands.
+- These reference actions use the existing full-width tables, resource forms,
+  mobile field labels and Fluent controls. Legacy receipt inspection and transfer
+  acknowledgment retain their separate historical workspace.
+
 - Tenant workflow selects the reference workspace from an authenticated server read.
   Technician work is a full-width document: task instructions, named required photos,
   own material quantities, completion review, then durable activity history. The

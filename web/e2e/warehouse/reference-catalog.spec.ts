@@ -118,7 +118,7 @@ test('default Admin manages reference catalog and Manager reads it within grante
   expect(reads).not.toContain('/api/areas')
   expect(reads.filter(path => path.startsWith('/api/v1/warehouse/'))).toEqual([])
   await page.goto('/warehouse/receipts')
-  await expect(page.getByText('Halaman gudang tidak tersedia', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Penerimaan', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Keluar', exact: true }).click()
   await login(page, manager.account)
   await page.goto('/warehouse/catalog')

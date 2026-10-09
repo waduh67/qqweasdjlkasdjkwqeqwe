@@ -15,13 +15,13 @@ export interface ReceiptDraftInput { supplierId: string; externalReference: stri
 export interface ReceiptInspectionInput { lineId: string; stockIdentityId: string; baseUnit: BaseUnit; acceptedBase: string; rejectedBase: string; evidenceId: string; reason: string; rejectedDisposition: 'QUARANTINE' | 'SUPPLIER_RETURN' }
 export interface ReceiptPutawayInput { lineId: string; stockIdentityId: string; quantityBase: string; baseUnit: BaseUnit }
 
-function conversion(value: unknown, path = 'conversion'): ReceiptConversion {
+export function conversion(value: unknown, path = 'conversion'): ReceiptConversion {
   const row = record(value, path)
   const result = { numerator: decimal(row.numerator, path), denominator: decimal(row.denominator, path), packageQuantity: decimal(row.packageQuantity, path) }
   if (Object.values(result).some(v => BigInt(v) <= 0n)) throw new WarehouseDataError(path)
   return result
 }
-function cost(value: unknown, path = 'cost') {
+export function cost(value: unknown, path = 'cost') {
   const row = record(value, path), currency = text(row.currency, path), basis = decimal(row.costBasisQuantityBase, path)
   if (!/^[A-Z]{3}$/.test(currency) || BigInt(basis) <= 0n) throw new WarehouseDataError(path)
   return { totalMinor: decimal(row.totalMinor, path), currency, costBasisQuantityBase: basis }

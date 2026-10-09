@@ -11,6 +11,7 @@ vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can: () => false, hasPermissi
 vi.mock('@/api/warehouse/reference', () => ({ readWorkflow: vi.fn() }))
 vi.mock('./ReferenceCatalogPage', () => ({ ReferenceCatalogPage: () => <h1>Reference catalog</h1> }))
 vi.mock('./ReferenceStockPage', () => ({ ReferenceStockPage: () => <h1>Reference stock</h1> }))
+vi.mock('./ReferenceMovementsPage', () => ({ ReferenceReceiptsPage: () => <h1>Reference receipts</h1>, ReferenceTransfersPage: () => <h1>Reference transfers</h1> }))
 vi.mock('./WarehouseCatalogPage', () => ({ WarehouseCatalogPage: () => <h1>Legacy catalog</h1> }))
 vi.mock('./WarehouseReceiptsPage', () => ({ WarehouseReceiptsPage: () => <h1>Legacy receipts</h1> }))
 const read = vi.mocked(readWorkflow)
@@ -30,8 +31,14 @@ it('selects reference catalog with default read grants even when mutations are l
 it('never opens a legacy receipt writer in the reference workflow even with old grants', async () => {
   read.mockResolvedValue(reference); access.permissions.add('inventory.receipt.view')
   route('/warehouse/receipts')
-  await screen.findByText('Halaman gudang tidak tersedia')
+  await screen.findByRole('alert')
   expect(screen.queryByText('Legacy receipts')).toBeNull()
+})
+
+it.each(['receipts', 'transfers'])('opens reference %s with scoped stock read permission', async path => {
+  read.mockResolvedValue(reference); access.permissions.add('warehouse.stock.view')
+  route('/warehouse/' + path)
+  await screen.findByRole('heading', { name: 'Reference ' + path })
 })
 
 it('opens scoped reference stock with only the read grant while subscription writes are locked', async () => {

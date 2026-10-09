@@ -19,6 +19,8 @@ export const WAREHOUSE_VIEW_PERMISSIONS: readonly string[] = [...new Set(WAREHOU
 export const REFERENCE_WAREHOUSE_PAGES = [
   { path: 'catalog', label: 'Barang, Gudang & Pemasok', permissions: ['warehouse.catalog.view'] },
   { path: 'stock', label: 'Stok & Riwayat', permissions: ['warehouse.stock.view'] },
+  { path: 'receipts', label: 'Penerimaan', permissions: ['warehouse.stock.view'] },
+  { path: 'transfers', label: 'Transfer', permissions: ['warehouse.stock.view'] },
 ] as const
 
 export function warehousePages(workflow: 'LEGACY' | 'DRAINING' | 'REFERENCE') {

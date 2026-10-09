@@ -17,6 +17,8 @@ import { WarehouseQuantityField } from '@/components/organisms/warehouse/Warehou
 import { WarehouseDenied } from '@/components/organisms/warehouse/WarehouseState'
 import { buildReceiptLines, emptyReceiptRow, rowsFromReceipt, type ReceiptDraftRow, type ReceiptSkuChoice } from './receiptDraft'
 import { locationLabel, receiptLocations, receiptSkus, receiptSuppliers } from './receiptChoices'
+import { referenceSkus } from '@/api/warehouse/reference'
+import { saveReferenceSku } from '@/api/warehouse/referenceCatalog'
 
 type LocationChoice = Pick<WarehouseLocation, 'id' | 'name' | 'code' | 'kind' | 'issueEligible'>
 const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }
@@ -74,19 +76,19 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
   </>
 }
 
-function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { row: ReceiptDraftRow; number: number; costVisible: boolean; onChange: (patch: Partial<ReceiptDraftRow>) => void; onRemove?: () => void }) {
+export function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove, reference = false }: { readonly row: ReceiptDraftRow; readonly number: number; readonly costVisible: boolean; readonly onChange: (patch: Partial<ReceiptDraftRow>) => void; readonly onRemove?: () => void; readonly reference?: boolean }) {
   const [scan, setScan] = useState(''), [creatingSku, setCreatingSku] = useState(false)
   const { can } = useCan()
   function addScan() { if (scan.trim()) { onChange({ serials: [row.serials.trim(), scan.trim()].filter(Boolean).join('\n') }); setScan('') } }
   return <><fieldset className="card stack receipt-line" style={{ minWidth: 0 }}><legend>Barang {number}</legend>
-    <WarehousePicker<ReceiptSkuChoice> create={can('inventory.sku.manage') ? { label: 'Tambah barang baru', onClick: () => setCreatingSku(true) } : undefined} label={`Barang ${number}`} load={receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />
+    <WarehousePicker<ReceiptSkuChoice> create={can(reference ? 'warehouse.catalog.manage' : 'inventory.sku.manage') ? { label: 'Tambah barang baru', onClick: () => setCreatingSku(true) } : undefined} label={`Barang ${number}`} load={reference ? referenceSkus : receiptSkus} value={row.sku} name={sku => `${sku.name} · ${sku.code}`} onChange={sku => onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' })} />
     {row.sku && <>
       <WarehouseQuantityField label={row.sku.baseUnit === 'MM' ? 'Panjang reel aktual' : 'Jumlah aktual'} unit={row.sku.baseUnit} value={row.quantity} onChange={quantity => onChange({ quantity })} />
       {row.sku.tracking === 'SERIAL' ? <>
         <TextareaField label="Serial dan MAC" required rows={5} maxLength={100000} value={row.serials} onChange={(_, data) => onChange({ serials: data.value })} hint="Satu serial per baris. MAC opsional setelah koma: ONU-001, AA:BB:CC:DD:EE:FF" />
         <TextField label="Pindai serial baru" value={scan} maxLength={128} onChange={(_, data) => setScan(data.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addScan() } }} hint="Enter hanya menambahkan serial ke daftar." />
         <Button type="button" onClick={addScan}>Tambahkan hasil pindai</Button>
-      </> : <TextField label="Kode lot / reel" required maxLength={120} value={row.lotCode} onChange={(_, data) => onChange({ lotCode: data.value })} />}
+      </> : <TextField label="Kode lot / reel" required={!reference} maxLength={120} value={row.lotCode} onChange={(_, data) => onChange({ lotCode: data.value })} hint={reference ? 'Opsional. Kode otomatis dibuat saat penerimaan disimpan.' : undefined} />}
       <Disclosure title={<>Konversi kemasan dan biaya</>}><div className="stack">
         <Checkbox label="Catat konversi kemasan" checked={row.useConversion} onChange={(_, data) => onChange({ useConversion: data.checked === true })} />
         {row.useConversion && <div style={grid}>
@@ -103,6 +105,6 @@ function ReceiptLineEditor({ row, number, costVisible, onChange, onRemove }: { r
     </>}
     {onRemove && <Button type="button" onClick={onRemove}>Hapus baris {number}</Button>}
   </fieldset>
-    {creatingSku && <WarehouseSkuEditor row={null} readOnly={false} onClose={() => setCreatingSku(false)} onReload={() => setCreatingSku(false)} onSaved={sku => { onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' }); setCreatingSku(false) }} />}
+    {creatingSku && <WarehouseSkuEditor reference={reference} save={reference ? saveReferenceSku : undefined} row={null} readOnly={false} onClose={() => setCreatingSku(false)} onReload={() => setCreatingSku(false)} onSaved={sku => { onChange({ sku, quantity: '', serials: '', lotCode: '', useConversion: false, useCost: false, totalMinor: '' }); setCreatingSku(false) }} />}
   </>
 }
