@@ -25,7 +25,7 @@ data class ReferenceStockPosition(val stockIdentityId: UUID, val skuId: UUID, va
 data class ReferenceWarehouseQuantity(val warehouseId: UUID, val warehouseName: String, val quantityBase: String)
 data class ReferenceSkuStock(val sku: SkuSnapshot, val warehouses: List<ReferenceWarehouseQuantity>,
     val positions: List<ReferenceStockPosition>)
-data class ReferenceStockHistory(val operationId: UUID, val documentId: UUID, val kind: String,
+data class ReferenceStockHistory(val id: UUID, val operationId: UUID, val documentId: UUID, val kind: String,
     val recordedAt: Instant, val actorName: String, val notes: String, val locationId: UUID,
     val locationName: String, val holderName: String, val direction: String, val quantityBase: String,
     val baseUnit: WarehouseBaseUnit, val serial: String?, val mac: String?)

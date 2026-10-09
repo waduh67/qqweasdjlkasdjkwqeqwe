@@ -94,6 +94,43 @@ class ReferenceWarehouseIT : WarehouseMasterHttpFixture() {
         assertThat(request("GET", "/api/v2/warehouse/stock/${setup.bulk}/history?size=0", setup.token).status).isEqualTo(400)
     }
 
+    @Test fun `scoped stock positions page and search before counting while summaries retain all warehouse stock`() {
+        val setup = setup()
+        val (manager, managerId) = member(setup, "Manager", listOf(setup.warehouse))
+        activate(setup.token)
+        val serials = (1..31).map { mapOf("serial" to "PAGE-${it.toString().padStart(3, '0')}") }
+        receipt(setup, mapper.writeValueAsString(mapOf("skuId" to setup.onu, "quantityBase" to "31", "serials" to serials)))
+        ok("POST", "/receipts", setup.token,
+            mapper.writeValueAsString(mapOf("warehouseId" to setup.destination, "lines" to listOf(mapOf(
+                "skuId" to setup.onu, "quantityBase" to "1", "serials" to listOf(mapOf("serial" to "HIDDEN-ONU")))))), status = 201)
+        val summary = ok("GET", "/stock/${setup.onu}?includePositions=false", manager)
+        assertThat(summary.path("positions").isEmpty).isTrue()
+        assertThat(summary.path("warehouses")).hasSize(1)
+        assertThat(summary.path("warehouses")[0].path("quantityBase").asString()).isEqualTo("31")
+        val first = ok("GET", "/stock/${setup.onu}/positions?size=25", manager)
+        val second = ok("GET", "/stock/${setup.onu}/positions?page=1&size=25", manager)
+        assertThat(first.path("totalElements").asLong()).isEqualTo(31)
+        assertThat(first.path("items")).hasSize(25)
+        assertThat(second.path("items")).hasSize(6)
+        val ids = first.path("items").toList().map { it.path("stockIdentityId").asString() } +
+            second.path("items").toList().map { it.path("stockIdentityId").asString() }
+        assertThat(ids.distinct()).hasSize(31)
+        assertThat(ok("GET", "/stock/${setup.onu}/positions?search=PAGE-031", manager).path("totalElements").asLong()).isEqualTo(1)
+        assertThat(ok("GET", "/stock/${setup.onu}/positions?search=HIDDEN", manager).path("totalElements").asLong()).isZero()
+        assertThat(ok("GET", "/stock/${setup.onu}/positions?holderKind=TECHNICIAN", manager).path("totalElements").asLong()).isZero()
+        assertThat(ok("GET", "/stock/${setup.onu}/positions?locationId=${setup.warehouse}&availableOnly=true", manager)
+            .path("totalElements").asLong()).isEqualTo(31)
+        assertThat(request("GET", "/api/v2/warehouse/stock/${setup.onu}/positions?locationId=${setup.destination}", manager).status).isEqualTo(404)
+        for (query in listOf("size=0", "size=101", "page=-1", "holderKind=UNRECOGNIZED")) {
+            assertThat(request("GET", "/api/v2/warehouse/stock/${setup.onu}/positions?$query", manager).status).isEqualTo(400)
+        }
+        val revoke = request("PUT", "/api/v1/warehouse/settings/scopes/$managerId/${setup.warehouse}", setup.token,
+            """{"expectedRevision":1,"active":false}""")
+        assertThat(revoke.status).withFailMessage(revoke.contentAsString).isEqualTo(200)
+        assertThat(ok("GET", "/stock/${setup.onu}/positions", manager).path("totalElements").asLong()).isZero()
+        assertThat(ok("GET", "/stock/${setup.onu}?includePositions=false", manager).path("warehouses").isEmpty).isTrue()
+    }
+
     @Test fun `new tenant default warehouse receives immediately and every warehouse has an explicit zero balance`() {
         val setup = setup()
         activate(setup.token)

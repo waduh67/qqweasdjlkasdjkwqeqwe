@@ -145,13 +145,13 @@ class ReferenceWarehouseStore(private val jdbc: WarehouseCommandJdbc) {
             LEFT JOIN inventory_segment segment ON segment.tenant_id=leg.tenant_id AND segment.id=leg.stock_identity_id
             LEFT JOIN inventory_serialized_asset asset ON asset.tenant_id=segment.tenant_id AND asset.id=segment.asset_id"""
         val total = requireNotNull(sql.value("SELECT count(*) $joins WHERE $predicate", *values.toTypedArray())).toLong()
-        val rows = sql.query("""SELECT movement.operation_id,movement.document_id,movement.kind,movement.server_received_at,
+        val rows = sql.query("""SELECT leg.id,movement.operation_id,movement.document_id,movement.kind,movement.server_received_at,
             coalesce(actor.name,'Pengguna lama') actor_name,movement.reason,leg.location_id,
             coalesce(location.name,location.code) location_name,coalesce(holder.name,location.name,location.code) holder_name,
             leg.direction,leg.quantity_base,leg.base_unit,asset.serial_number,asset.mac_address
             $joins WHERE $predicate ORDER BY movement.server_received_at DESC,movement.id,leg.id LIMIT ? OFFSET ?""",
             *values.toTypedArray(), size, page.toLong() * size) {
-            ReferenceStockHistory(it.uuid("operation_id"), it.uuid("document_id"), it.getString("kind"),
+            ReferenceStockHistory(it.uuid("id"), it.uuid("operation_id"), it.uuid("document_id"), it.getString("kind"),
                 it.getTimestamp("server_received_at").toInstant(), it.getString("actor_name"), it.getString("reason"),
                 it.uuid("location_id"), it.getString("location_name"), it.getString("holder_name"), it.getString("direction"),
                 it.getLong("quantity_base").toString(), WarehouseBaseUnit.valueOf(it.getString("base_unit")),

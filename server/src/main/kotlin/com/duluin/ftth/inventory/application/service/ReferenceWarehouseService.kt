@@ -267,58 +267,6 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
         return post(command, input.sourceWarehouseId, destination.id, "RETURN", canonical, access)
     }
 
-    fun stock(skuId: UUID): ReferenceSkuStock {
-        val current = authority.lockCurrent()
-        receiptPermission(current, "warehouse.stock.view")
-        masters.lockTopology()
-        val sku = masters.get(MasterKind.SKU, skuId) as SkuSnapshot
-        val locations = locations(current)
-        val allowed = locations.map { it.id }.toSet()
-        val positions = store.positions(skuId).filter { it.locationId in allowed &&
-            (it.holderKind !in setOf("TECHNICIAN", "VEHICLE") || it.holderId == current.fence.identity.userId ||
-                "warehouse.request.handover" in current.permissions || current.platformAdmin) }
-        val byId = locations.associateBy { it.id }
-        val warehouses = locations.filter { it.kind == LocationKind.WAREHOUSE }.map { location ->
-            val descendants = locations.filter { candidate ->
-                var parent: LocationSnapshot? = candidate
-                val visited = mutableSetOf<UUID>()
-                var matches = false
-                while (parent != null && visited.add(parent.id) && visited.size <= 32) {
-                    if (parent.id == location.id) { matches = true; break }
-                    parent = parent.parentLocationId?.let(byId::get)
-                }
-                matches
-            }.map { it.id }.toSet()
-            val quantity = positions.filter { it.locationId in descendants && it.status == "AVAILABLE" && it.holderKind == "WAREHOUSE" }
-                .fold(java.math.BigInteger.ZERO) { total, position -> total + position.quantityBase.toBigInteger() }
-            ReferenceWarehouseQuantity(location.id, location.name ?: location.code, quantity.toString())
-        }
-        return ReferenceSkuStock(sku, warehouses, positions)
-    }
-
-    fun history(skuId: UUID, page: Int, size: Int): WarehousePage<ReferenceStockHistory> {
-        if (page < 0 || size !in 1..100) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
-        val current = authority.lockCurrent()
-        receiptPermission(current, "warehouse.stock.view")
-        masters.lockTopology()
-        masters.get(MasterKind.SKU, skuId)
-        val holder = if (current.platformAdmin || "warehouse.request.handover" in current.permissions) null else current.fence.identity.userId
-        return store.history(skuId, locations(current).map { it.id }.toSet(), holder, page, size)
-    }
-
-    private fun locations(current: CurrentAuthority): List<LocationSnapshot> {
-        val locations = mutableListOf<LocationSnapshot>()
-        var page = 0
-        do {
-            val scope = if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence)
-            val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
-            val batch = masters.list(MasterKind.LOCATION, MasterFilter(page = page, size = 100, state = WarehouseMasterState.ACTIVE),
-                scope, areas, sites.visibleAreas(areas))
-            locations += batch.items.filterIsInstance<LocationSnapshot>()
-            page++
-        } while (page.toLong() * 100 < batch.totalElements)
-        return locations
-    }
 
     private data class Access(val current: CurrentAuthority, val scope: AuthorityScope, val cutover: TenantCutoverFence)
     private fun access(permission: String, key: String): Access {
