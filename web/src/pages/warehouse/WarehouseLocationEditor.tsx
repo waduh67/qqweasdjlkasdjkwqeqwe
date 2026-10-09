@@ -14,6 +14,7 @@ import { WarehouseCommandDialog } from '@/components/organisms/warehouse/Warehou
 import { WarehousePicker } from '@/components/organisms/warehouse/WarehousePicker'
 import { WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
+import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
 
 type LocationChoice = { id: string; label: string; areaId?: string | null; siteId?: string | null; kind?: WarehouseLocation['kind'] }
 type UserChoice = { id: string; label: string; active?: boolean }
@@ -33,6 +34,7 @@ async function accessible<T>(promise: Promise<T>): Promise<T | null> {
 export function WarehouseLocationEditor({ row, readOnly, onClose, onSaved, onReload, preset, allowedKinds, fixedCode, parentCreation = false, api = legacyLocationApi, scopedAreas, unrestrictedAreas = false, managePermission = 'inventory.location.manage', reference = false }: EditorProps) {
   const { can } = useCan()
   const { user } = useAuth()
+  const workflow = useWarehouseWorkflow()
   const [returnFocus] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const loader = useCallback(async () => {
     const [areas, parent, custodian, site] = await Promise.all([
@@ -70,7 +72,7 @@ export function WarehouseLocationEditor({ row, readOnly, onClose, onSaved, onRel
     for (const area of areas) if (area.parentId && areaIds.has(area.parentId)) areaIds.add(area.id)
     if (areaIds.size === previous) break
   }
-  const fullAreaAccess = user?.platformAdmin || unrestrictedAreas
+  const fullAreaAccess = user?.platformAdmin || unrestrictedAreas || (workflow.state.status === 'ready' && workflow.state.data.owner)
   const choices = fullAreaAccess || scopedAreas ? areas : areas.filter(area => areaIds.has(area.id))
   function prepare(event: FormEvent) {
     event.preventDefault(); if (readOnly) return
