@@ -15,7 +15,7 @@ export function captureCommandSession() {
   return () => { if (tokenStore.getSessionVersion() !== version) throw new ApiError(409, 'Sesi berubah. Muat ulang sebelum membuat transaksi baru.') }
 }
 
-export function command<T>(path: string, method: 'POST' | 'PUT', input: unknown, decode: Decoder<T>, key = crypto.randomUUID()): WarehouseCommand<T> {
+export function command<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', input: unknown, decode: Decoder<T>, key = crypto.randomUUID()): WarehouseCommand<T> {
   if (!path.startsWith('/api/') || path.includes('\\') || !/^[\x21-\x7e]{1,240}$/.test(key)) throw new Error('Transaksi gudang tidak valid.')
   const body = JSON.stringify(input)
   if (body === undefined) throw new Error('Transaksi gudang wajib berisi data.')

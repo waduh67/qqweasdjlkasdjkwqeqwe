@@ -84,8 +84,8 @@ export function referenceWorkDetail(value: unknown) {
     }) }
 }
 export type ReferenceWorkDetail = ReturnType<typeof referenceWorkDetail>
-export const listReferenceWork = (search = '', page = 0, state?: typeof WORK_STATES[number]) =>
-  query(`/api/v2/work-orders${parameters({ search, page, state })}`, pageOf(referenceWorkOrder))
+export const listReferenceWork = (search = '', page = 0, state?: typeof WORK_STATES[number], overdue = false) =>
+  query(`/api/v2/work-orders${parameters({ search, page, state, overdue: overdue ? 'true' : undefined })}`, pageOf(referenceWorkOrder))
 export const getReferenceWork = (id: string) => query(`/api/v2/work-orders/${uuid(id)}`, referenceWorkDetail)
 export const referenceTypes = () => query('/api/v2/work-orders/types', value => array(value, workType))
 export const referencePhotos = (id: string) => query(`/api/v2/work-orders/${uuid(id)}/evidence`, value => array(value, referencePhoto))
@@ -94,7 +94,7 @@ function sessionCommand<T>(captured: WarehouseCommand<T>): WarehouseCommand<T> {
   const check = captureCommandSession()
   return Object.freeze({ ...captured, execute() { check(); return captured.execute() } })
 }
-export function referenceCommand<T>(path: string, method: 'POST' | 'PUT', input: unknown, decode: Decoder<T>): WarehouseCommand<T> {
+export function referenceCommand<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', input: unknown, decode: Decoder<T>): WarehouseCommand<T> {
   return sessionCommand(command(path, method, input, decode))
 }
 export const referenceProgress = (id: string, revision: number, state: 'PENDING' | 'BLOCKED', notes: string) =>
