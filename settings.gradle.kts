@@ -10,6 +10,7 @@ pluginManagement {
 }
 
 include("contract", "server", "collector", "snmp", "simulator")
+if (providers.gradleProperty("ftth.android").map(String::toBoolean).getOrElse(false)) include(":mobile:android")
 include(
     ":mobile:app",
     ":mobile:domain",
