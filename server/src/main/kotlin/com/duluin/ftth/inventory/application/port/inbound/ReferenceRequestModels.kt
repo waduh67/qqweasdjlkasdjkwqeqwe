@@ -1,6 +1,7 @@
 package com.duluin.ftth.inventory.application.port.inbound
 
 import com.duluin.ftth.inventory.WarehouseBaseUnit
+import com.duluin.ftth.inventory.WarehousePage
 import java.time.Instant
 import java.util.UUID
 
@@ -31,3 +32,6 @@ data class ReferenceRequestEvent(val operationId: UUID, val revision: Long, val 
 data class ReferenceRequestDetail(val request: ReferenceRequestView, val timeline: List<ReferenceRequestEvent>)
 data class ReferenceOperationalSettings(val revision: Long = 0, val requireManagerApproval: Boolean = true, val overdueDays: Int = 3)
 data class ReferenceOperationalSettingsInput(val expectedRevision: Long, val requireManagerApproval: Boolean, val overdueDays: Int)
+data class ReferenceRequestStockPreview(val skuId: UUID, val skuName: String, val baseUnit: WarehouseBaseUnit,
+    val totalWarehouseBase: String, val technicianId: UUID?, val technicianName: String?, val technicianQuantityBase: String?,
+    val warehouses: WarehousePage<ReferenceWarehouseQuantity>)

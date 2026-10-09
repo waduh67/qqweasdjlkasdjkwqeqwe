@@ -28,6 +28,13 @@ class ReferenceStockStore(private val jdbc: WarehouseCommandJdbc) {
         }.toMap()
     }
 
+    fun technicianQuantity(sku: UUID, technician: UUID): java.math.BigInteger = jdbc.execute { sql ->
+        requireNotNull(sql.value("""SELECT coalesce(sum(balance.quantity_base),0)::text $joins
+            WHERE balance.tenant_id=? AND balance.sku_id=? AND balance.custody_owner_id=? AND balance.custody_owner_kind='TECHNICIAN'
+            AND balance.quantity_base>0 AND balance.warehouse_admission='VERIFIED' AND segment.state='ACTIVE'
+            AND balance.status='ISSUED' AND location.state='ACTIVE'""", sql.tenant, sku, technician)).toBigInteger()
+    }
+
     fun positions(sku: UUID, locations: Set<UUID>, holder: UUID?, page: Int, size: Int, search: String?,
         holderKind: String?, availableOnly: Boolean): WarehousePage<ReferenceStockPosition> = jdbc.execute { sql ->
         if (locations.isEmpty()) return@execute WarehousePage(emptyList(), page, size, 0)

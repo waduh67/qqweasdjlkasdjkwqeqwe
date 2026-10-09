@@ -105,6 +105,48 @@ class ReferenceRequestIT : WarehouseMasterHttpFixture() {
         assertThat(detail.path("timeline").asSequence().map { it.path("actorName").asString() }.toList()).containsExactly("Teknisi NE", "Admin", "Manager")
     }
 
+    @Test fun `request stock preview includes scoped zero warehouses and destination holdings without granting general stock access`() {
+        val setup = setup()
+        val empty = create("locations", setup.owner, """{"code":"EMPTY","name":"Gudang kosong","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        val hidden = create("locations", setup.owner, """{"code":"HIDDEN","name":"Gudang tersembunyi","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        val grant = request("PUT", "/api/v1/warehouse/settings/scopes/${setup.technicianId}/$empty", setup.owner,
+            """{"expectedRevision":0,"active":true}""")
+        assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
+        ok("POST", "/receipts", setup.admin, """{"warehouseId":"${setup.warehouse}","lines":[{"skuId":"${setup.sku}","quantityBase":"12"}]}""", status = 201)
+        ok("POST", "/receipts", setup.owner, """{"warehouseId":"$hidden","lines":[{"skuId":"${setup.sku}","quantityBase":"99"}]}""", status = 201)
+        val view = approved(setup, "RESTOCK", quantity = "9")
+        val id = view.path("id").asString()
+        val identity = stock(setup).path("positions").single { it.path("locationId").asString() == setup.warehouse }.path("stockIdentityId").asString()
+        ok("POST", "/requests/$id/handovers", setup.admin, handoverBody(setup, view, identity, "3"))
+        val path = "/requests/stock-preview?skuId=${setup.sku}"
+        val own = ok("GET", "$path&size=1", setup.technician)
+        assertThat(own.path("totalWarehouseBase").asString()).isEqualTo("9")
+        assertThat(own.path("technicianId").asString()).isEqualTo(setup.technicianId)
+        assertThat(own.path("technicianQuantityBase").asString()).isEqualTo("3")
+        assertThat(own.path("warehouses").path("totalElements").asLong()).isEqualTo(2)
+        val second = ok("GET", "$path&size=1&page=1", setup.technician)
+        assertThat(second.path("warehouses").path("items")[0].path("quantityBase").asString()).isEqualTo("0")
+        assertThat(second.path("warehouses").path("items")[0].path("warehouseId").asString()).isEqualTo(empty)
+        assertThat(request("GET", "/api/v2/warehouse/stock/${setup.sku}", setup.technician).status).isEqualTo(403)
+        assertThat(request("GET", "/api/v2/warehouse$path&technicianId=${UUID.randomUUID()}", setup.technician).status).isEqualTo(403)
+        assertThat(request("GET", "/api/v2/warehouse$path&warehouseId=${setup.warehouse}", setup.technician).status).isEqualTo(403)
+        assertThat(request("GET", "/api/v2/warehouse$path&requestId=$id", setup.other).status).isEqualTo(404)
+        val reviewed = ok("GET", "$path&requestId=$id", setup.admin)
+        assertThat(reviewed.path("technicianName").asString()).isEqualTo("Teknisi NE")
+        assertThat(reviewed.path("technicianQuantityBase").asString()).isEqualTo("3")
+        val destination = ok("GET", "$path&warehouseId=${setup.warehouse}", setup.admin)
+        assertThat(destination.path("totalWarehouseBase").asString()).isEqualTo("9")
+        assertThat(destination.path("technicianId").isNull).isTrue()
+        assertThat(destination.path("warehouses").path("totalElements").asLong()).isEqualTo(1)
+        assertThat(request("GET", "/api/v2/warehouse$path&warehouseId=$hidden", setup.admin).status).isEqualTo(404)
+        val revoke = request("PUT", "/api/v1/warehouse/settings/scopes/${setup.technicianId}/${setup.warehouse}", setup.owner,
+            """{"expectedRevision":1,"active":false}""")
+        assertThat(revoke.status).withFailMessage(revoke.contentAsString).isEqualTo(200)
+        assertThat(ok("GET", path, setup.technician).path("totalWarehouseBase").asString()).isEqualTo("0")
+        val foreign = this.setup()
+        assertThat(request("GET", "/api/v2/warehouse$path", foreign.technician).status).isEqualTo(404)
+    }
+
     @Test fun `admin rejection retains its original permission during replay and requires a reason`() {
         val setup = setup()
         val submitted = submit(setup)
