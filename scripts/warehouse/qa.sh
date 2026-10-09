@@ -124,7 +124,7 @@ case "$MODE" in
         export SPRING_PROFILES_ACTIVE=warehouse-e2e SERVER_ADDRESS=127.0.0.1 SERVER_PORT=17880
         export MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always MANAGEMENT_ENDPOINT_HEALTH_SHOW_COMPONENTS=always
         export FTTH_CORS_ORIGINS=http://127.0.0.1:14188 FTTH_SEED_DEMO=false
-        gradle :server:bootJar --no-parallel
+        gradle :server:bootJar --no-daemon --no-parallel
         read -r jar < "$ROOT/server/build/warehouse/boot-jar-path.txt"
         [[ -f "$jar" && "$jar" == "$ROOT/server/build/libs/"*.jar && "$jar" != *-plain.jar ]] || refuse 'invalid bootJar output metadata'
         web npm run typecheck:warehouse-e2e
