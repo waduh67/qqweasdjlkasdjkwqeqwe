@@ -31,6 +31,7 @@ import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyMaterialsPage } from './pages/MyMaterialsPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
 import { WorkflowSurface } from './pages/warehouse/WorkflowSurface'
+import { WarehouseWorkflowProvider } from './pages/warehouse/WarehouseWorkflowContext'
 import { ReferenceMyMaterials } from './pages/warehouse/ReferenceMyMaterials'
 import { ReferenceWorkList } from './pages/workorder/ReferenceWorkList'
 import { ReferenceWorkDetailPage } from './pages/workorder/ReferenceWorkDetailPage'
@@ -176,7 +177,7 @@ function OperatorApp() {
           <Route
             element={
               <RequireAuth>
-                <Layout />
+                <WarehouseWorkflowProvider><Layout /></WarehouseWorkflowProvider>
               </RequireAuth>
             }
           >

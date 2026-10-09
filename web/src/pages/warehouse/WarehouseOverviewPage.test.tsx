@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { tokenStore } from '@/api/client'
+import { readWorkflow } from '@/api/warehouse/reference'
 import { receiptIds as id } from '@/test/warehouseReceiptFixture'
 import { approvalDetailsFixture } from '@/test/warehouseApprovalFixture'
 import { replenishmentFixture } from '@/test/warehouseReplenishmentFixture'
@@ -9,12 +10,18 @@ import { returnDetailsFixture } from '@/test/warehouseReturnFixture'
 import { reportMovementFixture, reportPage } from '@/test/warehouseReportFixture'
 import { WarehouseOperationsPage } from '../WarehouseOperationsPage'
 import { WarehouseOverviewPage } from './WarehouseOverviewPage'
+import { WarehouseWorkflowProvider } from './WarehouseWorkflowContext'
 const mocks = vi.hoisted(() => { const permissions = new Set<string>(); return { permissions, can: (value: string) => permissions.has(value) } })
-vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can: mocks.can }) }))
+vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can: mocks.can, hasPermission: mocks.can }) }))
+vi.mock('@/auth/useAuth', () => ({ useAuth: () => ({ user: { id: 'user', tenantId: 'tenant' } }) }))
+vi.mock('@/api/warehouse/reference', () => ({ readWorkflow: vi.fn() }))
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 const shortage = { id: id.sku, skuId: id.sku, name: 'Kabel minimum', skuCode: 'CABLE', baseUnit: 'MM', availableBase: '20001', minimumBase: '50005', shortageBase: '30004' }
 function show() { return render(<MemoryRouter><WarehouseOverviewPage /></MemoryRouter>) }
-beforeEach(() => { mocks.permissions.clear(); tokenStore.clear() })
+beforeEach(() => {
+  mocks.permissions.clear(); tokenStore.clear()
+  vi.mocked(readWorkflow).mockResolvedValue({ tenantId: 'tenant', epoch: 0, state: 'ENFORCED', workflow: 'LEGACY', owner: false })
+})
 afterEach(() => { vi.unstubAllGlobals(); tokenStore.clear() })
 
 it('shows exact scoped shortages with server totals and pages and links directly to source work', async () => {
@@ -30,7 +37,7 @@ it('loads only the approval queue for approver-only users through the original w
   mocks.permissions.add('inventory.approval.view')
   const approval = approvalDetailsFixture().approval
   const fetch = vi.fn(async () => response(reportPage([approval]))); vi.stubGlobal('fetch', fetch)
-  render(<MemoryRouter initialEntries={['/warehouse']}><Routes><Route path="/warehouse/*" element={<WarehouseOperationsPage />} /></Routes></MemoryRouter>)
+  render(<MemoryRouter initialEntries={['/warehouse']}><WarehouseWorkflowProvider><Routes><Route path="/warehouse/*" element={<WarehouseOperationsPage />} /></Routes></WarehouseWorkflowProvider></MemoryRouter>)
   const link = await screen.findByRole('link', { name: approval.code }); expect(link.getAttribute('href')).toBe(`/warehouse/approvals?approvalId=${approval.requestId}`)
   expect(fetch).toHaveBeenCalledOnce(); expect(screen.queryByRole('heading', { name: 'Stok di bawah minimum SKU' })).toBeNull()
 })
