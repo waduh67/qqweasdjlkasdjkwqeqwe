@@ -125,6 +125,11 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Owner-only Jenis Pekerjaan lists named photo slots, material requirements and
+  active state. The resource form reviews 1–12 unique photo names before saving.
+  Editing or deactivating affects new assignments; existing WO retain their
+  immutable type snapshot. Deletion reviews the revision and explains the
+  used-type restriction. Uncertain deletion retries retain the session and key.
 - Stock Opname starts with a named material and location, followed by an immutable
   book snapshot. Physical quantity starts blank and accepts zero. Review shows
   book, physical and exact difference before adjustment. Serial book positions

@@ -35,6 +35,7 @@ import { WarehouseWorkflowProvider } from './pages/warehouse/WarehouseWorkflowCo
 import { ReferenceMyMaterials } from './pages/warehouse/ReferenceMyMaterials'
 import { ReferenceWorkList } from './pages/workorder/ReferenceWorkList'
 import { ReferenceWorkDetailPage } from './pages/workorder/ReferenceWorkDetailPage'
+import { ReferenceWorkTypesPage } from './pages/workorder/ReferenceWorkTypesPage'
 import { MyVisitsPage } from './pages/MyVisitsPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
@@ -350,6 +351,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="workorder.dashboard.view">
                   <WorkflowSurface reference={<ReferenceWorkList field={false} />} legacy={<WorkOrdersPage />} />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="work-orders/types"
+              element={
+                <RequirePermission permission="workorder.order.view">
+                  <WorkflowSurface reference={<ReferenceWorkTypesPage />} legacy={<WorkOrdersPage />} />
                 </RequirePermission>
               }
             />
