@@ -40,7 +40,9 @@ export async function login(page: Page, user: { email: string; password: string 
   if (!page.url().endsWith('/login')) await page.goto('/login')
   await page.getByLabel('Email').fill(user.email)
   await page.getByLabel('Password').fill(user.password)
+  const authenticated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/auth/login' && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Masuk', exact: true }).click()
+  expect((await authenticated).ok()).toBeTruthy()
   await expect(page).not.toHaveURL(/\/login$/)
   await expect(page.getByRole('button', { name: 'Keluar', exact: true })).toBeVisible()
 }
