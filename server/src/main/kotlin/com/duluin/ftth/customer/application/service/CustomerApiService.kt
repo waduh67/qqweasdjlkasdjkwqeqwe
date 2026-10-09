@@ -440,6 +440,7 @@ class CustomerApiService(
         email = email,
         location = location,
         status = status.name,
+        areaId = areaId,
     )
 
     private companion object {

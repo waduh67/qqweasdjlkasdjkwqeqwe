@@ -14,6 +14,7 @@ import com.duluin.ftth.inventory.application.port.inbound.masterFailure
 import com.duluin.ftth.inventory.application.service.WarehouseCanonicalPayload
 import com.duluin.ftth.inventory.application.service.referenceTimestamp
 import com.duluin.ftth.workorder.WorkOrderAssigned
+import com.duluin.ftth.workorder.adapter.outbound.persistence.ReferenceWorkIntakeStore
 import com.duluin.ftth.workorder.adapter.outbound.persistence.ReferenceWorkOrderStore
 import com.duluin.ftth.workorder.adapter.outbound.persistence.ReferenceWorkOrderCompletionStore
 import com.duluin.ftth.workorder.application.port.inbound.*
@@ -33,7 +34,8 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
     private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi, private val owners: TenantOwnerStore,
     private val iam: IamApi, private val customers: CustomerApi, private val settings: ReferenceRequestStore,
     private val entityManager: EntityManager, private val events: ApplicationEventPublisher,
-    private val completions: ReferenceWorkOrderCompletionStore, private val accessChecker: AccessChecker) {
+    private val completions: ReferenceWorkOrderCompletionStore, private val accessChecker: AccessChecker,
+    private val intakes: ReferenceWorkIntakeStore) {
     private val mapper = jacksonObjectMapper()
     internal data class Access(val current: CurrentAuthority, val cutover: TenantCutoverFence)
 
@@ -99,6 +101,33 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
         store.save(view, true)
         assigned(view)
         return record("CREATE", key, canonical, access, view.id, "WO", 0, view, "Work order dibuat", "workorder.order.create", 201)
+    }
+    fun dispatch(id: UUID, input: ReferenceWorkDispatchInput, key: String): WarehouseOperationReceipt {
+        val access = access(key)
+        permission(access.current, "workorder.order.assign")
+        val canonical = canonical(id, input)
+        replay("DISPATCH", key, canonical, access)?.let { return it }
+        val intake = intakes.get(id, true)
+        if (intake.dispatched) masterFailure(WarehouseErrorCode.STALE_REVISION)
+        intake.areaId?.let { area(it, access.current) }
+        validateDetails(intake.title, intake.description, input.areaId, intake.customerId, intake.customerId, access)
+        val technician = technician(input.technicianId)
+        store.lockTypes()
+        store.ensureDefaults()
+        val type = store.type(input.typeId).takeIf { it.active && !it.deleted && it.workType == intake.type }
+            ?: malformed("Pilih jenis aktif yang sesuai pekerjaan sumber")
+        val order = workOrders.findById(id) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+        val now = referenceTimestamp()
+        order.updateDetails(order.title, order.description, order.priority, order.customerId, null, input.areaId,
+            input.scheduledAt?.let(::referenceTimestamp), now, access.current.fence.identity.userId)
+        order.assign(setOf(technician.id), now, access.current.fence.identity.userId)
+        workOrders.save(order)
+        entityManager.flush()
+        val view = ReferenceWorkOrderView(id, order.code, 0, type, order.title, order.description.orEmpty(), order.priority,
+            order.customerId, technician.id, technician.name, input.areaId, order.scheduledAt, ReferenceWorkOrderState.PENDING, 0, now, null, intake.createdAt)
+        store.save(view, true)
+        assigned(view)
+        return record("DISPATCH", key, canonical, access, id, "WO", 0, view, "Pekerjaan sumber ditugaskan", "workorder.order.assign")
     }
     fun update(id: UUID, input: ReferenceWorkOrderUpdate, key: String): WarehouseOperationReceipt {
         val access = access(key)

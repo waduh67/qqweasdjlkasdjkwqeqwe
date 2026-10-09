@@ -3,6 +3,7 @@ package com.duluin.ftth.workorder.adapter.inbound.web
 import com.duluin.ftth.inventory.WarehouseOperationReceipt
 import com.duluin.ftth.inventory.adapter.inbound.web.WarehouseReceiptJson
 import com.duluin.ftth.workorder.application.port.inbound.*
+import com.duluin.ftth.workorder.application.service.ReferenceWorkIntakeService
 import com.duluin.ftth.workorder.application.service.ReferenceWorkOrderService
 import com.duluin.ftth.workorder.application.service.ReferenceWorkOrderCompletionService
 import org.springframework.http.MediaType
@@ -12,7 +13,13 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v2/work-orders")
-class ReferenceWorkOrderController(private val service: ReferenceWorkOrderService, private val completions: ReferenceWorkOrderCompletionService) {
+class ReferenceWorkOrderController(private val service: ReferenceWorkOrderService, private val completions: ReferenceWorkOrderCompletionService,
+    private val intakes: ReferenceWorkIntakeService) {
+    @GetMapping("/intake") fun intakeList(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
+        @RequestParam(required = false) search: String?) = fresh(intakes.list(page, size, search))
+    @GetMapping("/intake/{id}") fun intakeDetail(@PathVariable id: UUID) = fresh(intakes.detail(id))
+    @PostMapping("/intake/{id}/dispatch") fun dispatch(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
+        result(service.dispatch(id, WarehouseReceiptJson.decode(body, ReferenceWorkDispatchInput::class.java), key))
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
         @RequestParam(required = false) state: ReferenceWorkOrderState?, @RequestParam(required = false) search: String?,
         @RequestParam(defaultValue = "false") overdue: Boolean) = fresh(service.list(page, size, state, search, overdue))

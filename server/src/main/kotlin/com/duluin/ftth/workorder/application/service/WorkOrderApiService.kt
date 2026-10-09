@@ -1,6 +1,8 @@
 package com.duluin.ftth.workorder.application.service
 
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.inventory.InventoryTenantCutoverApi
+import com.duluin.ftth.inventory.WarehouseWorkflow
 import com.duluin.ftth.workorder.FieldOpsReport
 import com.duluin.ftth.workorder.RaisePsbCommand
 import com.duluin.ftth.workorder.RaiseRepairCommand
@@ -9,6 +11,7 @@ import com.duluin.ftth.workorder.WorkOrderRef
 import com.duluin.ftth.workorder.WorkOrderAssignmentRef
 import com.duluin.ftth.workorder.WorkorderApi
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
+import com.duluin.ftth.workorder.application.port.inbound.ReferenceWorkSource
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
@@ -31,6 +34,8 @@ import java.util.UUID
 class WorkOrderApiService(
     private val workOrderRepository: WorkOrderRepository,
     private val manageWorkOrder: ManageWorkOrderUseCase,
+    private val cutovers: InventoryTenantCutoverApi,
+    private val intakes: ReferenceWorkIntakeService,
 ) : WorkorderApi {
 
     override fun assignment(workOrderId: UUID, technicianId: UUID): WorkOrderAssignmentRef? {
@@ -53,6 +58,12 @@ class WorkOrderApiService(
 
     @Transactional
     override fun raisePsb(command: RaisePsbCommand): WorkOrderRef {
+        if (cutovers.read().workflow == WarehouseWorkflow.REFERENCE) {
+            if (command.assignees.isNotEmpty()) throw ValidationException("Tugaskan satu teknisi melalui antrean pekerjaan setelah PSB dibuat")
+            return intakes.open(ReferenceWorkSource.PSB, command.subscriptionId,
+                WorkOrderType.PSB, command.title, command.description, WorkOrderPriority.NORMAL, command.customerId, command.areaId,
+                command.scheduledAt, command.subscriptionId).toRef()
+        }
         val view = manageWorkOrder.create(
             SaveWorkOrderCommand(
                 type = WorkOrderType.PSB,
@@ -78,6 +89,13 @@ class WorkOrderApiService(
 
     @Transactional
     override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef {
+        if (cutovers.read().workflow == WarehouseWorkflow.REFERENCE) {
+            val priority = WorkOrderPriority.entries.firstOrNull { it.name == command.priority }
+                ?: throw ValidationException("Prioritas tidak dikenal")
+            val ticketId = command.ticketId ?: throw ValidationException("Sumber tiket diperlukan")
+            return intakes.open(ReferenceWorkSource.HELPDESK, ticketId,
+                WorkOrderType.REPAIR, command.title, command.description, priority, command.customerId, null, command.scheduledAt).toRef()
+        }
         val priority = WorkOrderPriority.entries.firstOrNull { it.name == command.priority }
             ?: throw ValidationException("Prioritas '${command.priority}' tidak dikenal")
         val view = manageWorkOrder.create(

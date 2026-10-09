@@ -2,8 +2,12 @@ package com.duluin.ftth.workorder.application.service
 
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.inventory.InventoryTenantCutoverApi
+import com.duluin.ftth.inventory.WarehouseWorkflow
+import com.duluin.ftth.workorder.adapter.outbound.persistence.ReferenceWorkIntakeStore
 import com.duluin.ftth.workorder.application.port.inbound.DegradingOnuSignal
 import com.duluin.ftth.workorder.application.port.inbound.RaisePreventiveMaintenanceUseCase
+import com.duluin.ftth.workorder.application.port.inbound.ReferenceWorkSource
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
 import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
@@ -33,6 +37,9 @@ import java.util.UUID
 class PreventiveMaintenanceService(
     private val repository: WorkOrderRepository,
     private val customerApi: CustomerApi,
+    private val cutovers: InventoryTenantCutoverApi,
+    private val intakes: ReferenceWorkIntakeService,
+    private val intakeStore: ReferenceWorkIntakeStore,
 ) : RaisePreventiveMaintenanceUseCase {
 
     override fun raiseForDegradingOnu(signal: DegradingOnuSignal): UUID? {
@@ -42,9 +49,15 @@ class PreventiveMaintenanceService(
 
         // Idempoten: satu pelanggan cukup satu kunjungan preventif terbuka, meski
         // pemindaian berulang terus menandainya memburuk.
+        intakeStore.lockSource(ReferenceWorkSource.PREVENTIVE, customerId)
         if (repository.existsOpenPreventiveForCustomer(customerId)) return null
 
         val customerName = customerApi.findCustomer(customerId)?.name
+        if (cutovers.read().workflow == WarehouseWorkflow.REFERENCE) {
+            return intakes.open(ReferenceWorkSource.PREVENTIVE, signal.onuId,
+                WorkOrderType.PREVENTIVE, "Preventif: redaman ONU memburuk" + (customerName?.let { " — " + it } ?: ""),
+                describe(signal), WorkOrderPriority.HIGH, customerId, null, null).id
+        }
         val workOrder = WorkOrder.open(
             tenantId = TenantContext.tenantId(),
             type = WorkOrderType.PREVENTIVE,
