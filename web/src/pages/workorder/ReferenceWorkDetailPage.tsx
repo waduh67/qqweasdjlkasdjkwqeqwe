@@ -4,6 +4,7 @@ import { captureCommandSession, type WarehouseCommand } from '@/api/warehouse/tr
 import { completeReferenceWork, getReferenceWork, readWorkflow, referencePhotos, referenceProgress, uploadReferencePhoto, type ReferenceWorkDetail } from '@/api/warehouse/reference'
 import { warehouseError } from '@/api/warehouse/errors'
 import { useAuth } from '@/auth/useAuth'
+import { useCan } from '@/auth/useCan'
 import { Button, TextareaField } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
@@ -16,6 +17,8 @@ import { ReferenceWorkStatus } from './ReferenceWorkList'
 import { ReferencePhotos } from './ReferencePhotos'
 import { ReferenceMaterialsEditor } from './ReferenceMaterialsEditor'
 import { ReferenceWorkHistory } from './ReferenceWorkHistory'
+import { ReferenceWorkEditor } from './ReferenceWorkEditor'
+import { ReferenceWorkAssignment } from './ReferenceWorkAssignment'
 import { assertCompletionEvidence, completionMaterials, freshOwnPosition, ReferenceDraftError, type ReferenceMaterialDraft } from './referenceCompletionDraft'
 
 type Review = { readonly title: string; readonly summary: ReactNode; readonly command: WarehouseCommand<unknown>; readonly label: string }
@@ -25,6 +28,7 @@ export function ReferenceWorkDetailPage({ field = true }: { field?: boolean }) {
 }
 function ReferenceWorkDetail({ id, field }: { id: string; field: boolean }) {
   const { user, readOnly, refreshProfile } = useAuth(), online = useFieldConnection()
+  const { can } = useCan(), [editing, setEditing] = useState(false), [assigning, setAssigning] = useState(false)
   const [notes, setNotes] = useState(''), [reason, setReason] = useState(''), [rows, setRows] = useState<readonly ReferenceMaterialDraft[]>([])
   const [review, setReview] = useState<Review | null>(null), [preparing, setPreparing] = useState(false), [error, setError] = useState<unknown>(null)
   const working = useRef(false)
@@ -96,7 +100,13 @@ function ReferenceWorkDetail({ id, field }: { id: string; field: boolean }) {
       const work = detail.workOrder, active = work.state === 'PENDING' || work.state === 'BLOCKED'
       const assigned = work.technicianId === user?.id
       const enabled = assigned && active && online && !readOnly && !preparing && !review
-      return <><PageHeader title={work.title} subtitle={work.code + ' · ' + work.type.name} actions={<Button disabled={!online || preparing || !!review} onClick={result.reload}>Muat ulang</Button>} />
+      const operatorEnabled = !field && active && online && !readOnly && !preparing && !review
+      const closeEditor = () => { setEditing(false); setAssigning(false); result.reload() }
+      return <><PageHeader title={work.title} subtitle={work.code + ' · ' + work.type.name} actions={<>
+        <Button disabled={!online || preparing || !!review} onClick={result.reload}>Muat ulang</Button>
+        {operatorEnabled && can('workorder.order.update') && <Button onClick={() => setEditing(true)}>Ubah rincian</Button>}
+        {operatorEnabled && can('workorder.order.assign') && <Button onClick={() => setAssigning(true)}>Ganti teknisi</Button>}
+      </>} />
         <div className="spread wrap"><ReferenceWorkStatus state={work.state} /><span>Teknisi: {work.technicianName}</span>{work.scheduledAt && <span>Jadwal: <WarehouseTime value={work.scheduledAt} /></span>}</div>
         {detail.overdue && active && <p role="status">Tugas melewati batas aktivitas. Perbarui hasil atau laporkan kendala.</p>}
         <section className="card stack"><h2>1. Instruksi pekerjaan</h2><p className="reference-work-notes">{work.description || 'Belum ada instruksi tambahan.'}</p>{work.blockedReason && <p className="reference-work-notes">Kendala: {work.blockedReason}</p>}</section>
@@ -108,6 +118,8 @@ function ReferenceWorkDetail({ id, field }: { id: string; field: boolean }) {
           </div></details>
         </>}
         <ReferenceWorkHistory detail={detail} />
+        {editing && operatorEnabled && can('workorder.order.update') && <ReferenceWorkEditor work={work} customerLocked={detail.customerLocked} onClose={() => setEditing(false)} onSaved={closeEditor} onReload={closeEditor} />}
+        {assigning && operatorEnabled && can('workorder.order.assign') && <ReferenceWorkAssignment work={work} onClose={() => setAssigning(false)} onSaved={closeEditor} onReload={closeEditor} />}
       </>
     }}</WarehouseState>
     {review && <WarehouseCommandDialog title={review.title} summary={review.summary} command={review.command} confirmLabel={review.label} disabled={!online || readOnly} onDone={() => { setReview(null); result.reload() }} onClose={() => setReview(null)} onReload={() => { setReview(null); result.reload() }} />}

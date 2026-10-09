@@ -130,6 +130,17 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   Editing or deactivating affects new assignments; existing WO retain their
   immutable type snapshot. Deletion reviews the revision and explains the
   used-type restriction. Uncertain deletion retries retain the session and key.
+- Operator Work Order uses the same list and document as field tasks. Create and
+  edit open a resource form with named type, scoped area, optional customer and
+  a pure active NE/FO technician. Each directory is searched and paginated at 25
+  rows; saved selections resolve through scoped detail reads. Local scheduling
+  preserves the original instant when unchanged. The review names the assignee,
+  instructions, priority and schedule. Closed tasks have no edit or reassign action.
+- Reassignment reviews the previous and replacement technician and explains that
+  previous photos cannot satisfy the new assignment. Revision conflicts offer a
+  reload; uncertain responses keep the same command. Overdue filtering is explicit
+  in the list. Map drafts hydrate only validated customer and instruction fields.
+  Existing form scrolling, tokens, focus and mobile wrapping apply unchanged.
 - Stock Opname starts with a named material and location, followed by an immutable
   book snapshot. Physical quantity starts blank and accepts zero. Review shows
   book, physical and exact difference before adjustment. Serial book positions
