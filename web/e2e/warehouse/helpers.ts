@@ -1,6 +1,18 @@
 import { expect, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 
+export async function selectNamed(page: Page, name: string, label: string) {
+  const control = page.getByRole('combobox', { name, exact: true })
+  await expect(control).toBeEnabled()
+  if (await control.evaluate(element => element.tagName === 'SELECT')) {
+    await expect(control.getByRole('option', { name: label, exact: true })).toBeAttached()
+    await control.selectOption({ label })
+  } else {
+    await control.click()
+    await page.getByRole('option', { name: label, exact: true }).click()
+  }
+}
+
 export function identity(prefix: string) {
   const suffix = randomUUID().slice(0, 8)
   return { name: `${prefix} ${suffix}`, email: `${prefix.toLowerCase()}-${suffix}@example.test`, password: `Warehouse-${randomUUID()}!` }
