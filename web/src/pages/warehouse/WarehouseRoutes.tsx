@@ -3,7 +3,7 @@ import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useCan } from '@/auth/useCan'
 import { EmptyState } from '@/components/atoms'
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
-import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS } from './navigation'
+import { WAREHOUSE_PAGES, WAREHOUSE_VIEW_PERMISSIONS, SHARED_WAREHOUSE_PAGES } from './navigation'
 import { WarehouseCatalogPage } from './WarehouseCatalogPage'
 import { WarehouseReceiptsPage } from './WarehouseReceiptsPage'
 import { WarehouseStockPage } from './WarehouseStockPage'
@@ -25,6 +25,8 @@ import { ReferenceSettingsPage } from './ReferenceSettingsPage'
 import { ReferenceReturnsPage } from './ReferenceReturnsPage'
 import { ReferenceCountsPage } from './ReferenceCountsPage'
 import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
+import { WarehouseTransitionPage } from './WarehouseTransitionPage'
+import { WarehouseArchivePage } from './WarehouseArchivePage'
 import { REFERENCE_WAREHOUSE_PAGES } from './navigation'
 
 const pages = {
@@ -46,7 +48,8 @@ export function WarehouseRoutes() {
 
 function ReferenceRoutes() {
   const { hasPermission } = useCan()
-  const first = REFERENCE_WAREHOUSE_PAGES.find(page => page.permissions.some(hasPermission))
+  const workflow = useWarehouseWorkflow(), owner = workflow.state.status === 'ready' && workflow.state.data.owner
+  const first = [...REFERENCE_WAREHOUSE_PAGES, ...SHARED_WAREHOUSE_PAGES].find(page => 'ownerOnly' in page ? owner : page.permissions.some(hasPermission))
   return <Routes>
     <Route index element={first ? <Navigate replace to={first.path} /> : <WarehouseDenied />} />
     <Route path="catalog" element={<WarehouseGate permissions={['warehouse.catalog.view']}><ReferenceCatalogPage /></WarehouseGate>} />
@@ -57,12 +60,16 @@ function ReferenceRoutes() {
     <Route path="returns" element={<WarehouseGate permissions={['warehouse.return.own', 'warehouse.return.manage']}><ReferenceReturnsPage /></WarehouseGate>} />
     <Route path="counts" element={<WarehouseGate permissions={['warehouse.count.manage']}><ReferenceCountsPage /></WarehouseGate>} />
     <Route path="settings" element={<ReferenceSettingsPage />} />
+    <Route path="transition" element={<WarehouseTransitionPage />} />
+    <Route path="archive" element={<WarehouseArchivePage />} />
     <Route path="*" element={<WarehouseUnavailable />} />
   </Routes>
 }
 
 function LegacyRoutes() {
   return <Routes>
+    <Route path="transition" element={<WarehouseTransitionPage />} />
+    <Route path="archive" element={<WarehouseArchivePage />} />
     <Route index element={<WarehouseGate permissions={WAREHOUSE_VIEW_PERMISSIONS}><WarehouseOverviewPage /></WarehouseGate>} />
     {WAREHOUSE_PAGES.map(page => {
       const Page = pages[page.path]

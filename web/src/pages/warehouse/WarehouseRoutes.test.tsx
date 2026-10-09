@@ -19,6 +19,7 @@ vi.mock('./WarehouseCountsPage', () => ({ WarehouseCountsPage: () => <h1>Legacy 
 vi.mock('./WarehouseReturnsPage', () => ({ WarehouseReturnsPage: () => <h1>Legacy returns</h1> }))
 vi.mock('./WarehouseCatalogPage', () => ({ WarehouseCatalogPage: () => <h1>Legacy catalog</h1> }))
 vi.mock('./WarehouseReceiptsPage', () => ({ WarehouseReceiptsPage: () => <h1>Legacy receipts</h1> }))
+vi.mock('./WarehouseTransitionPage', () => ({ WarehouseTransitionPage: () => <h1>Transition page</h1> }))
 const read = vi.mocked(readWorkflow)
 const reference = { tenantId: 'tenant', epoch: 2, state: 'ENFORCED', workflow: 'REFERENCE', owner: false } as const
 function route(path: string) {
@@ -65,6 +66,20 @@ it('does not redirect an account without any warehouse grant into a protected pa
   await screen.findByRole('alert')
   expect(screen.queryByText('Reference catalog')).toBeNull()
   expect(screen.queryByText('Legacy catalog')).toBeNull()
+})
+
+it('routes an archive-only account to its readable archive after activation', async () => {
+  read.mockResolvedValue(reference); access.permissions.add('inventory.item.view')
+  route('/warehouse')
+  await screen.findByRole('heading', { name: 'Arsip Gudang' })
+  expect(screen.queryByText('Reference stock')).toBeNull()
+})
+
+it.each(['LEGACY', 'DRAINING', 'REFERENCE'] as const)('keeps the shared archive route available in %s', async workflow => {
+  read.mockResolvedValue({ ...reference, workflow }); access.permissions.add('inventory.receipt.view')
+  route('/warehouse/archive?section=unknown')
+  await screen.findByText('Alamat arsip tidak dikenal.')
+  expect(screen.queryByText('Legacy receipts')).toBeNull()
 })
 
 it.each(['/warehouse', '/warehouse/requests'])('lets an own-only technician reach requests at %s', async path => {

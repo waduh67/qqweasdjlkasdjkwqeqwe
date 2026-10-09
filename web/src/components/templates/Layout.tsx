@@ -101,8 +101,8 @@ export function Layout() {
   const { state: workflow } = useWarehouseWorkflow()
   const pages = workflow.status === 'ready' ? warehousePages(workflow.data.workflow, workflow.data.owner) : []
   const groups: NavGroup[] = GROUPS.map(group => group.label === 'Gudang' ? { ...group, items: [
-    ...(pages.length ? [{ to: '/warehouse', label: 'Ringkasan Gudang', permission: pages.flatMap(page => [...page.permissions]), icon: NavIcons.PackageCheck, end: true, access: 'read' as const }] : []),
-    ...pages.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: page.permissions, icon: NavIcons.warehouse[page.path], access: 'read' as const })),
+    ...(pages.length ? [{ to: '/warehouse', label: 'Ringkasan Gudang', permission: workflow.status === 'ready' && workflow.data.owner ? null : pages.flatMap(page => [...page.permissions]), icon: NavIcons.PackageCheck, end: true, access: 'read' as const }] : []),
+    ...pages.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: 'ownerOnly' in page ? null : page.permissions, icon: NavIcons.warehouse[page.path], access: 'read' as const })),
   ] } : group)
   const warehouseLabels = Object.fromEntries(pages.map(page => [`/warehouse/${page.path}`, page.label]))
   const location = useLocation()

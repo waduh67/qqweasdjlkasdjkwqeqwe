@@ -27,6 +27,12 @@ export const REFERENCE_WAREHOUSE_PAGES = [
   { path: 'settings', label: 'Setelan Gudang', permissions: ['warehouse.request.view'], ownerOnly: true },
 ] as const
 
+export const SHARED_WAREHOUSE_PAGES = [
+  { path: 'transition', label: 'Perpindahan Gudang', permissions: [], ownerOnly: true },
+  { path: 'archive', label: 'Arsip Gudang', permissions: ['inventory.receipt.view', 'inventory.transfer.view', 'inventory.item.view'] },
+] as const
+
 export function warehousePages(workflow: 'LEGACY' | 'DRAINING' | 'REFERENCE', owner = false) {
-  return workflow === 'REFERENCE' ? REFERENCE_WAREHOUSE_PAGES.filter(page => !('ownerOnly' in page) || owner) : WAREHOUSE_PAGES
+  const pages = workflow === 'REFERENCE' ? REFERENCE_WAREHOUSE_PAGES : WAREHOUSE_PAGES
+  return [...pages, ...SHARED_WAREHOUSE_PAGES].filter(page => !('ownerOnly' in page) || owner)
 }
