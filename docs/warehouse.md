@@ -1,5 +1,86 @@
 # Operasi gudang, material WO, dan perangkat pelanggan
 
+## Alur baru untuk tenant baru
+
+Tenant yang dibuat melalui pendaftaran atau **Platform → Tenants** langsung
+memakai alur gudang baru dengan stok kosong. Role **Admin**, **Manager**,
+**Teknisi NE**, dan **Teknisi FO**, serta **Gudang Utama**, dibuat otomatis.
+Owner memiliki akses penuh dalam tenant; Admin dan petugas lain tetap memakai
+izin, area, dan cakupan gudang yang diberikan. Tidak ada akun teknisi atau stok
+contoh yang dibuat.
+
+Owner menyiapkan area, pengguna dan akses lokasi. Di **Barang, Gudang & Pemasok**,
+tetapkan area Gudang Utama, tambahkan barang dan pemasok, lalu berikan akses
+gudang kepada petugas. Barang kabel memakai meter dengan maksimal tiga desimal
+dan disimpan sebagai MM utuh; perangkat memakai EA utuh.
+
+| Halaman | Pekerjaan | Hasil tersimpan |
+| --- | --- | --- |
+| Penerimaan | Pilih gudang, barang, jumlah, dan identitas nyata; tinjau lalu simpan | Stok langsung tersedia, tanpa putaway terpisah |
+| Transfer | Pilih gudang asal dan tujuan serta jumlah yang tersedia; tinjau lalu simpan | Stok berpindah langsung antara kedua gudang |
+| Permintaan Material | Teknisi mengajukan kebutuhan sendiri; Admin meninjau jumlah dan pemetaan barang | Persetujuan belum mencadangkan atau memindahkan stok |
+| Permintaan Material → penerimaan/penyerahan | Terima pengadaan sebagian atau serahkan stok gudang kepada teknisi | Jumlah diterima/terpenuhi tercatat; material langsung masuk pegangan teknisi |
+| Retur Material | Teknisi mengajukan sisa; Admin menerima atau menolak dengan alasan | Barang tetap pada teknisi sampai penerimaan sah dibukukan |
+| Stock Opname | Admin memuat snapshot buku, mencatat jumlah fisik, lalu meninjau hasil | Selisih dibukukan sekali dan jejak hitung tetap tersimpan |
+| Stok & Riwayat | Pilih barang lalu baca saldo, Lokasi & Pemegang, atau Riwayat | Saldo gudang dan pegangan teknisi terlihat terpisah |
+
+Owner mengatur persetujuan Manager opsional dan batas keterlambatan melalui
+**Setelan Gudang**. Kebijakan yang berubah berlaku untuk permintaan baru;
+permintaan berjalan mempertahankan kebijakan yang digunakan saat diajukan.
+
+### Tampilan dan pekerjaan teknisi
+
+Teknisi NE/FO membuka **Work order** untuk pekerjaan yang ditugaskan kepadanya.
+Detail pekerjaan menampilkan instruksi, slot foto bernama, material miliknya,
+catatan dan riwayat. Teknisi mengunggah foto nyata, mengisi pemakaian material
+yang terukur dan catatan penyelesaian, meninjau, lalu menyelesaikan pekerjaan.
+Penyelesaian mendebit material sekali dan tidak memerlukan persetujuan QA lama.
+Kendala wajib mempunyai catatan; lanjutkan pekerjaan setelah kendala selesai.
+Sisa material dikembalikan melalui **Retur Material**.
+
+Operator memilih satu teknisi NE atau FO, jenis pekerjaan dan instruksi melalui
+form WO. Pekerjaan otomatis dari meja bantuan atau pemeliharaan masuk sebagai
+pekerjaan yang perlu ditinjau dan ditugaskan. Pergantian teknisi tidak memindahkan
+material yang masih dipegang teknisi lama. Foto dan perintah dari penugasan lama
+tidak dapat dipakai untuk menyelesaikan penugasan baru.
+
+Jika respons penyimpanan hilang, gunakan pilihan untuk mencoba transaksi yang
+sama: payload dan kunci dipertahankan agar stok tidak dibukukan dua kali.
+Konflik revisi yang sudah diketahui memerlukan pembacaan dan tinjauan ulang.
+Tampilan teknisi tersedia di web responsif dan aplikasi Android yang sudah
+berhasil dibangun sebagai APK debug. Host iOS juga sudah ditambahkan. Panduan
+menjalankan aplikasi dan bukti build ada di [panduan mobile](mobile.md). Uji
+perangkat Android dan kompilasi/link/runtime iOS belum teramati di host ini.
+
+### Owner di platform
+
+**Platform → Tenants** menampilkan nama, email dan status owner. Panel owner
+memungkinkan admin platform memilih owner aktif dan mengganti password owner.
+Reset password mengakhiri sesi lama; password tidak ditampilkan dalam riwayat
+audit. Tenant platform tidak mempunyai kontrol owner tenant.
+
+### Memindahkan tenant lama
+
+Owner membuka **Gudang → Perpindahan Gudang**. Mulai perpindahan menghentikan
+dokumen baru pada alur lama. Selesaikan dokumen, reservasi, WO dan pemenuhan lama,
+serta rekonsiliasi asal stok, identitas dan pemegang yang dilaporkan sebagai
+penghambat. Aktivasi keamanan **ENFORCED** dan pemilihan alur **REFERENCE**
+merupakan pemeriksaan yang terpisah.
+
+Setelah kesiapan tidak mempunyai penghambat, tinjau aktivasi alur baru dan
+simpan alasan. Server memeriksa ulang epoch dan hash tinjauan sebelum aktivasi.
+Stok terverifikasi memakai ledger yang sama; tidak ada impor salinan stok.
+Respons mulai perpindahan yang tidak pasti harus dipastikan melalui pembacaan
+status sebelum mengirim perintah baru. Aktivasi yang tidak pasti dapat dicoba
+kembali dengan transaksi yang sama.
+
+**Arsip Gudang** menyediakan penerimaan, bukti unduhan, transfer, lot, serial,
+posisi dan riwayat lama sesuai izin baca masing-masing. Arsip tidak mengubah
+dokumen. Posisi stok menunjukkan ledger saat ini, bukan snapshot aktivasi.
+Panduan berikut menjelaskan operasi lama yang masih diperlukan selama draining.
+
+## Panduan operasi lama
+
 Gudang menyimpan identitas fisik, kuantitas, lokasi, pihak yang memegang barang,
 kondisi, dan kepemilikan. WO menyimpan penugasan dan keputusan QA. Halaman pelanggan
 menyimpan episode pemasangan perangkat. Ketiganya terhubung melalui dokumen nyata;
@@ -128,7 +209,7 @@ Kasus riwayat saja dan saldo awal nol tidak boleh membuat unit atau biaya fiktif
 ID pelanggan/ONU, serial mentah, dan sejarah lama tetap dipertahankan.
 
 Versi migrasi dan aturan checksum ada pada [manifest migrasi](warehouse-migrations.md).
-Versi tertinggi saat panduan ini ditulis adalah **178.12**. File yang sudah diterapkan
+Versi tertinggi yang dikemas pada 2026-10-09 adalah **211**. File yang sudah diterapkan
 tidak boleh diedit. Ambil cadangan database dan object storage yang konsisten,
 verifikasi latihan restore pada lingkungan terisolasi, lalu catat identitas image
 dan hasil preflight sebelum rilis. Migrasi membutuhkan role pemilik; aplikasi

@@ -4,7 +4,25 @@ Gunakan tenant uji baru dengan server, PostgreSQL non-owner, dan object storage 
 Login sebagai tiap petugas sesuai perannya. Hasil yang tampil harus berasal dari
 transaksi tersimpan, bukan mock API atau isian stok melalui SQL.
 
-## Demo numerik
+## Review alur baru
+
+Gunakan [panduan operasi terbaru](warehouse.md) untuk tenant yang langsung
+memakai REFERENCE. Pastikan tenant baru memiliki empat role dan Gudang Utama
+kosong, lalu uji penerimaan langsung, transfer, permintaan dengan tinjauan Admin
+dan Manager opsional, penerimaan sebagian, penyerahan ke teknisi, retur dan
+snapshot stock opname. Persetujuan tidak boleh mengubah saldo; penyerahan dan
+penerimaan retur hanya membukukan stok sekali.
+
+Login sebagai Teknisi NE/FO dan periksa instruksi WO, foto bernama, material
+sendiri, kendala serta penyelesaian langsung. Uji perubahan penugasan, draft
+offline dan respons hilang dengan percobaan transaksi yang sama. Operator
+meninjau pekerjaan otomatis dan menugaskan teknisi melalui alur baru.
+
+Spec `reference`, `reference-technician`, dan `reference-work-management`
+dijalankan melalui `scripts/warehouse/qa.sh browser <spec>.spec.ts`.
+Gate historis di bawah membuktikan perpindahan tenant lama dan arsipnya.
+
+## Demo numerik alur lama
 
 Siapkan satu reel kabel 1.000 m dan sepuluh ONU dari penerimaan/inspeksi/putaway.
 SKU ONU memakai pelacakan serial, satuan EA, kategori ONU, dan mode LOAN/SALE yang
@@ -99,7 +117,11 @@ xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 WAREHOUSE_E2E_BROWSER=firefox \
 ```
 
 Xvfb, `xauth`, dan Mesa harus tersedia. Gate ini tetap menjalankan dua viewport
-pada tiga fase: sebelum migrasi, sesudah migrasi, dan sesudah restart. Main
+pada lima fase: sebelum migrasi, sesudah migrasi, sesudah restart, perpindahan
+ke alur baru, dan sesudah restart alur baru. Sepuluh tes harus berhasil. Fase
+perpindahan membuat penerimaan 100 m dan satu ONU beserta bukti nyata,
+menyelesaikan transfer 12,501 m selama draining, lalu memeriksa stok, serial,
+bukti unduhan dan riwayat arsip dengan akun owner dan pembaca terbatas. Main
 warehouse browser cases dapat tetap memakai Firefox headless. Skenario tambahan
 `f3-extra-edge.spec.ts` dan `ui-layout.spec.ts` dijalankan melalui `qa.sh browser`
 dan disimpan terpisah; keduanya berada di luar daftar sembilan spec CI di atas.
@@ -140,16 +162,45 @@ build Go yang dingin dapat memerlukan beberapa menit. PostgreSQL memakai digest
 Timescale yang dipatok. Detail dependency dan arsip CI ada di
 [panduan CI](warehouse-ci.md).
 
-Di macOS, jalankan kompilasi target native melalui workflow `mobile-materials`
-atau tugas Gradle yang sama:
+Di macOS, workflow `mobile-materials` memeriksa kompilasi kedua target shared iOS
+dan link host Swift untuk device serta simulator tanpa signing. Untuk pemeriksaan
+kompilasi shared saja, jalankan:
 
 ```bash
 ./gradlew :mobile:app:compileKotlinIosArm64 :mobile:app:compileKotlinIosSimulatorArm64 \
   verifyMobileModuleGraph --no-daemon --no-parallel --max-workers=2
 ```
 
+Perintah itu belum membuktikan link host Swift. Ikuti [panduan mobile](mobile.md)
+dan perintah `xcodebuild` pada workflow untuk memeriksa host lengkap.
 Keberhasilan kompilasi native tidak mencakup login perangkat nyata, lifecycle OS,
 Keychain/KeyStore, izin kamera/lokasi, distribusi aplikasi, atau pengujian hardware GPON.
+
+## Bukti terakhir pada 2026-10-09
+
+- Web: 158 file / 915 tes, E2E typecheck, lint dan build berhasil; tes arsip
+  terfokus 10 berhasil. Log: `.omo/runtime/reference-final-web-check-fixed.log`
+  dan `.omo/runtime/reference-archive-focused.log`. Lint masih melaporkan 12
+  warning, build melaporkan ukuran bundle, dan audit dependency melaporkan 11
+  kerentanan (4 moderate, 6 high, 1 critical).
+- Backend aktivasi/provenance: 23 tes berhasil, tanpa failure/error/skip. Log:
+  `.omo/runtime/reference-activation-server.log`. Ini focused gate; hasilnya
+  tidak menyatakan seluruh rangkaian server/historical-upgrades di atas dijalankan
+  ulang pada checkpoint terakhir.
+- Browser historis: 10 tes berhasil pada dua viewport dan lima fase. Manifest
+  `.omo/runtime/warehouse-legacy-b6ec13a75b4a833589f0fd83e70e328f/verification.json`
+  mencatat V172 ke V211, dua pelanggan dan dua ONU tetap utuh, checksum historis
+  dan fungsi database bersama tidak berubah, serta 2 probe preflight positif
+  dan 6 negatif berhasil. Log: `.omo/runtime/reference-five-phase-final.log`.
+- Visual: 308 PNG diperiksa melalui seluruh 39 contact sheet, dengan empat
+  gambar asli diperbesar. Laporan `.omo/runtime/reference-final-visual-review.md`
+  membatasi hasil pada capture 1280x900 dan 375x812, tema terang/gelap serta
+  halaman/status yang terdaftar. Tablet, zoom 200 persen, pengukuran kontras,
+  audit aksesibilitas lengkap dan penilaian independen belum teramati.
+- Mobile: 54 hasil shared/JVM diperiksa tanpa failure/error/skip dan APK debug
+  Android berhasil dibangun. Lihat checksum dan log pada [panduan mobile](mobile.md).
+  Belum ada uji runtime perangkat Android atau compile/link/runtime iOS; YAML
+  dan syntax shell CI sudah diperiksa, workflow belum dijalankan secara remote.
 
 ## Membaca hasil
 
@@ -162,10 +213,13 @@ dan `REVIEW_SKU` dari tenant/SKU yang benar-benar sedang diperiksa:
 ```bash
 psql -X -v ON_ERROR_STOP=1 \
   -v "tenant_id=$REVIEW_TENANT" -v "sku_id=$REVIEW_SKU" \
-  -v expected_version=178.12 -v expected_cutover=ENFORCED -v expected_unit=MM \
+  -v expected_version=211 -v expected_cutover=ENFORCED -v expected_unit=MM \
   -f scripts/warehouse/preflight.sql
 ```
 
+Angka 211 adalah versi pada checkout yang ditinjau pada 2026-10-09; gunakan
+versi tertinggi dari build yang benar-benar dirilis bila manifest bertambah.
+Runner historis menentukan versi dari migrasi yang dikemas dalam checkout.
 Contoh ini memeriksa SKU kabel MM setelah cutover. Untuk SKU perangkat, satuan yang
 ditinjau adalah EA. Pilih status LEGACY/VALIDATING hanya ketika sedang memeriksa
 fase tersebut; itu bukan izin menjalankan operasi gudang biasa. Tenant yang belum

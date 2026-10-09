@@ -1,7 +1,7 @@
-# Technician Mobile Foundation
+# Technician Mobile Application
 
-The `mobile/` tree is a Kotlin Multiplatform foundation for the technician
-work-order application. `domain` owns platform-independent state, reducers,
+The `mobile/` tree contains the shared technician application and its Android
+and iOS hosts. `domain` owns platform-independent state, reducers,
 use cases, and ports. `data` and `core/*` contain adapter boundaries. The
 `feature:workorders` module composes those contracts; `app` owns the shared
 Compose Fluent UI entry point and the iOS `ComposeUIViewController` bridge.
@@ -52,17 +52,60 @@ was published against an older Compose generation, so upgrades require Android
 and iOS validation. Location adapters are `expect`/`actual` boundaries and do
 not claim native runtime permission behavior yet.
 
-The repository currently cannot configure the Android target: Kotlin 2.3.21
-fails to infer the Android Gradle Plugin version when `androidTarget()` is used
-through the included convention plugin. iOS targets (`iosArm64` and
-`iosSimulatorArm64`) and JVM test targets remain configured. Resolve this by
-moving to the repository-supported Kotlin/AGP Android KMP plugin matrix before
-enabling the Android launcher.
+Android is enabled explicitly with `-Pftth.android=true`. The convention plugin
+uses `com.android.kotlin.multiplatform.library` and configures its Android target;
+the launcher uses `com.android.application`. The local build uses Kotlin 2.3.21,
+Compose 1.9.3, AGP 9.0.0 and the checksum-pinned Gradle 9.3.0 wrapper. iOS targets
+(`iosArm64` and `iosSimulatorArm64`) and JVM tests remain available without an
+Android SDK.
+
+## Run the technician host
+
+The reference entry point has Ringkasan, Pekerjaan, Material, Permintaan and Retur
+destinations. Sign in with the API server URL and the tenant technician account;
+enter an authenticator code when the account has two-factor authentication.
+The host persists encrypted credentials, refreshes tokens, and clears the account
+queue on logout. Requests, returns, named photos, progress and completion use
+the real reference API and an encrypted queue with exact retry bytes and keys.
+Stale snapshots are labeled; a destination that has not loaded does not report
+an invented zero count.
+
+With JDK 21 and Android SDK 36 configured, build and install the debug host:
+
+```bash
+./gradlew :mobile:android:assembleDebug -Pftth.android=true \
+  --no-daemon --no-parallel --max-workers=2 \
+  -Pkotlin.compiler.execution.strategy=in-process
+adb install -r mobile/android/build/outputs/apk/debug/android-debug.apk
+```
+
+Application ID: `com.duluin.ftth.technician`; minimum Android API 26, target API
+36. Use HTTPS for the server. Debug development HTTP is restricted to localhost,
+127.0.0.1 and the Android emulator host alias 10.0.2.2. Photos are selected or
+captured from the named slot, normalized to JPEG, bounded to 2048 pixels and 5 MB,
+and previewed before review. The merged manifest removes obsolete phone/storage
+permissions inherited from the Fluent dependency. App backups are disabled.
+
+The iOS host lives in `mobile/ios`. On macOS with Xcode, JDK 21 and XcodeGen:
+
+```bash
+xcodegen generate --spec mobile/ios/project.yml
+open mobile/ios/FTTHTechnician.xcodeproj
+```
+
+Select the FTTHTechnician scheme and an iOS 16 or newer simulator/device. The
+pre-build script embeds the static `TechnicianApp` framework. The SwiftUI host
+uses the shared screen, Keychain credentials/outbox, and named camera/library
+photos. Configure a signing team for a physical device. Generated Xcode files
+and Info.plist are ignored; the XcodeGen specification is the source of truth.
 
 ## Extension Points
 
-- Implement `HttpClientPort` and `WorkOrderGateway` for authenticated API DTOs.
-- Implement `SecureOutboxRecords` and `OutboxCipher` with Android KeyStore or iOS Keychain.
+- Extend the legacy `HttpClientPort` and `WorkOrderGateway` adapters when a
+  separate feature host needs them; reference operations use `KtorFieldTransport`
+  and `ReferenceTechnicianRepository`.
+- Keep platform storage behind `SecureOutboxRecords` and `OutboxCipher`; the
+  reference host already binds Android KeyStore and iOS Keychain implementations.
 - Implement `PlatformLocationAdapter` with runtime permission and GPS fixes.
 - Add evidence hashing/upload adapters behind `EvidencePort`.
 - Reuse `MviStore` and the core UI atoms for attendance/payroll features; do not add a
@@ -93,8 +136,8 @@ Location is purpose-bound to technician check-in. The common state machine repre
 only `Unknown`, `Granted`, and `Denied`; denied permission routes to permission help and
 does not claim background or continuous tracking. JVM and iOS location adapters currently
 return `Unknown` and reject coordinate retrieval, so neither is native runtime proof.
-Android runtime execution is also environment-gated because this repository does not
-configure an Android KMP target. A production Android adapter must declare/request location
+The Android adapter also returns Unknown and rejects coordinate retrieval.
+A production attendance adapter must declare/request location
 permission, disclose the onsite purpose, and keep exact coordinates out of portal and
 payslip projections before it can be claimed as implemented.
 
@@ -143,4 +186,34 @@ quantity boundaries, partial receipt, source revocation, restart/response-loss r
 session changes and actual Compose text input. The reusable `mobile-materials` workflow
 compiles both configured iOS application targets on macOS and rejects skipped/no-source
 compilation. Linux common/JVM checks do not establish iOS compilation. Neither check
-claims native device execution, a signed app binary or an app-store release.
+claims native device execution, a release-signed app binary or an app-store release.
+
+## Current verification evidence
+
+On 2026-10-09 the Android debug APK assembled successfully on the Windows ARM64
+SDK host. The final manifest rebuild passed in 46 seconds; `aapt2 dump badging`
+verified the application ID, API 26/36 and the removal of phone/storage permissions.
+Local artifact: `.omo/runtime/artifacts/ftth-technician-debug.apk`. SHA256:
+`09fb576e602e321c06a21d24c357803f010054076167b5dfd2395e571844b8b3`.
+Build log: `.omo/runtime/reference-android-final.log`.
+
+The domain, data and app JVM checks plus `verifyMobileModuleGraph` passed in
+28 seconds, with 26 tests and no failures, errors or skips (unchanged domain/data
+results were reused by Gradle). Log: `.omo/runtime/reference-mobile-final-shared.log`.
+Tests cover authentication refresh/session fences, account purge, exact quantity
+and source validation, encrypted photo/completion retry, and late controller results.
+
+The remaining MVI, secure storage, workorders and materials consumer JVM checks
+plus the module graph passed in 32 seconds with 28 tests and no failures, errors
+or skips. Log: `.omo/runtime/reference-mobile-consumer-check.log`. Across both
+commands the reviewed XML reports contain 54 tests: domain 5, data 19, app 2,
+MVI 6, storage 7, workorders 7 and materials 8.
+
+The Android device list is empty and this host has no supported emulator or macOS
+toolchain. Android launch, native visual/accessibility checks, camera/KeyStore
+runtime and iOS compile/link/runtime have not been observed. The
+`mobile-materials` workflow now builds the APK, compiles both iOS targets, rejects
+skipped native compilation, generates the Xcode host and links device/simulator
+builds without signing. Its YAML and shell syntax passed locally; the workflow
+has not been run for these changes. APK assembly and JVM checks do not establish
+those remaining native acceptance checks.

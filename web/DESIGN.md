@@ -125,6 +125,21 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ### Reference warehouse and field work
 
+- Owner-only Perpindahan Gudang shows the current workflow, a reviewed stop on
+  new legacy documents, server-reported blockers with links to their resolution,
+  and a separately reviewed activation reason. Drain has no transaction replay:
+  an unconfirmed response requires a workflow read before another attempt.
+  Activation retains the exact server epoch/hash, session and retry key. A fresh
+  review is required after conflict. Subscription locks preserve read access.
+- Arsip Gudang uses dedicated read-only lists and document details for historical
+  receipts, transfers and stock. Existing inventory permissions and location scopes
+  apply independently of reference grants. Archive links stay inside the archive;
+  names, exact quantities and paginated history use the existing table primitives.
+  The archive describes current ledger positions as current, not frozen at activation.
+  Both pages keep existing tokens, focus, scrolling and 375px reflow.
+  Warehouse table cells grow with wrapped document names and quantities so the
+  complete text and its link remain inside the row at every container width.
+
 - Operator Work Order separates Belum ditugaskan source requests from assigned
   tasks using the shared Tabs. Source details show the customer, instructions,
   area and schedule. Tugaskan teknisi opens the shared resource form with only
