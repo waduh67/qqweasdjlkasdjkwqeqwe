@@ -3,7 +3,7 @@ package com.duluin.ftth.mobile.app
 import com.duluin.ftth.mobile.domain.FieldEvidence
 import kotlinx.cinterop.*
 import platform.CoreGraphics.CGRectMake
-import platform.Foundation.NSObject
+import platform.darwin.NSObject
 import platform.UIKit.*
 
 @OptIn(ExperimentalForeignApi::class)
