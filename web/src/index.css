@@ -2906,6 +2906,18 @@ td.dg-actions {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.reference-work-notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.reference-work-photo {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: contain;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
 .workspace-field {
   gap: 0.35rem;
 }
@@ -3440,6 +3452,96 @@ td.dg-actions {
 /* Gudang: tabel tetap datar; di ponsel label dan nilai dibaca per baris. */
 .warehouse-mobile-label {
   display: none;
+}
+.warehouse-data-table-card {
+  container-type: inline-size;
+}
+.warehouse-data-table-card .resource-data-table-grid .fui-DataGridBody .fui-DataGridRow {
+  height: auto;
+}
+.warehouse-data-table-card .resource-data-table-grid .fui-DataGridCell {
+  height: auto;
+  min-height: 2rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.warehouse-data-table-card .resource-data-table-grid .fui-DataGridCell > .warehouse-cell-value {
+  flex: 1;
+  min-width: 0;
+}
+.warehouse-data-table-card .table-cell-content {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.warehouse-data-table-card .table-cell-content :is(a, span, .resource-cell-description) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@container (max-width: 48rem) {
+  .warehouse-data-table-card.table-card .resource-data-table-grid {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .warehouse-data-table-card .resource-data-table-grid .fui-DataGridHeader {
+    display: block;
+  }
+  .warehouse-data-table-card .resource-data-table-grid .fui-DataGridBody {
+    display: block;
+    width: 100%;
+  }
+  .warehouse-data-table-card .resource-data-table-grid .fui-DataGridHeader .fui-DataGridRow {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+    height: auto;
+  }
+  .warehouse-data-table-card .resource-data-table-grid .fui-DataGridHeaderCell {
+    flex: 1 1 8rem !important;
+    white-space: normal;
+    position: static;
+  }
+  .warehouse-data-table-card .resource-data-table-grid .fui-DataGridBody .fui-DataGridRow {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding-block: 0.5rem;
+    min-width: 0;
+    height: auto;
+  }
+  .warehouse-data-table-card .resource-data-table-grid .fui-DataGridBody .fui-DataGridCell {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 2rem;
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    text-align: left !important;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  .warehouse-data-table-card .warehouse-mobile-label {
+    display: block;
+    color: var(--muted);
+    font-size: var(--fontSizeBase200);
+  }
+  .warehouse-data-table-card .table-cell-content {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  .warehouse-data-table-card .warehouse-cell-value {
+    min-width: 0;
+  }
+  .warehouse-data-table-card .table-scroll-hint {
+    display: none;
+  }
 }
 :is(.warehouse-data-table-card, .mobile-card-table) .data-table-grid .fui-DataGridCell > .warehouse-cell-value {
   min-width: 0;

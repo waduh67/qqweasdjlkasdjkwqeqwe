@@ -123,6 +123,25 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
 
 ## 9. Warehouse transaction controls
 
+### Reference warehouse and field work
+
+- Tenant workflow selects the reference workspace from an authenticated server read.
+  Technician work is a full-width document: task instructions, named required photos,
+  own material quantities, completion review, then durable activity history. The
+  document owns scrolling; there are no nested scrolling task panels.
+- Task lists use plain states: Belum selesai, Ada kendala, Selesai, Dibatalkan.
+  Technician and warehouse views share the existing Fluent fields, flat tables,
+  searchable paginated pickers and exact quantity controls. All sections reflow
+  at 375px and use existing color, spacing and focus tokens.
+- A required photo has its slot name, receipt state and private download action.
+  Upload reviews retain the original bytes, slot, revision and retry key. Material
+  selection reads current own custody; completion reviews refreshed assignment,
+  revision, photo receipts and stock before sending. Offline drafts remain visible
+  and cannot post; reconnect refreshes the source before review.
+- Empty material stock explains when handed-over stock appears. Completion history displays the named
+  material, exact quantity, serial and submitted photos. No accessibility debt
+  or new visual dependencies are introduced.
+
 - Keep the existing flat tables, command bars, Fluent fields, `Modal`, `ConfirmDialog`,
   `Badge`, `EmptyState`, and page stacks. Put warehouse operations in a separate
   `Gudang & Logistik` navigation group; field custody belongs under `Material Saya`.

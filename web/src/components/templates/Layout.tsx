@@ -71,9 +71,9 @@ const GROUPS: NavGroup[] = [
       // Papan dispatch (semua WO) di-gate izin dashboard = khusus operator; teknisi (yang
       // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
       { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: NavIcons.WorkOrder },
-      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: NavIcons.Inbox },
-      { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', icon: NavIcons.PackageCheck },
-      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: NavIcons.Calendar },
+      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Inbox },
+      { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.PackageCheck },
+      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Calendar },
     ],
   },
   {
@@ -99,7 +99,7 @@ const FLUSH_ROUTES = new Set(['/map'])
 
 export function Layout() {
   const { user, logout, readOnly, subscriptionLock } = useAuth()
-  const { can, isPlatformAdmin } = useCan()
+  const { can, hasPermission, isPlatformAdmin } = useCan()
   const location = useLocation()
   const navigate = useNavigate()
   const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
@@ -200,7 +200,7 @@ export function Layout() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
-        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} compact groups={GROUPS} can={can} storageKey="ftth.navGroups.tenant" />
+        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} compact groups={GROUPS} can={can} hasPermission={hasPermission} storageKey="ftth.navGroups.tenant" />
       </aside>
 
       <div className="main">

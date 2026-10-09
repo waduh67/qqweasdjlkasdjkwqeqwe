@@ -20,6 +20,17 @@ const groups = [
 ]
 
 describe('SidebarNav hotspot', () => {
+  it('keeps granted field data visible during a subscription lock without showing mutation routes', () => {
+    render(<MemoryRouter><SidebarNav groups={[{ label: 'Lapangan', items: [
+      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', access: 'read', icon: IconWifi },
+      { to: '/new-work', label: 'Buat pekerjaan', permission: 'workorder.order.field', icon: IconWifi },
+      { to: '/denied', label: 'Data akun lain', permission: 'other.field', access: 'read', icon: IconWifi },
+    ] }]} can={() => false} hasPermission={permission => permission === 'workorder.order.field'} storageKey="field-locked" /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Tugas Saya' }).getAttribute('href')).toBe('/my-work-orders')
+    expect(screen.queryByRole('link', { name: 'Buat pekerjaan' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Data akun lain' })).toBeNull()
+  })
+
   it('menampilkan menu untuk pengguna yang punya kebijakan view hotspot', () => {
     localStorage.removeItem('hotspot-authorized.v3.closed')
 

@@ -11,6 +11,7 @@ beforeEach(() => {
   mockedUseCan.mockReturnValue({
     can: () => false,
     canAny: () => false,
+    hasPermission: () => false,
     isPlatformAdmin: false,
   })
 })
@@ -31,6 +32,7 @@ describe('RequirePermission', () => {
     mockedUseCan.mockReturnValue({
       can: (permission) => permission === 'provisioning.segment.view',
       canAny: () => false,
+      hasPermission: (permission) => permission === 'provisioning.segment.view',
       isPlatformAdmin: false,
     })
 
@@ -41,5 +43,16 @@ describe('RequirePermission', () => {
     )
 
     expect(screen.getByText('Workspace provisioning').textContent).toBe('Workspace provisioning')
+  })
+
+  it('keeps granted field reads accessible while subscription writes are locked', () => {
+    mockedUseCan.mockReturnValue({
+      can: () => false,
+      canAny: () => false,
+      hasPermission: permission => permission === 'workorder.order.field',
+      isPlatformAdmin: false,
+    })
+    render(<RequirePermission access="read" permission="workorder.order.field"><p>Tugas tersimpan</p></RequirePermission>)
+    expect(screen.getByText('Tugas tersimpan').textContent).toBe('Tugas tersimpan')
   })
 })
