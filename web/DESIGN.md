@@ -47,6 +47,13 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 
 ## 5. Components
 
+### B2B clients and monthly visits
+- Client B2B uses the warehouse presentation of DataTable, explicit search, pagination and shared ResourceForm review. Each client shows the frozen current assignment and the settings for next month. Assigned NE selection has search, pagination and a retained selection.
+- Rekap B2B and Visit B2B use a labeled month control, target/count/remaining columns and clipped Monday-Sunday week details. Missed weeks have text; extra same-day visits remain visible in history. Current active assignments expose the report action.
+- A report requires notes and one to five JPEG/PNG files. Shared command review retains the command and photo bytes during uncertain retries. Private photos load only in the opened visit detail and object URLs are released on close. Loading, empty, error, read-only, conflict, pending and retry states have visible Indonesian labels.
+- Existing spacing, colors, responsive table labels and form scroll ownership apply. Buttons, fields, review and dialogs remain keyboard operable. No new visual tokens or accessibility debt.
+- Breadcrumbs use Lapangan and the visible B2B page names. The Lapangan crumb opens the first B2B page allowed by the current account. A failed request shows its reload action without also claiming that the dataset is empty.
+
 ### Card
 - Structure: `.card`, optionally `.card-head` and `.card-body`.
 - States: static by default; `.clickable` supplies hover, active, and focus states.
