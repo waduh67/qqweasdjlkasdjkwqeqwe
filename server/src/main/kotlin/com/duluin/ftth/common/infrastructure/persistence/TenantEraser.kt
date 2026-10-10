@@ -85,7 +85,7 @@ class TenantEraser(txManager: PlatformTransactionManager) {
                 NOT has_table_privilege(current_user,c.oid,'DELETE') OR EXISTS (
                     SELECT FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid
                     WHERE t.tgrelid=c.oid AND NOT t.tgisinternal AND (t.tgtype::integer & 8)<>0
-                      AND p.proname='warehouse_append_only'))
+                      AND p.proname IN ('warehouse_append_only','b2b_append_only')))
         """.trimIndent()).use { query ->
             query.setArray(1, conn.createArrayOf("text", tables.toTypedArray()))
             query.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getString(1)) } }
