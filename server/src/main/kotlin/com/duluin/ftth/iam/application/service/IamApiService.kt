@@ -24,7 +24,11 @@ class IamApiService(
     private val userDirectory: UserDirectory,
     private val areaRepository: AreaRepository,
     private val roleRepository: RoleRepository,
-) : IamApi, AreaReferenceApi {
+    private val owners: com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore,
+) : IamApi, AreaReferenceApi, com.duluin.ftth.iam.NeTechnicianApi {
+
+    override fun searchNetworkEngineers(query: String, page: PageRequest): Page<UserRef> =
+        userRepository.searchNetworkEngineers(query, page).map { it.toRef() }
 
     override fun findUser(id: UUID): UserRef? = userRepository.findById(id)?.toRef()
 
@@ -56,6 +60,8 @@ class IamApiService(
         pureTechnician = !platformAdmin && roleIds.isNotEmpty() && roleRepository.findAllByIds(roleIds).all {
             it.defaultKey in setOf("TECHNICIAN_NE", "TECHNICIAN_FO")
         },
+        pureNetworkEngineer = !platformAdmin && owners.findUserId() != id && roleIds.isNotEmpty() &&
+            roleRepository.findAllByIds(roleIds).all { it.defaultKey == "TECHNICIAN_NE" },
     )
 
     private fun Area.toRef() = AreaRef(id = id, code = code, name = name)

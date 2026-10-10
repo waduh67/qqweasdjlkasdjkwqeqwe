@@ -104,6 +104,10 @@ object PermissionCatalog {
         perm("order.order.manage", "Kelola status order")
 
         perm("inventory.location.view", "Lihat gudang dan bin")
+        perm("b2b.client.view", "Lihat client dan rekap B2B")
+        perm("b2b.client.manage", "Kelola client B2B")
+        perm("b2b.visit.view", "Lihat penugasan dan visit B2B sendiri")
+        perm("b2b.visit.report", "Laporkan visit B2B sebagai Teknisi NE")
         perm("warehouse.catalog.view", "Lihat katalog barang")
         perm("warehouse.catalog.manage", "Kelola katalog barang")
         perm("warehouse.stock.view", "Lihat stok gudang")
