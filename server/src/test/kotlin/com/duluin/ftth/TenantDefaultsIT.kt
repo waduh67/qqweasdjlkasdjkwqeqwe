@@ -144,6 +144,31 @@ class TenantDefaultsIT {
     }
 
     @Test
+    fun `backfill B2B menambah izin sekali dan mempertahankan kustomisasi setelah upgrade`() {
+        val (tenant, _) = tenant()
+        within(tenant) {
+            jdbc.update("DELETE FROM iam_default_role_feature WHERE tenant_id=?", tenant)
+            listOf("ADMIN", "TECHNICIAN_NE").forEach { key ->
+                val role = requireNotNull(roles.findByDefaultKey(key))
+                role.replacePermissions(emptySet())
+                roles.save(role)
+            }
+            provisioner.ensureOperationalRoles(tenant)
+            assertThat(roles.findByDefaultKey("ADMIN")?.permissionIds).hasSize(2)
+            assertThat(roles.findByDefaultKey("TECHNICIAN_NE")?.permissionIds).hasSize(2)
+            listOf("ADMIN", "TECHNICIAN_NE").forEach { key ->
+                val role = requireNotNull(roles.findByDefaultKey(key))
+                role.replacePermissions(emptySet())
+                roles.save(role)
+            }
+            provisioner.ensureOperationalRoles(tenant)
+            assertThat(roles.findByDefaultKey("ADMIN")?.permissionIds).isEmpty()
+            assertThat(roles.findByDefaultKey("TECHNICIAN_NE")?.permissionIds).isEmpty()
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM iam_default_role_feature WHERE tenant_id=?", Long::class.java,tenant)).isEqualTo(2)
+        }
+    }
+
+    @Test
     fun `identitas owner tenant lain tidak terbaca`() {
         val (first, _) = tenant()
         val (second, _) = tenant()

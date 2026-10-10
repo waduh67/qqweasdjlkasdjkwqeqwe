@@ -37,6 +37,8 @@ import { ReferenceWorkList } from './pages/workorder/ReferenceWorkList'
 import { ReferenceWorkDetailPage } from './pages/workorder/ReferenceWorkDetailPage'
 import { ReferenceWorkTypesPage } from './pages/workorder/ReferenceWorkTypesPage'
 import { MyVisitsPage } from './pages/MyVisitsPage'
+const B2BClientsPage = lazy(() => import('./pages/b2b/B2BClientsPage').then(m => ({ default: m.B2BClientsPage })))
+const B2BVisitsPage = lazy(() => import('./pages/b2b/B2BVisitsPage').then(m => ({ default: m.B2BVisitsPage })))
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { AcsPage } from './pages/AcsPage'
@@ -100,6 +102,13 @@ function RequireAnyPermission({
   const { can } = useCan()
   if (!canViewHotspot(can)) return <ForbiddenPermission permission={permissions.join(' atau ')} />
   return <>{children}</>
+}
+
+function B2BIndexRoute() {
+  const { hasPermission } = useCan()
+  if (hasPermission('b2b.client.view')) return <Navigate to="/b2b/clients" replace />
+  if (hasPermission('b2b.visit.view')) return <Navigate to="/b2b/visits" replace />
+  return <ForbiddenPermission permission="b2b.client.view atau b2b.visit.view" />
 }
 
 function ForbiddenPermission({ permission }: { permission: string }) {
@@ -380,6 +389,10 @@ function OperatorApp() {
             />
             <Route path="my-materials" element={<RequirePermission access="read" permission="workorder.order.field"><WorkflowSurface reference={<ReferenceMyMaterials />} legacy={<MyMaterialsPage />} /></RequirePermission>} />
             <Route path="my-visits" element={<RequirePermission access="read" permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
+            <Route path="b2b" element={<B2BIndexRoute />} />
+            <Route path="b2b/clients" element={<RequirePermission permission="b2b.client.view"><B2BClientsPage /></RequirePermission>} />
+            <Route path="b2b/reports" element={<RequirePermission permission="b2b.client.view"><B2BVisitsPage admin /></RequirePermission>} />
+            <Route path="b2b/visits" element={<RequirePermission permission="b2b.visit.view"><B2BVisitsPage /></RequirePermission>} />
             <Route
               path="my-work-orders/:id"
               element={

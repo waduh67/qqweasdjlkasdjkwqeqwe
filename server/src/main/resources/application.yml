@@ -44,7 +44,7 @@ spring:
     multipart:
       # Bukti foto lapangan; batas keras di sini, validasi lebih ketat di service.
       max-file-size: 20MB
-      max-request-size: 25MB
+      max-request-size: 26MB
 
 server:
   port: 8080

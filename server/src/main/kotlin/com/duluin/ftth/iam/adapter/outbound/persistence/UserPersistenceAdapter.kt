@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.persistence.toDomainPage
 import com.duluin.ftth.common.infrastructure.persistence.toPageable
+import com.duluin.ftth.common.infrastructure.persistence.TenantTransactionJdbc
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.iam.application.port.outbound.UserRepository
 import com.duluin.ftth.iam.domain.model.User
@@ -15,6 +16,7 @@ import java.util.UUID
 class UserPersistenceAdapter(
     private val jpa: UserJpaRepository,
     private val directory: UserDirectoryJpaRepository,
+    private val tenantJdbc: TenantTransactionJdbc,
 ) : UserRepository {
 
     override fun save(user: User): User {
@@ -77,6 +79,15 @@ class UserPersistenceAdapter(
             .toDomainPage()
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)
+
+    override fun searchNetworkEngineers(query: String, pageRequest: PageRequest): Page<User> {
+        var result: Page<User>? = null
+        tenantJdbc.withinTenant(TenantContext.tenantId()) {
+            result = jpa.searchNetworkEngineers(TenantContext.tenantId(), query.trim().lowercase(), pageRequest.toPageable())
+                .map { it.toDomain() }.toDomainPage()
+        }
+        return requireNotNull(result)
+    }
 }
 
 private fun UserJpaEntity.toDomain(): User =

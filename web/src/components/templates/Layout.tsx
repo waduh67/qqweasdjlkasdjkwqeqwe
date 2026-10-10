@@ -72,6 +72,9 @@ const GROUPS: NavGroup[] = [
       { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Inbox },
       { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.PackageCheck },
       { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Calendar },
+      { to: '/b2b/clients', label: 'Client B2B', permission: 'b2b.client.view', icon: NavIcons.Users },
+      { to: '/b2b/reports', label: 'Rekap B2B', permission: 'b2b.client.view', icon: NavIcons.Chart },
+      { to: '/b2b/visits', label: 'Visit B2B', permission: 'b2b.visit.view', icon: NavIcons.Calendar },
     ],
   },
   {
@@ -104,7 +107,13 @@ export function Layout() {
     ...(pages.length ? [{ to: '/warehouse', label: 'Ringkasan Gudang', permission: workflow.status === 'ready' && workflow.data.owner ? null : pages.flatMap(page => [...page.permissions]), icon: NavIcons.PackageCheck, end: true, access: 'read' as const }] : []),
     ...pages.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: 'ownerOnly' in page ? null : page.permissions, icon: NavIcons.warehouse[page.path], access: 'read' as const })),
   ] } : group)
-  const warehouseLabels = Object.fromEntries(pages.map(page => [`/warehouse/${page.path}`, page.label]))
+  const pageLabels = {
+    ...Object.fromEntries(pages.map(page => [`/warehouse/${page.path}`, page.label])),
+    '/b2b': 'Lapangan',
+    '/b2b/clients': 'Client B2B',
+    '/b2b/reports': 'Rekap B2B',
+    '/b2b/visits': 'Visit B2B',
+  }
   const location = useLocation()
   const navigate = useNavigate()
   const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
@@ -244,7 +253,7 @@ export function Layout() {
         <main className={flush ? 'content content-flush' : 'content'}>
           {!flush && (
             <div className="breadcrumb-bar">
-              <Breadcrumbs labels={warehouseLabels} />
+              <Breadcrumbs labels={pageLabels} />
             </div>
           )}
           <Outlet />

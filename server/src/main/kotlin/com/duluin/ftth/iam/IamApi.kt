@@ -43,6 +43,7 @@ data class UserRef(
     val active: Boolean,
     val technician: Boolean = false,
     val pureTechnician: Boolean = false,
+    val pureNetworkEngineer: Boolean = false,
 )
 
 /** Pandangan ringkas sebuah area/wilayah operasional untuk konsumen lintas-module. */

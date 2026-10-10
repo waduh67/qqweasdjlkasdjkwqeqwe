@@ -17,7 +17,7 @@ value class PermissionCode private constructor(val value: String) {
     override fun toString(): String = value
 
     companion object {
-        private val PATTERN = Regex("^[a-z]+\\.[a-z]+\\.[a-z]+$")
+        private val PATTERN = Regex("^[a-z][a-z0-9]*\\.[a-z][a-z0-9]*\\.[a-z][a-z0-9]*$")
 
         fun of(raw: String): PermissionCode {
             val normalized = raw.trim().lowercase()

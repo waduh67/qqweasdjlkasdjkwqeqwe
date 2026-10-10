@@ -22,5 +22,7 @@ interface UserRepository {
 
     fun search(query: String?, pageRequest: PageRequest): Page<User>
 
+    fun searchNetworkEngineers(query: String, pageRequest: PageRequest): Page<User>
+
     fun deleteById(id: UUID)
 }

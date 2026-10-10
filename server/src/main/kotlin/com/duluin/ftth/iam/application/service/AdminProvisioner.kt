@@ -25,6 +25,7 @@ class AdminProvisioner(
     private val passwordHasher: PasswordHasher,
     private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
     private val owners: com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore,
+    private val features: com.duluin.ftth.iam.adapter.outbound.persistence.DefaultRoleFeatureStore,
 ) {
     fun provisionTenantAdmin(tenantId: UUID, email: String, name: String, password: String): Boolean {
         val roleId = ensureOperationalRoles(tenantId)
@@ -44,9 +45,23 @@ class AdminProvisioner(
     fun ensureOperationalRoles(tenantId: UUID): UUID {
         val admin = ensureRole(tenantId, "ADMIN", "Admin", "Kelola gudang, work order dan akun teknisi", permissionIdsForCodes(ADMIN_PERMISSION_CODES))
         ensureRole(tenantId, "MANAGER", "Manager", "Persetujuan pengajuan material", permissionIdsForCodes(MANAGER_PERMISSION_CODES))
-        ensureRole(tenantId, "TECHNICIAN_NE", "Teknisi NE", "Teknisi Network Equipment", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
+        val ne = ensureRole(tenantId, "TECHNICIAN_NE", "Teknisi NE", "Teknisi Network Equipment", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES + B2B_NE_PERMISSION_CODES))
         ensureRole(tenantId, "TECHNICIAN_FO", "Teknisi FO", "Teknisi Fiber Optic", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
+        ensureFeaturePermissions(admin, B2B_ADMIN_PERMISSION_CODES)
+        ensureFeaturePermissions(ne, B2B_NE_PERMISSION_CODES)
         return admin
+    }
+
+    private fun ensureFeaturePermissions(roleId: UUID, codes: Set<String>) {
+        val fence = authority.lockForChange()
+        if (!features.claim(roleId, "B2B_V1")) return
+        val role = requireNotNull(roleRepository.findById(roleId))
+        val updated = role.permissionIds + permissionIdsForCodes(codes)
+        if (updated != role.permissionIds) {
+            role.replacePermissions(updated)
+            roleRepository.save(role)
+            fence.incrementEpoch()
+        }
     }
 
     fun backfillOwner() {
@@ -138,7 +153,10 @@ class AdminProvisioner(
             "warehouse.return.own",
         )
 
-        val ADMIN_PERMISSION_CODES = setOf(
+        val B2B_ADMIN_PERMISSION_CODES = setOf("b2b.client.view", "b2b.client.manage")
+        val B2B_NE_PERMISSION_CODES = setOf("b2b.visit.view", "b2b.visit.report")
+
+        val ADMIN_PERMISSION_CODES = B2B_ADMIN_PERMISSION_CODES + setOf(
             "iam.user.view", "iam.user.create", "iam.user.update", "iam.user.assign",
             "customer.customer.view", "customer.subscription.view",
             "workorder.order.view", "workorder.dashboard.view", "workorder.order.create",
