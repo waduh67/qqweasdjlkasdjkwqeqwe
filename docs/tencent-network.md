@@ -29,6 +29,13 @@ It must not replace existing sites, firewall defaults, or Docker projects.
 The memory limits and single GenieACS worker per process are for this small,
 shared host; size it again before adding a large device fleet.
 
+HTTPS CWMP uses nginx's RFC 7239 `Forwarded` header, trusted only from the local
+Docker gateway, so GenieACS correctly challenges with Basic over TLS. Plain
+CWMP on 7547 reaches GenieACS directly and uses Digest. Do not put the plain
+endpoint behind an HTTP proxy: GenieACS ties its Digest nonce to the TCP socket,
+and replacing that connection makes correct ONT credentials fail. Keep the
+trusted proxy addresses in sync if changing the network's Docker subnet.
+
 ## Configuration and recovery
 
 - Node files: `/opt/ftth-network`; `.env` is mode 0600 and never committed.
@@ -37,6 +44,39 @@ shared host; size it again before adding a large device fleet.
 - Original RADIUS dump: `/opt/ftth-network/backups/legacy-radius.dump`.
 - Application, ACS connection settings and VPN PKI remain in the main FTTH database.
 - Do not delete the original mini PC volumes during migration or rollback.
+
+GitHub Actions `deploy-network` builds GenieACS, checks isolated PostgreSQL,
+MongoDB, RADIUS and an authenticated CWMP session, then transfers the tested
+image to Tencent. Production activation validates HTTPS and direct CWMP again.
+`TENCENT_HOST`, `TENCENT_USER`, `TENCENT_SSH_KEY`, and `TENCENT_KNOWN_HOSTS`
+are repository secrets; application deployment continues to use its existing
+mini PC secrets. No node credentials are included in the release artifact.
+Pure network changes do not rebuild the application.
+
+Release records and previous configuration are stored under
+`/opt/ftth-network/releases/<commit>`; `current/activation.json` identifies the
+active release. Configuration is restored automatically if activation fails.
+The initial core connection backup is
+`/opt/ftth/backups/network-config-20261011T112507Z` on the mini PC. It includes the
+original environment and resolved Compose file. `configure-core.py` handles
+resolved Compose files whose entrypoint otherwise overrides environment values.
+
+`ftth-network-backup.timer` runs daily at 03:15 UTC (10:15 WIB), retaining local
+archives for 14 days and copying them over WireGuard to
+`/opt/ftth/backups/tencent` on the mini PC (30 days). Its SSH key can only upload
+archives through `receive-backup.sh`. Backups contain databases, service
+configuration and VPN keys; protect them as credentials. The main FTTH database
+continues to use its existing backup job.
+
+`ftth-radius-clients.timer` checks the NAS registry every 30 seconds and restarts
+only this FreeRADIUS container after a change. Existing PPPoE sessions continue;
+new authentication requests can briefly retry during the restart.
+
+Once the remote node is verified, stop the mini PC's old `genieacs-cwmp`,
+`genieacs-nbi`, `genieacs-fs`, `genieacs-mongo`, `freeradius`, and `backup-radius`
+services. Retain their volumes and the old RADIUS database for rollback. Normal
+application releases update only server/web and do not restart these services;
+a manual full-stack `compose up` may start them again.
 
 The stock VPN installer called an empty legacy-NAT cleanup pipeline with
 `set -euo pipefail`, which stopped first-time installation before systemd startup.
@@ -48,8 +88,15 @@ Moving the hub does not remove that dependency when the mini PC is offline.
 
 ## Installation checkpoint — 2026-10-11
 
-DNS points both hostnames directly to Tencent. The platform VPN hub is registered
-and its daemon is active. PostgreSQL/ACS installation, private-link reachability,
-platform connections, backup automation, and deployment verification are in
-progress. Private local evidence is under `.omo/runtime/tencent` in the
-`work/tencent-network-20261011` worktree. Credentials are kept outside Git.
+DNS points both hostnames directly to Tencent. WireGuard, OpenVPN, RADIUS and ACS
+are running. The actual FTTH RADIUS database test and ACS connection test pass.
+A temporary OpenVPN client authenticated through the platform callback. RADIUS
+accepted correct SQL credentials and rejected an incorrect password. Both ACS
+endpoints accepted an authenticated Inform, persisted the device and rejected
+incorrect credentials. Probe accounts and devices are removed after testing.
+The first database/configuration backup was copied successfully to the mini PC.
+
+PR #57 tracks CI and production activation. Private local evidence is under
+`.omo/runtime/tencent` in the `work/tencent-network-20261011` worktree.
+Credentials are kept outside Git. Physical MikroTik/ONT commissioning still
+requires applying the generated VPN account and ONT settings to the devices.

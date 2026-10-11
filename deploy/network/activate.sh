@@ -11,10 +11,12 @@ flock -w 120 9
 [[ -f .env && -f docker-compose.yml ]]
 release="$PWD/releases/$commit"
 mkdir -p "$release"
-cp -a .env "$release/env-before"
-cp -a docker-compose.yml "$release/compose-before.yml"
-cp -a radius "$release/radius-before"
-cp -a /etc/nginx/sites-available/ftth-acs.conf "$release/nginx-before.conf"
+if [[ ! -f "$release/env-before" ]]; then
+  cp -a .env "$release/env-before"
+  cp -a docker-compose.yml "$release/compose-before.yml"
+  cp -a radius "$release/radius-before"
+  cp -a /etc/nginx/sites-available/ftth-acs.conf "$release/nginx-before.conf"
+fi
 image="ftth-network-genieacs:$commit"
 docker load -i "$stage/genieacs.tar.gz" > "$release/image-load.log"
 [[ $(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image") == "$commit" ]]
@@ -43,6 +45,7 @@ cp -a "$stage/radius/." radius/
 install -m 600 "$stage/nginx-acs.conf.template" nginx-acs.conf.template
 install -m 700 "$stage/backup.sh" backup.sh
 install -m 700 "$stage/sync-radius-clients.sh" sync-radius-clients.sh
+install -m 700 "$stage/probe-cwmp.py" probe-cwmp.py
 docker compose config --quiet
 docker compose up -d --wait --wait-timeout 150
 for attempt in {1..30}; do
@@ -58,6 +61,8 @@ Path('/etc/nginx/sites-available/ftth-acs.conf').write_text(Path('nginx-acs.conf
 PY
 nginx -t
 systemctl reload nginx
+python3 probe-cwmp.py --env-file .env --url https://acs.ftth.karuhundeveloper.com/ --nbi http://10.254.67.1:7557
+python3 probe-cwmp.py --env-file .env --url http://127.0.0.1:7547/ --nbi http://10.254.67.1:7557
 cat > /etc/systemd/system/ftth-network-backup.service <<'UNIT'
 [Unit]
 Description=Back up FTTH network services and copy to the mini PC

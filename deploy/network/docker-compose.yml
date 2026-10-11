@@ -86,6 +86,8 @@ services:
     environment:
       NODE_OPTIONS: --max-old-space-size=96
       GENIEACS_CWMP_WORKER_PROCESSES: '1'
+      # Trust only the local nginx connection, including Docker's IPv4-mapped address.
+      GENIEACS_FORWARDED_HEADER: '172.30.67.1,::ffff:172.30.67.1'
       GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/genieacs
       GENIEACS_FS_HOSTNAME: ${ACS_DEVICE_HOST:?set the device hostname}
       GENIEACS_FS_PORT: '7567'
@@ -94,6 +96,9 @@ services:
       FTTH_CPE_ONT_ACS_PASSWORD: ${FTTH_CPE_ONT_ACS_PASSWORD:?set the ONT password}
     ports:
       - '127.0.0.1:17547:7547'
+      # Digest authentication requires the original TCP connection. Keep plain
+      # CWMP direct; an HTTP reverse proxy cannot preserve that association.
+      - '7547:7547'
 
   nbi:
     <<: *genieacs

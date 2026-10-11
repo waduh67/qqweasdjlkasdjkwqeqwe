@@ -72,13 +72,14 @@ jobs:
             sleep 1
           done
           test "$status" = 405
+          python3 deploy/network/probe-cwmp.py --env-file deploy/network/.env --url http://127.0.0.1:7547/ --nbi http://127.0.0.1:7557
           printf 'Message-Authenticator = 0x00\n' | docker compose --env-file deploy/network/.env -f deploy/network/docker-compose.yml exec -T radius radclient -t 3 -r 1 127.0.0.1 status radclient-loopback-only | tee /tmp/network-radius.txt
           grep -q 'Received Access-Accept' /tmp/network-radius.txt
       - name: Package the tested image and deployment files
         run: |
           set -euo pipefail
           mkdir -p .omo/runtime/network-release
-          cp deploy/network/docker-compose.yml deploy/network/nginx-acs.conf.template deploy/network/activate.sh deploy/network/backup.sh deploy/network/sync-radius-clients.sh .omo/runtime/network-release/
+          cp deploy/network/docker-compose.yml deploy/network/nginx-acs.conf.template deploy/network/activate.sh deploy/network/backup.sh deploy/network/sync-radius-clients.sh deploy/network/probe-cwmp.py .omo/runtime/network-release/
           cp -a deploy/radius .omo/runtime/network-release/radius
           docker save "ftth-network-genieacs:$GITHUB_SHA" | gzip > .omo/runtime/network-release/genieacs.tar.gz
       - uses: actions/upload-artifact@v4
