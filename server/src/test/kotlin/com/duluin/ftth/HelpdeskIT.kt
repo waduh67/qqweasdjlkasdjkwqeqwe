@@ -91,6 +91,21 @@ class HelpdeskIT {
         )
 
     @Test
+    fun `antrean belum ditugaskan mengecualikan tiket tertutup sebelum pagination`() {
+        val tenant = newTenantAdmin("hdq")
+        val (_, portalToken) = newPortalCustomer(tenant, "Rani")
+        val openId = JsonPath.read<String>(submitTicket(portalToken, "Koneksi belum pulih"), "$.ticket.id")
+        val closedId = JsonPath.read<String>(submitTicket(portalToken, "Gangguan sudah selesai"), "$.ticket.id")
+        post("/api/helpdesk/tickets/$closedId/status", tenant.token, """{"status":"CLOSED"}""", expected = 200)
+
+        val queue = get("/api/helpdesk/tickets?unassigned=true&size=1", tenant.token)
+        assertThat(JsonPath.read<List<String>>(queue, "$.content[*].id")).containsExactly(openId)
+        assertThat(JsonPath.read<Int>(queue, "$.totalElements")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(get("/api/helpdesk/tickets/summary", tenant.token), "$.unassigned")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(get("/api/helpdesk/tickets?status=CLOSED", tenant.token), "$.totalElements")).isEqualTo(1)
+    }
+
+    @Test
     fun `pelanggan lapor dari portal, operator membalas dan mengeskalasi jadi work order`() {
         val tenant = newTenantAdmin("hd")
         val (customerId, portalToken) = newPortalCustomer(tenant, "Budi")

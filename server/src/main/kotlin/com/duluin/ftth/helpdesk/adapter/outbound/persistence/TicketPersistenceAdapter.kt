@@ -163,7 +163,10 @@ class TicketPersistenceAdapter(
     /** [unassigned] menang atas [assigneeId] bila keduanya terisi — "belum dipegang siapa pun". */
     private fun hasAssignee(assigneeId: UUID?, unassigned: Boolean?) = Specification<TicketJpaEntity> { root, _, cb ->
         when {
-            unassigned == true -> cb.isNull(root.get<UUID>("assigneeId"))
+            unassigned == true -> cb.and(
+                cb.isNull(root.get<UUID>("assigneeId")),
+                cb.notEqual(root.get<TicketStatus>("status"), TicketStatus.CLOSED),
+            )
             assigneeId != null -> cb.equal(root.get<UUID>("assigneeId"), assigneeId)
             else -> cb.conjunction()
         }
