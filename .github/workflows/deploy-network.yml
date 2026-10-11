@@ -79,7 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .omo/runtime/network-release
-          cp deploy/network/docker-compose.yml deploy/network/nginx-acs.conf.template deploy/network/activate.sh deploy/network/backup.sh deploy/network/sync-radius-clients.sh deploy/network/probe-cwmp.py .omo/runtime/network-release/
+          cp deploy/network/docker-compose.yml deploy/network/nginx-acs.conf.template deploy/network/activate.sh deploy/network/backup.sh deploy/network/sync-radius-clients.sh deploy/network/probe-cwmp.py deploy/network/vpn-firewall.sh .omo/runtime/network-release/
           cp -a deploy/radius .omo/runtime/network-release/radius
           docker save "ftth-network-genieacs:$GITHUB_SHA" | gzip > .omo/runtime/network-release/genieacs.tar.gz
       - uses: actions/upload-artifact@v4

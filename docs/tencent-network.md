@@ -53,6 +53,11 @@ are repository secrets; application deployment continues to use its existing
 mini PC secrets. No node credentials are included in the release artifact.
 Pure network changes do not rebuild the application.
 
+At boot, `ftth-network.service` starts this Compose project after WireGuard and
+Docker, so private port bindings have an address. An OpenVPN systemd drop-in
+restores this hub's forwarding/NAT rules when OpenVPN starts. Do not reboot the
+shared VPS just to apply a network release.
+
 Release records and previous configuration are stored under
 `/opt/ftth-network/releases/<commit>`; `current/activation.json` identifies the
 active release. Configuration is restored automatically if activation fails.
@@ -72,9 +77,9 @@ continues to use its existing backup job.
 only this FreeRADIUS container after a change. Existing PPPoE sessions continue;
 new authentication requests can briefly retry during the restart.
 
-Once the remote node is verified, stop the mini PC's old `genieacs-cwmp`,
-`genieacs-nbi`, `genieacs-fs`, `genieacs-mongo`, `freeradius`, and `backup-radius`
-services. Retain their volumes and the old RADIUS database for rollback. Normal
+The mini PC's old `genieacs-cwmp`, `genieacs-nbi`, `genieacs-fs`,
+`genieacs-mongo`, `freeradius`, and `backup-radius` services are stopped.
+Their volumes and the old RADIUS database are retained for rollback. Normal
 application releases update only server/web and do not restart these services;
 a manual full-stack `compose up` may start them again.
 

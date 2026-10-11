@@ -46,6 +46,7 @@ install -m 600 "$stage/nginx-acs.conf.template" nginx-acs.conf.template
 install -m 700 "$stage/backup.sh" backup.sh
 install -m 700 "$stage/sync-radius-clients.sh" sync-radius-clients.sh
 install -m 700 "$stage/probe-cwmp.py" probe-cwmp.py
+install -m 700 "$stage/vpn-firewall.sh" vpn-firewall.sh
 docker compose config --quiet
 docker compose up -d --wait --wait-timeout 150
 for attempt in {1..30}; do
@@ -63,6 +64,29 @@ nginx -t
 systemctl reload nginx
 python3 probe-cwmp.py --env-file .env --url https://acs.ftth.karuhundeveloper.com/ --nbi http://10.254.67.1:7557
 python3 probe-cwmp.py --env-file .env --url http://127.0.0.1:7547/ --nbi http://10.254.67.1:7557
+cat > /etc/systemd/system/ftth-network.service <<'UNIT'
+[Unit]
+Description=Start FTTH network containers after the private interface is available
+Requires=docker.service wg-quick@ftth-link.service
+After=docker.service wg-quick@ftth-link.service
+[Service]
+Type=oneshot
+RemainAfterExit=true
+WorkingDirectory=/opt/ftth-network
+ExecStart=/usr/bin/docker compose up -d --wait --wait-timeout 150
+TimeoutStartSec=180
+[Install]
+WantedBy=multi-user.target
+UNIT
+mkdir -p /etc/systemd/system/openvpn-server@server.service.d
+cat > /etc/systemd/system/openvpn-server@server.service.d/ftth-network.conf <<'UNIT'
+[Unit]
+After=docker.service wg-quick@ftth-link.service
+Wants=wg-quick@ftth-link.service
+[Service]
+ExecStartPre=/opt/ftth-network/vpn-firewall.sh
+UNIT
+/opt/ftth-network/vpn-firewall.sh
 cat > /etc/systemd/system/ftth-network-backup.service <<'UNIT'
 [Unit]
 Description=Back up FTTH network services and copy to the mini PC
@@ -81,6 +105,7 @@ Persistent=true
 WantedBy=timers.target
 UNIT
 systemctl daemon-reload
+systemctl enable --now ftth-network.service
 systemctl enable --now ftth-network-backup.timer
 cat > /etc/systemd/system/ftth-radius-clients.service <<'UNIT'
 [Unit]
