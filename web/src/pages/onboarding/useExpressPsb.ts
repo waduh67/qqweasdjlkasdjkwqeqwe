@@ -60,6 +60,8 @@ export function useExpressPsb() {
   const [areas, setAreas] = useState<Area[]>([])
   const [technicians, setTechnicians] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   const [draft, setDraft] = useState<Draft>({ ...EMPTY })
   // Password dipisah dari draft agar tombol Generate/Lihat sederhana.
@@ -71,30 +73,42 @@ export function useExpressPsb() {
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<(ExpressPsbResult & { secretUsed: string }) | null>(null)
 
-  const canManage = can('customer.customer.create')
+  const canManage = ['customer.customer.create', 'customer.subscription.update', 'bng.access.manage', 'workorder.order.create'].every(can)
+  const canViewPlans = can('catalog.plan.view')
 
   useEffect(() => {
+    if (!canManage) return
+    let active = true
+    setLoading(true)
+    setLoadError(null)
     void Promise.all([
-      listPlans().catch(() => []),
+      listPlans(),
       listNas().catch(() => []),
     ])
       .then(([p, n]) => {
-        const active = p.filter((x) => x.active)
-        setPlans(active)
+        if (!active) return
+        const available = p.filter((x) => x.active)
+        setPlans(available)
         setNasList(n.filter((x) => x.enabled))
-        if (active.length > 0) {
-          setPlanId(active[0].id)
-          setAuthType(active[0].serviceTypes[0] ?? 'PPPOE')
+        if (available.length > 0) {
+          setPlanId(available[0].id)
+          setAuthType(available[0].serviceTypes[0] ?? 'PPPOE')
         }
       })
-      .finally(() => setLoading(false))
+      .catch((error) => {
+        if (active) setLoadError(error instanceof ApiError && error.status === 403
+          ? 'Anda tidak memiliki akses ke paket internet.'
+          : 'Paket internet belum berhasil dimuat.')
+      })
+      .finally(() => { if (active) setLoading(false) })
 
     // Area best-effort — dipakai memilih area pelanggan sekaligus auto-pilih BRAS dari cakupannya.
     void api
       .get<Area[]>('/api/areas')
-      .then(setAreas)
-      .catch(() => setAreas([]))
-  }, [])
+      .then(rows => { if (active) setAreas(rows) })
+      .catch(() => { if (active) setAreas([]) })
+    return () => { active = false }
+  }, [canManage, loadAttempt])
 
   useEffect(() => {
     if (workflowMode !== 'LEGACY') return
@@ -150,7 +164,7 @@ export function useExpressPsb() {
     (!macBased && !secret.trim())
 
   const submit = async () => {
-    if (saving || workflowMode === null) return
+    if (!canManage || saving || loading || loadError || workflowMode === null) return
     if (invalid) {
       toast.error('Lengkapi dulu kolom wajib (nama, alamat, koordinat, paket, kredensial).')
       return
@@ -191,7 +205,8 @@ export function useExpressPsb() {
     }
   }
 
-  return { canManage, workflow, workflowMode, reference, plans, nasList, areas, technicians, loading, draft,
+  return { canManage, canViewPlans, workflow, workflowMode, reference, plans, nasList, areas, technicians, loading, loadError,
+    reloadPlans: () => setLoadAttempt(attempt => attempt + 1), draft,
     secret, showSecret, planId, nasId, authType, saving, result, nasByArea, availableTypes, macBased, invalid,
     set, changePlan, changeArea, setAuthType, setNasId, setSecret, setShowSecret, randomSecret, submit, setResult }
 }
