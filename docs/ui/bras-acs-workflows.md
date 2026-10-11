@@ -32,7 +32,21 @@ ordering adjustment, the 13 affected component tests, production build, and all
 eight Chromium/Firefox browser scenarios passed again. Lint reports only existing
 warnings in unrelated files. Release is tracked by PR #56.
 
-The public domain returned HTTP 530 / Cloudflare 1033 before release. The previous
-main deployment (run 38045936436) also failed image smoke verification before its
-deploy step. These release conditions must be resolved before claiming the UI is
-live; the interface checks above use local mocked APIs.
+The public domain recovered from Cloudflare 1033 and returned HTTP 200 with
+readiness UP before release. Deployments of PRs #54 and #55 stopped in image
+verification: new tenants now use REFERENCE/ENFORCED, but the release fixture
+still called the retired v1 receipt writer and received CUTOVER_REQUIRED.
+
+`scripts/warehouse/reference-image-http.py` exercises the current v2 workflow
+through real HTTP: public signup, catalog setup, four stock fixtures, exact
+transfers, count loss/recovery, stale snapshots, and tenant/location/permission
+isolation. It verifies identical operation replays and persisted stock/history
+after restart. This journey passed against the local packaged server before and
+after restart on 2026-10-11. The image harness now calls this fixture while retaining its
+immutable image, gateway, header-size, and no-SQL-business-seeding checks. The
+old-route rejection remains an explicit assertion; product warehouse behavior
+and historical v1 scenarios are unchanged.
+
+The production release still requires the exact-image verification and deployment
+jobs in GitHub Actions. PR #56 records the release; local UI checks use mocked
+APIs, and local packaged-server checks use an isolated warehouse fixture database.

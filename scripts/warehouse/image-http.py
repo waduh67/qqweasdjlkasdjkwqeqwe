@@ -45,7 +45,7 @@ def main():
         header_problem = json.load(header_response)
     http_support.check({"email", "password"}.issubset(header_problem.get("errors", {})),
                        "Large-header request did not reach login validation")
-    spec = importlib.util.spec_from_file_location("warehouse_wave5", Path(__file__).with_name("wave5-http.py"))
+    spec = importlib.util.spec_from_file_location("warehouse_reference", Path(__file__).with_name("reference-image-http.py"))
     journey = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(journey)
     state_path = run / "state.json"
@@ -60,7 +60,7 @@ def main():
         raise ValueError("Unknown image smoke phase")
     proof = {"phase": phase, "staticAssets": len(assets), "persistedReplays": len(state["replays"]),
              "persistedReads": len(state["reads"]), "stockKinds": len(state["stocks"]),
-             "realHttp": True, "sqlBusinessSeeding": False, "largeRequestHeaders": True}
+             "realHttp": True, "sqlBusinessSeeding": False, "largeRequestHeaders": True, "workflow": "REFERENCE"}
     (run / f"{phase}.json").write_text(json.dumps(proof, indent=2) + "\n")
     print("PASS: image gateway serves the real bundle and warehouse HTTP journey")
 
