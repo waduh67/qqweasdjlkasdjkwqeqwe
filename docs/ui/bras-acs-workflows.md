@@ -27,5 +27,12 @@ a newer device result.
 - Browser behavior and layout: run `npx playwright test --config playwright.network.config.ts` from `web` after building. Covers Chromium and Firefox at 375 and 1280 px using local mocked APIs, with screenshots and traces under `.omo/runtime/network-ui`.
 - Release through the existing GitHub Actions verification and deployment workflows.
 
-Checkpoint 2026-10-11: component tests and build pass. Full web regression and
-browser verification are in progress; deployment has not been performed yet.
+Verification 2026-10-11: 928 web tests passed. After the final focus and column
+ordering adjustment, the 13 affected component tests, production build, and all
+eight Chromium/Firefox browser scenarios passed again. Lint reports only existing
+warnings in unrelated files. Release is tracked by PR #56.
+
+The public domain returned HTTP 530 / Cloudflare 1033 before release. The previous
+main deployment (run 38045936436) also failed image smoke verification before its
+deploy step. These release conditions must be resolved before claiming the UI is
+live; the interface checks above use local mocked APIs.

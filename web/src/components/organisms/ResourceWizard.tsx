@@ -21,14 +21,17 @@ export function ResourceWizard({ title, steps, summary, editing = false, dirty, 
   const [busy, setBusy] = useState(false), saving = useRef(false)
   const [error, setError] = useState('')
   const focusTarget = useRef<HTMLElement | null>(null)
+  const previousStep = useRef<string | null>(null)
   const step = selected === 'review' || steps.some(item => item.key === selected) ? selected : steps[0].key
   const index = steps.findIndex(item => item.key === step)
   const reviewing = step === 'review'
   const reviewLabel = editing ? 'Tinjau + simpan' : 'Tinjau + buat'
 
   useLayoutEffect(() => {
+    const moved = previousStep.current !== step
+    previousStep.current = step
     if (focusTarget.current) { focusTarget.current.focus(); focusTarget.current = null }
-    else if (!reviewing) content.current?.querySelector<HTMLElement>(`[data-step="${step}"]`)?.focus()
+    else if (moved && !reviewing) content.current?.querySelector<HTMLElement>(`[data-step="${step}"]`)?.focus()
   }, [step, error, reviewing])
 
   function go(next: string) {
@@ -77,7 +80,7 @@ export function ResourceWizard({ title, steps, summary, editing = false, dirty, 
     review={reviewing ? <section id={`${id}-panel-review`} role="tabpanel" aria-labelledby={`${id}-tab-review`} className="network-review">
       {error && <p role="alert" className="error">{error}</p>}{summary}
     </section> : undefined}>
-    <form ref={content} noValidate onSubmit={event => { event.preventDefault(); next() }}>
+    <form ref={content} noValidate onChange={() => { if (error) setError('') }} onSubmit={event => { event.preventDefault(); next() }}>
       {error && !reviewing && <p role="alert" className="error">{error}</p>}
       {steps.map(item => <section key={item.key} data-step={item.key} id={`${id}-panel-${item.key}`} role="tabpanel"
         aria-labelledby={`${id}-tab-${item.key}`} tabIndex={-1} hidden={step !== item.key} inert={step !== item.key ? true : undefined}

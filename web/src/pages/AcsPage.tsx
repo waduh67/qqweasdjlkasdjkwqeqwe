@@ -163,17 +163,17 @@ function DevicesTab({ canCustomer, revision }: { canCustomer: boolean; revision:
     { key: 'serial', header: 'Serial', sortValue: item => item.serialNumber, cell: item => item.serialNumber,
       onCellClick: canCustomer ? item => { if (item.customerId) setDetailId(item.customerId) } : undefined },
     { key: 'customer', header: 'Pelanggan', sortValue: item => item.customerName, cell: item => item.customerName || '—' },
+    { key: 'status', header: 'Status ACS', minWidth: 100, sortValue: item => item.online ? 1 : 0, cell: item => item.online ? 'Online' : 'Offline' },
+    { key: 'rx', header: 'RX (dBm)', minWidth: 100, align: 'right', sortValue: item => item.rxPowerDbm, cell: item => item.rxPowerDbm?.toLocaleString('id-ID') ?? '—' },
+    { key: 'tx', header: 'TX (dBm)', minWidth: 100, align: 'right', sortValue: item => item.txPowerDbm, cell: item => item.txPowerDbm?.toLocaleString('id-ID') ?? '—' },
+    { key: 'lastInform', header: 'Laporan terakhir', sortValue: item => item.lastInformAt, cell: item => item.lastInformAt ? timeAgo(item.lastInformAt) : 'Belum melapor' },
+    { key: 'ip', header: 'Alamat IP', sortValue: item => item.ipAddress, cell: item => item.ipAddress || '—' },
     { key: 'manufacturer', header: 'Merek', sortValue: item => item.manufacturer, cell: item => item.manufacturer || '—' },
     { key: 'model', header: 'Model', sortValue: item => item.model, cell: item => item.model || '—' },
-    { key: 'status', header: 'Status ACS', sortValue: item => item.online ? 1 : 0, cell: item => item.online ? 'Online' : 'Offline' },
-    { key: 'ip', header: 'Alamat IP', sortValue: item => item.ipAddress, cell: item => item.ipAddress || '—' },
     { key: 'ssid', header: 'SSID', sortValue: item => item.ssid, cell: item => item.ssid || '—' },
     { key: 'pppoe', header: 'Akun PPPoE', sortValue: item => item.pppoeUsername, cell: item => item.pppoeUsername || '—' },
     { key: 'session', header: 'Sesi PPPoE', sortValue: item => item.pppoeOnline == null ? -1 : item.pppoeOnline ? 1 : 0, cell: item => item.pppoeOnline == null ? '—' : item.pppoeOnline ? 'Aktif' : 'Tidak aktif' },
-    { key: 'rx', header: 'RX (dBm)', align: 'right', sortValue: item => item.rxPowerDbm, cell: item => item.rxPowerDbm?.toLocaleString('id-ID') ?? '—' },
-    { key: 'tx', header: 'TX (dBm)', align: 'right', sortValue: item => item.txPowerDbm, cell: item => item.txPowerDbm?.toLocaleString('id-ID') ?? '—' },
     { key: 'temperature', header: 'Suhu (°C)', align: 'right', sortValue: item => item.temperatureC, cell: item => item.temperatureC?.toLocaleString('id-ID') ?? '—' },
-    { key: 'lastInform', header: 'Laporan terakhir', sortValue: item => item.lastInformAt, cell: item => item.lastInformAt ? timeAgo(item.lastInformAt) : 'Belum melapor' },
   ]
   const filtered = !!q || status !== 'ALL' || signal !== 'ALL' || !!brand
   return <div className="network-panel">
