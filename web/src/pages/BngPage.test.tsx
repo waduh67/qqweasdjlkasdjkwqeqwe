@@ -1,0 +1,114 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, expect, it, vi } from 'vitest'
+import * as bng from '@/api/bng'
+import { api } from '@/api/client'
+import { BngPage } from './BngPage'
+
+const auth = vi.hoisted(() => ({ manage: true, areas: true }))
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can: (key: string) => key === 'bng.nas.manage' ? auth.manage : key === 'iam.area.view' ? auth.areas : true }) }))
+vi.mock('@/system', () => ({ useToast: () => toast, useConfirm: () => vi.fn().mockResolvedValue(true) }))
+const nas: bng.NasView = { id: 'bras-1', name: 'BRAS Tebet', vendor: 'MIKROTIK', address: '10.8.0.3', nasIdentifier: 'tebet', hasCoaSecret: true,
+  collectorId: 'collector-1', enabled: true, apiUsername: 'operator', hasApiSecret: true, apiPort: 8443, apiUseTls: true, areaIds: ['area-1'], reachability: 'COLLECTOR' }
+beforeEach(() => {
+  vi.restoreAllMocks(); auth.manage = true; auth.areas = true
+  vi.spyOn(bng, 'listNas').mockResolvedValue([nas])
+  vi.spyOn(bng, 'getRadiusEndpoint').mockResolvedValue({ host: '203.0.113.4', authPort: 1812, acctPort: 1813, coaPort: 3799, configured: true, vpnHosts: [{ tunnelCidr: '10.8.0.0/24', host: '10.8.0.1' }], isolirAddressList: 'isolir' })
+  vi.spyOn(api, 'get').mockResolvedValue([{ id: 'area-1', name: 'Tebet', code: 'TEBET' }])
+  vi.spyOn(bng, 'createNas').mockResolvedValue(nas)
+  vi.spyOn(bng, 'updateNas').mockResolvedValue(nas)
+})
+async function open() {
+  const user = userEvent.setup()
+  render(<BngPage />)
+  await user.click(await screen.findByRole('button', { name: 'Tambah BRAS' }))
+  await screen.findByRole('textbox', { name: 'Nama BRAS' })
+  return user
+}
+it('groups creation into steps, retains values and only submits the final review once', async () => {
+  const user = await open()
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: RADIUS' }))
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Isi nama BRAS dengan 2–80 karakter.')
+  expect(bng.createNas).not.toHaveBeenCalled()
+  await user.type(screen.getByRole('textbox', { name: 'Nama BRAS' }), 'BRAS Selatan')
+  await user.type(screen.getByRole('textbox', { name: 'Alamat manajemen' }), '10.8.0.4')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: RADIUS' }))
+  expect(screen.queryByRole('textbox', { name: 'Nama BRAS' })).toBeNull()
+  await user.type(screen.getByLabelText('Shared secret RADIUS'), 'new-radius-secret')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: Akses RouterOS' }))
+  await user.type(screen.getByRole('textbox', { name: 'Nama pengguna API' }), 'api-user')
+  await user.type(screen.getByLabelText('Kata sandi API'), 'new-api-password')
+  await user.type(screen.getByRole('spinbutton', { name: 'Port API' }), '8443')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: Cakupan area' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Tebet' }))
+  await user.click(screen.getByRole('tab', { name: 'Dasar' }))
+  expect(screen.getByRole('textbox', { name: 'Nama BRAS' })).toHaveProperty('value', 'BRAS Selatan')
+  await user.click(screen.getByRole('tab', { name: 'Tinjau + buat' }))
+  const review = screen.getByRole('tabpanel', { name: 'Tinjau + buat' })
+  expect(review.textContent).toContain('MikroTik (RouterOS)')
+  expect(review.textContent).toContain('Tebet')
+  expect(review.textContent).not.toContain('new-radius-secret')
+  expect(review.textContent).not.toContain('new-api-password')
+  expect(bng.createNas).not.toHaveBeenCalled()
+  let resolve!: (value: bng.NasView) => void
+  vi.mocked(bng.createNas).mockReturnValue(new Promise(done => { resolve = done }))
+  await user.dblClick(screen.getByRole('button', { name: 'Buat' }))
+  expect(bng.createNas).toHaveBeenCalledTimes(1)
+  expect(bng.createNas).toHaveBeenCalledWith(expect.objectContaining({ name: 'BRAS Selatan', coaSecret: 'new-radius-secret', apiSecret: 'new-api-password', apiPort: 8443, areaIds: ['area-1'] }))
+  expect(screen.getByRole('tab', { name: 'Dasar' })).toHaveProperty('disabled', true)
+  resolve(nas)
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+})
+it('returns an invalid hidden field to its step and retains the review after a rejected save', async () => {
+  const user = await open()
+  await user.type(screen.getByRole('textbox', { name: 'Nama BRAS' }), 'BRAS Baru')
+  await user.click(screen.getByRole('tab', { name: 'Akses RouterOS' }))
+  fireEvent.change(screen.getByRole('spinbutton', { name: 'Port API' }), { target: { value: '70000' } })
+  await user.click(screen.getByRole('tab', { name: 'Dasar' }))
+  await user.click(screen.getByRole('tab', { name: 'Tinjau + buat' }))
+  expect(screen.getByRole('spinbutton', { name: 'Port API' })).toBe(document.activeElement)
+  expect(screen.getByRole('alert').textContent).toContain('1 dan 65535')
+  expect(bng.createNas).not.toHaveBeenCalled()
+  await user.clear(screen.getByRole('spinbutton', { name: 'Port API' }))
+  vi.mocked(bng.createNas).mockRejectedValueOnce(new Error('Nama BRAS sudah digunakan.'))
+  await user.click(screen.getByRole('tab', { name: 'Tinjau + buat' }))
+  await user.click(screen.getByRole('button', { name: 'Buat' }))
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Nama BRAS sudah digunakan.')
+  await user.click(screen.getByRole('tab', { name: 'Dasar' }))
+  expect(screen.getByRole('textbox', { name: 'Nama BRAS' })).toHaveProperty('value', 'BRAS Baru')
+})
+it('preserves collector, unavailable area assignments and existing secrets when editing', async () => {
+  auth.areas = false
+  const user = userEvent.setup()
+  render(<BngPage />)
+  await user.click(await screen.findByRole('button', { name: 'BRAS Tebet' }))
+  await screen.findByRole('textbox', { name: 'Nama BRAS' })
+  await user.clear(screen.getByRole('textbox', { name: 'Nama BRAS' }))
+  await user.type(screen.getByRole('textbox', { name: 'Nama BRAS' }), 'BRAS Tebet Baru')
+  await user.click(screen.getByRole('tab', { name: 'Tinjau + simpan' }))
+  await user.click(screen.getByRole('button', { name: 'Simpan perubahan' }))
+  await waitFor(() => expect(bng.updateNas).toHaveBeenCalledWith('bras-1', expect.objectContaining({ collectorId: 'collector-1', areaIds: ['area-1'], coaSecret: null, apiSecret: null, apiPort: 8443, apiUsername: 'operator' })))
+})
+it('omits RouterOS fields for other vendors and guards unsaved changes', async () => {
+  const user = await open()
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Vendor' }), 'CISCO')
+  expect(screen.queryByRole('tab', { name: 'Akses RouterOS' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Tutup' }))
+  await user.click(await screen.findByRole('button', { name: 'Lanjutkan pengisian' }))
+  expect(screen.getByRole('combobox', { name: 'Vendor' })).toHaveProperty('value', 'CISCO')
+})
+it('keeps read-only access read-only and applies filters without an apply action', async () => {
+  auth.manage = false
+  const user = userEvent.setup()
+  render(<BngPage />)
+  await screen.findByText('BRAS Tebet')
+  expect(screen.queryByRole('button', { name: 'Tambah BRAS' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Ubah' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Filter Vendor' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Vendor' }), 'CISCO')
+  expect(await screen.findByText('Tidak ada BRAS yang cocok')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Hapus Vendor' }))
+  expect(await screen.findByText('BRAS Tebet')).toBeTruthy()
+  expect(within(screen.getByRole('region', { name: 'Filter BRAS' })).queryByRole('button', { name: /Terapkan/ })).toBeNull()
+})

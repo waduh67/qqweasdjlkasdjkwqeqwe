@@ -108,8 +108,8 @@ describe('peringatan alamat server kami sendiri', () => {
   it('menegur saat kolom alamat BRAS diisi host publik RADIUS', () => {
     const pesan = selfAddressWarning(ENDPOINT, '20.6.72.13')
     expect(pesan).toContain('20.6.72.13')
-    expect(pesan).toContain('bukan alamat router kamu')
-    expect(pesan).toContain('timeout')
+    expect(pesan).toContain('alamat server RADIUS')
+    expect(pesan).toContain('Masukkan alamat manajemen router BRAS')
   })
 
   // Kekeliruan yang sama persis, cuma angkanya versi overlay.

@@ -1,576 +1,231 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Text } from '@fluentui/react-components'
-import { Copy } from 'lucide-react'
+import { Copy, Download, RefreshCw, Radio, Activity } from 'lucide-react'
 import { ApiError } from '@/api/client'
-import {
-  exportAcsDevicesCsv,
-  getAcsHealth,
-  getAcsServerInfo,
-  getAcsStats,
-  listAcsDevices,
-  listAcsLogs,
-  refreshAcsFleet,
-  type AcsActivityView,
-  type AcsDeviceQuery,
-  type AcsDeviceRowView,
-  type AcsHealthView,
-  type AcsServerInfoView,
-  type AcsSignalFilter,
-  type AcsStatsView,
-  type AcsStatusFilter,
-} from '@/api/acs'
+import { exportAcsDevicesCsv, getAcsHealth, getAcsServerInfo, getAcsStats, listAcsDevices, listAcsLogs, refreshAcsFleet,
+  type AcsActivityView, type AcsDeviceQuery, type AcsDeviceRowView, type AcsHealthView, type AcsServerInfoView, type AcsSignalFilter, type AcsStatsView, type AcsStatusFilter } from '@/api/acs'
 import { CPE_ACTION_LABEL, type CpeAction } from '@/api/cpe'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, Toolbar } from '@/components/atoms'
-import { IconDownload, IconWifi } from '@/components/atoms/icons'
-import { PageHeader, SearchInput, Tabs } from '@/components/molecules'
+import { Button, EmptyState, Spinner } from '@/components/atoms'
+import { CommandBar, PageHeader, Tabs } from '@/components/molecules'
 import { DataTable, OntAcsSettingsCard, type Column } from '@/components/organisms'
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { useToast } from '@/system'
 import { copyText } from '@/utils/clipboard'
 import { downloadBlob } from '@/utils/download'
 import { timeAgo } from '@/utils/timeAgo'
 import { CustomerDetailBlade } from './CustomerDetailPage'
+import './network-workspaces.css'
 
-/**
- * Konsol ACS / TR-069 — pandangan se-armada atas ONT pelanggan yang melapor ke GenieACS.
- *
- * Melengkapi tab GenieACS di detail pelanggan (yang melayani satu perangkat): di sini ISP
- * melihat berapa ONT-nya online, mana yang sinyalnya jelek, dan menyalin setelan TR-069
- * yang harus diketik ke tiap ONT.
- *
- * DUA tingkat akses dalam satu halaman:
- * - `cpe.acs.view` (dipegang teknisi juga) — info server ACS + kesehatan. Nilainya global
- *   dari env deploy, nol data tenant.
- * - `cpe.device.view` — statistik, tabel perangkat, CSV, dan log aktivitas.
- *
- * Saat pengguna hanya punya yang pertama, strip tab tak dirender sama sekali dan
- * pengambilan data armada dipagari di awal effect — kalau tidak, teknisi kebanjiran toast
- * 403 tiap membuka halaman.
- */
+type AcsTab = 'overview' | 'devices' | 'settings' | 'activity'
 export function AcsPage() {
   const { can } = useCan()
-  const canView = can('cpe.acs.view')
-  const canDevices = can('cpe.device.view')
-  const canManage = can('cpe.device.manage')
-  const canCustomer = can('customer.customer.view')
-  const [tab, setTab] = useState<'dashboard' | 'devices'>('dashboard')
-
-  if (!canView) {
-    return (
-      <div className="card">
-        <Text as="h3" size={400} weight="semibold" style={{ marginTop: 0 }}>Akses ditolak</Text>
-        <Text as="p" className="muted" size={300}>Kamu tidak punya izin melihat konsol ACS.</Text>
-      </div>
-    )
-  }
-
-  return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader title="ACS / TR-069" />
-
-      {canDevices && (
-        <Tabs
-          tabs={[
-            { key: 'dashboard' as const, label: 'Dashboard' },
-            { key: 'devices' as const, label: 'Devices' },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
-      )}
-
-      {(!canDevices || tab === 'dashboard') && (
-        <DashboardTab canDevices={canDevices} canManage={canManage} />
-      )}
-      {canDevices && tab === 'devices' && <DevicesTab canCustomer={canCustomer} />}
-    </div>
-  )
+  return can('cpe.acs.view') ? <AcsWorkspace /> : <EmptyState title="Akses ditolak" hint="Anda tidak memiliki izin melihat ACS." />
 }
-
-/* ============================== Dashboard ============================== */
-
-function DashboardTab({ canDevices, canManage }: { canDevices: boolean; canManage: boolean }) {
-  const toast = useToast()
-  const [stats, setStats] = useState<AcsStatsView | null>(null)
-  const [health, setHealth] = useState<AcsHealthView | null>(null)
-  const [info, setInfo] = useState<AcsServerInfoView | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [logsOpen, setLogsOpen] = useState(false)
-
-  const loadStats = useCallback(() => {
-    // Teknisi tak punya `cpe.device.view`; memanggilnya tetap hanya menghasilkan 403.
-    if (!canDevices) return
-    void getAcsStats()
-      .then(setStats)
-      .catch(() => setStats(null))
-  }, [canDevices])
-
-  const checkHealth = useCallback(
-    (announce: boolean) => {
-      void getAcsHealth()
-        .then((h) => {
-          setHealth(h)
-          if (announce) (h.status === 'ONLINE' ? toast.success : toast.error)(h.message)
-        })
-        .catch((err) => {
-          setHealth(null)
-          if (announce) toast.error(err instanceof ApiError ? err.message : 'Gagal memeriksa server ACS')
-        })
-    },
-    [toast],
-  )
-
-  useEffect(() => loadStats(), [loadStats])
-  useEffect(() => checkHealth(false), [checkHealth])
-  useEffect(() => {
-    let cancelled = false
-    let active = false
-    const refresh = async () => {
-      if (active) return
-      active = true
-      try {
-        const latest = await getAcsServerInfo()
-        if (!cancelled) setInfo(latest)
-      } catch { if (!cancelled) setInfo(null) }
-      finally { active = false }
-    }
-    void refresh()
-    const timer = window.setInterval(() => void refresh(), 30_000)
-    window.addEventListener("focus", refresh)
-    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("focus", refresh) }
-  }, [])
-
-  const runBulkRefresh = async () => {
-    setBusy(true)
-    try {
-      const res = await refreshAcsFleet()
-      toast.success(res.message)
-      loadStats()
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Sapuan refresh gagal')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const exportCsv = async () => {
-    try {
-      downloadBlob(await exportAcsDevicesCsv(), 'perangkat-acs.csv')
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Ekspor gagal')
-    }
-  }
-
-  return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      {canDevices && <StatTiles stats={stats} />}
-
-      {/* Aksi cepat se-armada. Tombol tulis menyembunyikan diri sendiri saat langganan
-          terkunci — `useCan` sudah mencerminkan aturan write di server. */}
-      <div className="card stack" style={{ gap: '0.6rem' }}>
-        <h3 style={{ margin: 0 }}>Aksi cepat</h3>
-        <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-          {canManage && (
-            <Button type="button" variant="primary" disabled={busy} onClick={() => void runBulkRefresh()}>
-              {busy ? 'Menyapu…' : 'Segarkan Batch'}
-            </Button>
-          )}
-          {canDevices && (
-            <Button type="button" icon={<IconDownload size={16} />} onClick={() => void exportCsv()}>
-              Export CSV
-            </Button>
-          )}
-          {canDevices && (
-            <Button type="button" onClick={() => setLogsOpen((v) => !v)}>
-              {logsOpen ? 'Sembunyikan Log' : 'Lihat Log'}
-            </Button>
-          )}
-          <Button type="button" onClick={() => checkHealth(true)}>
-            Health Check
-          </Button>
-        </div>
-      </div>
-
-      <ServerInfoCard info={info} health={health} lastSyncAt={stats?.lastSyncAt ?? null} lastSyncOk={stats?.lastSyncOk ?? null} />
-
-      <OntAcsSettingsCard />
-
-      {canDevices && logsOpen && <ActivityLog />}
-    </div>
-  )
-}
-
-/**
- * Empat tile ringkasan armada.
- *
- * Catatan penting yang ditulis di `stat-note`: "online" di sini berarti *melapor ke ACS*,
- * bukan *ONU hidup di OLT* — ONT yang menyala tapi klien CWMP-nya macet akan terhitung
- * offline di sini sementara `/monitoring` menyebutnya online. Angkanya memang akan
- * berselisih; itu bukan bug.
- */
-function StatTiles({ stats }: { stats: AcsStatsView | null }) {
-  if (!stats) {
-    return (
-      <div className="card">
-        <Spinner />
-      </div>
-    )
-  }
-  const signalNote =
-    stats.signalSampleCount > 0
-      ? `rata-rata dari ${stats.signalSampleCount} / ${stats.totalDevices} perangkat`
-      : 'belum ada bacaan optik'
-  return (
-    <div className="stat-grid">
-      <div className="stat accent-bar">
-        <div className="stat-label">Perangkat online</div>
-        <div className="stat-value">{stats.onlineDevices.toLocaleString('id-ID')}</div>
-        <div className="stat-note">melapor ke ACS baru-baru ini (bukan status ONU di OLT)</div>
-      </div>
-      <div className="stat accent-bar">
-        <div className="stat-label">Total perangkat</div>
-        <div className="stat-value">{stats.totalDevices.toLocaleString('id-ID')}</div>
-      </div>
-      <div className={`stat ${stats.offlineDevices > 0 ? 'warn-bar' : 'accent-bar'}`}>
-        <div className="stat-label">Perangkat offline</div>
-        <div className="stat-value">{stats.offlineDevices.toLocaleString('id-ID')}</div>
-        <div className="stat-note">belum melapor melewati ambang basi</div>
-      </div>
-      <div className={`stat ${signalTone(stats.avgRxPowerDbm)}`}>
-        <div className="stat-label">Rata-rata sinyal</div>
-        <div className="stat-value">{stats.avgRxPowerDbm != null ? `${stats.avgRxPowerDbm.toLocaleString('id-ID')} dBm` : '—'}</div>
-        <div className="stat-note">{signalNote}</div>
-      </div>
-    </div>
-  )
-}
-
-/** Kelas bar tile sinyal — ambang sama dengan halaman monitoring. */
-function signalTone(rx: number | null): string {
-  if (rx == null) return 'stat'
-  if (rx < -27) return 'crit-bar'
-  if (rx < -25) return 'warn-bar'
-  return 'accent-bar'
-}
-
-/** Blok "Informasi Server ACS": alamat, status probe, dan waktu sinkronisasi terakhir. */
-function ServerInfoCard({
-  info,
-  health,
-  lastSyncAt,
-  lastSyncOk,
-}: {
-  info: AcsServerInfoView | null
-  health: AcsHealthView | null
-  lastSyncAt: string | null
-  lastSyncOk: boolean | null
-}) {
-  const toast = useToast()
-  const copy = async (label: string, value: string) => {
-    if (await copyText(value)) toast.success(`${label} disalin`)
-    else toast.error('Browser menolak akses papan klip — salin manual')
-  }
-
-  return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      <div className="row" style={{ gap: '0.45rem', alignItems: 'center' }}>
-        <IconWifi size={18} />
-        <h3 style={{ margin: 0 }}>Informasi Server ACS</h3>
-      </div>
-
-      <InfoLine label="Server URL (NBI)" value={info?.nbiBaseUrl || null} onCopy={copy} />
-      <InfoLine label="CWMP URL (diketik ke ONT)" value={info?.cwmpUrl ?? null} onCopy={copy} />
-
-      <div className="stack" style={{ gap: '0.2rem' }}>
-        <Text as="span" size={300} className="muted" style={{  }} >Status</Text>
-        {health ? (
-          <div className="row" style={{ gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <StatusBadge status={health.status} />
-            <Text as="span" className="muted" size={200}>{health.message}
-            {health.latencyMs != null && ` · ${health.latencyMs} ms`}</Text>
-          </div>
-        ) : (
-          <Text as="span" size={300} className="muted" >—</Text>
-        )}
-      </div>
-
-      <div className="stack" style={{ gap: '0.2rem' }}>
-        <Text as="span" size={300} className="muted" style={{  }} >Sinkronisasi terakhir</Text>
-        {lastSyncAt ? (
-          <div className="row" style={{ gap: '0.45rem', alignItems: 'center' }}>
-            <Text as="span" size={300}  >{timeAgo(lastSyncAt)}</Text>
-            {lastSyncOk === false && <Badge tone="warning">gagal</Badge>}
-          </div>
-        ) : (
-          <Text as="span" size={300} className="muted" >
-            belum ada ronde sinkronisasi sejak server terakhir dinyalakan
-          </Text>
-        )}
-      </div>
-
-    </div>
-  )
-}
-
-/** Satu baris alamat monospace + tombol salin. */
-function InfoLine({
-  label,
-  value,
-  onCopy,
-}: {
-  label: string
-  value: string | null
-  onCopy: (label: string, value: string) => void
-}) {
-  return (
-    <div className="stack" style={{ gap: '0.2rem' }}>
-      <Text as="span" size={300} className="muted" style={{  }} >{label}</Text>
-      <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-        {value ? (
-          <>
-            <code style={{ flex: 1, overflowX: 'auto', padding: '0.3rem 0.5rem',  }}>{value}</code>
-            <Button
-              type="button"
-              size="small"
-              variant="subtle"
-              icon={<Copy size={14} />}
-              aria-label={`Salin ${label}`}
-              title={`Salin ${label}`}
-              onClick={() => onCopy(label, value)}
-            />
-          </>
-        ) : (
-          <Text as="span" size={300} className="muted" style={{ fontStyle: 'italic' }} >belum dikonfigurasi</Text>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** Jendela "Lihat Log": jejak aksi ACS terbaru lintas perangkat milik tenant. */
-function ActivityLog() {
-  const toast = useToast()
-  const [rows, setRows] = useState<AcsActivityView[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    void listAcsLogs(100)
-      .then(setRows)
-      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat log'))
-      .finally(() => setLoading(false))
+function AcsWorkspace() {
+  const { can } = useCan(), toast = useToast()
+  const canDevices = can('cpe.device.view'), canManage = canDevices && can('cpe.device.manage')
+  const [tab, setTab] = useState<AcsTab>('overview')
+  const [visited, setVisited] = useState<AcsTab[]>(['overview'])
+  const [info, setInfo] = useState<AcsServerInfoView | null>(null), [health, setHealth] = useState<AcsHealthView | null>(null)
+  const [stats, setStats] = useState<AcsStatsView | null>(null), [statsFailed, setStatsFailed] = useState(false)
+  const [serverFailed, setServerFailed] = useState(false), [revision, setRevision] = useState(0)
+  const [checking, setChecking] = useState(false)
+  const [updating, setUpdating] = useState(false), [updateResult, setUpdateResult] = useState('')
+  const checkHealth = useCallback(async (announce = false) => {
+    setChecking(true)
+    try { const value = await getAcsHealth(); setHealth(value); if (announce) (value.status === 'ONLINE' ? toast.success : toast.error)(value.status === 'ONLINE' ? 'Server ACS terhubung.' : 'Server ACS tidak dapat dihubungi.') }
+    catch { setHealth(null); if (announce) toast.error('Pemeriksaan koneksi gagal.') }
+    finally { setChecking(false) }
   }, [toast])
-
-  return (
-    <div className="card stack" style={{ gap: '0.6rem' }}>
-      <h3 style={{ margin: 0 }}>Log aktivitas ACS</h3>
-      {loading && <Spinner />}
-      {!loading && rows.length === 0 && (
-        <p className="muted" style={{ margin: 0 }}>Belum ada aksi ACS yang tercatat.</p>
-      )}
-      {rows.map((row) => (
-        <div key={row.id} className="stack" style={{ gap: '0.15rem' }}>
-          <div className="row" style={{ gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <StatusBadge status={row.status === 'SUCCESS' ? 'GOOD' : 'CRITICAL'} label={row.status === 'SUCCESS' ? 'Sukses' : 'Gagal'} />
-            <Text as="strong" size={300}  >{CPE_ACTION_LABEL[row.action as CpeAction] ?? row.action}</Text>
-            <Text as="span" className="muted" size={200}>{row.serialNumber ?? '—'}
-            {row.customerName && ` · ${row.customerName}`}</Text>
-          </div>
-          <Text as="span" size={300} className="muted" >{timeAgo(row.requestedAt)}
-          {row.requestedByEmail && ` · ${row.requestedByEmail}`}
-          {row.detail && ` · ${row.detail}`}</Text>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/* =============================== Devices =============================== */
-
-const STATUS_OPTIONS: { value: AcsStatusFilter; label: string }[] = [
-  { value: 'ALL', label: 'Semua status' },
-  { value: 'ONLINE', label: 'Online' },
-  { value: 'OFFLINE', label: 'Offline' },
-]
-
-const SIGNAL_OPTIONS: { value: AcsSignalFilter; label: string }[] = [
-  { value: 'ALL', label: 'Semua sinyal' },
-  { value: 'GOOD', label: 'Sinyal baik (≥ −25 dBm)' },
-  { value: 'WARN', label: 'Sinyal waspada (−25 … −27 dBm)' },
-  { value: 'CRITICAL', label: 'Sinyal kritis (< −27 dBm)' },
-  { value: 'UNKNOWN', label: 'Tanpa bacaan' },
-]
-
-function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
-  const toast = useToast()
-  const [q, setQ] = useState('')
-  const [status, setStatus] = useState<AcsStatusFilter>('ALL')
-  const [signal, setSignal] = useState<AcsSignalFilter>('ALL')
-  const [brand, setBrand] = useState('')
-  const [rows, setRows] = useState<AcsDeviceRowView[]>([])
-  const [brands, setBrands] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [detailId, setDetailId] = useState<string | null>(null)
-
-  const filter = useMemo<AcsDeviceQuery>(() => ({ q, status, signal, brand: brand || undefined }), [q, status, signal, brand])
-
-  // Pencarian diketik huruf demi huruf; tunda sesaat supaya tiap ketukan tak jadi request.
+  useEffect(() => { void checkHealth() }, [checkHealth, revision])
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setLoading(true)
-      void listAcsDevices(filter)
-        .then((data) => {
-          setRows(data)
-          // Pilihan merek dikumpulkan hanya saat saringan merek kosong — kalau tidak,
-          // memilih satu merek akan menyusutkan daftar pilihannya jadi merek itu saja.
-          if (!filter.brand) {
-            setBrands([...new Set(data.map((d) => d.manufacturer).filter((m): m is string => !!m))].sort())
-          }
-        })
-        .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat perangkat'))
-        .finally(() => setLoading(false))
-    }, 250)
-    return () => window.clearTimeout(timer)
-  }, [filter, toast])
-
-  const exportCsv = async () => {
-    try {
-      downloadBlob(await exportAcsDevicesCsv(filter), 'perangkat-acs.csv')
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Ekspor gagal')
+    let alive = true, pending = false
+    async function load() {
+      if (pending) return
+      pending = true
+      try { const value = await getAcsServerInfo(); if (alive) { setInfo(value); setServerFailed(false) } }
+      catch { if (alive) setServerFailed(true) }
+      finally { pending = false }
     }
+    void load()
+    const timer = window.setInterval(() => void load(), 30_000)
+    window.addEventListener('focus', load)
+    return () => { alive = false; window.clearInterval(timer); window.removeEventListener('focus', load) }
+  }, [revision])
+  useEffect(() => {
+    if (!canDevices) return
+    let alive = true
+    void getAcsStats().then(value => { if (alive) { setStats(value); setStatsFailed(false) } }).catch(() => { if (alive) setStatsFailed(true) })
+    return () => { alive = false }
+  }, [canDevices, revision])
+  const tabs: { key: AcsTab; label: string }[] = [
+    { key: 'overview', label: 'Ringkasan' }, ...(canDevices ? [{ key: 'devices' as const, label: 'Perangkat' }] : []),
+    { key: 'settings', label: 'Setelan ONT' }, ...(canDevices ? [{ key: 'activity' as const, label: 'Aktivitas' }] : []),
+  ]
+  const active = tabs.some(item => item.key === tab) ? tab : 'overview'
+  const refresh = () => setRevision(value => value + 1)
+  async function updateDevices() {
+    if (updating) return
+    setUpdating(true); setUpdateResult('')
+    try {
+      const result = await refreshAcsFleet()
+      setUpdateResult(`Pembaruan perangkat: ${result.connected} terhubung, ${result.queued} dalam antrean, ${result.failed} gagal, ${result.skipped} belum diproses.`)
+      refresh()
+    } catch (caught) { toast.error(caught instanceof ApiError ? caught.message : 'Pembaruan perangkat gagal.') }
+    finally { setUpdating(false) }
   }
-
-  const columns = useMemo<Column<AcsDeviceRowView>[]>(
-    () => [
-      {
-        key: 'device',
-        header: 'Device info',
-        sortValue: (d) => d.serialNumber,
-        cell: (d) => (
-          <span className="table-inline-values">
-            <strong>{d.serialNumber}</strong>
-            <Text as="span" size={300} className="muted" >{[d.customerName, [d.manufacturer, d.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || '—'}</Text>
-          </span>
-        ),
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        sortValue: (d) => (d.online ? 1 : 0),
-        cell: (d) => <StatusBadge status={d.online ? 'ONLINE' : 'OFFLINE'} />,
-      },
-      {
-        key: 'ip',
-        header: 'IP address',
-        sortValue: (d) => d.ipAddress,
-        cell: (d) => d.ipAddress ?? <span className="muted">—</span>,
-      },
-      {
-        key: 'ssid',
-        header: 'WiFi / SSID',
-        sortValue: (d) => d.ssid,
-        cell: (d) => d.ssid ?? <span className="muted">—</span>,
-      },
-      {
-        key: 'pppoe',
-        header: 'PPPoE',
-        sortValue: (d) => d.pppoeUsername,
-        cell: (d) =>
-          d.pppoeUsername ? (
-            <span className="table-inline-values">
-              <span>{d.pppoeUsername}</span>
-              {d.pppoeOnline != null && (
-                <Text as="span" size={300} className="muted" >{d.pppoeOnline ? 'sesi aktif' : 'tak ada sesi'}</Text>
-              )}
-            </span>
-          ) : (
-            <span className="muted">—</span>
-          ),
-      },
-      {
-        key: 'signal',
-        header: 'Sinyal (RX / TX)',
-        align: 'right',
-        sortValue: (d) => d.rxPowerDbm,
-        cell: (d) => <SignalCell rx={d.rxPowerDbm} tx={d.txPowerDbm} />,
-      },
-      {
-        key: 'temp',
-        header: 'Suhu',
-        align: 'right',
-        sortValue: (d) => d.temperatureC,
-        // Parameter vendor: kosong di hampir semua armada sampai path suhunya dikonfigurasi.
-        cell: (d) => (d.temperatureC != null ? `${d.temperatureC} °C` : <span className="muted">—</span>),
-      },
-      {
-        key: 'lastSeen',
-        header: 'Terakhir terlihat',
-        sortValue: (d) => d.lastInformAt,
-        cell: (d) => (d.lastInformAt ? timeAgo(d.lastInformAt) : <span className="muted">belum pernah</span>),
-      },
-    ],
-    [],
-  )
-
-  return (
-    <div className="stack" style={{ gap: '0.85rem' }}>
-      <Toolbar>
-        <SearchInput value={q} onChange={setQ} placeholder="Cari serial, SSID, PPPoE, atau nama pelanggan…" />
-        <SelectField value={status} onChange={(_, data) => setStatus(data.value as AcsStatusFilter)}>
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </SelectField>
-        <SelectField value={signal} onChange={(_, data) => setSignal(data.value as AcsSignalFilter)}>
-          {SIGNAL_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </SelectField>
-        <SelectField value={brand} onChange={(_, data) => setBrand(data.value)}>
-          <option value="">Semua merek</option>
-          {brands.map((b) => (
-            <option key={b} value={b}>{b}</option>
-          ))}
-        </SelectField>
-        <Button type="button" icon={<IconDownload size={16} />} onClick={() => void exportCsv()}>
-          Export CSV
-        </Button>
-      </Toolbar>
-
-      <span className="muted">{rows.length} perangkat</span>
-
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(d) => d.id}
-        loading={loading}
-        initialSort={{ key: 'device', dir: 'asc' }}
-        // Aksi per perangkat hidup di detail pelanggan; baris tanpa pelanggan tak bisa dibuka.
-        onRowClick={canCustomer ? (d) => d.customerId && setDetailId(d.customerId) : undefined}
-        empty={
-          <EmptyState
-            icon={<IconWifi size={28} />}
-            title="Belum ada perangkat"
-            hint="ONT baru muncul di sini setelah melapor ke ACS dan serialnya cocok dengan ONU yang terdaftar di tenant ini."
-          />
-        }
-      />
-
-      <CustomerDetailBlade customerId={detailId} onClose={() => setDetailId(null)} />
-    </div>
-  )
+  return <div className="network-page">
+    <PageHeader title="ACS / TR-069" />
+    <Tabs idPrefix="acs" tabs={tabs} active={active} onChange={next => { setTab(next); setVisited(current => current.includes(next) ? current : [...current, next]) }} />
+    <section role="tabpanel" id="acs-panel-overview" aria-labelledby="acs-tab-overview" hidden={active !== 'overview'} className="network-panel">
+      <CommandBar actions={[
+        { key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh },
+        ...(canManage ? [{ key: 'update', label: 'Perbarui perangkat online', icon: <Radio size={16} />, disabled: updating, onClick: () => void updateDevices() }] : []),
+        { key: 'health', label: 'Periksa koneksi', icon: <Activity size={16} />, disabled: checking, onClick: () => void checkHealth(true) },
+      ]} />
+      {updateResult && <p role="status" className="network-note">{updateResult}</p>}
+      {canDevices && (statsFailed ? <LoadError message="Ringkasan perangkat gagal dimuat." retry={refresh} /> : <AcsMetrics stats={stats} />)}
+      {serverFailed ? <LoadError message="Informasi server gagal dimuat." retry={refresh} /> : <ServerInfo info={info} health={health} stats={canDevices ? stats : null} />}
+    </section>
+    {canDevices && visited.includes('devices') && <section role="tabpanel" id="acs-panel-devices" aria-labelledby="acs-tab-devices" hidden={active !== 'devices'} className="network-panel">
+      <DevicesTab canCustomer={can('customer.customer.view')} revision={revision} />
+    </section>}
+    {visited.includes('settings') && <section role="tabpanel" id="acs-panel-settings" aria-labelledby="acs-tab-settings" hidden={active !== 'settings'} className="network-panel">
+      <CommandBar actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh }]} />
+      <OntAcsSettingsCard server={{ info, failed: serverFailed }} layout="section" />
+    </section>}
+    {canDevices && visited.includes('activity') && <section role="tabpanel" id="acs-panel-activity" aria-labelledby="acs-tab-activity" hidden={active !== 'activity'} className="network-panel"><ActivityLog /></section>}
+  </div>
 }
-
-/** Sel RX/TX; RX diwarnai sesuai ambang, TX ditampilkan apa adanya sebagai pelengkap. */
-function SignalCell({ rx, tx }: { rx: number | null; tx: number | null }) {
-  if (rx == null && tx == null) return <span className="muted">—</span>
-  const color = rx == null ? undefined : rx < -27 ? 'var(--critical)' : rx < -25 ? 'var(--warning)' : undefined
-  return (
-    <div className="stack" style={{ gap: '0.1rem', alignItems: 'flex-end' }}>
-      <span style={{ color,  }}>
-        {rx != null ? `${rx} dBm` : '—'}
-      </span>
-      <Text as="span" size={300} className="muted" > · TX {tx != null ? `${tx} dBm` : '—'}</Text>
+function LoadError({ message, retry }: { message: string; retry: () => void }) {
+  return <div className="network-error" role="alert"><p>{message}</p><Button onClick={retry}>Coba lagi</Button></div>
+}
+function AcsMetrics({ stats }: { stats: AcsStatsView | null }) {
+  if (!stats) return <Spinner />
+  return <>
+    <dl className="network-metrics" aria-label="Ringkasan perangkat">
+      <div><dt>Total perangkat</dt><dd>{stats.totalDevices.toLocaleString('id-ID')}</dd></div>
+      <div><dt>Online</dt><dd>{stats.onlineDevices.toLocaleString('id-ID')}</dd></div>
+      <div><dt>Offline</dt><dd>{stats.offlineDevices.toLocaleString('id-ID')}</dd></div>
+      <div><dt>Rata-rata RX</dt><dd>{stats.avgRxPowerDbm == null ? '—' : `${stats.avgRxPowerDbm.toLocaleString('id-ID')} dBm`}</dd>
+        <small>{stats.signalSampleCount ? `${stats.signalSampleCount} perangkat terukur` : 'Belum ada pengukuran'}</small></div>
+    </dl>
+    <p className="network-note">Status online mengikuti laporan terakhir perangkat ke ACS.</p>
+  </>
+}
+function ServerInfo({ info, health, stats }: { info: AcsServerInfoView | null; health: AcsHealthView | null; stats: AcsStatsView | null }) {
+  const toast = useToast()
+  if (!info) return <Spinner />
+  return <section className="network-section" aria-label="Server ACS">
+    <h2>Server ACS</h2>
+    <dl className="network-properties">
+      {([['Alamat API (NBI)', info.nbiBaseUrl], ['Alamat perangkat (CWMP)', info.cwmpUrl]] as const).map(([label, value]) => <div key={label}>
+        <dt>{label}</dt><dd className="network-property-value"><span>{value || 'Belum diatur'}</span>{value && <Button variant="subtle" icon={<Copy size={14} />} aria-label={`Salin ${label}`}
+          onClick={() => void copyText(value).then(ok => ok ? toast.success('Alamat disalin.') : toast.error('Gagal menyalin alamat.'))} />}</dd>
+      </div>)}
+      <div><dt>Koneksi server</dt><dd>{health ? health.status === 'ONLINE' ? 'Terhubung' : 'Tidak terhubung' : 'Belum tersedia'}</dd></div>
+      <div><dt>Waktu respons</dt><dd>{health?.latencyMs != null ? `${health.latencyMs} ms` : '—'}</dd></div>
+      <div><dt>Terakhir diperiksa</dt><dd>{health?.checkedAt ? timeAgo(health.checkedAt) : '—'}</dd></div>
+      {stats && <div><dt>Sinkronisasi terakhir</dt><dd>{stats.lastSyncAt ? `${timeAgo(stats.lastSyncAt)}${stats.lastSyncOk === false ? ' · Gagal' : ''}` : 'Belum ada sinkronisasi'}</dd></div>}
+    </dl>
+  </section>
+}
+const SIGNAL_OPTIONS: { value: AcsSignalFilter; label: string }[] = [
+  { value: 'ALL', label: 'Semua' }, { value: 'GOOD', label: 'Baik (≥ −25 dBm)' },
+  { value: 'WARN', label: 'Lemah (−27 hingga < −25 dBm)' }, { value: 'CRITICAL', label: 'Kritis (< −27 dBm)' }, { value: 'UNKNOWN', label: 'Belum terukur' },
+]
+function DevicesTab({ canCustomer, revision }: { canCustomer: boolean; revision: number }) {
+  const toast = useToast()
+  const [q, setQ] = useState(''), [status, setStatus] = useState<AcsStatusFilter>('ALL'), [signal, setSignal] = useState<AcsSignalFilter>('ALL'), [brand, setBrand] = useState('')
+  const [rows, setRows] = useState<AcsDeviceRowView[]>([]), [brands, setBrands] = useState<string[]>([])
+  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [refresh, setRefresh] = useState(0)
+  const [exporting, setExporting] = useState(false)
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const filter = useMemo<AcsDeviceQuery>(() => ({ q, status, signal, brand: brand || undefined }), [q, status, signal, brand])
+  useEffect(() => {
+    let alive = true
+    setLoading(true); setError('')
+    void listAcsDevices(filter).then(data => {
+      if (!alive) return
+      setRows(data)
+      setBrands(current => [...new Set([...current, ...data.flatMap(item => item.manufacturer ? [item.manufacturer] : [])])].sort())
+    }).catch(caught => { if (alive) setError(caught instanceof ApiError ? caught.message : 'Daftar perangkat gagal dimuat.') })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [filter, refresh, revision])
+  async function exportCsv() {
+    setExporting(true)
+    try { downloadBlob(await exportAcsDevicesCsv(filter), 'perangkat-acs.csv') }
+    catch (caught) { toast.error(caught instanceof ApiError ? caught.message : 'Ekspor perangkat gagal.') }
+    finally { setExporting(false) }
+  }
+  const columns: Column<AcsDeviceRowView>[] = [
+    { key: 'serial', header: 'Serial', sortValue: item => item.serialNumber, cell: item => item.serialNumber,
+      onCellClick: canCustomer ? item => { if (item.customerId) setDetailId(item.customerId) } : undefined },
+    { key: 'customer', header: 'Pelanggan', sortValue: item => item.customerName, cell: item => item.customerName || '—' },
+    { key: 'status', header: 'Status ACS', minWidth: 100, sortValue: item => item.online ? 1 : 0, cell: item => item.online ? 'Online' : 'Offline' },
+    { key: 'rx', header: 'RX (dBm)', minWidth: 100, align: 'right', sortValue: item => item.rxPowerDbm, cell: item => item.rxPowerDbm?.toLocaleString('id-ID') ?? '—' },
+    { key: 'tx', header: 'TX (dBm)', minWidth: 100, align: 'right', sortValue: item => item.txPowerDbm, cell: item => item.txPowerDbm?.toLocaleString('id-ID') ?? '—' },
+    { key: 'lastInform', header: 'Laporan terakhir', sortValue: item => item.lastInformAt, cell: item => item.lastInformAt ? timeAgo(item.lastInformAt) : 'Belum melapor' },
+    { key: 'ip', header: 'Alamat IP', sortValue: item => item.ipAddress, cell: item => item.ipAddress || '—' },
+    { key: 'manufacturer', header: 'Merek', sortValue: item => item.manufacturer, cell: item => item.manufacturer || '—' },
+    { key: 'model', header: 'Model', sortValue: item => item.model, cell: item => item.model || '—' },
+    { key: 'ssid', header: 'SSID', sortValue: item => item.ssid, cell: item => item.ssid || '—' },
+    { key: 'pppoe', header: 'Akun PPPoE', sortValue: item => item.pppoeUsername, cell: item => item.pppoeUsername || '—' },
+    { key: 'session', header: 'Sesi PPPoE', sortValue: item => item.pppoeOnline == null ? -1 : item.pppoeOnline ? 1 : 0, cell: item => item.pppoeOnline == null ? '—' : item.pppoeOnline ? 'Aktif' : 'Tidak aktif' },
+    { key: 'temperature', header: 'Suhu (°C)', align: 'right', sortValue: item => item.temperatureC, cell: item => item.temperatureC?.toLocaleString('id-ID') ?? '—' },
+  ]
+  const filtered = !!q || status !== 'ALL' || signal !== 'ALL' || !!brand
+  return <div className="network-panel">
+    <div className="resource-list-controls">
+      <CommandBar actions={[
+        { key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: () => setRefresh(value => value + 1) },
+        { key: 'export', label: 'Ekspor CSV', icon: <Download size={16} />, disabled: exporting, onClick: () => void exportCsv() },
+      ]} />
+      <FilterBar label="Filter perangkat" search={<FilterSearch label="Cari perangkat" value={q} onChange={setQ} />}>
+        <FilterSelect label="Status ACS" value={status} defaultValue="ALL" onChange={value => setStatus(value as AcsStatusFilter)}><option value="ALL">Semua</option><option value="ONLINE">Online</option><option value="OFFLINE">Offline</option></FilterSelect>
+        <FilterSelect label="Sinyal RX" value={signal} defaultValue="ALL" onChange={value => setSignal(value as AcsSignalFilter)}>{SIGNAL_OPTIONS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</FilterSelect>
+        <FilterSelect label="Merek" value={brand} onChange={setBrand}><option value="">Semua</option>{brands.map(value => <option key={value} value={value}>{value}</option>)}</FilterSelect>
+      </FilterBar>
     </div>
-  )
+    {error ? <LoadError message={error} retry={() => setRefresh(value => value + 1)} /> : <>
+      <p className="network-count">{rows.length} perangkat</p>
+      <DataTable presentation="resource" rows={rows} columns={columns} rowKey={item => item.id} loading={loading} initialSort={{ key: 'serial', dir: 'asc' }}
+        empty={<EmptyState title={filtered ? 'Tidak ada perangkat yang cocok' : 'Belum ada perangkat'} hint={filtered ? 'Ubah pencarian atau filter.' : 'Perangkat muncul setelah terhubung ke ACS dan serialnya terdaftar pada pelanggan.'} />} />
+    </>}
+    <CustomerDetailBlade customerId={detailId} onClose={() => setDetailId(null)} />
+  </div>
+}
+function ActivityLog() {
+  const [rows, setRows] = useState<AcsActivityView[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('')
+  const [revision, setRevision] = useState(0), [q, setQ] = useState(''), [status, setStatus] = useState('')
+  useEffect(() => {
+    let alive = true
+    setLoading(true); setError('')
+    void listAcsLogs(100).then(value => { if (alive) setRows(value) }).catch(() => { if (alive) setError('Aktivitas gagal dimuat.') }).finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [revision])
+  const filtered = rows.filter(item => (!status || item.status === status) && [item.serialNumber, item.customerName, item.requestedByEmail, CPE_ACTION_LABEL[item.action as CpeAction] ?? item.action].some(value => value?.toLowerCase().includes(q.toLowerCase().trim())))
+  const columns: Column<AcsActivityView>[] = [
+    { key: 'time', header: 'Waktu', sortValue: item => item.requestedAt, cell: item => new Date(item.requestedAt).toLocaleString('id-ID') },
+    { key: 'action', header: 'Tindakan', cell: item => CPE_ACTION_LABEL[item.action as CpeAction] ?? item.action },
+    { key: 'serial', header: 'Serial', cell: item => item.serialNumber || '—' },
+    { key: 'customer', header: 'Pelanggan', cell: item => item.customerName || '—' },
+    { key: 'status', header: 'Hasil', cell: item => item.status === 'SUCCESS' ? 'Berhasil' : 'Gagal' },
+    { key: 'actor', header: 'Pengguna', cell: item => item.requestedByEmail || '—' },
+    { key: 'detail', header: 'Keterangan', cell: item => item.detail || '—' },
+  ]
+  return <div className="network-panel">
+    <div className="resource-list-controls">
+      <CommandBar actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: () => setRevision(value => value + 1) }]} />
+      <FilterBar label="Filter aktivitas" search={<FilterSearch label="Cari aktivitas" value={q} onChange={setQ} />}>
+        <FilterSelect label="Hasil" value={status} onChange={setStatus}><option value="">Semua</option><option value="SUCCESS">Berhasil</option><option value="FAILED">Gagal</option></FilterSelect>
+      </FilterBar>
+    </div>
+    {error ? <LoadError message={error} retry={() => setRevision(value => value + 1)} /> : <>
+      <p className="network-count">{filtered.length} dari {rows.length} aktivitas terbaru</p>
+      <DataTable presentation="resource" rows={filtered} columns={columns} rowKey={item => item.id} loading={loading} initialSort={{ key: 'time', dir: 'desc' }}
+        empty={<EmptyState title={q || status ? 'Tidak ada aktivitas yang cocok' : 'Belum ada aktivitas'} hint={q || status ? 'Ubah pencarian atau filter.' : 'Tindakan pada perangkat akan tampil di sini.'} />} />
+    </>}
+  </div>
 }
