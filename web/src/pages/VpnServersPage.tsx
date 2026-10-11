@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -298,10 +299,10 @@ function ServerForm({
   onCancel: () => void
 }) {
   return (
-    <Blade open title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} onClose={onCancel} dirty creation={creation}
+    <Blade open title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} onClose={onCancel} dirty creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'connection', label: 'Koneksi' }] }}
       footer={<Button variant="primary" disabled={creation.busy} onClick={onSave}>Simpan</Button>}>
     <form className="stack horizontal-form" onSubmit={event => { event.preventDefault(); onSave() }}>
-      <FormSection title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} description="Tentukan alamat publik dan koneksi yang dipakai router.">
+      <FormSection step="identity" title={draft.id ? 'Ubah hub VPN' : 'Hub VPN baru'} description="Tentukan alamat publik dan koneksi yang dipakai router.">
         <TextField
           label="Nama hub"
           value={draft.name}
@@ -310,12 +311,13 @@ function ServerForm({
           required
         />
         <TextField
-          label="Host / IP publik VPS"
+          label="Alamat host"
           value={draft.host}
           onChange={(_, data) => setDraft({ ...draft, host: data.value })}
           placeholder="vpn.isp-anda.com"
           required
         />
+      </FormSection><ResourceStep step="connection">
         <TextField
           label="Port"
           type="number"
@@ -335,7 +337,6 @@ function ServerForm({
             <option value="TCP">TCP — RouterOS v6 dan v7</option>
             <option value="UDP">UDP — RouterOS v7</option>
         </SelectField>
-      </FormSection>
 
       {/* Pilihan protokol tak bisa dibalik tanpa mengganggu perangkat: yang sudah men-dial harus
           menempel ulang confignya. Sebutkan konsekuensinya di tempat pilihannya diambil. */}
@@ -349,18 +350,18 @@ function ServerForm({
 
       {draft.id === null ? (
         <TextField
-          label="Subnet overlay (CIDR)"
+          label="Subnet VPN (CIDR)"
           value={draft.tunnelCidr}
           onChange={(_, data) => setDraft({ ...draft, tunnelCidr: data.value })}
           placeholder="10.8.0.0/24"
         />
       ) : (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          CIDR tunnel tidak dapat diubah setelah server dibuat karena IP peer telah dialokasikan.
+          Subnet VPN tidak dapat diubah setelah server dibuat.
         </Text>
       )}
 
-    </form></Blade>
+    </ResourceStep></form></Blade>
   )
 }
 

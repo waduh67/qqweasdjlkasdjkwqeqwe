@@ -35,6 +35,7 @@ object PermissionCatalog {
         perm("iam.user.view", "Lihat pengguna")
         perm("iam.user.create", "Tambah pengguna")
         perm("iam.user.update", "Ubah pengguna")
+        perm("iam.user.resetpassword", "Reset password pengguna")
         perm("iam.user.delete", "Hapus pengguna")
         perm("iam.user.assign", "Atur role & area pengguna")
         perm("iam.role.view", "Lihat role")

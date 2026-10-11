@@ -54,6 +54,7 @@ data class UserView(
     val createdAt: Instant,
     /** Ditampilkan di daftar pengguna: siapa yang sudah memasang faktor kedua, siapa belum. */
     val twoFactorEnabled: Boolean,
+    val tenantOwner: Boolean = false,
 )
 
 /** Profil ringkas untuk endpoint `/me` dan payload login — apa yang perlu diketahui UI. */

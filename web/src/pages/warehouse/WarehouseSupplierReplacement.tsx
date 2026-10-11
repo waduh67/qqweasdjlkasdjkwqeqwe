@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
 import { WarehouseDraftExpired } from '@/components/organisms/warehouse/WarehouseDraftExpired'
@@ -63,11 +64,11 @@ function ReplacementEditor({ details, onClose, onDone }: { details: ReturnDetail
       setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa perangkat pengganti.') }
   }
-  return <><ResourceForm title={<>Siapkan penerimaan pengganti</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi penerimaan pengganti" confirmLabel="Catat usulan pengganti" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
+  return <><ResourceForm steps={[{ key: 'device', label: 'Perangkat & lokasi' }, { key: 'evidence', label: 'Dokumen & nilai' }]} title={<>Siapkan penerimaan pengganti</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Konfirmasi penerimaan pengganti" confirmLabel="Catat usulan pengganti" command={operation} onDone={onDone} onReload={onDone} onClose={() => setOperation(null)}
       summary={<><p>{reference} · {details.references.vendor?.name}</p><p>{details.references.item.name} · 1 unit · Serial baru: {serial}{mac && ` · MAC ${mac}`}</p>
         <p>{source && locationLabel(source)} → {quarantine && locationLabel(quarantine)}</p><p>Bukti: {evidence}</p>
         <p>Perangkat lama tetap tercatat. Usulan ini disimpan sebagai catatan tetap; lanjutkan persetujuan yang berlaku, penerimaan fisik, dan inspeksi dari detail penerimaan.</p><p><WarehouseStatus status={details.returnCase.legalOwner} /></p>
-        {can('inventory.cost.view') && <p>{useCost ? `Nilai: ${totalMinor} ${currency.toUpperCase()} (satuan terkecil).` : 'Nilai belum diketahui.'}</p>}</>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} variant="primary" type="submit">Tinjau usulan pengganti</Button></>}><form id={resourceFormId} className="stack" aria-label="Penerimaan perangkat pengganti" onSubmit={prepare}>
+        {can('inventory.cost.view') && <p>{useCost ? `Nilai: ${totalMinor} ${currency.toUpperCase()} (satuan terkecil).` : 'Nilai belum diketahui.'}</p>}</>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} variant="primary" type="submit">Tinjau usulan pengganti</Button></>}><form id={resourceFormId} className="stack" aria-label="Penerimaan perangkat pengganti" onSubmit={prepare}><ResourceStep step="device">
     <p>{details.references.code} · {returnItemLabel(details.references.item)} · {details.references.vendor?.name}</p>
     <p>Satu unit dari SKU yang sama, dengan serial baru. Draft ini belum menerima barang atau menghapus perangkat lama.</p>
     {details.returnCase.legalOwner === 'CUSTOMER' && <p role="status">Pengganti tetap milik pelanggan. Penerimaan dan inspeksi tidak memasukkannya ke stok tersedia ISP.</p>}
@@ -76,11 +77,12 @@ function ReplacementEditor({ details, onClose, onDone }: { details: ReturnDetail
     <TextField label="Serial perangkat pengganti" value={serial} required maxLength={128} onChange={(_, data) => setSerial(data.value)}
       onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation() } }} />
     <TextField label="MAC perangkat pengganti (opsional)" value={mac} maxLength={32} onChange={(_, data) => setMac(data.value)} />
-    <TextField label="Referensi surat pengganti" value={reference} required maxLength={500} onChange={(_, data) => setReference(data.value)} />
+    </ResourceStep><ResourceStep step="evidence"><TextField label="Referensi surat pengganti" value={reference} required maxLength={500} onChange={(_, data) => setReference(data.value)} />
     <TextField label="Referensi bukti pengganti" value={evidence} required maxLength={500} onChange={(_, data) => setEvidence(data.value)} />
     {can('inventory.cost.view') && <><Checkbox label="Nilai pengganti diketahui" checked={useCost} onChange={(_, data) => setUseCost(data.checked === true)} />
       {useCost ? <><WarehouseQuantityField label="Nilai total satuan terkecil mata uang" value={totalMinor} unit="EA" allowZero onChange={setTotalMinor} />
         <TextField label="Mata uang pengganti" value={currency} maxLength={3} onChange={(_, data) => setCurrency(data.value)} /></> : <p className="muted">Nilai belum diketahui; tidak dianggap nol.</p>}</>}
+    </ResourceStep>
     {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"></div>
   </form></ResourceForm>
 

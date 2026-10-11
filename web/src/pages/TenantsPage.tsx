@@ -2,10 +2,12 @@ import { CreationSummary, useCreationReview } from '@/components/organisms/Creat
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
-import { CreditCard, Pause, Play, Trash2 } from 'lucide-react'
+import { CreditCard, KeyRound, Pause, Play, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { PlatformTenant as Tenant } from '../api/tenant'
+import { resetTenantOwnerPassword } from '../api/tenant'
+import { PasswordPanel } from '@/components/organisms/PasswordPanel'
 import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
@@ -39,6 +41,7 @@ export function TenantsPage() {
   const [initialDraft, setInitialDraft] = useState<typeof EMPTY | null>(null)
   const [subscription, setSubscription] = useState<{ id: string; name: string } | null>(null)
   const [ownerTenant, setOwnerTenant] = useState<Tenant | null>(null)
+  const [passwordTenant, setPasswordTenant] = useState<Tenant | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [defaultFee, setDefaultFee] = useState<number | null>(null)
@@ -128,6 +131,8 @@ export function TenantsPage() {
   const rowActions = (t: Tenant): RowAction[] => {
     if (t.slug === 'platform') return []
     const list: RowAction[] = []
+    if (canManageTenant && t.owner)
+      list.push({ key: 'password', label: 'Reset password owner', icon: <KeyRound size={16} />, onClick: () => setPasswordTenant(t) })
     if (canSubscription)
       list.push({ key: 'subscription', label: 'Langganan', icon: <CreditCard size={16} />, onClick: () => setSubscription({ id: t.id, name: t.name }) })
     if (canManageTenant)
@@ -158,6 +163,10 @@ export function TenantsPage() {
 
       {error && <div className="card load-error" role="alert"><p>{error}</p><Button onClick={() => void reload()}>Coba lagi</Button></div>}
       {notice && <p role="status" className="form-note">{notice}</p>}
+      {passwordTenant?.owner && <PasswordPanel key={passwordTenant.owner.id} title="Reset password owner" name={passwordTenant.owner.name} email={passwordTenant.owner.email}
+        onClose={() => setPasswordTenant(null)} onSave={password => resetTenantOwnerPassword(passwordTenant.id,
+          { expectedOwnerUserId: passwordTenant.owner!.id, newPassword: password })}
+        onSaved={() => { setNotice('Password owner direset.'); setPasswordTenant(null) }} />}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
@@ -185,7 +194,7 @@ export function TenantsPage() {
       />
 
       <Blade
-        creation={{ ...creation, busy: saving, prepare: () => (document.getElementById('tenant-onboarding') as HTMLFormElement | null)?.requestSubmit(), summary: <><CreationSummary rows={[['Tenant', draft?.name], ['Slug', draft?.slug]]} />{formError && <p className="error" role="alert">{formError}</p>}</> }}
+        creation={{ ...creation, steps: [{ key: 'tenant', label: 'Tenant' }, { key: 'admin', label: 'Administrator' }, { key: 'billing', label: 'Langganan' }], busy: saving, prepare: () => (document.getElementById('tenant-onboarding') as HTMLFormElement | null)?.requestSubmit(), summary: <><CreationSummary rows={[['Tenant', draft?.name], ['Slug', draft?.slug]]} />{formError && <p className="error" role="alert">{formError}</p>}</> }}
         open={draft != null}
         title="Tambah tenant"
         size="sm"

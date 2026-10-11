@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { custodianLabels } from './stockPresentation'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
@@ -40,21 +41,23 @@ export function WarehouseCountEditor({ initial, onSaved, onClose, onReload = onC
       setOperation(initial ? updateCount(initial.details.count.id, initial.details.count.revision, draft) : createCount(draft)); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa isian stock opname.') }
   }
-  return <><ResourceForm editing={!!initial} title={<>{initial ? 'Ubah draft stock opname' : 'Stock opname baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft stock opname" confirmLabel="Simpan stock opname" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
-    summary={<>{initial && <p>{initial.details.references.code} · Revisi {initial.details.count.revision}</p>}<p>{location && locationLabel(location)}</p><p>{reason}</p><ul>{rows.map(row => <li key={row.key}>{row.position && countItemLabel(row.position.item)} · {row.counter && countPersonLabel(row.counter)}</li>)}</ul><p>Simpan draf sebelum memulai penghitungan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!location}>Tinjau stock opname</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft stock opname" onSubmit={prepare}>
+  return <><ResourceForm steps={[{ key: 'setup', label: 'Lokasi' }, { key: 'details', label: 'Posisi hitung' }]} editing={!!initial} title={<>{initial ? 'Ubah draft stock opname' : 'Stock opname baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft stock opname" confirmLabel="Simpan stock opname" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    summary={<>{initial && <p>{initial.details.references.code} · Revisi {initial.details.count.revision}</p>}<p>{location && locationLabel(location)}</p><p>{reason}</p><ul>{rows.map(row => <li key={row.key}>{row.position && countItemLabel(row.position.item)} · {row.counter && countPersonLabel(row.counter)}</li>)}</ul><p>Simpan draf sebelum memulai penghitungan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!location}>Tinjau stock opname</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft stock opname" onSubmit={prepare}><ResourceStep step="setup">
     {initial && <p>Revisi {initial.details.count.revision}. Perubahan hanya tersedia sebelum penghitungan dimulai; riwayat tersimpan tetap utuh.</p>}
     <p>Penghitungan mencakup posisi yang dipilih pada satu lokasi. Petugas mencatat hasil fisik tanpa angka pembanding stok buku.</p>
     <WarehousePicker label="Lokasi stock opname" load={receiptLocations} value={location} name={locationLabel} onChange={value => { setLocation(value); setRows([empty()]); setRowPage(0) }} />
     <TextareaField label="Alasan stock opname" value={reason} required maxLength={500} onChange={(_, data) => setReason(data.value)} />
+    </ResourceStep><ResourceStep step="details">
     {pages > 1 && <><SelectField label="Halaman posisi hitung" value={String(currentPage)} onChange={(_, data) => setRowPage(Number(data.value))}>
       {Array.from({ length: pages }, (_, page) => <option key={page} value={page}>Posisi {page * 25 + 1}–{Math.min((page + 1) * 25, rows.length)}</option>)}
     </SelectField><p>Seluruh {rows.length} posisi tetap disimpan, termasuk posisi pada halaman lain.</p></>}
     {location ? rows.slice(currentPage * 25, (currentPage + 1) * 25).map((row, index) => <CountEntryEditor key={row.key} row={row} number={currentPage * 25 + index + 1} locationId={location.id}
       update={patch => setRows(current => current.map(item => item.key === row.key ? { ...item, ...patch } : item))}
       remove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />) : <p>Pilih lokasi untuk mencari posisi barang.</p>}
-    {error && <p className="error" role="alert">{error}</p>}
     <div className="row wrap"><Button type="button" disabled={!location || rows.length >= 100} onClick={() => { setRowPage(Math.floor(rows.length / 25)); setRows(current => [...current, empty()]) }}>Tambah posisi hitung</Button>
       </div>
+    </ResourceStep>
+    {error && <p className="error" role="alert">{error}</p>}
   </form></ResourceForm></>
 }
 function CountEntryEditor({ row, number, locationId, update, remove }: { row: Row; number: number; locationId: string; update: (patch: Partial<Row>) => void; remove?: () => void }) {

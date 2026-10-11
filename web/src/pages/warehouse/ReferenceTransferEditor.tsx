@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import type { WarehouseLocation, WarehouseSku } from '@/api/warehouse/models'
 import { referenceLocations, referenceSkus, type ReferencePosition } from '@/api/warehouse/reference'
@@ -30,23 +31,25 @@ export function ReferenceTransferEditor({ onSaved, onClose }: { readonly onSaved
       setOperation(postReferenceTransfer({ sourceWarehouseId: source.id, warehouseId: destination.id, lines, notes: notes.trim() })); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa tujuan dan jumlah transfer.') }
   }
-  return <ResourceForm title="Transfer baru" onClose={onClose} onBack={() => setOperation(null)}
+  return <ResourceForm steps={[{ key: 'setup', label: 'Lokasi' }, { key: 'items', label: 'Barang' }]} title="Transfer baru" onClose={onClose} onBack={() => setOperation(null)}
     footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau transfer</Button></>}
     review={operation && <WarehouseCommandDialog embedded title="Pindahkan stok" confirmLabel="Pindahkan stok" command={operation} onDone={onSaved} onClose={() => setOperation(null)}
       summary={<><p><strong>{source?.name ?? source?.code}</strong> → <strong>{destination?.name ?? destination?.code}</strong></p>
         <ul>{rows.map(row => <li key={row.key}>{row.position?.skuName}{row.position?.serial && ' · ' + row.position.serial}: {row.quantity} {row.position && displayUnit(row.position.baseUnit)}</li>)}</ul>
         {notes.trim() && <p>{notes.trim()}</p>}<p>Jumlah tersebut langsung berpindah dari gudang asal ke gudang tujuan setelah disimpan.</p></>} />}>
-    <form id={formId} className="stack" onSubmit={prepare}>
+    <form id={formId} className="stack" onSubmit={prepare}><ResourceStep step="setup">
       <p className="muted">Pilih posisi stok yang tersedia. Transfer langsung memindahkan jumlah yang Anda tinjau.</p>
       <WarehousePicker label="Gudang asal" load={referenceLocations} value={source} name={row => (row.name ?? row.code) + ' · ' + row.code}
         eligible={row => row.state === 'ACTIVE' && row.issueEligible} onChange={row => { setSource(row); setRows([emptyRow()]) }} />
       <WarehousePicker label="Gudang tujuan" load={referenceLocations} value={destination} name={row => (row.name ?? row.code) + ' · ' + row.code}
         eligible={row => row.state === 'ACTIVE' && row.issueEligible && row.id !== source?.id} onChange={setDestination} />
+      </ResourceStep><ResourceStep step="items">
       {source ? rows.map((row, index) => <ReferenceTransferLine key={row.key} sourceId={source.id} number={index + 1} row={row}
         onChange={patch => setRows(current => current.map(item => item.key === row.key ? { ...item, ...patch } : item))}
         onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />) : <p>Pilih gudang asal untuk mencari stok.</p>}
       <Button type="button" disabled={!source || rows.length >= 100} onClick={() => setRows(current => [...current, emptyRow()])}>Tambah barang transfer</Button>
       <TextareaField label="Catatan transfer" maxLength={1000} value={notes} onChange={(_, data) => setNotes(data.value)} />
+      </ResourceStep>
       {error && <p className="error" role="alert">{error}</p>}
     </form>
   </ResourceForm>

@@ -143,7 +143,7 @@ export function SignupPage() {
           autoComplete="email"
         />
         <TextField
-          label="Password (min. 8 karakter)"
+          label="Password" hint="Minimal 8 karakter."
           type="password"
           value={adminPassword}
           onChange={(_, data) => setAdminPassword(data.value)}

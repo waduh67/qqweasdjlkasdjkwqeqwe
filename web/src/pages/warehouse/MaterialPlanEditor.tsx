@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
 import { useState, type FormEvent } from 'react'
@@ -31,14 +32,15 @@ export function MaterialPlanEditor({ summary, onSaved, onClose, onReload }: { su
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rencana material.') }
   }
   return <>
-    <ResourceForm editing={!!summary.plan} title={<>{summary.plan ? 'Revisi rencana material' : 'Rencana material baru'}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Simpan rencana material" confirmLabel="Simpan rencana" command={review.command} onDone={onSaved} onClose={() => setReview(null)} onReload={onReload}
-      summary={<><p>Revisi rencana {review.input.expectedRevision} → {review.input.expectedRevision + 1}</p>{review.input.materialMode === 'NONE' ? <p>Tanpa material: {review.input.reason}</p> : <ul>{review.input.lines?.map((line, index) => <li key={line.skuId}><strong>{rows[index].sku?.name}</strong>: <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} />{line.continuousCut && ' · satu potongan utuh'}{line.substitution && <p>Substitusi {rows[index].previous?.sku.name}: {line.substitution.reason}</p>}</li>)}</ul>}<p>Setelah disimpan, ajukan permintaan untuk mulai mencadangkan stok.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={mode === 'MATERIAL_REQUIRED' && !can('inventory.sku.view')}>Tinjau rencana</Button></>}><form id={resourceFormId} className="stack" onSubmit={prepare} aria-label="Rencana material">
+    <ResourceForm steps={[{ key: 'setup', label: 'Kebutuhan' }, ...(mode === 'MATERIAL_REQUIRED' ? [{ key: 'details', label: 'Material' }] : [])]} editing={!!summary.plan} title={<>{summary.plan ? 'Revisi rencana material' : 'Rencana material baru'}</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Simpan rencana material" confirmLabel="Simpan rencana" command={review.command} onDone={onSaved} onClose={() => setReview(null)} onReload={onReload}
+      summary={<><p>Revisi rencana {review.input.expectedRevision} → {review.input.expectedRevision + 1}</p>{review.input.materialMode === 'NONE' ? <p>Tanpa material: {review.input.reason}</p> : <ul>{review.input.lines?.map((line, index) => <li key={line.skuId}><strong>{rows[index].sku?.name}</strong>: <WarehouseQuantity value={line.quantityBase} unit={line.baseUnit} />{line.continuousCut && ' · satu potongan utuh'}{line.substitution && <p>Substitusi {rows[index].previous?.sku.name}: {line.substitution.reason}</p>}</li>)}</ul>}<p>Setelah disimpan, ajukan permintaan untuk mulai mencadangkan stok.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={mode === 'MATERIAL_REQUIRED' && !can('inventory.sku.view')}>Tinjau rencana</Button></>}><form id={resourceFormId} className="stack" onSubmit={prepare} aria-label="Rencana material"><ResourceStep step="setup">
 
       <p className="muted">Revisi rencana {summary.revisions.planRevision} · Menyimpan rencana belum mencadangkan stok.</p>
       <SelectField label="Kebutuhan material" value={mode} onChange={(_, data) => setMode(data.value as MaterialPlanInput['materialMode'])}>
         <option value="MATERIAL_REQUIRED">Membutuhkan material</option><option value="NONE">Tanpa material</option>
       </SelectField>
       <TextareaField label={mode === 'NONE' ? 'Alasan tanpa material' : 'Catatan rencana'} required={mode === 'NONE'} value={reason} maxLength={1000} onChange={(_, data) => setReason(data.value)} />
+      </ResourceStep><ResourceStep step="details">
       {mode === 'MATERIAL_REQUIRED' && (can('inventory.sku.view') ? <>
         {summary.template && !summary.plan && <div className="stack"><p>Template {summary.template.workType} tersedia. Salin dan tinjau jumlah sebelum menyimpan.</p><Button type="button" onClick={() => setRows(rowsFromMaterialPlan(summary.template!.lines, false))}>Salin template</Button></div>}
         {rows.map((row, index) => <fieldset key={row.key} className="stack" style={{ minWidth: 0 }}><legend>Material {index + 1}</legend>
@@ -53,6 +55,7 @@ export function MaterialPlanEditor({ summary, onSaved, onClose, onReload }: { su
         </fieldset>)}
         <Button type="button" disabled={rows.length >= 100} onClick={() => setRows(current => [...current, emptyMaterialRow()])}>Tambah material</Button>
       </> : <p role="alert">Izin lihat barang diperlukan untuk menyusun baris material.</p>)}
+      </ResourceStep>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="row wrap"></div>
     </form></ResourceForm>

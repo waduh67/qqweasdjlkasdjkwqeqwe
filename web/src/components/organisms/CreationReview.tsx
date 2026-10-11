@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ResourceStepDefinition } from './ResourceStep'
 
 /** Call beforeSave only after the resource's own validation and before its API write. */
 export function useCreationReview(open: boolean, editing = false) {
@@ -19,7 +20,7 @@ export function useCreationReview(open: boolean, editing = false) {
 }
 
 export type CreationFlow = ReturnType<typeof useCreationReview> & {
-  summary: ReactNode; prepare: () => void; busy?: boolean
+  summary: ReactNode; prepare: () => void; busy?: boolean; steps?: ResourceStepDefinition[]
 }
 
 export function CreationSummary({ rows }: { rows: [string, ReactNode][] }) {

@@ -1,5 +1,8 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { ResourceStep } from '@/components/organisms/ResourceStep'
+import { CreationSummary } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Text, typographyStyles } from '@fluentui/react-components'
+import { Field as FluentField, Text, typographyStyles } from '@fluentui/react-components'
 import { Copy } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import {
@@ -556,6 +559,7 @@ function ChannelCodeField({
 }) {
   return (
     <Combobox<PivotChannel>
+      ariaLabel="Bank"
       value={value}
       onChange={(code) => onChange(code)}
       fetchOptions={(t) => Promise.resolve(searchChannelCodes(t))}
@@ -580,6 +584,9 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
   // Profil bisnis sub-account (identitas + PIC + alamat + rekening payout) — wajib sebelum
   // provisioning. Rekening payout ikut di sini karena Pivot mewajibkan `bankAccount` saat create.
   const [profile, setProfile] = useState<PivotProfileRequest>(EMPTY_PROFILE)
+  const [profileOpen, setProfileOpen] = useState(false), [profileReview, setProfileReview] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const profileSaving = useRef(false)
 
   const syncFrom = (a: TenantPivotAccountView) => {
     setAccount(a)
@@ -610,11 +617,26 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
     try {
       syncFrom(await fn())
       toast.success(okMsg)
+      return true
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+      return false
     } finally {
       setBusy(false)
     }
+  }
+
+  async function saveProfile(register: boolean) {
+    if (profileSaving.current || busy || !manage || (register && !profileFilled)) return
+    profileSaving.current = true; setProfileError('')
+    try {
+      const saved = await run(async () => {
+        const profileResult = profileDirty ? await savePivotProfile(trimmedProfile()) : account!
+        return register ? provisionPivotAccount() : profileResult
+      }, register ? 'Akun pembayaran didaftarkan' : 'Profil bisnis disimpan')
+      if (saved) { setProfileOpen(false); setProfileReview(false) }
+      else setProfileError('Belum berhasil disimpan. Periksa data atau coba lagi.')
+    } finally { profileSaving.current = false }
   }
 
   const payoutDirty =
@@ -721,21 +743,31 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
             /></Text>
           )}
 
-          {/* Profil bisnis sub-account — wajib diisi lengkap sebelum bisa diprovisi ke Pivot. */}
-          {!account.provisioned && (
-            <>
-              <div className="hr" />
-              <SectionTitle>Profil sub-account</SectionTitle>
-              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-                Data bisnis yang didaftarkan ke Pivot. Semua kolom (kecuali nama legal) wajib diisi
-                sebelum sub-account bisa diprovisi.
-              </Text>
-              <div className="stack" style={{ gap: '0.6rem' }}>
+          {!account.provisioned && <section className="stack">
+            <SectionTitle>Profil bisnis</SectionTitle>
+            <CreationSummary rows={[["Nama bisnis", profile.legalName || 'Mengikuti nama tenant'], ['Email', profile.merchantEmail], ['Penanggung jawab', profile.picName]]} />
+            <div><Button disabled={busy} onClick={() => { setProfileError(''); setProfileOpen(true) }}>{manage ? 'Lengkapi profil' : 'Lihat profil'}</Button></div>
+          </section>}
+          {profileOpen && <ResourceForm title="Profil akun pembayaran" readOnly={!manage} editing={false} dirty={manage && profileDirty} busy={busy}
+            steps={[{ key: 'business', label: 'Bisnis' }, { key: 'contact', label: 'Penanggung jawab' }, { key: 'bank', label: 'Rekening' }]}
+            onClose={() => { syncFrom(account); setProfileOpen(false); setProfileReview(false); setProfileError('') }} onBack={() => setProfileReview(false)}
+            onReview={() => setProfileReview(true)}
+            review={profileReview ? <div className="stack">{profileError && <p role="alert" className="error">{profileError}</p>}
+              <CreationSummary rows={[
+                ['Nama bisnis', profile.legalName || 'Mengikuti nama tenant'], ['Email bisnis', profile.merchantEmail], ['Telepon bisnis', profile.merchantPhone], ['Alamat', profile.address],
+                ['Penanggung jawab', profile.picName], ['Email PIC', profile.picEmail], ['Telepon PIC', profile.picPhone],
+                ['Bank', profile.channelCode], ['Nomor rekening', profile.accountNumber], ['Pemilik rekening', profile.accountName],
+              ]} />{!profileFilled && <p>Lengkapi data bisnis, penanggung jawab, dan rekening untuk mendaftar. Isian sementara dapat disimpan sebagai profil.</p>}
+            </div> : undefined}
+            reviewFooter={<><Button disabled={busy} onClick={() => setProfileReview(false)}>Sebelumnya</Button>
+              <Button disabled={busy || !profileDirty} onClick={() => void saveProfile(false)}>Simpan profil</Button>
+              <Button variant="primary" disabled={busy || !account.masterActive || !profileFilled} onClick={() => void saveProfile(true)}>Daftarkan sub-account</Button></>}>
+              <div className="stack"><ResourceStep step="business">
                 <TextField
-                  label="Nama legal bisnis (opsional)"
+                  label="Nama legal bisnis"
                   value={profile.legalName ?? ''}
                   onChange={(_, data) => setProfile((p) => ({ ...p, legalName: data.value }))}
-                  placeholder="kosong = pakai nama tenant"
+                  placeholder="Gunakan nama tenant"
                   maxLength={200}
                   disabled={!manage}
                 />
@@ -760,7 +792,16 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     style={{ flex: 1, minWidth: 160 }}
                   />
                 </div>
-                <TextField
+                <TextareaField
+                  label="Alamat bisnis"
+                  value={profile.address ?? ''}
+                  onChange={(_, data) => setProfile((p) => ({ ...p, address: data.value }))}
+                  placeholder="alamat lengkap usaha"
+                  maxLength={500}
+                  rows={2}
+                  disabled={!manage}
+                />
+                </ResourceStep><ResourceStep step="contact"><TextField
                   label="Nama PIC"
                   value={profile.picName ?? ''}
                   onChange={(_, data) => setProfile((p) => ({ ...p, picName: data.value }))}
@@ -789,25 +830,15 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     style={{ flex: 1, minWidth: 160 }}
                   />
                 </div>
-                <TextareaField
-                  label="Alamat bisnis"
-                  value={profile.address ?? ''}
-                  onChange={(_, data) => setProfile((p) => ({ ...p, address: data.value }))}
-                  placeholder="alamat lengkap usaha"
-                  maxLength={500}
-                  rows={2}
-                  disabled={!manage}
-                />
-                {/* Rekening payout — bagian profil karena Pivot mewajibkan bankAccount saat create. */}
+                </ResourceStep><ResourceStep step="bank">
                 <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <label style={{ flex: 1, minWidth: 140 }}>
-                    <Text as="span" >Kode channel bank</Text>
+                  <FluentField label="Bank" size="small" className="app-field">
                     <ChannelCodeField
                       value={profile.channelCode ?? ''}
                       onChange={(code) => setProfile((p) => ({ ...p, channelCode: code }))}
                       disabled={!manage}
                     />
-                  </label>
+                  </FluentField>
                   <TextField
                     label="Nomor rekening"
                     value={profile.accountNumber ?? ''}
@@ -828,43 +859,14 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                   />
                 </div>
                 <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-                  Rekening tujuan pencairan dana pelanggan. Nama pemilik harus persis seperti catatan
-                  bank — dicocokkan otomatis setelah sub-account terdaftar. Menekan “Daftarkan
-                  sub-account” otomatis menyimpan profil.
+                  Gunakan nama pemilik rekening yang terdaftar di bank.
                 </Text>
-                {manage && (
-                  <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
-                    <Button
-                      variant="subtle"
-                      disabled={busy || !profileDirty}
-                      onClick={() => void run(() => savePivotProfile(trimmedProfile()), 'Profil sub-account tersimpan')}
-                    >
-                      Simpan profil
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+              </ResourceStep></div>
+          </ResourceForm>}
 
           {manage && (
             <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-              {!account.provisioned && (
-                <Button
-                  variant="primary"
-                  disabled={busy || !account.masterActive || !profileFilled}
-                  title={!profileFilled ? 'Lengkapi profil sub-account dulu' : undefined}
-                  onClick={() =>
-                    void run(async () => {
-                      // Satu klik: simpan profil dulu bila ada perubahan, lalu daftarkan.
-                      if (profileDirty) await savePivotProfile(trimmedProfile())
-                      return provisionPivotAccount()
-                    }, 'Sub-account Pivot diprovisi')
-                  }
-                >
-                  Daftarkan sub-account
-                </Button>
-              )}
+              {!account.provisioned && <Button variant="primary" disabled={busy || !account.masterActive} onClick={() => { setProfileError(''); setProfileOpen(true) }}>Daftarkan sub-account</Button>}
               <Button
                 variant="subtle"
                 disabled={busy || !account.provisioned}
@@ -1432,7 +1434,7 @@ function TripayPaymentSection({
         <Text as="span" className="muted" size={200}>Kosongkan kedua input untuk mempertahankan nilai tersimpan.</Text>
       </div>
 
-      <FormRow label="Callback pembayaran" hint="Server membentuk URL callback publik lengkap dari FTTH_SITE_ADDRESS.">
+      <FormRow label="Callback pembayaran" hint="Alamat penerima status pembayaran.">
         <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {tripayCallbackUrl ? (
             <>
@@ -1443,7 +1445,7 @@ function TripayPaymentSection({
             </>
           ) : (
             <Text as="span" className="muted" size={200}>
-              Isi FTTH_SITE_ADDRESS dengan domain HTTPS publik untuk memakai Tripay.
+              Alamat HTTPS aplikasi belum diatur. Hubungi administrator platform.
             </Text>
           )}
         </div>

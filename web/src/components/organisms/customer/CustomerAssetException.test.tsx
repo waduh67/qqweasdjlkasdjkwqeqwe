@@ -53,8 +53,10 @@ function transport(options: { row?: AssetHistory; context?: AssetExceptionContex
   vi.stubGlobal('fetch', fetch); return fetch
 }
 const mount = () => render(<MemoryRouter><CustomerAssetPanel customerId={id.customer} onChanged={vi.fn()} /></MemoryRouter>)
+async function menu() { fireEvent.click(await screen.findByRole('button', { name: 'Aksi baris' })) }
+async function choose(name: string) { await menu(); fireEvent.click(await screen.findByRole('menuitem', { name })) }
 async function open(kind: 'title' | 'loss' = 'title') {
-  fireEvent.click(await screen.findByRole('button', { name: kind === 'title' ? 'Ajukan koreksi kepemilikan' : 'Ajukan kehilangan perangkat' }))
+  await choose(kind === 'title' ? 'Ajukan koreksi kepemilikan' : 'Ajukan kehilangan perangkat')
   await screen.findByText(/Tanda tangan Pelanggan Satu/)
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan pengajuan' }), { target: { value: 'Berita acara dan persetujuan pelanggan' } })
 }
@@ -70,7 +72,7 @@ it('lets an office requester review named ownership context and retry the same s
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(writes).toHaveLength(2); expect(writes[0]).toEqual(writes[1])
   expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ assignmentId: id.assignment, sourceHandoverId: id.allocation, expectedAssignmentRevision: 1, expectedTitleRevision: 0, targetOwner: 'CUSTOMER', reason: 'Berita acara dan persetujuan pelanggan', evidenceId: id.evidence })
-  expect(screen.getByText('Milik ISP')).toBeDefined()
+  expect(screen.getByText('ISP')).toBeDefined()
   expect(screen.getByText(/Stok, kepemilikan, dan kewajiban pengembalian belum berubah/)).toBeDefined()
   expect(fetch.mock.calls.every(([path]) => !path.includes('/jobs'))).toBe(true)
 })
@@ -96,19 +98,19 @@ it.each(['sold', 'pending', 'ended', 'unknown', 'repair'] as const)('does not of
   if (state === 'ended') row.asset.endedAt = '2026-09-26T00:00:00Z'
   if (state === 'unknown') row.asset.provenance = 'UNKNOWN'
   if (state === 'repair') row.asset.positionStatus = 'REPAIR'
-  transport({ row }); mount(); await screen.findByText('ONU Rumah · ONU-A1')
-  expect(screen.queryByRole('button', { name: 'Ajukan kehilangan perangkat' })).toBeNull()
-  if (state === 'sold') expect(screen.getByRole('button', { name: 'Ajukan koreksi kepemilikan' })).toBeDefined()
+  transport({ row }); mount(); await screen.findByText('ONU-A1'); await menu()
+  expect(screen.queryByRole('menuitem', { name: 'Ajukan kehilangan perangkat' })).toBeNull()
+  if (state === 'sold') expect(screen.getByRole('menuitem', { name: 'Ajukan koreksi kepemilikan' })).toBeDefined()
 })
 it('requires existing signature evidence and explains inaccessible work order evidence without requesting technician jobs', async () => {
   const context = contextFor(); context.workOrder.signature = null
   const fetch = transport({ context }); const view = mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Ajukan koreksi kepemilikan' }))
+  await choose('Ajukan koreksi kepemilikan')
   await screen.findByText(/Lengkapi bukti tanda tangan pada WO asal/)
   expect(screen.getByRole('button', { name: 'Tinjau pengajuan' })).toHaveProperty('disabled', true)
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
   view.unmount(); transport({ noEvidenceAccess: true }); mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Ajukan koreksi kepemilikan' }))
+  await choose('Ajukan koreksi kepemilikan')
   await screen.findByText('Data tidak ditemukan dalam cakupan gudang Anda.')
   expect(screen.getByText(/Akses bukti WO atau penugasan teknisi/)).toBeDefined()
   expect(screen.getByRole('button', { name: 'Tinjau pengajuan' })).toHaveProperty('disabled', true)
@@ -131,14 +133,14 @@ it('disables captured proposal submission offline and disables entry in a read-o
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false); fireEvent(window, new Event('offline'))
   expect(screen.getByRole('button', { name: 'Catat pengajuan' })).toHaveProperty('disabled', true)
   expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
-  view.unmount(); access.readOnly = true; vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true); mount()
-  expect(await screen.findByRole('button', { name: 'Ajukan koreksi kepemilikan' })).toHaveProperty('disabled', true)
+  view.unmount(); access.readOnly = true; vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true); mount(); await menu()
+  expect((await screen.findByRole('menuitem', { name: 'Ajukan koreksi kepemilikan' })).getAttribute('aria-disabled')).toBe('true')
 })
 it('explains the missing approval view permission so a loss requester can continue their own proposal', async () => {
   access.permissions.delete('inventory.approval.view')
-  const fetch = transport(); mount()
-  expect(await screen.findByRole('button', { name: 'Ajukan kehilangan perangkat' })).toHaveProperty('disabled', true)
-  expect(screen.getByText(/Akses lihat persetujuan diperlukan agar Anda dapat melanjutkan pengajuan kehilangan sendiri/)).toBeDefined()
-  expect(screen.queryByRole('button', { name: 'Ajukan koreksi kepemilikan' })).toBeNull()
+  const fetch = transport(); mount(); await menu()
+  expect((await screen.findByRole('menuitem', { name: 'Ajukan kehilangan perangkat' })).getAttribute('aria-disabled')).toBe('true')
+  expect(screen.getByText(/Pengajuan kehilangan memerlukan akses lihat persetujuan/)).toBeDefined()
+  expect(screen.queryByRole('menuitem', { name: 'Ajukan koreksi kepemilikan' })).toBeNull()
   expect(fetch.mock.calls.every(([path]) => !path.endsWith('/exceptions/context'))).toBe(true)
 })

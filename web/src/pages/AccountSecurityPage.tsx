@@ -7,6 +7,7 @@ import QRCode from 'react-qr-code'
 import { Copy, Download, ShieldCheck, ShieldOff } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
+  changeMyPassword,
   disableTwoFactor,
   enableTwoFactor,
   getTwoFactorStatus,
@@ -19,6 +20,7 @@ import { useAuth } from '../auth/useAuth'
 import { Badge, Button, Spinner, TextField } from '@/components/atoms'
 import { Modal, PageHeader } from '@/components/molecules'
 import { useToast } from '@/system'
+import { PasswordPanel } from '@/components/organisms/PasswordPanel'
 
 /**
  * Keamanan akun sendiri: verifikasi dua langkah (TOTP).
@@ -34,7 +36,7 @@ import { useToast } from '@/system'
  *     belum dikonfirmasi satu kode, 2FA belum berlaku dan login tetap satu langkah.
  */
 export function AccountSecurityPage() {
-  const { user, refreshProfile } = useAuth()
+  const { user, refreshProfile, logout } = useAuth()
   const toast = useToast()
 
   const [status, setStatus] = useState<TwoFactorStatus | null>(null)
@@ -46,6 +48,7 @@ export function AccountSecurityPage() {
   /** Aksi yang sedang menunggu password; null = modal tertutup. */
   const [passwordFor, setPasswordFor] = useState<'disable' | 'regenerate' | null>(null)
   const [password, setPassword] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
 
   const reload = useCallback(async () => {
     try {
@@ -137,8 +140,15 @@ export function AccountSecurityPage() {
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
         title="Keamanan akun"
-        subtitle={`Verifikasi dua langkah untuk ${user?.email ?? 'akun ini'}.`}
+        subtitle={user?.email}
       />
+
+      <section className="stack" style={{ gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Password</h2>
+        <div><Button onClick={() => setChangingPassword(true)}>Ganti password</Button></div>
+      </section>
+      {changingPassword && user && <PasswordPanel title="Ganti password" own email={user.email} onClose={() => setChangingPassword(false)}
+        onSave={(password, current) => changeMyPassword(current, password)} onSaved={() => { toast.success('Password diganti. Silakan masuk kembali.'); void logout() }} />}
 
       <div className="card stack" style={{ gap: '0.9rem' }}>
         <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
@@ -148,7 +158,7 @@ export function AccountSecurityPage() {
             <FluentText as="span" className="muted" size={300} style={{ display: 'block' }}>
               {enabled
                 ? 'Setiap kali masuk, akun ini meminta kode 6 digit dari aplikasi autentikator.'
-                : 'Password saja cukup untuk masuk ke akun ini. Akun operator bisa memutus layanan pelanggan — pasang pagar keduanya.'}
+                : 'Tambahkan kode autentikator saat masuk.'}
             </FluentText>
           </div>
           <Badge tone={enabled ? 'good' : 'warning'}>{enabled ? 'Aktif' : 'Belum aktif'}</Badge>

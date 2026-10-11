@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { useCallback, useState } from 'react'
 import { b2b, type B2BClient, type B2BInput, type B2BSetting } from '@/api/b2b'
 import { useCan } from '@/auth/useCan'
@@ -27,22 +28,23 @@ function ClientForm({ client, onClose, onDone }: { client: B2BClient | null; onC
     if (!input.technicianId) { setError('Pilih Teknisi NE aktif.'); return }
     setError(''); setReview(b2b.save(client?.id, { ...input, name: input.name.trim(), address: input.address.trim(), contact: input.contact.trim() }))
   }
-  return <ResourceForm title={client ? 'Client B2B · ' + client.current.setting.name : 'Tambah client B2B'} editing={!!client} readOnly={!writable} onClose={onClose} onBack={() => setReview(null)} onReview={toReview} reviewAction={writable}
+  return <ResourceForm steps={[{ key: 'client', label: 'Pelanggan' }, { key: 'visits', label: 'Kunjungan' }]} title={client ? 'Client B2B · ' + client.current.setting.name : 'Tambah client B2B'} editing={!!client} readOnly={!writable} onClose={onClose} onBack={() => setReview(null)} onReview={toReview} reviewAction={writable}
     review={review && <WarehouseCommandDialog embedded title="Tinjau client B2B" command={review} disabled={!writable} summary={<><p>{client ? 'Perubahan berlaku bulan berikutnya.' : 'Client ditambahkan pada bulan ini.'}</p><SettingSummary value={{ ...input, technicianName: selectedName }} /></>} onDone={onDone} onClose={() => setReview(null)} />}>
     <div className="stack">
       {client && <details><summary>Data bulan ini · tetap tersimpan</summary><SettingSummary value={client.current.setting} /></details>}
       <p className="muted">{client ? 'Pengaturan di bawah berlaku bulan berikutnya. Target dan penugasan bulan ini tetap.' : 'Tentukan Teknisi NE dan target bulanan. Satu hari menghitung satu visit.'}</p>
       <form className="stack" onSubmit={e => { e.preventDefault(); toReview() }}>
-        <TextField label="Nama client" required minLength={2} maxLength={200} value={input.name} disabled={!writable} onChange={(_, d) => update('name', d.value)} />
+        <ResourceStep step="client"><TextField label="Nama client" required minLength={2} maxLength={200} value={input.name} disabled={!writable} onChange={(_, d) => update('name', d.value)} />
         <TextareaField label="Alamat" required maxLength={2000} value={input.address} disabled={!writable} onChange={(_, d) => update('address', d.value)} />
         <TextField label="Kontak / PIC" required maxLength={300} value={input.contact} disabled={!writable} onChange={(_, d) => update('contact', d.value)} />
-        <TextField label="Target visit per bulan" type="number" required min={1} max={31} value={String(input.target)} disabled={!writable} onChange={(_, d) => update('target', Number(d.value))} />
+        </ResourceStep><ResourceStep step="visits"><TextField label="Target visit per bulan" type="number" required min={1} max={31} value={String(input.target)} disabled={!writable} onChange={(_, d) => update('target', Number(d.value))} />
         <SelectField label="Status" value={input.active ? 'active' : 'inactive'} disabled={!writable} onChange={(_, d) => update('active', d.value === 'active')}><option value="active">Aktif</option><option value="inactive">Nonaktif</option></SelectField>
         <p>Teknisi NE terpilih: <strong>{selectedName || 'Belum dipilih'}</strong></p>
         {writable && <><TextField label="Cari Teknisi NE" value={q} onChange={(_, d) => { setQ(d.value); setN(0) }} />
           <LoadError error={technicians.error} reload={technicians.reload} />
           <DataTable presentation="warehouse" loading={technicians.loading} rows={technicians.data?.content ?? []} rowKey={r => r.id} columns={[{ key: 'name', header: 'Teknisi NE aktif', cell: r => r.name }, { key: 'select', header: 'Penugasan', cell: r => <Button aria-pressed={r.id === input.technicianId} onClick={() => { update('technicianId', r.id); setSelectedName(r.name) }}>{r.id === input.technicianId ? 'Terpilih' : 'Pilih'}</Button> }]} empty={technicians.error ? <></> : 'Tidak ada Teknisi NE aktif yang sesuai.'} />
           <B2BPagination data={technicians.data} onChange={setN} /></>}
+        </ResourceStep>
         {error && <p role="alert" className="error">{error}</p>}
       </form>
     </div>

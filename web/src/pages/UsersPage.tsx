@@ -1,11 +1,14 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { KeyRound, Plus, Power, RefreshCw, ShieldOff, Trash2 } from 'lucide-react'
 import { Checkbox, Text } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
-import { resetTwoFactorFor } from '../api/account'
+import { resetTwoFactorFor, resetUserPassword } from '../api/account'
 import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
+import { useAuth } from '../auth/useAuth'
+import { PasswordPanel } from '@/components/organisms/PasswordPanel'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
@@ -27,6 +30,9 @@ const EMPTY: NewUser = { email: '', name: '', password: '', roleIds: new Set(), 
 
 export function UsersPage() {
   const { can } = useCan()
+  const { user: currentUser } = useAuth()
+  const [passwordUser, setPasswordUser] = useState<User | null>(null)
+  const [notice, setNotice] = useState('')
   const confirm = useConfirm()
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
@@ -132,9 +138,12 @@ export function UsersPage() {
   const canAssign = can('iam.user.assign')
   const canUpdate = can('iam.user.update')
   const canDelete = can('iam.user.delete')
-  const hasRowActions = canAssign || canUpdate || canDelete
+  const canResetPassword = can('iam.user.resetpassword')
+  const hasRowActions = canAssign || canUpdate || canDelete || canResetPassword
   const rowActions = (user: User): RowAction[] => {
     const list: RowAction[] = []
+    if (canResetPassword && user.id !== currentUser?.id && !user.platformAdmin && !user.tenantOwner)
+      list.push({ key: 'password', label: 'Reset password', icon: <KeyRound size={16} />, onClick: () => setPasswordUser(user) })
     if (canAssign)
       list.push({ key: 'access', label: 'Akses', icon: <KeyRound size={16} />, onClick: () => setEditing(user) })
     if (canUpdate)
@@ -222,6 +231,10 @@ export function UsersPage() {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader title="Pengguna" />
+      {notice && <p role="status" className="form-note">{notice}</p>}
+      {passwordUser && <PasswordPanel key={passwordUser.id} title="Reset password" name={passwordUser.name} email={passwordUser.email}
+        onClose={() => setPasswordUser(null)} onSave={password => resetUserPassword(passwordUser.id, password)}
+        onSaved={() => { setNotice('Password pengguna direset.'); setPasswordUser(null) }} />}
 
       <CommandBar primary={primary} actions={actions} />
 
@@ -249,7 +262,7 @@ export function UsersPage() {
       />
 
       <Blade
-        creation={{ ...creation, prepare: () => void saveUser(), summary: <><CreationSummary rows={[
+        creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'access', label: 'Akses' }], prepare: () => void saveUser(), summary: <><CreationSummary rows={[
           ['Nama', draft?.name], ['Email', draft?.email], ['Peran', roles.filter(role => draft?.roleIds.has(role.id)).map(role => role.name).join(', ')],
           ['Area', areas.filter(area => draft?.areaIds.has(area.id)).map(area => area.name).join(', ')],
         ]} />{error && <p role="alert" className="error">{error}</p>}</> }}
@@ -276,24 +289,25 @@ export function UsersPage() {
         }
       >
         {draft && (
-          <div className="stack">
+          <div className="stack"><ResourceStep step="identity">
             <TextField
-              label="Nama"
+              label="Nama" required
               value={draft.name}
               onChange={(_, data) => setDraft({ ...draft, name: data.value })}
             />
             <TextField
-              label="Email"
+              label="Email" required
               type="email"
               value={draft.email}
               onChange={(_, data) => setDraft({ ...draft, email: data.value })}
             />
             <TextField
-              label="Password (min. 8 karakter)"
+              label="Password" required minLength={8} maxLength={72} hint="Minimal 8 karakter." autoComplete="new-password"
               type="password"
               value={draft.password}
               onChange={(_, data) => setDraft({ ...draft, password: data.value })}
             />
+            </ResourceStep><ResourceStep step="access">
             <RoleAreaPicker
               roles={roles}
               areas={areas}
@@ -302,6 +316,7 @@ export function UsersPage() {
               onToggleRole={(id) => setDraft({ ...draft, roleIds: toggle(draft.roleIds, id) })}
               onToggleArea={(id) => setDraft({ ...draft, areaIds: toggle(draft.areaIds, id) })}
             />
+            </ResourceStep>
           </div>
         )}
       </Blade>
@@ -401,7 +416,7 @@ function AccessEditor({
     <Blade
       open
       title={`Akses — ${user.email}`}
-      subtitle="Mengubah akses mencabut refresh token pengguna; izin baru berlaku setelah access-token kedaluwarsa."
+      subtitle="Atur peran dan cakupan area pengguna."
       size="sm"
       dirty={dirty}
       onClose={onCancel}

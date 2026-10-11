@@ -80,6 +80,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Administrasi',
     items: [
+      { to: '/account/security', label: 'Keamanan akun', permission: null, icon: NavIcons.Shield },
       { to: '/subscription', label: 'Langganan aplikasi', permission: 'billing.subscription.view', icon: NavIcons.Payment },
       { to: '/users', label: 'Pengguna', permission: 'iam.user.view', icon: NavIcons.Users },
       { to: '/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: NavIcons.Shield },

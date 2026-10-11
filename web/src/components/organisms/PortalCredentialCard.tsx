@@ -1,3 +1,5 @@
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { copyText } from '@/utils/clipboard'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
@@ -19,7 +21,7 @@ import { Ess } from '@/components/molecules'
 import { useToast } from '@/system'
 
 /**
- * Kartu operator "Kredensial Portal" di detail pelanggan: lihat status, buatkan/nonaktifkan
+ * Kartu operator "Portal pelanggan" di detail pelanggan: lihat status, buatkan/nonaktifkan
  * login self-service, dan reset password. Password sementara yang di-generate server
  * ditampilkan SEKALI di sini (operator menyalin & memberikannya ke pelanggan) — server tak
  * pernah menyimpannya dalam bentuk terbaca.
@@ -34,6 +36,7 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
   const canManage = can('portal.credential.manage')
 
   const [status, setStatus] = useState<PortalCredentialStatus | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   // Password sementara hasil generate — ditahan di UI sampai operator menutupnya.
@@ -47,10 +50,10 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
 
   const load = useCallback(() => {
     if (!canView) return
-    setLoading(true)
+    setLoading(true); setLoadError(false)
     void getPortalCredential(customerId)
       .then(setStatus)
-      .catch(() => setStatus(null))
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
   }, [canView, customerId])
 
@@ -113,7 +116,7 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
           <span className="ico" aria-hidden>
             <IconKey size={16} />
           </span>
-          <h3 className="section-title">Kredensial Portal</h3>
+          <h3 className="section-title">Portal pelanggan</h3>
         </div>
         {status?.provisioned && (
           <Badge tone={status.active ? 'good' : 'neutral'}>{status.active ? 'aktif' : 'nonaktif'}</Badge>
@@ -124,9 +127,9 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
         <div style={{ display: 'grid', placeItems: 'center', minHeight: 60 }}>
           <Spinner />
         </div>
-      ) : !status?.provisioned ? (
+      ) : loadError ? <p role="alert">Akun portal gagal dimuat. <Button onClick={load}>Coba lagi</Button></p> : !status?.provisioned ? (
         <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
-          Pelanggan belum punya login portal self-service.
+          Akun portal belum dibuat.
         </p>
       ) : (
         <dl className="essentials wide">
@@ -138,31 +141,18 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
 
       {/* Password sementara — hanya muncul saat server yang membangkitkan. */}
       {reveal?.temporaryPassword && (
-        <div
-          className="stack"
-          style={{ gap: '0.35rem', padding: '0.6rem 0.7rem', borderRadius: 8, background: 'var(--accent-soft)', border: '1px solid var(--border-strong)' }}
-        >
-          <span style={{ ...typographyStyles.subtitle2 }}>Password sementara (salin sekarang):</span>
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <code className="tnum" style={{ ...typographyStyles.subtitle1, userSelect: 'all' }}>{reveal.temporaryPassword}</code>
-            <Button
-              variant="subtle"
-              onClick={() => {
-                void navigator.clipboard?.writeText(reveal.temporaryPassword ?? '')
-                toast.success('Password disalin')
-              }}
-            >
-              Salin
-            </Button>
-            <Button variant="subtle" onClick={() => setReveal(null)}>Tutup</Button>
+        <ResourceForm title="Akun portal pelanggan" readOnly onClose={() => setReveal(null)} onBack={() => {}}
+          footer={<Button onClick={() => setReveal(null)}>Selesai</Button>}>
+          <div className="stack"><p>Simpan password ini sebelum menutup panel.</p>
+            <CreationSummary rows={[
+              ['Login', reveal.login], ['Password', <span style={{ userSelect: 'all' }}>{reveal.temporaryPassword}</span>],
+            ]} />
+            <Button onClick={() => void copyText(reveal.temporaryPassword ?? '').then(ok => ok ? toast.success('Password disalin') : toast.error('Gagal menyalin password.'))}>Salin password</Button>
           </div>
-          <span className="muted" style={{ ...typographyStyles.caption1 }}>
-            Login <span className="tnum">{reveal.login}</span> · tak bisa dilihat lagi setelah ditutup.
-          </span>
-        </div>
+        </ResourceForm>
       )}
 
-      {canManage && form === null && (
+      {canManage && !loading && !loadError && form === null && (
         <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
           {!status?.provisioned ? (
             <>
@@ -177,16 +167,7 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
             </>
           ) : (
             <>
-              <Button
-                variant="subtle"
-                disabled={busy}
-                onClick={() => void runRevealing(() => resetPortalPassword(customerId), 'Password direset')}
-              >
-                Reset password (otomatis)
-              </Button>
-              <Button variant="subtle" disabled={busy} onClick={() => setForm('reset')}>
-                Reset manual…
-              </Button>
+              <Button variant="subtle" disabled={busy} onClick={() => setForm('reset')}>Reset password</Button>
               {status.active ? (
                 <Button
                   variant="danger"

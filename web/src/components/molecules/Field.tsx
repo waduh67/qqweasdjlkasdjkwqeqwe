@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useContext, type ReactNode } from 'react'
+import { ResourceStepsContext } from '@/components/organisms/ResourceStep'
 
 /**
  * Seksi form berjudul di dalam [Blade] — memisah kelompok field yang panjang
@@ -9,14 +10,18 @@ export function FormSection({
   title,
   description,
   children,
+  step,
 }: {
   title?: ReactNode
   description?: ReactNode
   children: ReactNode
+  step?: string
 }) {
+  const context = useContext(ResourceStepsContext)
+  const hidden = !!step && !!context && context.active !== step
   return (
-    <section className="form-section">
-      {title && <h3 className="form-section-title">{title}</h3>}
+    <section className="form-section" data-resource-step={step} hidden={hidden} inert={hidden ? true : undefined}>
+      {title && !(step && context) && <h3 className="form-section-title">{title}</h3>}
       {description && <p className="form-section-desc">{description}</p>}
       <div className="stack form-section-fields">
         {children}

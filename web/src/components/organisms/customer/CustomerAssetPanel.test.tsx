@@ -44,6 +44,10 @@ function transport(options: { history?: ReturnType<typeof assetHistoryFixture>[]
     throw new Error(`unexpected read ${path}`)
   }); vi.stubGlobal('fetch', fetch); return fetch
 }
+async function rowAction(name: string) {
+  fireEvent.click(await screen.findByRole('button', { name: 'Aksi baris' }))
+  fireEvent.click(await screen.findByRole('menuitem', { name }))
+}
 const mount = () => render(<MemoryRouter><CustomerAssetPanel customerId={id.customer} onChanged={vi.fn()} /></MemoryRouter>)
 async function selectSource(serial = 'ONU-A1') {
   fireEvent.click(await screen.findByRole('button', { name: 'Pasang perangkat dari gudang' }))
@@ -61,7 +65,7 @@ it.each(['ONU-A1', 'Onu-A1'])('installs reviewed serial %s and retries a lost re
   const dialog = await screen.findByRole('dialog'); expect(dialog.textContent).toContain(serial)
   fireEvent.click(within(dialog).getByRole('button', { name: 'Pasang perangkat' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Coba transaksi yang sama' }))
-  await screen.findByText(/Asal: RCV-01/)
+  await screen.findByText('RCV-01')
   const installs = fetch.mock.calls.filter(([path]) => path.endsWith('/install')); expect(installs).toHaveLength(2); expect(installs[0]).toEqual(installs[1])
   expect(screen.queryByPlaceholderText(/Serial ONU baru/)).toBeNull()
 })
@@ -75,12 +79,12 @@ it('blocks mismatched manual serial and revalidates moved stock before allowing 
 it('shows customer title history and legacy reconciliation without granting assignment actions to read-only viewers', async () => {
   const row = assetHistoryFixture(); row.asset.ownershipMode = 'SALE'; row.asset.legalOwner = 'CUSTOMER'; row.asset.handoverState = 'ACCEPTED'; row.asset.recoveryRequired = false
   access.permissions = new Set(['customer.onu.view', 'inventory.provenance.manage']); const fetch = transport({ history: [row], legacy: 2 }); mount()
-  await screen.findByText('Milik pelanggan'); expect(screen.getByText(/2 perangkat lama/)).toBeDefined(); expect(screen.getByRole('link', { name: 'Rekonsiliasi perangkat lama' })).toBeDefined()
+  await screen.findByText('Pelanggan'); expect(screen.getByText(/2 perangkat menunggu/)).toBeDefined(); expect(screen.getByRole('link', { name: 'Rekonsiliasi perangkat lama' })).toBeDefined()
   expect(screen.queryByRole('button', { name: 'Ganti perangkat' })).toBeNull(); expect(fetch.mock.calls.every(([path]) => !path.includes('/jobs'))).toBe(true)
 })
 it('accepts customer handover with the displayed signature and actual assignment revisions', async () => {
   const row = assetHistoryFixture(); row.asset.revision = 6; row.asset.titleRevision = 2
-  const fetch = transport({ history: [row] }); mount(); fireEvent.click(await screen.findByRole('button', { name: 'Terima serah-terima pelanggan' }))
+  const fetch = transport({ history: [row] }); mount(); await rowAction('Terima serah-terima pelanggan')
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO tindakan perangkat' })).not.toHaveProperty('disabled', true))
   await selectControl(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan' }))
@@ -92,7 +96,7 @@ it('accepts customer handover with the displayed signature and actual assignment
 
 it('closes a completed removal dialog and reloads retired history from the real response envelope', async () => {
   const fetch = transport({ history: [assetHistoryFixture()], dismantle: true }); mount()
-  fireEvent.click(await screen.findByRole('button', { name: 'Lepas perangkat fisik' }))
+  await rowAction('Lepas perangkat fisik')
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'WO tindakan perangkat' })).not.toHaveProperty('disabled', true))
   await selectControl(screen.getByRole('combobox', { name: 'WO tindakan perangkat' }), { target: { value: id.source } })
   fireEvent.click(screen.getByRole('button', { name: 'Tinjau tindakan' }))

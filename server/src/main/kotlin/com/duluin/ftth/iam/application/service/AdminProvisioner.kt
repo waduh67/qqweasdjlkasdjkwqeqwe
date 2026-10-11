@@ -48,13 +48,14 @@ class AdminProvisioner(
         val ne = ensureRole(tenantId, "TECHNICIAN_NE", "Teknisi NE", "Teknisi Network Equipment", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES + B2B_NE_PERMISSION_CODES))
         ensureRole(tenantId, "TECHNICIAN_FO", "Teknisi FO", "Teknisi Fiber Optic", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
         ensureFeaturePermissions(admin, B2B_ADMIN_PERMISSION_CODES)
+        ensureFeaturePermissions(admin, setOf("iam.user.resetpassword"), "ACCOUNT_PASSWORD_RESET_V1")
         ensureFeaturePermissions(ne, B2B_NE_PERMISSION_CODES)
         return admin
     }
 
-    private fun ensureFeaturePermissions(roleId: UUID, codes: Set<String>) {
+    private fun ensureFeaturePermissions(roleId: UUID, codes: Set<String>, feature: String = "B2B_V1") {
         val fence = authority.lockForChange()
-        if (!features.claim(roleId, "B2B_V1")) return
+        if (!features.claim(roleId, feature)) return
         val role = requireNotNull(roleRepository.findById(roleId))
         val updated = role.permissionIds + permissionIdsForCodes(codes)
         if (updated != role.permissionIds) {
@@ -157,7 +158,7 @@ class AdminProvisioner(
         val B2B_NE_PERMISSION_CODES = setOf("b2b.visit.view", "b2b.visit.report")
 
         val ADMIN_PERMISSION_CODES = B2B_ADMIN_PERMISSION_CODES + setOf(
-            "iam.user.view", "iam.user.create", "iam.user.update", "iam.user.assign",
+            "iam.user.view", "iam.user.create", "iam.user.update", "iam.user.assign", "iam.user.resetpassword",
             "customer.customer.view", "customer.subscription.view",
             "workorder.order.view", "workorder.dashboard.view", "workorder.order.create",
             "workorder.order.update", "workorder.order.assign", "workorder.evidence.view",

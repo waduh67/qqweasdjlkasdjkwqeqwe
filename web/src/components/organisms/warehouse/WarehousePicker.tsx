@@ -24,7 +24,8 @@ export function WarehousePicker<T extends { id: string }>({ label, load, value, 
   const rows = state.status === 'ready' ? state.data.items : []
   const choices = value && !rows.some(row => row.id === value.id) ? [value, ...rows] : rows
   const loading = state.status === 'loading' || search.trim() !== query
-  return <Field className="app-field warehouse-picker" label={label} required={!optional}>
+  return <Field className="app-field warehouse-picker" label={label} required={!optional}
+    data-resource-required={!optional && !disabled} data-resource-selected={!!value} data-resource-label={label}>
     <Combobox size="small" className="app-control app-control-compact" aria-label={label}
       open={open} disabled={disabled} value={open && searchable ? search : value ? name(value) : ''}
       selectedOptions={value ? [value.id] : []} placeholder={placeholder ?? 'Pilih…'}

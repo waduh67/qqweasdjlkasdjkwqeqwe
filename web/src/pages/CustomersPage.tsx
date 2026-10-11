@@ -445,7 +445,7 @@ export function CustomersPage() {
       {!loadError && <Pagination page={pageIndex} size={50} total={total} busy={loading} onChange={index => setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(index)); return next })} />}
 
       <Blade
-        creation={{ ...creation, busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama', draft?.name], ['Telepon', draft?.phone], ['Alamat', draft?.address], ['Paket', plans.find(plan => plan.id === draft?.planId)?.name]]} /> }}
+        creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'location', label: 'Lokasi' }, ...(!draft?.id ? [{ key: 'service', label: 'Layanan' }] : [])], busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama', draft?.name], ['Telepon', draft?.phone], ['Alamat', draft?.address], ['Paket', plans.find(plan => plan.id === draft?.planId)?.name]]} /> }}
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
         subtitle={draft?.id ? draft.code : undefined}
@@ -464,7 +464,7 @@ export function CustomersPage() {
       >
         {draft && (
           <div className="stack azure-resource-form">
-            <FormSection title="Identitas pelanggan">
+            <FormSection step="identity" title="Identitas pelanggan">
             <TextField
               label="Nama"
               required
@@ -487,7 +487,7 @@ export function CustomersPage() {
               placeholder="opsional"
             />
             </FormSection>
-            <FormSection title="Alamat pemasangan">
+            <FormSection step="location" title="Alamat pemasangan">
             <TextField
               label="Alamat"
               required
@@ -513,7 +513,7 @@ export function CustomersPage() {
             </Disclosure>
             </FormSection>
             {draft.id == null && (
-              <FormSection title="Layanan internet">
+              <FormSection step="service" title="Layanan internet">
               <SelectField
                 label="Paket langganan"
                 required={plans.length > 0}
@@ -523,10 +523,10 @@ export function CustomersPage() {
                 validationMessage={errors.planId}
                 hint={
                   !canPlanView
-                    ? 'Anda belum memiliki izin melihat paket. Paket dapat ditetapkan kemudian melalui detail pelanggan.'
+                    ? 'Paket dapat ditetapkan oleh pengelola layanan.'
                     : plans.length === 0
-                      ? 'Belum ada paket aktif. Buat paket di menu Paket Internet, lalu tetapkan melalui detail pelanggan.'
-                      : 'Paket langsung terhubung saat pelanggan disimpan. Perubahan paket tersedia di detail pelanggan.'
+                      ? 'Belum ada paket aktif.'
+                      : 'Pilih paket internet pelanggan.'
                 }
                 onChange={(_, data) => {
                   setDraft({ ...draft, planId: data.value })

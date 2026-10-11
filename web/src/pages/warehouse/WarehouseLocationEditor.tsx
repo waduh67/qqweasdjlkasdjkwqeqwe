@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
@@ -85,19 +86,20 @@ export function WarehouseLocationEditor({ row, readOnly, onClose, onSaved, onRel
       custodianId: custodian?.id ?? null, siteId: site?.id ?? null, issueEligible, ...(row ? { expectedRevision: row.revision } : {}) }, row?.id))
   }
   return <>
-    <ResourceForm returnFocus={returnFocus} loading={!setup} readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan lokasi" confirmLabel="Simpan lokasi" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    <ResourceForm steps={[{ key: 'identity', label: 'Identitas' }, { key: 'placement', label: 'Penempatan' }]} returnFocus={returnFocus} loading={!setup} readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan lokasi" confirmLabel="Simpan lokasi" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{kinds[kind]} · {areas.find(area => area.id === areaId)?.name ?? (areaId ? 'Area tersimpan' : 'Tanpa area')}</p>
         <p>{parent ? `Induk: ${parent.label}` : 'Lokasi utama'}</p>{custodian && <p>{custodian.label}</p>}<p>{issueEligible ? 'Dapat menjadi sumber pengeluaran' : 'Tidak menjadi sumber pengeluaran'}</p></>} />)} title={readOnly ? 'Detail lokasi' : row ? 'Ubah lokasi' : parentCreation ? 'Tambah lokasi induk' : 'Tambah lokasi'} onClose={onClose} footer={setup && <>
       <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
     </>}>
       <WarehouseState {...result}>{() => <form id={formId} className="stack" onSubmit={prepare}>
         {row && <p className="muted">Tersimpan: {row.name ?? row.code} · Revisi {row.revision}</p>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
+        <ResourceStep step="identity"><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
           <TextField label="Kode lokasi" required maxLength={64} pattern="[A-Z0-9][A-Z0-9._-]{0,63}" value={code} disabled={readOnly || !!fixedCode} onChange={(_, data) => setCode(data.value.toUpperCase())} />
           <TextField label="Nama lokasi" required maxLength={200} value={name} disabled={readOnly} onChange={(_, data) => setName(data.value)} />
           <SelectField label="Jenis lokasi" value={kind} disabled={readOnly} onChange={(_, data) => { const next = data.value as typeof kind; setKind(next); if (!canIssue(next)) setIssueEligible(false) }}>
             {Object.entries(kinds).filter(([value]) => !allowedKinds || allowedKinds.includes(value as WarehouseLocation['kind'])).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </SelectField>
+        </div></ResourceStep><ResourceStep step="placement"><div className="stack">
           <SelectField label="Area lokasi" value={areaId} required={!fullAreaAccess} disabled={readOnly || (!scopedAreas && !can('iam.area.view')) || parent !== null}
             onChange={(_, data) => { setAreaId(data.value); setSite(null) }}>
             <option value="">{fullAreaAccess ? 'Tanpa area' : 'Pilih area…'}</option>
@@ -115,7 +117,8 @@ export function WarehouseLocationEditor({ row, readOnly, onClose, onSaved, onRel
         <Checkbox label="Boleh menjadi sumber pengeluaran barang" checked={issueEligible} disabled={readOnly || !canIssue(kind)} onChange={(_, data) => setIssueEligible(data.checked === true)} />
         {!fullAreaAccess && choices.length === 0 && <div role="note"><p>Akses gudang membutuhkan area yang diberikan secara eksplisit kepada akun Anda.</p>
           {can('iam.area.view') && <p><Link to="/areas">Kelola area</Link></p>}{can('iam.user.view') && <p><Link to="/users">Atur akses area pengguna</Link></p>}</div>}
-        <p className="muted">Hierarki, area, pemegang dan kelayakan lokasi yang masih memiliki stok atau referensi tidak dapat diubah.</p>
+        <p className="muted">Pengaturan lokasi yang sudah digunakan dibatasi untuk menjaga riwayat stok.</p>
+        </ResourceStep>
         {error && <p role="alert" className="error">{error}</p>}
       </form>}</WarehouseState>
       {creatingParent && <WarehouseLocationEditor reference={reference} api={api} scopedAreas={scopedAreas} unrestrictedAreas={unrestrictedAreas} managePermission={managePermission} parentCreation allowedKinds={['WAREHOUSE', 'BIN']} row={null} readOnly={false} onClose={() => setCreatingParent(false)} onReload={() => setCreatingParent(false)}

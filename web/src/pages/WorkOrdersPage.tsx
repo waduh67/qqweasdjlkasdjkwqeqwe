@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { CreationSummary, useCreationReview, type CreationFlow } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState } from 'react'
 import { Text, ToggleButton } from '@fluentui/react-components'
@@ -489,7 +490,7 @@ function WorkOrderForm({
   }
   const areaChoices = user?.platformAdmin ? areas : areas.filter(area => areaIds.has(area.id))
   return (
-    <Blade creation={creation}
+    <Blade creation={{ ...creation, steps: [{ key: 'work', label: 'Pekerjaan' }, { key: 'assignment', label: 'Penugasan' }] }}
       open={open}
       title="Buat work order"
       size="lg"
@@ -503,15 +504,15 @@ function WorkOrderForm({
       }
     >
       {draft && (
-        <div className="stack">
+        <div className="stack"><ResourceStep step="work">
           <TextField
-            label="Judul"
+            label="Judul" required
             autoFocus
             value={draft.title}
             onChange={(_, data) => onChange({ ...draft, title: data.value })}
             placeholder="mis. Ganti drop core putus"
           />
-          <SelectField label="Area pekerjaan" value={draft.areaId} disabled={areasLoading || !can('iam.area.view')} onChange={(_, data) => onChange({ ...draft, areaId: data.value })}>
+          <SelectField label="Area pekerjaan" required value={draft.areaId} disabled={areasLoading || !can('iam.area.view')} onChange={(_, data) => onChange({ ...draft, areaId: data.value })}>
             <option value="">Pilih area pekerjaan…</option>
             {areaChoices.map(area => <option key={area.id} value={area.id}>{area.name} · {area.code}</option>)}
           </SelectField>
@@ -544,12 +545,13 @@ function WorkOrderForm({
             </SelectField>
           </div>
           <TextareaField
-            label="Deskripsi (opsional)"
+            label="Deskripsi"
             rows={3}
             maxLength={2000}
             value={draft.description}
             onChange={(_, data) => onChange({ ...draft, description: data.value })}
           />
+          </ResourceStep><ResourceStep step="assignment">
           <div className="stack" style={{ gap: '0.25rem' }}>
             <span>Pelanggan (opsional)</span>
             <Combobox
@@ -579,13 +581,14 @@ function WorkOrderForm({
               />
             </div>
             <TextField
-              label="Jadwal (opsional)"
+              label="Jadwal"
               type="datetime-local"
               value={draft.scheduledAt}
               onChange={(_, data) => onChange({ ...draft, scheduledAt: data.value })}
               style={{ flex: 1, minWidth: 180 }}
             />
           </div>
+          </ResourceStep>
         </div>
       )}
     </Blade>

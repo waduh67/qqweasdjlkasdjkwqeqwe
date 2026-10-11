@@ -34,6 +34,7 @@ class UserController(
     private val manageUser: ManageUserUseCase,
     private val twoFactor: ManageTwoFactorUseCase,
     private val technicianPasswords: com.duluin.ftth.iam.application.service.TechnicianPasswordService,
+    private val accountPasswords: com.duluin.ftth.iam.application.service.AccountPasswordService,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('iam.user.view')")
@@ -94,6 +95,12 @@ class UserController(
     @PreAuthorize("@authz.can('warehouse.technician.manage')")
     fun resetPassword(@PathVariable id: UUID, @Valid @RequestBody request: TechnicianPasswordRequest) =
         technicianPasswords.reset(id, request.newPassword)
+
+    @PostMapping("/{id}/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('iam.user.resetpassword')")
+    fun resetUserPassword(@PathVariable id: UUID, @Valid @RequestBody request: TechnicianPasswordRequest) =
+        accountPasswords.resetUser(id, request.newPassword)
 }
 
 data class TechnicianPasswordRequest(@field:NotBlank val newPassword: String)

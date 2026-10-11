@@ -37,6 +37,7 @@ class UserService(
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
     private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
+    private val owners: com.duluin.ftth.iam.application.port.outbound.TenantOwnerStore,
 ) : ManageUserUseCase {
 
     override fun create(command: CreateUserCommand): UserView {
@@ -104,11 +105,13 @@ class UserService(
     }
 
     @Transactional(readOnly = true)
-    override fun get(id: UUID): UserView = load(id).toView()
+    override fun get(id: UUID): UserView = load(id).toView().copy(tenantOwner = owners.findUserId() == id)
 
     @Transactional(readOnly = true)
-    override fun list(query: String?, pageRequest: PageRequest): Page<UserView> =
-        userRepository.search(query, pageRequest).map { it.toView() }
+    override fun list(query: String?, pageRequest: PageRequest): Page<UserView> {
+        val ownerId = owners.findUserId()
+        return userRepository.search(query, pageRequest).map { it.toView().copy(tenantOwner = it.id == ownerId) }
+    }
 
     private fun load(id: UUID): User =
         userRepository.findById(id) ?: throw NotFoundException("User $id tidak ditemukan")

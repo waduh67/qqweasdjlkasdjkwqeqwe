@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { useId as useResourceFormId } from 'react'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useCallback, useState, type FormEvent } from 'react'
@@ -36,15 +37,17 @@ function DelegationForm({ settings, onDone, reload, onClose }: { onClose: () => 
     const input: DelegationInput = { expectedRevision: 0, approverId: approver.id, delegateId: delegate.id, sourceRoleId: sourceRoleId || null, locationId, operation, validUntil: new Date(validUntil).toISOString() }
     setReview({ command: createDelegation(input), input, source: approver.name, target: delegate.name }); setError(null)
   }
-  return <><ResourceForm title={<>Delegasi pemeriksa baru</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi delegasi pemeriksa" command={review.command} confirmLabel="Simpan delegasi" onClose={() => setReview(null)} onDone={onDone} onReload={reload}
+  return <><ResourceForm steps={[{ key: 'setup', label: 'Lingkup' }, { key: 'details', label: 'Pemeriksa' }]} title={<>Delegasi pemeriksa baru</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi delegasi pemeriksa" command={review.command} confirmLabel="Simpan delegasi" onClose={() => setReview(null)} onDone={onDone} onReload={reload}
     summary={<><p>{review.source} → {review.target}</p><p>{locationLabel(settings.references.locations.find(row => row.id === review.input.locationId)!)} · {approvalOperationLabels[review.input.operation]}</p>
-      <p>Sumber: {review.input.sourceRoleId ? `Role ${roles.find(role => role.id === review.input.sourceRoleId)?.name}` : 'Penunjukan pengguna langsung'}</p><p>Berlaku sampai {new Date(review.input.validUntil).toLocaleString('id-ID')}.</p><p>Delegasi tidak mengizinkan persetujuan sendiri atau pengganti yang terlibat dalam dokumen.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau delegasi</Button></>}><form id={resourceFormId} className="stack" onSubmit={submit}><p>Delegasi berlaku untuk lokasi dan jenis persetujuan yang dipilih. Penerima harus memiliki izin yang sesuai.</p>
+      <p>Sumber: {review.input.sourceRoleId ? `Role ${roles.find(role => role.id === review.input.sourceRoleId)?.name}` : 'Penunjukan pengguna langsung'}</p><p>Berlaku sampai {new Date(review.input.validUntil).toLocaleString('id-ID')}.</p><p>Delegasi tidak mengizinkan persetujuan sendiri atau pengganti yang terlibat dalam dokumen.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau delegasi</Button></>}><form id={resourceFormId} className="stack" onSubmit={submit}><ResourceStep step="setup"><p>Delegasi berlaku untuk lokasi dan jenis persetujuan yang dipilih. Penerima harus memiliki izin yang sesuai.</p>
     <SelectField label="Lokasi delegasi" required value={locationId} onChange={(_, value) => { setLocationId(value.value); reset() }}><option value="">Pilih lokasi</option>{settings.references.locations.map(row => <option value={row.id} key={row.id}>{locationLabel(row)}</option>)}</SelectField>
     <SelectField label="Jenis persetujuan delegasi" value={operation} onChange={(_, value) => { setOperation(value.value as PolicyOperation); setSourceRoleId(''); reset() }}>{settings.current!.rules.map(rule => <option key={rule.operation} value={rule.operation}>{approvalOperationLabels[rule.operation]}</option>)}</SelectField>
     <SelectField label="Sumber kewenangan delegasi" value={sourceRoleId} onChange={(_, value) => { setSourceRoleId(value.value); reset() }}><option value="">Pengguna yang ditunjuk langsung</option>{roles.map(role => <option key={role.id} value={role.id}>Role {role.name}</option>)}</SelectField>
+    </ResourceStep><ResourceStep step="details">
     <WarehousePicker key={`source:${locationId}:${operation}:${sourceRoleId}`} label="Pemeriksa asal" load={loadApprovers} value={approver} onChange={value => { setApprover(value); setDelegate(null) }} name={row => row.name} disabled={!locationId} />
     <WarehousePicker key={`delegate:${locationId}:${operation}:${sourceRoleId}:${approver?.id}`} label="Penerima delegasi" load={loadDelegates} value={delegate} onChange={setDelegate} name={row => row.name} disabled={!approver} />
     <TextField label="Delegasi berlaku sampai" type="datetime-local" required value={until} onChange={(_, value) => setUntil(value.value)} hint="Waktu lokal perangkat, maksimal 30 hari. Izin diperiksa lagi saat keputusan dibuat." />
+    </ResourceStep>
     {error && <p role="alert">{error}</p>}
   </form></ResourceForm></>
 }

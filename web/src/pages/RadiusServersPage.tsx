@@ -306,7 +306,7 @@ export function RadiusServersPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="Server RADIUS"
-        subtitle="Kelola node FreeRADIUS multi-server platform dengan pembatasan kapasitas tenant (auto-distribute)."
+        subtitle="Kelola server RADIUS dan kapasitas tenant."
       />
 
       <div className="spread">
@@ -367,7 +367,7 @@ export function RadiusServersPage() {
             hint={
               query || statusFilter
                 ? 'Coba ubah kata kunci atau filter.'
-                : 'Jika belum ada node terdaftar, aplikasi berjalan menggunakan konfigurasi RADIUS bawaan (.env).'
+                : 'Tambahkan server RADIUS.'
             }
             icon={<IconServer size={32} />}
           />
@@ -429,27 +429,27 @@ function ServerForm({
   }
 
   return (
-    <Blade open title={isEdit ? 'Ubah node RADIUS' : 'Node RADIUS baru'} onClose={onCancel} dirty creation={{ ...creation, busy: creation.busy || testing }}
+    <Blade open title={isEdit ? 'Ubah node RADIUS' : 'Node RADIUS baru'} onClose={onCancel} dirty creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'radius', label: 'RADIUS' }, { key: 'database', label: 'Database' }], busy: creation.busy || testing }}
       footer={<Button variant="primary" disabled={creation.busy || testing} onClick={onSave}>Simpan node</Button>}>
       <form className="stack horizontal-form" onSubmit={event => { event.preventDefault(); if (!testing && !creation.busy) onSave() }}>
       <fieldset className="stack" disabled={testing || creation.busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <FormSection title="Identitas node">
+      <FormSection step="identity" title="Identitas node">
         <TextField
-          label="Nama Node Server"
+          label="Nama server" required
           value={draft.name}
           onChange={(_, data) => setDraft({ ...draft, name: data.value })}
           placeholder="Misal: VPS-Node-SG-1"
         />
 
         <TextField
-          label="IP Publik / FQDN Host"
+          label="Alamat host" required
           value={draft.host}
           onChange={(_, data) => setDraft({ ...draft, host: data.value })}
           placeholder="Misal: 203.0.113.10"
         />
 
         <TextField
-          label="Batas Maksimum Tenant (Kapasitas)"
+          label="Kapasitas tenant" required min={1}
           type="number"
           value={draft.maxTenants}
           onChange={(_, data) => setDraft({ ...draft, maxTenants: data.value })}
@@ -457,7 +457,7 @@ function ServerForm({
         />
 
         <SelectField
-          label="Status Node"
+          label="Status server"
           value={draft.status}
           onChange={(_, data) => setDraft({ ...draft, status: data.value as RadiusServerStatus })}
         >
@@ -467,43 +467,43 @@ function ServerForm({
         </SelectField>
       </FormSection>
 
-      <FormSection title="Endpoint RADIUS">
+      <FormSection step="radius" title="Endpoint RADIUS">
         <TextField
-          label="Port Auth (RFC 2865)"
+          label="Port autentikasi" required min={1} max={65535}
           type="number"
           value={draft.authPort}
           onChange={(_, data) => setDraft({ ...draft, authPort: data.value })}
         />
 
         <TextField
-          label="Port Acct (RFC 2866)"
+          label="Port accounting" required min={1} max={65535}
           type="number"
           value={draft.acctPort}
           onChange={(_, data) => setDraft({ ...draft, acctPort: data.value })}
         />
 
         <TextField
-          label="Port CoA / DAE (RFC 5176)"
+          label="Port CoA" required min={1} max={65535}
           type="number"
           value={draft.coaPort}
           onChange={(_, data) => setDraft({ ...draft, coaPort: data.value })}
         />
 
         <TextField
-          label="Default Shared Secret"
+          label="Shared secret" type="password" required autoComplete="new-password"
           value={draft.sharedSecret}
           onChange={(_, data) => setDraft({ ...draft, sharedSecret: data.value })}
           placeholder="Secret koneksi Mikrotik"
         />
       </FormSection>
 
-      <FormSection title="Database FreeRADIUS">
+      <FormSection step="database" title="Database FreeRADIUS">
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Koneksi JDBC ini dipakai aplikasi untuk menulis tabel <code>radcheck</code>, <code>nas</code>, dan membaca <code>radacct</code>.
+          Koneksi database FreeRADIUS.
         </Text>
 
         <TextField
-          label="JDBC URL"
+          label="JDBC URL" required
           value={draft.dbUrl}
           onChange={(_, data) => setDraft({ ...draft, dbUrl: data.value })}
           placeholder="jdbc:postgresql://203.0.113.10:5432/radius"
@@ -511,7 +511,7 @@ function ServerForm({
 
 
           <TextField
-            label="Database User"
+            label="Username database" required
             value={draft.dbUser}
             onChange={(_, data) => setDraft({ ...draft, dbUser: data.value })}
             placeholder="radius"
