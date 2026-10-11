@@ -22,16 +22,16 @@ beforeEach(() => {
 function open() { render(<MemoryRouter><ExpressPsbPage /></MemoryRouter>); return userEvent.setup() }
 it('explains the missing plan prerequisite to a non-platform tenant owner and links to setup', async () => {
   open()
-  await screen.findByText('Belum ada paket internet aktif')
-  expect(screen.getByText(/formulir dan tombol Buat PSB/)).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Buka paket internet' }).getAttribute('href')).toBe('/catalog')
+  await screen.findByText('Belum ada paket aktif')
+  expect(screen.getByText('Tambahkan paket internet untuk mulai mendaftarkan pelanggan.')).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Kelola paket' }).getAttribute('href')).toBe('/catalog')
   expect(screen.queryByText('Akses PSB dibatasi')).toBeNull()
 })
 it('keeps load failures distinct from empty setup and retries without reloading the page', async () => {
   vi.mocked(catalog.listPlans).mockRejectedValueOnce(new ApiError(503, 'unavailable'))
   const user = open()
   await screen.findByText('Paket internet belum berhasil dimuat.')
-  expect(screen.queryByText('Belum ada paket internet aktif')).toBeNull()
+  expect(screen.queryByText('Belum ada paket aktif')).toBeNull()
   vi.mocked(catalog.listPlans).mockResolvedValueOnce([{ id: 'plan-1', active: true, serviceTypes: ['PPPOE'] } as catalog.PlanView])
   await user.click(screen.getByRole('button', { name: 'Coba lagi' }))
   await screen.findByRole('button', { name: 'Buat PSB' })
