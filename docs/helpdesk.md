@@ -248,6 +248,24 @@ migrasinya gagal justru di database yang sudah berisi tiket. Pola sama `V29/V39/
 
 ## API & izin
 
+### Konsol operator
+
+Halaman `/helpdesk` membuka tab **Tiket**. Command bar berada langsung di atas
+pencarian dan filter **Antrean**, **Status**, dan **Kategori**. Filter langsung
+berlaku pada seluruh data melalui API; pagination menampilkan 25 tiket per halaman.
+Antrean **Belum ditugaskan** hanya memuat tiket yang belum ditutup. Tab **Ringkasan**
+menampilkan jumlah tiket seluruh tenant; klik angka untuk membuka antreannya.
+
+Klik kode tiket untuk membuka panel detail di atas daftar. Tab **Percakapan** memuat
+laporan, riwayat, dan balasan; tab **Detail** memuat informasi tiket, penanggung
+jawab, prioritas, SLA, dan work order. **Buat work order** membuka form bertingkat
+dengan langkah **Dasar** dan **Tinjau + buat**. Menutup panel mengembalikan daftar
+beserta filternya tanpa memuat ulang halaman. Balasan dan catatan work order tetap
+tersimpan di form jika permintaan gagal. Penutupan terminal tiket memerlukan
+konfirmasi dan mengikuti transisi status domain.
+
+Tiket baru dibuat pelanggan dari portal. Aksi operator mengikuti izin di bawah.
+
 | Endpoint | Izin |
 |---|---|
 | `GET /api/helpdesk/tickets` · `/summary` · `/{id}` | `helpdesk.ticket.view` |
@@ -265,8 +283,8 @@ Penugasan divalidasi ke `iam` — id sembarang akan menempelkan nama kosong di a
 dan pengguna nonaktif melahirkan tiket "punya pemilik" yang tak pernah dibuka siapa pun.
 `userId` kosong = tiket dikembalikan ke antrean bersama.
 
-Izin `helpdesk.ticket.*` non-platform, jadi otomatis masuk role **Tenant Admin**
-(disinkron idempoten oleh `AdminProvisioner`).
+Izin `helpdesk.ticket.*` bersifat non-platform. Tenant owner menerima izin aktif
+non-platform melalui assembler autentikasi; akses pengguna lain mengikuti role.
 
 ---
 

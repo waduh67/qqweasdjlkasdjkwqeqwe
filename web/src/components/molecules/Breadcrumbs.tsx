@@ -28,7 +28,7 @@ const LABELS: Record<string, string> = {
   monitoring: 'Monitoring',
   provisioning: 'Provisioning perangkat',
   'network-provisioning': 'Segmen jaringan',
-  helpdesk: 'Meja Bantuan',
+  helpdesk: 'Helpdesk',
   hotspot: 'Hotspot & Voucher',
   'my-visits': 'Kunjungan Saya',
   account: 'Akun',

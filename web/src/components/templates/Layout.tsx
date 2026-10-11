@@ -38,7 +38,7 @@ const GROUPS: NavGroup[] = [
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: NavIcons.Customers },
       // Keluhan yang dilaporkan pelanggan sendiri dari portal — tetangga Pelanggan, bukan
       // Insiden: yang di sini lahir dari manusia, yang di Lapangan lahir dari alarm.
-      { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: NavIcons.Chat },
+      { to: '/helpdesk', label: 'Helpdesk', permission: 'helpdesk.ticket.view', icon: NavIcons.Chat },
       { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: NavIcons.Receipt },
        { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: NavIcons.Package },
        { to: '/hotspot', label: 'Hotspot & Voucher', permission: HOTSPOT_VIEW_PERMISSIONS, icon: NavIcons.Wifi },

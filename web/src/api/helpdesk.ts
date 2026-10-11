@@ -109,8 +109,8 @@ export const TICKET_CATEGORY_LABEL: Record<TicketCategory, string> = {
   GANTI_PAKET: 'Ajuan ganti paket',
 }
 
-export function listTickets(filter: TicketFilter = {}, size = 100): Promise<PageResponse<TicketView>> {
-  const params = new URLSearchParams({ size: String(size) })
+export function listTickets(filter: TicketFilter = {}, size = 100, page = 0): Promise<PageResponse<TicketView>> {
+  const params = new URLSearchParams({ size: String(size), page: String(page) })
   if (filter.query?.trim()) params.set('query', filter.query.trim())
   if (filter.status) params.set('status', filter.status)
   if (filter.category) params.set('category', filter.category)

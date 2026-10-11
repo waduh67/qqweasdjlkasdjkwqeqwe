@@ -1,5 +1,6 @@
-import { EmptyState } from '@/components/atoms'
-import { IconPackage, IconPlus } from '@/components/atoms/icons'
+import { Link } from 'react-router-dom'
+import { Button, EmptyState } from '@/components/atoms'
+import { IconPlus } from '@/components/atoms/icons'
 import { PageHeader } from '@/components/molecules'
 import { WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
 import { ExpressPsbFields } from './onboarding/ExpressPsbFields'
@@ -8,13 +9,21 @@ import { useExpressPsb } from './onboarding/useExpressPsb'
 
 export function ExpressPsbPage() {
   const model = useExpressPsb()
-  if (!model.canManage) return <div className="card"><EmptyState title="Tak berizin" hint="Anda tidak memiliki izin membuat pelanggan." icon={<IconPlus size={32} />} /></div>
+  if (!model.canManage) return <div role="alert"><EmptyState title="Akses PSB dibatasi" hint="PSB memerlukan izin membuat pelanggan, mengubah langganan, mengelola akun jaringan, dan membuat work order." icon={<IconPlus size={32} />} /></div>
   return <div className="stack" style={{ gap: '1.25rem' }}>
-    <PageHeader title="PSB Express" subtitle="Layanan aktif setelah teknisi menuntaskan Work Order PSB." />
+    <PageHeader title="PSB Ekspres" subtitle="Daftarkan pelanggan, layanan, dan pekerjaan pemasangan." />
     {model.result && <ExpressPsbResultCard result={model.result} reference={model.reference} onDismiss={() => model.setResult(null)} />}
     <WarehouseState {...model.workflow}>{() => null}</WarehouseState>
-    {model.loading ? <div className="card">Memuat paket…</div> : model.plans.length === 0
-      ? <div className="card"><EmptyState title="Belum ada paket aktif" icon={<IconPackage size={32} />} /></div>
+    {model.loading ? <div role="status">Memuat paket internet…</div> : model.loadError
+      ? <div role="alert" className="stack"><p>{model.loadError}</p><div><Button onClick={model.reloadPlans}>Coba lagi</Button></div></div>
+      : model.plans.length === 0
+      ? <div role="status" className="stack">
+          <div><strong>Belum ada paket internet aktif</strong><p>Buat atau aktifkan paket internet untuk menampilkan formulir dan tombol Buat PSB.</p></div>
+          <div className="row">
+            {model.canViewPlans && <Link to="/catalog">Buka paket internet</Link>}
+            <Button onClick={model.reloadPlans}>Periksa lagi</Button>
+          </div>
+        </div>
       : <ExpressPsbFields {...model} />}
   </div>
 }
