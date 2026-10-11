@@ -139,10 +139,10 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
                   <TextField label="Username (opsional)" value={draft.username} onChange={(_, data) => set({ username: data.value })} placeholder="otomatis dari kode pelanggan" />
                 </div>
                 <div style={{ flex: 2, minWidth: 160 }}>
-                  <TextField label="Password" required autoComplete="new-password" type={showSecret ? 'text' : 'password'} value={secret} onChange={(_, data) => setSecret(data.value)} />
+                  <TextField label="Password" required autoComplete="new-password" type={showSecret ? 'text' : 'password'} value={secret} onChange={(_, data) => setSecret(data.value)}
+                    contentAfter={<><Button type="button" variant="subtle" onClick={() => setShowSecret(value => !value)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
+                      <Button type="button" variant="subtle" onClick={() => { setSecret(randomSecret()); setShowSecret(false) }}>Acak</Button></>} />
                 </div>
-                <Button type="button" onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
-                <Button type="button" onClick={() => { setSecret(randomSecret()); setShowSecret(true) }}>Buat acak</Button>
               </div>
             )}
 

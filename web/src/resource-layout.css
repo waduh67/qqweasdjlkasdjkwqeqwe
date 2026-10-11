@@ -91,7 +91,7 @@
 .resource-form-content .form-section { padding: 0; border: 0; }
 .resource-form-content .form-section-title { margin: 0 0 16px; }
 .resource-form-content .form-section-desc { margin: 0 0 16px; }
-.resource-form-content .row:has(.app-field) { flex-direction: column; align-items: stretch; gap: 20px; }
+.resource-form-content .row:has(.app-field) { flex-direction: column; align-items: stretch; gap: 20px !important; }
 .resource-form-content .row:has(.app-field) > * { flex: auto !important; width: 100%; }
 .resource-form-content .form-grid:has(.app-field) { grid-template-columns: minmax(0, 1fr); }
 .resource-form-content .form-grid:has(.app-field) > * { width: 100% !important; }

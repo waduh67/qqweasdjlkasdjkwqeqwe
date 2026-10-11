@@ -14,13 +14,13 @@ Branch: `fix/azure-customer-forms-20261012`, based on main `f3672a72`.
 
 - [x] Isolated worktree and initial source inventory.
 - [x] Password backend, permission and regression coverage: 8 integration tests passed.
-- [x] Account/user/tenant password interfaces: 6 focused UI tests passed; browser verification remains pending.
-- [ ] Customer detail layout and tab workflows.
+- [x] Account/user/tenant password interfaces: 6 focused UI tests passed; own, tenant-staff and platform-owner browser flows verified.
+- [x] Customer detail layout and retained section workflows.
 - [x] Shared form spacing and grouped-step support; native fields and required selections validate before advancing.
-- [ ] All creation entry points reviewed; complex forms grouped explicitly.
-- [ ] Desktop/mobile Firefox and Chromium verification.
-- [ ] Full frontend checks and relevant backend checks.
-- [ ] Merge, deploy, and verify production.
+- [x] All creation entry points reviewed; complex forms grouped explicitly.
+- [x] Desktop/mobile Firefox and Chromium verification: 30 scenarios passed (15 per browser), no skipped or flaky cases.
+- [x] Full frontend checks and relevant backend checks: 944 frontend tests in CI, 8 backend password/owner integration tests, lint and production build passed.
+- Release tracking: [PR #61](https://github.com/waduh67/qqweasdjlkasdjkwqeqwe/pull/61). This document is committed before deployment; the merged commit and production `deploy` workflow are the release authority.
 
 ## Source inventory
 
@@ -31,11 +31,11 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 | `web/src/pages/AccountSecurityPage.tsx` | 1 | 2 | Source reviewed; short retained form |
 | `web/src/pages/AreasPage.tsx` | 1 | 2 | Source reviewed; short retained form |
 | `web/src/pages/BngConfiguration.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
-| `web/src/pages/CatalogPage.tsx` | 1 | 26 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/CatalogPage.tsx` | 1 | 26 | Source reviewed; named steps and regression verified |
 | `web/src/pages/CustomerDetailPage.tsx` | 3 | 13 | Source reviewed; short retained form |
-| `web/src/pages/CustomersPage.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/HotspotPage.tsx` | 3 | 10 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/InventoryPage.tsx` | 8 | 25 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/CustomersPage.tsx` | 1 | 8 | Source reviewed; named steps and regression verified |
+| `web/src/pages/HotspotPage.tsx` | 3 | 10 | Source reviewed; named steps and regression verified |
+| `web/src/pages/InventoryPage.tsx` | 8 | 25 | Source reviewed; named steps and regression verified |
 | `web/src/pages/InvoicesPage.tsx` | 6 | 6 | Source reviewed; short retained form |
 | `web/src/pages/MapPage.tsx` | 3 | 0 | Source reviewed; detail/edit or short action |
 | `web/src/pages/MonitoringPage.tsx` | 1 | 1 | Source reviewed; short retained form |
@@ -44,48 +44,48 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 | `web/src/pages/MyMaterialReturn.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/pages/MyMaterialRma.tsx` | 1 | 1 | Source reviewed; short retained form |
 | `web/src/pages/OltDetailPage.tsx` | 2 | 17 | Source reviewed; short retained form |
-| `web/src/pages/PaymentGatewaySettingsPage.tsx` | 2 | 21 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/PaymentGatewaySettingsPage.tsx` | 2 | 21 | Source reviewed; named steps and regression verified |
 | `web/src/pages/PlatformAcsSettingsPage.tsx` | 0 | 4 | Source reviewed; detail/edit or short action |
 | `web/src/pages/PlatformEmailSettingsPage.tsx` | 1 | 7 | Source reviewed; detail/edit or short action |
-| `web/src/pages/RadiusServersPage.tsx` | 1 | 12 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/RolesPage.tsx` | 1 | 2 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/RadiusServersPage.tsx` | 1 | 12 | Source reviewed; named steps and regression verified |
+| `web/src/pages/RolesPage.tsx` | 1 | 2 | Source reviewed; named steps and regression verified |
 | `web/src/pages/SignupPage.tsx` | 0 | 4 | Source reviewed; short retained form |
 | `web/src/pages/TaxSettingsPage.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
-| `web/src/pages/TenantsPage.tsx` | 1 | 1 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/UsersPage.tsx` | 2 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/TenantsPage.tsx` | 1 | 1 | Source reviewed; named steps and regression verified |
+| `web/src/pages/UsersPage.tsx` | 2 | 5 | Source reviewed; named steps and regression verified |
 | `web/src/pages/VpnCredentialsBlade.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/pages/VpnPage.tsx` | 5 | 9 | Source reviewed; short retained form |
-| `web/src/pages/VpnServersPage.tsx` | 1 | 6 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/WorkOrdersPage.tsx` | 1 | 10 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/b2b/B2BClientsPage.tsx` | 1 | 7 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/VpnServersPage.tsx` | 1 | 6 | Source reviewed; named steps and regression verified |
+| `web/src/pages/WorkOrdersPage.tsx` | 1 | 10 | Source reviewed; named steps and regression verified |
+| `web/src/pages/b2b/B2BClientsPage.tsx` | 1 | 7 | Source reviewed; named steps and regression verified |
 | `web/src/pages/b2b/B2BVisitsPage.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/pages/b2b/shared.tsx` | 2 | 0 | Source reviewed; short retained form |
 | `web/src/pages/helpdesk/TicketBlade.tsx` | 2 | 5 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/MaterialPlanEditor.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/MaterialPlanEditor.tsx` | 1 | 5 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/ReferenceCountEditor.tsx` | 2 | 4 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/ReferenceReceiptEditor.tsx` | 1 | 4 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/warehouse/ReferenceRequestEditor.tsx` | 1 | 9 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/ReferenceReceiptEditor.tsx` | 1 | 4 | Source reviewed; named steps and regression verified |
+| `web/src/pages/warehouse/ReferenceRequestEditor.tsx` | 1 | 9 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/ReferenceRequestMovements.tsx` | 3 | 7 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/ReferenceRequestReview.tsx` | 2 | 3 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/ReferenceReturnEditor.tsx` | 2 | 4 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/ReferenceSettingsPage.tsx` | 1 | 2 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/ReferenceTransferEditor.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/ReferenceTransferEditor.tsx` | 1 | 5 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseActivationEditor.tsx` | 1 | 1 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseAllocationEditor.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseApprovalsPage.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
-| `web/src/pages/warehouse/WarehouseCountEditor.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseCountEditor.tsx` | 1 | 5 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseCountsPage.tsx` | 1 | 2 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseCustomerRma.tsx` | 1 | 6 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/WarehouseDelegationForm.tsx` | 1 | 6 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseDelegationForm.tsx` | 1 | 6 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseDispositionForm.tsx` | 1 | 4 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseDrainDialog.tsx` | 1 | 0 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/WarehouseLocationEditor.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseLocationEditor.tsx` | 1 | 8 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseSource reviewed; detail/edit or short actionMaterialReturns.tsx` | 1 | 0 | Source reviewed; detail/edit or short action |
 | `web/src/pages/warehouse/WarehouseProvenanceCase.tsx` | 3 | 8 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseProvenanceOpening.tsx` | 4 | 5 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseProvenancePage.tsx` | 1 | 0 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseReceiptActions.tsx` | 1 | 7 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/WarehouseReceiptEditor.tsx` | 1 | 15 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseReceiptEditor.tsx` | 1 | 15 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseReceiptEvidence.tsx` | 1 | 0 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseReplenishmentRuleForm.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseReservationEditor.tsx` | 1 | 3 | Source reviewed; short retained form |
@@ -93,15 +93,15 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 | `web/src/pages/warehouse/WarehouseReturnEditor.tsx` | 4 | 3 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseReturnReacquisition.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/pages/warehouse/WarehouseReturnsPage.tsx` | 1 | 0 | Source reviewed; detail/edit or short action |
-| `web/src/pages/warehouse/WarehouseSettingsPage.tsx` | 1 | 3 | Source reviewed; named steps added; regression pending |
-| `web/src/pages/warehouse/WarehouseSkuEditor.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseSettingsPage.tsx` | 1 | 3 | Source reviewed; named steps and regression verified |
+| `web/src/pages/warehouse/WarehouseSkuEditor.tsx` | 1 | 8 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseSupplierEditor.tsx` | 1 | 3 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/WarehouseSupplierReplacement.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseSupplierReplacement.tsx` | 1 | 8 | Source reviewed; named steps and regression verified |
 | `web/src/pages/warehouse/WarehouseTransferActions.tsx` | 1 | 5 | Source reviewed; short retained form |
-| `web/src/pages/warehouse/WarehouseTransferEditor.tsx` | 1 | 7 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseTransferEditor.tsx` | 1 | 7 | Source reviewed; named steps and regression verified |
 | `web/src/pages/workorder/ReferenceWorkAssignment.tsx` | 1 | 1 | Source reviewed; short retained form |
 | `web/src/pages/workorder/ReferenceWorkDispatch.tsx` | 2 | 4 | Source reviewed; short retained form |
-| `web/src/pages/workorder/ReferenceWorkEditor.tsx` | 2 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/workorder/ReferenceWorkEditor.tsx` | 2 | 8 | Source reviewed; named steps and regression verified |
 | `web/src/pages/workorder/ReferenceWorkTypesPage.tsx` | 1 | 6 | Source reviewed; short retained form |
 | `web/src/components/organisms/AccessNodeDetail.tsx` | 1 | 12 | Source reviewed; detail/edit or short action |
 | `web/src/components/organisms/OdfDetail.tsx` | 1 | 5 | Source reviewed; detail/edit or short action |
@@ -118,9 +118,9 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 | `web/src/components/organisms/customer/CustomerAssetInstallation.tsx` | 1 | 3 | Source reviewed; short retained form |
 | `web/src/components/organisms/map/CablePanel.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
 | `web/src/components/organisms/map/OtdrSection.tsx` | 1 | 5 | Source reviewed; short retained form |
-| `web/src/components/organisms/map/PlaceAssetForm.tsx` | 1 | 21 | Source reviewed; named steps added; regression pending |
-| `web/src/components/organisms/map/SaveCablePanel.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
-| `web/src/components/organisms/provisioning/ProvisioningEditors.tsx` | 1 | 10 | Source reviewed; named steps added; regression pending |
+| `web/src/components/organisms/map/PlaceAssetForm.tsx` | 1 | 21 | Source reviewed; named steps and regression verified |
+| `web/src/components/organisms/map/SaveCablePanel.tsx` | 1 | 5 | Source reviewed; named steps and regression verified |
+| `web/src/components/organisms/provisioning/ProvisioningEditors.tsx` | 1 | 10 | Source reviewed; named steps and regression verified |
 | `web/src/components/organisms/provisioning/ProvisioningEvidencePanels.tsx` | 1 | 1 | Source reviewed; short retained form |
 | `web/src/components/organisms/warehouse/WarehouseCommandDialog.tsx` | 1 | 0 | Source reviewed; short retained form |
 | `web/src/components/organisms/workorder/WorkOrderMaterialHandover.tsx` | 1 | 4 | Source reviewed; short retained form |
@@ -168,3 +168,16 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 - Stable Firefox/Chromium screenshots at 375/1440 verified customer navigation, retained child panels, password change/reset, five-step PSB failure retention, and payment draft/registration separation. Final browser run additionally repairs older nested-location fixtures for the warehouse workflow endpoint and adds OLT creation and platform-owner reset coverage.
 - Copy cleanup removes informal cable/splitter instructions while preserving operational consequences. OLT identity is required before advancing. Shared combobox clear actions remain alongside the field; payment bank selection uses the same label alignment as text fields.
 - Final lint passed. Production build passed. Full frontend regression and final browser matrix are still running; do not merge before these results are checked. Backend password/owner integration tests remain 8 passed without subsequent backend changes.
+
+
+## Release evidence
+
+- PR: https://github.com/waduh67/qqweasdjlkasdjkwqeqwe/pull/61.
+- CI at `84cd6c11`: https://github.com/waduh67/qqweasdjlkasdjkwqeqwe/actions/runs/38162090310 — all 165 frontend test files / 944 tests passed, lint/build passed, protocol tests passed. The final commit must also pass CI before merging.
+- Backend: `.omo/runtime/azure-forms/password-server-tests.log` — 8 passed, 0 failed/skipped. No backend changes after this run.
+- Final spacing correction enforces 20px between fields even in older inline row layouts. PSB password actions are contained in the input; generating a new password keeps it masked.
+- Reproduce browser coverage: `cd web && npx playwright test --config playwright.customer-forms.config.ts`. The fixtures cover customer sections/assets/subscription nesting, own-password rejection, tenant-staff reset, platform-owner reset with expected owner ID, PSB failure/retry without credential review leakage, payment draft vs registration, OLT management steps, and nested warehouse parent-location creation. All use synthetic data; no production records or passwords are changed.
+- Browser fixtures include the warehouse workflow endpoint and complete site/owner records. Required field labels include Fluent's required marker, so hidden-field assertions match the label prefix. One interrupted combined browser process was followed by separate complete browser runs for conclusive reports.
+- Production verification helper: `.omo/runtime/azure-forms/verify-live.py <merge-sha>` checks public readiness, released bundle markers, activation receipt and running server/web OCI revision without reading secrets. Deploy via GitHub Actions; do not replace it with manual SSH deployment.
+
+- Final browser acceptance: Firefox 15/15 in 42.8s, Chromium 15/15 in 41.4s; no failures, skipped tests or retries. Reports: `.omo/runtime/azure-forms/browser-{firefox,chromium}.{json,log}`. Final production build and lint passed after the spacing/password-action correction.

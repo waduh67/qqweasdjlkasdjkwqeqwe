@@ -102,6 +102,8 @@ for (const width of [375, 1440]) {
     await panel.getByRole('button', { name: 'Berikutnya: Paket' }).click()
     await panel.getByRole('button', { name: 'Berikutnya: Akun jaringan' }).click()
     await panel.getByLabel(/^Password/).fill('Fixture-network-secret')
+    await expect(panel.getByLabel(/^Password/)).toHaveAttribute('type', 'password')
+    await page.screenshot({ path: info.outputPath('psb-network.png'), fullPage: true, animations: 'disabled' })
     await panel.getByRole('button', { name: 'Berikutnya: Pemasangan' }).click()
     await panel.getByRole('textbox', { name: 'Catatan pemasangan' }).fill('Hubungi sebelum datang')
     await page.screenshot({ path: info.outputPath('psb-installation.png'), fullPage: true, animations: 'disabled' })
@@ -179,7 +181,7 @@ test('platform admin resets the selected tenant owner with an identity precondit
 for (const width of [375, 1440]) {
   test(`OLT creation separates identity and management credentials at ${width}px`, async ({ page }, info) => {
     const { errors } = await setup(page, true), writes: unknown[] = []
-    await page.route('**/api/sites?*', route => route.fulfill({ json: { content: [{ id: 'site-1', code: 'POP-01', name: 'POP Cimahi', status: 'ACTIVE', oltCount: 0 }], totalElements: 1, totalPages: 1 } }))
+    await page.route('**/api/sites?*', route => route.fulfill({ json: { content: [{ id: 'site-1', code: 'POP-01', name: 'POP Cimahi', address: 'Cimahi', areaId: null, location: { latitude: -6.87, longitude: 107.55 }, oltCount: 0 }], totalElements: 1, totalPages: 1 } }))
     await page.route('**/api/olts', async route => { writes.push(route.request().postDataJSON()); await route.fulfill({ json: { id: 'olt-new' } }) })
     await page.setViewportSize({ width, height: 1000 }); await page.goto('/inventory')
     await page.getByRole('tab', { name: 'OLT', exact: true }).click()
