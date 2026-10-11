@@ -297,8 +297,8 @@ class VpnAccountService(
             host = server.host,
             port = server.port,
             protocol = protocol,
-            cipher = CIPHER,
-            securityType = "OpenVPN ($protocol) · $CIPHER",
+            cipher = VpnClientVariant.V7.cipher,
+            securityType = "OpenVPN ($protocol) · ${VpnClientVariant.V7.cipher}",
             username = username,
             overlayIp = overlayIp,
             remotePort = remotePort,
@@ -325,8 +325,6 @@ class VpnAccountService(
     }
 
     private companion object {
-        /** Cipher tunnel — harus selaras dengan yang dirender [VpnConfigRenderer]. */
-        const val CIPHER = "AES-256-GCM"
         const val DEFAULT_LABEL = "Akun VPN"
     }
 }

@@ -719,7 +719,7 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
           onCopy={() => copy(account.routerOsCommand!, 'Perintah RouterOS v7')}
           hint={
             account.supportsV6
-              ? 'RouterOS v7 (UDP/TCP, AES-256-GCM).'
+              ? 'RouterOS v7 (UDP/TCP, AES-256-CBC).'
               : `RouterOS v6 tidak kompatibel dengan ${account.protocol}. Gunakan server TCP untuk perangkat v6.`
           }
         />

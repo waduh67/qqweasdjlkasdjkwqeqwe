@@ -48,9 +48,9 @@ data class VpnAccountView(
     val host: String,
     val port: Int,
     val protocol: String,
-    /** Cipher tunnel (mis. AES-256-GCM). */
+    /** Cipher pada profil klien yang dihasilkan (mis. AES-256-CBC). */
     val cipher: String,
-    /** Ringkasan tipe keamanan siap-tampil (mis. "OpenVPN (UDP) · AES-256-GCM"). */
+    /** Ringkasan profil keamanan (mis. "OpenVPN (UDP) · AES-256-CBC"). */
     val securityType: String,
     val username: String,
     /** IP overlay tetap yang di-push server — alamat perangkat di dalam tunnel. */

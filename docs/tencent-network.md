@@ -91,6 +91,26 @@ pending unrelated service restarts instead of restarting shared applications.
 The managed OpenVPN hub still validates new device connections against FTTH.
 Moving the hub does not remove that dependency when the mini PC is offline.
 
+## RouterOS cipher compatibility
+
+RouterOS 7.20.8 was observed sending `IV_PROTO=2` without a cipher list. The hub
+therefore selects `data-ciphers-fallback AES-256-CBC`; a client fixed to GCM
+disconnects after successful authentication with an unsupported CBC cipher error.
+Generated RouterOS v7 commands and downloads now use `aes256-cbc` / `AES-256-CBC`,
+matching the existing hub fallback. The v6 command retains its `aes256` spelling.
+Clients that support cipher negotiation can still negotiate GCM with the hub.
+
+For an existing v7 interface, run (substitute its actual name):
+
+```routeros
+/interface/ovpn-client/set [find where name="ovpn-example"] cipher=aes256-cbc auth=sha1
+/interface/ovpn-client/monitor [find where name="ovpn-example"] once
+```
+
+The `add` command accepting a configuration does not confirm a successful tunnel.
+See [MikroTik OpenVPN documentation](https://help.mikrotik.com/docs/spaces/ROS/pages/2031655/OpenVPN)
+for supported ciphers and NCP limitations.
+
 ## Installation checkpoint — 2026-10-11
 
 DNS points both hostnames directly to Tencent. WireGuard, OpenVPN, RADIUS and ACS

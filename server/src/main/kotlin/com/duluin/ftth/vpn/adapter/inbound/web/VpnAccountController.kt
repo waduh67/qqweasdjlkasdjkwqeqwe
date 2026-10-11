@@ -119,7 +119,7 @@ class VpnAccountController(
 
     @GetMapping("/{id}/ovpn", produces = ["text/plain"])
     @PreAuthorize("@authz.can('vpn.config.view')")
-    @Operation(summary = "Unduh berkas .ovpn akun (berisi kredensial); variant V7 (GCM) / V6 (CBC)")
+    @Operation(summary = "Unduh berkas .ovpn akun (berisi kredensial); variant V7 (UDP/TCP) / V6 (TCP)")
     fun ovpn(
         @PathVariable id: UUID,
         @RequestParam(required = false, defaultValue = "V7") variant: VpnClientVariant,
