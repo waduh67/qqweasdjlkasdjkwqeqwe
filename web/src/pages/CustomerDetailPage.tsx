@@ -57,7 +57,10 @@ import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { useCan } from '../auth/useCan'
 import { useAuth } from '../auth/useAuth'
 import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
-import { CommandBar, Ess, Tabs, type CommandAction } from '@/components/molecules'
+import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
+import { ResourceNavigation, type ResourceNavigationItem } from '@/components/organisms/ResourceNavigation'
+import './customer-detail.css'
 import { useConfirm, useToast } from '@/system'
 import { OpticalChart } from '@/components/atoms'
 import { SubscriberTrafficPanel } from '@/components/organisms'
@@ -65,7 +68,6 @@ import {
   IconAlert,
   IconAudit,
   IconChart,
-  IconChevronDown,
   IconCustomers,
   IconFlask,
   IconGauge,
@@ -89,7 +91,7 @@ import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
 import { OntAcsSettingsCard, PortalCredentialCard } from '@/components/organisms'
-import { Blade } from '@/components/organisms'
+import { Blade, DataTable } from '@/components/organisms'
 
 /**
  * Detail pelanggan sebagai flyout — SATU-SATUNYA cara membukanya di aplikasi ini.
@@ -112,17 +114,14 @@ export function CustomerDetailBlade({
   /** Diteruskan ke command bar detail; lihat [CustomerDetailPage]. */
   onShowOnMap?: (focus: MapFocusState) => void
 }) {
-  return (
-    <Blade
-      open={customerId != null}
-      title="Detail pelanggan"
-      size="full"
-      className="blade-customer"
-      onClose={onClose}
-    >
-      {customerId && <CustomerDetailPage customerId={customerId} onShowOnMap={onShowOnMap} />}
-    </Blade>
-  )
+  return customerId ? <CustomerResource key={customerId} customerId={customerId} onClose={onClose} onShowOnMap={onShowOnMap} /> : null
+}
+
+function CustomerResource({ customerId, onClose, onShowOnMap }: { customerId: string; onClose: () => void; onShowOnMap?: (focus: MapFocusState) => void }) {
+  const [title, setTitle] = useState('Pelanggan')
+  return <ResourceForm title={title} readOnly onClose={onClose} onBack={() => {}} className="customer-detail-resource">
+    <CustomerDetailPage customerId={customerId} onShowOnMap={onShowOnMap} onTitleChange={setTitle} />
+  </ResourceForm>
 }
 
 /** Warna kesehatan optik selaras token status. */
@@ -133,7 +132,7 @@ const HEALTH_COLOR: Record<string, string> = {
   UNKNOWN: 'var(--muted)',
 }
 
-type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'trafik' | 'cpe' | 'tagihan' | 'tiket' | 'timeline'
+type Tab = 'ringkasan' | 'langganan' | 'perangkat' | 'portal' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'trafik' | 'cpe' | 'tagihan' | 'tiket' | 'timeline'
 
 /**
  * Detail satu pelanggan bergaya blade Azure: kepala + command bar, blok "Essentials"
@@ -144,8 +143,10 @@ type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'trafik' | 
 export function CustomerDetailPage({
   customerId,
   onShowOnMap,
+  onTitleChange,
 }: {
   customerId: string
+  onTitleChange?: (title: string) => void
   /**
    * Perilaku aksi "Lihat di peta". Diisi oleh pembungkus yang PETANYA sudah tampil di
    * belakang flyout (halaman Peta): di sana cukup menutup flyout agar penanda pelanggan
@@ -175,19 +176,22 @@ export function CustomerDetailPage({
   const [metrics, setMetrics] = useState<OnuMetricView[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState<Tab>('ringkasan')
   const [sub360, setSub360] = useState<Subscriber360View | null>(null)
 
   const reload = useCallback(async () => {
     try {
-      setCustomer(await api.get<CustomerView>(`/api/customers/${id}`))
+      const value = await api.get<CustomerView>(`/api/customers/${id}`)
+      setCustomer(value); setNotFound(false); setLoadError('')
+      onTitleChange?.(value.name)
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) setNotFound(true)
-      else toast.error(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
+      else setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan. Coba lagi.')
     } finally {
       setLoading(false)
     }
-  }, [id, toast])
+  }, [id, toast, onTitleChange])
 
   useEffect(() => {
     void reload()
@@ -266,6 +270,8 @@ export function CustomerDetailPage({
     )
   }
 
+  if (!customer && loadError) return <div role="alert"><p>{loadError}</p><Button onClick={() => void reload()}>Coba lagi</Button></div>
+
   if (notFound || !customer) {
     return (
       <div className="stack" style={{ gap: '1rem' }}>
@@ -280,18 +286,23 @@ export function CustomerDetailPage({
   const odpCount = neighbors?.sameOdp.length ?? 0
   const ponCount = neighbors?.samePonPort.length ?? 0
 
-  const tabDefs: { key: Tab; label: ReactNode; badge?: ReactNode }[] = [
+  const tabDefs: ResourceNavigationItem<Tab>[] = [
     { key: 'ringkasan', label: 'Ringkasan' },
-    { key: 'jalur', label: 'Jalur' },
-    { key: 'tetangga', label: 'Tetangga', badge: ponCount || undefined },
-    { key: 'metrik', label: 'Metrik' },
-    ...(canAccess ? [{ key: 'akses' as Tab, label: 'Akses' }] : []),
-    ...(canTraffic ? [{ key: 'trafik' as Tab, label: 'Trafik' }] : []),
-    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'GenieACS' }] : []),
-    ...(canBilling ? [{ key: 'tagihan' as Tab, label: 'Tagihan' }] : []),
-    ...(canIncident || canWorkorder ? [{ key: 'tiket' as Tab, label: 'Tiket & WO' }] : []),
-    ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Timeline' }] : []),
+    { key: 'langganan', label: 'Langganan', group: 'Layanan' },
+    ...(canAccess ? [{ key: 'akses' as Tab, label: 'Akun jaringan', group: 'Layanan' }] : []),
+    { key: 'perangkat', label: 'Perangkat', group: 'Layanan' },
+    ...(can('portal.credential.view') ? [{ key: 'portal' as Tab, label: 'Portal pelanggan', group: 'Layanan' }] : []),
+    { key: 'jalur', label: 'Jalur koneksi', group: 'Jaringan' },
+    { key: 'tetangga', label: 'Pelanggan sekitar', group: 'Jaringan' },
+    ...(canMetric ? [{ key: 'metrik' as Tab, label: 'Metrik', group: 'Jaringan' }] : []),
+    ...(canTraffic ? [{ key: 'trafik' as Tab, label: 'Trafik', group: 'Jaringan' }] : []),
+    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'ACS', group: 'Jaringan' }] : []),
+    ...(canBilling ? [{ key: 'tagihan' as Tab, label: 'Tagihan', group: 'Operasional' }] : []),
+    ...(canIncident || canWorkorder ? [{ key: 'tiket' as Tab, label: 'Tiket & work order', group: 'Operasional' }] : []),
+    ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Aktivitas', group: 'Operasional' }] : []),
   ]
+
+  const activeTab = tabDefs.some(item => item.key === tab) ? tab : 'ringkasan'
 
   // Command bar blade: aksi yang berlaku untuk pelanggan secara keseluruhan, bukan
   // untuk satu tab. Sengaja datar & seragam dengan command bar halaman tabel.
@@ -321,30 +332,29 @@ export function CustomerDetailPage({
   ]
 
   return (
-    <div className="stack flat-sections" style={{ gap: '0.85rem' }}>
-      <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>{customer.name}</h1>
-        <span className="badge">{customer.code}</span>
-        <StatusBadge status={customer.status} label={customerStatusLabel(customer.status)} />
-        {customer.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
+    <div className="customer-detail">
+      {!onTitleChange && <h1 className="page-title">{customer.name}</h1>}
+      <div className="customer-identity">
+        <span>{customer.code}</span>
+        <span>{customerStatusLabel(customer.status)}</span>
+        {customer.awaitingInstallation && <span>Menunggu instalasi</span>}
       </div>
 
-      <CommandBar actions={commands} />
-
-      <EssentialsBlock customer={customer} sub360={sub360} trace={trace} />
-
-      <Tabs tabs={tabDefs} active={tab} onChange={setTab} />
-
-      {tab === 'ringkasan' && <RingkasanTab customer={customer} run={run} />}
-      {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
-      {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
-      {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
-      {tab === 'akses' && <NetworkAccessTab customerId={id} subscription={customer.subscription} />}
-      {tab === 'trafik' && <TrafikTab customerId={id} />}
-      {tab === 'cpe' && <CpeTab customerId={id} />}
-      {tab === 'tagihan' && <TagihanTab customerId={id} billing={sub360?.billing ?? null} />}
-      {tab === 'tiket' && <TiketWoTab customerId={id} canIncident={canIncident} canWorkorder={canWorkorder} />}
-      {tab === 'timeline' && (
+      <CommandBar primary={commands[0]} actions={commands.slice(1)} />
+      <ResourceNavigation label="Bagian pelanggan" items={tabDefs} active={activeTab} onChange={setTab}>
+      {activeTab === 'ringkasan' && <EssentialsBlock customer={customer} sub360={sub360} trace={trace} />}
+      {activeTab === 'langganan' && <SubscriptionManager customer={customer} run={run} />}
+      {activeTab === 'perangkat' && <><OnuManager customer={customer} run={run} />{customer.onus.length > 0 && <OntAcsSettingsCard />}</>}
+      {activeTab === 'portal' && <PortalCredentialCard customerId={customer.id} />}
+      {activeTab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
+      {activeTab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
+      {activeTab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
+      {activeTab === 'akses' && <NetworkAccessTab customerId={id} subscription={customer.subscription} />}
+      {activeTab === 'trafik' && <TrafikTab customerId={id} />}
+      {activeTab === 'cpe' && <CpeTab customerId={id} />}
+      {activeTab === 'tagihan' && <TagihanTab customerId={id} billing={sub360?.billing ?? null} />}
+      {activeTab === 'tiket' && <TiketWoTab customerId={id} canIncident={canIncident} canWorkorder={canWorkorder} />}
+      {activeTab === 'timeline' && (
         <TimelineTab
           customerId={id}
           customer={customer}
@@ -353,6 +363,7 @@ export function CustomerDetailPage({
           canWorkorder={canWorkorder}
         />
       )}
+      </ResourceNavigation>
     </div>
   )
 }
@@ -389,172 +400,38 @@ function SectionHead({ icon, title, aside }: { icon: ReactNode; title: string; a
  * facet-nya digerbang izin di server — facet tanpa izin ditulis "terkunci" agar berbeda
  * jelas dari "memang kosong". Detail penuhnya tetap di tab masing-masing.
  */
-function EssentialsBlock({
-  customer,
-  sub360,
-  trace,
-}: {
-  customer: CustomerView
-  sub360: Subscriber360View | null
-  trace: CustomerTrace | null
+function EssentialsBlock({ customer, sub360, trace }: {
+  customer: CustomerView; sub360: Subscriber360View | null; trace: CustomerTrace | null
 }) {
-  const [open, setOpen] = useState(true)
-  const billing = sub360?.billing ?? null
-  const session = sub360?.session ?? null
-  const cpeDevices = sub360?.cpeDevices ?? null
-  const openWorkOrder = sub360?.openWorkOrder ?? null
-  const access = sub360?.access ?? null
-  const arrears = billing ? Number(billing.outstandingAmount) : 0
-  const cpeOnline = cpeDevices?.filter((d) => d.online).length ?? 0
-  // Langganan yang masih berjalan; yang sudah berakhir tak pantas dipamerkan sebagai "paket".
   const live = customer.subscription?.status === 'TERMINATED' ? null : customer.subscription
-  const attachedOnu = customer.onus.find((o) => o.odpId) ?? customer.onus[0] ?? null
-
-  // Facet yang belum diizinkan ditulis sekali di sini supaya keempat baris layanan
-  // memakai kalimat yang sama persis. Selama `access` masih null (tarikan 360° belum
-  // selesai / gagal) barisnya DIHILANGKAN, bukan diisi nol — "Rp 0" yang ternyata
-  // cuma keadaan memuat adalah kebohongan yang mahal di layar tagihan.
-  const locked = <span className="muted">terkunci</span>
-
-  return (
-    <section className="stack" style={{ gap: '0.6rem' }}>
-      <Button variant="subtle" className="blade-disclosure" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-        <span className="chev" aria-hidden>
-          <IconChevronDown size={14} />
-        </span>
-        Informasi utama
-      </Button>
-
-      {open && (
-        <div className="ess-cols">
-          <dl className="essentials wide">
-            <Ess label="Kode">
-              <span className="tnum">{customer.code}</span>
-            </Ess>
-            <Ess label="Status">
-              <StatusBadge status={customer.status} label={customerStatusLabel(customer.status)} />
-            </Ess>
-            <Ess label="Alamat">{customer.address}</Ess>
-            <Ess label="Telepon">{customer.phone}</Ess>
-            <Ess label="Email">{customer.email}</Ess>
-            <Ess label="NIK / identitas">{customer.idCardNumber}</Ess>
-            <Ess label="Koordinat">
-              <span className="tnum">
-                {hasCustomerLocation(customer.location) ? `${customer.location.latitude}, ${customer.location.longitude}` : 'Belum ditentukan'}
-              </span>
-            </Ess>
-          </dl>
-
-          <dl className="essentials wide">
-            <Ess label="Paket">
-              {live == null ? (
-                <span className="muted">belum berlangganan</span>
-              ) : (
-                `${live.packageName} · ${live.bandwidthMbps} Mbps`
-              )}
-            </Ess>
-            <Ess label="Tunggakan">
-              {!access ? null : !access.billing ? (
-                locked
-              ) : (
-                <span
-                  className="tnum"
-                  style={{ color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
-                >
-                  {fmtRupiah(arrears)}
-                  {billing && billing.outstandingCount > 0 && (
-                    <Text as="span" weight="semibold" className="muted" > · {billing.outstandingCount} jatuh tempo</Text>
-                  )}
-                </span>
-              )}
-            </Ess>
-            <Ess label="Sesi PPPoE">
-              {!access ? null : !access.session ? (
-                locked
-              ) : !session ? (
-                <span className="muted">belum ada</span>
-              ) : (
-                <span className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Badge tone={session.online ? 'good' : 'neutral'}>{session.online ? 'Online' : 'Offline'}</Badge>
-                  <span className="tnum muted">{session.framedIp ?? session.username}</span>
-                </span>
-              )}
-            </Ess>
-            <Ess label="ONU">
-              {!attachedOnu ? (
-                <span className="muted">belum ada</span>
-              ) : (
-                <span>
-                  <span className="tnum">{attachedOnu.serialNumber}</span>
-                  {attachedOnu.odpCode && (
-                    <span className="muted"> · {attachedOnu.odpCode} port {attachedOnu.odpPortNumber}</span>
-                  )}
-                </span>
-              )}
-            </Ess>
-            <Ess label="Redaman">
-              {trace?.liveRxPowerDbm != null || trace?.installRxPowerDbm != null ? (
-                <span className="tnum" style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
-                  {fmtDbm(trace.liveRxPowerDbm ?? trace.installRxPowerDbm)}
-                </span>
-              ) : null}
-            </Ess>
-            <Ess label="CPE">
-              {!access ? null : !access.cpe ? (
-                locked
-              ) : !cpeDevices || cpeDevices.length === 0 ? (
-                <span className="muted">tak ada</span>
-              ) : (
-                <span className="tnum">
-                  {cpeOnline}/{cpeDevices.length} <span className="muted">online</span>
-                </span>
-              )}
-            </Ess>
-            <Ess label="WO terbuka">
-              {!access ? null : !access.workOrder ? (
-                locked
-              ) : !openWorkOrder ? (
-                <span className="muted">tak ada</span>
-              ) : (
-                <span className="tnum">
-                  {openWorkOrder.code}
-                  {openWorkOrder.scheduledAt && (
-                    <span className="muted"> · {fmtDate(openWorkOrder.scheduledAt.slice(0, 10))}</span>
-                  )}
-                </span>
-              )}
-            </Ess>
-          </dl>
-        </div>
-      )}
-    </section>
-  )
+  const onu = customer.onus.find(row => row.odpId) ?? customer.onus[0]
+  const billing = sub360?.billing, session = sub360?.session, devices = sub360?.cpeDevices
+  const work = sub360?.openWorkOrder
+  return <section className="customer-overview">
+    <h2>Ringkasan</h2>
+    <div className="ess-cols">
+      <dl className="essentials wide">
+        <Ess label="Alamat">{customer.address || '—'}</Ess>
+        <Ess label="Telepon">{customer.phone || '—'}</Ess>
+        <Ess label="Email">{customer.email || '—'}</Ess>
+        <Ess label="NIK / identitas">{customer.idCardNumber || '—'}</Ess>
+        <Ess label="Koordinat">{hasCustomerLocation(customer.location) ? `${customer.location.latitude}, ${customer.location.longitude}` : 'Belum ditentukan'}</Ess>
+      </dl>
+      <dl className="essentials wide">
+        <Ess label="Paket">{live ? `${live.packageName} · ${live.bandwidthMbps} Mbps` : 'Belum berlangganan'}</Ess>
+        {sub360?.access.billing && <Ess label="Tunggakan">{billing ? fmtRupiah(Number(billing.outstandingAmount)) : '—'}</Ess>}
+        {sub360?.access.session && <Ess label="Sesi PPPoE">{session ? `${session.online ? 'Online' : 'Offline'} · ${session.framedIp ?? session.username}` : 'Belum ada sesi'}</Ess>}
+        <Ess label="ONU">{onu?.serialNumber ?? 'Belum terpasang'}</Ess>
+        {onu?.odpCode && <Ess label="Port ODP">{`${onu.odpCode} · ${onu.odpPortNumber}`}</Ess>}
+        <Ess label="Redaman">{fmtDbm(trace?.liveRxPowerDbm ?? trace?.installRxPowerDbm ?? null)}</Ess>
+        {sub360?.access.cpe && <Ess label="CPE online">{devices ? `${devices.filter(row => row.online).length} dari ${devices.length}` : '—'}</Ess>}
+        {sub360?.access.workOrder && <Ess label="Work order aktif">{work ? work.code : 'Tidak ada'}</Ess>}
+      </dl>
+    </div>
+  </section>
 }
 
 /* ---------- Tab: Ringkasan (langganan, perangkat ONU, portal) ---------- */
-
-function RingkasanTab({
-  customer,
-  run,
-}: {
-  customer: CustomerView
-  run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
-}) {
-  // Profil & angka 360° kini hidup di blok Essentials permanen di atas tab, jadi tab
-  // ini tinggal berisi yang benar-benar bisa DIKERJAKAN: langganan, ONU, akun portal.
-  return (
-    <div className="stack" style={{ gap: '0.25rem' }}>
-      <SubscriptionManager customer={customer} run={run} />
-
-      <OnuManager customer={customer} run={run} />
-
-      {/* Pengaturan ACS melengkapi pemantauan perangkat yang sudah terdaftar. */}
-      {customer.onus.length > 0 && <OntAcsSettingsCard />}
-
-      <PortalCredentialCard customerId={customer.id} />
-    </div>
-  )
-}
 
 /**
  * Kelola langganan pelanggan: pilih paket dari katalog (bukan lagi ketik bebas), harga
@@ -637,7 +514,7 @@ function SubscriptionManager({
       <SectionHead icon={<IconPackage size={16} />} title="Langganan" />
 
       {sub == null ? (
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum berpaket.</Text>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada langganan.</Text>
       ) : (
         <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
           <Text as="span" size={300}  >{sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}</Text>
@@ -664,7 +541,7 @@ function SubscriptionManager({
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <SelectField
-                  label={live ? 'Pindahkan ke paket' : ended ? 'Berlangganan lagi dengan paket' : 'Paket'}
+                  label="Paket" required
                   value={planId}
                   onChange={(_, data) => setPlanId(data.value)}
                   style={{ flex: '2 1 200px' }}
@@ -693,9 +570,7 @@ function SubscriptionManager({
               {selected.fupEnabled ? ' · FUP' : ''}
                 </p>
               )}
-              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{ended
-                ? 'Mengaktifkan kembali langganan mempertahankan Username PPPoE dan riwayat tagihan.'
-                : 'Satu pelanggan memiliki satu langganan; ganti paket tidak menambah langganan. Layanan kedua di lokasi lain memerlukan pelanggan baru.'}</Text>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{ended ? 'Username jaringan dan riwayat tagihan tetap digunakan.' : 'Harga negosiasi bersifat opsional.'}</Text>
             </>
           )}
         </div></Blade></>
@@ -747,7 +622,6 @@ function OnuManager({ customer, run }: {
         <span>{onu.serialNumber} · {onu.odpCode ? `${onu.odpCode} port ${onu.odpPortNumber}` : 'Belum terhubung ke port ODP'}</span>
         <span style={{ color: HEALTH_COLOR[onu.opticalHealth] }}>{onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}</span>
       </div>)}
-      <p className="muted">Pemasangan, penggantian, pelepasan fisik, dan pindah ODP dilakukan pada aset perangkat pelanggan di atas.</p>
     </div>
   </>
 }
@@ -1048,13 +922,13 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <SectionHead icon={<IconGauge size={16} />} title={`Bacaan hidup — ${onu.serialNumber}`} />
+        <SectionHead icon={<IconGauge size={16} />} title={`Status ONU · ${onu.serialNumber}`} />
         {live ? (
           <>
             <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <StatusBadge status={live.status} />
               {live.rxPowerDbm != null && (
-                <span className="badge neutral tnum" title="Rx power hidup terakhir dari OLT">
+                <span className="badge neutral tnum" title="Rx power terakhir dari OLT">
                   Rx {live.rxPowerDbm.toFixed(1)} dBm
                 </span>
               )}
@@ -1078,7 +952,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
             )}
           </>
         ) : (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada bacaan live dari monitoring.</Text>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Data monitoring belum tersedia.</Text>
         )}
       </div>
 
@@ -1095,7 +969,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
             {history.degrading && (
               <div className="row" style={{ gap: '0.5rem', color: 'var(--warning-ink)',  }}>
                 <IconAlert size={16} />
-                Redaman memburuk cukup cepat — kandidat pemeliharaan preventif.
+                Redaman meningkat. Jadwalkan pemeriksaan.
               </div>
             )}
             <OpticalChart points={history.points} />
@@ -1861,11 +1735,11 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
     try {
       const action = await setCpeWifi(deviceId, body)
       if (action.status === 'SUCCESS') toast.success('Perubahan WiFi terkirim')
-      else toast.error(action.detail ?? 'Ubah WiFi gagal di ACS')
+      else throw new Error(action.detail ?? 'Perubahan WiFi belum berhasil.')
       loadLive()
       loadDetail()
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Ubah WiFi gagal')
+      throw new Error(err instanceof Error ? err.message : 'Perubahan WiFi belum berhasil.')
     }
   }
 
@@ -1947,23 +1821,12 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
           ) : live.hosts.length === 0 ? (
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada host aktif.</Text>
           ) : (
-            <div className="stack" style={{ gap: '0.35rem' }}>
-              {live.hosts.map((h, i) => (
-                <div key={`${h.macAddress ?? i}`} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-                  <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                    <Text as="span" weight="semibold" size={200} >{h.hostName ?? '(tanpa nama)'}</Text>
-                    <Text as="span" size={300} className="muted tnum" >{h.ipAddress ?? '—'}
-                    {h.macAddress && ` · ${h.macAddress}`}</Text>
-                  </div>
-                  <span
-                    className="badge"
-                    style={{ color: h.active ? 'var(--good-ink)' : 'var(--muted)',  }}
-                  >
-                    {h.active ? 'aktif' : 'idle'}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <DataTable rows={live.hosts} rowKey={h => h.macAddress ?? h.ipAddress ?? h.hostName ?? 'host'} columns={[
+              { key: 'name', header: 'Nama perangkat', cell: h => h.hostName ?? '—' },
+              { key: 'ip', header: 'Alamat IP', cell: h => h.ipAddress ?? '—' },
+              { key: 'mac', header: 'Alamat MAC', cell: h => h.macAddress ?? '—' },
+              { key: 'status', header: 'Status', cell: h => h.active ? 'Aktif' : 'Tidak aktif' },
+            ]} />
           )}
         </div>
       )}
@@ -2297,107 +2160,48 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
  * dan hanya field yang benar-benar berubah yang dikirim (server menolak "tanpa
  * perubahan"), jadi tombol Simpan mati sampai ada yang diubah.
  */
-function WifiCard({
-  wifi,
-  canManage,
-  onSave,
-}: {
-  wifi: WifiView
-  canManage: boolean
-  onSave: (body: SetWifiRequest) => Promise<void>
-}) {
+function WifiCard({ wifi, canManage, onSave }: { wifi: WifiView; canManage: boolean; onSave: (body: SetWifiRequest) => Promise<void> }) {
+  const [editing, setEditing] = useState(false)
   const [ssid, setSsid] = useState(wifi.ssid)
-  const [passphrase, setPassphrase] = useState(wifi.passphrase ?? '')
-  const [showPass, setShowPass] = useState(false)
-  const [saving, setSaving] = useState(false)
-
-  const ssidChanged = ssid.trim() !== '' && ssid !== wifi.ssid
-  const passChanged = passphrase !== '' && passphrase !== (wifi.passphrase ?? '')
-  const dirty = ssidChanged || passChanged
-
-  const save = async () => {
-    setSaving(true)
-    try {
-      await onSave({
-        ref: wifi.ref,
-        ssid: ssidChanged ? ssid : null,
-        passphrase: passChanged ? passphrase : null,
-      })
-    } finally {
-      setSaving(false)
-    }
+  const [passphrase, setPassphrase] = useState('')
+  const [saving, setSaving] = useState(false), [error, setError] = useState('')
+  const dirty = ssid !== wifi.ssid || !!passphrase
+  const close = () => { setEditing(false); setSsid(wifi.ssid); setPassphrase(''); setError('') }
+  async function save() {
+    if (saving || !ssid.trim() || !dirty) return
+    setSaving(true); setError('')
+    try { await onSave({ ref: wifi.ref, ssid: ssid !== wifi.ssid ? ssid.trim() : null, passphrase: passphrase || null }); close() }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'Gagal menyimpan WiFi.') }
+    finally { setSaving(false) }
   }
-
-  return (
-    <div
-      className="stack"
-      style={{ gap: '0.5rem', padding: '0.6rem 0.7rem', border: '1px solid var(--border)', borderRadius: 8 }}
-    >
-      <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        {wifi.band && <span className="badge neutral">{wifi.band}</span>}
-        <span className="badge" style={{ color: wifi.enabled ? 'var(--good-ink)' : 'var(--muted)',  }}>
-          {wifi.enabled ? 'aktif' : 'nonaktif'}
-        </span>
+  return <section className="customer-wifi">
+    <dl className="essentials wide">
+      <Ess label="SSID">{wifi.ssid}</Ess><Ess label="Frekuensi">{wifi.band ?? '—'}</Ess>
+      <Ess label="Status">{wifi.enabled ? 'Aktif' : 'Nonaktif'}</Ess>
+    </dl>
+    {canManage && <Button onClick={() => setEditing(true)}>Ubah WiFi</Button>}
+    {editing && <ResourceForm title="Ubah WiFi" editing navigation={<></>} dirty={dirty} busy={saving} onClose={close} onBack={() => {}}
+      footer={<><Button disabled={saving} onClick={close}>Batal</Button><Button variant="primary" disabled={saving || !dirty} onClick={() => void save()}>{saving ? 'Menyimpan…' : 'Simpan'}</Button></>}>
+      <div className="stack">{error && <p role="alert">{error}</p>}
+        <TextField label="SSID" required value={ssid} onChange={(_, data) => setSsid(data.value)} />
+        <TextField label="Password baru" type="password" autoComplete="new-password" value={passphrase} onChange={(_, data) => setPassphrase(data.value)} hint="Kosongkan jika tidak diubah." />
       </div>
-      {canManage ? (
-        <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <TextField
-            label="SSID"
-            value={ssid}
-            onChange={(_, data) => setSsid(data.value)}
-            style={{ flex: 2, minWidth: 160 }}
-          />
-          <TextField
-            label="Password"
-            type={showPass ? 'text' : 'password'}
-            value={passphrase}
-            placeholder={wifi.passphrase == null ? 'Masukkan kata sandi baru' : ''}
-            onChange={(_, data) => setPassphrase(data.value)}
-            style={{ flex: 2, minWidth: 160 }}
-          />
-          <Button onClick={() => setShowPass((v) => !v)}>{showPass ? 'Sembunyikan' : 'Lihat'}</Button>
-          <Button variant="primary" onClick={() => void save()} disabled={!dirty || saving}>
-            {saving ? 'Menyimpan…' : 'Simpan'}
-          </Button>
-        </div>
-      ) : (
-        <dl className="essentials wide">
-          <Ess label="SSID">{wifi.ssid}</Ess>
-          <Ess label="Password">{wifi.passphrase ?? <span className="muted">tersembunyi</span>}</Ess>
-        </dl>
-      )}
-    </div>
-  )
+    </ResourceForm>}
+  </section>
 }
 
 /** Jejak aksi terakhir ke perangkat — reboot / ubah WiFi, berhasil atau gagal. */
 function CpeActionLog({ actions }: { actions: CpeActionView[] }) {
   if (actions.length === 0) return null
-  return (
-    <div className="card stack" style={{ gap: '0.5rem' }}>
-      <SectionHead icon={<IconAudit size={16} />} title="Jejak aksi" />
-      <div className="stack" style={{ gap: '0.35rem' }}>
-        {actions.map((a) => (
-          <div key={a.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-            <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-              <Text as="span" size={300}  ><Text as="span" weight="semibold">{CPE_ACTION_LABEL[a.action]}</Text>
-              {a.detail && <span className="muted"> · {a.detail}</span>}</Text>
-              <Text as="span" size={300} className="muted" >{fmtInstant(a.requestedAt)}
-              {a.requestedByEmail && ` · ${a.requestedByEmail}`}</Text>
-            </div>
-            <span
-              className="badge"
-              style={{
-                color: a.status === 'SUCCESS' ? 'var(--good-ink)' : 'var(--critical-ink)',
-              }}
-            >
-              {a.status === 'SUCCESS' ? 'berhasil' : 'gagal'}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  return <section className="card stack"><SectionHead icon={<IconAudit size={16} />} title="Riwayat tindakan" />
+    <DataTable rows={actions} rowKey={action => action.id} columns={[
+      { key: 'action', header: 'Tindakan', cell: action => CPE_ACTION_LABEL[action.action] },
+      { key: 'status', header: 'Status', cell: action => action.status === 'SUCCESS' ? 'Berhasil' : 'Gagal' },
+      { key: 'date', header: 'Waktu', cell: action => fmtInstant(action.requestedAt) },
+      { key: 'user', header: 'Pengguna', cell: action => action.requestedByEmail ?? '—' },
+      { key: 'detail', header: 'Keterangan', cell: action => action.detail ?? '—' },
+    ]} />
+  </section>
 }
 
 /* ---------- Tab: Tagihan & tunggakan (module billing) ---------- */

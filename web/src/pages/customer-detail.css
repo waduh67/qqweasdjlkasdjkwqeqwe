@@ -1,0 +1,31 @@
+.customer-detail { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.customer-identity { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.customer-detail .resource-detail-panel { display: flex; flex-direction: column; gap: 24px; }
+.customer-detail :is(h2, h3) { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
+.customer-detail p { font-size: 13px; line-height: 20px; }
+.customer-detail .card { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.customer-detail .resource-detail-panel > .card + .card { padding-top: 24px; border-top: 1px solid var(--border); }
+.customer-detail .section-head { gap: 8px; }
+.customer-detail .section-head > :first-child:not(h3) { padding: 0; background: none; border: 0; border-radius: 0; color: var(--muted); }
+.customer-detail :is(.badge, .fui-Badge) { min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; line-height: 20px; }
+.customer-detail :is(.badge-dot, .status-dot, .fui-Badge__icon) { display: none; }
+.customer-overview { display: flex; flex-direction: column; gap: 20px; }
+.customer-overview .ess-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.customer-detail dl.essentials { margin: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px 20px; font-size: 13px; line-height: 20px; }
+.customer-detail dl.essentials dt { color: var(--muted); font-weight: 400; }
+.customer-detail dl.essentials dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.customer-detail .stat-grid { display: flex; flex-wrap: wrap; gap: 24px; }
+.customer-detail .stat { min-width: 110px; padding: 0 24px 0 0; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: none; box-shadow: none; }
+.customer-detail .stat:last-child { border-right: 0; }
+.customer-detail .stat-value { font-size: 24px; line-height: 32px; font-weight: 400; }
+.customer-detail :is(.fui-TableCell, .fui-TableHeaderCell) { white-space: nowrap; font-size: 13px; line-height: 20px; }
+.customer-detail .table-wrap { max-width: 100%; overflow-x: auto; }
+.customer-detail .resource-detail-panel > .stack { gap: 24px !important; }
+@container (min-width: 1100px) {
+  .customer-overview .ess-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .customer-detail dl.essentials { grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
+}
+
+.customer-wifi { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }

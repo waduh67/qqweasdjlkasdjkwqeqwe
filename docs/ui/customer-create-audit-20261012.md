@@ -140,3 +140,10 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 - Platform reset retains `expectedOwnerUserId` on the existing owner endpoint. It is now exposed from tenant row actions.
 - Security pages are available in both tenant and platform navigation. Passwords remain masked and are never placed in review summaries, logs, or browser storage.
 - Evidence: `.omo/runtime/azure-forms/password-server-tests.log`, `password-ui-tests.log`, and `password-build.log`.
+
+## Customer layout checkpoint
+
+- Customer detail now uses a retained resource panel and vertical section navigation (compact picker on mobile). Overview, subscriptions, devices, portal, network, billing and activity no longer share one overloaded summary.
+- Asset history is a plain resource table with row actions and nested details; warehouse action endpoints, command signatures and permissions are preserved. Connected hosts and ACS action logs also use tables.
+- WiFi editing is a nested panel; failures retain edits. Portal login reset is a single reviewed action and generated credentials use a resource panel.
+- Customer asset regression: 7 tests passed; build passed. Rich browser fixtures and remaining customer sections still need verification.
