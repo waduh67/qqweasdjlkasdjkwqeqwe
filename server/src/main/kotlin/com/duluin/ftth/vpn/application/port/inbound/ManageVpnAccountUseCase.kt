@@ -58,7 +58,7 @@ interface ManageVpnAccountUseCase {
     /** Cabut satu blok: hub berhenti merutekannya. Perangkat di dalamnya kembali tak terjangkau. */
     fun removeRoute(id: UUID, routeId: UUID): VpnAccountView
 
-    /** Berkas `.ovpn` klien generik (berisi kredensial); [variant] memilih cipher v7 (GCM)/v6 (CBC). */
+    /** Berkas `.ovpn` (berisi kredensial); [variant] memilih profil v7 (UDP/TCP) atau v6 (TCP). */
     fun renderOvpn(id: UUID, variant: VpnClientVariant = VpnClientVariant.V7): String
 
     /**

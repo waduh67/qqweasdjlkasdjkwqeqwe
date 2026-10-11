@@ -113,7 +113,7 @@ class VpnConfigRendererTest {
         assertThat(cmd).contains("protocol=udp")
         assertThat(cmd).contains("user=\"bras-jakarta-1\"")
         assertThat(cmd).contains("password=\"secretpassword12345\"")
-        assertThat(cmd).contains("cipher=aes256-gcm")
+        assertThat(cmd).contains("cipher=aes256-cbc")
         assertThat(cmd).contains("verify-server-certificate=no")
     }
 
@@ -171,7 +171,7 @@ class VpnConfigRendererTest {
     }
 
     @Test
-    fun `server conf menyajikan GCM dan CBC via NCP untuk melayani v7 dan v6`() {
+    fun `server conf menyajikan GCM untuk NCP dan CBC untuk klien RouterOS`() {
         val server = newTcpServer().apply { setCredentials(dummyCa, null) }
         val peer = newPeer(server.id)
 
@@ -179,6 +179,23 @@ class VpnConfigRendererTest {
 
         assertThat(config.serverConf).contains("data-ciphers AES-256-GCM:AES-256-CBC")
         assertThat(config.serverConf).contains("data-ciphers-fallback AES-256-CBC")
+    }
+
+    @Test
+    fun `semua konfigurasi v7 cocok dengan fallback hub saat klien tidak mengirim NCP`() {
+        for (server in listOf(newTcpServer(), newServer())) {
+            server.setCredentials(dummyCa, null)
+            val peer = newPeer(server.id)
+            val fallback = renderer.renderServerConfig(server, listOf(peer)).serverConf
+                .lineSequence().single { it.startsWith("data-ciphers-fallback ") }.substringAfter(' ')
+
+            assertThat(fallback).isEqualTo("AES-256-CBC")
+            assertThat(renderer.renderOvpn(server, peer)).contains("cipher $fallback\n")
+            for (script in listOf(renderer.renderRouterOs(server, peer), renderer.renderRouterOsCommand(server, peer))) {
+                assertThat(script).contains("cipher=aes256-cbc", "auth=sha1")
+                assertThat(script).doesNotContain("aes256-gcm")
+            }
+        }
     }
 
     @Test

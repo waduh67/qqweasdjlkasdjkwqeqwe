@@ -11,19 +11,17 @@ import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets
 
 /**
- * Perakit teks konfigurasi OpenVPN (murni, tanpa I/O). Baseline RouterOS v7 (UDP/TCP +
- * AES-256-GCM) — sejalan dengan adapter Mikrotik REST v7 di module bng — plus varian
- * RouterOS v6 (TCP + AES-256-CBC) untuk perangkat lama; satu hub melayani keduanya karena
- * `server.conf` menyajikan GCM+CBC via `data-ciphers`. Menerima entitas dengan rahasianya
- * sudah terdekripsi (CA/tls-auth server, password peer) dan mengembalikan artefak siap-unduh.
+ * Perakit konfigurasi OpenVPN tanpa I/O. Profil RouterOS v7 dan v6 memakai AES-256-CBC
+ * agar cocok dengan fallback hub ketika klien tidak mengirim kemampuan NCP.
+ * Entitas masuk sudah memuat kredensial terdekripsi; hasilnya berisi konfigurasi klien.
  */
 @Component
 class VpnConfigRenderer {
 
     /**
      * Berkas `.ovpn` klien generik yang mandiri (CA + kredensial inline). [variant] menentukan
-     * cipher: [VpnClientVariant.V7] (AES-256-GCM) atau [VpnClientVariant.V6] (AES-256-CBC, dan
-     * proto dipaksa `tcp` karena v6 TCP-only). Melempar [ConflictException] bila hub belum punya
+     * sintaks/protokol klien. Kedua varian memakai AES-256-CBC; proto varian v6 dipaksa
+     * `tcp`. Melempar [ConflictException] bila hub belum punya
      * sertifikat CA — mustahil membangun config klien tanpanya — atau bila varian [VpnClientVariant.V6]
      * diminta pada hub non-TCP.
      */
@@ -64,7 +62,8 @@ class VpnConfigRenderer {
     /**
      * Parameter `ovpn-client` RouterOS **v7** sebagai pasangan key=value URUT — sumber tunggal
      * untuk skrip `.rsc` [renderRouterOs] maupun perintah satu-baris [renderRouterOsCommand].
-     * Memakai AES-256-GCM (dinego lewat NCP hub). Untuk perangkat v6 lihat [routerOsV6Params].
+     * Memakai cipher fallback hub karena RouterOS v7 dapat menyambung tanpa NCP.
+     * Untuk perangkat v6 lihat [routerOsV6Params].
      * Nilai username/password dikutip; keduanya dijamin alfanumerik oleh PasswordGenerator/slug.
      */
     private fun routerOsParams(server: VpnServer, peer: VpnPeer): List<Pair<String, String>> = listOf(
@@ -79,7 +78,7 @@ class VpnConfigRenderer {
         "use-peer-dns" to "no",
         "verify-server-certificate" to "no",
         "auth" to "sha1",
-        "cipher" to "aes256-gcm",
+        "cipher" to VpnClientVariant.V7.routerOsCipher,
         "disabled" to "no",
     )
 
@@ -207,7 +206,7 @@ class VpnConfigRenderer {
             appendLine("keepalive 10 120")
             appendLine("persist-key")
             appendLine("persist-tun")
-            // NCP: v7 nego AES-256-GCM; klien tanpa NCP (RouterOS v6) jatuh ke AES-256-CBC.
+            // Klien dengan NCP dapat memilih GCM; RouterOS v6/v7 memakai fallback CBC.
             appendLine("data-ciphers AES-256-GCM:AES-256-CBC")
             appendLine("data-ciphers-fallback AES-256-CBC")
             appendLine("verb 3")
@@ -289,7 +288,7 @@ class VpnConfigRenderer {
             appendLine("keepalive 10 120")
             appendLine("persist-key")
             appendLine("persist-tun")
-            // NCP: v7 nego AES-256-GCM; klien tanpa NCP (RouterOS v6, TCP) jatuh ke AES-256-CBC.
+            // Klien dengan NCP dapat memilih GCM; RouterOS v6/v7 memakai fallback CBC.
             appendLine("data-ciphers AES-256-GCM:AES-256-CBC")
             appendLine("data-ciphers-fallback AES-256-CBC")
             append("verb 3")

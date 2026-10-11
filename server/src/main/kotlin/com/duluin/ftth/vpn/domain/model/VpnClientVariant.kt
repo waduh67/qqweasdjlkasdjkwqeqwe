@@ -3,17 +3,15 @@ package com.duluin.ftth.vpn.domain.model
 /**
  * Profil kemampuan klien OpenVPN target yang di-render config-nya.
  *
- * - [V7] — RouterOS v7 (atau OpenVPN modern): UDP/TCP + **AES-256-GCM**, mendukung NCP dan
- *   punya properti `verify-server-certificate`.
- * - [V6] — RouterOS v6: **TCP-only** + **AES-256-CBC** (tanpa NCP), tanpa
- *   `verify-server-certificate`, dan memakai sintaks menu lama (`/interface ovpn-client add`).
+ * - [V7] — RouterOS v7: UDP/TCP, AES-256-CBC dan sintaks menu `/interface/ovpn-client`.
+ * - [V6] — RouterOS v6: TCP, AES-256-CBC dan sintaks menu `/interface ovpn-client`.
  *
- * Satu hub melayani KEDUANYA: `server.conf` menyajikan GCM+CBC via `data-ciphers` +
- * `data-ciphers-fallback`, jadi klien v7 nego GCM dan klien v6 jatuh ke CBC. Karena v6
- * TCP-only, varian [V6] hanya bermakna pada hub berprotokol TCP.
+ * RouterOS v7 juga tidak menjamin negosiasi cipher (NCP). Kedua profil harus memakai
+ * cipher fallback hub. Klien OpenVPN yang mendukung NCP tetap dapat menegosiasikan GCM.
+ * https://help.mikrotik.com/docs/spaces/ROS/pages/2031655/OpenVPN
  */
 enum class VpnClientVariant(val cipher: String, val routerOsCipher: String) {
-    V7(cipher = "AES-256-GCM", routerOsCipher = "aes256-gcm"),
+    V7(cipher = "AES-256-CBC", routerOsCipher = "aes256-cbc"),
 
     /**
      * [routerOsCipher] SENGAJA `aes256`, bukan `aes256-cbc`. Ejaan bermode (`aes256-cbc`,
