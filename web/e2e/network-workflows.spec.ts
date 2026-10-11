@@ -3,6 +3,10 @@ import { expect, test, type Page } from '@playwright/test'
 async function setup(page: Page) {
   const profile = { id: 'qa', email: 'qa@example.test', name: 'QA', tenantId: 'qa', tenantSlug: 'qa', platformAdmin: true, permissions: [], areaIds: [], roleIds: [], twoFactorEnabled: true }
   const writes: { path: string; body: Record<string, unknown> }[] = [], errors: string[] = []
+  let vpnCreated = false
+  const vpnAccount = { id: 'vpn-1', label: 'MikroTik Lab Laptop', serverName: 'VPN Jakarta', host: 'vpn.example.test', port: 1194, protocol: 'TCP', cipher: 'AES-256-CBC', securityType: 'OpenVPN', username: 'mikrotik-lab-laptop', overlayIp: '10.8.0.2', remotePort: 20001, winboxAddress: 'vpn.example.test:20001', forwards: [], routes: [], status: 'ENABLED', online: false, lastHandshakeAt: null, supportsV6: true, password: 'demo-test-password',
+    routerOsCommand: '/interface/ovpn-client/add name="ovpn-lab" connect-to=vpn.example.test port=1194 protocol=tcp user="mikrotik-lab-laptop" password="demo-test-password" mode=ip add-default-route=no use-peer-dns=no verify-server-certificate=no auth=sha1 cipher=aes256-cbc disabled=no',
+    routerOsCommandV6: '/interface ovpn-client add name="ovpn-lab" connect-to=vpn.example.test port=1194 user="mikrotik-lab-laptop" password="demo-test-password" mode=ip add-default-route=no auth=sha1 cipher=aes256 disabled=no' }
   const nas = { id: 'bras-1', name: 'BRAS Tebet', vendor: 'MIKROTIK', address: '10.8.0.3', nasIdentifier: 'tebet', hasCoaSecret: true, collectorId: null, enabled: true, apiUsername: 'operator', hasApiSecret: true, apiPort: 443, apiUseTls: true, areaIds: ['tebet'], reachability: 'VPN' }
   const devices = [{ id: 'ont-1', serialNumber: 'HWTC00112233', customerId: null, customerName: 'Budi Santoso', manufacturer: 'Huawei', model: 'HG8245H', softwareVersion: 'V5', online: true, lastInformAt: '2026-10-11T09:00:00Z', ipAddress: '10.20.0.2', ssid: 'Budi Home', pppoeUsername: 'budi', pppoeOnline: true, rxPowerDbm: -23.4, txPowerDbm: 2.1, temperatureC: 42 },
     { id: 'ont-2', serialNumber: 'ZTEG44556677', customerId: null, customerName: 'Siti Aminah', manufacturer: 'ZTE', model: 'F670L', softwareVersion: 'V1', online: false, lastInformAt: '2026-10-10T09:00:00Z', ipAddress: '10.20.0.3', ssid: 'Siti Home', pppoeUsername: 'siti', pppoeOnline: false, rxPowerDbm: -28, txPowerDbm: 2.5, temperatureC: 39 }]
@@ -15,6 +19,12 @@ async function setup(page: Page) {
     else if (path === '/api/me') body = profile
     else if (path === '/api/subscription/lock') body = { locked: false }
     else if (path === '/api/areas') body = [{ id: 'tebet', code: 'TEBET', name: 'Tebet', parentId: null }, { id: 'pancoran', code: 'PANCORAN', name: 'Pancoran', parentId: null }]
+    else if (path === '/api/vpn/accounts') body = vpnCreated ? [{ ...vpnAccount, password: null, routerOsCommand: null, routerOsCommandV6: null }] : []
+    else if (path === '/api/vpn/accounts/generate') { vpnCreated = true; body = vpnAccount }
+    else if (path === '/api/vpn/accounts/vpn-1/routeros' || path === '/api/vpn/accounts/vpn-1/ovpn') {
+      await route.fulfill({ status: 200, contentType: 'text/plain', body: url.searchParams.get('variant') === 'V6' ? vpnAccount.routerOsCommandV6 : vpnAccount.routerOsCommand })
+      return
+    }
     else if (path === '/api/bng/nas') body = request.method() === 'GET' ? [nas] : { ...nas, ...request.postDataJSON() }
     else if (path === '/api/bng/radius-endpoint') body = { host: '203.0.113.4', authPort: 1812, acctPort: 1813, coaPort: 3799, configured: true, vpnHosts: [{ tunnelCidr: '10.8.0.0/24', host: '10.8.0.1' }], isolirAddressList: 'isolir' }
     else if (path === '/api/cpe/acs/server') body = { nbiBaseUrl: 'http://genieacs:7557', cwmpUrl: 'https://acs.example.test', acsUsername: 'ont', acsPassword: 'demo-secret', connectionRequestUsername: 'acs', connectionRequestPassword: 'demo-request-secret', periodicInformEnabled: true, periodicInformIntervalSeconds: 300, syncIntervalSeconds: 60, configured: true }
@@ -37,6 +47,46 @@ async function compactControls(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 for (const width of [375, 1280]) {
+  test(`VPN credentials, configuration downloads and retained list at ${width}px`, async ({ page }, testInfo) => {
+    const { writes, errors } = await setup(page)
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/vpn')
+    const search = page.getByPlaceholder('Cari label, server, username, atau IP…')
+    await search.fill('MikroTik')
+    const originalDocument = await page.evaluateHandle(() => document)
+    await page.getByRole('button', { name: 'Buat akun VPN', exact: true }).click()
+    const form = page.getByRole('dialog', { name: 'Buat akun VPN', exact: true })
+    await form.getByRole('textbox', { name: 'Label', exact: true }).fill('MikroTik Lab Laptop')
+    await form.getByRole('tab', { name: 'Tinjau + buat' }).click()
+    await form.getByRole('button', { name: 'Buat akun VPN', exact: true }).click()
+    const panel = page.getByRole('dialog', { name: 'Sambungkan perangkat', exact: true })
+    await expect(panel).toBeVisible()
+    await expect(form).toHaveCount(0)
+    await expect(panel.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'password')
+    await expect(panel.getByRole('textbox', { name: 'Username', exact: true })).toHaveValue('mikrotik-lab-laptop')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('vpn-connection.png'), fullPage: true, animations: 'disabled' })
+    await panel.getByRole('tab', { name: 'Konfigurasi', exact: true }).click()
+    await expect(panel.locator('pre')).toContainText('cipher=aes256-cbc')
+    await page.screenshot({ path: testInfo.outputPath('vpn-configuration.png'), fullPage: true, animations: 'disabled' })
+    const v7Download = page.waitForEvent('download')
+    await panel.getByRole('button', { name: 'Unduh .rsc' }).click()
+    expect((await v7Download).suggestedFilename()).toBe('mikrotik-lab-laptop.rsc')
+    await panel.getByRole('combobox', { name: 'Versi RouterOS' }).selectOption('V6')
+    await expect(panel.locator('pre')).toContainText('cipher=aes256 disabled=no')
+    const request = page.waitForRequest('**/api/vpn/accounts/vpn-1/ovpn?variant=V6'), download = page.waitForEvent('download')
+    await panel.getByRole('button', { name: 'Unduh .ovpn' }).click()
+    await request
+    expect((await download).suggestedFilename()).toBe('mikrotik-lab-laptop-v6.ovpn')
+    await panel.getByRole('button', { name: 'Tutup', exact: true }).click()
+    await expect(panel).toHaveCount(0)
+    await expect(search).toHaveValue('MikroTik')
+    await expect(page.getByRole('gridcell', { name: 'MikroTik Lab Laptop Aksi sel', exact: true })).toBeVisible()
+    expect(await page.evaluate(original => document === original, originalDocument)).toBe(true)
+    await expect(page).toHaveURL('/vpn')
+    expect(writes.map(write => write.path)).toEqual(['/api/vpn/accounts/generate'])
+    expect(errors).toEqual([])
+  })
   test(`BRAS step navigation, nested guide and save at ${width}px`, async ({ page }, testInfo) => {
     const { writes, errors } = await setup(page)
     await page.setViewportSize({ width, height: 900 })

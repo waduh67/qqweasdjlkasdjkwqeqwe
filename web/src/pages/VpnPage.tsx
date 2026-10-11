@@ -2,7 +2,7 @@ import { CommandBar } from '@/components/molecules/CommandBar'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Table, TableBody, TableCell, TableRow, Text } from '@fluentui/react-components'
+import { Text } from '@fluentui/react-components'
 import { Download, DoorOpen, KeyRound, Network, Power, PowerOff, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
@@ -31,7 +31,8 @@ import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
-import { IconAlert, IconPlus } from '@/components/atoms/icons'
+import { IconPlus } from '@/components/atoms/icons'
+import { VpnCredentialsBlade } from './VpnCredentialsBlade'
 import { blokFirewallScript, isCidrLike, ovpnInterfaceName } from '@/utils/blokPelanggan'
 
 /**
@@ -175,7 +176,7 @@ export function VpnPage() {
         return
       void run(async () => {
         setFresh(await rotateAccountPassword(a.id))
-      }, 'Password dirotasi — salin yang baru di bawah')
+      }, 'Password diperbarui')
     })()
   }
 
@@ -352,7 +353,11 @@ export function VpnPage() {
           <p>Server dan alamat VPN dipilih otomatis. Kredensial ditampilkan setelah akun dibuat.</p></div>
       </Blade>
 
-      {fresh && <CredentialCard account={fresh} onDismiss={() => setFresh(null)} />}
+      {fresh && <VpnCredentialsBlade key={fresh.id} account={fresh} canDownload={canConfig} onClose={() => setFresh(null)}
+        onDownload={(format, version) => {
+          const filename = `${fresh.username}${version === 'V6' ? '-v6' : ''}.${format === 'routeros' ? 'rsc' : 'ovpn'}`
+          void saveBlob(() => format === 'routeros' ? downloadAccountRouterOs(fresh.id, version) : downloadAccountOvpn(fresh.id, version), filename, toast.error)
+        }} />}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari label, server, username, atau IP…" />
@@ -666,122 +671,6 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
         </>
       )}
   </Blade>
-}
-
-/* ---------- Kartu kredensial sekali-tampil ---------- */
-
-function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDismiss: () => void }) {
-  const toast = useToast()
-  const copy = (value: string, what: string) =>
-    void navigator.clipboard?.writeText(value).then(() => toast.success(`${what} disalin`))
-
-  const rows: Array<{ label: string; value: string; copy?: boolean }> = [
-    { label: 'Server', value: account.serverName },
-    { label: 'Host / IP', value: account.host, copy: true },
-    { label: 'Port', value: String(account.port), copy: true },
-    { label: 'Tipe keamanan', value: account.securityType },
-    { label: 'Username', value: account.username, copy: true },
-    { label: 'Password', value: account.password ?? '—', copy: !!account.password },
-    { label: 'IP overlay', value: account.overlayIp },
-    { label: 'Winbox (remote)', value: account.winboxAddress ?? '—', copy: !!account.winboxAddress },
-  ]
-
-  return (
-    <div
-      className="card"
-      style={{ borderColor: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 8%, var(--surface))' }}
-    >
-      <div className="row" style={{ gap: '0.5rem', marginBottom: '0.5rem' }}>
-        <IconAlert size={17} style={{ color: 'var(--warning-ink)' }} />
-        <strong>Kredensial akun “{account.label}”</strong>
-      </div>
-      <p className="muted" style={{ margin: '0 0 0.6rem',  }}>
-        <strong>Password hanya ditampilkan sekali.</strong> Simpan sekarang atau unduh konfigurasi.
-      </p>
-      <Table style={{ marginBottom: '0.6rem' }}><TableBody>{rows.map((r) => (
-        <TableRow key={r.label}><TableCell className="muted" style={{ width: '9rem' }}>{r.label}</TableCell>
-        <TableCell ><code style={{ wordBreak: 'break-all' }}>{r.value}</code></TableCell>
-        <TableCell style={{ width: '4rem' }}>{r.copy && (
-          <Button variant="subtle" size="small" onClick={() => copy(r.value, r.label)}>
-            Salin
-          </Button>
-        )}</TableCell></TableRow>
-      ))}</TableBody></Table>
-      {account.routerOsCommand && (
-        <CommandBlock
-            title={
-              <>
-                RouterOS <strong>v7</strong>
-              </>
-            }
-          command={account.routerOsCommand}
-          copyLabel="Salin perintah"
-          onCopy={() => copy(account.routerOsCommand!, 'Perintah RouterOS v7')}
-          hint={
-            account.supportsV6
-              ? 'RouterOS v7 (UDP/TCP, AES-256-CBC).'
-              : `RouterOS v6 tidak kompatibel dengan ${account.protocol}. Gunakan server TCP untuk perangkat v6.`
-          }
-        />
-      )}
-      {account.supportsV6 && account.routerOsCommandV6 && (
-        <CommandBlock
-            title={
-              <>
-                RouterOS <strong>v6</strong>
-              </>
-            }
-          command={account.routerOsCommandV6}
-          copyLabel="Salin perintah v6"
-          onCopy={() => copy(account.routerOsCommandV6!, 'Perintah RouterOS v6')}
-            hint={`TCP, AES-256-CBC. Jika status berhenti di "connecting...", buka port ${account.port}/tcp di firewall atau NSG VPS.`}
-        />
-      )}
-      <div className="row" style={{ flexWrap: 'wrap' }}>
-        <Button
-          size="small"
-          onClick={() => void saveBlob(() => downloadAccountRouterOs(account.id), `${account.username}.rsc`, toast.error)}
-        >
-          Unduh RouterOS
-        </Button>
-        <Button
-          variant="subtle"
-          size="small"
-          onClick={() => void saveBlob(() => downloadAccountOvpn(account.id), `${account.username}.ovpn`, toast.error)}
-        >
-          Unduh .ovpn
-        </Button>
-        {account.supportsV6 && (
-          <>
-            <Button
-              size="small"
-              onClick={() =>
-                void saveBlob(
-                  () => downloadAccountRouterOs(account.id, 'V6'),
-                  `${account.username}-v6.rsc`,
-                  toast.error,
-                )
-              }
-            >
-              Unduh RouterOS v6
-            </Button>
-            <Button
-              variant="subtle"
-              size="small"
-              onClick={() =>
-                void saveBlob(() => downloadAccountOvpn(account.id, 'V6'), `${account.username}-v6.ovpn`, toast.error)
-              }
-            >
-              Unduh .ovpn v6
-            </Button>
-          </>
-        )}
-        <Button variant="subtle" size="small" onClick={onDismiss}>
-          Selesai
-        </Button>
-      </div>
-    </div>
-  )
 }
 
 /* ---------- Blok perintah RouterOS satu-baris (v7/v6), dengan salin + catatan ---------- */

@@ -166,7 +166,7 @@ export interface VpnAccountView {
   routerOsCommandV6: string | null
 }
 
-/** Varian klien saat unduh config: v7 (UDP/TCP + GCM) atau v6 (TCP + CBC). */
+/** Varian klien saat unduh config: v7 (UDP/TCP + CBC) atau v6 (TCP + CBC). */
 export type VpnClientVariant = 'V7' | 'V6'
 
 /** Semua opsional — alur unggulan cukup POST kosong. */
@@ -230,7 +230,7 @@ export const removeAccountRoute = (id: string, routeId: string) =>
 
 // ---- Unduh config akun (berisi kredensial; izin vpn.config.view) ----
 
-/** Unduh berkas .ovpn akun sebagai Blob (dijadikan unduhan file oleh pemanggil). [variant] V7 (GCM)/V6 (CBC). */
+/** Unduh berkas .ovpn akun sebagai Blob (dijadikan unduhan file oleh pemanggil). Kedua varian memakai CBC. */
 export const downloadAccountOvpn = (id: string, variant: VpnClientVariant = 'V7') =>
   api.blob(`/api/vpn/accounts/${id}/ovpn?variant=${variant}`)
 
