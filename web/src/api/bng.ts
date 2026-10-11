@@ -38,24 +38,14 @@ export type NasReachability = 'DIRECT' | 'VPN' | 'COLLECTOR' | 'NONE'
 
 /** Label pendek rute kendali sesi untuk badge tabel. */
 export const NAS_REACHABILITY_LABEL: Record<NasReachability, string> = {
-  DIRECT: 'langsung',
-  VPN: 'lewat VPN',
-  COLLECTOR: 'lewat collector',
-  NONE: 'belum beralamat',
+  DIRECT: 'Langsung', VPN: 'VPN', COLLECTOR: 'Collector', NONE: 'Belum tersedia',
 }
 
-/** Keterangan satu kalimat: apa akibatnya bagi isolir & Reset Login. */
 export const NAS_REACHABILITY_HINT: Record<NasReachability, string> = {
-  DIRECT: 'Isolir & Reset Login ditembak langsung ke alamat BRAS.',
-  VPN: 'Isolir & Reset Login ditembak lewat tunnel VPN ke alamat overlay BRAS.',
-  COLLECTOR:
-    'Alamatnya privat/di balik NAT — atau BRAS ini memang ditugaskan ke collector. Isolir & Reset Login ' +
-    'dititipkan ke collector on-prem yang sekamar dengan BRAS; perintahnya menunggu di antrean sampai ' +
-    'collector itu menjemputnya. Belum ada collector yang jalan? Beri BRAS ini alamat VPN kita supaya ' +
-    'server bisa menembak sendiri.',
-  NONE:
-    'Isolir & Reset Login TAK BISA dikirim selama BRAS belum beralamat — perubahan baru berlaku saat ' +
-    'pelanggan login ulang. Isi alamat BRAS: IP publiknya, atau alamat VPN kita bila ia masuk lewat tunnel.',
+  DIRECT: 'Perintah isolir dan reset sesi dikirim langsung ke router.',
+  VPN: 'Perintah isolir dan reset sesi dikirim melalui VPN.',
+  COLLECTOR: 'Perintah isolir dan reset sesi memerlukan collector aktif yang dapat menjangkau router.',
+  NONE: 'Isi alamat manajemen agar perintah isolir dan reset sesi dapat dikirim.',
 }
 
 /**

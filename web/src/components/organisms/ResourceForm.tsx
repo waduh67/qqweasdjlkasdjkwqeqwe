@@ -13,9 +13,9 @@ export function useResourceReviewLock(locked: boolean) {
 }
 
 /** A retained resource layer for details and review; form submission owns validation. */
-export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, loading = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus }: {
+export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, loading = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus, navigation }: {
   returnFocus?: HTMLElement | null;
-  title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode;
+  title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode; navigation?: ReactNode;
   onBack: () => void; onClose: () => void; readOnly?: boolean; editing?: boolean;
   onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean
 }) {
@@ -58,13 +58,13 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
     <Modal returnFocus={returnFocus} title={title} onClose={requestClose} layout="resource" className={className} footer={withCancelGuard(review ? reviewFooter : reviewAction ? <>
       <Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy || loading} onClick={toReview}>{reviewLabel}</Button>
     </> : footer)}>
-      {!readOnly && <TabList className="resource-form-tabs" selectedValue={review ? 'review' : 'basics'} onTabSelect={(_, data) => {
+      {navigation ?? (!readOnly && <TabList className="resource-form-tabs" selectedValue={review ? 'review' : 'basics'} onTabSelect={(_, data) => {
         if (locked || busy || loading) return
         if (data.value === 'basics') onBack()
         else if (!review) toReview()
       }}>
         <Tab value="basics" disabled={locked || busy || loading}>Dasar</Tab><Tab value="review" disabled={locked || busy || loading}>{reviewLabel}</Tab>
-      </TabList>}
+      </TabList>)}
       <div ref={content} className="resource-form-content" aria-busy={loading || undefined}>
         <div hidden={!!review} inert={review ? true : undefined}>{children}</div>
         {review && <div ref={reviewContent} tabIndex={-1} className="resource-review-content">{review}</div>}

@@ -122,10 +122,5 @@ export function selfAddressWarning(endpoint: RadiusEndpointView | null, brasAddr
   if (!address || !endpoint) return null
   const ours = [endpoint.host, ...(endpoint.vpnHosts ?? []).map((it) => it.host)].filter(Boolean)
   if (!ours.includes(address)) return null
-  return (
-    `${address} adalah alamat server RADIUS kami, bukan alamat router kamu. Kolom ini diisi alamat ` +
-    'BRAS-nya sendiri — alamat asal yang terlihat oleh RADIUS saat router mengirim permintaan, dan ' +
-    'sasaran balik untuk CoA/Disconnect. Diisi alamat kami, tiap permintaan router ditolak diam-diam ' +
-    'sebagai klien tak dikenal dan di router cuma terlihat sebagai timeout.'
-  )
+  return `${address} adalah alamat server RADIUS. Masukkan alamat manajemen router BRAS.`
 }

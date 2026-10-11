@@ -1,0 +1,85 @@
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, expect, it, vi } from 'vitest'
+import * as acs from '@/api/acs'
+import { AcsPage } from './AcsPage'
+
+const auth = vi.hoisted(() => ({ devices: true, manage: true }))
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+vi.mock('@/auth/useCan', () => ({ useCan: () => ({ can: (key: string) => key === 'cpe.device.view' ? auth.devices : key === 'cpe.device.manage' ? auth.manage : true }) }))
+vi.mock('@/system', () => ({ useToast: () => toast }))
+vi.mock('./CustomerDetailPage', () => ({ CustomerDetailBlade: () => null }))
+vi.mock('@/utils/download', () => ({ downloadBlob: vi.fn() }))
+const device: acs.AcsDeviceRowView = { id: 'ont-1', serialNumber: 'ONT-001', customerId: 'customer-1', customerName: 'Budi', manufacturer: 'Huawei', model: 'HG8245', softwareVersion: null,
+  online: true, lastInformAt: '2026-10-11T00:00:00Z', ipAddress: '10.1.1.2', ssid: 'Budi', pppoeUsername: 'budi', pppoeOnline: true, rxPowerDbm: -23.2, txPowerDbm: 2.1, temperatureC: 40 }
+beforeEach(() => {
+  vi.restoreAllMocks(); auth.devices = true; auth.manage = true
+  vi.spyOn(acs, 'getAcsServerInfo').mockResolvedValue({ nbiBaseUrl: 'http://genieacs:7557', cwmpUrl: 'https://acs.example.test', acsUsername: 'ont', acsPassword: 'acs-password', connectionRequestUsername: 'request', connectionRequestPassword: 'request-password', periodicInformEnabled: true, periodicInformIntervalSeconds: 300, syncIntervalSeconds: 60, configured: true })
+  vi.spyOn(acs, 'getAcsHealth').mockResolvedValue({ status: 'ONLINE', latencyMs: 10, checkedAt: '2026-10-11T00:00:00Z', message: 'Internal probe details' })
+  vi.spyOn(acs, 'getAcsStats').mockResolvedValue({ totalDevices: 1, onlineDevices: 1, offlineDevices: 0, avgRxPowerDbm: -23.2, signalSampleCount: 1, lastSyncAt: null, lastSyncOk: null })
+  vi.spyOn(acs, 'listAcsDevices').mockResolvedValue([device])
+  vi.spyOn(acs, 'listAcsLogs').mockResolvedValue([])
+  vi.spyOn(acs, 'exportAcsDevicesCsv').mockResolvedValue(new Blob(['serial\nONT-001']))
+  vi.spyOn(acs, 'refreshAcsFleet').mockResolvedValue({ candidates: 5, attempted: 3, connected: 1, queued: 1, failed: 1, skipped: 2, message: 'Internal bulk detail' })
+})
+it('retains device filters across tabs and exports the visible selection', async () => {
+  const user = userEvent.setup()
+  render(<AcsPage />)
+  await user.click(screen.getByRole('tab', { name: 'Perangkat' }))
+  await screen.findByText('ONT-001')
+  await user.click(screen.getByRole('button', { name: 'Filter Status ACS' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Status ACS' }), 'OFFLINE')
+  await waitFor(() => expect(acs.listAcsDevices).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'OFFLINE' })))
+  await user.click(screen.getByRole('button', { name: 'Filter Merek' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Merek' }), 'Huawei')
+  await user.click(screen.getByRole('tab', { name: 'Setelan ONT' }))
+  expect(screen.queryByText('acs-password')).toBeNull()
+  await user.click(screen.getByRole('tab', { name: 'Perangkat' }))
+  expect(screen.getByRole('button', { name: 'Filter Status ACS' }).textContent).toContain('Offline')
+  expect(screen.getByRole('button', { name: 'Filter Merek' }).textContent).toContain('Huawei')
+  await user.click(screen.getByRole('button', { name: 'Ekspor CSV' }))
+  await waitFor(() => expect(acs.exportAcsDevicesCsv).toHaveBeenCalledWith(expect.objectContaining({ status: 'OFFLINE', brand: 'Huawei' })))
+  expect(screen.getByRole('columnheader', { name: 'RX (dBm)' })).toBeTruthy()
+  expect(screen.getByRole('columnheader', { name: 'TX (dBm)' })).toBeTruthy()
+  expect(screen.queryByText('Device info')).toBeNull()
+})
+it('ignores old responses after a newer filter completes', async () => {
+  let resolve!: (rows: acs.AcsDeviceRowView[]) => void
+  vi.mocked(acs.listAcsDevices).mockReturnValueOnce(new Promise(done => { resolve = done })).mockResolvedValueOnce([{ ...device, id: 'offline', serialNumber: 'ONT-OFFLINE', online: false }])
+  const user = userEvent.setup()
+  render(<AcsPage />)
+  await user.click(screen.getByRole('tab', { name: 'Perangkat' }))
+  await waitFor(() => expect(acs.listAcsDevices).toHaveBeenCalledTimes(1))
+  await user.click(screen.getByRole('button', { name: 'Filter Status ACS' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Status ACS' }), 'OFFLINE')
+  await screen.findByText('ONT-OFFLINE')
+  await act(async () => resolve([device]))
+  expect(screen.queryByText('ONT-001')).toBeNull()
+  expect(screen.getByText('ONT-OFFLINE')).toBeTruthy()
+})
+it('does not fetch fleet data or expose fleet actions to a settings-only user', async () => {
+  auth.devices = false
+  const user = userEvent.setup()
+  render(<AcsPage />)
+  await screen.findByText('Terhubung')
+  expect(screen.queryByRole('tab', { name: 'Perangkat' })).toBeNull()
+  expect(screen.queryByRole('tab', { name: 'Aktivitas' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Perbarui perangkat online' })).toBeNull()
+  await user.click(screen.getByRole('tab', { name: 'Setelan ONT' }))
+  await screen.findByText('300 detik')
+  expect(acs.getAcsStats).not.toHaveBeenCalled()
+  expect(acs.listAcsDevices).not.toHaveBeenCalled()
+  expect(acs.listAcsLogs).not.toHaveBeenCalled()
+  expect(acs.getAcsServerInfo).toHaveBeenCalledTimes(1)
+})
+it('shows a retry for failed data and reports the bounded fleet update accurately', async () => {
+  vi.mocked(acs.getAcsStats).mockRejectedValueOnce(new Error('offline'))
+  const user = userEvent.setup()
+  render(<AcsPage />)
+  const error = await screen.findByRole('alert')
+  await user.click(within(error).getByRole('button', { name: 'Coba lagi' }))
+  await screen.findByText('Total perangkat')
+  await user.click(screen.getByRole('button', { name: 'Perbarui perangkat online' }))
+  await screen.findByText('Pembaruan perangkat: 1 terhubung, 1 dalam antrean, 1 gagal, 2 belum diproses.')
+  expect(acs.refreshAcsFleet).toHaveBeenCalledOnce()
+})
