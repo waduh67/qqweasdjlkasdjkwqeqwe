@@ -50,6 +50,7 @@ export interface User {
   name: string
   status: string
   platformAdmin: boolean
+  tenantOwner?: boolean
   roleIds: string[]
   areaIds: string[]
   createdAt: string

@@ -35,3 +35,9 @@ export const regenerateRecoveryCodes = (password: string) =>
 
 /** Jalur admin: mengosongkan 2FA pengguna lain (ponsel hilang). Butuh `iam.user.update`. */
 export const resetTwoFactorFor = (userId: string) => api.post<void>(`/api/users/${userId}/2fa/reset`)
+
+export const changeMyPassword = (currentPassword: string, newPassword: string) =>
+  api.post<void>('/api/me/password', { currentPassword, newPassword })
+
+export const resetUserPassword = (userId: string, newPassword: string) =>
+  api.post<void>(`/api/users/${userId}/reset-password`, { newPassword })

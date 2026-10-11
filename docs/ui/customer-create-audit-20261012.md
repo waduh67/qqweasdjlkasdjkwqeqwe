@@ -13,8 +13,8 @@ Branch: `fix/azure-customer-forms-20261012`, based on main `f3672a72`.
 ## Checkpoints
 
 - [x] Isolated worktree and initial source inventory.
-- [ ] Password backend, permission and regression coverage.
-- [ ] Account/user/tenant password interfaces.
+- [x] Password backend, permission and regression coverage: 8 integration tests passed.
+- [x] Account/user/tenant password interfaces: 6 focused UI tests passed; browser verification remains pending.
 - [ ] Customer detail layout and tab workflows.
 - [ ] Shared form spacing and grouped-step support.
 - [ ] All creation entry points reviewed; complex forms grouped explicitly.
@@ -131,3 +131,12 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 | `web/src/portal/PortalForgotPasswordPage.tsx` | 0 | 4 | Pending |
 | `web/src/portal/PortalHelpTab.tsx` | 0 | 4 | Pending |
 | `web/src/portal/PortalProfilPage.tsx` | 0 | 4 | Pending |
+
+## Password implementation checkpoint
+
+- Self service: `POST /api/me/password` verifies the current password. Password change revokes all access/refresh sessions and leaves 2FA/status intact.
+- Tenant reset: `POST /api/users/{id}/reset-password` requires `iam.user.resetpassword`; other tenants, tenant owners, platform admins and self-reset are rejected. Existing technician-only endpoint remains unchanged.
+- The new permission is seeded through PermissionCatalog; default Admin receives it once through the default-role feature marker. No existing custom role permissions are replaced.
+- Platform reset retains `expectedOwnerUserId` on the existing owner endpoint. It is now exposed from tenant row actions.
+- Security pages are available in both tenant and platform navigation. Passwords remain masked and are never placed in review summaries, logs, or browser storage.
+- Evidence: `.omo/runtime/azure-forms/password-server-tests.log`, `password-ui-tests.log`, and `password-build.log`.

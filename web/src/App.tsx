@@ -494,6 +494,7 @@ function OperatorApp() {
             }
           >
             <Route index element={<PlatformDashboardPage />} />
+            <Route path="account/security" element={<AccountSecurityPage />} />
             <Route
               path="tenants"
               element={

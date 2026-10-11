@@ -1,7 +1,7 @@
 import { Navigation16Regular } from '@fluentui/react-icons'
 import * as NavIcons from '@/components/molecules/navigationIcons'
 import { Text } from '@fluentui/react-components'
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
 import { useAppShellNav } from '@/hooks/useAppShellNav'
@@ -50,6 +50,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Administrasi',
     items: [
+      { to: '/platform/account/security', label: 'Keamanan akun', permission: null, icon: NavIcons.Shield },
       { to: '/platform/email', label: 'Setelan Email', permission: 'platform.email.view', icon: NavIcons.Mail },
       { to: '/platform/users', label: 'Pengguna', permission: 'iam.user.view', icon: NavIcons.Users },
       { to: '/platform/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: NavIcons.Shield },
@@ -90,7 +91,7 @@ export function PlatformLayout() {
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           <ThemeToggle />
-          <div className="user-chip">
+          <Link to="/platform/account/security" className="user-chip" title="Keamanan akun">
             <span className="avatar" aria-hidden>
               {initials}
             </span>
@@ -98,7 +99,7 @@ export function PlatformLayout() {
               <Text as="span" block size={200} weight="semibold">{user?.name}</Text>
               <Text as="span" block className="muted" size={100}>{user?.email}</Text>
             </div>
-          </div>
+          </Link>
           <Button
             size="medium"
             variant="subtle"
