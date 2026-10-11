@@ -18,10 +18,10 @@ export function ExpressPsbPage() {
       ? <div role="alert" className="stack"><p>{model.loadError}</p><div><Button onClick={model.reloadPlans}>Coba lagi</Button></div></div>
       : model.plans.length === 0
       ? <div role="status" className="stack">
-          <div><strong>Belum ada paket internet aktif</strong><p>Buat atau aktifkan paket internet untuk menampilkan formulir dan tombol Buat PSB.</p></div>
+          <div><strong>Belum ada paket aktif</strong><p>Tambahkan paket internet untuk mulai mendaftarkan pelanggan.</p></div>
           <div className="row">
-            {model.canViewPlans && <Link to="/catalog">Buka paket internet</Link>}
-            <Button onClick={model.reloadPlans}>Periksa lagi</Button>
+            {model.canViewPlans && <Link to="/catalog">Kelola paket</Link>}
+            <Button onClick={model.reloadPlans}>Segarkan</Button>
           </div>
         </div>
       : <ExpressPsbFields {...model} />}
