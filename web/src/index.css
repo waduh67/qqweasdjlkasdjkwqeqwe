@@ -681,6 +681,9 @@ td.dg-actions {
   width: 100%;
   min-width: 0;
 }
+.combobox { display: flex; align-items: flex-start; gap: 4px; }
+.combobox .fui-Combobox { flex: 1; width: auto; }
+.combobox > .fui-Button { flex: none; }
 .cb-field {
   display: flex;
   align-items: center;

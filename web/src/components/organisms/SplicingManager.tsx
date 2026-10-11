@@ -369,12 +369,12 @@ function CableAttachmentBar({
                     <Button
                       variant="subtle"
                       disabled={busy}
-                      title="Ternyata selubungnya utuh di kotak ini — cuma numpang lewat."
+                      title="Kabel melewati kotak ini tanpa dikupas."
                       onClick={() =>
-                        void attach(cable.cableId, 'PASSING', `${cable.code} ditandai cuma lewat`)
+                        void attach(cable.cableId, 'PASSING', `${cable.code} ditandai lewat tanpa dikupas`)
                       }
                     >
-                      Cuma lewat
+                      Lewat tanpa dikupas
                     </Button>
                   ) : (
                     <Button

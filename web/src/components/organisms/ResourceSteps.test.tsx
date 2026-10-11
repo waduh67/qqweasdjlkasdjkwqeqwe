@@ -6,6 +6,7 @@ import { Blade } from './Blade'
 import { ResourceForm, useResourceReviewLock } from './ResourceForm'
 import { ResourceStep } from './ResourceStep'
 import { useCreationReview } from './CreationReview'
+import { WarehousePicker } from './warehouse/WarehousePicker'
 
 vi.mock('@/system', () => ({ useConfirm: () => vi.fn() }))
 
@@ -59,4 +60,37 @@ it('reveals an invalid hidden field before review and keeps uncertain warehouse 
   expect(screen.getByRole('tab', { name: 'Identitas' })).toHaveProperty('disabled', true)
   await user.click(screen.getByRole('button', { name: 'Tutup' }))
   expect(screen.getByText('Menunggu hasil transaksi')).toBeTruthy()
+})
+
+it('requires an actual lookup selection and applies domain validation before advancing', async () => {
+  const user = userEvent.setup(), onReview = vi.fn()
+  const location = { id: 'warehouse-1', name: 'Gudang Utama' }
+  const load = vi.fn(async () => ({ items: [location], page: 0, size: 25, totalElements: 1 }))
+  function Example() {
+    const [selected, setSelected] = useState<typeof location | null>(null), [latitude, setLatitude] = useState('91')
+    return <ResourceForm title="Lokasi barang" onClose={() => {}} onBack={() => {}} onReview={onReview}
+      steps={[{ key: 'location', label: 'Lokasi', validate: () => Number(latitude) > 90 ? 'Lintang maksimal 90.' : null }, { key: 'items', label: 'Barang' }]}>
+      <ResourceStep step="location"><WarehousePicker label="Gudang" load={load} value={selected} onChange={setSelected} name={row => row.name} />
+        <label>Lintang<input value={latitude} onChange={event => setLatitude(event.target.value)} /></label></ResourceStep>
+      <ResourceStep step="items"><p>Pilih barang di gudang.</p></ResourceStep>
+    </ResourceForm>
+  }
+  render(<Example />)
+  const picker = await screen.findByRole('combobox', { name: 'Gudang' })
+  await waitFor(() => expect(picker).not.toHaveProperty('disabled', true))
+  await user.type(picker, 'Gudang')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: Barang' }))
+  expect(screen.getByRole('tab', { name: 'Lokasi' }).getAttribute('aria-selected')).toBe('true')
+  expect(onReview).not.toHaveBeenCalled()
+  await user.click(picker)
+  await waitFor(() => expect(screen.getByRole('option', { name: 'Gudang Utama' }).getAttribute('aria-disabled')).not.toBe('true'))
+  await user.click(screen.getByRole('option', { name: 'Gudang Utama' }))
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: Barang' }))
+  expect(screen.getByRole('alert').textContent).toContain('Lintang maksimal 90.')
+  await user.clear(screen.getByLabelText('Lintang')); await user.type(screen.getByLabelText('Lintang'), '-6.87')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: Barang' }))
+  expect(screen.getByRole('tab', { name: 'Barang' }).getAttribute('aria-selected')).toBe('true')
+  expect(onReview).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+  expect(onReview).toHaveBeenCalledTimes(1)
 })

@@ -276,11 +276,9 @@ export function SaveCablePanel({
         {fromKind === 'ODP' && toKind === 'ODP' && (
           <MessageBar intent="info">
             <MessageBarBody>
-              Ruas kotak ke kotak cuma sah bila kaki splitter {from} benar-benar menyuapi {to}
-              (splitter bertingkat). Kalau ini sebenarnya SATU selubung yang lewat di depan
-              kedua kotak, gambar satu kabel menerus sampai kotak terakhir lalu kupas di tiap
-              kotak lewat meja sambung — panjang materialnya tak dihitung dobel dan simulasi
-              putusnya jadi jujur.
+              Gunakan ruas ini jika splitter {from} terhubung ke splitter {to}.
+              Untuk satu kabel yang melewati beberapa kotak, gambar kabel menerus dan catat
+              titik kupasnya di meja sambung. Ini menjaga perhitungan panjang dan jalur koneksi.
             </MessageBarBody>
           </MessageBar>
         )}

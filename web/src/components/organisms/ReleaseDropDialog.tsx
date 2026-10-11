@@ -75,14 +75,13 @@ export function ReleaseDropDialog({
       <div className="stack" style={{ gap: '0.8rem' }}>
         <MessageBar intent="warning">
           <MessageBarBody>
-            Semua sambungan kabel ini dilepas dan core-nya kembali bebas — termasuk kaki splitter di kotak
-            hulunya, supaya kotak itu bisa dijual lagi. Kabelnya sendiri tidak dihapus: seratnya masih
-            tergantung di tiang.
+            Semua sambungan kabel ini dilepas. Core dan port splitter kembali tersedia.
+            Catatan kabel tetap tersimpan.
           </MessageBarBody>
         </MessageBar>
 
         <Checkbox
-          label="Tandai kabelnya ditinggal (digulung, tak akan dipakai lagi)"
+          label="Tandai kabel tidak digunakan lagi"
           checked={abandon}
           onChange={(_, data) => setAbandon(!!data.checked)}
           disabled={busy}

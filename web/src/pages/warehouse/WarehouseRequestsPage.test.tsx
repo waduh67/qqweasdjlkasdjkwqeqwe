@@ -116,7 +116,7 @@ it('allows an authorized planner to declare NONE without SKU access and requires
   fireEvent.click(await screen.findByRole('button', { name: 'Susun rencana material' }))
   await selectControl(screen.getByRole('combobox', { name: 'Kebutuhan material' }), { target: { value: 'NONE' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan tanpa material' }), { target: { value: plan.reason } })
-  fireEvent.click(screen.getByRole('button', { name: 'Tinjau rencana' }))
+  fireEvent.click(screen.getByRole('tab', { name: /Tinjau \+/ }))
   fireEvent.click(await screen.findByRole('button', { name: 'Simpan rencana' }))
   expect(await screen.findByRole('button', { name: 'Ajukan rencana tanpa material' })).toHaveProperty('disabled', false)
   const write = fetch.mock.calls.find(([, init]) => init?.method === 'PUT')!

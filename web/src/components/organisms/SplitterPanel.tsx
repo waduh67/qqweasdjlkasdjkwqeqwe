@@ -170,8 +170,7 @@ export function SplitterPanel({
         <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>{summarize(splitters)}</p>
       ) : (
         <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>
-          Belum ada modul splitter di sini. Kabinet tanpa splitter itu sah — isinya cuma
-          sambungan lewat (cross-connect); tambahkan modul bila kabinet ini memang memecah sinyal.
+          Belum ada modul splitter. Tambahkan modul jika kabinet ini membagi sinyal.
         </p>
       )}
 

@@ -160,3 +160,11 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 
 - Additional checkpoint: PSB Ekspres now opens from its command bar, uses Customer/Location/Plan/Network/Installation steps and clears drafts only on confirmed discard or successful creation. The shared step definition now supports domain validation such as required map coordinates.
 - Latest full regression is in `.omo/runtime/azure-forms/frontend-regression-2.log` (in progress when checkpoint written). Newly grouped warehouse settings/count/transfer/material forms require test navigation updates. Do not merge until the whole suite is green.
+
+## Regression checkpoint, 2026-10-12
+
+- Updated tests follow the new named steps while retaining payload, permission, conflict, revision and uncertain-retry assertions. All six affected warehouse suites passed (47 tests across the focused runs).
+- Required warehouse lookup choices now have a regression proving that typed search text is not a selected location, followed by domain coordinate validation. ResourceSteps: 3 passed.
+- Stable Firefox/Chromium screenshots at 375/1440 verified customer navigation, retained child panels, password change/reset, five-step PSB failure retention, and payment draft/registration separation. Final browser run additionally repairs older nested-location fixtures for the warehouse workflow endpoint and adds OLT creation and platform-owner reset coverage.
+- Copy cleanup removes informal cable/splitter instructions while preserving operational consequences. OLT identity is required before advancing. Shared combobox clear actions remain alongside the field; payment bank selection uses the same label alignment as text fields.
+- Final lint passed. Production build passed. Full frontend regression and final browser matrix are still running; do not merge before these results are checked. Backend password/owner integration tests remain 8 passed without subsequent backend changes.

@@ -54,10 +54,10 @@ export function WarehouseCountEditor({ initial, onSaved, onClose, onReload = onC
     {location ? rows.slice(currentPage * 25, (currentPage + 1) * 25).map((row, index) => <CountEntryEditor key={row.key} row={row} number={currentPage * 25 + index + 1} locationId={location.id}
       update={patch => setRows(current => current.map(item => item.key === row.key ? { ...item, ...patch } : item))}
       remove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />) : <p>Pilih lokasi untuk mencari posisi barang.</p>}
-    </ResourceStep>
-    {error && <p className="error" role="alert">{error}</p>}
     <div className="row wrap"><Button type="button" disabled={!location || rows.length >= 100} onClick={() => { setRowPage(Math.floor(rows.length / 25)); setRows(current => [...current, empty()]) }}>Tambah posisi hitung</Button>
       </div>
+    </ResourceStep>
+    {error && <p className="error" role="alert">{error}</p>}
   </form></ResourceForm></>
 }
 function CountEntryEditor({ row, number, locationId, update, remove }: { row: Row; number: number; locationId: string; update: (patch: Partial<Row>) => void; remove?: () => void }) {

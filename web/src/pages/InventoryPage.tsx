@@ -727,7 +727,7 @@ return (
           <div className="form-grid">
             <div style={{ flex: 1 }}>
               <SelectField
-                label="Site"
+                label="Site" required
                 value={draft.siteId}
                 onChange={(_, data) => setDraft({ ...draft, siteId: data.value })}
               >
@@ -740,7 +740,7 @@ return (
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Kode"
+                label="Kode" required
                 value={draft.code}
                 onChange={(_, data) => setDraft({ ...draft, code: data.value })}
                 placeholder="OLT-BKS-01"
@@ -748,7 +748,7 @@ return (
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Nama"
+                label="Nama" required
                 value={draft.name}
                 onChange={(_, data) => setDraft({ ...draft, name: data.value })}
               />
@@ -757,7 +757,7 @@ return (
           <div className="form-grid">
             <div style={{ flex: 1 }}>
               <SelectField
-                label={<>Vendor <span className="muted">(hardware type)</span></>}
+                label="Vendor"
                 value={draft.vendor}
                 onChange={(_, data) => setDraft(changeVendor(draft, data.value))}
               >
@@ -790,10 +790,9 @@ return (
             placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
           />
 
-          <h2 className="settings-section-title">Koneksi monitoring</h2>
           {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ EPON pun dipolling lewat SNMP, jadi tampil untuk semua vendor */}
           </ResourceStep><ResourceStep step="snmp">
-          <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+          <div className="stack" style={{ gap: 20 }}>
             <Checkbox
               label={<Text as="span" weight="semibold">Aktifkan SNMP untuk OLT ini</Text>}
               checked={draft.snmpEnabled}
@@ -843,7 +842,7 @@ return (
 
           </ResourceStep><ResourceStep step="web">
           {/* Kanal Web UI — HSGQ pakai ini sebagai manajemen langsung; lainnya untuk metrik suhu/optik */}
-          <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+          <div className="stack" style={{ gap: 20 }}>
             {isWebManaged(draft.vendor) ? (
               <div className="stack" style={{ gap: '0.25rem' }}>
                 <Text as="span" weight="semibold">Web UI API (HTTP Management)</Text>
@@ -899,7 +898,7 @@ return (
                     type="password"
                     value={draft.webPassword}
                     onChange={(_, data) => setDraft({ ...draft, webPassword: data.value })}
-                    placeholder={isWebManaged(draft.vendor) ? 'password Web UI' : 'kalau beda dari Telnet'}
+                    placeholder="Password web OLT"
                   />
                 </div>
               </div>

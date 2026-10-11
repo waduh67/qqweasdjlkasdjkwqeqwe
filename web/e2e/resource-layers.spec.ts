@@ -14,6 +14,7 @@ for (const width of [375, 1280]) {
       if (path === '/api/auth/refresh') body = { accessToken: 'test-access', tokenType: 'Bearer', accessTokenExpiresAt: '2099-01-01T00:00:00Z', refreshToken: 'test-refresh', refreshTokenExpiresAt: '2099-01-02T00:00:00Z', user: profile }
       else if (path === '/api/me') body = profile
       else if (path === '/api/subscription/lock') body = { locked: false }
+      else if (path === '/api/v2/warehouse/workflow') body = { snapshot: { tenantId: 'c9f2b300-e3a6-4ed2-b680-11b945d3dd0a', epoch: 1, state: 'ENFORCED', workflow: 'LEGACY' }, owner: true }
       else if (path === '/api/areas') { await areasReady; body = [] }
       if (path === '/api/v1/warehouse/receipts') reads.push(request.url())
       if (request.method() !== 'GET' && path !== '/api/auth/refresh') writes.push(path)
@@ -36,6 +37,9 @@ for (const width of [375, 1280]) {
     const child = page.locator('[data-resource-layer="1"]')
     await expect(child.getByRole('textbox', { name: 'Nama lokasi' })).toBeVisible()
     expect(await child.evaluate((element, original) => element === original, loadingPanel)).toBe(true)
+    await child.getByRole('textbox', { name: 'Kode lokasi' }).fill('LOK-KEEP')
+    await child.getByRole('textbox', { name: 'Nama lokasi' }).fill('Lokasi tetap')
+    await child.getByRole('tab', { name: 'Penempatan', exact: true }).click()
     const parentLauncher = child.getByRole('button', { name: 'Tambah lokasi induk' })
     await parentLauncher.click()
     const grandchild = page.locator('[data-resource-layer="2"]')
@@ -45,6 +49,7 @@ for (const width of [375, 1280]) {
     await grandchild.getByRole('button', { name: 'Tutup', exact: true }).click()
     await expect(parentLauncher).toBeFocused()
     await child.getByRole('button', { name: 'Tutup', exact: true }).click()
+    await page.getByRole('button', { name: 'Buang perubahan', exact: true }).click()
     await expect(launcher).toBeFocused()
     await expect(reference).toHaveValue('SJ-KEEP')
     await page.getByRole('button', { name: 'Tutup', exact: true }).click()
@@ -70,6 +75,7 @@ for (const width of [375, 1280]) {
       if (path === '/api/auth/refresh') body = { accessToken: 'test-access', tokenType: 'Bearer', accessTokenExpiresAt: '2099-01-01T00:00:00Z', refreshToken: 'test-refresh', refreshTokenExpiresAt: '2099-01-02T00:00:00Z', user: profile }
       else if (path === '/api/me') body = profile
       else if (path === '/api/subscription/lock') body = { locked: false }
+      else if (path === '/api/v2/warehouse/workflow') body = { snapshot: { tenantId: 'c9f2b300-e3a6-4ed2-b680-11b945d3dd0a', epoch: 1, state: 'ENFORCED', workflow: 'LEGACY' }, owner: true }
       else if (path === '/api/areas') { areaReads++; body = [{ id: areaId, code: 'TEBET', name: 'Tebet', parentId: null }] }
       if (path === '/api/v1/warehouse/locations' && request.method() === 'GET') listReads.push(request.url())
       if (request.method() !== 'GET' && path !== '/api/auth/refresh') {
@@ -91,6 +97,7 @@ for (const width of [375, 1280]) {
     await original.getByRole('textbox', { name: 'Kode lokasi' }).fill('RAK-KEEP')
     await original.getByRole('textbox', { name: 'Nama lokasi' }).fill('Rak tetap')
     await original.getByRole('combobox', { name: 'Jenis lokasi', exact: true }).selectOption('BIN')
+    await original.getByRole('tab', { name: 'Penempatan', exact: true }).click()
     const launcher = original.getByRole('button', { name: 'Tambah lokasi induk', exact: true })
     await launcher.click()
     const parent = page.getByRole('dialog', { name: 'Tambah lokasi induk', exact: true })
@@ -99,6 +106,7 @@ for (const width of [375, 1280]) {
     await expect(parent.getByRole('button', { name: 'Tambah lokasi induk', exact: true })).toHaveCount(0)
     await parent.getByRole('textbox', { name: 'Kode lokasi' }).fill('GUDANG-UTAMA')
     await parent.getByRole('textbox', { name: 'Nama lokasi' }).fill('Gudang utama')
+    await parent.getByRole('tab', { name: 'Penempatan', exact: true }).click()
     await parent.getByRole('combobox', { name: 'Area lokasi', exact: true }).selectOption(areaId)
     await parent.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
     await expect(parent.getByText('Gudang utama', { exact: true })).toBeVisible()
@@ -106,8 +114,8 @@ for (const width of [375, 1280]) {
     await parent.getByRole('button', { name: 'Simpan lokasi', exact: true }).click()
     await expect(parent).toHaveCount(0)
     await expect(launcher).toBeFocused()
-    await expect(original.getByRole('textbox', { name: 'Kode lokasi' })).toHaveValue('RAK-KEEP')
-    await expect(original.getByRole('textbox', { name: 'Nama lokasi' })).toHaveValue('Rak tetap')
+    await expect(original.getByLabel('Kode lokasi', { exact: true })).toHaveValue('RAK-KEEP')
+    await expect(original.getByLabel('Nama lokasi', { exact: true })).toHaveValue('Rak tetap')
     await expect(original.getByRole('combobox', { name: 'Lokasi induk', exact: true })).toHaveValue('Gudang utama · GUDANG-UTAMA')
     await expect(original.getByRole('combobox', { name: 'Area lokasi', exact: true })).toHaveValue(areaId)
     await launcher.click()

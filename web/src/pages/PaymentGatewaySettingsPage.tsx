@@ -2,7 +2,7 @@ import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { CreationSummary } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Text, typographyStyles } from '@fluentui/react-components'
+import { Field as FluentField, Text, typographyStyles } from '@fluentui/react-components'
 import { Copy } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import {
@@ -559,6 +559,7 @@ function ChannelCodeField({
 }) {
   return (
     <Combobox<PivotChannel>
+      ariaLabel="Bank"
       value={value}
       onChange={(code) => onChange(code)}
       fetchOptions={(t) => Promise.resolve(searchChannelCodes(t))}
@@ -831,14 +832,13 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                 </div>
                 </ResourceStep><ResourceStep step="bank">
                 <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <label style={{ flex: 1, minWidth: 140 }}>
-                    <Text as="span" >Bank</Text>
+                  <FluentField label="Bank" size="small" className="app-field">
                     <ChannelCodeField
                       value={profile.channelCode ?? ''}
                       onChange={(code) => setProfile((p) => ({ ...p, channelCode: code }))}
                       disabled={!manage}
                     />
-                  </label>
+                  </FluentField>
                   <TextField
                     label="Nomor rekening"
                     value={profile.accountNumber ?? ''}
