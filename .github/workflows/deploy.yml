@@ -12,6 +12,9 @@ on:
             - 'docker-compose.simulator.yml'
             - 'docs/hosted-simulator.md'
             - '.github/workflows/deploy-simulator.yml'
+            - 'deploy/network/**'
+            - 'docs/tencent-network.md'
+            - '.github/workflows/deploy-network.yml'
     workflow_dispatch:
 
 concurrency:

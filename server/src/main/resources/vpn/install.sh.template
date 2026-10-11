@@ -19,6 +19,8 @@ DIR=/etc/openvpn/server
 
 echo "[ftth] Memasang OpenVPN untuk hub {{SERVER_NAME}} ..."
 export DEBIAN_FRONTEND=noninteractive
+# A shared VPS may have unrelated services awaiting a library restart.
+export NEEDRESTART_MODE="${NEEDRESTART_MODE:-l}"
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update -qq
   apt-get install -y -qq openvpn curl
@@ -271,7 +273,7 @@ if command -v iptables >/dev/null 2>&1; then
   TUN_PREFIX="${TUN_CIDR%.*}."
   iptables -t nat -S PREROUTING 2>/dev/null \
     | grep -- '-j DNAT' | grep -v -- '--comment ftth-vpn' | grep -F -- "--to-destination $TUN_PREFIX" \
-    | while read -r rule; do iptables -t nat ${rule/#-A/-D} 2>/dev/null || true; done
+    | while read -r rule; do iptables -t nat ${rule/#-A/-D} 2>/dev/null || true; done || true
 fi
 
 systemctl daemon-reload

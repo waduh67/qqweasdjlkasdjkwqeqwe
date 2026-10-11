@@ -1,0 +1,131 @@
+name: deploy-network
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/network/**'
+      - 'deploy/radius/**'
+      - 'docker/genieacs/**'
+      - '.github/workflows/deploy-network.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'deploy/network/**'
+      - 'deploy/radius/**'
+      - 'docker/genieacs/**'
+      - '.github/workflows/deploy-network.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: network-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the network service image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/genieacs
+          load: true
+          tags: ftth-network-genieacs:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=ftth-network-genieacs
+          cache-to: type=gha,mode=max,scope=ftth-network-genieacs
+      - name: Verify the isolated network services
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          for script in deploy/network/*.sh; do bash -n "$script"; done
+          python3 -m py_compile deploy/network/*.py
+          cp -a deploy/radius deploy/network/radius
+          cat > deploy/network/.env <<EOF
+          GENIEACS_IMAGE=ftth-network-genieacs:$GITHUB_SHA
+          PRIVATE_ADDRESS=127.0.0.1
+          RADIUS_DB_PASSWORD=$(openssl rand -hex 32)
+          ACS_DEVICE_HOST=acs.example.test
+          FTTH_CPE_CWMP_AUTH_MODE=enforce
+          FTTH_CPE_ONT_ACS_USERNAME=network-probe
+          FTTH_CPE_ONT_ACS_PASSWORD=$(openssl rand -hex 32)
+          EOF
+          docker compose --env-file deploy/network/.env -f deploy/network/docker-compose.yml config --quiet
+          docker compose --env-file deploy/network/.env -f deploy/network/docker-compose.yml up -d --wait --wait-timeout 150
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:7557/devices > /tmp/network-devices.json; then break; fi
+            sleep 2
+          done
+          python3 -c 'import json; assert json.load(open("/tmp/network-devices.json")) == []'
+          for attempt in {1..30}; do
+            status=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:17547/ || true)
+            if [[ "$status" == 405 ]]; then break; fi
+            sleep 1
+          done
+          test "$status" = 405
+          python3 deploy/network/probe-cwmp.py --env-file deploy/network/.env --url http://127.0.0.1:7547/ --nbi http://127.0.0.1:7557
+          printf 'Message-Authenticator = 0x00\n' | docker compose --env-file deploy/network/.env -f deploy/network/docker-compose.yml exec -T radius radclient -t 3 -r 1 127.0.0.1 status radclient-loopback-only | tee /tmp/network-radius.txt
+          grep -q 'Received Access-Accept' /tmp/network-radius.txt
+      - name: Package the tested image and deployment files
+        run: |
+          set -euo pipefail
+          mkdir -p .omo/runtime/network-release
+          cp deploy/network/docker-compose.yml deploy/network/nginx-acs.conf.template deploy/network/activate.sh deploy/network/backup.sh deploy/network/sync-radius-clients.sh deploy/network/probe-cwmp.py deploy/network/vpn-firewall.sh .omo/runtime/network-release/
+          cp -a deploy/radius .omo/runtime/network-release/radius
+          docker save "ftth-network-genieacs:$GITHUB_SHA" | gzip > .omo/runtime/network-release/genieacs.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: network-release-${{ github.sha }}
+          path: .omo/runtime/network-release/
+          compression-level: 0
+          retention-days: 3
+      - name: Stop the isolated test services
+        if: always()
+        run: |
+          if [[ -f deploy/network/.env ]]; then
+            docker compose --env-file deploy/network/.env -f deploy/network/docker-compose.yml down
+          fi
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: network-release-${{ github.sha }}
+          path: network-release
+      - name: Install the verified network release
+        env:
+          TENCENT_HOST: ${{ secrets.TENCENT_HOST }}
+          TENCENT_USER: ${{ secrets.TENCENT_USER }}
+          TENCENT_SSH_KEY: ${{ secrets.TENCENT_SSH_KEY }}
+          TENCENT_KNOWN_HOSTS: ${{ secrets.TENCENT_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$TENCENT_HOST" =~ ^[A-Za-z0-9.-]+$ && "$TENCENT_USER" == ubuntu ]]
+          mkdir -p ~/.ssh
+          printf '%s\n' "$TENCENT_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$TENCENT_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host *\n    BatchMode yes\n    IdentitiesOnly yes\n    StrictHostKeyChecking yes\n' > ~/.ssh/config
+          target="$TENCENT_USER@$TENCENT_HOST"
+          stage="/home/ubuntu/ftth-network-releases/$GITHUB_SHA"
+          ssh "$target" "mkdir -p '$stage'"
+          scp -r network-release/. "$target:$stage/"
+          ssh "$target" "sudo -n bash '$stage/activate.sh' '$GITHUB_SHA' '$stage'"
+      - name: Check the public ACS endpoint
+        run: |
+          status=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://acs.ftth.karuhundeveloper.com/)
+          test "$status" = 405

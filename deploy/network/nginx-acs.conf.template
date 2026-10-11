@@ -1,0 +1,43 @@
+upstream ftth_acs_cwmp {
+    server 127.0.0.1:17547;
+    keepalive 16;
+}
+
+server {
+    listen 80;
+    server_name {{ACS_DEVICE_HOST}};
+    location /.well-known/acme-challenge/ { root /var/lib/letsencrypt; }
+    location / { return 308 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    server_name {{ACS_DEVICE_HOST}};
+    ssl_certificate /etc/letsencrypt/live/{{ACS_DEVICE_HOST}}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ACS_DEVICE_HOST}}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 16m;
+    access_log /var/log/nginx/ftth-acs.access.log;
+    error_log /var/log/nginx/ftth-acs.error.log;
+    location / {
+        proxy_pass http://ftth_acs_cwmp;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "";
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Forwarded 'for="$remote_addr";proto=https;host="$host"';
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+    }
+}
+
+server {
+    listen 7567;
+    server_name {{ACS_DEVICE_HOST}};
+    location / {
+        proxy_pass http://127.0.0.1:17567;
+        proxy_set_header Host $host;
+    }
+}
