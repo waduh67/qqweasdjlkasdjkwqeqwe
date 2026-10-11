@@ -164,10 +164,10 @@ export function useExpressPsb() {
     (!macBased && !secret.trim())
 
   const submit = async () => {
-    if (!canManage || saving || loading || loadError || workflowMode === null) return
+    if (!canManage || saving || loading || loadError || workflowMode === null) return false
     if (invalid) {
-      toast.error('Lengkapi dulu kolom wajib (nama, alamat, koordinat, paket, kredensial).')
-      return
+      toast.error('Lengkapi data pelanggan dan layanan.')
+      return false
     }
     setSaving(true)
     try {
@@ -198,8 +198,10 @@ export function useExpressPsb() {
       setDraft({ ...EMPTY })
       setSecret(randomSecret())
       setShowSecret(false)
+      return true
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal membuat PSB ekspres')
+      return false
     } finally {
       setSaving(false)
     }
@@ -208,5 +210,5 @@ export function useExpressPsb() {
   return { canManage, canViewPlans, workflow, workflowMode, reference, plans, nasList, areas, technicians, loading, loadError,
     reloadPlans: () => setLoadAttempt(attempt => attempt + 1), draft,
     secret, showSecret, planId, nasId, authType, saving, result, nasByArea, availableTypes, macBased, invalid,
-    set, changePlan, changeArea, setAuthType, setNasId, setSecret, setShowSecret, randomSecret, submit, setResult }
+    set, changePlan, changeArea, setAuthType, setNasId, setSecret, setShowSecret, randomSecret, submit, setResult, resetDraft: () => { setDraft({ ...EMPTY }); setSecret(randomSecret()); setShowSecret(false) } }
 }

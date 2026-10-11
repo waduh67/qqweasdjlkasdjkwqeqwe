@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useMemo, useState } from 'react'
@@ -179,7 +180,7 @@ export function RolesPage() {
 
       {draft && catalog && (
         <Blade open layout="resource" title={draft.id ? 'Ubah role' : 'Role baru'} onClose={() => setDraft(null)}
-          creation={readOnly ? undefined : { ...creation, busy, prepare: () => void save(), summary: <><CreationSummary rows={[
+          creation={readOnly ? undefined : { ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'permissions', label: 'Izin' }], busy, prepare: () => void save(), summary: <><CreationSummary rows={[
             ['Nama', draft.name], ['Deskripsi', draft.description], ['Izin dipilih', draft.permissionIds.size],
           ]} />{error && <p role="alert" className="error">{error}</p>}</> }}
           footer={<>          <div className="row">
@@ -189,7 +190,7 @@ export function RolesPage() {
             <Button onClick={() => setDraft(null)}>Batal</Button>
           </div></>}>
 
-          <div className="row" style={{ alignItems: 'flex-start' }}>
+          <ResourceStep step="identity"><div className="row" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <TextField
                 label="Nama"
@@ -209,7 +210,7 @@ export function RolesPage() {
             </div>
           </div>
 
-          <div>
+          </ResourceStep><ResourceStep step="permissions"><div>
             <div className="spread">
               <Text as="strong" weight="semibold" >Izin</Text>
               <Text as="span" className="muted">{draft.permissionIds.size} dipilih</Text>
@@ -221,8 +222,7 @@ export function RolesPage() {
               onChange={(next) => setDraft({ ...draft, permissionIds: next })}
             />
           </div>
-
-
+          </ResourceStep>
         </Blade>
       )}
     </div>

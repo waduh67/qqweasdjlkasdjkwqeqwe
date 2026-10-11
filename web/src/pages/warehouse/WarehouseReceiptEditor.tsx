@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId, useState, type FormEvent } from 'react'
@@ -50,9 +51,9 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian penerimaan.') }
   }
   return <>
-    <ResourceForm editing={!!receipt} title={<>{receipt ? 'Ubah draft penerimaan' : 'Draft penerimaan baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft penerimaan" confirmLabel="Simpan draft" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    <ResourceForm steps={[{ key: 'receipt', label: 'Dokumen & lokasi' }, { key: 'items', label: 'Barang' }]} editing={!!receipt} title={<>{receipt ? 'Ubah draft penerimaan' : 'Draft penerimaan baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft penerimaan" confirmLabel="Simpan draft" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{reference}</strong> · {supplier?.name}{receipt && ` · Revisi ${receipt.revision}`}</p><p>{source?.name ?? source?.code} → {inspection?.name}</p>
-        <ul>{rows.map(row => <li key={row.key}>{row.sku?.name}: {row.sku && `${formatBaseQuantity(buildReceiptLines([row], costVisible)[0].quantityBase, row.sku.baseUnit)} ${displayUnit(row.sku.baseUnit)}`}</li>)}</ul><p>Perubahan stok: belum ada. Lanjutkan Terima barang dari detail setelah draft tersimpan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau draft</Button></>}><form id={formId} className="stack" onSubmit={prepare}>
+        <ul>{rows.map(row => <li key={row.key}>{row.sku?.name}: {row.sku && `${formatBaseQuantity(buildReceiptLines([row], costVisible)[0].quantityBase, row.sku.baseUnit)} ${displayUnit(row.sku.baseUnit)}`}</li>)}</ul><p>Perubahan stok: belum ada. Lanjutkan Terima barang dari detail setelah draft tersimpan.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau draft</Button></>}><form id={formId} className="stack" onSubmit={prepare}><ResourceStep step="receipt">
 
       <p className="muted">Menyimpan draft belum menambah stok. Lampiran draft lama perlu diunggah ulang setelah isi draft berubah.</p>
       <div style={grid}>
@@ -62,9 +63,11 @@ export function WarehouseReceiptEditor({ receipt, onSaved, onClose, onReload }: 
         <WarehousePicker<LocationChoice> create={can('inventory.location.manage') ? { label: 'Tambah lokasi pemeriksaan', onClick: () => setCreatingMaster('inspection') } : undefined} label="Lokasi pemeriksaan" load={receiptLocations} value={inspection} onChange={setInspection} name={locationLabel} eligible={row => row.kind === 'QUARANTINE' && !row.issueEligible} />
       </div>
       <p className="muted">Barang diterima di lokasi pemeriksaan sebelum ditempatkan ke gudang.</p>
+      </ResourceStep><ResourceStep step="items">
       {rows.map((row, index) => <ReceiptLineEditor key={row.key} row={row} number={index + 1} costVisible={costVisible} onChange={patch => update(row.key, patch)} onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />)}
       <div className="row wrap"><Button type="button" disabled={rows.length >= 100} onClick={() => setRows(current => [...current, emptyReceiptRow()])}>Tambah baris barang</Button>
         </div>
+      </ResourceStep>
       {error && <p className="error" role="alert">{error}</p>}
     </form>
       {creatingMaster === 'supplier' && <WarehouseSupplierEditor row={null} readOnly={false} onClose={() => setCreatingMaster(null)} onReload={() => setCreatingMaster(null)} onSaved={saved => { setSupplier(saved); setCreatingMaster(null) }} />}

@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
 import { useState, type FormEvent } from 'react'
@@ -52,17 +53,19 @@ function PolicyEditor({ settings, onClose, onDone }: { settings: PolicyDetails; 
       setReview({ input, command: savePolicy(input) }); setError('')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa aturan persetujuan.') }
   }
-  return <><ResourceForm editing title={<>Draft perubahan kebijakan</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi perubahan kebijakan" confirmLabel="Simpan kebijakan" command={review.command} onDone={onDone} onReload={onDone} onClose={() => setReview(null)}
+  return <><ResourceForm steps={[{ key: 'setup', label: 'Lingkup' }, { key: 'details', label: 'Persetujuan' }]} editing title={<>Draft perubahan kebijakan</>} onClose={onClose} onBack={() => setReview(null)} review={review && <WarehouseCommandDialog embedded title="Konfirmasi perubahan kebijakan" confirmLabel="Simpan kebijakan" command={review.command} onDone={onDone} onReload={onDone} onClose={() => setReview(null)}
     summary={<><h3>Tersimpan · Versi {review.input.expectedRevision}</h3>{settings.current ? <WarehousePolicyPreview locations={settings.references.locations} rules={policyRulesDraft(settings)} currency={settings.current.currency} expiry={String(settings.current.expiryHours)} /> : <p>Belum ada kebijakan.</p>}
-      <h3>Rencana perubahan</h3><WarehousePolicyPreview locations={locations} rules={rules} currency={currency} expiry={expiry} /><p></p></>} />} footer={<><Button type="button" onClick={onClose}>Batalkan perubahan kebijakan</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau kebijakan</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft kebijakan persetujuan" onSubmit={prepare}>
+      <h3>Rencana perubahan</h3><WarehousePolicyPreview locations={locations} rules={rules} currency={currency} expiry={expiry} /><p></p></>} />} footer={<><Button type="button" onClick={onClose}>Batalkan perubahan kebijakan</Button><Button form={resourceFormId} type="submit" variant="primary">Tinjau kebijakan</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft kebijakan persetujuan" onSubmit={prepare}><ResourceStep step="setup">
     <p>Berdasarkan versi tersimpan {settings.current?.revision ?? 0}. Perubahan mulai berlaku setelah disimpan. Pengajuan yang sudah ada memakai versi yang dicatat saat diajukan.</p>
     <TextField label="Mata uang kebijakan" required maxLength={3} value={currency} onChange={(_, data) => setCurrency(data.value.toUpperCase())} />
     <TextField label="Masa berlaku persetujuan (jam)" inputMode="numeric" required maxLength={3} value={expiry} onChange={(_, data) => setExpiry(data.value)} />
     <h3>Lokasi kebijakan</h3><ul>{locations.map(row => <li key={row.id} className="row wrap"><span>{locationLabel(row)}</span><Button type="button" aria-label={`Hapus lokasi ${locationLabel(row)}`} onClick={() => setLocations(locations.filter(item => item.id !== row.id))}>Hapus lokasi</Button></li>)}</ul>
     {can('inventory.location.view') && <><WarehousePicker label="Lokasi kebijakan" load={receiptLocations} value={location} name={locationLabel} optional eligible={row => !locations.some(selected => selected.id === row.id)} onChange={setLocation} />
       <Button type="button" disabled={!location || locations.length >= 100 || locations.some(row => row.id === location.id)} onClick={() => { if (location) { setLocations([...locations, location]); setLocation(null) } }}>Tambahkan lokasi kebijakan</Button></>}
+    </ResourceStep><ResourceStep step="details">
     <p>Setiap tahap memerlukan pemeriksa independen. Pilihan pengguna dan role dibatasi izin serta cakupan seluruh lokasi di atas. Satu orang tidak dapat menyelesaikan dua tahap pada pengajuan yang sama.</p>
     <WarehousePolicyRules rules={rules} locations={locations} onChange={setRules} />
+    </ResourceStep>
     {error && <p role="alert" className="error">{error}</p>}<div className="row wrap"></div>
   </form></ResourceForm></>
 }

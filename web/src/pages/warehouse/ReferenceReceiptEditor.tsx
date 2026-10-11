@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { useId, useState, type FormEvent } from 'react'
 import type { WarehouseLocation, WarehouseSupplier } from '@/api/warehouse/models'
 import { referenceLocations, referenceSuppliers } from '@/api/warehouse/reference'
@@ -33,7 +34,7 @@ export function ReferenceReceiptEditor({ onSaved, onClose }: { readonly onSaved:
       setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa barang dan jumlah penerimaan.') }
   }
-  return <ResourceForm title="Penerimaan baru" onClose={onClose} onBack={() => setOperation(null)}
+  return <ResourceForm steps={[{ key: 'receipt', label: 'Penerimaan' }, { key: 'items', label: 'Barang' }]} title="Penerimaan baru" onClose={onClose} onBack={() => setOperation(null)}
     footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau penerimaan</Button></>}
     review={operation && <WarehouseCommandDialog embedded title="Simpan penerimaan" confirmLabel="Terima barang" command={operation} onDone={onSaved} onClose={() => setOperation(null)}
       summary={<><p>Gudang tujuan: <strong>{warehouse?.name ?? warehouse?.code}</strong></p>
@@ -44,16 +45,18 @@ export function ReferenceReceiptEditor({ onSaved, onClose }: { readonly onSaved:
           {costVisible && row.useCost && <p>Total biaya kelompok: {row.totalMinor} {row.currency} (satuan terkecil)</p>}
         </li>)}</ul>
         {notes.trim() && <p>{notes.trim()}</p>}<p>Barang langsung menjadi stok tersedia setelah penerimaan disimpan.</p></>} />}>
-    <form id={formId} className="stack" onSubmit={prepare}>
-      <p className="muted">Pilih gudang dan barang yang benar-benar datang. Simpan untuk langsung menambah stok tersedia.</p>
+    <form id={formId} className="stack" onSubmit={prepare}><ResourceStep step="receipt">
+      <p className="muted">Catat barang yang diterima di gudang.</p>
       <WarehousePicker label="Gudang tujuan" load={referenceLocations} value={warehouse} name={row => (row.name ?? row.code) + ' · ' + row.code} onChange={setWarehouse} eligible={row => row.state === 'ACTIVE' && row.issueEligible} />
       <WarehousePicker optional label="Pemasok" load={referenceSuppliers} value={supplier} name={row => row.name + ' · ' + row.code} onChange={setSupplier} eligible={row => row.state === 'ACTIVE'} />
       <TextField label="Referensi surat jalan" maxLength={500} value={reference} onChange={(_, data) => setReference(data.value)} />
+      </ResourceStep><ResourceStep step="items">
       {rows.map((row, index) => <ReceiptLineEditor reference key={row.key} row={row} number={index + 1} costVisible={costVisible}
         onChange={patch => setRows(current => current.map(item => item.key === row.key ? { ...item, ...patch } : item))}
         onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />)}
       <Button type="button" disabled={rows.length >= 100} onClick={() => setRows(current => [...current, emptyReceiptRow()])}>Tambah baris barang</Button>
       <TextareaField label="Catatan penerimaan" maxLength={1000} value={notes} onChange={(_, data) => setNotes(data.value)} />
+      </ResourceStep>
       {error && <p className="error" role="alert">{error}</p>}
     </form>
   </ResourceForm>

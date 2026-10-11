@@ -41,7 +41,7 @@ export function MyMaterialReceipt({ context, issue, actor, online, onDone, onClo
     <p>Diterima {accepted}, kurang {missing}, ditolak {rejected} {source?.baseUnit === 'MM' ? 'm' : 'unit'}.</p><p>Bukti: {reference}</p>
   </>} />} footer={<><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={busy || !!review || !online}>{busy ? 'Memeriksa pengiriman…' : 'Tinjau penerimaan'}</Button></>}><form id={resourceFormId} className="stack" aria-label="Penerimaan material saya" onSubmit={event => void submit(event)}>
     <p>Pengirim: {issue.sender.name} · Penerima: {issue.receiver.name} · Revisi {issue.revision}</p>
-    <p>Draf di tab ini. Stok baru menjadi milik tanggung jawab Anda setelah penerimaan dikonfirmasi server.</p>
+    <p>Konfirmasikan jumlah material yang diterima.</p>
     {pending.some(line => line.serial) && <MaterialScanner onScan={scan} disabled={busy || !!review} />}
     <SelectField label="Barang yang diterima" required value={lineId} disabled={busy || !!review} onChange={(_, data) => { setLineId(data.value); setSerial(null); setAccepted('') }}>
       <option value="">Pilih…</option>{pending.map(line => <option key={line.id} value={line.id}>{line.sku.name} · {line.serial ?? line.lotCode ?? line.sku.code}</option>)}

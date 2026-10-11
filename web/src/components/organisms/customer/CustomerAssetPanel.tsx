@@ -53,7 +53,7 @@ function Assets({ customerId, areaId, onChanged, readOnly }: { customerId: strin
     }
     if (idle && !row.asset.endedAt && row.asset.handoverState === 'ACCEPTED' && row.asset.provenance !== 'UNKNOWN' && row.asset.positionStatus === 'CUSTOMER_INSTALLED') {
       if (proposalAccess('title')) items.push({ key: 'title', label: assetExceptionLabel.title, disabled: !online || readOnly, onClick: () => setException({ row, kind: 'title' }) })
-      if (proposalAccess('loss') && row.asset.ownershipMode === 'LOAN' && row.asset.legalOwner === 'ISP') items.push({ key: 'loss', label: assetExceptionLabel.loss, disabled: !online || readOnly, onClick: () => setException({ row, kind: 'loss' }) })
+      if (can('inventory.approval.request') && can('inventory.custody.manage') && row.asset.ownershipMode === 'LOAN' && row.asset.legalOwner === 'ISP') items.push({ key: 'loss', label: assetExceptionLabel.loss, disabled: !online || readOnly || !proposalAccess('loss'), onClick: () => setException({ row, kind: 'loss' }) })
     }
     return items
   }
@@ -64,6 +64,7 @@ function Assets({ customerId, areaId, onChanged, readOnly }: { customerId: strin
       {context.unresolvedDevices > 0 && <div role="status"><p>{context.unresolvedDevices} perangkat menunggu rekonsiliasi asal gudang.</p>
         {can('inventory.provenance.manage') && <Link to="/warehouse/provenance">Rekonsiliasi perangkat lama</Link>}</div>}
       {manage && idle && <Button disabled={!enabled} onClick={() => setInstall(true)}>Pasang perangkat dari gudang</Button>}
+      {can('inventory.approval.request') && can('inventory.custody.manage') && !can('inventory.approval.view') && <p role="note">Pengajuan kehilangan memerlukan akses lihat persetujuan.</p>}
       <DataTable columns={columns} rows={history.items} rowKey={row => row.asset.id} rowActions={actions} empty={<p>Belum ada riwayat perangkat.</p>} />
       <WarehousePagination page={page} size={history.size} total={history.totalElements} onChange={setPage} />
     </>}</WarehouseState>

@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useMemo, useState } from 'react'
@@ -247,12 +248,12 @@ export function SaveCablePanel({
 
   return (
     <Blade open title="Kabel baru" onClose={onCancel}
-      creation={{ ...creation, prepare: () => void submit(), summary: <><CreationSummary rows={[
+      creation={{ ...creation, steps: [{ key: 'cable', label: 'Kabel' }, { key: 'ports', label: 'Sambungan' }], prepare: () => void submit(), summary: <><CreationSummary rows={[
         ['Nama', name], ['Jenis kabel', TYPE_LABEL[type]], ['Rute', `${from} → ${to}`],
         ['Panjang', formatLength(lengthMeters)], ['Jumlah core', coreCount], ['Kode', codeTouched ? code : 'Otomatis'],
       ]} />{saveError && <p role="alert">{saveError}</p>}</> }}
       footer={<><Button disabled={creation.busy} onClick={onCancel}>Batal</Button><Button variant="primary" disabled={!canSave || creation.busy} onClick={() => void submit()}>Simpan kabel</Button></>}>
-      <div className="blade-body stack">
+      <div className="blade-body stack"><ResourceStep step="cable">
         {ambiguousType && (
           <div className="stack" style={{ gap: '0.35rem' }}>
             <SelectField
@@ -265,8 +266,7 @@ export function SaveCablePanel({
               ))}
             </SelectField>
             <Text as="span" className="muted" size={100}>
-              Ruas yang berakhir di joint box tak menunjukkan jenisnya sendiri — pilih jenis
-              kabel HULUNYA, sebab kotak sambung cuma menerus apa yang masuk.
+              Gunakan jenis kabel yang masuk dari sisi hulu.
             </Text>
           </div>
         )}
@@ -315,8 +315,7 @@ export function SaveCablePanel({
               </div>
             ))}
             <Text as="span" className="muted" size={100}>
-              Panjang materialnya dihitung sekali untuk seluruh bentang, dan kalau selubung ini
-              putus, semua kotak di atas ikut padam — persis seperti di lapangan.
+              Panjang kabel dihitung untuk seluruh jalur yang digambar.
             </Text>
           </div>
         )}
@@ -330,15 +329,15 @@ export function SaveCablePanel({
           maxLength={CODE_MAX}
           hint={
             codeTouched
-              ? 'Dipakai apa adanya — kalau sudah dipakai kabel lain, simpannya ditolak.'
-              : 'Terisi otomatis dari kedua ujungnya. Biarkan saja: ruas kedua ke tujuan yang sama otomatis diberi akhiran angka.'
+              ? 'Kode harus unik.'
+              : 'Kode dibuat otomatis dari kedua ujung kabel.'
           }
           onChange={(_, data) => {
             setCodeTouched(true)
             setCode(data.value)
           }}
         />
-        <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
+        <TextField label="Nama" required value={name} onChange={(_, data) => setName(data.value)} />
         <TextField
           label="Jumlah core"
           type="number"
@@ -354,6 +353,7 @@ export function SaveCablePanel({
           onOwnership={setOwnership}
         />
 
+        </ResourceStep><ResourceStep step="ports">
         {!customerDrop && (
           <div className="stack" style={{ gap: '0.4rem' }}>
             <Text as="span" size={300} weight="semibold">Port sumber {from}</Text>
@@ -412,7 +412,7 @@ export function SaveCablePanel({
                 />
                 {!onu ? (
                   <Text as="span" className="muted" size={100}>
-                    Pelanggan belum punya ONU terpasang — kabel drop tak bisa ditarik ke sini.
+                    Pasang ONU pelanggan sebelum menyambungkan kabel drop.
                   </Text>
                 ) : !canAssignPort ? (
                   <Text as="span" className="muted" size={100}>
@@ -437,7 +437,7 @@ export function SaveCablePanel({
         )}
 
 
-      </div>
+      </ResourceStep></div>
     </Blade>
   )
 }

@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { useId, useState, type FormEvent } from 'react'
 import type { WarehouseLocation } from '@/api/warehouse/models'
 import { referenceLocations, referenceSkus } from '@/api/warehouse/reference'
@@ -31,13 +32,13 @@ export function ReferenceRequestEditor({ onSaved, onClose }: { readonly onSaved:
       setReview({ command: submitRequest(input), input }); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa permintaan.') }
   }
-  return <ResourceForm title="Permintaan baru" onClose={onClose} onBack={() => setReview(null)}
+  return <ResourceForm steps={[{ key: 'setup', label: 'Permintaan' }, { key: 'items', label: 'Material' }]} title="Permintaan baru" onClose={onClose} onBack={() => setReview(null)}
     footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau permintaan</Button></>}
     review={review && <WarehouseCommandDialog embedded title="Ajukan permintaan" confirmLabel="Ajukan permintaan" command={review.command} onDone={onSaved} onClose={() => setReview(null)}
       summary={<><p>{kind === 'RESTOCK' ? 'Restock dari stok gudang' : 'Pengadaan barang'}</p><p>Penerima: <strong>{managing ? destination === 'WAREHOUSE' ? warehouse?.name ?? warehouse?.code : technician?.name : 'Anda sendiri'}</strong></p>
         <ul>{review.input.lines.map((line, index) => <li key={rows[index].key}>{line.proposedName ?? rows[index].sku?.name}: <WarehouseQuantity value={line.requestedBase} unit={line.baseUnit} /></li>)}</ul>
         <p>{review.input.reason}</p><p>Permintaan masuk ke tinjauan Admin. Pengajuan dan persetujuan belum memindahkan atau memesan stok.</p></>} />}>
-    <form id={formId} className="stack" onSubmit={prepare}>
+    <form id={formId} className="stack" onSubmit={prepare}><ResourceStep step="setup">
       <SelectField label="Jenis permintaan" value={kind} disabled={destination === 'WAREHOUSE'} onChange={(_, data) => { if (data.value === 'RESTOCK' || data.value === 'PROCUREMENT') { setKind(data.value); setRows([emptyRequestRow()]) } }}>
         <option value="RESTOCK">Restock dari stok gudang</option><option value="PROCUREMENT">Pengadaan barang</option>
       </SelectField>
@@ -46,12 +47,14 @@ export function ReferenceRequestEditor({ onSaved, onClose }: { readonly onSaved:
         {destination === 'TECHNICIAN' ? <WarehousePicker label="Teknisi penerima" load={requestTechnicians} value={technician} name={row => row.name + ' · ' + row.email} onChange={setTechnician} />
           : <WarehousePicker label="Gudang penerima" load={referenceLocations} value={warehouse} name={row => (row.name ?? row.code) + ' · ' + row.code} onChange={setWarehouse} eligible={row => row.state === 'ACTIVE' && row.issueEligible} />}
       </> : <p>Material diajukan untuk Anda sendiri. Admin akan menyerahkannya setelah permintaan disetujui.</p>}
+      </ResourceStep><ResourceStep step="items">
       {rows.map((row, index) => <RequestLineEditor key={row.key} row={row} number={index + 1} kind={kind}
         stockDestination={!managing ? {} : destination === 'WAREHOUSE' ? warehouse ? { warehouseId: warehouse.id } : null : technician ? { technicianId: technician.id } : null}
         onChange={patch => setRows(current => current.map(item => item.key === row.key ? { ...item, ...patch } : item))}
         onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />)}
       <Button type="button" disabled={rows.length >= 100} onClick={() => setRows(current => [...current, emptyRequestRow()])}>Tambah material</Button>
       <TextareaField label="Alasan permintaan" required maxLength={1000} value={reason} onChange={(_, data) => setReason(data.value)} />
+      </ResourceStep>
       {error && <p role="alert" className="error">{error}</p>}
     </form>
   </ResourceForm>

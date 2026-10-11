@@ -19,12 +19,14 @@ describe('tenant onboarding submission', () => {
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Tambah tenant' }))
     for (const [label, value] of [[/^Nama\s*\*?$/, 'ISP Bandung'], [/^Slug/, 'isp-bandung'], [/^Nama admin/, 'Admin ISP'], [/^Email admin/, 'admin@example.test'], [/^Password admin/, 'Random-password-123!']] as const) {
+      if (value === 'Admin ISP') await user.click(screen.getByRole('tab', { name: 'Administrator' }))
       await user.type(screen.getByLabelText(label), value)
     }
+    await user.click(screen.getByRole('tab', { name: 'Langganan' }))
     const fee = screen.getByLabelText('Harga bulanan khusus (Rp)') as HTMLInputElement
     await user.type(fee, '149500')
     expect(fee.checkValidity()).toBe(true)
-    await user.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
+    await user.click(screen.getByRole('tab', { name: 'Tinjau + buat' }))
     expect(fixtures.post).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Simpan' }))
     expect((await screen.findByRole('alert')).textContent).toContain('Gagal memuat daftar tenant')

@@ -194,7 +194,7 @@ export function TenantsPage() {
       />
 
       <Blade
-        creation={{ ...creation, busy: saving, prepare: () => (document.getElementById('tenant-onboarding') as HTMLFormElement | null)?.requestSubmit(), summary: <><CreationSummary rows={[['Tenant', draft?.name], ['Slug', draft?.slug]]} />{formError && <p className="error" role="alert">{formError}</p>}</> }}
+        creation={{ ...creation, steps: [{ key: 'tenant', label: 'Tenant' }, { key: 'admin', label: 'Administrator' }, { key: 'billing', label: 'Langganan' }], busy: saving, prepare: () => (document.getElementById('tenant-onboarding') as HTMLFormElement | null)?.requestSubmit(), summary: <><CreationSummary rows={[['Tenant', draft?.name], ['Slug', draft?.slug]]} />{formError && <p className="error" role="alert">{formError}</p>}</> }}
         open={draft != null}
         title="Tambah tenant"
         size="sm"

@@ -1,3 +1,4 @@
+import { ResourceStep, type ResourceStepDefinition } from '@/components/organisms/ResourceStep'
 import { useState, type ReactNode } from 'react'
 import { Text } from '@fluentui/react-components'
 import {
@@ -69,7 +70,7 @@ function ProfileEditor({ defaultPoolId, onClose, onCreated, onError }: EditorPro
     catch (cause) { onError(cause); throw cause }
     finally { setSaving(false) }
   }}>
-    <TextField label="Nama profil" hint="Gunakan nama yang menjelaskan kelas layanan." value={name} onChange={(_, data) => setName(data.value)} required />
+    <TextField label="Nama profil" hint="Contoh: Pelanggan rumahan." value={name} onChange={(_, data) => setName(data.value)} required />
     <Text as="p" className="muted" size={200}>Profil memakai pool VLAN aktif pertama. </Text>
   </EditorShell>
 }
@@ -90,24 +91,25 @@ function IntentEditor({ profiles, topology, onClose, onCreated, onError }: Edito
   const selectedOlt = oltNodes.find((node) => node.id === oltNodeId)
   const selectedPon = ponPorts.find((networkInterface) => networkInterface.id === ponInterfaceId)
   const valid = subscriptionId.trim() !== '' && profileId !== '' && selectedOlt?.reference?.id != null && selectedPon?.reference?.id != null && onuId.trim() !== '' && (mode === 'SHARED' || validVlan)
-  return <EditorShell summary={<CreationSummary rows={[['Langganan', subscriptionId], ['OLT', selectedOlt?.name], ['PON', selectedPon?.name], ['ONU', onuId], ['VLAN', vlan || 'Otomatis']]} />} title="Buat intent layanan" saving={saving} valid={valid} onClose={onClose} onSubmit={async () => {
+  return <EditorShell steps={[{ key: 'access', label: 'Akses pelanggan' }, { key: 'service', label: 'Layanan' }]} summary={<CreationSummary rows={[['Langganan', subscriptionId], ['OLT', selectedOlt?.name], ['PON', selectedPon?.name], ['ONU', onuId], ['VLAN', vlan || 'Otomatis']]} />} title="Buat intent layanan" saving={saving} valid={valid} onClose={onClose} onSubmit={async () => {
     setSaving(true)
     if (!selectedOlt?.reference || !selectedPon?.reference) return
     try { await createServiceIntent({ subscriptionId: subscriptionId.trim(), segmentProfileId: profileId, allocationMode: mode, dedicatedVlanId: mode === 'DEDICATED' && vlan !== '' ? dedicatedVlanId : null, accessOltId: selectedOlt.reference.id, accessPonPortId: selectedPon.reference.id, accessOnuId: onuId.trim() }); await onCreated(); onClose() }
     catch (cause) { onError(cause); throw cause }
     finally { setSaving(false) }
   }}>
-    <TextField label="ID langganan" value={subscriptionId} onChange={(_, data) => setSubscriptionId(data.value)} required />
+    <ResourceStep step="access"><TextField label="ID langganan" value={subscriptionId} onChange={(_, data) => setSubscriptionId(data.value)} required />
     <SelectField label="OLT akses" value={oltNodeId} onChange={(event) => { setOltNodeId(event.target.value); setPonInterfaceId('') }} required><option value="">Pilih OLT</option>{oltNodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</SelectField>
     <SelectField label="Port PON" value={ponInterfaceId} onChange={(event) => setPonInterfaceId(event.target.value)} required><option value="">Pilih port PON</option>{ponPorts.map((networkInterface) => <option key={networkInterface.id} value={networkInterface.id}>{networkInterface.name}</option>)}</SelectField>
     <TextField label="ID ONU" value={onuId} onChange={(_, data) => setOnuId(data.value)} required />
-    <SelectField label="Profil segmen" value={profileId} onChange={(event) => setProfileId(event.target.value)} required><option value="">Pilih profil</option>{profiles.map((profile) => <option key={profile.value.id} value={profile.value.id}>{profile.value.name}</option>)}</SelectField>
-    <SelectField label="Mode intent" value={mode} onChange={(event) => setMode(event.target.value === 'DEDICATED' ? 'DEDICATED' : 'SHARED')}><option value="SHARED">Residential shared</option><option value="DEDICATED">Enterprise dedicated</option></SelectField>
+    </ResourceStep><ResourceStep step="service"><SelectField label="Profil segmen" value={profileId} onChange={(event) => setProfileId(event.target.value)} required><option value="">Pilih profil</option>{profiles.map((profile) => <option key={profile.value.id} value={profile.value.id}>{profile.value.name}</option>)}</SelectField>
+    <SelectField label="Alokasi VLAN" value={mode} onChange={(event) => setMode(event.target.value === 'DEDICATED' ? 'DEDICATED' : 'SHARED')}><option value="SHARED">Bersama</option><option value="DEDICATED">Khusus</option></SelectField>
     {mode === 'DEDICATED' && <TextField type="number" min={2} max={4094} label="Override VLAN dedicated (opsional)" value={vlan} onChange={(_, data) => setVlan(data.value)} />}
+    </ResourceStep>
   </EditorShell>
 }
 
-function EditorShell({ title, saving, valid, onClose, onSubmit, children, summary }: { readonly title: string; readonly saving: boolean; readonly valid: boolean; readonly onClose: () => void; readonly onSubmit: () => Promise<void>; readonly children: ReactNode; readonly summary: ReactNode }) {
+function EditorShell({ title, saving, valid, onClose, onSubmit, children, summary, steps }: { readonly steps?: ResourceStepDefinition[]; readonly title: string; readonly saving: boolean; readonly valid: boolean; readonly onClose: () => void; readonly onSubmit: () => Promise<void>; readonly children: ReactNode; readonly summary: ReactNode }) {
   const creation = useCreationReview(true)
   const [error, setError] = useState('')
   const submit = async () => {
@@ -118,7 +120,7 @@ function EditorShell({ title, saving, valid, onClose, onSubmit, children, summar
     finally { creation.finish() }
   }
   return <Blade open title={title} onClose={() => !saving && onClose()}
-    creation={{ ...creation, busy: saving, prepare: () => void submit(), summary: <>{summary}{error && <p role="alert" className="error">{error}</p>}</> }}
+    creation={{ ...creation, steps, busy: saving, prepare: () => void submit(), summary: <>{summary}{error && <p role="alert" className="error">{error}</p>}</> }}
     footer={<Button variant="primary" disabled={!valid || saving} onClick={() => void submit()}>{saving ? 'Menyimpan…' : 'Simpan'}</Button>}>
     <div className="stack">{children}</div>
   </Blade>

@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { Blade } from '@/components/organisms/Blade'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useEffect, useState } from 'react'
@@ -163,20 +164,21 @@ export function PlaceAssetForm({
 
   return (
     <Blade open title={`${meta.label} baru`} onClose={onCancel}
-      creation={{ ...creation, prepare: () => void submit(), summary: <><CreationSummary rows={[
+      creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'settings', label: kind === 'OLT' ? 'Koneksi' : 'Pengaturan' }], prepare: () => void submit(), summary: <><CreationSummary rows={[
         ['Jenis perangkat', meta.label], ['Kode', sanitizeCode(code)], ['Nama', name.trim()], ['Alamat', address],
         ['Koordinat', `${lat.toFixed(6)}, ${lng.toFixed(6)}`],
         ...(needsSite ? [['Site induk', sites.find(site => site.id === siteId)?.name] as [string, string | undefined]] : []),
       ]} />{saveError && <p role="alert">{saveError}</p>}</> }}
       footer={<><Button disabled={creation.busy} onClick={onCancel}>Batal</Button><Button variant="primary" disabled={!canSubmit || creation.busy} onClick={() => void submit()}>Simpan {meta.label}</Button></>}>
-      <div className="blade-body stack">
+      <div className="blade-body stack"><ResourceStep step="identity">
         <TextField
-          label="Kode"
+          label="Kode" required
           value={code}
           onChange={(_, data) => setCode(data.value)}
           placeholder={kind === 'JOINT_BOX' ? 'JB-001' : `${kind}-001`}
         />
-        <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
+        <TextField label="Nama" required value={name} onChange={(_, data) => setName(data.value)} />
+        </ResourceStep><ResourceStep step="settings">
         {kind === 'OLT' && (
           <>
             <SelectField label="Site induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
@@ -373,7 +375,7 @@ export function PlaceAssetForm({
           </>
         )}
 
-      </div>
+      </ResourceStep></div>
     </Blade>
   )
 }

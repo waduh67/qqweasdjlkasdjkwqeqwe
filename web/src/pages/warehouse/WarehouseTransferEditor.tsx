@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
 import { useCallback, useState, type FormEvent } from 'react'
@@ -49,10 +50,10 @@ export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }:
       setOperation(initial ? updateTransfer(initial.transfer.id, initial.transfer.revision, draft) : createTransfer(draft)); setError(null)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa rincian transfer.') }
   }
-  return <><ResourceForm editing={!!initial} title={<>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft transfer" confirmLabel="Simpan transfer" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+  return <><ResourceForm steps={[{ key: 'shipping', label: 'Pengiriman' }, { key: 'items', label: 'Barang' }]} editing={!!initial} title={<>{initial ? 'Ubah draft transfer' : 'Transfer baru'}</>} onClose={onClose} onBack={() => setOperation(null)} review={operation && <WarehouseCommandDialog embedded title="Simpan draft transfer" confirmLabel="Simpan transfer" command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p>{source && locationLabel(source)} → {transit && locationLabel(transit)} → {destination && locationLabel(destination)}</p><p>Pengirim: {actor.name} · Penerima: {receiver?.name}</p>
         <ul>{rows.map(row => <li key={row.key}>{row.position?.name} · {row.position?.serial ?? row.position?.stockIdentityId}: {row.quantity} {row.position?.physical.baseUnit === 'MM' ? 'm' : 'unit'}</li>)}</ul>
-        <p>{reason}</p><p>Stok belum berpindah. Kondisi dan kepemilikan barang tetap mengikuti sumbernya.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!source}>Tinjau transfer</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft transfer" onSubmit={prepare}>
+        <p>{reason}</p><p>Stok belum berpindah. Kondisi dan kepemilikan barang tetap mengikuti sumbernya.</p></>} />} footer={<><Button type="button" onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={!source}>Tinjau transfer</Button></>}><form id={resourceFormId} className="stack" aria-label="Draft transfer" onSubmit={prepare}><ResourceStep step="shipping">
     <p>Draft belum memindahkan atau mencadangkan stok. Setelah disimpan, pengirim perlu mengirim barang dan penerima mengonfirmasi jumlah fisik yang diterima.</p>
     {initial && <p>Revisi {initial.transfer.revision}. Perubahan sebelumnya tetap tersimpan di riwayat. Barang yang tidak lagi tersedia perlu dipilih kembali.</p>}
     {receiver?.status !== 'ACTIVE' && initial && <p role="status">Penerima tersimpan sudah tidak aktif. Pilih penerima aktif sebelum menyimpan.</p>}
@@ -68,10 +69,12 @@ export function WarehouseTransferEditor({ initial, onSaved, onClose, onReload }:
       </SelectField><p className="muted">Izin lihat pengguna diperlukan untuk memilih penerima lain.</p></>}
     <TextareaField label="Alasan transfer" value={reason} required maxLength={1000} onChange={(_, data) => setReason(data.value)} />
     <p><Link to="/warehouse/catalog">Kelola lokasi gudang dan transit</Link></p>
+    </ResourceStep><ResourceStep step="items">
     {source ? rows.map((row, index) => <TransferLineEditor key={row.key} row={row} number={index + 1} sourceId={source.id} actorId={actor.id} onChange={patch => update(row.key, patch)}
       onRemove={rows.length > 1 ? () => setRows(current => current.filter(item => item.key !== row.key)) : undefined} />) : <p>Pilih lokasi asal untuk mencari barang fisik.</p>}
     <div className="row wrap"><Button type="button" disabled={!source || rows.length >= 100} onClick={() => setRows(current => [...current, emptyLine()])}>Tambah barang transfer</Button>
       </div>
+    </ResourceStep>
     {error && <p className="error" role="alert">{error}</p>}
   </form></ResourceForm>
 

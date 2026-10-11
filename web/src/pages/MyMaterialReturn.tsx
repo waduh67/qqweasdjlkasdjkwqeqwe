@@ -40,7 +40,7 @@ export function MyMaterialReturn({ context, source, online, onDone, onClose }: {
     <p>Petugas gudang masih perlu mengakui penerimaan dan memeriksa barang. Bukti: {reference}</p>
   </>} />} footer={<><Button disabled={busy || !!review} onClick={onClose}>Batal</Button><Button form={resourceFormId} type="submit" variant="primary" disabled={busy || !!review || !online}>{busy ? 'Memeriksa sisa…' : 'Tinjau pengembalian'}</Button></>}><form id={resourceFormId} className="stack" aria-label="Pengembalian material saya" onSubmit={event => void submit(event)}>
     <p>{source.serial ?? source.lotCode ?? source.issueCode} · <WarehouseQuantity value={source.quantityBase} unit={source.baseUnit} /> · {source.location.name ?? source.location.code}</p>
-    <p>Draf di tab ini. Sisa tetap dapat dikembalikan setelah penugasan berubah. Barang yang dikirim belum menjadi stok gudang tersedia.</p>
+    <p>Material yang dikembalikan menunggu penerimaan dan pemeriksaan gudang.</p>
     {source.serial && <><MaterialScanner disabled={busy || !!review} onScan={value => {
       if (!sameSerialIdentity(value, source.serial)) { setSerial(null); setError('Serial tidak cocok dengan perangkat yang akan dikembalikan.'); return }
       setSerial(source.serial); setError(null)

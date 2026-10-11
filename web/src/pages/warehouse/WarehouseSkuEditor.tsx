@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId, useState, type FormEvent } from 'react'
 import { Checkbox } from '@fluentui/react-components'
@@ -35,30 +36,32 @@ export function WarehouseSkuEditor({ row, readOnly, onClose, onSaved, onReload, 
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Periksa isian barang.') }
   }
   return <>
-    <ResourceForm readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan barang" command={operation} confirmLabel="Simpan barang" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
+    <ResourceForm steps={[{ key: 'identity', label: 'Identitas' }, { key: 'stock', label: 'Stok & kepemilikan' }]} readOnly={readOnly} editing={!!row} onBack={() => setOperation(null)} review={operation && (<WarehouseCommandDialog embedded title="Simpan barang" command={operation} confirmLabel="Simpan barang" onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload}
       summary={<><p><strong>{name.trim()}</strong> · {code.trim()}{row && ` · Revisi ${row.revision}`}</p><p>{TRACKING_LABELS[tracking]} · {displayUnit(unit)} · Minimum {minimum} {displayUnit(unit)}</p>
         <p>{reference ? 'Katalog ini belum menambah stok fisik.' : inspection ? 'Wajib pemeriksaan' : 'Pemeriksaan sesuai penerimaan'} · {ownership.map(mode => mode === 'LOAN' ? 'Pinjaman' : 'Penjualan').join(', ')}</p></>} />)} title={readOnly ? 'Detail barang' : row ? 'Ubah barang' : 'Tambah barang'} onClose={onClose} footer={<>
       <Button onClick={onClose}>{readOnly ? 'Tutup' : 'Batal'}</Button>{!readOnly && <Button variant="primary" type="submit" form={formId}>{row ? 'Tinjau + simpan' : 'Tinjau + buat'}</Button>}
     </>}>
       <form id={formId} className="stack" onSubmit={prepare}>
         {row && <p className="muted">Tersimpan: {row.name} · Revisi {row.revision}</p>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
+        <ResourceStep step="identity"><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(16rem, 100%), 1fr))', gap: '1rem' }}>
           <TextField label="Kode barang" required pattern="[A-Z0-9][A-Z0-9._-]{0,63}" maxLength={64} value={code} disabled={readOnly} onChange={(_, data) => setCode(data.value.toUpperCase())} hint="Contoh: ONU-001." />
           <TextField label="Nama barang" required maxLength={200} value={name} disabled={readOnly} onChange={(_, data) => setName(data.value)} />
+          <TextField label="Kategori" maxLength={100} value={category} disabled={readOnly} onChange={(_, data) => setCategory(data.value)} />
+          <TextField label="Model" maxLength={200} value={model} disabled={readOnly} onChange={(_, data) => setModel(data.value)} />
+        </div></ResourceStep><ResourceStep step="stock"><div className="stack">
           <SelectField label="Pelacakan" value={tracking} disabled={readOnly} onChange={(_, data) => { const next = data.value as typeof tracking; setTracking(next); if (next === 'SERIAL') { setUnit('EA'); setMinimum('0') } }}>
             {Object.entries(TRACKING_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </SelectField>
           <SelectField label="Satuan" value={unit} disabled={readOnly || tracking === 'SERIAL'} onChange={(_, data) => { setUnit(data.value as typeof unit); setMinimum('0') }}>
             <option value="EA">Unit</option><option value="MM">Meter (0,001 m)</option>
           </SelectField>
-          <TextField label="Kategori" maxLength={100} value={category} disabled={readOnly} onChange={(_, data) => setCategory(data.value)} />
-          <TextField label="Model" maxLength={200} value={model} disabled={readOnly} onChange={(_, data) => setModel(data.value)} />
           <WarehouseQuantityField label="Stok minimum" value={minimum} unit={unit} allowZero disabled={readOnly} onChange={setMinimum} />
         </div>
         <fieldset className="resource-choice-group" disabled={readOnly}><legend>Kepemilikan</legend><div>{(['LOAN', 'SALE'] as const).map(mode => <Checkbox key={mode} label={mode === 'LOAN' ? 'Pinjaman (milik ISP)' : 'Penjualan (milik pelanggan)'} checked={ownership.includes(mode)}
           onChange={(_, data) => setOwnership(current => data.checked === true ? [...current, mode] : current.filter(item => item !== mode))} />)}</div></fieldset>
-        {reference ? <p className="muted">Stok bertambah saat penerimaan. Minimum dihitung pada setiap gudang, terpisah dari material di tangan teknisi.</p> : <Checkbox className="resource-choice-control" label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />}
+        {reference ? <p className="muted">Stok minimum berlaku per gudang.</p> : <Checkbox className="resource-choice-control" label="Wajib diperiksa sebelum tersedia" disabled={readOnly} checked={inspection} onChange={(_, data) => setInspection(data.checked === true)} />}
         {row && <p className="muted">Satuan dan pelacakan tidak dapat diubah setelah barang memiliki riwayat.</p>}
+        </ResourceStep>
         {error && <p role="alert" className="error">{error}</p>}
       </form>
     </ResourceForm>

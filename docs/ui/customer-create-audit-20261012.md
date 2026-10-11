@@ -16,7 +16,7 @@ Branch: `fix/azure-customer-forms-20261012`, based on main `f3672a72`.
 - [x] Password backend, permission and regression coverage: 8 integration tests passed.
 - [x] Account/user/tenant password interfaces: 6 focused UI tests passed; browser verification remains pending.
 - [ ] Customer detail layout and tab workflows.
-- [ ] Shared form spacing and grouped-step support.
+- [x] Shared form spacing and grouped-step support; native fields and required selections validate before advancing.
 - [ ] All creation entry points reviewed; complex forms grouped explicitly.
 - [ ] Desktop/mobile Firefox and Chromium verification.
 - [ ] Full frontend checks and relevant backend checks.
@@ -28,109 +28,109 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 
 | Source | Panels | Direct fields | Review |
 |---|---:|---:|---|
-| `web/src/pages/AccountSecurityPage.tsx` | 1 | 2 | Pending |
-| `web/src/pages/AreasPage.tsx` | 1 | 2 | Pending |
-| `web/src/pages/BngConfiguration.tsx` | 1 | 1 | Pending |
-| `web/src/pages/CatalogPage.tsx` | 1 | 26 | Pending |
-| `web/src/pages/CustomerDetailPage.tsx` | 3 | 13 | Pending |
-| `web/src/pages/CustomersPage.tsx` | 1 | 8 | Pending |
-| `web/src/pages/HotspotPage.tsx` | 3 | 10 | Pending |
-| `web/src/pages/InventoryPage.tsx` | 8 | 25 | Pending |
-| `web/src/pages/InvoicesPage.tsx` | 6 | 6 | Pending |
-| `web/src/pages/MapPage.tsx` | 3 | 0 | Pending |
-| `web/src/pages/MonitoringPage.tsx` | 1 | 1 | Pending |
-| `web/src/pages/MyMaterialReceipt.tsx` | 1 | 3 | Pending |
-| `web/src/pages/MyMaterialResidualAcknowledgement.tsx` | 1 | 1 | Pending |
-| `web/src/pages/MyMaterialReturn.tsx` | 1 | 3 | Pending |
-| `web/src/pages/MyMaterialRma.tsx` | 1 | 1 | Pending |
-| `web/src/pages/OltDetailPage.tsx` | 2 | 17 | Pending |
-| `web/src/pages/PaymentGatewaySettingsPage.tsx` | 2 | 21 | Pending |
-| `web/src/pages/PlatformAcsSettingsPage.tsx` | 0 | 4 | Pending |
-| `web/src/pages/PlatformEmailSettingsPage.tsx` | 1 | 7 | Pending |
-| `web/src/pages/RadiusServersPage.tsx` | 1 | 12 | Pending |
-| `web/src/pages/RolesPage.tsx` | 1 | 2 | Pending |
-| `web/src/pages/SignupPage.tsx` | 0 | 4 | Pending |
-| `web/src/pages/TaxSettingsPage.tsx` | 1 | 1 | Pending |
-| `web/src/pages/TenantsPage.tsx` | 1 | 1 | Pending |
-| `web/src/pages/UsersPage.tsx` | 2 | 5 | Pending |
-| `web/src/pages/VpnCredentialsBlade.tsx` | 1 | 3 | Pending |
-| `web/src/pages/VpnPage.tsx` | 5 | 9 | Pending |
-| `web/src/pages/VpnServersPage.tsx` | 1 | 6 | Pending |
-| `web/src/pages/WorkOrdersPage.tsx` | 1 | 10 | Pending |
-| `web/src/pages/b2b/B2BClientsPage.tsx` | 1 | 7 | Pending |
-| `web/src/pages/b2b/B2BVisitsPage.tsx` | 1 | 3 | Pending |
-| `web/src/pages/b2b/shared.tsx` | 2 | 0 | Pending |
-| `web/src/pages/helpdesk/TicketBlade.tsx` | 2 | 5 | Pending |
-| `web/src/pages/warehouse/MaterialPlanEditor.tsx` | 1 | 5 | Pending |
-| `web/src/pages/warehouse/ReferenceCountEditor.tsx` | 2 | 4 | Pending |
-| `web/src/pages/warehouse/ReferenceReceiptEditor.tsx` | 1 | 4 | Pending |
-| `web/src/pages/warehouse/ReferenceRequestEditor.tsx` | 1 | 9 | Pending |
-| `web/src/pages/warehouse/ReferenceRequestMovements.tsx` | 3 | 7 | Pending |
-| `web/src/pages/warehouse/ReferenceRequestReview.tsx` | 2 | 3 | Pending |
-| `web/src/pages/warehouse/ReferenceReturnEditor.tsx` | 2 | 4 | Pending |
-| `web/src/pages/warehouse/ReferenceSettingsPage.tsx` | 1 | 2 | Pending |
-| `web/src/pages/warehouse/ReferenceTransferEditor.tsx` | 1 | 5 | Pending |
-| `web/src/pages/warehouse/WarehouseActivationEditor.tsx` | 1 | 1 | Pending |
-| `web/src/pages/warehouse/WarehouseAllocationEditor.tsx` | 1 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseApprovalsPage.tsx` | 1 | 1 | Pending |
-| `web/src/pages/warehouse/WarehouseCountEditor.tsx` | 1 | 5 | Pending |
-| `web/src/pages/warehouse/WarehouseCountsPage.tsx` | 1 | 2 | Pending |
-| `web/src/pages/warehouse/WarehouseCustomerRma.tsx` | 1 | 6 | Pending |
-| `web/src/pages/warehouse/WarehouseDelegationForm.tsx` | 1 | 6 | Pending |
-| `web/src/pages/warehouse/WarehouseDispositionForm.tsx` | 1 | 4 | Pending |
-| `web/src/pages/warehouse/WarehouseDrainDialog.tsx` | 1 | 0 | Pending |
-| `web/src/pages/warehouse/WarehouseLocationEditor.tsx` | 1 | 8 | Pending |
-| `web/src/pages/warehouse/WarehousePendingMaterialReturns.tsx` | 1 | 0 | Pending |
-| `web/src/pages/warehouse/WarehouseProvenanceCase.tsx` | 3 | 8 | Pending |
-| `web/src/pages/warehouse/WarehouseProvenanceOpening.tsx` | 4 | 5 | Pending |
-| `web/src/pages/warehouse/WarehouseProvenancePage.tsx` | 1 | 0 | Pending |
-| `web/src/pages/warehouse/WarehouseReceiptActions.tsx` | 1 | 7 | Pending |
-| `web/src/pages/warehouse/WarehouseReceiptEditor.tsx` | 1 | 15 | Pending |
-| `web/src/pages/warehouse/WarehouseReceiptEvidence.tsx` | 1 | 0 | Pending |
-| `web/src/pages/warehouse/WarehouseReplenishmentRuleForm.tsx` | 1 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseReservationEditor.tsx` | 1 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseReturnActions.tsx` | 1 | 9 | Pending |
-| `web/src/pages/warehouse/WarehouseReturnEditor.tsx` | 4 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseReturnReacquisition.tsx` | 1 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseReturnsPage.tsx` | 1 | 0 | Pending |
-| `web/src/pages/warehouse/WarehouseSettingsPage.tsx` | 1 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseSkuEditor.tsx` | 1 | 8 | Pending |
-| `web/src/pages/warehouse/WarehouseSupplierEditor.tsx` | 1 | 3 | Pending |
-| `web/src/pages/warehouse/WarehouseSupplierReplacement.tsx` | 1 | 8 | Pending |
-| `web/src/pages/warehouse/WarehouseTransferActions.tsx` | 1 | 5 | Pending |
-| `web/src/pages/warehouse/WarehouseTransferEditor.tsx` | 1 | 7 | Pending |
-| `web/src/pages/workorder/ReferenceWorkAssignment.tsx` | 1 | 1 | Pending |
-| `web/src/pages/workorder/ReferenceWorkDispatch.tsx` | 2 | 4 | Pending |
-| `web/src/pages/workorder/ReferenceWorkEditor.tsx` | 2 | 8 | Pending |
-| `web/src/pages/workorder/ReferenceWorkTypesPage.tsx` | 1 | 6 | Pending |
-| `web/src/components/organisms/AccessNodeDetail.tsx` | 1 | 12 | Pending |
-| `web/src/components/organisms/OdfDetail.tsx` | 1 | 5 | Pending |
-| `web/src/components/organisms/PortalCredentialCard.tsx` | 1 | 2 | Pending |
-| `web/src/components/organisms/ReleaseDropDialog.tsx` | 1 | 2 | Pending |
-| `web/src/components/organisms/SplicingManager.tsx` | 1 | 8 | Pending |
-| `web/src/components/organisms/SplitterPanel.tsx` | 1 | 2 | Pending |
-| `web/src/components/organisms/TenantOwnerPanel.tsx` | 1 | 0 | Pending |
-| `web/src/components/organisms/TenantOwnerPasswordForm.tsx` | 0 | 2 | Pending |
-| `web/src/components/organisms/TenantSubscriptionModal.tsx` | 1 | 5 | Pending |
-| `web/src/components/organisms/WhatsAppTemplateCard.tsx` | 1 | 5 | Pending |
-| `web/src/components/organisms/customer/CustomerAssetAction.tsx` | 1 | 1 | Pending |
-| `web/src/components/organisms/customer/CustomerAssetException.tsx` | 1 | 2 | Pending |
-| `web/src/components/organisms/customer/CustomerAssetInstallation.tsx` | 1 | 3 | Pending |
-| `web/src/components/organisms/map/CablePanel.tsx` | 1 | 1 | Pending |
-| `web/src/components/organisms/map/OtdrSection.tsx` | 1 | 5 | Pending |
-| `web/src/components/organisms/map/PlaceAssetForm.tsx` | 1 | 21 | Pending |
-| `web/src/components/organisms/map/SaveCablePanel.tsx` | 1 | 5 | Pending |
-| `web/src/components/organisms/provisioning/ProvisioningEditors.tsx` | 1 | 10 | Pending |
-| `web/src/components/organisms/provisioning/ProvisioningEvidencePanels.tsx` | 1 | 1 | Pending |
-| `web/src/components/organisms/warehouse/WarehouseCommandDialog.tsx` | 1 | 0 | Pending |
-| `web/src/components/organisms/workorder/WorkOrderMaterialHandover.tsx` | 1 | 4 | Pending |
-| `web/src/components/organisms/workorder/WorkOrderMaterialRework.tsx` | 1 | 3 | Pending |
-| `web/src/components/organisms/workorder/WorkOrderMaterialUse.tsx` | 1 | 3 | Pending |
-| `web/src/components/organisms/workorder/WorkOrderMaterials.tsx` | 0 | 1 | Pending |
-| `web/src/components/organisms/workorder/WorkOrderSignatureUpload.tsx` | 0 | 2 | Pending |
-| `web/src/portal/PortalForgotPasswordPage.tsx` | 0 | 4 | Pending |
-| `web/src/portal/PortalHelpTab.tsx` | 0 | 4 | Pending |
-| `web/src/portal/PortalProfilPage.tsx` | 0 | 4 | Pending |
+| `web/src/pages/AccountSecurityPage.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/pages/AreasPage.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/pages/BngConfiguration.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
+| `web/src/pages/CatalogPage.tsx` | 1 | 26 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/CustomerDetailPage.tsx` | 3 | 13 | Source reviewed; short retained form |
+| `web/src/pages/CustomersPage.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/HotspotPage.tsx` | 3 | 10 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/InventoryPage.tsx` | 8 | 25 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/InvoicesPage.tsx` | 6 | 6 | Source reviewed; short retained form |
+| `web/src/pages/MapPage.tsx` | 3 | 0 | Source reviewed; detail/edit or short action |
+| `web/src/pages/MonitoringPage.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/pages/MyMaterialReceipt.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/MyMaterialResidualAcknowledgement.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/pages/MyMaterialReturn.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/MyMaterialRma.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/pages/OltDetailPage.tsx` | 2 | 17 | Source reviewed; short retained form |
+| `web/src/pages/PaymentGatewaySettingsPage.tsx` | 2 | 21 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/PlatformAcsSettingsPage.tsx` | 0 | 4 | Source reviewed; detail/edit or short action |
+| `web/src/pages/PlatformEmailSettingsPage.tsx` | 1 | 7 | Source reviewed; detail/edit or short action |
+| `web/src/pages/RadiusServersPage.tsx` | 1 | 12 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/RolesPage.tsx` | 1 | 2 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/SignupPage.tsx` | 0 | 4 | Source reviewed; short retained form |
+| `web/src/pages/TaxSettingsPage.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
+| `web/src/pages/TenantsPage.tsx` | 1 | 1 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/UsersPage.tsx` | 2 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/VpnCredentialsBlade.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/VpnPage.tsx` | 5 | 9 | Source reviewed; short retained form |
+| `web/src/pages/VpnServersPage.tsx` | 1 | 6 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/WorkOrdersPage.tsx` | 1 | 10 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/b2b/B2BClientsPage.tsx` | 1 | 7 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/b2b/B2BVisitsPage.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/b2b/shared.tsx` | 2 | 0 | Source reviewed; short retained form |
+| `web/src/pages/helpdesk/TicketBlade.tsx` | 2 | 5 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/MaterialPlanEditor.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/ReferenceCountEditor.tsx` | 2 | 4 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/ReferenceReceiptEditor.tsx` | 1 | 4 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/ReferenceRequestEditor.tsx` | 1 | 9 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/ReferenceRequestMovements.tsx` | 3 | 7 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/ReferenceRequestReview.tsx` | 2 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/ReferenceReturnEditor.tsx` | 2 | 4 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/ReferenceSettingsPage.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/ReferenceTransferEditor.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseActivationEditor.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseAllocationEditor.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseApprovalsPage.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
+| `web/src/pages/warehouse/WarehouseCountEditor.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseCountsPage.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseCustomerRma.tsx` | 1 | 6 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseDelegationForm.tsx` | 1 | 6 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseDispositionForm.tsx` | 1 | 4 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseDrainDialog.tsx` | 1 | 0 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseLocationEditor.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseSource reviewed; detail/edit or short actionMaterialReturns.tsx` | 1 | 0 | Source reviewed; detail/edit or short action |
+| `web/src/pages/warehouse/WarehouseProvenanceCase.tsx` | 3 | 8 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseProvenanceOpening.tsx` | 4 | 5 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseProvenancePage.tsx` | 1 | 0 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReceiptActions.tsx` | 1 | 7 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReceiptEditor.tsx` | 1 | 15 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseReceiptEvidence.tsx` | 1 | 0 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReplenishmentRuleForm.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReservationEditor.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReturnActions.tsx` | 1 | 9 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReturnEditor.tsx` | 4 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReturnReacquisition.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseReturnsPage.tsx` | 1 | 0 | Source reviewed; detail/edit or short action |
+| `web/src/pages/warehouse/WarehouseSettingsPage.tsx` | 1 | 3 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseSkuEditor.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseSupplierEditor.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseSupplierReplacement.tsx` | 1 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/warehouse/WarehouseTransferActions.tsx` | 1 | 5 | Source reviewed; short retained form |
+| `web/src/pages/warehouse/WarehouseTransferEditor.tsx` | 1 | 7 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/workorder/ReferenceWorkAssignment.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/pages/workorder/ReferenceWorkDispatch.tsx` | 2 | 4 | Source reviewed; short retained form |
+| `web/src/pages/workorder/ReferenceWorkEditor.tsx` | 2 | 8 | Source reviewed; named steps added; regression pending |
+| `web/src/pages/workorder/ReferenceWorkTypesPage.tsx` | 1 | 6 | Source reviewed; short retained form |
+| `web/src/components/organisms/AccessNodeDetail.tsx` | 1 | 12 | Source reviewed; detail/edit or short action |
+| `web/src/components/organisms/OdfDetail.tsx` | 1 | 5 | Source reviewed; detail/edit or short action |
+| `web/src/components/organisms/PortalCredentialCard.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/components/organisms/ReleaseDropDialog.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/components/organisms/SplicingManager.tsx` | 1 | 8 | Source reviewed; short retained form |
+| `web/src/components/organisms/SplitterPanel.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/components/organisms/TenantOwnerPanel.tsx` | 1 | 0 | Source reviewed; detail/edit or short action |
+| `web/src/components/organisms/TenantOwnerPasswordForm.tsx` | 0 | 2 | Source reviewed; detail/edit or short action |
+| `web/src/components/organisms/TenantSubscriptionModal.tsx` | 1 | 5 | Source reviewed; short retained form |
+| `web/src/components/organisms/WhatsAppTemplateCard.tsx` | 1 | 5 | Source reviewed; short retained form |
+| `web/src/components/organisms/customer/CustomerAssetAction.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/components/organisms/customer/CustomerAssetException.tsx` | 1 | 2 | Source reviewed; short retained form |
+| `web/src/components/organisms/customer/CustomerAssetInstallation.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/components/organisms/map/CablePanel.tsx` | 1 | 1 | Source reviewed; detail/edit or short action |
+| `web/src/components/organisms/map/OtdrSection.tsx` | 1 | 5 | Source reviewed; short retained form |
+| `web/src/components/organisms/map/PlaceAssetForm.tsx` | 1 | 21 | Source reviewed; named steps added; regression pending |
+| `web/src/components/organisms/map/SaveCablePanel.tsx` | 1 | 5 | Source reviewed; named steps added; regression pending |
+| `web/src/components/organisms/provisioning/ProvisioningEditors.tsx` | 1 | 10 | Source reviewed; named steps added; regression pending |
+| `web/src/components/organisms/provisioning/ProvisioningEvidencePanels.tsx` | 1 | 1 | Source reviewed; short retained form |
+| `web/src/components/organisms/warehouse/WarehouseCommandDialog.tsx` | 1 | 0 | Source reviewed; short retained form |
+| `web/src/components/organisms/workorder/WorkOrderMaterialHandover.tsx` | 1 | 4 | Source reviewed; short retained form |
+| `web/src/components/organisms/workorder/WorkOrderMaterialRework.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/components/organisms/workorder/WorkOrderMaterialUse.tsx` | 1 | 3 | Source reviewed; short retained form |
+| `web/src/components/organisms/workorder/WorkOrderMaterials.tsx` | 0 | 1 | Source reviewed; detail/edit or short action |
+| `web/src/components/organisms/workorder/WorkOrderSignatureUpload.tsx` | 0 | 2 | Source reviewed; short retained form |
+| `web/src/portal/PortalForgotPasswordPage.tsx` | 0 | 4 | Source reviewed; detail/edit or short action |
+| `web/src/portal/PortalHelpTab.tsx` | 0 | 4 | Source reviewed; short retained form |
+| `web/src/portal/PortalProfilPage.tsx` | 0 | 4 | Source reviewed; detail/edit or short action |
 
 ## Password implementation checkpoint
 
@@ -147,3 +147,16 @@ Panel counts include detail/edit panels; each file must be inspected to identify
 - Asset history is a plain resource table with row actions and nested details; warehouse action endpoints, command signatures and permissions are preserved. Connected hosts and ACS action logs also use tables.
 - WiFi editing is a nested panel; failures retain edits. Portal login reset is a single reviewed action and generated credentials use a resource panel.
 - Customer asset regression: 7 tests passed; build passed. Rich browser fixtures and remaining customer sections still need verification.
+
+## Shared creation-flow checkpoint (work remains)
+
+- Added named, retained steps to ResourceForm/Blade. ResourceStep and FormSection can group domain fields without replacing existing API/warehouse command handlers. Native validation, required lookup choices, dirty-close guards, nested submit isolation and uncertain-command review locks are preserved.
+- Applied named steps to customer/user/tenant/role/catalog, RADIUS/VPN/hotspot/OLT, map asset/cable, provisioning intent, legacy/reference work orders, B2B clients, payment onboarding, warehouse catalog/receipts/requests/transfers/replacement/delegation/policy/count/material-plan forms.
+- Payment profile registration now has Business/Contact/Bank steps. Draft profile saving remains available separately from registration, and failed requests retain the form.
+- Initial source inventory inspected (103 files). Rows above record source review only; they do not imply final browser/regression acceptance. Additional entry points: BngEditor already uses ResourceWizard; PlaceCustomerForm selects an existing customer; remaining map panels are detail/action wrappers. ExpressPsbPage/onboarding child fields were additionally audited: the 17-field inline form was migrated to a retained five-step resource flow, with coordinate validation, masked credential review and explicit result-based closure.
+- Evidence: 943-test baseline run had 920 passes and 23 failures caused by changed navigation/control locations. Updated affected fixtures passed 56/57; the last catalog access fixture was corrected and its 11-test core run passed. More forms were grouped after that run, so full regression must be repeated and repaired before merge.
+- Browser: own password failure/masking and tenant admin reset passed at 375/1440 in Firefox and Chromium (4 scenarios). Customer resource navigation, nested subscription/asset panels and plain asset table passed the same matrix (4 scenarios). Screenshots under web/test-results; captures should disable animations to avoid translucent entrance frames.
+- Still required: final copy cleanup, remaining long-form browser coverage including payment/OLT/warehouse, platform owner reset browser scenario, all relevant unit/DOM tests and lint/build, production merge/deploy/verification. No production mutation or deployment has been performed for this branch yet.
+
+- Additional checkpoint: PSB Ekspres now opens from its command bar, uses Customer/Location/Plan/Network/Installation steps and clears drafts only on confirmed discard or successful creation. The shared step definition now supports domain validation such as required map coordinates.
+- Latest full regression is in `.omo/runtime/azure-forms/frontend-regression-2.log` (in progress when checkpoint written). Newly grouped warehouse settings/count/transfer/material forms require test navigation updates. Do not merge until the whole suite is green.

@@ -191,7 +191,7 @@ export function CustomerDetailPage({
     } finally {
       setLoading(false)
     }
-  }, [id, toast, onTitleChange])
+  }, [id, onTitleChange])
 
   useEffect(() => {
     void reload()
@@ -708,7 +708,7 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
                 {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
               </span>
             </Ess>
-            <Ess label="Rx hidup">
+            <Ess label="Rx terkini">
               {trace.liveRxPowerDbm != null && <span className="tnum">{fmtDbm(trace.liveRxPowerDbm)}</span>}
             </Ess>
             <Ess label="Jarak dari OLT">
@@ -740,7 +740,7 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
                 <span className="tnum">{fmtUptime(bras.uptimeSeconds)}</span>
               )}
             </Ess>
-            <Ess label="Profil laju">{bras.rateProfileName}</Ess>
+            <Ess label="Profil kecepatan">{bras.rateProfileName}</Ess>
           </dl>
         </div>
       )}
@@ -1071,7 +1071,7 @@ function NetworkAccessTab({
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          Pelanggan belum berpaket — tetapkan paketnya dulu sebelum memberi akun PPPoE.
+          Paket langganan belum ditetapkan.
         </p>
       </div>
     )
@@ -1413,7 +1413,7 @@ function SubscriptionAccessCard({
         </div>
       ) : sub.status === 'TERMINATED' ? (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Langganan sudah dihentikan — tak bisa diberi akun jaringan.
+          Langganan sudah berakhir.
         </Text>
       ) : !canManage ? (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada akun jaringan untuk langganan ini.</Text>

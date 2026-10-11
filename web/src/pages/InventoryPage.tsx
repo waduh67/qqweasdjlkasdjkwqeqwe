@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@fluentui/react-components'
@@ -702,7 +703,7 @@ return (
     <div className="stack">
       <CommandBar primary={primary} actions={actions} />
 
-      <Blade creation={{ ...creation, prepare: saveDraft, summary: <CreationSummary rows={[['Kode', draft?.code], ['Nama', draft?.name], ['Vendor', draft?.vendor], ['Model', draft?.model], ['IP manajemen', draft?.managementIp]]} /> }}
+      <Blade creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'snmp', label: 'SNMP' }, { key: 'web', label: 'Web management' }, { key: 'location', label: 'Lokasi' }], prepare: saveDraft, summary: <CreationSummary rows={[['Kode', draft?.code], ['Nama', draft?.name], ['Vendor', draft?.vendor], ['Model', draft?.model], ['IP manajemen', draft?.managementIp]]} /> }}
         open={draft != null}
         title="Tambah OLT"
         size="lg"
@@ -721,7 +722,7 @@ return (
         }
       >
         {draft && (
-          <div className="stack">
+          <div className="stack"><ResourceStep step="identity">
           <h2 className="settings-section-title">Identitas perangkat</h2>
           <div className="form-grid">
             <div style={{ flex: 1 }}>
@@ -791,6 +792,7 @@ return (
 
           <h2 className="settings-section-title">Koneksi monitoring</h2>
           {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ EPON pun dipolling lewat SNMP, jadi tampil untuk semua vendor */}
+          </ResourceStep><ResourceStep step="snmp">
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
             <Checkbox
               label={<Text as="span" weight="semibold">Aktifkan SNMP untuk OLT ini</Text>}
@@ -839,14 +841,14 @@ return (
             </Text>
           </div>
 
+          </ResourceStep><ResourceStep step="web">
           {/* Kanal Web UI — HSGQ pakai ini sebagai manajemen langsung; lainnya untuk metrik suhu/optik */}
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
             {isWebManaged(draft.vendor) ? (
               <div className="stack" style={{ gap: '0.25rem' }}>
                 <Text as="span" weight="semibold">Web UI API (HTTP Management)</Text>
                 <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-                  OLT HSGQ terhubung langsung lewat HTTP Web UI API — mengandalkan Port Web, Web Username, & Web Password di
-                  bawah.</Text>
+                  Masukkan kredensial web OLT HSGQ.</Text>
               </div>
             ) : (
               <>
@@ -856,7 +858,7 @@ return (
                   onChange={(e) => setDraft({ ...draft, webEnabled: e.target.checked })}
                 />
                 <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-                  Digunakan untuk mengambil data suhu (temperature) &amp; daya optik (optical power) lewat Web UI.
+                  Membaca suhu dan daya optik OLT.
                 </Text>
               </>
             )}
@@ -909,14 +911,16 @@ return (
             )}
           </div>
 
+          </ResourceStep><ResourceStep step="location">
           <LocationFields
             longitude={draft.longitude}
             latitude={draft.latitude}
             onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
           />
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Kosongkan lokasi untuk mengikuti koordinat site. Isi bila ingin OLT tampil di titiknya sendiri di peta.
+            Kosongkan untuk menggunakan lokasi site.
           </Text>
+          </ResourceStep>
           </div>
         )}
       </Blade>

@@ -233,3 +233,15 @@
   .horizontal-form .app-field { display: flex; flex-direction: column; }
   .horizontal-form .app-field > .fui-Field__label { margin-bottom: 4px; padding: 0; }
 }
+
+/* Named creation steps share one compact field rhythm and retain their drafts. */
+.resource-form-step { display: flex; flex-direction: column; gap: 20px; min-width: 0; outline: none; }
+.resource-form-step[hidden] { display: none; }
+.resource-form-step > .row, .resource-form-step > .stack { gap: 20px; }
+.resource-form-tabs { flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; }
+.resource-form-tabs .fui-Tab { flex-shrink: 0; }
+
+.resource-form-content .form-section[hidden] { display: none; }
+.resource-form-content .form-section[data-resource-step] { margin: 0; padding: 0; }
+
+.resource-step-error { margin-bottom: 20px !important; }

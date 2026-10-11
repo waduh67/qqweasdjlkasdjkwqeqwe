@@ -1,3 +1,4 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import type { ReferenceWorkOrder } from '@/api/warehouse/reference'
 import { assignmentTechnicians, type TechnicianChoice } from '@/api/warehouse/technicians'
@@ -42,25 +43,27 @@ function WorkEditorForm({ work, seed, customerLocked = false, area: initialArea,
       setError(null)
     } catch (caught) { setError(caught instanceof WorkDraftError ? caught.message : warehouseError(caught)) }
   }
-  return <ResourceForm editing={!!work} title={work ? 'Ubah rincian pekerjaan' : 'Work order baru'} onClose={onClose} onBack={() => setOperation(null)}
+  return <ResourceForm steps={[{ key: 'work', label: 'Pekerjaan' }, { key: 'location', label: 'Lokasi & jadwal' }]} editing={!!work} title={work ? 'Ubah rincian pekerjaan' : 'Work order baru'} onClose={onClose} onBack={() => setOperation(null)}
     footer={<><Button onClick={onClose}>Batal</Button><Button form={formId} type="submit" variant="primary">Tinjau pekerjaan</Button></>}
     review={operation && <WarehouseCommandDialog embedded title={work ? 'Simpan rincian pekerjaan' : 'Buat penugasan'} confirmLabel={work ? 'Simpan rincian' : 'Buat work order'} command={operation} onDone={onSaved} onClose={() => setOperation(null)} onReload={onReload ?? onClose}
       summary={<><p><strong>{draft.title.trim()}</strong> · {type?.name}</p><p>Teknisi: {work?.technicianName ?? technician?.name}</p><p>Area: {area?.name} · Pelanggan: {customer?.name ?? 'Tanpa pelanggan'}</p><p>Prioritas: {PRIORITY_LABELS[draft.priority]} · Jadwal: {draft.schedule ? new Date(draft.schedule).toLocaleString('id-ID') : 'Belum dijadwalkan'}</p><p className="reference-work-notes">{draft.description || 'Tanpa instruksi tambahan.'}</p><p>{work ? 'Rincian disimpan pada revisi ' + work.revision + '. Jenis dan teknisi tetap pada penugasan saat ini.' : 'Tugas akan muncul di Tugas Saya milik teknisi yang dipilih.'}</p></>} />}>
-    <form id={formId} className="stack" onSubmit={prepare}>
-      {seed && <p>Draf dari peta: {seed.type === 'PSB' ? 'pasang baru' : 'perbaikan'}. Periksa jenis dan area sebelum membuat penugasan.</p>}
+    <form id={formId} className="stack" onSubmit={prepare}><ResourceStep step="work">
+      {seed && <p>Sumber peta: {seed.type === 'PSB' ? 'pasang baru' : 'perbaikan'}.</p>}
       {!work ? <><WarehousePicker label="Jenis pekerjaan" load={workTypes} value={type} name={item => item.name} onChange={setType} />
         {type && <p>Foto wajib: {type.photoSlots.join(', ')} · {type.materialRequired ? 'Material wajib dicatat' : 'Material opsional'}.</p>}
         <WarehousePicker label="Teknisi penanggung jawab" load={assignmentTechnicians} value={technician} name={item => item.name + ' · ' + item.email} onChange={setTechnician} />
       </> : <p>{work.type.name} · {work.technicianName}. Pergantian teknisi dilakukan melalui tindakan Ganti teknisi.</p>}
       <TextField label="Judul pekerjaan" required maxLength={200} value={draft.title} onChange={(_, data) => setDraft(current => ({ ...current, title: data.value }))} />
       <TextareaField label="Instruksi pekerjaan" maxLength={2000} value={draft.description} onChange={(_, data) => setDraft(current => ({ ...current, description: data.value }))} />
+      </ResourceStep><ResourceStep step="location">
       <WarehousePicker label="Area pekerjaan" load={workAreas} value={area} name={item => item.name + ' · ' + item.code} onChange={setArea} />
       <WarehousePicker optional disabled={customerLocked} label="Pelanggan pekerjaan" load={workCustomers} value={customer} name={item => item.name + ' · ' + item.code} eligible={item => item.status === 'ACTIVE' || item.status === 'PROSPECT' || item.id === work?.customerId} onChange={setCustomer} />
-      {customerLocked && <p>Pelanggan terikat langganan dan tetap pada pekerjaan ini.</p>}
+      {customerLocked && <p>Pelanggan tidak dapat diubah pada pekerjaan ini.</p>}
       <SelectField label="Prioritas pekerjaan" value={draft.priority} onChange={(_, data) => setDraft(current => ({ ...current, priority: oneOf(data.value, ['LOW', 'NORMAL', 'HIGH', 'URGENT']) }))}>
         {Object.entries(PRIORITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </SelectField>
       <TextField label="Jadwal pekerjaan" type="datetime-local" step="0.001" hint="Waktu setempat. Kosongkan jika belum dijadwalkan." value={draft.schedule} onChange={(_, data) => setDraft(current => ({ ...current, schedule: data.value }))} />
+      </ResourceStep>
       {error && <p role="alert" className="error">{error}</p>}
     </form>
   </ResourceForm>

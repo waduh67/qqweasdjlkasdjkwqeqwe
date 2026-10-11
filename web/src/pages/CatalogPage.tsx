@@ -1,6 +1,7 @@
+import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Text, typographyStyles } from '@fluentui/react-components'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   buildFupRateLimit,
@@ -347,16 +348,16 @@ export function CatalogPage() {
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
         title="Paket Internet"
-        subtitle="Atur harga, kecepatan, QoS, FUP, dan billing paket. Atribut RADIUS dibuat otomatis."
+        subtitle=""
       />
 
       <CommandBar primary={primary} actions={actions} />
 
       <Blade
-        creation={{ ...creation, busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama paket', draft?.name], ['Harga', draft?.price], ['Unduh / unggah (Mbps)', `${draft?.downMbps} / ${draft?.upMbps}`], ['Jenis layanan', draft?.serviceTypes.join(', ')]]} /> }}
+        creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'speed', label: 'Kecepatan' }, { key: 'burst', label: 'Burst' }, { key: 'fup', label: 'FUP' }, { key: 'services', label: 'Layanan' }, { key: 'billing', label: 'Tagihan' }], busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama paket', draft?.name], ['Harga', draft?.price], ['Unduh / unggah (Mbps)', `${draft?.downMbps} / ${draft?.upMbps}`], ['Jenis layanan', draft?.serviceTypes.map(service => SERVICE_TYPE_LABEL[service]).join(', ')], ['Profil kecepatan', preview], ['Profil FUP', fupPreview]]} /> }}
         open={draft != null}
         title={draft?.id ? 'Edit paket' : 'Tambah paket'}
-        subtitle="Atur kebijakan paket. Atribut RADIUS dibuat otomatis."
+        subtitle=""
         size="lg"
         dirty={dirty}
         onClose={closeDraft}
@@ -371,33 +372,11 @@ export function CatalogPage() {
       >
         {draft && (
           <div className="stack">
-            {/* Preview rate-limit — persis yang ditulis ke RADIUS */}
-          <div
-            className="stack"
-            style={{
-              gap: '0.35rem',
-              padding: '0.75rem 1rem',
-              borderRadius: 8,
-              background: 'var(--surface-2, rgba(127,127,127,0.08))',
-            }}
-          >
-            <Text as="span" className="muted" size={200} style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Preview atribut RADIUS (Mikrotik-Rate-Limit)
-            </Text>
-            <code style={{ ...typographyStyles.body1Strong }}>{preview || '— isi kecepatan —'}</code>
-            {fupPreview && (
-              <code className="muted" style={{ ...typographyStyles.body2 }}>
-                FUP → {fupPreview}
-              </code>
-            )}
-          </div>
-
-          {/* ---- Informasi Dasar ---- */}
-          <SectionTitle>Informasi dasar</SectionTitle>
+          <ResourceStep step="identity">
           <div className="row">
             <div style={{ flex: 2 }}>
               <TextField
-                label="Nama paket"
+                label="Nama paket" required
                 value={draft.name}
                 onChange={(_, data) => setDraft({ ...draft, name: data.value })}
                 placeholder="Home 50 Mbps"
@@ -405,7 +384,7 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Harga bulanan (Rp)"
+                label="Harga bulanan (Rp)" required type="number" min={0}
                 value={draft.price}
                 onChange={(_, data) => setDraft({ ...draft, price: data.value })}
                 placeholder="150000"
@@ -418,10 +397,11 @@ export function CatalogPage() {
             onChange={(_, data) => setDraft({ ...draft, description: data.value })}
             placeholder="opsional"
           />
+          </ResourceStep><ResourceStep step="speed">
           <div className="row">
             <div style={{ flex: 1 }}>
               <TextField
-                label="Unduh (Mbps)"
+                label="Unduh (Mbps)" required type="number" min={0.001} step="any"
                 value={draft.downMbps}
                 onChange={(_, data) => setDraft({ ...draft, downMbps: data.value })}
                 placeholder="50"
@@ -429,7 +409,7 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Unggah (Mbps)"
+                label="Unggah (Mbps)" required type="number" min={0.001} step="any"
                 value={draft.upMbps}
                 onChange={(_, data) => setDraft({ ...draft, upMbps: data.value })}
                 placeholder="25"
@@ -453,8 +433,7 @@ export function CatalogPage() {
             </div>
           </div>
 
-          {/* ---- Burst & Limit-at ---- */}
-          <SectionTitle>Burst &amp; limit-at</SectionTitle>
+          </ResourceStep><ResourceStep step="burst">
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Isi unduh dan unggah berpasangan. Threshold dan waktu berlaku saat burst diisi.
           </Text>
@@ -519,10 +498,9 @@ export function CatalogPage() {
             </div>
           </div>
 
-          {/* ---- FUP ---- */}
-          <SectionTitle>FUP</SectionTitle>
+          </ResourceStep><ResourceStep step="fup">
           <Checkbox
-            label="Aktifkan FUP; kecepatan turun setelah kuota terlampaui"
+            label="Aktifkan FUP"
             checked={draft.fupEnabled}
             onChange={(e) => setDraft({ ...draft, fupEnabled: e.target.checked })}
           />
@@ -555,8 +533,7 @@ export function CatalogPage() {
             </div>
           )}
 
-          {/* ---- Ketersediaan ---- */}
-          <SectionTitle>Tipe layanan</SectionTitle>
+          </ResourceStep><ResourceStep step="services">
           <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
             {SERVICE_TYPES.map((svc) => (
               <Checkbox
@@ -568,13 +545,18 @@ export function CatalogPage() {
             ))}
           </div>
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Tipe layanan menentukan ketersediaan paket; layanan yang dipilih diprovisikan ke RADIUS.
+            Paket tersedia untuk jenis layanan yang dipilih.
           </Text>
 
-          {/* ---- Siklus Billing (override) ---- */}
-          <SectionTitle>Billing paket</SectionTitle>
+          {/* ---- Status ---- */}
+          <Checkbox
+            label="Paket aktif"
+            checked={draft.active}
+            onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
+          />
+          </ResourceStep><ResourceStep step="billing">
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Kosongkan untuk mengikuti kebijakan billing global.
+            Kosongkan untuk mengikuti pengaturan tagihan tenant.
           </Text>
           <div className="row">
             <div style={{ flex: 1 }}>
@@ -625,12 +607,7 @@ export function CatalogPage() {
             </div>
           </div>
 
-          {/* ---- Status ---- */}
-          <Checkbox
-            label="Aktifkan paket; paket nonaktif tidak tersedia untuk langganan baru"
-            checked={draft.active}
-            onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
-          />
+          </ResourceStep>
           </div>
         )}
       </Blade>
@@ -671,21 +648,6 @@ export function CatalogPage() {
           />
         }
       />
-    </div>
-  )
-}
-
-function SectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        ...typographyStyles.body1Strong,
-        marginTop: '0.5rem',
-        borderBottom: '1px solid var(--border, rgba(127,127,127,0.2))',
-        paddingBottom: '0.35rem',
-      }}
-    >
-      {children}
     </div>
   )
 }

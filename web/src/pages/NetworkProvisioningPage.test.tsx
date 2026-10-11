@@ -211,6 +211,7 @@ describe('NetworkProvisioningPage', () => {
     fireEvent.change(screen.getByLabelText(/OLT akses/), { target: { value: 'olt-1' } })
     fireEvent.change(screen.getByLabelText(/Port PON/), { target: { value: 'pon-1' } })
     fireEvent.change(screen.getByLabelText(/ID ONU/), { target: { value: 'onu-1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Layanan' }))
     fireEvent.change(screen.getByLabelText(/Profil segmen/), { target: { value: 'profile-shared' } })
     fireEvent.click(screen.getByRole('button', { name: 'Tinjau + buat' }))
     fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))

@@ -1,3 +1,8 @@
+import { useState } from 'react'
+import { Blade } from '@/components/organisms/Blade'
+import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
+import { ResourceStep } from '@/components/organisms/ResourceStep'
+import { CommandBar } from '@/components/molecules'
 import { Text } from '@fluentui/react-components'
 import { SERVICE_TYPE_LABEL } from '@/api/catalog'
 import { oneOf } from '@/api/warehouse/codec'
@@ -9,27 +14,52 @@ import type { useExpressPsb } from './useExpressPsb'
 
 export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, plans, planId, changePlan,
   authType, setAuthType, availableTypes, macBased, secret, showSecret, setSecret, setShowSecret,
-  randomSecret, nasId, setNasId, nasList, reference, workflowMode, technicians, submit, saving, invalid
+  randomSecret, nasId, setNasId, nasList, reference, workflowMode, technicians, submit, saving, invalid, resetDraft
 }: ReturnType<typeof useExpressPsb>) {
-  return <div className="card stack" style={{ gap: '1rem' }}>
+  const [open, setOpen] = useState(false), [error, setError] = useState('')
+  const creation = useCreationReview(open)
+  const close = () => { setOpen(false); setError(''); resetDraft() }
+  async function prepare() {
+    if (invalid) { setError('Lengkapi data pelanggan dan layanan.'); return }
+    if (creation.beforeSave()) return
+    try { if (await submit()) { setOpen(false); setError('') } else setError('PSB belum berhasil dibuat. Periksa data atau coba lagi.') }
+    finally { creation.finish() }
+  }
+  return <><CommandBar primary={{ key: 'create', label: 'Buat PSB', icon: <IconPlus size={16} />, onClick: () => setOpen(true) }} />
+    <Blade open={open} title="Buat PSB" onClose={close}
+      creation={{ ...creation, busy: saving || creation.busy, steps: [
+        { key: 'customer', label: 'Pelanggan' }, { key: 'location', label: 'Lokasi', validate: () => {
+          const lat = Number(draft.latitude), lng = Number(draft.longitude)
+          return !draft.latitude.trim() || !draft.longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180 ? 'Tentukan lokasi pemasangan yang valid.' : null
+        } }, { key: 'plan', label: 'Paket' }, { key: 'network', label: 'Akun jaringan' }, { key: 'installation', label: 'Pemasangan' },
+      ], prepare: () => void prepare(), summary: <div className="stack">{error && <p role="alert" className="error">{error}</p>}
+        <CreationSummary rows={[
+          ['Pelanggan', draft.name], ['Telepon', draft.phone], ['Alamat', draft.address], ['Area', areas.find(area => area.id === draft.areaId)?.name],
+          ['Paket', plans.find(plan => plan.id === planId)?.name], ['Layanan', SERVICE_TYPE_LABEL[authType]],
+          ['Username', draft.username || 'Otomatis'], ['BRAS', nasList.find(nas => nas.id === nasId)?.name],
+          ['Jadwal pemasangan', draft.scheduledAt || 'Belum dijadwalkan'],
+        ]} /></div> }}
+      footer={<><Button disabled={saving} onClick={close}>Batal</Button><Button variant="primary" disabled={saving || invalid || workflowMode === null} onClick={() => void prepare()}>{saving ? 'Memproses…' : 'Buat PSB'}</Button></>}>
+      <div className="stack">{error && <p role="alert" className="error">{error}</p>}
           {/* Pelanggan */}
-          <section className="stack" style={{ gap: '0.5rem' }}>
-            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Pelanggan</Text>
+          <ResourceStep step="customer">
+
             <div className="row wrap" style={{ gap: '0.6rem' }}>
               <div style={{ flex: 1, minWidth: 140 }}>
                 <TextField label="Kode" value={draft.code} onChange={(_, data) => set({ code: data.value })} placeholder="Otomatis: CUST-000001" />
               </div>
               <div style={{ flex: 2, minWidth: 180 }}>
-                <TextField label="Nama *" value={draft.name} onChange={(_, data) => set({ name: data.value })} placeholder="Budi Santoso" />
+                <TextField label="Nama" required value={draft.name} onChange={(_, data) => set({ name: data.value })} placeholder="Budi Santoso" />
               </div>
               <div style={{ flex: 1, minWidth: 140 }}>
                 <TextField label="Telepon" value={draft.phone} onChange={(_, data) => set({ phone: data.value })} placeholder="08123456789" />
               </div>
               <div style={{ flex: 1, minWidth: 140 }}>
-                <TextField label="Email" value={draft.email} onChange={(_, data) => set({ email: data.value })} placeholder="budi@email.com" />
+                <TextField label="Email" type="email" value={draft.email} onChange={(_, data) => set({ email: data.value })} placeholder="budi@email.com" />
               </div>
             </div>
-            <TextField label="Alamat *" value={draft.address} onChange={(_, data) => set({ address: data.value })} placeholder="Jl. Merdeka No. 10" />
+          </ResourceStep><ResourceStep step="location">
+            <TextField label="Alamat" required value={draft.address} onChange={(_, data) => set({ address: data.value })} placeholder="Jl. Merdeka No. 10" />
             <label>
               <span>Lokasi *</span>
               <LocationPicker
@@ -57,14 +87,14 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
                 </div>
               </div>
             )}
-          </section>
+          </ResourceStep>
 
           {/* Paket & akun jaringan */}
-          <section className="stack" style={{ gap: '0.5rem' }}>
-            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Paket &amp; akun jaringan</Text>
+          <ResourceStep step="plan">
+
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
               <div style={{ flex: 2, minWidth: 180 }}>
-                <SelectField label="Paket *" value={planId} onChange={(_, data) => changePlan(data.value)}>
+                <SelectField label="Paket" required value={planId} onChange={(_, data) => changePlan(data.value)}>
                   {plans.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.downMbps}/{p.upMbps} Mbps)
@@ -93,13 +123,14 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
               </div>
             </div>
 
+          </ResourceStep><ResourceStep step="network">
             {macBased ? (
               <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
                 <div style={{ flex: 2, minWidth: 180 }}>
-                  <TextField label="MAC Address *" value={draft.username} onChange={(_, data) => set({ username: data.value })} placeholder="AA:BB:CC:DD:EE:FF" />
+                  <TextField label="MAC Address" required value={draft.username} onChange={(_, data) => set({ username: data.value })} placeholder="AA:BB:CC:DD:EE:FF" />
                 </div>
                 <div style={{ flex: 2, minWidth: 160 }}>
-                  <TextField label={`Reserved IP${authType === 'STATIC' ? ' *' : ' (opsional)'}`} value={draft.framedIp} onChange={(_, data) => set({ framedIp: data.value })} placeholder="100.64.0.10" />
+                  <TextField label="Reserved IP" required={authType === 'STATIC'} value={draft.framedIp} onChange={(_, data) => set({ framedIp: data.value })} placeholder="100.64.0.10" />
                 </div>
               </div>
             ) : (
@@ -108,10 +139,10 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
                   <TextField label="Username (opsional)" value={draft.username} onChange={(_, data) => set({ username: data.value })} placeholder="otomatis dari kode pelanggan" />
                 </div>
                 <div style={{ flex: 2, minWidth: 160 }}>
-                  <TextField label="Password *" type={showSecret ? 'text' : 'password'} value={secret} onChange={(_, data) => setSecret(data.value)} />
+                  <TextField label="Password" required autoComplete="new-password" type={showSecret ? 'text' : 'password'} value={secret} onChange={(_, data) => setSecret(data.value)} />
                 </div>
                 <Button type="button" onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
-                <Button type="button" onClick={() => { setSecret(randomSecret()); setShowSecret(true) }}>Generate</Button>
+                <Button type="button" onClick={() => { setSecret(randomSecret()); setShowSecret(true) }}>Buat acak</Button>
               </div>
             )}
 
@@ -137,15 +168,15 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
                 ? 'DHCP dan Static memakai MAC Address sebagai identitas. Static memerlukan Reserved IP.'
                 : 'Password dapat diubah sebelum PSB dibuat dan hanya ditampilkan sekali setelahnya.'}
             </Text>
-          </section>
+          </ResourceStep>
 
           {/* Work order pemasangan */}
-          <section className="stack" style={{ gap: '0.5rem' }}>
-            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Pemasangan (Work Order PSB)</Text>
-            {reference && <p>PSB masuk ke antrean Belum ditugaskan. Setelah dibuat, buka pekerjaan untuk memilih jenis pemasangan dan satu teknisi NE atau FO.</p>}
+          <ResourceStep step="installation">
+
+            {reference && <p>Teknisi dapat ditugaskan setelah PSB dibuat.</p>}
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
               <div style={{ flex: 2, minWidth: 200 }}>
-                <TextField label="Judul WO (opsional)" value={draft.title} onChange={(_, data) => set({ title: data.value })} placeholder={`PSB ${draft.name.trim() || 'pelanggan'}`} />
+                <TextField label="Judul pekerjaan" value={draft.title} onChange={(_, data) => set({ title: data.value })} placeholder={`PSB ${draft.name.trim() || 'pelanggan'}`} />
               </div>
               {workflowMode === 'LEGACY' && <label style={{ flex: 1, minWidth: 180 }}>
                 <span>Teknisi (opsional, bisa lebih dari satu)</span>
@@ -165,22 +196,18 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
                 />
               </label>}
               <div style={{ flex: 1, minWidth: 180 }}>
-                <TextField label="Jadwal (opsional)" type="datetime-local" value={draft.scheduledAt} onChange={(_, data) => set({ scheduledAt: data.value })} />
+                <TextField label="Jadwal" type="datetime-local" value={draft.scheduledAt} onChange={(_, data) => set({ scheduledAt: data.value })} />
               </div>
             </div>
             <TextareaField
-              label="Catatan pemasangan (opsional)"
+              label="Catatan pemasangan"
               rows={2}
               maxLength={2000}
               value={draft.description}
               onChange={(_, data) => set({ description: data.value })}
             />
-          </section>
+          </ResourceStep>
 
-          <div className="row" style={{ gap: '0.5rem' }}>
-            <Button variant="primary" onClick={() => void submit()} disabled={saving || invalid || workflowMode === null}>
-              <IconPlus size={15} /> {saving ? 'Memproses…' : 'Buat PSB'}
-            </Button>
-          </div>
-  </div>
+      </div>
+    </Blade></>
 }
