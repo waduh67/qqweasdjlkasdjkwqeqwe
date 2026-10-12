@@ -56,7 +56,7 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
         return !draft.latitude.trim() || !draft.longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180 ? 'Tentukan lokasi pemasangan yang valid.' : null
       } }, { key: 'plan', label: 'Paket' }, { key: 'network', label: 'Akun jaringan' }, { key: 'installation', label: 'Pemasangan' },
     ]}
-    footer={<Button onClick={onClose}>Tutup</Button>}
+    footer={<Button onClick={onClose}>Batal</Button>}
     reviewFooter={<><Button disabled={busy} onClick={creation.back}>Sebelumnya</Button><Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy || invalid || !ready} onClick={() => void prepare()}>{busy ? 'Memproses…' : 'Buat PSB'}</Button></>}>
     {!canManage ? <p role="alert">Akses PSB dibatasi. Hubungi administrator.</p> : <>
       <WarehouseState {...workflow}>{() => null}</WarehouseState>
