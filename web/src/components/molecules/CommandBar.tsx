@@ -9,6 +9,8 @@ export type CommandAction = {
   icon?: ReactElement
   onClick: () => void
   disabled?: boolean
+  /** Tetap tampil di toolbar, termasuk pada layar kecil. */
+  pinned?: boolean
   /** Sisipkan pemisah vertikal SEBELUM aksi ini. */
   dividerBefore?: boolean
 }
@@ -20,14 +22,16 @@ export function CommandBar({
   primary?: CommandAction
   actions?: CommandAction[]
 }) {
+  const secondary = actions.filter(action => !action.pinned)
   return (
     <Toolbar className="azure-commandbar" aria-label="Aksi">
       {primary && <CommandButton action={primary} primary />}
+      {actions.filter(action => action.pinned).map(action => <CommandActionItem key={action.key} action={action} />)}
       <div className="command-secondary">
-        {primary && actions.length > 0 && <CommandDivider />}
-        {actions.map((action) => <CommandActionItem key={action.key} action={action} />)}
+        {primary && secondary.length > 0 && !secondary[0].dividerBefore && <CommandDivider />}
+        {secondary.map((action) => <CommandActionItem key={action.key} action={action} />)}
       </div>
-      {actions.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton size="small" appearance="subtle" icon={<MoreHorizontal size={18} />}>Aksi lainnya</MenuButton></MenuTrigger><MenuPopover><MenuList>{actions.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
+      {secondary.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton size="small" appearance="subtle" icon={<MoreHorizontal size={18} />}>Aksi lainnya</MenuButton></MenuTrigger><MenuPopover><MenuList>{secondary.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
     </Toolbar>
   )
 }

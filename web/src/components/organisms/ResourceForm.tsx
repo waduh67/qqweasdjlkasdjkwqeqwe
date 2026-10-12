@@ -18,7 +18,7 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
   returnFocus?: HTMLElement | null;
   title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode; navigation?: ReactNode; steps?: ResourceStepDefinition[];
   onBack: () => void; onClose: () => void; readOnly?: boolean; editing?: boolean;
-  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean
+  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean | (() => boolean)
 }) {
   const steps = readOnly ? undefined : configuredSteps
   const content = useRef<HTMLDivElement>(null)
@@ -57,7 +57,9 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
   }, [loading])
   const requestClose = () => {
     if (locked || busy) return
-    if (dirty || (!readOnly && initialValues.current !== null && initialValues.current !== values())) setConfirmClose(true)
+    // A form with lazy controls can compare its domain draft instead of DOM fields.
+    const changed = typeof dirty === 'function' ? dirty() : dirty || (!readOnly && initialValues.current !== null && initialValues.current !== values())
+    if (changed) setConfirmClose(true)
     else onClose()
   }
   const interceptCancel = (event: MouseEvent) => {

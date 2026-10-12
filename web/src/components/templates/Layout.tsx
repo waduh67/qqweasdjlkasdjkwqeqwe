@@ -32,7 +32,6 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Pelanggan & layanan',
     items: [
-      { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: NavIcons.Plus },
       // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
       // (menyatu dengan rencana impor/ekspor pelanggan via CSV). Rute /import-pppoe tetap ada.
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: NavIcons.Customers },

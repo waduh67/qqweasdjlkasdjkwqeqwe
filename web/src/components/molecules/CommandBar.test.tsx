@@ -44,4 +44,19 @@ describe('CommandBar', () => {
     expect(refresh).toHaveBeenCalledOnce()
   })
 
+  it('keeps pinned creation actions beside the primary button and out of overflow', async () => {
+    const open = vi.fn(), user = userEvent.setup()
+    render(<CommandBar primary={{ key: 'create', label: 'Tambah pelanggan', onClick: vi.fn() }} actions={[
+      { key: 'psb', label: 'PSB Ekspres', pinned: true, onClick: open },
+      { key: 'refresh', label: 'Segarkan', onClick: vi.fn() },
+    ]} />)
+    const toolbar = screen.getByRole('toolbar', { name: 'Aksi' })
+    expect([...toolbar.querySelectorAll(':scope > button')].map(button => button.textContent)).toEqual(['Tambah pelanggan', 'PSB Ekspres'])
+    await user.click(screen.getByRole('button', { name: 'PSB Ekspres' }))
+    expect(open).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: 'Aksi lainnya' }))
+    expect(screen.getByRole('menuitem', { name: 'Segarkan' })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: 'PSB Ekspres' })).toBeNull()
+  })
+
 })
