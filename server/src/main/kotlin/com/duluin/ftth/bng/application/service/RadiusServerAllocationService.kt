@@ -49,7 +49,7 @@ class RadiusServerAllocationService(
 
         val activeServers = allServers.filter { it.status == RadiusServerStatus.ACTIVE }
         if (activeServers.isEmpty()) {
-            throw ConflictException("Tidak ada server RADIUS berstatus AKTIF yang tersedia")
+            throw ConflictException("Tidak ada server RADIUS aktif. Hubungi administrator platform.")
         }
 
         val counts = serverRepository.countAllAssignedTenants()
@@ -61,10 +61,8 @@ class RadiusServerAllocationService(
             )
 
         if (eligible.isEmpty()) {
-            val maxCapacities = activeServers.joinToString(", ") { "${it.name} (${counts[it.id] ?: 0}/${it.maxTenants})" }
             throw ConflictException(
-                "Semua server RADIUS telah mencapai kapasitas maksimum ($maxCapacities). " +
-                    "Silakan daftarkan node RADIUS baru pada dashboard platform.",
+                "Kapasitas server RADIUS penuh. Hubungi administrator platform.",
             )
         }
 

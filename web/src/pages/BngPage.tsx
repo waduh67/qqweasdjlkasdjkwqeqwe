@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
-import { deleteNas, getRadiusEndpoint, listNas, NAS_REACHABILITY_HINT, NAS_REACHABILITY_LABEL, NAS_VENDOR_LABEL, NAS_VENDORS, type NasVendor, type NasView, type RadiusEndpointView } from '@/api/bng'
+import { deleteNas, getRadiusEndpoint, listNas, NAS_REACHABILITY_HINT, NAS_REACHABILITY_LABEL, NAS_VENDOR_LABEL, NAS_VENDORS, type NasVendor, type NasView } from '@/api/bng'
 import type { Area } from '@/api/types'
 import { useCan } from '@/auth/useCan'
 import { Button, EmptyState } from '@/components/atoms'
@@ -10,6 +10,7 @@ import { DataTable, type Column } from '@/components/organisms'
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { useConfirm, useToast } from '@/system'
 import { BngEditor } from './BngEditor'
+import type { BngRadiusState } from './BngRadiusStatus'
 import './network-workspaces.css'
 
 export function BngPage() {
@@ -21,7 +22,8 @@ function BrasWorkspace() {
   const { can } = useCan(), toast = useToast(), confirm = useConfirm()
   const canManage = can('bng.nas.manage'), canViewAreas = can('iam.area.view')
   const [items, setItems] = useState<NasView[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('')
-  const [endpoint, setEndpoint] = useState<RadiusEndpointView | null>(null)
+  const [radius, setRadius] = useState<BngRadiusState>({ status: 'loading' })
+  const radiusRequest = useRef(0)
   const [areas, setAreas] = useState<Area[]>([]), [areasFailed, setAreasFailed] = useState(false)
   const [editor, setEditor] = useState<{ nas: NasView | null } | null>(null)
   const [query, setQuery] = useState(''), [vendor, setVendor] = useState<NasVendor | ''>(''), [status, setStatus] = useState('')
@@ -36,7 +38,19 @@ function BrasWorkspace() {
     try { setAreas(await api.get<Area[]>('/api/areas')); setAreasFailed(false) }
     catch { setAreasFailed(true) }
   }, [canViewAreas])
-  useEffect(() => { void reload(); void getRadiusEndpoint().then(setEndpoint).catch(() => setEndpoint(null)) }, [reload])
+  const loadRadius = useCallback(async () => {
+    const request = ++radiusRequest.current
+    setRadius({ status: 'loading' })
+    try {
+      const endpoint = await getRadiusEndpoint()
+      if (request === radiusRequest.current) setRadius({ status: 'ready', endpoint })
+    } catch (caught) {
+      if (request === radiusRequest.current) setRadius({ status: 'error', message: caught instanceof ApiError && caught.status === 409
+        ? caught.message : caught instanceof ApiError && caught.status === 403
+          ? 'Anda tidak memiliki akses ke konfigurasi RADIUS.' : 'Informasi server RADIUS gagal dimuat.' })
+    }
+  }, [])
+  useEffect(() => { void reload(); void loadRadius(); return () => { radiusRequest.current += 1 } }, [reload, loadRadius])
   useEffect(() => { void loadAreas() }, [loadAreas])
   const rows = useMemo(() => items.filter(nas => {
     if (vendor && nas.vendor !== vendor) return false
@@ -67,7 +81,7 @@ function BrasWorkspace() {
     <div className="network-panel">
       <div className="resource-list-controls">
         <CommandBar primary={canManage ? { key: 'create', label: 'Tambah BRAS', icon: <Plus size={16} />, onClick: () => setEditor({ nas: null }) } : undefined}
-          actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: () => void reload() }]} />
+          actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: () => { void reload(); void loadRadius() } }]} />
         <FilterBar label="Filter BRAS" search={<FilterSearch label="Cari BRAS" value={query} onChange={setQuery} />}>
           <FilterSelect label="Vendor" value={vendor} onChange={value => setVendor(value as NasVendor | '')}>
             <option value="">Semua</option>{NAS_VENDORS.map(value => <option key={value} value={value}>{NAS_VENDOR_LABEL[value]}</option>)}
@@ -81,7 +95,7 @@ function BrasWorkspace() {
           empty={<EmptyState title={query || vendor || status ? 'Tidak ada BRAS yang cocok' : 'Belum ada BRAS'} hint={query || vendor || status ? 'Ubah pencarian atau filter.' : 'Tambahkan router untuk mengelola akses pelanggan.'} />} />
       </>}
     </div>
-    {editor && <BngEditor nas={editor.nas} endpoint={endpoint} areas={areas} canViewAreas={canViewAreas} areasFailed={areasFailed} onReloadAreas={() => void loadAreas()}
+    {editor && <BngEditor nas={editor.nas} radius={radius} onReloadRadius={() => void loadRadius()} areas={areas} canViewAreas={canViewAreas} areasFailed={areasFailed} onReloadAreas={() => void loadAreas()}
       onClose={() => setEditor(null)} onSaved={() => { toast.success(editor.nas ? 'Perubahan BRAS disimpan.' : 'BRAS ditambahkan.'); setEditor(null); void reload() }} />}
   </div>
 }

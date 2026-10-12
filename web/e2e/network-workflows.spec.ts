@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
-async function setup(page: Page) {
-  const profile = { id: 'qa', email: 'qa@example.test', name: 'QA', tenantId: 'qa', tenantSlug: 'qa', platformAdmin: true, permissions: [], areaIds: [], roleIds: [], twoFactorEnabled: true }
+async function setup(page: Page, platformAdmin = true) {
+  const profile = { id: 'qa', email: 'qa@example.test', name: 'QA', tenantId: 'qa', tenantSlug: 'qa', platformAdmin, permissions: platformAdmin ? [] : ['bng.nas.view', 'bng.nas.manage', 'iam.area.view'], areaIds: [], roleIds: [], twoFactorEnabled: true }
   const writes: { path: string; body: Record<string, unknown> }[] = [], errors: string[] = []
   let vpnCreated = false
   const vpnAccount = { id: 'vpn-1', label: 'MikroTik Lab Laptop', serverName: 'VPN Jakarta', host: 'vpn.example.test', port: 1194, protocol: 'TCP', cipher: 'AES-256-CBC', securityType: 'OpenVPN', username: 'mikrotik-lab-laptop', overlayIp: '10.8.0.2', remotePort: 20001, winboxAddress: 'vpn.example.test:20001', forwards: [], routes: [], status: 'ENABLED', online: false, lastHandshakeAt: null, supportsV6: true, password: 'demo-test-password',
@@ -157,5 +157,47 @@ for (const width of [375, 1280]) {
     await page.screenshot({ path: testInfo.outputPath('acs-activity.png'), fullPage: true })
     expect(writes).toHaveLength(0)
     expect(errors).toEqual([])
+  })
+}
+
+for (const width of [375, 1440]) {
+  test(`RADIUS capacity recovery retains the tenant BRAS form at ${width}px`, async ({ page }, info) => {
+    const { errors, writes } = await setup(page, false)
+    let calls = 0, resume!: () => void
+    await page.route('**/api/bng/radius-endpoint', async route => {
+      calls += 1
+      if (calls === 1) { await route.fulfill({ status: 409, json: { detail: 'Kapasitas server RADIUS penuh. Hubungi administrator platform.' } }); return }
+      await new Promise<void>(resolve => { resume = resolve })
+      await route.fulfill({ json: { host: 'vpn.example.test', authPort: 1812, acctPort: 1813, coaPort: 3799, configured: true,
+        vpnHosts: [{ tunnelCidr: '10.208.67.0/24', host: '10.208.67.1' }], isolirAddressList: 'isolir' } })
+    })
+    await page.setViewportSize({ width, height: 1000 }); await page.goto('/bras')
+    await page.getByRole('button', { name: 'Tambah BRAS', exact: true }).click()
+    const form = page.getByRole('dialog', { name: 'Tambah BRAS', exact: true })
+    await form.getByRole('textbox', { name: 'Nama BRAS', exact: true }).fill('BRAS Demo')
+    await form.getByRole('textbox', { name: 'Alamat manajemen', exact: true }).fill('10.208.67.2')
+    await form.getByRole('button', { name: 'Berikutnya: RADIUS' }).click()
+    await expect(form.getByRole('alert')).toContainText('Kapasitas server RADIUS penuh.')
+    await expect(form.getByText('Belum diatur', { exact: true })).toHaveCount(0)
+    await form.getByLabel('Shared secret RADIUS', { exact: true }).fill('fixture-radius-secret')
+    await form.getByRole('button', { name: 'Lihat konfigurasi RouterOS' }).click()
+    const guide = page.getByRole('dialog', { name: 'Konfigurasi RouterOS', exact: true })
+    await expect(guide.getByRole('alert')).toContainText('Kapasitas server RADIUS penuh.')
+    await page.screenshot({ path: info.outputPath('radius-capacity.png'), fullPage: true })
+    const retained = await guide.elementHandle()
+    await guide.getByRole('button', { name: 'Coba lagi', exact: true }).click()
+    await expect(guide.getByRole('status')).toContainText('Memuat server RADIUS')
+    await expect.poll(() => calls).toBe(2); resume()
+    await expect(guide.locator('code').first()).toContainText('address=10.208.67.1 secret=fixture-radius-secret')
+    await expect(guide.locator('code').first()).toContainText('authentication-port=1812 accounting-port=1813')
+    expect(await retained?.evaluate(node => node.isConnected)).toBe(true)
+    await page.screenshot({ path: info.outputPath('radius-routeros-ready.png'), fullPage: true })
+    await guide.getByRole('button', { name: 'Tutup', exact: true }).click()
+    await expect(form.getByLabel('Shared secret RADIUS', { exact: true })).toHaveValue('fixture-radius-secret')
+    await form.getByRole('tab', { name: 'Dasar', exact: true }).click()
+    await expect(form.getByRole('textbox', { name: 'Nama BRAS', exact: true })).toHaveValue('BRAS Demo')
+    await expect(form.getByRole('textbox', { name: 'Alamat manajemen', exact: true })).toHaveValue('10.208.67.2')
+    expect(writes).toEqual([]); expect(errors).toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }

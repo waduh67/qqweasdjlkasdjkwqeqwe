@@ -47,7 +47,8 @@ class NasService(
         return all.map { it.toView(coverage[it.id] ?: emptyList()) }
     }
 
-    @Transactional(readOnly = true)
+    // The first read allocates a RADIUS node; that assignment must be committed.
+    @Transactional
     override fun radiusEndpoint(): RadiusEndpointView {
         val tenantId = currentUser.current().tenantId
         val server = allocationService?.getOrAllocateServerForTenant(tenantId)

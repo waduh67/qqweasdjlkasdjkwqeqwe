@@ -5,6 +5,7 @@ import type { RadiusEndpointView } from '@/api/bng'
 import { useToast } from '@/system'
 import { copyText } from '@/utils/clipboard'
 import { WALLED_GARDEN_PORT, defaultIsolirUrl, isolirScript, parseIsolirTarget } from '@/utils/isolirScript'
+import { BngRadiusStatus, type BngRadiusState } from './BngRadiusStatus'
 
 function mikrotikScript(endpoint: RadiusEndpointView, secret: string, radiusHost: string | null): string {
   const host = radiusHost ?? '<IP-RADIUS>'
@@ -57,14 +58,16 @@ function MikrotikSnippet({
 }
 
 
-export function BngConfiguration({ endpoint, secret, host, onClose }: {
-  endpoint: RadiusEndpointView | null; secret: string; host: string | null; onClose: () => void
+export function BngConfiguration({ radius, onReloadRadius, secret, host, onClose }: {
+  radius: BngRadiusState; onReloadRadius: () => void; secret: string; host: string | null; onClose: () => void
 }) {
   const [url, setUrl] = useState(() => defaultIsolirUrl(window.location.origin))
   const target = useMemo(() => parseIsolirTarget(url), [url])
+  const endpoint = radius.status === 'ready' ? radius.endpoint : null
   return <ResourceForm title="Konfigurasi RouterOS" readOnly onBack={() => {}} onClose={onClose}>
     <div className="network-form-step">
-      {!endpoint ? <p>Informasi server RADIUS belum tersedia.</p> : <>
+      <BngRadiusStatus state={radius} onRetry={onReloadRadius} />
+      {endpoint && <>
         <h2>RADIUS</h2>
         <p className="network-note">Sesuaikan pool alamat dan profil PPPoE dengan jaringan Anda.</p>
         {!host && <p role="status">Alamat server RADIUS belum diatur. Lengkapi alamat sebelum menerapkan konfigurasi.</p>}
