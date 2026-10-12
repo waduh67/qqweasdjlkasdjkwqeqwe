@@ -18,7 +18,7 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
   returnFocus?: HTMLElement | null;
   title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode; navigation?: ReactNode; steps?: ResourceStepDefinition[];
   onBack: () => void; onClose: () => void; readOnly?: boolean; editing?: boolean;
-  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean
+  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean | (() => boolean)
 }) {
   const steps = readOnly ? undefined : configuredSteps
   const content = useRef<HTMLDivElement>(null)
@@ -53,12 +53,13 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
     choices: [...content.current?.querySelectorAll('[aria-pressed], [role=radio], [role=switch]') ?? []].map(choice => [choice.getAttribute('aria-pressed'), choice.getAttribute('aria-checked')]),
   })
   useLayoutEffect(() => {
-    if (readOnly) initialValues.current = null
-    else if (!loading && initialValues.current === null) initialValues.current = values()
-  }, [loading, readOnly])
+    if (!loading && initialValues.current === null) initialValues.current = values()
+  }, [loading])
   const requestClose = () => {
     if (locked || busy) return
-    if (dirty || (!readOnly && initialValues.current !== null && initialValues.current !== values())) setConfirmClose(true)
+    // A form with lazy controls can compare its domain draft instead of DOM fields.
+    const changed = typeof dirty === 'function' ? dirty() : dirty || (!readOnly && initialValues.current !== null && initialValues.current !== values())
+    if (changed) setConfirmClose(true)
     else onClose()
   }
   const interceptCancel = (event: MouseEvent) => {

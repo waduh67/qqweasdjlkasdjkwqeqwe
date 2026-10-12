@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
@@ -24,6 +24,11 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
   const creation = useCreationReview(true)
   const ready = canManage && !loading && !loadError && plans.length > 0 && workflowMode !== null
   const busy = saving || creation.busy
+  const values = JSON.stringify({ draft, planId, nasId, authType, secret })
+  const initialValues = useRef<string | null>(null)
+  useLayoutEffect(() => {
+    if (ready && initialValues.current === null) initialValues.current = values
+  }, [ready, values])
   async function prepare() {
     if (!ready) return
     if (invalid) { setError('Lengkapi data pelanggan dan layanan.'); return }
@@ -42,6 +47,7 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
       ['Jadwal pemasangan', draft.scheduledAt || 'Belum dijadwalkan'],
     ]} /></div>
   return <ResourceForm title="Buat PSB" onClose={onClose} onBack={creation.back}
+    dirty={() => initialValues.current !== null && initialValues.current !== values}
     readOnly={!ready} loading={canManage && loading} busy={busy}
     onReview={() => void prepare()} review={ready && creation.reviewing ? summary : undefined}
     steps={[
