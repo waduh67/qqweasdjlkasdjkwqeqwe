@@ -1,7 +1,7 @@
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { Pagination } from '@/components/molecules/Pagination'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
@@ -23,6 +23,9 @@ import { IconCustomers } from '@/components/atoms/icons'
 import { downloadBlob } from '@/utils/download'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { CustomerAreaField } from '@/components/organisms/customer/CustomerAreaField'
+import { ExpressPsbPanel } from './onboarding/ExpressPsbPanel'
+import { ExpressPsbResultCard } from './onboarding/ExpressPsbResultCard'
+import { PSB_PERMISSIONS, type CreatedPsb } from './onboarding/useExpressPsb'
 
 /**
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
@@ -84,7 +87,19 @@ export function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerView[]>([])
   // Detail pelanggan kini tampil sebagai flyout fullscreen (bukan rute) — id yang dipilih ada di sini.
   const [params, setParams] = useSearchParams()
+  // Panel parameters must not reload the list; only its filters and page do.
+  const setParamsRef = useRef(setParams)
+  useLayoutEffect(() => { setParamsRef.current = setParams }, [setParams])
   const detailId = params.get('customer')
+  const psbOpen = params.get('create') === 'psb'
+  const canCreatePsb = PSB_PERMISSIONS.every(can)
+  const [psbResult, setPsbResult] = useState<{ result: CreatedPsb; reference: boolean } | null>(null)
+  const setPsbOpen = (open: boolean) => setParams(previous => {
+    const next = new URLSearchParams(previous)
+    if (open) next.set('create', 'psb')
+    else next.delete('create')
+    return next
+  }, { replace: true })
   const query = params.get('q') ?? ''
   const statusFilter = (params.get('status') ?? '') as CustomerStatus | ''
   const pageIndex = Math.max(0, Number.parseInt(params.get('page') ?? '0', 10) || 0)
@@ -168,7 +183,7 @@ export function CustomersPage() {
       if (version !== requestVersion.current) return
       const lastPage = Math.max(0, Math.ceil(page.totalElements / 50) - 1)
       if (pageIndex > lastPage) {
-        setParams(previous => {
+        setParamsRef.current(previous => {
           const next = new URLSearchParams(previous)
           if (lastPage === 0) next.delete('page')
           else next.set('page', String(lastPage))
@@ -183,7 +198,7 @@ export function CustomersPage() {
     } finally {
       if (version === requestVersion.current) setLoading(false)
     }
-  }, [query, statusFilter, pageIndex, setParams])
+  }, [query, statusFilter, pageIndex])
 
   useEffect(() => {
     void reload()
@@ -354,7 +369,9 @@ export function CustomersPage() {
       }
     : undefined
 
-  const actions: CommandAction[] = []
+  const actions: CommandAction[] = canCreatePsb ? [{
+    key: 'psb', label: 'PSB Ekspres', pinned: true, icon: <Plus size={16} />, onClick: () => setPsbOpen(true),
+  }] : []
   const pushGroup = (items: CommandAction[]) => {
     items.forEach((it, i) => actions.push({ ...it, dividerBefore: i === 0 && actions.length > 0 }))
   }
@@ -415,6 +432,8 @@ export function CustomersPage() {
       {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
           digating izin BACA (bisa untuk operator view-only); impor digating izin buat pelanggan. */}
       <CommandBar primary={primary} actions={actions} />
+
+      {psbResult && <ExpressPsbResultCard {...psbResult} onDismiss={() => setPsbResult(null)} />}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, kode, alamat, atau telepon…" />
@@ -545,6 +564,12 @@ export function CustomersPage() {
           </div>
         )}
       </Blade>
+
+      {psbOpen && <ExpressPsbPanel onClose={() => setPsbOpen(false)} onCreated={(result, reference) => {
+        setPsbResult({ result, reference })
+        setPsbOpen(false)
+        setRefreshVersion(version => version + 1)
+      }} />}
 
       {/* Detail pelanggan sebagai flyout — dibuka dari klik baris, bukan rute. */}
       <CustomerDetailBlade customerId={detailId} onClose={() => setDetailId(null)} />

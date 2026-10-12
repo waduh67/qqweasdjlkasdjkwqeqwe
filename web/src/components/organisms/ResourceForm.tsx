@@ -53,8 +53,9 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
     choices: [...content.current?.querySelectorAll('[aria-pressed], [role=radio], [role=switch]') ?? []].map(choice => [choice.getAttribute('aria-pressed'), choice.getAttribute('aria-checked')]),
   })
   useLayoutEffect(() => {
-    if (!loading && initialValues.current === null) initialValues.current = values()
-  }, [loading])
+    if (readOnly) initialValues.current = null
+    else if (!loading && initialValues.current === null) initialValues.current = values()
+  }, [loading, readOnly])
   const requestClose = () => {
     if (locked || busy) return
     if (dirty || (!readOnly && initialValues.current !== null && initialValues.current !== values())) setConfirmClose(true)

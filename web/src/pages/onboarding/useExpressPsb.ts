@@ -45,6 +45,8 @@ const EMPTY: PsbDraft = {
 }
 
 type Draft = PsbDraft
+export type CreatedPsb = ExpressPsbResult & { secretUsed: string }
+export const PSB_PERMISSIONS = ['customer.customer.create', 'customer.subscription.update', 'bng.access.manage', 'workorder.order.create'] as const
 
 const toInstant = (local: string): string | null => (local ? new Date(local).toISOString() : null)
 
@@ -71,9 +73,7 @@ export function useExpressPsb() {
   const [nasId, setNasId] = useState('')
   const [authType, setAuthType] = useState<ServiceType>('PPPOE')
   const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState<(ExpressPsbResult & { secretUsed: string }) | null>(null)
-
-  const canManage = ['customer.customer.create', 'customer.subscription.update', 'bng.access.manage', 'workorder.order.create'].every(can)
+  const canManage = PSB_PERMISSIONS.every(can)
   const canViewPlans = can('catalog.plan.view')
 
   useEffect(() => {
@@ -84,12 +84,14 @@ export function useExpressPsb() {
     void Promise.all([
       listPlans(),
       listNas().catch(() => []),
+      api.get<Area[]>('/api/areas').catch(() => []),
     ])
-      .then(([p, n]) => {
+      .then(([p, n, a]) => {
         if (!active) return
         const available = p.filter((x) => x.active)
         setPlans(available)
         setNasList(n.filter((x) => x.enabled))
+        setAreas(a)
         if (available.length > 0) {
           setPlanId(available[0].id)
           setAuthType(available[0].serviceTypes[0] ?? 'PPPOE')
@@ -102,16 +104,11 @@ export function useExpressPsb() {
       })
       .finally(() => { if (active) setLoading(false) })
 
-    // Area best-effort — dipakai memilih area pelanggan sekaligus auto-pilih BRAS dari cakupannya.
-    void api
-      .get<Area[]>('/api/areas')
-      .then(rows => { if (active) setAreas(rows) })
-      .catch(() => { if (active) setAreas([]) })
     return () => { active = false }
   }, [canManage, loadAttempt])
 
   useEffect(() => {
-    if (workflowMode !== 'LEGACY') return
+    if (!canManage || workflowMode !== 'LEGACY') return
     let active = true
     void Promise.all([
       api.get<PageResponse<User>>('/api/users?size=200').then(page => page.content).catch(() => []),
@@ -123,7 +120,7 @@ export function useExpressPsb() {
       setTechnicians(role ? available.filter(user => user.roleIds.includes(role.id)) : available)
     })
     return () => { active = false }
-  }, [workflowMode])
+  }, [canManage, workflowMode])
 
   // Peta area → BRAS (dari cakupan tiap BRAS). Dasar auto-pilih BRAS saat area dipilih.
   const nasByArea = useMemo(() => {
@@ -163,11 +160,11 @@ export function useExpressPsb() {
     (authType === 'STATIC' && !draft.framedIp.trim()) ||
     (!macBased && !secret.trim())
 
-  const submit = async () => {
-    if (!canManage || saving || loading || loadError || workflowMode === null) return false
+  const submit = async (): Promise<CreatedPsb | null> => {
+    if (!canManage || saving || loading || loadError || workflowMode === null) return null
     if (invalid) {
       toast.error('Lengkapi data pelanggan dan layanan.')
-      return false
+      return null
     }
     setSaving(true)
     try {
@@ -192,16 +189,11 @@ export function useExpressPsb() {
         scheduledAt: toInstant(draft.scheduledAt),
         assignees: reference ? [] : draft.assignees,
       })
-      setResult({ ...res, secretUsed: macBased ? res.username : secret })
       toast.success(`PSB ${res.workOrderCode} dibuat untuk ${draft.name.trim()}`)
-      // Reset untuk entri berikutnya; paket/BRAS/teknisi dipertahankan agar batch cepat.
-      setDraft({ ...EMPTY })
-      setSecret(randomSecret())
-      setShowSecret(false)
-      return true
+      return { ...res, secretUsed: macBased ? res.username : secret }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal membuat PSB ekspres')
-      return false
+      return null
     } finally {
       setSaving(false)
     }
@@ -209,6 +201,6 @@ export function useExpressPsb() {
 
   return { canManage, canViewPlans, workflow, workflowMode, reference, plans, nasList, areas, technicians, loading, loadError,
     reloadPlans: () => setLoadAttempt(attempt => attempt + 1), draft,
-    secret, showSecret, planId, nasId, authType, saving, result, nasByArea, availableTypes, macBased, invalid,
-    set, changePlan, changeArea, setAuthType, setNasId, setSecret, setShowSecret, randomSecret, submit, setResult, resetDraft: () => { setDraft({ ...EMPTY }); setSecret(randomSecret()); setShowSecret(false) } }
+    secret, showSecret, planId, nasId, authType, saving, nasByArea, availableTypes, macBased, invalid,
+    set, changePlan, changeArea, setAuthType, setNasId, setSecret, setShowSecret, randomSecret, submit }
 }

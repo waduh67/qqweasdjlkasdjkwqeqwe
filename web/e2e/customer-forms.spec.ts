@@ -5,11 +5,12 @@ async function setup(page: Page, platformAdmin = false) {
   const customer = { id: assetIds.customer, code: 'C-001', name: 'Budi Santoso', phone: '081234567890', email: 'budi@example.test', address: 'Jl. Cihanjuang No. 12, Cimahi', location: { longitude: 107.55, latitude: -6.87 }, areaId: null, idCardNumber: '3204000000000001', status: 'ACTIVE', subscription: { id: 'sub-1', customerId: assetIds.customer, planId: 'plan-1', packageName: 'Rumah 50 Mbps', bandwidthMbps: 50, monthlyFee: '150000', status: 'ACTIVE', activatedAt: '2026-10-01T00:00:00Z', terminatedAt: null }, onus: [], awaitingInstallation: false }
   const profile = { id: 'qa', email: 'admin@example.test', name: 'Rina', tenantId: 'qa', tenantSlug: 'qa', platformAdmin, permissions: ['customer.customer.view', 'customer.customer.create', 'customer.customer.update', 'customer.subscription.update', 'catalog.plan.view', 'customer.onu.view', 'customer.onu.assign', 'workorder.order.view', 'workorder.order.field', 'iam.user.view', 'iam.user.resetpassword', 'iam.area.view', 'bng.access.manage', 'workorder.order.create', 'billing.gateway.view', 'billing.gateway.manage'], areaIds: [], roleIds: [], twoFactorEnabled: false }
   const staff = { id: 'staff', name: 'Andi', email: 'andi@example.test', status: 'ACTIVE', roleIds: [], areaIds: [], platformAdmin: false, tenantOwner: false, twoFactorEnabled: false }
-  const writes: string[] = [], errors: string[] = []
+  const writes: string[] = [], errors: string[] = [], reads: string[] = []
   page.on('pageerror', e => errors.push(e.message))
   await page.addInitScript(() => localStorage.setItem('ftth.refreshToken', 'test-refresh'))
   await page.route('**/api/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname
+    if (request.method() === 'GET') reads.push(path)
     let body: unknown = { content: [], items: [], totalElements: 0, totalPages: 0, page: 0, size: 25 }
     if (path === '/api/auth/refresh') body = { accessToken: 'test-access', refreshToken: 'test-refresh', accessTokenExpiresAt: '2099-01-01T00:00:00Z', user: profile }
     else if (path === '/api/me') body = profile
@@ -33,7 +34,7 @@ async function setup(page: Page, platformAdmin = false) {
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
   })
-  return { writes, errors }
+  return { writes, errors, reads }
 }
 async function section(panel: Locator, label: string) {
   const picker = panel.getByRole('combobox', { name: 'Bagian pelanggan' })
@@ -83,15 +84,18 @@ for (const width of [375, 1440]) {
 
 for (const width of [375, 1440]) {
   test(`PSB keeps a rejected draft through five steps at ${width}px`, async ({ page }, info) => {
-    const { errors } = await setup(page), requests: Record<string, unknown>[] = []
+    const { errors, reads } = await setup(page), requests: Record<string, unknown>[] = []
     await page.route('**/api/onboarding/psb', async route => {
       requests.push(route.request().postDataJSON())
       await route.fulfill({ status: requests.length === 1 ? 422 : 200, contentType: 'application/json', body: JSON.stringify(requests.length === 1
         ? { detail: 'Data PSB belum dapat disimpan.' }
         : { customerId: assetIds.customer, subscriptionId: 'sub-1', accessId: 'access-1', username: 'cust-001', workOrderId: 'wo-1', workOrderCode: 'WO-001' }) })
     })
-    await page.setViewportSize({ width, height: 1000 }); await page.goto('/express-psb')
-    await page.getByRole('button', { name: 'Buat PSB', exact: true }).click()
+    await page.setViewportSize({ width, height: 1000 }); await page.goto('/customers?q=Budi&status=ACTIVE')
+    await expect(page.getByRole('button', { name: 'Budi Santoso', exact: true })).toBeVisible()
+    expect(reads).not.toContain('/api/catalog/plans')
+    await page.screenshot({ path: info.outputPath('customers-psb-commandbar.png'), fullPage: true, animations: 'disabled' })
+    await page.getByRole('button', { name: 'PSB Ekspres', exact: true }).click()
     const panel = page.getByRole('dialog', { name: 'Buat PSB', exact: true })
     await panel.getByRole('button', { name: 'Berikutnya: Lokasi' }).click()
     await expect(panel.getByRole('tab', { name: 'Pelanggan', exact: true })).toHaveAttribute('aria-selected', 'true')
@@ -117,6 +121,10 @@ for (const width of [375, 1440]) {
     await panel.getByRole('tab', { name: 'Tinjau + buat', exact: true }).click()
     await panel.getByRole('button', { name: 'Buat PSB', exact: true }).click()
     await expect(panel).toHaveCount(0); await expect(page.getByText('PSB dibuat', { exact: true })).toBeVisible()
+    await expect(page).toHaveURL('/customers?q=Budi&status=ACTIVE')
+    await expect.poll(() => reads.filter(path => path === '/api/customers').length).toBe(2)
+    await expect(page.getByText('Fixture-network-secret', { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Tugaskan teknisi', exact: true })).toHaveAttribute('href', '/work-orders/wo-1')
     expect(requests).toHaveLength(2); expect(requests[1]).toEqual(requests[0])
     expect(requests[1]).toMatchObject({ name: 'Budi Baru', planId: 'plan-1', serviceType: 'PPPOE', secret: 'Fixture-network-secret', location: { latitude: -6.87, longitude: 107.55 }, assignees: [] })
     expect(errors).toEqual([]); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -161,6 +169,47 @@ for (const width of [375, 1440]) {
     expect(writes.slice(2).map(write => write.path)).toEqual(['/api/billing/pivot-account/profile', '/api/billing/pivot-account/provision'])
     expect(writes[2].input).toMatchObject({ legalName: 'Cimahi Net', picName: 'Rina', accountNumber: '1234567890', accountName: 'Rina' })
     expect(errors).toEqual([]); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+
+for (const width of [375, 1440]) {
+  test(`PSB opens from customers and legacy bookmarks without remounting the list at ${width}px`, async ({ page }) => {
+    const { errors, reads, writes } = await setup(page)
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto('/customers?q=Budi&status=ACTIVE')
+    await expect(page.getByRole('button', { name: 'Budi Santoso', exact: true })).toBeVisible()
+    await expect(page.locator('a[href="/express-psb"]')).toHaveCount(0)
+    const customerList = await page.locator('.customers-page').elementHandle()
+    const toolbar = page.getByRole('toolbar', { name: 'Aksi', exact: true })
+    await expect(toolbar.getByRole('button', { name: 'Tambah pelanggan', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'PSB Ekspres', exact: true })).toBeVisible()
+    expect(await toolbar.locator(':scope > button').allTextContents()).toEqual(['Tambah pelanggan', 'PSB Ekspres'])
+    await toolbar.getByRole('button', { name: 'PSB Ekspres', exact: true }).click()
+    const panel = page.getByRole('dialog', { name: 'Buat PSB', exact: true })
+    await expect(panel.getByRole('tab', { name: 'Pelanggan', exact: true })).toBeVisible()
+    await panel.getByRole('button', { name: 'Batal', exact: true }).click()
+    await expect(panel).toHaveCount(0)
+    await expect(page).toHaveURL('/customers?q=Budi&status=ACTIVE')
+    await expect(toolbar.getByRole('button', { name: 'PSB Ekspres', exact: true })).toBeFocused()
+    expect(await customerList?.evaluate(node => node.isConnected)).toBe(true)
+    expect(reads.filter(path => path === '/api/customers')).toHaveLength(1)
+    await page.goto('/express-psb?q=Budi&status=ACTIVE')
+    await expect(page).toHaveURL('/customers?q=Budi&status=ACTIVE&create=psb')
+    await expect(panel.getByRole('tab', { name: 'Pelanggan', exact: true })).toBeVisible()
+    await panel.getByRole('textbox', { name: 'Nama', exact: true }).fill('Draft yang dibatalkan')
+    await panel.getByRole('button', { name: 'Tutup', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Buang perubahan?', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Lanjutkan pengisian', exact: true }).click()
+    await expect(panel.getByRole('textbox', { name: 'Nama', exact: true })).toHaveValue('Draft yang dibatalkan')
+    await panel.getByRole('button', { name: 'Batal', exact: true }).click()
+    await page.getByRole('button', { name: 'Buang perubahan', exact: true }).click()
+    await expect(panel).toHaveCount(0)
+    await expect(page).toHaveURL('/customers?q=Budi&status=ACTIVE')
+    await expect(page.getByRole('button', { name: 'Budi Santoso', exact: true })).toBeVisible()
+    expect(reads.filter(path => path === '/api/customers')).toHaveLength(2)
+    expect(writes).toEqual([]); expect(errors).toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
 

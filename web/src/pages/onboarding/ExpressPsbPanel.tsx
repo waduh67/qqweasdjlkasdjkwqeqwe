@@ -1,45 +1,67 @@
 import { useState } from 'react'
-import { Blade } from '@/components/organisms/Blade'
+import { Link } from 'react-router-dom'
+import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { ResourceStep } from '@/components/organisms/ResourceStep'
-import { CommandBar } from '@/components/molecules'
+import { WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
 import { Text } from '@fluentui/react-components'
 import { SERVICE_TYPE_LABEL } from '@/api/catalog'
 import { oneOf } from '@/api/warehouse/codec'
 import { Button, SelectField, TextField, TextareaField } from '@/components/atoms'
-import { IconPlus } from '@/components/atoms/icons'
 import { LocationPicker } from '@/components/organisms'
 import { MultiCombobox } from '@/components/molecules'
-import type { useExpressPsb } from './useExpressPsb'
+import { useExpressPsb, type CreatedPsb } from './useExpressPsb'
 
-export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, plans, planId, changePlan,
-  authType, setAuthType, availableTypes, macBased, secret, showSecret, setSecret, setShowSecret,
-  randomSecret, nasId, setNasId, nasList, reference, workflowMode, technicians, submit, saving, invalid, resetDraft
-}: ReturnType<typeof useExpressPsb>) {
-  const [open, setOpen] = useState(false), [error, setError] = useState('')
-  const creation = useCreationReview(open)
-  const close = () => { setOpen(false); setError(''); resetDraft() }
+export function ExpressPsbPanel({ onClose, onCreated }: {
+  onClose: () => void; onCreated: (result: CreatedPsb, reference: boolean) => void
+}) {
+  const model = useExpressPsb()
+  const { draft, set, areas, nasByArea, changeArea, plans, planId, changePlan,
+    authType, setAuthType, availableTypes, macBased, secret, showSecret, setSecret, setShowSecret,
+    randomSecret, nasId, setNasId, nasList, reference, workflowMode, technicians, submit, saving, invalid,
+    canManage, canViewPlans, loading, loadError, reloadPlans, workflow } = model
+  const [error, setError] = useState('')
+  const creation = useCreationReview(true)
+  const ready = canManage && !loading && !loadError && plans.length > 0 && workflowMode !== null
+  const busy = saving || creation.busy
   async function prepare() {
+    if (!ready) return
     if (invalid) { setError('Lengkapi data pelanggan dan layanan.'); return }
     if (creation.beforeSave()) return
-    try { if (await submit()) { setOpen(false); setError('') } else setError('PSB belum berhasil dibuat. Periksa data atau coba lagi.') }
-    finally { creation.finish() }
+    try {
+      const result = await submit()
+      if (result) onCreated(result, reference)
+      else setError('PSB belum berhasil dibuat. Periksa data atau coba lagi.')
+    } finally { creation.finish() }
   }
-  return <><CommandBar primary={{ key: 'create', label: 'Buat PSB', icon: <IconPlus size={16} />, onClick: () => setOpen(true) }} />
-    <Blade open={open} title="Buat PSB" onClose={close}
-      creation={{ ...creation, busy: saving || creation.busy, steps: [
-        { key: 'customer', label: 'Pelanggan' }, { key: 'location', label: 'Lokasi', validate: () => {
-          const lat = Number(draft.latitude), lng = Number(draft.longitude)
-          return !draft.latitude.trim() || !draft.longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180 ? 'Tentukan lokasi pemasangan yang valid.' : null
-        } }, { key: 'plan', label: 'Paket' }, { key: 'network', label: 'Akun jaringan' }, { key: 'installation', label: 'Pemasangan' },
-      ], prepare: () => void prepare(), summary: <div className="stack">{error && <p role="alert" className="error">{error}</p>}
-        <CreationSummary rows={[
-          ['Pelanggan', draft.name], ['Telepon', draft.phone], ['Alamat', draft.address], ['Area', areas.find(area => area.id === draft.areaId)?.name],
-          ['Paket', plans.find(plan => plan.id === planId)?.name], ['Layanan', SERVICE_TYPE_LABEL[authType]],
-          ['Username', draft.username || 'Otomatis'], ['BRAS', nasList.find(nas => nas.id === nasId)?.name],
-          ['Jadwal pemasangan', draft.scheduledAt || 'Belum dijadwalkan'],
-        ]} /></div> }}
-      footer={<><Button disabled={saving} onClick={close}>Batal</Button><Button variant="primary" disabled={saving || invalid || workflowMode === null} onClick={() => void prepare()}>{saving ? 'Memproses…' : 'Buat PSB'}</Button></>}>
+  const summary = <div className="stack">{error && <p role="alert" className="error">{error}</p>}
+    <CreationSummary rows={[
+      ['Pelanggan', draft.name], ['Telepon', draft.phone], ['Alamat', draft.address], ['Area', areas.find(area => area.id === draft.areaId)?.name],
+      ['Paket', plans.find(plan => plan.id === planId)?.name], ['Layanan', SERVICE_TYPE_LABEL[authType]],
+      ['Username', draft.username || 'Otomatis'], ['BRAS', nasList.find(nas => nas.id === nasId)?.name],
+      ['Jadwal pemasangan', draft.scheduledAt || 'Belum dijadwalkan'],
+    ]} /></div>
+  return <ResourceForm title="Buat PSB" onClose={onClose} onBack={creation.back}
+    readOnly={!ready} loading={canManage && loading} busy={busy}
+    onReview={() => void prepare()} review={ready && creation.reviewing ? summary : undefined}
+    steps={[
+      { key: 'customer', label: 'Pelanggan' }, { key: 'location', label: 'Lokasi', validate: () => {
+        const lat = Number(draft.latitude), lng = Number(draft.longitude)
+        return !draft.latitude.trim() || !draft.longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180 ? 'Tentukan lokasi pemasangan yang valid.' : null
+      } }, { key: 'plan', label: 'Paket' }, { key: 'network', label: 'Akun jaringan' }, { key: 'installation', label: 'Pemasangan' },
+    ]}
+    footer={<Button onClick={onClose}>Tutup</Button>}
+    reviewFooter={<><Button disabled={busy} onClick={creation.back}>Sebelumnya</Button><Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy || invalid || !ready} onClick={() => void prepare()}>{busy ? 'Memproses…' : 'Buat PSB'}</Button></>}>
+    {!canManage ? <p role="alert">Akses PSB dibatasi. Hubungi administrator.</p> : <>
+      <WarehouseState {...workflow}>{() => null}</WarehouseState>
+      {loading ? <p role="status">Memuat paket internet…</p> : loadError
+        ? <div role="alert" className="stack"><p>{loadError}</p><div><Button onClick={reloadPlans}>Coba lagi</Button></div></div>
+        : plans.length === 0 && <div role="status" className="stack">
+          <div><strong>Belum ada paket aktif</strong><p>Tambahkan paket internet untuk mulai mendaftarkan pelanggan.</p></div>
+          <div className="row">{canViewPlans && <Link to="/catalog">Kelola paket</Link>}<Button onClick={reloadPlans}>Segarkan</Button></div>
+        </div>}
+    </>}
+    {ready && (
       <div className="stack">{error && <p role="alert" className="error">{error}</p>}
           {/* Pelanggan */}
           <ResourceStep step="customer">
@@ -209,5 +231,6 @@ export function ExpressPsbFields({ draft, set, areas, nasByArea, changeArea, pla
           </ResourceStep>
 
       </div>
-    </Blade></>
+    )}
+    </ResourceForm>
 }
