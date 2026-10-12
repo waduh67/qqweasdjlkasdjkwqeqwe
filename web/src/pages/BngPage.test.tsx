@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import * as bng from '@/api/bng'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import { BngPage } from './BngPage'
 
 const auth = vi.hoisted(() => ({ manage: true, areas: true }))
@@ -111,4 +111,58 @@ it('keeps read-only access read-only and applies filters without an apply action
   await user.click(screen.getByRole('button', { name: 'Hapus Vendor' }))
   expect(await screen.findByText('BRAS Tebet')).toBeTruthy()
   expect(within(screen.getByRole('region', { name: 'Filter BRAS' })).queryByRole('button', { name: /Terapkan/ })).toBeNull()
+})
+
+it('shows loading instead of an unconfigured server while the endpoint is pending', async () => {
+  let complete!: (endpoint: bng.RadiusEndpointView) => void
+  const endpoint = { host: '203.0.113.4', authPort: 1812, acctPort: 1813, coaPort: 3799, configured: true, vpnHosts: [], isolirAddressList: 'isolir' }
+  vi.mocked(bng.getRadiusEndpoint).mockReturnValue(new Promise(resolve => { complete = resolve }))
+  const user = await open()
+  await user.type(screen.getByRole('textbox', { name: 'Nama BRAS' }), 'BRAS Demo')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: RADIUS' }))
+  expect(screen.getByRole('status').textContent).toContain('Memuat server RADIUS')
+  expect(screen.queryByText('Belum diatur')).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Lihat konfigurasi RouterOS' }))
+  const guide = await screen.findByRole('dialog', { name: 'Konfigurasi RouterOS' })
+  expect(within(guide).getByRole('status').textContent).toContain('Memuat server RADIUS')
+  complete(endpoint)
+  await waitFor(() => expect(guide.textContent).toContain('address=203.0.113.4'))
+  expect(screen.getByRole('dialog', { name: 'Konfigurasi RouterOS' })).toBe(guide)
+})
+
+it('shows capacity errors and retries inside the RouterOS layer without losing the BRAS draft', async () => {
+  vi.mocked(bng.getRadiusEndpoint).mockRejectedValueOnce(new ApiError(409, 'Kapasitas server RADIUS penuh. Hubungi administrator platform.'))
+  const user = await open()
+  await user.type(screen.getByRole('textbox', { name: 'Nama BRAS' }), 'BRAS Demo')
+  await user.type(screen.getByRole('textbox', { name: 'Alamat manajemen' }), '10.8.0.4')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: RADIUS' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('Kapasitas server RADIUS penuh.')
+  expect(screen.queryByText('Belum diatur')).toBeNull()
+  await user.type(screen.getByLabelText('Shared secret RADIUS'), 'fixture-secret')
+  await user.click(screen.getByRole('button', { name: 'Lihat konfigurasi RouterOS' }))
+  const guide = await screen.findByRole('dialog', { name: 'Konfigurasi RouterOS' })
+  await user.click(within(guide).getByRole('button', { name: 'Coba lagi' }))
+  await waitFor(() => expect(guide.textContent).toContain('address=10.8.0.1 secret=fixture-secret'))
+  expect(screen.getByRole('dialog', { name: 'Konfigurasi RouterOS' })).toBe(guide)
+  expect(bng.getRadiusEndpoint).toHaveBeenCalledTimes(2)
+  await user.click(within(guide).getByRole('button', { name: 'Tutup' }))
+  expect(await screen.findByLabelText('Shared secret RADIUS')).toHaveProperty('value', 'fixture-secret')
+  await user.click(screen.getByRole('tab', { name: 'Dasar' }))
+  expect(screen.getByRole('textbox', { name: 'Nama BRAS' })).toHaveProperty('value', 'BRAS Demo')
+  expect(bng.createNas).not.toHaveBeenCalled()
+})
+
+it('distinguishes a missing setup from a failed request and refreshes the endpoint with the list', async () => {
+  vi.mocked(bng.getRadiusEndpoint).mockRejectedValueOnce(new ApiError(503, 'Internal infrastructure error'))
+  const user = userEvent.setup()
+  render(<BngPage />)
+  await screen.findByRole('button', { name: 'BRAS Tebet' })
+  vi.mocked(bng.getRadiusEndpoint).mockResolvedValue({ host: null, authPort: 1812, acctPort: 1813, coaPort: 3799, configured: false, vpnHosts: [], isolirAddressList: 'isolir' })
+  await user.click(screen.getByRole('button', { name: 'Segarkan' }))
+  await user.click(screen.getByRole('button', { name: 'Tambah BRAS' }))
+  await user.type(screen.getByRole('textbox', { name: 'Nama BRAS' }), 'BRAS Demo')
+  await user.click(screen.getByRole('button', { name: 'Berikutnya: RADIUS' }))
+  expect(await screen.findByText('Server RADIUS belum diatur. Hubungi administrator platform.')).toBeTruthy()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(bng.getRadiusEndpoint).toHaveBeenCalledTimes(2)
 })

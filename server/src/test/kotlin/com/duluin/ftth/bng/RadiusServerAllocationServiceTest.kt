@@ -70,7 +70,7 @@ class RadiusServerAllocationServiceTest {
         // Node A penuh (2/2) → t3 gagal karena kapasitas habis
         assertThatThrownBy { service.getOrAllocateServerForTenant(t3) }
             .isInstanceOf(ConflictException::class.java)
-            .hasMessageContaining("kapasitas maksimum")
+            .hasMessageContaining("Kapasitas server RADIUS penuh")
     }
 
     @Test

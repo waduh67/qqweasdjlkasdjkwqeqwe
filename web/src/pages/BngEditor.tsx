@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Checkbox } from '@fluentui/react-components'
-import { createNas, updateNas, NAS_REACHABILITY_LABEL, NAS_REACHABILITY_HINT, NAS_VENDOR_LABEL, NAS_VENDORS, type NasView, type RadiusEndpointView } from '@/api/bng'
+import { createNas, updateNas, NAS_REACHABILITY_LABEL, NAS_REACHABILITY_HINT, NAS_VENDOR_LABEL, NAS_VENDORS, type NasView } from '@/api/bng'
 import type { Area } from '@/api/types'
 import { Button, SelectField, TextField } from '@/components/atoms'
 import { CreationSummary } from '@/components/organisms/CreationReview'
 import { ResourceWizard, type ResourceStep } from '@/components/organisms/ResourceWizard'
 import { radiusTargetFor, selfAddressWarning, sessionControlRoute } from '@/utils/radiusTarget'
 import { BngConfiguration } from './BngConfiguration'
+import { BngRadiusStatus, type BngRadiusState } from './BngRadiusStatus'
 
 function initialDraft(nas: NasView | null) {
   return {
@@ -22,14 +23,15 @@ function randomSecret() {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-export function BngEditor({ nas, endpoint, areas, canViewAreas, areasFailed, onReloadAreas, onClose, onSaved }: {
-  nas: NasView | null; endpoint: RadiusEndpointView | null; areas: Area[]; canViewAreas: boolean
+export function BngEditor({ nas, radius, onReloadRadius, areas, canViewAreas, areasFailed, onReloadAreas, onClose, onSaved }: {
+  nas: NasView | null; radius: BngRadiusState; onReloadRadius: () => void; areas: Area[]; canViewAreas: boolean
   areasFailed: boolean; onReloadAreas: () => void; onClose: () => void; onSaved: () => void
 }) {
   const [initial] = useState(() => initialDraft(nas))
   const [draft, setDraft] = useState(initial)
   const [reveal, setReveal] = useState(false), [configuration, setConfiguration] = useState(false)
   const [areaSearch, setAreaSearch] = useState('')
+  const endpoint = radius.status === 'ready' ? radius.endpoint : null
   const patch = (next: Partial<typeof draft>) => setDraft(current => ({ ...current, ...next }))
   const target = endpoint ? radiusTargetFor(endpoint, draft.address) : null
   const warning = selfAddressWarning(endpoint, draft.address)
@@ -54,11 +56,12 @@ export function BngEditor({ nas, endpoint, areas, canViewAreas, areasFailed, onR
         hint="Gunakan secret yang sama pada router dan server RADIUS." />
       <div className="network-secret-actions"><Button onClick={() => { patch({ coaSecret: randomSecret() }); setReveal(true) }}>Buat secret acak</Button>
         <Button disabled={!draft.coaSecret} onClick={() => setReveal(value => !value)}>{reveal ? 'Sembunyikan secret' : 'Tampilkan secret'}</Button></div>
-      <CreationSummary rows={[
+      <BngRadiusStatus state={radius} onRetry={onReloadRadius} />
+      {endpoint && <><CreationSummary rows={[
         ['Server RADIUS', target?.host ?? 'Belum diatur'],
         ['Kendali sesi', NAS_REACHABILITY_LABEL[route]],
       ]} />
-      <p className="network-note">{NAS_REACHABILITY_HINT[route]}</p>
+      <p className="network-note">{NAS_REACHABILITY_HINT[route]}</p></>}
       {draft.vendor === 'MIKROTIK' && <div><Button onClick={() => setConfiguration(true)}>Lihat konfigurasi RouterOS</Button></div>}
     </> },
     ...(draft.vendor === 'MIKROTIK' ? [{ key: 'api', label: 'Akses RouterOS', validate: () => draft.apiPort && (!/^\d+$/.test(draft.apiPort) || Number(draft.apiPort) < 1 || Number(draft.apiPort) > 65535) ? 'Isi port antara 1 dan 65535.' : null, content: <>
@@ -93,9 +96,9 @@ export function BngEditor({ nas, endpoint, areas, canViewAreas, areasFailed, onR
         <section><h2>Dasar</h2><CreationSummary rows={[
           ['Nama BRAS', draft.name], ['Vendor', NAS_VENDOR_LABEL[draft.vendor]], ['Alamat manajemen', draft.address], ['Status', draft.enabled ? 'Aktif' : 'Nonaktif'],
         ]} /></section>
-        <section><h2>RADIUS</h2><CreationSummary rows={[
+        <section><h2>RADIUS</h2><BngRadiusStatus state={radius} onRetry={onReloadRadius} /><CreationSummary rows={[
           ['NAS-Identifier', draft.nasIdentifier], ['Shared secret', draft.coaSecret ? 'Secret baru' : nas?.hasCoaSecret ? 'Tidak diubah' : 'Belum diisi'],
-          ['Server RADIUS', target?.host], ['Kendali sesi', NAS_REACHABILITY_LABEL[route]],
+          ...(endpoint ? [['Server RADIUS', target?.host ?? 'Belum diatur'], ['Kendali sesi', NAS_REACHABILITY_LABEL[route]]] as [string, string][] : []),
         ]} /></section>
         {draft.vendor === 'MIKROTIK' && <section><h2>Akses RouterOS</h2><CreationSummary rows={[
           ['Nama pengguna API', draft.apiUsername], ['Kata sandi API', draft.apiSecret ? 'Kata sandi baru' : nas?.hasApiSecret ? 'Tidak diubah' : 'Belum diisi'],
@@ -103,7 +106,7 @@ export function BngEditor({ nas, endpoint, areas, canViewAreas, areasFailed, onR
         ]} /></section>}
         <section><h2>Cakupan area</h2><CreationSummary rows={[[ 'Area layanan', selectedAreas.join(', ') || 'Belum ditetapkan' ]]} /></section>
       </>}>
-      {configuration && <BngConfiguration endpoint={endpoint} secret={draft.coaSecret} host={target?.host ?? null} onClose={() => setConfiguration(false)} />}
+      {configuration && <BngConfiguration radius={radius} onReloadRadius={onReloadRadius} secret={draft.coaSecret} host={target?.host ?? null} onClose={() => setConfiguration(false)} />}
     </ResourceWizard>
   </>
 }
