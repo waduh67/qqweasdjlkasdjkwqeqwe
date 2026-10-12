@@ -17,6 +17,7 @@ BRAS and its nested RouterOS guide distinguish loading, unavailable capacity, re
 - **25 frontend tests passed**, including endpoint loading, failed allocation, retry, nested guide retention, refresh and VPN target selection.
 - **8 Chromium/Firefox browser scenarios passed**, covering BRAS creation and capacity recovery at mobile and desktop widths. Retried RouterOS configuration targets the RADIUS gateway `10.208.67.1` for a router on `10.208.67.0/24`; the draft and shared secret remain intact.
 - Lint and production build passed. Existing unrelated lint warnings remain.
+- The first full CI run passed 954 of 955 frontend tests and exposed a pre-existing owner-selection test race. The test now waits for candidate options before selecting or inspecting the reloaded form; application owner behavior is unchanged. Repeat CI for the final commit before merge.
 - Production API verification: Tencent FTTH active, limit 4, assigned tenants 4, demo assignment present; RADIUS database connection PASS. No BRAS or customer records were created for this verification.
 
 ## Release and recovery
