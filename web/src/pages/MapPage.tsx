@@ -23,6 +23,7 @@ import type {
   OtdrTest,
   RecordOtdrTest,
   SiteInspection,
+  SiteView,
   SurveyCapacityView,
   UnmappedCustomer,
   UtilizationHeatmap,
@@ -108,6 +109,8 @@ import {
   IconSettings,
 } from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
+import { useMapSites } from '@/map/useMapSites'
+import { MapSitePicker } from '@/components/organisms/map/MapSitePicker'
 
 /**
  * Peta jaringan berbasis vector tile.
@@ -218,6 +221,7 @@ export function MapPage() {
   // tapi dikerjakan efek jauh di bawah — sesudah efek yang MEMBUAT peta, sebab menyuruh
   // peta terbang sebelum ia ada tak berbunyi apa-apa.
   const focus = (location.state as { focus?: MapFocus } | null)?.focus
+  const cameraIntent = useRef(0)
 
   // Menutup semua panel info sebelum membuka yang baru — hanya satu tampil.
   const clearPanels = useCallback(() => {
@@ -235,6 +239,21 @@ export function MapPage() {
     setMovable(null)
     setSettingsOpen(false)
   }, [])
+
+  const focusSite = useCallback((site: SiteView, restore: boolean) => {
+    if (restore && cameraIntent.current > 0) return
+    cameraIntent.current++
+    const view = { center: [site.location.longitude, site.location.latitude] as [number, number], zoom: 16 }
+    if (restore) map.current?.jumpTo(view)
+    else { clearPanels(); map.current?.flyTo({ ...view, duration: 700 }) }
+    setHiddenLayers(previous => {
+      if (!previous.has('site')) return previous
+      const next = new Set(previous); next.delete('site'); return next
+    })
+  }, [clearPanels])
+  const siteScope = user ? `${user.tenantId}:${user.id}` : null
+  const siteSelection = useMapSites(siteScope, can('gis.map.view') && can('network.site.view'), focusSite)
+  const selectSite = siteSelection.select
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
   const watermark = useMemo(() => {
@@ -320,13 +339,16 @@ export function MapPage() {
    */
   const locateMe = useCallback(
     (announce: boolean) => {
+      const intent = announce ? ++cameraIntent.current : cameraIntent.current
       if (!navigator.geolocation) {
         if (announce) toast.error('Peramban tidak mendukung geolokasi')
         return
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          if (!map.current || intent !== cameraIntent.current) return
           const { longitude, latitude } = pos.coords
+          if (announce) selectSite(null)
           map.current?.flyTo({ center: [longitude, latitude], zoom: Math.max(map.current.getZoom(), 15) })
           if (announce) toast.success('Peta dipusatkan ke lokasi Anda')
         },
@@ -336,7 +358,7 @@ export function MapPage() {
         { enableHighAccuracy: true, timeout: 8000 },
       )
     },
-    [toast],
+    [toast, selectSite],
   )
 
   // Pergantian tampilan tidak mengganti gaya atau sumber jaringan. `style.load` juga
@@ -813,7 +835,7 @@ export function MapPage() {
     // peta tetap di default). Operator bisa memusatkan ulang lewat tombol "Lokasi saya".
     // DILEWATI bila kita datang membawa pesan sorot: geolokasi menjawab belakangan dan
     // akan menerbangkan peta pergi dari aset yang justru baru saja diminta dilihat.
-    if (!focus) locateMe(false)
+    if (!focus && !siteSelection.hasSavedSite) locateMe(false)
 
     // Sidebar bisa diciutkan/dilebarkan, jadi lebar kanvas berubah tanpa resize
     // jendela — MapLibre perlu diberi tahu agar peta mengisi ulang penuh.
@@ -846,6 +868,7 @@ export function MapPage() {
    */
   useEffect(() => {
     if (!focus) return
+    cameraIntent.current++
     const { layer, id, lng, lat } = focus
     let alive = true
 
@@ -1603,6 +1626,7 @@ export function MapPage() {
               setBasemap(mode)
             }}
             basemapFailed={failedBasemap === basemap}
+            sitePicker={can('network.site.view') ? <MapSitePicker key={siteScope} selection={siteSelection} /> : undefined}
           />
         )}
 

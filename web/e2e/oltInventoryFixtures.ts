@@ -129,7 +129,7 @@ export async function installOltInventoryRoutes(
     setMode: (next: Mode) => { mode = next },
     setPollMode: (next: PollMode) => { pollMode = next },
     deferNextPoll: () => {
-      let resolve = () => undefined
+      let resolve: () => void = () => undefined
       const promise = new Promise<void>((done) => { resolve = done })
       pendingPoll = { promise, resolve }
       return () => pendingPoll?.resolve()
