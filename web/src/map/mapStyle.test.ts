@@ -4,10 +4,10 @@ import { createBasemapStyle } from './basemaps'
 
 afterEach(() => localStorage.removeItem(PREF_BASEMAP))
 
-it.each(['google-maps', 'google-earth'] as const)('uses the same %s tiles in location forms without loading network data or an API key', mode => {
+it.each(['google-maps', 'google-earth', 'dark'] as const)('uses the same %s tiles in location forms without loading network data or an API key', mode => {
   const picker = createBasemapStyle(mode)
   const network = createMapStyle(mode)
-  expect(Object.keys(picker.sources).sort()).toEqual(['basemap-google-earth', 'basemap-google-maps'])
+  expect(Object.keys(picker.sources).sort()).toEqual(['basemap-dark', 'basemap-google-earth', 'basemap-google-maps'])
   expect(picker.layers.every(layer => layer.type === 'raster')).toBe(true)
   expect(picker.layers).toEqual(network.layers.filter(layer => layer.type === 'raster'))
   for (const [id, source] of Object.entries(picker.sources)) {
@@ -29,7 +29,7 @@ describe('saved basemap', () => {
     ['google-maps', 'google-maps'],
     ['google-earth', 'google-earth'],
     ['streets', 'google-maps'],
-    ['dark', 'google-maps'],
+    ['dark', 'dark'],
     ['satellite', 'google-earth'],
     ['unrecognized', 'google-maps'],
   ])('restores or migrates %s to %s', (saved, expected) => {
@@ -55,17 +55,23 @@ describe('saved basemap', () => {
       expect(url.searchParams.get('lyrs')).toBe('y')
       expect(url.searchParams.has('apistyle')).toBe(false)
     }
+    for (const tile of BASEMAPS.dark.tiles) {
+      const url = new URL(tile)
+      expect(url.searchParams.get('lyrs')).toBe('m')
+      expect(url.searchParams.get('apistyle')).toContain('s.t:0|s.e:g|p.c:#242f3e')
+      expect(url.searchParams.get('apistyle')).toContain('s.t:2|s.e:all|p.v:off,s.t:4|s.e:all|p.v:off')
+    }
   })
 
-  it('starts with the migrated provider visible and network overlays above it', () => {
-    localStorage.setItem(PREF_BASEMAP, 'satellite')
+  it.each([['satellite', 'google-earth'], ['dark', 'dark']])('starts with %s visible and network overlays above it', (saved, mode) => {
+    localStorage.setItem(PREF_BASEMAP, saved)
     const style = createMapStyle(savedBasemap())
     const visible = style.layers.filter((layer) =>
       layer.type === 'raster' && layer.layout?.visibility === 'visible',
     )
-    expect(visible.map((layer) => layer.id)).toEqual(['basemap-google-earth'])
+    expect(visible.map((layer) => layer.id)).toEqual([`basemap-${mode}`])
     expect(style.layers.findIndex((layer) => layer.id === 'cable')).toBeGreaterThan(
-      style.layers.findIndex((layer) => layer.id === 'basemap-google-earth'),
+      style.layers.findIndex((layer) => layer.id === `basemap-${mode}`),
     )
     expect(style.sources.ftth.type).toBe('vector')
   })

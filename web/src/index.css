@@ -2186,6 +2186,10 @@ td.dg-actions {
   gap: 0.25rem;
   min-width: 0;
 }
+.map-toolbar-controls > .stack {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .map-basemap-error {
   margin: 0;
@@ -2337,6 +2341,7 @@ td.dg-actions {
 }
 .map-basemap {
   flex-shrink: 0;
+  flex-wrap: wrap;
   max-width: 100%;
 }
 .map-basemap .fui-ToggleButton {
@@ -2344,7 +2349,7 @@ td.dg-actions {
 }
 /* Tombol gerigi pojok kanan-atas: pintu satu-satunya ke laci setelan. Bulat & kecil
    supaya terbaca sebagai kontrol peta (seperti tombol zoom), bukan aksi data. */
-.map-settings-btn {
+.map-shell .map-settings-btn {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
