@@ -10,6 +10,8 @@ import com.duluin.ftth.network.application.port.inbound.SavePonPortCommand
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Size
+import com.duluin.ftth.network.application.port.inbound.PonPortImportResult
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -85,6 +87,11 @@ class OltController(
     fun addPonPort(@PathVariable id: UUID, @Valid @RequestBody request: PonPortRequest): PonPortView =
         manageOlt.addPonPort(id, request.toCommand())
 
+    @PostMapping("/{id}/pon-ports/import")
+    @PreAuthorize("@authz.can('network.olt.update')")
+    fun importPonPorts(@PathVariable id: UUID, @Valid @RequestBody request: PonPortImportRequest): PonPortImportResult =
+        manageOlt.importPonPorts(id, request.labels)
+
     @PutMapping("/pon-ports/{portId}")
     @PreAuthorize("@authz.can('network.olt.update')")
     fun updatePonPort(@PathVariable portId: UUID, @Valid @RequestBody request: PonPortRequest): PonPortView =
@@ -95,6 +102,8 @@ class OltController(
     @PreAuthorize("@authz.can('network.olt.update')")
     fun deletePonPort(@PathVariable portId: UUID) = manageOlt.deletePonPort(portId)
 }
+
+data class PonPortImportRequest(@field:Size(min = 1, max = 256) val labels: List<String>)
 
 private fun OltRequest.toCommand() = SaveOltCommand(
     siteId = siteId,

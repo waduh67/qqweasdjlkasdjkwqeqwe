@@ -35,6 +35,18 @@ class HsgqSnmpAdapter(
         return "PON${pon.toString().padStart(2, '0')}/$onu"
     }
 
+    override val supportsPonDiscovery: Boolean get() = true
+
+    override fun ponLabelFromOnuIndex(index: String): String? =
+        inventoryIndex(index)?.toLongOrNull()?.let { "PON${(it shr 8) and 0xFF}" }
+
+    override fun ponLabelFromInterface(name: String): String? {
+        // Exclude ONU subinterfaces and uplinks; do not guess slot/port mappings.
+        val number = Regex("^(?:G|E)?PON\\s*0*([0-9]{1,3})$", RegexOption.IGNORE_CASE)
+            .matchEntire(name.trim())?.groupValues?.get(1)?.toIntOrNull() ?: return null
+        return number.takeIf { it in 0..255 }?.let { "PON$it" }
+    }
+
     override fun pollOnus(target: OltTarget): List<OnuReading> {
         val community = target.snmpCommunity
             ?: throw OltProtocolException("Community string SNMP belum diisi untuk ${target.oltCode}")

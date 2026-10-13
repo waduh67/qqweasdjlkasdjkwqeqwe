@@ -4,6 +4,8 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.network.application.port.inbound.PonPortImportResult
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
@@ -169,7 +171,8 @@ class OltService(
 
     override fun addPonPort(oltId: UUID, command: SavePonPortCommand): PonPortView {
         val olt = requireOlt(oltId)
-        if (ponPortRepository.existsByOltIdAndLabel(oltId, command.label.trim())) {
+        val normalizedLabel = PonPort.normalizeLabel(command.label)
+        if (ponPortRepository.existsByOltIdAndLabel(oltId, normalizedLabel)) {
             throw ConflictException("PON port '${command.label}' sudah ada pada OLT ${olt.code}")
         }
         val port = ponPortRepository.save(
@@ -190,8 +193,9 @@ class OltService(
 
     override fun updatePonPort(id: UUID, command: SavePonPortCommand): PonPortView {
         val port = requirePonPort(id)
-        if (command.label.trim() != port.label &&
-            ponPortRepository.existsByOltIdAndLabel(port.oltId, command.label.trim())
+        val normalizedLabel = PonPort.normalizeLabel(command.label)
+        if (normalizedLabel != port.label &&
+            ponPortRepository.existsByOltIdAndLabel(port.oltId, normalizedLabel)
         ) {
             throw ConflictException("PON port '${command.label}' sudah ada pada OLT ini")
         }
@@ -199,6 +203,18 @@ class OltService(
         val saved = ponPortRepository.save(port)
         auditor.record("olt.pon_port_updated", "PonPort", saved.id, saved.tenantId, mapOf("label" to saved.label))
         return saved.toView(odcRepository.countByPonPortId(id))
+    }
+
+    override fun importPonPorts(oltId: UUID, labels: List<String>): PonPortImportResult {
+        val olt = requireOlt(oltId)
+        if (labels.isEmpty() || labels.size > 256) throw ValidationException("Pilih antara 1 dan 256 port PON.")
+        val ports = labels.map(PonPort::normalizeLabel).distinct().sorted().map {
+            PonPort.create(tenantId = olt.tenantId, oltId = olt.id, label = it)
+        }
+        val created = ports.filter(ponPortRepository::insertIfAbsent)
+        if (created.isNotEmpty()) auditor.record("olt.pon_ports_imported", "Olt", olt.id, olt.tenantId,
+            mapOf("labels" to created.map { it.label }))
+        return PonPortImportResult(created.size, ports.size - created.size)
     }
 
     override fun deletePonPort(id: UUID) {

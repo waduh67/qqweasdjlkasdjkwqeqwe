@@ -4,12 +4,23 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.domain.model.PonPort
 import org.springframework.stereotype.Component
+import jakarta.persistence.EntityManager
 import java.util.UUID
 
 @Component
 class PonPortPersistenceAdapter(
     private val jpa: PonPortJpaRepository,
+    private val entityManager: EntityManager,
 ) : PonPortRepository {
+
+    override fun insertIfAbsent(ponPort: PonPort): Boolean = entityManager.createNativeQuery("""
+        INSERT INTO pon_port(id,tenant_id,olt_id,label,description,status)
+        VALUES (:id,:tenant,:olt,:label,:description,:status)
+        ON CONFLICT (tenant_id,olt_id,label) DO NOTHING
+    """).setParameter("id", ponPort.id).setParameter("tenant", TenantContext.tenantId())
+        .setParameter("olt", ponPort.oltId).setParameter("label", ponPort.label)
+        .setParameter("description", ponPort.description).setParameter("status", ponPort.status.name)
+        .executeUpdate() == 1
 
     override fun save(ponPort: PonPort): PonPort {
         val entity = jpa.findById(ponPort.id).orElse(null)?.apply {

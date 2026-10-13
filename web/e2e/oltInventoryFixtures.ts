@@ -33,6 +33,7 @@ export async function installOltInventoryRoutes(
   allowDeviceRead = true,
   allowManualPoll = true,
   oltOverrides: Partial<OltView> = {},
+  extraPermissions: string[] = [],
 ) {
   const servedOlt = { ...olt, ...oltOverrides }
   let mode: Mode = 'populated'
@@ -45,7 +46,7 @@ export async function installOltInventoryRoutes(
   let tileReads = 0
   let pollGeneration = 0
   let pendingPoll: { promise: Promise<void>; resolve: () => void } | null = null
-  const permissions = ['network.olt.view', 'gis.map.view', 'network.odp.view', 'customer.customer.view']
+  const permissions = ['network.olt.view', 'gis.map.view', 'network.odp.view', 'customer.customer.view', ...extraPermissions]
   if (allowDeviceRead) permissions.push('monitoring.provisioning.view')
   if (allowManualPoll) permissions.push('monitoring.collector.manage')
   const profile = {

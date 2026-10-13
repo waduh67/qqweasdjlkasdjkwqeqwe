@@ -90,6 +90,21 @@ class HsgqSnmpAdapterTest {
         }
     }
 
+    @Test
+    fun `PON discovery normalizes physical names and rejects ONU subinterfaces and uplinks`() {
+        val adapter = HsgqSnmpAdapter(reader(emptyMap()))
+        assertEquals("PON1", adapter.ponLabelFromInterface(" gpon01 "))
+        assertEquals("PON2", adapter.ponLabelFromInterface("PON 2"))
+        assertEquals("PON3", adapter.ponLabelFromInterface("EPON3"))
+        assertEquals("PON1", adapter.ponLabelFromOnuIndex("16777472"))
+        assertEquals("PON2", adapter.ponLabelFromOnuIndex("16777735"))
+        for (name in listOf("PON1/7", "PON01:2", "GE1", "XPON1", "PON256", "1234")) {
+            assertNull(adapter.ponLabelFromInterface(name), name)
+        }
+        assertNull(adapter.ponLabelFromOnuIndex("bad-index"))
+        assertNull(adapter.ponLabelFromOnuIndex("16777472.65535.65535"))
+    }
+
     private fun reader(
         rows: Map<String, Map<String, String>>,
         description: String = "HSGQ-G01ID",

@@ -13,7 +13,7 @@ export interface ResourceStep {
 
 /** Retain every step and the underlying list; only the final review can save. */
 export function ResourceWizard({ title, steps, summary, editing = false, dirty, onClose, onSave, children }: {
-  title: string; steps: ResourceStep[]; summary: ReactNode; editing?: boolean; dirty: boolean
+  title: string; steps: ResourceStep[]; summary: ReactNode; editing?: boolean; dirty: boolean | (() => boolean)
   onClose: () => void; onSave: () => Promise<void>; children?: ReactNode
 }) {
   const id = useId(), content = useRef<HTMLFormElement>(null)

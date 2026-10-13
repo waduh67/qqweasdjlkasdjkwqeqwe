@@ -1,4 +1,3 @@
-import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -10,7 +9,6 @@ import type {
   OltView,
   PonOdcBranch,
   PonPortInspection,
-  PonPortView,
   SiteView,
   SnmpVersion,
   WebProtocol,
@@ -25,7 +23,7 @@ import { Checkbox } from '@fluentui/react-components'
 import { CommandBar, Tabs, type CommandAction } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Blade } from '@/components/organisms'
-import { IconInventory, IconMap, IconPlus } from '@/components/atoms/icons'
+import { IconInventory, IconMap } from '@/components/atoms/icons'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { mapFocusState } from '@/map/mapFocus'
 import { CustomerDetailBlade } from './CustomerDetailPage'
@@ -36,6 +34,7 @@ import { invalidateOltOnusCache } from '@/api/oltOnus'
 import { pollOltNow, type ManualOltPollResult } from '@/api/monitoring'
 import { SnmpDiagnosticPanel } from '@/components/organisms'
 import { PonPortLoadPanel } from '@/components/organisms'
+import { PonPortTab } from '@/components/organisms/PonPortTab'
 
 /**
  * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.
@@ -402,7 +401,7 @@ export function OltDetail({
       />
 
       {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
-      {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} />}
+      {tab === 'pon' && <PonPortTab olt={olt} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} renderDetail={id => <PonDrilldown ponPortId={id} canDrillOdp={canDrill} />} />}
       {tab === 'onu' && canOnuList && (
         <OltRegisteredOnus key={`registered-${onuRevision}`} oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
       )}
@@ -605,145 +604,6 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           </Text>
         )}
       </div>
-    </div>
-  )
-}
-
-/** Tab PON port: daftar port slot/kartu OLT — dasar penautan ODC di hilir. */
-function PonPortTab({
-  oltId,
-  canUpdate,
-  canDrill,
-  onChanged,
-}: {
-  oltId: string
-  canUpdate: boolean
-  canDrill: boolean
-  onChanged: () => void
-}) {
-  const toast = useToast()
-  const [ports, setPorts] = useState<PonPortView[] | null>(null)
-  const [label, setLabel] = useState('')
-  const [busy, setBusy] = useState(false)
-  // Satu PON port terbuka pada satu waktu — drill-down memuat topologinya on-demand.
-  const [expanded, setExpanded] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    try {
-      setPorts(await api.get<PonPortView[]>(`/api/olts/${oltId}/pon-ports`))
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat PON port')
-    }
-  }, [oltId, toast])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const [creating, setCreating] = useState(false)
-  const creation = useCreationReview(creating)
-  const add = async () => {
-    if (!label.trim() || creation.beforeSave()) return
-    setBusy(true)
-    try {
-      await api.post(`/api/olts/${oltId}/pon-ports`, { label: label.trim() })
-      setLabel(''); setCreating(false)
-      await load()
-      onChanged()
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menambah PON port')
-    } finally {
-      setBusy(false); creation.finish()
-    }
-  }
-
-  const remove = async (p: PonPortView) => {
-    try {
-      await api.del(`/api/olts/pon-ports/${p.id}`)
-      await load()
-      onChanged()
-      toast.success(`Port ${p.label} dihapus`)
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus PON port')
-    }
-  }
-
-  return (
-    <div className="card stack">
-      <div className="spread" style={{ gap: '0.75rem', alignItems: 'center' }}>
-        <Text as="h3" weight="semibold" style={{ margin: 0 }}>PON Port</Text>
-        {canUpdate && (
-          <><Button onClick={() => setCreating(true)} icon={<IconPlus size={14} />}>Tambah PON port</Button>
-          <Blade open={creating} title="Tambah PON port" onClose={() => setCreating(false)}
-            creation={{ ...creation, busy, prepare: () => void add(), summary: <CreationSummary rows={[["Label port", label]]} /> }}
-            footer={<><Button disabled={busy} onClick={() => setCreating(false)}>Batal</Button><Button variant="primary" disabled={busy || !label.trim()} onClick={() => void add()}>Tambah</Button></>}>
-            <TextField label="Label port" required placeholder="1/2/3" value={label} onChange={(_, data) => setLabel(data.value)} />
-          </Blade></>
-        )}
-      </div>
-      {ports == null ? (
-        <div style={{ display: 'grid', placeItems: 'center', padding: '1.5rem' }}>
-          <Spinner />
-        </div>
-      ) : ports.length === 0 ? (
-        <EmptyState title="Belum ada PON port" icon={<IconInventory size={30} />} />
-      ) : (
-        <div className="stack" style={{ gap: 0 }}>
-          {ports.map((p) => {
-            // Port kosong pun layak dibuka sekarang: muatannya dihitung dari graf
-            // sambungan, jadi port yang belum punya ODC tertaut bisa saja sudah
-            // menyuapi kabinet lewat serat yang tercatat di meja splicing.
-            const drillable = canDrill
-            const isOpen = expanded === p.id
-            return (
-              <div key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <div className="spread" style={{ gap: '0.5rem', alignItems: 'center', padding: '0.55rem 0' }}>
-                    <Button
-                      variant="subtle"
-                      onClick={() => drillable && setExpanded(isOpen ? null : p.id)}
-                      disabled={!drillable}
-                      aria-expanded={isOpen}
-                      style={{
-                      flex: 1,
-                      minWidth: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-start',
-                      gap: '0.5rem',
-                      font: 'inherit',
-                      color: 'inherit',
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor: drillable ? 'pointer' : 'default',
-                    }}
-                  >
-                    <span aria-hidden style={{ width: '0.9rem', color: 'var(--text-3)' }}>
-                      {drillable ? (isOpen ? '▾' : '▸') : ''}
-                    </span>
-                    <strong className="tnum">{p.label}</strong>
-                    <StatusBadge status={p.status} />
-                    {p.description && (
-                      <Text as="span" className="muted" size={300}>
-                        {p.description}
-                      </Text>
-                    )}
-                    </Button>
-                  <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-                    <span className="badge">{p.odcCount} ODC</span>
-                    {canUpdate && (
-                      <Button variant="danger" disabled={p.odcCount > 0} onClick={() => void remove(p)}>
-                        Hapus
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                {isOpen && <PonDrilldown ponPortId={p.id} canDrillOdp={canDrill} />}
-              </div>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }
