@@ -97,7 +97,7 @@ export function PonDiscoveryPanel({ oltId, onClose, onSaved }: { oltId: string; 
   }, [oltId, attempt])
   const available = data?.ports.filter(port => !existing.has(port.label)) ?? []
   const columns: Column<PonDiscovery['ports'][number]>[] = [
-    { key: 'select', minWidth: 40, header: <Checkbox aria-label="Pilih semua port baru" disabled={!available.length} checked={selected.size > 0 && selected.size === available.length ? true : selected.size > 0 ? 'mixed' : false}
+    { key: 'select', minWidth: 64, header: <Checkbox aria-label="Pilih semua port baru" disabled={!available.length} checked={selected.size > 0 && selected.size === available.length ? true : selected.size > 0 ? 'mixed' : false}
       onChange={(_, event) => setSelected(new Set(event.checked ? available.map(port => port.label) : []))} />,
       cell: port => <Checkbox aria-label={`Pilih ${port.label}`} disabled={existing.has(port.label)} checked={selected.has(port.label)}
         onChange={(_, event) => setSelected(current => { const next = new Set(current); if (event.checked) next.add(port.label); else next.delete(port.label); return next })} /> },

@@ -33,7 +33,7 @@ npm run build
 npx playwright test --config=playwright.network.config.ts pon-port-discovery.spec.ts
 ```
 
-The 40 targeted server cases passed, including real PostgreSQL concurrent imports, rollback of invalid batches, manual-label compatibility and cross-tenant HTTP access. Tests also cover SNMP partial failures, unsupported devices and read/write permissions. UI tests exercise explicit review, retry, duplicate-submit prevention and closing during a pending read. Browser coverage includes Chromium and Firefox at 375px and 1280px, plus read-only access and failed detection.
+The 40 targeted server cases passed, including real PostgreSQL concurrent imports, rollback of invalid batches, manual-label compatibility and cross-tenant HTTP access. Tests also cover SNMP partial failures, unsupported devices and read/write permissions. All 963 frontend tests passed, plus lint and production build. UI tests exercise explicit review, retry, duplicate-submit prevention and closing during a pending read. All 8 browser scenarios passed, covering Chromium and Firefox at 375px and 1280px, plus read-only access and failed detection.
 
 The general `ModularityTests` check reports dependencies in IAM/tenancy, fulfillment/workorder and warehouse modules outside this change. A separate checkout of base commit `7fd75c15` reproduced the same 383 violation entries (ordering excluded), with no new violations. Keep this visible; do not suppress that check or report the entire server suite as green.
 

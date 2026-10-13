@@ -48,6 +48,10 @@ for (const width of [375, 1280]) {
     await expect(indicator).toHaveCSS('border-top-style', 'solid')
     await expect(indicator).toHaveCSS('height', '16px')
     await page.screenshot({ path: testInfo.outputPath('pon-detection.png'), fullPage: true, animations: 'disabled' })
+    expect(await indicator.evaluate(element => {
+      const box = element.getBoundingClientRect(), cell = element.closest('[role="gridcell"]')!.getBoundingClientRect()
+      return box.left >= cell.left && box.right <= cell.right
+    })).toBe(true)
     await panel.getByRole('button', { name: 'Tinjau + buat' }).click()
     expect(state.writes).toHaveLength(0)
     await panel.getByRole('button', { name: 'Buat', exact: true }).click()
