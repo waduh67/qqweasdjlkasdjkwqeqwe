@@ -103,7 +103,7 @@ it('still fills coordinates and address from search when the map cannot initiali
   expect(save).toHaveBeenCalledWith(['107.610000', '-6.910000', 'Bandung, Jawa Barat'])
 })
 
-describe('Google location maps', () => {
+describe('Location maps', () => {
   beforeEach(() => {
     mocks.construct.mockImplementation(() => {})
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
@@ -124,7 +124,7 @@ describe('Google location maps', () => {
     expect(mocks.markerConstruct).toHaveBeenCalledOnce()
     expect(mocks.markerSet).toHaveBeenCalledExactlyOnceWith([107.61, -6.91])
     expect(mocks.flyTo).not.toHaveBeenCalled()
-    expect(mocks.setLayoutProperty).toHaveBeenLastCalledWith('basemap-google-earth', 'visibility', 'visible')
+    expect(mocks.setLayoutProperty).toHaveBeenCalledWith('basemap-google-earth', 'visibility', 'visible')
     expect(localStorage.getItem(PREF_BASEMAP)).toBe('google-earth')
     await user.click(screen.getByRole('button', { name: 'Simpan' }))
     expect(save).toHaveBeenCalledExactlyOnceWith(['107.61', '-6.91', 'Draft alamat'])
@@ -135,6 +135,7 @@ describe('Google location maps', () => {
       layers: [
         { id: 'basemap-google-maps', layout: { visibility: 'none' } },
         { id: 'basemap-google-earth', layout: { visibility: 'visible' } },
+        { id: 'basemap-dark', layout: { visibility: 'none' } },
       ],
     })
   })
@@ -143,7 +144,8 @@ describe('Google location maps', () => {
     const user = userEvent.setup()
     const save = vi.fn()
     render(<CustomerForm onSave={save} />)
-    await user.click(screen.getByRole('button', { name: 'Google Earth' }))
+    await user.click(screen.getByRole('button', { name: 'Peta gelap' }))
+    expect(localStorage.getItem(PREF_BASEMAP)).toBe('dark')
     const click = mocks.on.mock.calls.find(([name]) => name === 'click')?.[1]
     expect(click).toBeDefined()
     act(() => click?.({ lngLat: { lng: 107.61, lat: -6.91 } }))
@@ -188,6 +190,7 @@ describe('Google location maps', () => {
     expect(mocks.setLayoutProperty.mock.calls).toEqual([
       ['basemap-google-maps', 'visibility', 'none'],
       ['basemap-google-earth', 'visibility', 'visible'],
+      ['basemap-dark', 'visibility', 'none'],
     ])
     form.unmount()
     expect(waiting.size).toBe(0)

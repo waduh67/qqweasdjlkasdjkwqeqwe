@@ -1,11 +1,19 @@
 import type { RasterLayerSpecification, SourceSpecification, StyleSpecification } from 'maplibre-gl'
 
 export const INITIAL_CENTER: [number, number] = [106.995, -6.243]
-export type BasemapMode = 'google-maps' | 'google-earth'
+export type BasemapMode = 'google-maps' | 'google-earth' | 'dark'
 
-function googleTiles(layer: 'm' | 'y'): string[] {
+const DARK_MAP_STYLE = [
+  's.t:0|s.e:g|p.c:#242f3e',
+  's.t:0|s.e:l.t.f|p.c:#9ca5b3',
+  's.t:0|s.e:l.t.s|p.c:#242f3e',
+  's.t:3|s.e:g|p.c:#38414e',
+  's.t:5|s.e:g|p.c:#17263c',
+].join(',')
+
+function googleTiles(layer: 'm' | 'y', dark = false): string[] {
   const style = layer === 'm'
-    ? '&apistyle=' + encodeURIComponent('s.t:2|s.e:all|p.v:off,s.t:4|s.e:all|p.v:off')
+    ? '&apistyle=' + encodeURIComponent((dark ? DARK_MAP_STYLE + ',' : '') + 's.t:2|s.e:all|p.v:off,s.t:4|s.e:all|p.v:off')
     : ''
   return [0, 1, 2, 3].map((host) =>
     `https://mt${host}.google.com/vt?lyrs=${layer}&x={x}&y={y}&z={z}${style}`,
@@ -25,12 +33,19 @@ export const BASEMAPS = {
     attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
     maxzoom: 20,
   },
+  dark: {
+    label: 'Peta gelap',
+    tiles: googleTiles('m', true),
+    attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
+    maxzoom: 20,
+  },
 } as const
 
-export const BASEMAP_ORDER: readonly BasemapMode[] = ['google-maps', 'google-earth']
+export const BASEMAP_ORDER: readonly BasemapMode[] = ['google-maps', 'google-earth', 'dark']
 export const BASEMAP_HINTS = {
   'google-maps': 'Peta jalan Google Maps tanpa penanda tempat umum.',
   'google-earth': 'Citra satelit Google dengan label jalan; bukan aplikasi Google Earth 3D.',
+  dark: 'Peta gelap dengan label jalan.',
 } as const
 export const PREF_BASEMAP = 'ftth.map.basemap'
 
@@ -43,6 +58,7 @@ export function savedBasemap(): BasemapMode {
   switch (saved) {
     case 'google-maps':
     case 'google-earth':
+    case 'dark':
       return saved
     case 'satellite':
       return 'google-earth'
@@ -57,7 +73,7 @@ export function createBasemapStyle(mode: BasemapMode): StyleSpecification {
     const preset = BASEMAPS[option]
     const id = basemapId(option)
     sources[id] = {
-      type: 'raster', tiles: preset.tiles, tileSize: 256,
+      type: 'raster', tiles: [...preset.tiles], tileSize: 256,
       maxzoom: preset.maxzoom, attribution: preset.attribution,
     }
     return {
