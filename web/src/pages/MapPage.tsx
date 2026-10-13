@@ -253,6 +253,7 @@ export function MapPage() {
   }, [clearPanels])
   const siteScope = user ? `${user.tenantId}:${user.id}` : null
   const siteSelection = useMapSites(siteScope, can('gis.map.view') && can('network.site.view'), focusSite)
+  const selectSite = siteSelection.select
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
   const watermark = useMemo(() => {
@@ -347,7 +348,7 @@ export function MapPage() {
         (pos) => {
           if (!map.current || intent !== cameraIntent.current) return
           const { longitude, latitude } = pos.coords
-          if (announce) siteSelection.select(null)
+          if (announce) selectSite(null)
           map.current?.flyTo({ center: [longitude, latitude], zoom: Math.max(map.current.getZoom(), 15) })
           if (announce) toast.success('Peta dipusatkan ke lokasi Anda')
         },
@@ -357,7 +358,7 @@ export function MapPage() {
         { enableHighAccuracy: true, timeout: 8000 },
       )
     },
-    [toast, siteSelection.select],
+    [toast, selectSite],
   )
 
   // Pergantian tampilan tidak mengganti gaya atau sumber jaringan. `style.load` juga
