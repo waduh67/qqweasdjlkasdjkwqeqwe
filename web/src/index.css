@@ -2163,22 +2163,38 @@ td.dg-actions {
    apa pun (gelap, jalan/streets, atau satelit). Legibilitas tombol kini bergantung
    pada kartunya, bukan warna peta, jadi pindah mode basemap tak lagi menyembunyikan
    tombol seperti pada mode ghost lama. */
-.map-toolbar {
+.map-navigation {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
   z-index: 5;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-start;
   max-width: calc(100% - 4.5rem);
+  gap: 8px;
+}
+.map-toolbar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
   gap: 0.25rem;
   padding: 0.25rem;
+}
+.map-control-card {
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-md);
 }
+.map-site-picker { width: 330px; max-width: 100%; padding: 4px 8px; }
+.map-site-picker-field { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.map-site-picker-field > span { flex-shrink: 0; }
+.map-site-picker-field .combobox { min-width: 0; flex: 1; }
+.map-site-picker-field .fui-Combobox { min-width: 0; width: 100%; }
+.map-site-picker-error { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 
 .map-toolbar-controls {
   display: flex;

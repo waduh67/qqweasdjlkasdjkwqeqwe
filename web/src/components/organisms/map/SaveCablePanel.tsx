@@ -27,6 +27,7 @@ import {
 } from '@/map/cableFormat'
 import { legalCableTypes, type SnappedDevice } from '@/map/cableTool'
 import { CablePhysicalFields } from './CablePhysicalFields'
+import { CableSourceFields } from './CableSourceFields'
 
 export function SaveCablePanel({
   from,
@@ -128,23 +129,26 @@ export function SaveCablePanel({
   // dicolok, dan pilihannya sekaligus menyetel uplink simpul hilir.
   const [srcOptions, setSrcOptions] = useState<CablePortOption[] | null>(customerDrop ? [] : null)
   const [srcPort, setSrcPort] = useState<SourcePort | null>(null)
+  const [srcError, setSrcError] = useState(false), [srcAttempt, setSrcAttempt] = useState(0)
 
   useEffect(() => {
     if (customerDrop) return
     let alive = true
     setSrcOptions(null)
+    setSrcError(false)
+    setSrcPort(null)
     void api
       .get<CablePortOption[]>(`/api/cables/source-ports?kind=${fromKind}&id=${fromId}`)
       .then((opts) => {
         if (alive) setSrcOptions(opts)
       })
       .catch(() => {
-        if (alive) setSrcOptions([])
+        if (alive) { setSrcOptions([]); setSrcError(true) }
       })
     return () => {
       alive = false
     }
-  }, [customerDrop, fromKind, fromId])
+  }, [customerDrop, fromKind, fromId, srcAttempt])
 
   // Untuk kabel drop, tampilkan peta port ODP tujuan supaya port tidak ditebak.
   const [odp, setOdp] = useState<OdpInspection | null>(null)
@@ -204,7 +208,7 @@ export function SaveCablePanel({
   // port berarti uplink diam-diam tak ter-set (feeder "yatim").
   const sourceReady = customerDrop
     ? true
-    : srcOptions != null && (srcPort != null || (portlessSource && srcOptions.length === 0))
+    : !srcError && srcOptions != null && (srcPort != null || (portlessSource && srcOptions.length === 0))
   const dropReady = !customerDrop || onu != null
   const canSave = name.trim() !== '' && sourceReady && dropReady
 
@@ -251,6 +255,7 @@ export function SaveCablePanel({
       creation={{ ...creation, steps: [{ key: 'cable', label: 'Kabel' }, { key: 'ports', label: 'Sambungan' }], prepare: () => void submit(), summary: <><CreationSummary rows={[
         ['Nama', name], ['Jenis kabel', TYPE_LABEL[type]], ['Rute', `${from} → ${to}`],
         ['Panjang', formatLength(lengthMeters)], ['Jumlah core', coreCount], ['Kode', codeTouched ? code : 'Otomatis'],
+        ['Port sumber', customerDrop ? selectedPort ?? '—' : srcOptions?.find(port => srcPort && (port.ponPortId ? port.ponPortId === srcPort.ponPortId : port.portNumber === srcPort.portNumber))?.label ?? 'Sambungan core'],
       ]} />{saveError && <p role="alert">{saveError}</p>}</> }}
       footer={<><Button disabled={creation.busy} onClick={onCancel}>Batal</Button><Button variant="primary" disabled={!canSave || creation.busy} onClick={() => void submit()}>Simpan kabel</Button></>}>
       <div className="blade-body stack"><ResourceStep step="cable">
@@ -352,39 +357,8 @@ export function SaveCablePanel({
         />
 
         </ResourceStep><ResourceStep step="ports">
-        {!customerDrop && (
-          <div className="stack" style={{ gap: '0.4rem' }}>
-            <Text as="span" size={300} weight="semibold">Port sumber {from}</Text>
-            {srcOptions == null ? (
-              <Text as="span" className="muted" size={200}>
-                Memuat port…
-              </Text>
-            ) : srcOptions.length === 0 ? (
-            <Text as="span" className="muted" size={100}>
-              {fromKind === 'SITE'
-                ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
-                : fromKind === 'JOINT_BOX'
-                  ? 'Joint box tak punya port — serat masuk disambung langsung ke serat keluar, jadi pasangan core-nya diatur di sambungan kotak ini, bukan di sini.'
-                  : fromKind === 'ODF'
-                    ? 'Port ODF memang bernomor, tapi yang dicolok di sana patchcord — bukan ujung kabel luar. Kabel ini menempel lewat sambungan di sisi belakang portnya, diatur di layar sambungan rak.'
-                    : fromKind === 'ODC' || fromKind === 'ODP'
-                      ? 'Kabel ini berangkat lewat SERATNYA, bukan lewat satu kaki splitter: tiap core disambung ke kaki yang berbeda. Pasangannya diatur di meja sambung kotak ini setelah kabelnya tergambar.'
-                      : fromKind === 'OLT'
-                        ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
-                        : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
-            </Text>
-            ) : (
-              <>
-                <SourcePortGrid options={srcOptions} selected={srcPort} onPick={setSrcPort} />
-                <Text as="span" className="muted" size={100}>
-                  {srcPort == null
-                    ? 'Pilih port keluaran dulu — kabel tak bisa ditarik tanpa port.'
-                    : `Menarik kabel ini otomatis menyetel uplink ${to}.`}
-                </Text>
-              </>
-            )}
-          </div>
-        )}
+        {!customerDrop && <CableSourceFields from={from} to={to} fromKind={fromKind} options={srcOptions}
+          selected={srcPort} onPick={setSrcPort} error={srcError} onRetry={() => setSrcAttempt(value => value + 1)} />}
 
         {customerDrop && (
           <div className="stack" style={{ gap: '0.4rem' }}>
@@ -437,63 +411,6 @@ export function SaveCablePanel({
 
       </ResourceStep></div>
     </Blade>
-  )
-}
-
-/**
- * Peta port KELUARAN sumber (feeder/distribusi): PON port OLT, kaki splitter ODC,
- * atau slot ODP. Port yang sudah dipakai kabel lain tampil nonaktif dengan kode
- * kabel penghuninya — menjawab "colok dari port mana" tanpa menabrak yang terisi.
- */
-function SourcePortGrid({
-  options,
-  selected,
-  onPick,
-}: {
-  options: CablePortOption[]
-  selected: SourcePort | null
-  onPick: (port: SourcePort) => void
-}) {
-  const isSame = (o: CablePortOption) =>
-    selected != null &&
-    (o.ponPortId != null ? selected.ponPortId === o.ponPortId : selected.portNumber === o.portNumber)
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(56px, 1fr))', gap: '0.3rem' }}>
-      {options.map((o) => {
-        const key = o.ponPortId ?? `p${o.portNumber}`
-        const isSelected = isSame(o)
-        const selectable = !o.occupied
-        const bg = isSelected ? 'var(--accent-soft)' : o.occupied ? 'var(--surface-2, rgba(148,163,184,0.15))' : 'transparent'
-        const border = isSelected ? 'var(--accent)' : o.occupied ? 'var(--border)' : 'var(--good-ink)'
-        return (
-          <ToggleButton
-            key={key}
-            size="small"
-            checked={isSelected}
-            disabled={!selectable}
-            onClick={selectable ? () => onPick({ ponPortId: o.ponPortId, portNumber: o.portNumber }) : undefined}
-            title={o.occupied ? `${o.label} · dipakai kabel ${o.occupiedByCable}` : `${o.label} · kosong`}
-            style={{
-              minWidth: 0,
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: '0.3rem 0.2rem',
-              borderRadius: 6,
-              border: `1px solid ${border}`,
-              background: bg,
-              color: o.occupied ? 'var(--muted)' : 'var(--text)',
-              cursor: selectable ? 'pointer' : 'default',
-              textAlign: 'center',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {o.label}
-          </ToggleButton>
-        )
-      })}
-    </div>
   )
 }
 
