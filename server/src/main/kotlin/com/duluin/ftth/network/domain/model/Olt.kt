@@ -284,6 +284,7 @@ class PonPort private constructor(
     companion object {
         /** Notasi lapangan frame/slot/port, mis. `1/2/3` atau `0/1`. */
         private val LABEL_PATTERN = Regex("""^\d{1,3}(/\d{1,3}){1,3}$""")
+        private val PON_PATTERN = Regex("""^PON(\d{1,3})$""", RegexOption.IGNORE_CASE)
 
         fun create(
             tenantId: UUID,
@@ -309,12 +310,15 @@ class PonPort private constructor(
             status: AssetStatus,
         ): PonPort = PonPort(id, tenantId, oltId, label, description, status)
 
-        private fun validateLabel(label: String): String {
+        fun normalizeLabel(label: String): String {
             val trimmed = label.trim()
+            PON_PATTERN.matchEntire(trimmed)?.let { return "PON${it.groupValues[1].toInt()}" }
             if (!LABEL_PATTERN.matches(trimmed)) {
-                throw ValidationException("Label PON port '$label' tidak valid, gunakan notasi slot/port seperti '1/2/3'")
+                throw ValidationException("Gunakan label port seperti PON1 atau 0/1/1.")
             }
             return trimmed
         }
+
+        private fun validateLabel(label: String): String = normalizeLabel(label)
     }
 }

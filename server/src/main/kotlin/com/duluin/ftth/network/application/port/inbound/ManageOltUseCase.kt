@@ -30,10 +30,14 @@ interface ManageOltUseCase {
 
     fun addPonPort(oltId: UUID, command: SavePonPortCommand): PonPortView
 
+    fun importPonPorts(oltId: UUID, labels: List<String>): PonPortImportResult
+
     fun updatePonPort(id: UUID, command: SavePonPortCommand): PonPortView
 
     fun deletePonPort(id: UUID)
 }
+
+data class PonPortImportResult(val created: Int, val existing: Int)
 
 data class SaveOltCommand(
     val siteId: UUID,

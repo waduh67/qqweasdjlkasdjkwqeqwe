@@ -38,7 +38,7 @@
 .table-card .data-table-grid .fui-DataGridCell { height: 32px; min-height: 32px; overflow: hidden; }
 .table-card.warehouse-data-table-card .data-table-grid .fui-DataGridCell { height: auto; }
 .table-cell-content { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.table-cell-content :is(div, p, small, code, pre, strong, .badge, .pill, .tag, .fui-Badge, .resource-cell-description),
+.table-cell-content :is(div:not(.fui-Checkbox__indicator), p, small, code, pre, strong, .badge, .pill, .tag, .fui-Badge, .resource-cell-description),
 .fui-TableCell :is(p, small, code, pre, .badge, .pill, .tag, .fui-Badge) {
   display: inline; background: none; border: 0; box-shadow: none; border-radius: 0;
   padding: 0; margin-block: 0; font: inherit; white-space: nowrap;

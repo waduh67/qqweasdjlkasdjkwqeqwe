@@ -50,6 +50,11 @@ interface OltAdapter {
     fun inventoryIndex(index: String): String? = index
 
     fun ontIdFrom(index: String): String? = null
+
+    /** Only adapters with verified physical-port mappings support discovery. */
+    val supportsPonDiscovery: Boolean get() = false
+    fun ponLabelFromOnuIndex(index: String): String? = null
+    fun ponLabelFromInterface(name: String): String? = null
 }
 
 /**

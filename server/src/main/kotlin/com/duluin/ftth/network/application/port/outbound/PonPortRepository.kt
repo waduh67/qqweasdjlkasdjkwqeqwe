@@ -7,6 +7,9 @@ interface PonPortRepository {
 
     fun save(ponPort: PonPort): PonPort
 
+    /** Atomic insert; retain the existing port and its connections on conflict. */
+    fun insertIfAbsent(ponPort: PonPort): Boolean
+
     fun findById(id: UUID): PonPort?
 
     fun findAllByIds(ids: Set<UUID>): List<PonPort>
