@@ -30,6 +30,8 @@ export interface ComboboxProps<T> {
   placeholder?: string
   disabled?: boolean
   ariaLabel?: string
+  /** Validate the selected record in the parent form, rather than the temporary search text. */
+  selectionRequired?: boolean
   /** Debounce fetch (ms). Beri 0 untuk filter lokal yang instan. Default 250. */
   debounceMs?: number
   emptyText?: string
@@ -52,6 +54,7 @@ export function Combobox<T>({
   placeholder,
   disabled,
   ariaLabel,
+  selectionRequired = false,
   debounceMs = 250,
   emptyText = 'Tak ada hasil',
 }: ComboboxProps<T>) {
@@ -152,6 +155,8 @@ export function Combobox<T>({
     <div ref={containerRef} className={`combobox${disabled ? ' is-disabled' : ''}`}>
       <FluentCombobox
         aria-label={ariaLabel}
+        required={selectionRequired ? false : undefined}
+        aria-required={selectionRequired || undefined}
         size="small"
         className="cb-field app-control app-control-compact"
         open={open}

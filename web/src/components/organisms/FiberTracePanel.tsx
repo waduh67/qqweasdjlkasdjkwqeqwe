@@ -161,8 +161,7 @@ export function FiberTracePanel({ closureKind, closureId, reloadKey }: Props) {
 
       {!path && (
         <p className="muted">
-          Belum ada titik yang bisa ditelusuri dari sini. Sambungkan dulu seratnya di meja kerja
-          splicing di bawah — jalur dirangkai dari sambungan yang tercatat, bukan dari garis di peta.
+          Belum ada jalur. Tambahkan sambungan serat untuk menelusurinya.
         </p>
       )}
 
