@@ -61,6 +61,7 @@ async function setup(page: Page, jointBox = false, manage = true) {
 async function pick(page: Page, label: string, option: string) {
   await page.getByRole('combobox', { name: label, exact: true }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
+  await expect(page.getByRole('combobox', { name: label, exact: true })).toHaveValue(option)
 }
 async function inputPair(page: Page) {
   await page.getByRole('button', { name: 'Tambah sambungan', exact: true }).click()
@@ -82,11 +83,11 @@ for (const width of [375, 1440]) {
     await expect(target).toHaveValue('')
     await page.getByRole('tab', { name: 'Tinjau + buat', exact: true }).click()
     expect(state.creates).toHaveLength(0)
-    await pick(page, 'Port tujuan', 'Input')
     const dialog = page.getByRole('dialog', { name: 'Tambah sambungan', exact: true })
-    await page.getByRole('combobox', { name: 'Port tujuan' }).click()
+    await target.click()
     await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(1)
     await page.getByRole('option', { name: 'Input', exact: true }).click()
+    await expect(target).toHaveValue('Input')
     await dialog.screenshot({ path: info.outputPath('connection-form.png') })
     expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
     await page.getByRole('button', { name: 'Berikutnya: Detail', exact: true }).click()

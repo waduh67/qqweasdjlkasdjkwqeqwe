@@ -19,10 +19,11 @@ export function SplicePicker<T extends { id: string; label: string }>({ label, o
   label: string; options: T[]; value: T | null | undefined; onChange: (item: T | null) => void; required?: boolean; disabled?: boolean; hint?: string
 }) {
   const fetchOptions = useCallback(async (term: string) => options.filter(item => item.label.toLowerCase().includes(term.toLowerCase())), [options])
-  return <Field className="app-field" size="small" label={label} required={required} hint={hint}>
+  return <Field className="app-field" size="small" label={label} required={required} hint={hint}
+    data-resource-required={required && !disabled} data-resource-selected={!!value} data-resource-label={label}>
     <Combobox ariaLabel={label} value={value?.id ?? ''} initialLabel={value?.label ?? ''} fetchOptions={fetchOptions}
       toId={item => item.id} toLabel={item => item.label} onChange={(_, item) => onChange(item)}
-      debounceMs={0} placeholder={`Pilih ${label.toLowerCase()}`} emptyText="Tidak ada pilihan yang tersedia" disabled={disabled} />
+      debounceMs={0} placeholder={`Pilih ${label.toLowerCase()}`} emptyText="Tidak ada pilihan yang tersedia" disabled={disabled} selectionRequired={required} />
   </Field>
 }
 

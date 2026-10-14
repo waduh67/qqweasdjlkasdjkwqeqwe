@@ -41,7 +41,7 @@ export function CableAttachmentForm({ data, cable, onClose, onSaved }: {
     <div className="stack">
     {cable ? <CreationSummary rows={[[ 'Kabel', cable.code ]]} /> : <Field className="app-field" size="small" label="Kabel" required>
       <Combobox ariaLabel="Kabel" value={pick?.id ?? ''} initialLabel={pick?.code} fetchOptions={fetchOptions}
-        toId={item => item.id} toLabel={item => item.code} toMeta={item => item.name} onChange={(_, item) => setPick(item)} placeholder="Cari kabel" />
+        toId={item => item.id} toLabel={item => item.code} toMeta={item => item.name} onChange={(_, item) => setPick(item)} placeholder="Cari kabel" selectionRequired />
     </Field>}
     <SelectField label="Akses serat" value={role} onChange={(_, next) => setRole(next.value as CableAttachmentRole)}>
       <option value="TAPPED">Serat terbuka</option><option value="PASSING">Melintas tanpa dikupas</option>
