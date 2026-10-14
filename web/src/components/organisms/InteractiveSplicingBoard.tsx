@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { ArrowRight, Cable, Check, RefreshCw, Settings2, X } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type { SpliceWorkbenchView } from '@/api/network'
@@ -9,6 +9,7 @@ import {
   compatibleSplice, groupSpliceOptions, matchesPurpose, purposesFor, spliceDetailsError,
   spliceOptions, type SpliceGroup, type SpliceOption, type SplicePurpose,
 } from '@/utils/spliceOptions'
+import { fiberStyle } from '@/utils/fiberStyle'
 import { initialSpliceDetails, SpliceDetailFields } from './SpliceDetailFields'
 
 const labels: Record<SplicePurpose, string> = {
@@ -26,13 +27,12 @@ function Points({ groups, side, selected, disabled, onSelect }: {
   return <div className="splice-point-groups">{groups.map(group => <section key={group.id} className="splice-point-group" aria-label={group.label}>
     <div className="splice-group-heading"><h5>{group.label}</h5><span>{group.options.length} tersedia</span></div>
     <div className="splice-point-grid">{group.options.map(option => <button key={option.id} type="button"
-      className={`splice-point${option.point.kind === 'CORE' ? ' splice-point-core' : ''}`}
-      style={option.colorHex ? { '--fiber-color': option.colorHex } as CSSProperties : undefined}
+      className={option.point.kind === 'CORE' ? 'fiber-core-button' : 'splice-point'}
+      style={option.point.kind === 'CORE' ? fiberStyle(option.colorHex) : undefined}
       aria-label={`Pilih ${side} ${option.fullLabel}`} aria-pressed={selected?.id === option.id}
       title={option.fullLabel} disabled={disabled} onClick={() => onSelect(option)}>
-      {option.point.kind === 'CORE' && <span className="splice-fiber-color" aria-hidden="true" />}
       <span>{option.point.kind === 'CORE' ? option.number : option.label}</span>
-      {selected?.id === option.id && <Check size={12} className="splice-point-check" aria-hidden="true" />}
+      {selected?.id === option.id && <Check size={12} className={option.point.kind === 'CORE' ? 'fiber-core-check' : 'splice-point-check'} aria-hidden="true" />}
     </button>)}</div>
   </section>)}</div>
 }
