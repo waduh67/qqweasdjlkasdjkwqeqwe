@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { ArrowRight, Cable, Check, RefreshCw, Settings2, X } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type { SpliceWorkbenchView } from '@/api/network'
@@ -9,6 +9,7 @@ import {
   compatibleSplice, groupSpliceOptions, matchesPurpose, purposesFor, spliceDetailsError,
   spliceOptions, type SpliceGroup, type SpliceOption, type SplicePurpose,
 } from '@/utils/spliceOptions'
+import { fiberStyle } from '@/utils/fiberStyle'
 import { initialSpliceDetails, SpliceDetailFields } from './SpliceDetailFields'
 
 const labels: Record<SplicePurpose, string> = {
@@ -20,31 +21,18 @@ const sides: Record<SplicePurpose, [string, string]> = {
   CASCADE: ['Output splitter', 'Input splitter'], TERMINATION: ['Core kabel', 'Port belakang ODF'], PATCH: ['Port sumber', 'Port tujuan'],
 }
 
-function fiberStyle(hex?: string | null): CSSProperties | undefined {
-  if (!hex || !/^#(?:[a-f\d]{3}|[a-f\d]{6})$/i.test(hex)) return undefined
-  const rgb = hex.length === 4 ? [...hex.slice(1)].map(channel => channel.repeat(2)).join('') : hex.slice(1)
-  const [r, g, b] = [0, 2, 4].map(offset => {
-    const channel = parseInt(rgb.slice(offset, offset + 2), 16) / 255
-    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
-  })
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-  // Choose the higher WCAG contrast ratio; either black or white exceeds 4.5:1.
-  const ink = (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? '#000000' : '#ffffff'
-  return { '--fiber-color': hex, '--fiber-ink': ink } as CSSProperties
-}
-
 function Points({ groups, side, selected, disabled, onSelect }: {
   groups: SpliceGroup[]; side: 'sumber' | 'tujuan'; selected?: SpliceOption; disabled: boolean; onSelect: (option: SpliceOption) => void
 }) {
   return <div className="splice-point-groups">{groups.map(group => <section key={group.id} className="splice-point-group" aria-label={group.label}>
     <div className="splice-group-heading"><h5>{group.label}</h5><span>{group.options.length} tersedia</span></div>
     <div className="splice-point-grid">{group.options.map(option => <button key={option.id} type="button"
-      className={`splice-point${option.point.kind === 'CORE' ? ' splice-point-core' : ''}`}
+      className={option.point.kind === 'CORE' ? 'fiber-core-button' : 'splice-point'}
       style={option.point.kind === 'CORE' ? fiberStyle(option.colorHex) : undefined}
       aria-label={`Pilih ${side} ${option.fullLabel}`} aria-pressed={selected?.id === option.id}
       title={option.fullLabel} disabled={disabled} onClick={() => onSelect(option)}>
       <span>{option.point.kind === 'CORE' ? option.number : option.label}</span>
-      {selected?.id === option.id && <Check size={12} className="splice-point-check" aria-hidden="true" />}
+      {selected?.id === option.id && <Check size={12} className={option.point.kind === 'CORE' ? 'fiber-core-check' : 'splice-point-check'} aria-hidden="true" />}
     </button>)}</div>
   </section>)}</div>
 }

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Checkbox, MessageBar, MessageBarBody, typographyStyles } from '@fluentui/react-components'
+import { Check, X } from 'lucide-react'
+import { fiberStyle } from '@/utils/fiberStyle'
 import { api } from '@/api/client'
 import type { CableCoreList, CableCoreView, CoreMoveView, CoreStatus } from '@/api/network'
 import { CORE_STATUS_LABEL } from '@/api/network'
@@ -39,18 +41,6 @@ const STATUS_RING: Record<CoreStatus, string> = {
   USED: 'var(--muted)',
   RESERVED: 'var(--warning)',
   DAMAGED: 'var(--critical)',
-}
-
-/**
- * Hitam atau putih di atas warna serat, mengikuti luminansi yang dirasakan mata.
- * Nomor core harus terbaca baik di atas "Kuning" maupun "Hitam".
- */
-function inkOn(hex: string): string {
-  const v = hex.replace('#', '')
-  const r = parseInt(v.slice(0, 2), 16)
-  const g = parseInt(v.slice(2, 4), 16)
-  const b = parseInt(v.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0f172a' : '#ffffff'
 }
 
 export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdit: boolean }) {
@@ -252,12 +242,10 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
                 <button
                   type="button"
                   key={core.id}
-                  className={`core-chip${on ? ' is-selected' : ''}${core.status === 'USED' ? ' is-used' : ''}`}
+                  className={`fiber-core-button core-chip${core.status === 'USED' ? ' is-used' : ''}`}
                   aria-pressed={on}
-                  style={{
-                    background: core.colorHex,
-                    color: inkOn(core.colorHex),
-                  }}
+                  style={fiberStyle(core.colorHex)}
+                  aria-label={`Core ${core.coreNumber} · ${core.color} · ${CORE_STATUS_LABEL[core.status]}`}
                   onClick={(e) => toggle(core, e.shiftKey)}
                   disabled={!canEdit}
                   title={`Core ${core.coreNumber} · ${core.color} · ${CORE_STATUS_LABEL[core.status]}${
@@ -265,8 +253,9 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
                   }`}
                 >
                   {core.coreNumber}
-                  {core.status === 'DAMAGED' && <span className="core-slash" />}
-                  {core.note && <span className="core-note-dot" />}
+                  {core.status === 'DAMAGED' && <X size={10} className="core-damage-marker" aria-hidden="true" />}
+                  {core.note && <span className="core-note-dot" aria-hidden="true" />}
+                  {on && <Check size={12} className="fiber-core-check" aria-hidden="true" />}
                 </button>
               )
             })}
