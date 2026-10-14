@@ -9,11 +9,11 @@ import { Button, TextField } from '@/components/atoms'
 import { CommandBar } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { connectionLabel, spliceOptions } from '@/utils/spliceOptions'
-import { FiberConnectionForm } from './FiberConnectionForm'
+import { InteractiveSplicingBoard } from './InteractiveSplicingBoard'
 import { BulkSpliceForm } from './BulkSpliceForm'
 import { CableAttachmentForm, EditSpliceForm, cableAttachmentLabel } from './SpliceMaintenanceForms'
 
-type ActiveForm = 'connection' | 'bulk' | 'attach' | 'editCable' | 'editConnection' | null
+type ActiveForm = 'bulk' | 'attach' | 'editCable' | 'editConnection' | null
 
 export function SplicingManager({ closureKind, closureId, onChanged }: {
   closureKind: ClosureKind; closureId: string; onChanged?: () => void
@@ -22,7 +22,8 @@ export function SplicingManager({ closureKind, closureId, onChanged }: {
   const canView = can('network.splice.view'), canManage = can('network.splice.manage')
   const [data, setData] = useState<SpliceWorkbenchView | null>(null)
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false)
-  const [tab, setTab] = useState('connections'), [query, setQuery] = useState(''), [selected, setSelected] = useState('')
+  const [requestedTab, setTab] = useState(canManage ? 'workbench' : 'connections'), [query, setQuery] = useState(''), [selected, setSelected] = useState('')
+  const tab = requestedTab === 'workbench' && !canManage ? 'connections' : requestedTab
   const [form, setForm] = useState<ActiveForm>(null)
   const request = useRef({ version: 0 })
   const load = useCallback(async () => {
@@ -68,11 +69,17 @@ export function SplicingManager({ closureKind, closureId, onChanged }: {
   return <section className="splice-manager" aria-label="Sambungan serat" aria-busy={loading}>
     <h3>Sambungan serat</h3>
     <TabList selectedValue={tab} onTabSelect={(_, next) => { setTab(String(next.value)); setSelected(''); setQuery('') }}>
-      <Tab value="connections">Sambungan</Tab><Tab value="cables">Kabel di lokasi</Tab>
+      {canManage && <Tab value="workbench" disabled={busy}>Penyambungan</Tab>}
+      <Tab value="connections" disabled={busy}>Daftar sambungan</Tab><Tab value="cables" disabled={busy}>Kabel di lokasi</Tab>
     </TabList>
+    {canManage && data && <div hidden={tab !== 'workbench'} inert={tab !== 'workbench' ? true : undefined}>
+      <InteractiveSplicingBoard key={`${closureKind}:${closureId}`} data={data} disabled={disabled}
+        onSaved={saved} onBusyChange={setBusy} onRefresh={() => void load()} onBulk={() => setForm('bulk')} />
+    </div>}
+    {tab !== 'workbench' && <>
     <CommandBar primary={canManage ? {
       key: 'add', label: tab === 'connections' ? 'Tambah sambungan' : 'Catat kabel melintas', icon: <Plus size={16} />,
-      disabled: disabled || tab === 'connections' && full, onClick: () => setForm(tab === 'connections' ? 'connection' : 'attach'),
+      disabled: disabled || tab === 'connections' && full, onClick: () => tab === 'connections' ? setTab('workbench') : setForm('attach'),
     } : undefined} actions={[
       ...(canManage ? tab === 'connections' ? [
         { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, disabled: disabled || !connection, onClick: () => setForm('editConnection') },
@@ -88,8 +95,9 @@ export function SplicingManager({ closureKind, closureId, onChanged }: {
       value={query} onChange={(_, next) => setQuery(next.value)} /><span className="muted">{tab === 'connections' ? `${connections.length} sambungan` : `${cables.length} kabel`}</span>
       {full && <span>Kapasitas penuh</span>}
     </div>
+    </>}
     {error && <div role="alert" className="splice-load-error">{error}<Button onClick={() => void load()}>Coba lagi</Button></div>}
-    {loading && !data ? <Spinner size="small" label="Memuat sambungan" /> : data && <div className="table-wrap">
+    {loading && !data ? <Spinner size="small" label="Memuat sambungan" /> : data && tab !== 'workbench' && <div className="table-wrap">
       {tab === 'connections' ? <Table aria-label="Daftar sambungan"><TableHeader><TableRow>
         {canManage && <TableHeaderCell className="splice-select-column" />}
         <TableHeaderCell>Titik pertama</TableHeaderCell><TableHeaderCell>Titik kedua</TableHeaderCell><TableHeaderCell>Metode</TableHeaderCell>
@@ -111,7 +119,6 @@ export function SplicingManager({ closureKind, closureId, onChanged }: {
       {!(tab === 'connections' ? connections : cables).length && <p className="splice-empty">{query ? 'Tidak ada hasil yang cocok.' : tab === 'connections' ? 'Belum ada sambungan.' : 'Belum ada kabel di lokasi ini.'}</p>}
     </div>}
     {canManage && data && <>
-      {form === 'connection' && <FiberConnectionForm data={data} onClose={() => setForm(null)} onSaved={saved} />}
       {form === 'bulk' && <BulkSpliceForm data={data} onClose={() => setForm(null)} onSaved={saved} />}
       {(form === 'attach' || form === 'editCable' && cable) && <CableAttachmentForm data={data} cable={form === 'editCable' ? cable : undefined} onClose={() => setForm(null)} onSaved={saved} />}
       {form === 'editConnection' && connection && <EditSpliceForm row={connection} onClose={() => setForm(null)} onSaved={saved} />}

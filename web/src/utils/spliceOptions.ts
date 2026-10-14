@@ -10,6 +10,7 @@ export interface SpliceOption {
   id: string; groupId: string; groupLabel: string; label: string; fullLabel: string
   point: ConnectionPointRequest; cableId: string | null; cableCode: string | null
   number: number | null; connectedElsewhere: boolean
+  colorHex?: string | null
 }
 export interface SpliceGroup { id: string; label: string; options: SpliceOption[] }
 
@@ -23,7 +24,7 @@ export function spliceOptions(data: SpliceWorkbenchView): SpliceOption[] {
         const label = `Core ${entry.core.coreNumber} · ${entry.core.color}`
         return { id: entry.core.id, groupId: `cable:${cable.cableId}`, groupLabel: cable.code, label,
           fullLabel: `${cable.code} · ${label}`, point: { kind: 'CORE' as const, coreId: entry.core.id },
-          cableId: cable.cableId, cableCode: cable.code, number: entry.core.coreNumber, connectedElsewhere: entry.connectedElsewhere }
+          cableId: cable.cableId, cableCode: cable.code, number: entry.core.coreNumber, connectedElsewhere: entry.connectedElsewhere, colorHex: entry.core.colorHex }
       })),
     ...data.points.filter(point => !point.connectionId).map(point => {
       const label = point.kind === 'SPLITTER_IN' ? 'Input' : point.kind === 'SPLITTER_OUT' ? `Output ${point.portNumber}`
