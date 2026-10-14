@@ -798,8 +798,8 @@ export interface ClosureSpliceView {
 
 /**
  * Sehelai core dilihat DARI DALAM sebuah kotak: selain identitas seratnya,
- * yang menentukan bisa-tidaknya ia dipakai adalah apakah ia sudah tersambung —
- * di sini (`connectionId`) atau di kotak lain (`connectedElsewhere`).
+ * connectionId menandai pemakaian di lokasi ini. connectedElsewhere hanya
+ * informasi: ujung di lokasi ini tetap dapat disambung.
  */
 export interface SpliceCoreView {
   core: CableCoreView

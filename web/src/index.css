@@ -2993,10 +2993,7 @@ td.dg-actions {
 
 /* ---------- Kisi core kabel ---------- */
 
-/* Core digambar sebagai chip berwarna ASLI seratnya (TIA-598) dan dipecah per
-   tube, bukan sebagai baris tabel: susunannya jadi cerminan langsung dari yang
-   dilihat teknisi ketika tube dibuka. Ditata 12 kolom per baris di detail kabel
-   dan 8 kolom per baris di meja sambungan yang mengisi penuh lebar wadah (100%). */
+/* Fiber colors and tube order in the cable inventory. */
 .core-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -3014,23 +3011,7 @@ td.dg-actions {
 .core-grid > .core-chip.is-selected {
   transform: none;
 }
-.splice-core-grid {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 0.35rem;
-  width: 100%;
-}
-.splice-core-grid > .core-chip {
-  width: 100%;
-  aspect-ratio: 1;
-}
-.splice-core-grid > .core-chip:not(:disabled):hover {
-  transform: none;
-  filter: brightness(1.12);
-}
-.splice-core-grid > .core-chip.is-selected {
-  transform: none;
-}
+
 .core-chip {
   position: relative;
   width: 100%;
@@ -3227,184 +3208,20 @@ td.dg-actions {
   background: color-mix(in srgb, var(--warning) 16%, var(--surface));
 }
 
-/* ---------- Meja kerja splicing & patching ---------- */
-
-/* Dua panel bersisian karena begitulah pekerjaannya: satu kotak dibuka, dua
-   ujung ditaruh di hadapan teknisi, lalu disambung sehelai demi sehelai. Di
-   layar sempit keduanya menumpuk — Ujung A di atas, Ujung B di bawah; keduanya
-   memajang isi kotak yang sama, jadi urutannya cuma soal ruang, bukan arah. */
-.splice-bench {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(25rem, 100%), 1fr));
-  gap: 0.6rem;
-}
-.splice-side {
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  min-width: 0;
-  container-type: inline-size;
-}
-@container (max-width: 18rem) {
-  .splice-core-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-/* Seisi kotak terpajang sekaligus, jadi yang digulung adalah DAFTARNYA, bukan
-   tiap kisi sendiri-sendiri: satu batang gulung di tepi panel, bukan tujuh yang
-   bersarang. Rak ODF 144 port tetap tak mendorong tabel sambungan ke bawah
-   horizon karena batas tingginya ada di sini. */
-.splice-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  max-height: 420px;
-  overflow-y: auto;
-}
-.splice-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-/* Kepala lipatan selebar panel: nama kelompok di kiri, sisa titik bebas di
-   kanan — angka itu yang dicari orang sebelum memutuskan membukanya. */
-.splice-group-head {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  width: 100%;
-  padding: 0.2rem 0.3rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fontSizeBase200);
-  font-weight: var(--fontWeightSemibold);
-  text-align: left;
-  cursor: pointer;
-}
-.splice-group-head:hover {
-  background: var(--surface-hover);
-}
-.splice-group-head:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
-}
-.splice-group-head .chev {
-  display: inline-flex;
-  flex: none;
-  color: var(--muted);
-  transform: rotate(-90deg);
-  transition: transform 0.15s ease;
-}
-.splice-group-head[aria-expanded='true'] .chev {
-  transform: none;
-}
-.splice-group-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.splice-group-count {
-  flex: none;
-  font-size: var(--fontSizeBase200);
-  font-weight: var(--fontWeightRegular);
-}
-.splice-group-hint {
-  margin: 0 0 0 1.15rem;
-  font-size: var(--fontSizeBase200);
-}
-/* Titik non-core (port ODF, kaki splitter, PON) berlabel kata, bukan angka, jadi
-   bentuknya pil selebar isinya — bukan chip persegi seperti core. */
-.splice-slots {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
-  gap: 0.2rem;
-}
-.splice-slot {
-  padding: 0.25rem 0.4rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fontSizeBase200);
-  font-variant-numeric: tabular-nums;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-.splice-slot:not(:disabled):hover {
-  background: var(--surface-hover);
-}
-/* Kaki yang sudah berisi bercerita dua baris: nomornya, lalu muaranya. Keduanya
-   dipangkas sendiri-sendiri supaya nama panjang tak mendorong lebar kisi. */
-.splice-slot-label,
-.splice-slot-serves {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.splice-slot-serves {
-  margin-top: 0.1rem;
-  font-size: var(--fontSizeBase200);
-  color: var(--text-2);
-}
-/* Sudah tersambung = diredupkan dan tak bisa diklik; yang MASIH BEBAS-lah yang
-   harus menonjol, sebab itu pertanyaan yang dibawa orang ke layar ini. */
-.splice-slot.is-used {
-  opacity: 0.45;
-  cursor: default;
-}
-/* Kecuali kaki yang menyebut muaranya: justru itu yang dicari orang di depan
-   kotak ("kaki mana punya Budi?"), jadi ia tetap terbaca meski tak bisa diklik.
-   Yang diredupkan seharusnya pilihan yang tak tersedia, bukan keterangan. */
-.splice-slot.is-used.has-serves {
-  opacity: 0.8;
-}
-.splice-slot.is-selected {
-  outline: 3px solid var(--accent);
-  outline-offset: 1px;
-  background: var(--accent-soft);
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
-  font-weight: bold;
-}
-.splice-slot:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
-}
-/* Metode + rugi + tombol dalam satu baris yang rata-bawah, supaya "sambung" ada
-   tepat di sebelah dua isian yang menyertainya. */
-.splice-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-.splice-actions > .fui-Field {
-  flex: 1 1 140px;
-  min-width: 120px;
-}
-.splice-end {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-/* Warna selubung serat ikut ke tabel: nomor core saja tak cukup saat teknisi
-   mencocokkannya dengan helai yang sedang dipegang. */
-.splice-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 1px solid var(--border-strong);
-  flex: none;
-}
+/* ---------- Sambungan serat ---------- */
+.splice-manager { min-width: 0; }
+.splice-manager > h3 { margin: 0 0 8px; }
+.splice-manager .azure-commandbar { margin: 0; }
+.splice-list-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
+.splice-list-filter > .fui-Field { width: 280px; max-width: 100%; }
+.splice-manager .fui-TableCell { white-space: nowrap; }
+.splice-manager .splice-select-column { width: 36px; }
+.splice-empty { margin: 0; padding: 24px 12px; color: var(--muted); }
+.splice-field-note { margin: 0; color: var(--muted); font-size: var(--fontSizeBase200); }
+.splice-load-error { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+/* Shared by the work-order fiber history. */
+.splice-end { display: inline-flex; align-items: center; gap: 0.35rem; }
+.splice-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--border-strong); flex: none; }
 
 /* ---------- Telusur jalur & anggaran redaman ---------- */
 
