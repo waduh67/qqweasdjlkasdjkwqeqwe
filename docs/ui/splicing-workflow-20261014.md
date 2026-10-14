@@ -14,6 +14,13 @@ No schema migration or production topology edits. The existing backend write end
 
 ## Validation and recovery
 
-Initial verification: 15 targeted frontend tests and production build passed. Remaining: browser verification, full frontend regression, final lint/build, CI, merge, Actions deployment, live verification.
+Local verification:
+- 15 targeted tests passed for the selection matrix, local versus remote occupancy, purpose reset, permissions, bulk numbering, loss validation, save failure, and stale reads.
+- Full frontend report: 984 tests passed in 169 files. The local shell was subsequently reported as terminated (143); require a clean full CI result before merging.
+- 10 Firefox/Chromium browser scenarios passed, including 375/1440 px layout, retained parent without navigation, exact review/save payload, joint-box continuation, failure/retry, editing, disconnecting and read-only access.
+- Production build, lint (existing unrelated warnings only), and browser-spec TypeScript check passed.
+- Desktop/mobile Firefox screenshots reviewed; local evidence is in the private runtime directory.
+
+Remaining: CI, merge, Actions deployment and live verification. Final CI/release results belong in the PR.
 
 Evidence under `.omo/runtime/cable-ux-review/` is private and ignored. Keep code and this handoff committed/pushed. Update this document and the PR with final checks and release references. Production deployment must use the existing GitHub Actions workflow; do not manually deploy via SSH.

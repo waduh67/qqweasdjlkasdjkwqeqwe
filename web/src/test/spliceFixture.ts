@@ -1,4 +1,4 @@
-import type { CableCoreView, SpliceCableView, SplicePointView, SpliceWorkbenchView } from '@/api/network'
+import type { CableCoreView, SpliceCableView, SplicePointView, SpliceWorkbenchView } from '../api/network'
 
 const colors = ['Biru', 'Oranye', 'Hijau', 'Cokelat', 'Abu-abu', 'Putih', 'Merah', 'Hitam', 'Kuning', 'Ungu', 'Merah muda', 'Aqua']
 export function spliceCable(id = 'in', count = 12): SpliceCableView {

@@ -1,4 +1,4 @@
-import type { ConnectionPointRequest, FiberConnectionPointView, SpliceWorkbenchView } from '@/api/network'
+import type { ConnectionPointRequest, FiberConnectionPointView, SpliceWorkbenchView } from '../api/network'
 import { impossibleSpliceWarning, type SpliceEnd } from './spliceGuard'
 
 export type SplicePurpose = 'INPUT' | 'OUTPUT' | 'CABLE' | 'CASCADE' | 'TERMINATION' | 'PATCH'

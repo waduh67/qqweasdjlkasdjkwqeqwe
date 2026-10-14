@@ -15,11 +15,11 @@ import { Blade } from './Blade'
 import { CreationSummary, useCreationReview } from './CreationReview'
 import { ResourceStep } from './ResourceStep'
 
-export function SplicePicker<T extends { id: string; label: string }>({ label, options, value, onChange, required = true, disabled = false }: {
-  label: string; options: T[]; value: T | null | undefined; onChange: (item: T | null) => void; required?: boolean; disabled?: boolean
+export function SplicePicker<T extends { id: string; label: string }>({ label, options, value, onChange, required = true, disabled = false, hint }: {
+  label: string; options: T[]; value: T | null | undefined; onChange: (item: T | null) => void; required?: boolean; disabled?: boolean; hint?: string
 }) {
   const fetchOptions = useCallback(async (term: string) => options.filter(item => item.label.toLowerCase().includes(term.toLowerCase())), [options])
-  return <Field className="app-field" size="small" label={label} required={required}>
+  return <Field className="app-field" size="small" label={label} required={required} hint={hint}>
     <Combobox ariaLabel={label} value={value?.id ?? ''} initialLabel={value?.label ?? ''} fetchOptions={fetchOptions}
       toId={item => item.id} toLabel={item => item.label} onChange={(_, item) => onChange(item)}
       debounceMs={0} placeholder={`Pilih ${label.toLowerCase()}`} emptyText="Tidak ada pilihan yang tersedia" disabled={disabled} />
@@ -99,8 +99,8 @@ export function FiberConnectionForm({ data, onClose, onSaved }: { data: SpliceWo
       <SplicePicker label={sourceCable ? 'Kabel sumber' : purpose === 'PATCH' ? 'Perangkat sumber' : 'Splitter sumber'}
         options={sourceGroups} value={sourceGroup} onChange={group => { setSourceGroupId(group?.id ?? ''); setSourceId(''); clearTarget() }} />
       <SplicePicker label={sourceCable ? 'Core sumber' : 'Port sumber'} options={sourceGroup?.options ?? []} value={source}
-        onChange={option => { setSourceId(option?.id ?? ''); clearTarget() }} disabled={!sourceGroup} />
-      {source?.connectedElsewhere && <p className="splice-field-note">Core ini memiliki sambungan di lokasi lain.</p>}
+        onChange={option => { setSourceId(option?.id ?? ''); clearTarget() }} disabled={!sourceGroup}
+        hint={source?.connectedElsewhere ? 'Core ini memiliki sambungan di lokasi lain.' : undefined} />
       <SplicePicker label={targetCable ? 'Kabel tujuan' : purpose === 'TERMINATION' || purpose === 'PATCH' ? 'Perangkat tujuan' : 'Splitter tujuan'}
         options={targetGroups} value={targetGroup} onChange={group => { setTargetGroupId(group?.id ?? ''); setTargetId('') }} disabled={!source} />
       <SplicePicker label={targetCable ? 'Core tujuan' : 'Port tujuan'} options={targetGroup?.options ?? []} value={target}
