@@ -8,7 +8,7 @@ import { useToast } from '@/system'
 import { groupSpliceOptions, matchingCorePairs, spliceOptions } from '@/utils/spliceOptions'
 import { Blade } from './Blade'
 import { CreationSummary, useCreationReview } from './CreationReview'
-import { initialSpliceDetails, SpliceDetailFields, SplicePicker } from './FiberConnectionForm'
+import { initialSpliceDetails, SpliceDetailFields, SplicePicker } from './SpliceDetailFields'
 import { ResourceStep } from './ResourceStep'
 
 export function BulkSpliceForm({ data, onClose, onSaved }: { data: SpliceWorkbenchView; onClose: () => void; onSaved: () => void }) {

@@ -10,7 +10,7 @@ import { useToast } from '@/system'
 import { connectionLabel, spliceDetailsError } from '@/utils/spliceOptions'
 import { Blade } from './Blade'
 import { CreationSummary, useCreationReview } from './CreationReview'
-import { SpliceDetailFields } from './FiberConnectionForm'
+import { SpliceDetailFields } from './SpliceDetailFields'
 
 export const cableAttachmentLabel = (role: CableAttachmentRole) => role === 'END' ? 'Berakhir di sini' : role === 'TAPPED' ? 'Serat terbuka' : 'Melintas tanpa dikupas'
 
