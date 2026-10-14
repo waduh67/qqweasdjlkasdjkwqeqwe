@@ -4,9 +4,14 @@ import { spliceCable, spliceFixture } from '../src/test/spliceFixture'
 import { spliceOptions } from '../src/utils/spliceOptions'
 import { installOltInventoryRoutes } from './oltInventoryFixtures'
 
-async function setup(page: Page, jointBox = false, manage = true) {
+async function setup(page: Page, jointBox = false, manage = true, longLabels = false) {
   const data = spliceFixture()
   if (jointBox) { data.closureKind = 'JOINT_BOX'; data.closureId = 'jb-qa'; data.closureCode = 'JB-CRB-001'; data.points = []; data.cables.push(spliceCable('out')) }
+  if (longLabels) {
+    data.cables[0].code = 'DIST-JB-CRB-001-ODP-CRB-001'
+    data.cables[1].code = 'DIST-ODC-CRB-001-JB-CRB-001'
+    data.cables.forEach(cable => { cable.cores[0].connectionId = 'already-connected' })
+  }
   await installOltInventoryRoutes(page, false, false, {}, ['network.splice.view', 'network.jointbox.view', ...(manage ? ['network.splice.manage'] : [])])
   const node = { id: data.closureId, code: data.closureCode, name: jointBox ? 'Joint box Cirebon 001' : 'ODP Cirebon 001', address: 'Cirebon',
     location: { longitude: 108.55, latitude: -6.7 }, odcId: 'odc-qa', odcName: 'ODC Cirebon 001', splitterRatio: '1:16', splitterCount: 1,
@@ -73,20 +78,23 @@ for (const width of [375, 1440]) {
     const board = state.manager.getByRole('region', { name: 'Meja sambung', exact: true })
     await expect(page.getByRole('dialog', { name: 'Tambah sambungan', exact: true })).toHaveCount(0)
     await board.screenshot({ path: info.outputPath('interactive-pair.png') })
+    await state.manager.screenshot({ path: info.outputPath('single-view.png') })
     expect(await board.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
     const target = page.getByRole('button', { name: 'Pilih tujuan SPL-1 · 1:16 · Input', exact: true })
     await target.click()
     await expect(board.getByRole('button', { name: 'Sambungkan', exact: true })).toBeDisabled()
     expect(state.creates).toHaveLength(0)
     await target.click()
-    await state.manager.getByRole('tab', { name: 'Daftar sambungan', exact: true }).click()
-    await state.manager.getByRole('tab', { name: 'Penyambungan', exact: true }).click()
+    await expect(state.manager.getByRole('tab')).toHaveCount(0)
+    await state.manager.getByRole('textbox', { name: 'Cari kabel', exact: true }).fill('tidak-ada')
+    await expect(state.manager.getByRole('table', { name: 'Kabel di lokasi', exact: true }).getByRole('cell', { name: 'DIST-JB-ODP', exact: true })).toHaveCount(0)
+    await expect(state.manager.getByRole('textbox', { name: 'Cari sambungan', exact: true })).toHaveValue('')
+    await state.manager.getByRole('textbox', { name: 'Cari kabel', exact: true }).clear()
     await expect(target).toHaveAttribute('aria-pressed', 'true')
     await board.getByRole('button', { name: 'Detail sambungan', exact: true }).click()
     await board.getByRole('textbox', { name: 'Redaman (dB)' }).fill('0.08')
     await board.getByRole('button', { name: 'Sambungkan', exact: true }).click()
     await expect(board.getByRole('button', { name: 'Sambungkan', exact: true })).toBeDisabled()
-    await state.manager.getByRole('tab', { name: 'Daftar sambungan', exact: true }).click()
     await expect(state.manager.getByRole('cell', { name: 'DIST-JB-ODP · Core 1', exact: true })).toBeVisible()
     expect(state.creates).toHaveLength(1); expect(state.creates[0].lossDb).toBe(0.08)
     expect(await page.evaluate(original => window.document === original, document)).toBe(true)
@@ -105,7 +113,6 @@ test('joint box excludes its source cable and supports keyboard connection', asy
   await target.getByRole('button', { name: 'Pilih tujuan DIST-ODP-LANJUTAN · Core 7 · Merah', exact: true }).press('Space')
   await state.manager.getByRole('region', { name: 'Meja sambung', exact: true }).screenshot({ path: info.outputPath('joint-box-pair.png') })
   await page.getByRole('button', { name: 'Sambungkan', exact: true }).click()
-  await state.manager.getByRole('tab', { name: 'Daftar sambungan', exact: true }).click()
   await expect(state.manager.getByRole('cell', { name: 'DIST-ODP-LANJUTAN · Core 7', exact: true })).toBeVisible()
   expect(state.errors).toEqual([])
 })
@@ -117,15 +124,17 @@ test('failed save retains points; editing and disconnect remain available', asyn
   await expect(state.manager.getByRole('alert')).toHaveText('Titik tujuan sudah terpakai.')
   await expect(page.getByRole('button', { name: 'Pilih tujuan SPL-1 · 1:16 · Input', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Sambungkan', exact: true }).click()
-  await state.manager.getByRole('tab', { name: 'Daftar sambungan', exact: true }).click()
-  await state.manager.getByRole('checkbox').check()
+  await state.manager.getByRole('table', { name: 'Daftar sambungan', exact: true }).getByRole('checkbox').check()
   await state.manager.getByRole('button', { name: 'Ubah', exact: true }).click()
   await page.getByRole('textbox', { name: 'Redaman (dB)' }).fill('0.12')
   await page.getByRole('button', { name: 'Tinjau + simpan', exact: true }).click()
   await page.getByRole('dialog', { name: 'Ubah sambungan', exact: true }).getByRole('button', { name: 'Simpan', exact: true }).click()
   await expect(state.manager.getByRole('cell', { name: '0.12 dB', exact: true })).toBeVisible()
   expect(state.updates).toHaveLength(1)
-  await state.manager.getByRole('checkbox').check()
+  await state.manager.getByRole('table', { name: 'Daftar sambungan', exact: true }).getByRole('checkbox').check()
+  await state.manager.getByRole('table', { name: 'Kabel di lokasi', exact: true }).getByRole('checkbox').check()
+  await expect(state.manager.getByRole('table', { name: 'Daftar sambungan', exact: true }).getByRole('checkbox')).toBeChecked()
+  await expect(state.manager.getByRole('button', { name: 'Hapus catatan', exact: true })).toBeDisabled()
   await state.manager.getByRole('button', { name: 'Lepas', exact: true }).click()
   await page.getByRole('dialog', { name: 'Lepas sambungan', exact: true }).getByRole('button', { name: 'Lepas', exact: true }).click()
   await expect(state.manager.getByText('Belum ada sambungan.', { exact: true })).toBeVisible()
@@ -135,9 +144,44 @@ test('failed save retains points; editing and disconnect remain available', asyn
 test('read-only users see the list without creation or mutation controls', async ({ page }) => {
   const state = await setup(page, false, false)
   await expect(state.manager.getByRole('button', { name: 'Sambungkan', exact: true })).toHaveCount(0)
-  await expect(state.manager.getByRole('tab', { name: 'Penyambungan', exact: true })).toHaveCount(0)
-  await state.manager.getByRole('tab', { name: 'Kabel di lokasi' }).click()
+  await expect(state.manager.getByRole('tab')).toHaveCount(0)
   await expect(state.manager.getByRole('cell', { name: 'DIST-JB-ODP', exact: true })).toBeVisible()
   await expect(state.manager.getByRole('checkbox')).toHaveCount(0)
   expect(state.errors).toEqual([])
 })
+
+for (const panelWidth of [385, 620]) {
+  test(`joint-box content stays inside a ${panelWidth}px panel on desktop`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    const state = await setup(page, true, true, true)
+    const drawer = page.locator('.azure-blade.blade-detail')
+    await drawer.evaluate((node, width) => {
+      const style = (node as HTMLElement).style
+      style.setProperty('width', `${width}px`, 'important')
+      style.setProperty('max-width', `${width}px`, 'important')
+      style.setProperty('min-width', '0', 'important')
+    }, panelWidth)
+    const board = state.manager.getByRole('region', { name: 'Meja sambung', exact: true })
+    const source = board.getByRole('region', { name: 'Titik sumber', exact: true })
+    const target = board.getByRole('region', { name: 'Titik tujuan', exact: true })
+    await source.getByRole('button', { name: `Pilih sumber ${state.data.cables[0].code} · Core 7 · Merah`, exact: true }).click()
+    await target.getByRole('button', { name: `Pilih tujuan ${state.data.cables[1].code} · Core 7 · Merah`, exact: true }).click()
+    const sourceBox = (await source.boundingBox())!, targetBox = (await target.boundingBox())!
+    expect(targetBox.y).toBeGreaterThanOrEqual(sourceBox.y + sourceBox.height)
+    expect(Math.abs(sourceBox.x - targetBox.x)).toBeLessThan(2)
+    const metrics = await drawer.locator('.azure-blade-body').evaluate(body => ({
+      width: body.clientWidth, scrollWidth: body.scrollWidth,
+      children: [...body.querySelectorAll<HTMLElement>('.asset-detail-panel, .splice-manager, .splice-interactive, .splice-side, .splice-pair-preview')].map(node => ({ width: node.clientWidth, scrollWidth: node.scrollWidth })),
+    }))
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.width + 1)
+    for (const child of metrics.children) expect(child.scrollWidth).toBeLessThanOrEqual(child.width + 1)
+    await board.screenshot({ path: info.outputPath(`contained-panel-${panelWidth}.png`) })
+    await expect(state.manager.getByRole('table', { name: 'Daftar sambungan', exact: true })).toBeVisible()
+    await expect(state.manager.getByRole('table', { name: 'Kabel di lokasi', exact: true })).toBeVisible()
+    await expect(state.manager.getByRole('tab')).toHaveCount(0)
+    const table = state.manager.getByRole('region', { name: 'Tabel kabel', exact: true })
+    await table.focus(); await table.press('ArrowRight')
+    await expect(table).toBeFocused()
+    expect(state.errors).toEqual([])
+  })
+}

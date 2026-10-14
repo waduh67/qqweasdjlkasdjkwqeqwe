@@ -3209,9 +3209,12 @@ td.dg-actions {
 }
 
 /* ---------- Sambungan serat ---------- */
-.splice-manager { min-width: 0; }
+.splice-manager { min-width: 0; max-width: 100%; width: 100%; container: splicing / inline-size; }
 .splice-manager > h3 { margin: 0 0 8px; }
 .splice-manager .azure-commandbar { margin: 0; }
+.splice-list-section { min-width: 0; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.splice-list-section > h4 { margin: 0 0 8px; font-size: var(--fontSizeBase300); font-weight: 600; }
+.splice-list-section .table-wrap { min-width: 0; max-width: 100%; border-radius: 0; }
 .splice-list-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
 .splice-list-filter > .fui-Field { width: 280px; max-width: 100%; }
 .splice-manager .fui-TableCell { white-space: nowrap; }
@@ -3236,7 +3239,7 @@ td.dg-actions {
 .splice-group-heading h5 { margin: 0; font: inherit; font-weight: 600; overflow-wrap: anywhere; }
 .splice-group-heading > span { font-size: var(--fontSizeBase200); color: var(--muted); }
 .splice-point-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.splice-point { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 2px; color: var(--text); background: var(--surface); font: inherit; font-size: var(--fontSizeBase200); cursor: pointer; }
+.splice-point { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; max-width: 100%; overflow-wrap: anywhere; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 2px; color: var(--text); background: var(--surface); font: inherit; font-size: var(--fontSizeBase200); cursor: pointer; }
 .splice-point-core { width: 46px; min-width: 46px; padding-inline: 4px; }
 .splice-point:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-hover); }
 .splice-point[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -3252,7 +3255,7 @@ td.dg-actions {
 .splice-board-error { margin: 0 0 12px; }
 .splice-optional-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; padding: 16px 0; border: 0; border-top: 1px solid var(--border); min-width: 0; }
 .splice-optional-details legend { font-size: var(--fontSizeBase300); font-weight: 600; padding: 0 8px 0 0; }
-@media (max-width: 700px) {
+@container splicing (max-width: 700px) {
   .splice-interactive-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "source" "target" "pair"; gap: 20px; }
   .splice-pair-preview { padding-top: 12px; border-top: 1px solid var(--border); text-align: left; }
   .splice-selected-pair { flex-direction: row; align-items: center; }
@@ -3260,6 +3263,11 @@ td.dg-actions {
   .splice-selected-pair > svg { flex: none; }
   .splice-pair-preview > .app-button { align-self: flex-start; }
   .splice-optional-details { grid-template-columns: minmax(0, 1fr); }
+}
+@container splicing (max-width: 560px) {
+  .splice-interactive .azure-commandbar, .splice-list-section .azure-commandbar { flex-wrap: wrap; justify-content: flex-start; overflow: visible; gap: 4px; }
+  .splice-interactive .command-secondary, .splice-list-section .command-secondary { display: none; }
+  .splice-interactive .command-overflow, .splice-list-section .command-overflow { display: block; }
 }
 /* Shared by the work-order fiber history. */
 .splice-end { display: inline-flex; align-items: center; gap: 0.35rem; }

@@ -105,7 +105,7 @@ export function AssetDetailPanel({
     commands.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: onDelete, dividerBefore: commands.length > 0 })
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
+    <div className="stack asset-detail-panel" style={{ gap: '1.25rem' }}>
       <div className="stack" style={{ gap: '0.35rem' }}>
         <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>{badges}</div>
         {subtitle && <p className="page-sub" style={{ margin: 0 }}>{subtitle}</p>}
