@@ -64,6 +64,22 @@ describe('SplicingManager', () => {
     await user.click(screen.getByRole('tab', { name: 'Tinjau + buat' }))
     expect(apiPost).not.toHaveBeenCalled(); expect(screen.queryByRole('button', { name: 'Buat sambungan' })).toBeNull()
   })
+  it('honors clearing an automatically selected cable or input', async () => {
+    const { user } = await setup()
+    await user.click(screen.getByRole('button', { name: 'Tambah sambungan' }))
+    const source = screen.getByRole('combobox', { name: 'Kabel sumber' })
+    await user.click(within(source.closest<HTMLElement>('.combobox')!).getByRole('button', { name: 'Hapus pilihan' }))
+    expect(source).toHaveProperty('value', '')
+    expect(screen.getByRole('combobox', { name: 'Core sumber' })).toHaveProperty('disabled', true)
+    await pick(user, 'Kabel sumber', 'DIST-JB-ODP'); await pick(user, 'Core sumber', 'Core 1 · Biru')
+    const target = screen.getByRole('combobox', { name: 'Port tujuan' })
+    expect(target).toHaveProperty('value', 'Input')
+    await user.click(within(target.closest<HTMLElement>('.combobox')!).getByRole('button', { name: 'Hapus pilihan' }))
+    expect(target).toHaveProperty('value', '')
+    await user.click(screen.getByRole('tab', { name: 'Tinjau + buat' }))
+    expect(screen.queryByRole('button', { name: 'Buat sambungan' })).toBeNull()
+    expect(apiPost).not.toHaveBeenCalled()
+  })
   it('explains the missing destination for a joint box with only one cable', async () => {
     const data = spliceFixture(); data.closureKind = 'JOINT_BOX'; data.points = []
     const { user } = await setup(data)

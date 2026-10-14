@@ -56,19 +56,19 @@ export function FiberConnectionForm({ data, onClose, onSaved }: { data: SpliceWo
   const creation = useCreationReview(true)
   const purposes = purposesFor(data)
   const [purpose, setPurpose] = useState<SplicePurpose>(purposes[0])
-  const [sourceGroupId, setSourceGroupId] = useState(''), [targetGroupId, setTargetGroupId] = useState('')
-  const [sourceId, setSourceId] = useState(''), [targetId, setTargetId] = useState('')
+  const [sourceGroupId, setSourceGroupId] = useState<string | undefined>(), [targetGroupId, setTargetGroupId] = useState<string | undefined>()
+  const [sourceId, setSourceId] = useState<string | undefined>(), [targetId, setTargetId] = useState<string | undefined>()
   const [details, setDetails] = useState(initialSpliceDetails)
   const options = useMemo(() => spliceOptions(data), [data])
   const sourceGroups = groupSpliceOptions(options.filter(option => matchesPurpose(option, purpose, 'source')))
-  const sourceGroup = sourceGroups.find(group => group.id === sourceGroupId) ?? (sourceGroups.length === 1 ? sourceGroups[0] : null)
+  const sourceGroup = sourceGroups.find(group => group.id === sourceGroupId) ?? (sourceGroupId === undefined && sourceGroups.length === 1 ? sourceGroups[0] : null)
   const source = sourceGroup?.options.find(option => option.id === sourceId)
-    ?? (sourceGroup?.options.length === 1 && sourceGroup.options[0].point.kind !== 'CORE' ? sourceGroup.options[0] : null)
+    ?? (sourceId === undefined && sourceGroup?.options.length === 1 && sourceGroup.options[0].point.kind !== 'CORE' ? sourceGroup.options[0] : null)
   const targetGroups = groupSpliceOptions(source ? options.filter(option => matchesPurpose(option, purpose, 'target') && compatibleSplice(source, option, data)) : [])
-  const targetGroup = targetGroups.find(group => group.id === targetGroupId) ?? (targetGroups.length === 1 ? targetGroups[0] : null)
+  const targetGroup = targetGroups.find(group => group.id === targetGroupId) ?? (targetGroupId === undefined && targetGroups.length === 1 ? targetGroups[0] : null)
   const target = targetGroup?.options.find(option => option.id === targetId)
-    ?? (targetGroup?.options.length === 1 && targetGroup.options[0].point.kind !== 'CORE' ? targetGroup.options[0] : null)
-  const clearTarget = () => { setTargetGroupId(''); setTargetId('') }
+    ?? (targetId === undefined && targetGroup?.options.length === 1 && targetGroup.options[0].point.kind !== 'CORE' ? targetGroup.options[0] : null)
+  const clearTarget = () => { setTargetGroupId(undefined); setTargetId(undefined) }
   const sourceCable = ['INPUT', 'CABLE', 'TERMINATION'].includes(purpose)
   const targetCable = ['OUTPUT', 'CABLE'].includes(purpose)
   const validate = () => !source ? 'Pilih titik sumber.' : !target ? 'Pilih titik tujuan.' : null
@@ -94,15 +94,15 @@ export function FiberConnectionForm({ data, onClose, onSaved }: { data: SpliceWo
   }} footer={<Button variant="primary" disabled={creation.busy} onClick={() => void submit()}>Buat sambungan</Button>}>
     <ResourceStep step="connection">
       <SelectField label="Jenis sambungan" value={purpose} onChange={(_, next) => {
-        setPurpose(next.value as SplicePurpose); setSourceGroupId(''); setSourceId(''); clearTarget()
+        setPurpose(next.value as SplicePurpose); setSourceGroupId(undefined); setSourceId(undefined); clearTarget()
       }}>{purposes.map(key => <option key={key} value={key}>{splicePurposes[key]}</option>)}</SelectField>
       <SplicePicker label={sourceCable ? 'Kabel sumber' : purpose === 'PATCH' ? 'Perangkat sumber' : 'Splitter sumber'}
-        options={sourceGroups} value={sourceGroup} onChange={group => { setSourceGroupId(group?.id ?? ''); setSourceId(''); clearTarget() }} />
+        options={sourceGroups} value={sourceGroup} onChange={group => { setSourceGroupId(group?.id ?? ''); setSourceId(undefined); clearTarget() }} />
       <SplicePicker label={sourceCable ? 'Core sumber' : 'Port sumber'} options={sourceGroup?.options ?? []} value={source}
         onChange={option => { setSourceId(option?.id ?? ''); clearTarget() }} disabled={!sourceGroup}
         hint={source?.connectedElsewhere ? 'Core ini memiliki sambungan di lokasi lain.' : undefined} />
       <SplicePicker label={targetCable ? 'Kabel tujuan' : purpose === 'TERMINATION' || purpose === 'PATCH' ? 'Perangkat tujuan' : 'Splitter tujuan'}
-        options={targetGroups} value={targetGroup} onChange={group => { setTargetGroupId(group?.id ?? ''); setTargetId('') }} disabled={!source} />
+        options={targetGroups} value={targetGroup} onChange={group => { setTargetGroupId(group?.id ?? ''); setTargetId(undefined) }} disabled={!source} />
       <SplicePicker label={targetCable ? 'Core tujuan' : 'Port tujuan'} options={targetGroup?.options ?? []} value={target}
         onChange={option => setTargetId(option?.id ?? '')} disabled={!targetGroup} />
       {source && !targetGroups.length && <p role="status" className="splice-field-note">{purpose === 'CABLE'
