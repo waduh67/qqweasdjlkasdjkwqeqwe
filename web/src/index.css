@@ -3240,13 +3240,16 @@ td.dg-actions {
 .splice-group-heading > span { font-size: var(--fontSizeBase200); color: var(--muted); }
 .splice-point-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .splice-point { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; max-width: 100%; overflow-wrap: anywhere; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 2px; color: var(--text); background: var(--surface); font: inherit; font-size: var(--fontSizeBase200); cursor: pointer; }
-.splice-point-core { width: 46px; min-width: 46px; padding-inline: 4px; }
+.splice-point-core { width: 46px; min-width: 46px; padding-inline: 4px; font-weight: 600; }
 .splice-point:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-hover); }
 .splice-point[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .splice-point:focus-visible, .splice-purpose-choices button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .splice-point:disabled, .splice-purpose-choices button:disabled { opacity: .55; cursor: default; }
-.splice-fiber-color { width: 8px; height: 18px; border-radius: 2px; background: var(--fiber-color, var(--muted)); border: 1px solid var(--border-strong); flex: none; }
+.splice-point-core, .splice-point-core:hover:not(:disabled) { color: var(--fiber-ink, var(--text)); background: var(--fiber-color, var(--surface)); }
+.splice-point-core[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--surface), 0 0 0 3px var(--accent); }
+.splice-point-core:disabled { opacity: 1; cursor: not-allowed; }
 .splice-point-check { position: absolute; top: -5px; right: -4px; color: var(--accent); background: var(--surface); }
+.splice-point-core .splice-point-check { padding: 1px; border: 1px solid var(--border-strong); border-radius: 2px; box-sizing: content-box; color: var(--text); }
 .splice-board-empty { margin: 0; padding: 12px 0; font-size: var(--fontSizeBase200); color: var(--muted); }
 .splice-pair-preview { grid-area: pair; display: flex; flex-direction: column; align-items: stretch; gap: 12px; min-width: 0; padding-top: 34px; text-align: center; }
 .splice-selected-pair { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: var(--fontSizeBase200); color: var(--muted); overflow-wrap: anywhere; }
