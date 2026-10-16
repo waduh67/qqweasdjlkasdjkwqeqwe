@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { typographyStyles } from '@fluentui/react-components'
 import { getBrasTraffic, type TrafficHistoryView } from '@/api/bng'
 import { Segmented, TrafficChart } from '@/components/atoms'
 
@@ -25,7 +24,7 @@ export function SubscriberTrafficPanel({ accessId }: { accessId: string }) {
 
   useEffect(() => {
     let alive = true
-    setLoading(true)
+    setLoading(true); setTraffic(null)
     void getBrasTraffic(accessId, hours)
       .then((t) => {
         if (!alive) return
@@ -33,49 +32,20 @@ export function SubscriberTrafficPanel({ accessId }: { accessId: string }) {
         setLoading(false)
       })
       .catch(() => {
-        if (alive) setLoading(false)
+        if (alive) { setTraffic(null); setLoading(false) }
       })
-    return () => {
-      alive = false
-    }
+    return () => { alive = false }
   }, [accessId, hours])
-
-  const activeLabel = WINDOWS.find((w) => w.hours === hours)?.label ?? `${hours} jam`
-
-  return (
-    <div className="stack" style={{ gap: '0.6rem' }}>
-      <div className="spread" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-        {/* Ringkasan hidup: throughput terakhir terhitung + pemakaian data pada rentang. */}
-        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="badge neutral tnum" title="Throughput unduh terakhir terhitung">
-            ↓ {fmtMbps(traffic?.currentDownMbps ?? null)}
-          </span>
-          <span className="badge neutral tnum" title="Throughput unggah terakhir terhitung">
-            ↑ {fmtMbps(traffic?.currentUpMbps ?? null)}
-          </span>
-          <span className="muted" style={{ ...typographyStyles.caption1 }}>
-            Pemakaian {activeLabel}: <strong className="tnum">{fmtDataUsage(traffic?.totalBytes ?? null)}</strong>
-          </span>
-        </div>
-
-        {/* Pemilih rentang: memicu tarik ulang lewat state [hours]. */}
-        <Segmented
-          ariaLabel="Rentang waktu tren"
-          value={hours}
-          onChange={setHours}
-          options={WINDOWS.map((w) => ({ value: w.hours, label: w.label }))}
-        />
-      </div>
-
-      {loading && !traffic ? (
-        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>Memuat tren…</p>
-      ) : traffic ? (
-        <TrafficChart points={traffic.points} />
-      ) : (
-        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>Tren trafik tak tersedia.</p>
-      )}
+  const activeLabel = WINDOWS.find(window => window.hours === hours)?.label ?? `${hours} jam`
+  return <section className="customer-section" aria-label="Tren trafik">
+    <div className="customer-filters"><Segmented ariaLabel="Rentang waktu tren" value={hours} onChange={setHours}
+      options={WINDOWS.map(window => ({ value: window.hours, label: window.label }))} /></div>
+    <div className="stat-grid">
+      {[['Unduh terkini', fmtMbps(traffic?.currentDownMbps ?? null)], ['Unggah terkini', fmtMbps(traffic?.currentUpMbps ?? null)], [`Pemakaian ${activeLabel}`, fmtDataUsage(traffic?.totalBytes ?? null)]].map(([label, value]) =>
+        <div className="stat" key={label}><div className="stat-label">{label}</div><div className="stat-value">{value}</div></div>)}
     </div>
-  )
+    {loading ? <p role="status">Memuat tren…</p> : traffic ? <div className="customer-chart"><TrafficChart points={traffic.points} /></div> : <p role="alert">Tren trafik gagal dimuat.</p>}
+  </section>
 }
 
 /** Laju Mbps ringkas; null (akun offline / belum terhitung) → "—". */

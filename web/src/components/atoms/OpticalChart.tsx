@@ -30,7 +30,7 @@ export function OpticalChart({ points }: Props) {
   if (measured.length < 2) {
     return (
       <Text as="p" block className="muted" size={300} style={{ padding: '1rem 0', textAlign: 'center' }}>
-        Belum cukup data untuk menggambar tren (perlu ≥ 2 pengukuran).
+        Riwayat redaman belum cukup untuk ditampilkan.
       </Text>
     )
   }

@@ -31,7 +31,7 @@ export function TrafficChart({ points }: Props) {
   if (drawable.length < 2) {
     return (
       <Text as="p" block className="muted" size={300} style={{ padding: '1rem 0', textAlign: 'center' }}>
-        Belum cukup data untuk menggambar tren (perlu ≥ 2 pembacaan trafik).
+        Riwayat trafik belum cukup untuk ditampilkan.
       </Text>
     )
   }

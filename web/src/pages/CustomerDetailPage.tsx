@@ -1,9 +1,9 @@
 import { CustomerMigrationManagement } from './onboarding/CustomerMigrationManagement'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
+import { Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Pencil, KeyRound, Unplug, Ban, Trash2, Play } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import { CustomerOnuPanel } from '@/components/organisms/customer/CustomerOnuPanel'
 import { CustomerAssetPanel } from '@/components/organisms/customer/CustomerAssetPanel'
@@ -69,21 +69,8 @@ import { OpticalChart } from '@/components/atoms'
 import { SubscriberTrafficPanel } from '@/components/organisms'
 import {
   IconAlert,
-  IconAudit,
-  IconChart,
   IconCustomers,
-  IconFlask,
-  IconGauge,
   IconMap,
-  IconMonitor,
-  IconPackage,
-  IconReceipt,
-  IconRoute,
-  IconShield,
-  IconUpload,
-  IconUsers,
-  IconWifi,
-  IconWorkOrder,
 } from '@/components/atoms/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
@@ -276,7 +263,7 @@ export function CustomerDetailPage({
 
   if (notFound || !customer) {
     return (
-      <div className="stack" style={{ gap: '1rem' }}>
+      <div className="customer-section">
         <div className="card">
           <EmptyState title="Pelanggan tidak ditemukan" hint="Pelanggan mungkin telah dihapus." icon={<IconCustomers size={32} />} />
         </div>
@@ -341,8 +328,8 @@ export function CustomerDetailPage({
         <span>{customerStatusLabel(customer.status, customer.awaitingInstallation)}</span>
       </div>
 
-      <CommandBar primary={commands[0]} actions={commands.slice(1)} />
-      <ResourceNavigation label="Bagian pelanggan" items={tabDefs} active={activeTab} onChange={setTab}>
+      <CommandBar layout="wrap" primary={commands[0]} actions={commands.slice(1)} />
+      <ResourceNavigation key={`${id}:${refreshKey}`} label="Bagian pelanggan" items={tabDefs} active={activeTab} onChange={setTab}>
       {activeTab === 'ringkasan' && <EssentialsBlock customer={customer} sub360={sub360} trace={trace} />}
       {activeTab === 'langganan' && <div className="stack"><SubscriptionManager customer={customer} run={run} /><CustomerMigrationManagement customerId={id} mode="billing" onUpdated={() => void reload()} /></div>}
       {activeTab === 'perangkat' && <><OnuManager customer={customer} run={run} />{customer.onus.length > 0 && <OntAcsSettingsCard />}</>}
@@ -375,18 +362,16 @@ export function CustomerDetailPage({
  * Kepala seksi bergaya blade Azure: ikon beraksen + judul tebal, tanpa bingkai.
  * Pemisah antar-seksi dikerjakan garis rambut wadah `.flat-sections`.
  */
-function SectionHead({ icon, title, aside }: { icon: ReactNode; title: string; aside?: ReactNode }) {
-  return (
-    <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-      <div className="section-head">
-        <span className="ico" aria-hidden>
-          {icon}
-        </span>
-        <h3 className="section-title">{title}</h3>
-      </div>
-      {aside}
-    </div>
-  )
+function SectionHead({ title, aside }: { title: string; aside?: ReactNode }) {
+  return <header className="customer-section-heading"><h2>{title}</h2>{aside}</header>
+}
+
+function Properties({ rows }: { rows: [string, ReactNode][] }) {
+  return <dl className="essentials">{rows.map(([label, value]) => <Ess key={label} label={label}>{value ?? '—'}</Ess>)}</dl>
+}
+
+function DetailEmpty({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="customer-section"><h2>{title}</h2><p className="muted">{children}</p></section>
 }
 
 /**
@@ -404,30 +389,30 @@ function SectionHead({ icon, title, aside }: { icon: ReactNode; title: string; a
 function EssentialsBlock({ customer, sub360, trace }: {
   customer: CustomerView; sub360: Subscriber360View | null; trace: CustomerTrace | null
 }) {
-  const live = customer.subscription?.status === 'TERMINATED' ? null : customer.subscription
+  const sub = customer.subscription
   const onu = customer.onus.find(row => row.odpId) ?? customer.onus[0]
-  const billing = sub360?.billing, session = sub360?.session, devices = sub360?.cpeDevices
-  const work = sub360?.openWorkOrder
-  return <section className="customer-overview">
+  return <section className="customer-section">
     <h2>Ringkasan</h2>
-    <div className="ess-cols">
-      <dl className="essentials wide">
-        <Ess label="Alamat">{customer.address || '—'}</Ess>
-        <Ess label="Telepon">{customer.phone || '—'}</Ess>
-        <Ess label="Email">{customer.email || '—'}</Ess>
-        <Ess label="NIK / identitas">{customer.idCardNumber || '—'}</Ess>
-        <Ess label="Koordinat">{hasCustomerLocation(customer.location) ? `${customer.location.latitude}, ${customer.location.longitude}` : 'Belum ditentukan'}</Ess>
-      </dl>
-      <dl className="essentials wide">
-        <Ess label="Paket">{live ? `${live.packageName} · ${live.bandwidthMbps} Mbps` : 'Belum berlangganan'}</Ess>
-        {sub360?.access.billing && <Ess label="Tunggakan">{billing ? fmtRupiah(Number(billing.outstandingAmount)) : '—'}</Ess>}
-        {sub360?.access.session && <Ess label="Sesi PPPoE">{session ? `${session.online ? 'Online' : 'Offline'} · ${session.framedIp ?? session.username}` : 'Belum ada sesi'}</Ess>}
-        <Ess label="ONU">{onu?.serialNumber ?? 'Belum terpasang'}</Ess>
-        {onu?.odpCode && <Ess label="Port ODP">{`${onu.odpCode} · ${onu.odpPortNumber}`}</Ess>}
-        <Ess label="Redaman">{fmtDbm(trace?.liveRxPowerDbm ?? trace?.installRxPowerDbm ?? null)}</Ess>
-        {sub360?.access.cpe && <Ess label="CPE online">{devices ? `${devices.filter(row => row.online).length} dari ${devices.length}` : '—'}</Ess>}
-        {sub360?.access.workOrder && <Ess label="Work order aktif">{work ? work.code : 'Tidak ada'}</Ess>}
-      </dl>
+    <div className="customer-property-groups">
+      <section className="customer-section"><h3>Informasi pelanggan</h3><Properties rows={[
+        ['Kode pelanggan', customer.code], ['Status', customerStatusLabel(customer.status, customer.awaitingInstallation)],
+        ['Alamat', customer.address || '—'], ['Telepon', customer.phone || '—'], ['Email', customer.email || '—'],
+        ['NIK / identitas', customer.idCardNumber || '—'],
+        ['Koordinat', hasCustomerLocation(customer.location) ? `${customer.location.latitude}, ${customer.location.longitude}` : 'Belum ditentukan'],
+      ]} /></section>
+      <section className="customer-section"><h3>Layanan</h3><Properties rows={[
+        ['Paket', sub?.packageName ?? 'Belum ditetapkan'], ['Kecepatan', sub ? `${sub.bandwidthMbps} Mbps` : '—'],
+        ['Status langganan', sub ? <StatusBadge key="subscription-status" status={sub.status} label={({ ACTIVE: 'Aktif', PENDING: 'Menunggu aktivasi', ISOLATED: 'Diisolir', TERMINATED: 'Berakhir' }[sub.status])} /> : '—'],
+        ['Biaya bulanan', sub ? fmtRupiah(Number(sub.monthlyFee)) : '—'],
+        ...(sub360?.access.billing ? [['Tunggakan', sub360.billing ? fmtRupiah(Number(sub360.billing.outstandingAmount)) : '—']] as [string, ReactNode][] : []),
+        ...(sub360?.access.workOrder ? [['Work order aktif', sub360.openWorkOrder?.code ?? 'Tidak ada']] as [string, ReactNode][] : []),
+      ]} /></section>
+      <section className="customer-section"><h3>Koneksi jaringan</h3><Properties rows={[
+        ['ONU', onu?.serialNumber ?? 'Belum terpasang'], ['ODP', onu?.odpCode ?? '—'], ['Port ODP', onu?.odpPortNumber ?? '—'],
+        ['Rx optik', fmtDbm(trace?.liveRxPowerDbm ?? trace?.installRxPowerDbm ?? null)],
+        ...(sub360?.access.session ? [['Sesi jaringan', sub360.session ? (sub360.session.online ? 'Online' : 'Offline') : 'Belum ada sesi'], ['Alamat IP', sub360.session?.framedIp ?? '—']] as [string, ReactNode][] : []),
+        ...(sub360?.access.cpe ? [['CPE online', sub360.cpeDevices ? `${sub360.cpeDevices.filter(row => row.online).length} dari ${sub360.cpeDevices.length}` : '—']] as [string, ReactNode][] : []),
+      ]} /></section>
     </div>
   </section>
 }
@@ -511,23 +496,19 @@ function SubscriptionManager({
   }
 
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      <SectionHead icon={<IconPackage size={16} />} title="Langganan" />
+    <div className="customer-section">
+      <SectionHead title="Langganan" />
 
-      {sub == null ? (
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada langganan.</Text>
-      ) : (
-        <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-          <Text as="span" size={300}  >{sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}</Text>
-          <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-            <StatusBadge status={sub.status} />
-            {canManage && sub.status !== 'TERMINATED' && <SubscriptionActions sub={sub} run={run} />}
-          </div>
-        </div>
-      )}
-
-      {canManage && (
-        <><Button onClick={() => setEditingForm(true)}>{actionLabel}</Button>
+      {canManage && <div className="customer-actions" role="group" aria-label="Aksi langganan">
+        <Button variant="subtle" onClick={() => setEditingForm(true)}>{actionLabel}</Button>
+        {sub && sub.status !== 'TERMINATED' && <SubscriptionActions sub={sub} run={run} />}
+      </div>}
+      {sub ? <Properties rows={[
+        ['Paket', sub.packageName], ['Status', <StatusBadge key="subscription-status" status={sub.status} label={({ ACTIVE: 'Aktif', PENDING: 'Menunggu aktivasi', ISOLATED: 'Diisolir', TERMINATED: 'Berakhir' }[sub.status])} />],
+        ['Kecepatan', `${sub.bandwidthMbps} Mbps`], ['Biaya bulanan', fmtRupiah(Number(sub.monthlyFee))],
+        ['Diaktifkan', fmtInstant(sub.activatedAt)], ['Diakhiri', fmtInstant(sub.terminatedAt)],
+      ]} /> : <p className="muted">Belum ada langganan.</p>}
+      {canManage && (<>
         <Blade open={editingForm} title={actionLabel} onClose={() => setEditingForm(false)}
           creation={{ ...creation, busy: saving, prepare: () => void submit(), summary: <><CreationSummary rows={[
             ['Pelanggan', customer.name], ['Paket', selected?.name], ['Biaya bulanan', fmtRupiah(override ? Number(override) : selected?.price ?? 0)],
@@ -540,7 +521,7 @@ function SubscriptionManager({
             </Text>
           ) : (
             <>
-              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="customer-form-fields">
                 <SelectField
                   label="Paket" required
                   value={planId}
@@ -591,7 +572,7 @@ function SubscriptionActions({
   const act = (verb: string, okMessage: string) =>
     run(() => api.post(`/api/customers/subscriptions/${sub.id}/${verb}`, {}), okMessage)
   return (
-    <div className="row" style={{ gap: '0.35rem' }}>
+    <div className="customer-action-group">
       {(sub.status === 'PENDING' || sub.status === 'ISOLATED') && (
         <Button variant="subtle" onClick={() => void act('activate', 'Langganan diaktifkan')}>
           Aktifkan
@@ -625,8 +606,8 @@ function OnuManager({ customer, run }: {
 /** Label lapangan tiap simpul jalur: RADIUS→BRAS→OLT→FDT→FAT→ONT. */
 const HOP_LABEL: Record<string, string> = {
   CUSTOMER: 'ONT',
-  ODP: 'FAT',
-  ODC: 'FDT',
+  ODP: 'ODP',
+  ODC: 'ODC',
   PON_PORT: 'PON',
   OLT: 'OLT',
   SITE: 'POP',
@@ -647,49 +628,28 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
   // Pelanggan tanpa ONU terpasang tetap bisa punya identitas jaringan (akun PPPoE);
   // trace-nya sah selama ada, jadi cukup butuh trace — bukan status tersambung fisik.
   if (!trace) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>Pelanggan ini belum tersambung ke jaringan.</p>
-      </div>
-    )
+    return <DetailEmpty title="Jalur koneksi">Pelanggan belum tersambung ke jaringan.</DetailEmpty>
   }
   const bras = trace.bras
   return (
-    <div className="stack" style={{ gap: '0.25rem' }}>
-      <div className="card stack" style={{ gap: '0.75rem' }}>
-        <SectionHead icon={<IconRoute size={16} />} title="Jalur ke hulu" />
-        <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
-          {trace.hops.map((hop, index) => {
-            // Hop BRAS diwarnai menurut keadaan sesi: hijau online, merah offline.
-            const brasClass = hop.kind === 'BRAS' ? (hop.online ? 'badge good' : 'badge critical') : 'badge'
-            return (
-              <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-                <span
-                  className={brasClass}
-                  title={hop.detail ?? undefined}
-                  style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}
-                >
-                  <span>
-                    {HOP_LABEL[hop.kind] ?? hop.kind}
-                    {hop.code && ` ${hop.code}`}
-                  </span>
-                  {hop.detail && (
-                    <Text as="span" size={200}  style={{ opacity: 0.8,  }} >{hop.detail}</Text>
-                  )}
-                </span>
-                {index < trace.hops.length - 1 && <span className="muted">→</span>}
-              </span>
-            )
-          })}
-        </div>
+    <div className="customer-section">
+      <div className="customer-section">
+        <SectionHead title="Jalur koneksi" />
+        <DataTable rows={trace.hops.map((hop, index) => ({ ...hop, index }))} rowKey={hop => String(hop.index)} columns={[
+          { key: 'order', header: 'Urutan', minWidth: 64, cell: hop => hop.index + 1 },
+          { key: 'kind', header: 'Jenis', minWidth: 100, cell: hop => HOP_LABEL[hop.kind] ?? hop.kind },
+          { key: 'code', header: 'Titik jaringan', minWidth: 180, cell: hop => hop.code ?? '—' },
+          { key: 'detail', header: 'Keterangan', minWidth: 220, cell: hop => hop.detail ?? '—' },
+          { key: 'state', header: 'Status', minWidth: 100, cell: hop => hop.online == null ? '—' : hop.online ? 'Online' : 'Offline' },
+        ]} />
       </div>
 
       {/* Angka segmen optik & sesi BRAS dulu satu kalimat panjang bertitik-tengah; sebagai
           daftar properti tiap angka punya label sendiri, jadi bisa dibaca sekilas dan
           disalin tanpa memotong kalimat. */}
       {connected && (
-        <div className="card stack" style={{ gap: '0.6rem' }}>
-          <SectionHead icon={<IconGauge size={16} />} title="Segmen optik" />
+        <div className="customer-section">
+          <SectionHead title="Segmen optik" />
           <dl className="essentials wide">
             <Ess label="ONU">
               <span className="tnum">{trace.onuSerialNumber}</span>
@@ -718,8 +678,8 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
       )}
 
       {bras && (
-        <div className="card stack" style={{ gap: '0.6rem' }}>
-          <SectionHead icon={<IconChart size={16} />} title="Sesi BRAS" />
+        <div className="customer-section">
+          <SectionHead title="Sesi BRAS" />
           <dl className="essentials wide">
             <Ess label="Username">
               <span className="tnum">{bras.username}</span>
@@ -757,34 +717,14 @@ function TetanggaTab({
 }) {
   const [scope, setScope] = useState<'odp' | 'pon'>('odp')
   if (!connected) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>Pelanggan ini belum tersambung ke jaringan.</p>
-      </div>
-    )
+    return <DetailEmpty title="Pelanggan sekitar">Pelanggan belum tersambung ke jaringan.</DetailEmpty>
   }
   return (
-    <div className="card stack" style={{ gap: '0.6rem' }}>
-      {/* Pemilih cakupan duduk di baris judul, bukan sebagai baris sendiri: ia menyetel
-          seksi yang sama, jadi memisahkannya cuma menambah tinggi. */}
-      <SectionHead
-        icon={<IconUsers size={16} />}
-        title="Tetangga sejalur"
-        aside={
-          <Segmented
-            ariaLabel="Cakupan tetangga"
-            value={scope}
-            onChange={setScope}
-            options={[
-              { value: 'odp', label: `Se-ODP${odpCount ? ` (${odpCount})` : ''}` },
-              { value: 'pon', label: `Se-PON${ponCount ? ` (${ponCount})` : ''}` },
-            ]}
-          />
-        }
-      />
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{scope === 'odp'
-          ? 'Pelanggan pada ODP yang sama.'
-          : 'Pelanggan pada port PON yang sama.'}</Text>
+    <div className="customer-section">
+      <SectionHead title="Pelanggan sekitar" />
+      <div className="customer-filters"><Segmented ariaLabel="Cakupan pelanggan" value={scope} onChange={setScope} options={[
+        { value: 'odp', label: `ODP yang sama (${odpCount})` }, { value: 'pon', label: `PON yang sama (${ponCount})` },
+      ]} /></div>
       <NeighborList items={scope === 'odp' ? neighbors?.sameOdp ?? null : neighbors?.samePonPort ?? null} showOdp={scope === 'pon'} />
     </div>
   )
@@ -801,41 +741,20 @@ function fmtDbm(v: number | null): string {
  * kode ODP tiap baris, berguna di lingkup se-PON yang mencakup beberapa ODP.
  */
 function NeighborList({ items, showOdp }: { items: NeighborView[] | null; showOdp: boolean }) {
-  if (items == null) return <p className="muted" style={{ margin: 0 }}>Memuat tetangga…</p>
-  if (items.length === 0) return <p className="muted" style={{ margin: 0 }}>Tidak ada tetangga di lingkup ini.</p>
-  return (
-    <div className="stack" style={{ gap: '0.4rem' }}>
-      {items.map((n) => (
-        <div
-          key={n.customerId}
-          className="row"
-          style={{
-            gap: '0.6rem',
-            alignItems: 'center',
-            padding: '0.45rem 0.55rem',
-            borderRadius: 8,
-            background: n.self ? 'var(--accent-soft)' : 'transparent',
-            border: `1px solid ${n.self ? 'var(--border-strong)' : 'var(--border)'}`,
-          }}
-        >
-          <span className="badge neutral tnum" title="Nomor port ODP">#{n.portNumber}</span>
-          <div className="stack" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {n.customerName}
-              {n.self && <Text as="span" weight="semibold" className="muted" > · pelanggan ini</Text>}
-            </span>
-            <Text as="span" size={300} className="muted" >{showOdp && `${n.odpCode} · `}
-            {n.onuSerialNumber}</Text>
-          </div>
-          <div className="stack" style={{ gap: 3, alignItems: 'flex-end' }}>
-            <StatusBadge status={n.liveStatus ?? n.onuStatus} label={onuStatusLabel(n.liveStatus ?? n.onuStatus)} />
-            <Text as="span" size={300} className="tnum muted" >{fmtDbm(n.liveRxPowerDbm ?? n.installRxPowerDbm)}
-            {n.distanceMeters != null && ` · ${n.distanceMeters} m`}</Text>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
+  const [query, setQuery] = useState('')
+  const rows = (items ?? []).filter(row => `${row.customerName} ${row.onuSerialNumber} ${row.odpCode}`.toLowerCase().includes(query.toLowerCase()))
+  return <div className="customer-section">
+    <div className="customer-filters"><TextField label="Cari pelanggan sekitar" placeholder="Nama atau nomor seri" value={query} onChange={(_, data) => setQuery(data.value)} /></div>
+    {items == null ? <Spinner /> : <DataTable rows={rows} rowKey={row => row.customerId} columns={[
+      { key: 'name', header: 'Pelanggan', minWidth: 220, cell: row => `${row.customerName}${row.self ? ' (pelanggan ini)' : ''}`, sortValue: row => row.customerName },
+      ...(showOdp ? [{ key: 'odp', header: 'ODP', cell: (row: NeighborView) => row.odpCode ?? '—' }] : []),
+      { key: 'port', header: 'Port ODP', minWidth: 90, cell: row => row.portNumber },
+      { key: 'serial', header: 'Nomor seri ONU', minWidth: 180, cell: row => row.onuSerialNumber },
+      { key: 'status', header: 'Status', cell: row => onuStatusLabel(row.liveStatus ?? row.onuStatus) },
+      { key: 'rx', header: 'Rx optik', cell: row => fmtDbm(row.liveRxPowerDbm ?? row.installRxPowerDbm) },
+      { key: 'distance', header: 'Jarak', cell: row => row.distanceMeters == null ? '—' : `${row.distanceMeters} m` },
+    ]} empty={<p>{query ? 'Tidak ada pelanggan yang cocok.' : 'Belum ada pelanggan pada jalur ini.'}</p>} />}
+  </div>
 }
 
 /* ---------- Tab: Metrik (bacaan hidup + tren redaman) ---------- */
@@ -876,6 +795,7 @@ function describeOutage(m: OnuMetricView): string {
 function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: OnuMetricView[] }) {
   const { can } = useCan()
   const [history, setHistory] = useState<OnuHistoryView | null>(null)
+  const [historyFailed, setHistoryFailed] = useState(false)
 
   // ONU yang dipantau adalah yang terpasang; kalau tak ada yang terpasang, ambil
   // yang pertama agar tren instalasi tetap bisa dilihat.
@@ -889,10 +809,11 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
   useEffect(() => {
     if (!onuId || !canMetric) return
     let alive = true
+    setHistory(null); setHistoryFailed(false)
     void api
       .get<OnuHistoryView>(`/api/monitoring/onus/${onuId}/history?hours=24`)
       .then((h) => alive && setHistory(h))
-      .catch(() => {})
+      .catch(() => { if (alive) setHistoryFailed(true) })
     return () => {
       alive = false
     }
@@ -906,52 +827,23 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
     )
   }
   if (!onu) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>Tidak ada ONU untuk dipantau.</p>
-      </div>
-    )
+    return <DetailEmpty title="Metrik">Belum ada ONU untuk dipantau.</DetailEmpty>
   }
 
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      <div className="card stack" style={{ gap: '0.6rem' }}>
-        <SectionHead icon={<IconGauge size={16} />} title={`Status ONU · ${onu.serialNumber}`} />
-        {live ? (
-          <>
-            <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <StatusBadge status={live.status} />
-              {live.rxPowerDbm != null && (
-                <span className="badge neutral tnum" title="Rx power terakhir dari OLT">
-                  Rx {live.rxPowerDbm.toFixed(1)} dBm
-                </span>
-              )}
-              {live.distanceMeters != null && (
-                <span className="badge neutral tnum" title="Jarak ONU dari OLT (ukur OLT)">
-                  {live.distanceMeters} m
-                </span>
-              )}
-              {live.downCause && (
-                <span
-                  className="badge"
-                  title={`Sebab putus terakhir: ${live.downCause}`}
-                  style={{ color: 'var(--warning-ink)',  }}
-                >
-                  Ldc: {DOWN_CAUSE_LABEL[live.downCause]}
-                </span>
-              )}
-            </div>
-            {(live.lastOffAt || live.lastOnAt) && (
-              <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{describeOutage(live)}</Text>
-            )}
-          </>
-        ) : (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Data monitoring belum tersedia.</Text>
-        )}
+    <div className="customer-section">
+      <div className="customer-section">
+        <SectionHead title="Metrik" />
+        <Properties rows={[
+          ['Nomor seri ONU', onu.serialNumber], ['Status', live ? onuStatusLabel(live.status) : 'Belum tersedia'],
+          ['Rx terkini', fmtDbm(live?.rxPowerDbm ?? null)], ['Jarak dari OLT', live?.distanceMeters == null ? '—' : `${live.distanceMeters} m`],
+          ['Penyebab putus terakhir', live?.downCause ? DOWN_CAUSE_LABEL[live.downCause] : '—'],
+          ['Riwayat koneksi', live && (live.lastOffAt || live.lastOnAt) ? describeOutage(live) : '—'],
+        ]} />
       </div>
 
-      <div className="card stack" style={{ gap: '0.75rem' }}>
-        <SectionHead icon={<IconChart size={16} />} title="Tren redaman 24 jam" />
+      <div className="customer-section">
+        <SectionHead title="Tren redaman 24 jam" />
         {history ? (
           <>
             <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
@@ -966,10 +858,10 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
                 Redaman meningkat. Jadwalkan pemeriksaan.
               </div>
             )}
-            <OpticalChart points={history.points} />
+            <div className="customer-chart"><OpticalChart points={history.points} /></div>
           </>
         ) : (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat tren…</Text>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{historyFailed ? 'Tren redaman gagal dimuat.' : 'Memuat tren…'}</Text>
         )}
       </div>
     </div>
@@ -1123,14 +1015,7 @@ function PlanField({
  */
 function PlanMismatchBadge({ account }: { account: SubscriberAccessView }) {
   if (!account.subscriptionPlanName) return null
-  return (
-    <span
-      className="badge serious"
-      title={`Langganan ditagih paket "${account.subscriptionPlanName}", tapi akun jaringan berjalan di paket "${account.planName ?? 'tak dikenal'}". Betulkan salah satunya.`}
-    >
-      ≠ tagihan: {account.subscriptionPlanName}
-    </span>
-  )
+  return <p role="status" className="customer-notice">Paket tagihan ({account.subscriptionPlanName}) berbeda dari paket jaringan ({account.planName ?? '—'}).</p>
 }
 
 /** Dropdown BRAS — opsional; "tanpa BRAS" berarti belum ditautkan. */
@@ -1320,89 +1205,38 @@ function SubscriptionAccessCard({
     })()
 
   return (
-    <div className="card stack" style={{ gap: '0.6rem' }}>
-      <div className="spread" style={{ alignItems: 'center' }}>
-        <Text as="span" weight="semibold" size={200} >{sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}</Text>
-        <StatusBadge status={sub.status} />
-      </div>
-
+    <div className="customer-section">
+      <SectionHead title="Akun jaringan" />
       {account ? (
-        <div className="stack" style={{ gap: '0.5rem' }}>
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="badge neutral tnum">{account.username}</span>
-            <span className="badge">{SERVICE_TYPE_LABEL[account.authType]}</span>
-            <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
-            <PlanMismatchBadge account={account} />
-            <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
-            {account.framedIp && <span className="badge neutral tnum">IP {account.framedIp}</span>}
-            <StatusBadge status={account.status} />
-            {account.fupEnabled && (
-              <span
-                className={`badge ${account.fupThrottled ? 'critical' : 'neutral'} tnum`}
-                title={account.fupThrottled ? 'Kuota FUP terlampaui — kecepatan diturunkan' : 'Pemakaian FUP siklus berjalan'}
-              >
-                FUP {account.periodUsageMb ?? 0}
-                {account.fupQuotaMb != null ? ` / ${account.fupQuotaMb}` : ''} MB
-                {account.fupThrottled ? ' · throttle' : ''}
-              </span>
-            )}
-          </div>
-
+        <div className="customer-section">
           {form === null && (canManage || canReset || canIsolate) && (
-            <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
-              {canManage && <Button onClick={openEdit}>Ganti paket / BRAS</Button>}
-              {canManage && <Button onClick={openReset}>Reset password</Button>}
-              {/* Reset Login: putus sesi agar CPE dial ulang — tak berlaku pada akun terhenti. */}
-              {canReset && account.status !== 'TERMINATED' && (
-                <Button onClick={resetLogin}>Reset Login</Button>
-              )}
-              {/* Isolir/Pulihkan: saling meniadakan sesuai status akun. */}
-              {canIsolate && account.status === 'ACTIVE' && (
-                <Button variant="danger" onClick={isolate}>
-                  Isolir
-                </Button>
-              )}
-              {canIsolate && account.status === 'ISOLATED' && (
-                <Button variant="primary" onClick={restore}>
-                  Pulihkan
-                </Button>
-              )}
-              {canManage && (
-                <Button variant="danger" onClick={remove}>
-                  Hapus
-                </Button>
-              )}
-            </div>
+            <CommandBar layout="wrap" actions={[
+              ...(canManage ? [{ key: 'edit', label: 'Ganti paket / BRAS', icon: <Pencil size={16} />, onClick: openEdit }, { key: 'password', label: 'Reset password', icon: <KeyRound size={16} />, onClick: openReset }] : []),
+              ...(canReset && account.status !== 'TERMINATED' ? [{ key: 'session', label: 'Reset Login', icon: <Unplug size={16} />, onClick: resetLogin }] : []),
+              ...(canIsolate && account.status === 'ACTIVE' ? [{ key: 'isolate', label: 'Isolir', icon: <Ban size={16} />, onClick: isolate }] : []),
+              ...(canIsolate && account.status === 'ISOLATED' ? [{ key: 'restore', label: 'Pulihkan', icon: <Play size={16} />, onClick: restore }] : []),
+              ...(canManage ? [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: remove }] : []),
+            ]} />
           )}
 
-          {form === 'edit' && (
-            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <PlanField plans={plans} value={planId} onChange={setPlanId} />
-              <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-              <Button variant="primary" onClick={submitEdit} disabled={!planId}>
-                Simpan
-              </Button>
-              <Button onClick={close}>Batal</Button>
+          <Properties rows={[
+            ['Username', account.username], ['Jenis koneksi', SERVICE_TYPE_LABEL[account.authType]],
+            ['Status', <StatusBadge key="account-status" status={account.status} label={({ ACTIVE: 'Aktif', PENDING: 'Menunggu aktivasi', ISOLATED: 'Diisolir', TERMINATED: 'Berakhir' }[account.status])} />], ['Paket jaringan', account.planName ?? '—'],
+            ['BRAS', account.nasName ?? 'Belum ditentukan'], ['Alamat IP reservasi', account.framedIp ?? '—'],
+            ['FUP', account.fupEnabled ? (account.fupThrottled ? 'Kecepatan dibatasi' : 'Aktif') : 'Nonaktif'],
+            ...(account.fupEnabled ? [['Pemakaian FUP', `${account.periodUsageMb ?? 0} / ${account.fupQuotaMb ?? '—'} MB`]] as [string, ReactNode][] : []),
+          ]} />
+          <PlanMismatchBadge account={account} />
+          {form === 'edit' && <ResourceForm title="Ganti paket / BRAS" dirty={() => planId !== account.planId || nasId !== (account.nasId ?? '')} editing navigation={<></>} onClose={close} onBack={() => {}}
+            footer={<><Button onClick={close}>Batal</Button><Button variant="primary" onClick={submitEdit} disabled={!planId}>Simpan</Button></>}>
+            <div className="customer-form-fields"><PlanField plans={plans} value={planId} onChange={setPlanId} /><NasField nasList={nasList} value={nasId} onChange={setNasId} /></div>
+          </ResourceForm>}
+          {form === 'reset' && <ResourceForm title="Reset password jaringan" dirty={() => secret.length > 0} editing navigation={<></>} onClose={close} onBack={() => {}}
+            footer={<><Button onClick={close}>Batal</Button><Button variant="primary" onClick={submitReset} disabled={!secret}>Simpan</Button></>}>
+            <div className="customer-form-fields"><TextField label="Password baru" required autoComplete="new-password" type={showSecret ? 'text' : 'password'} value={secret} onChange={(_, data) => setSecret(data.value)} />
+              <div><Button onClick={() => setShowSecret(value => !value)}>{showSecret ? 'Sembunyikan password' : 'Tampilkan password'}</Button></div>
             </div>
-          )}
-
-          {form === 'reset' && (
-            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <TextField
-                label="Password baru"
-                type={showSecret ? 'text' : 'password'}
-                value={secret}
-                onChange={(_, data) => setSecret(data.value)}
-                style={{ flex: 2, minWidth: 180 }}
-              />
-              <Button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
-              <Button variant="primary" onClick={submitReset} disabled={!secret}>
-                Simpan
-              </Button>
-              <Button onClick={close}>Batal</Button>
-            </div>
-          )}
-
+          </ResourceForm>}
           {canSession && <BrasSessionPanel accessId={account.id} />}
         </div>
       ) : sub.status === 'TERMINATED' ? (
@@ -1413,15 +1247,15 @@ function SubscriptionAccessCard({
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada akun jaringan untuk langganan ini.</Text>
       ) : plans.length === 0 ? (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Belum ada akun jaringan. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
+          Belum ada paket internet yang tersedia.
         </Text>
       ) : form === 'provision' ? (
         <Blade open title="Buat akun jaringan" onClose={close}
           creation={{ ...accessCreation, prepare: submitProvision, summary: <CreationSummary rows={[
             ['Username', username], ['Layanan', SERVICE_TYPE_LABEL[authType]], ['Paket', plans.find(plan => plan.id === planId)?.name], ['IP reservasi', framedIp],
-          ]} /> }} footer={<><Button disabled={accessCreation.busy} onClick={close}>Batal</Button><Button variant="primary" onClick={submitProvision} disabled={provisionInvalid || accessCreation.busy}>Provisi</Button></>}>
-        <div className="stack">
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          ]} /> }} footer={<><Button disabled={accessCreation.busy} onClick={close}>Batal</Button><Button variant="primary" onClick={submitProvision} disabled={provisionInvalid || accessCreation.busy}>Buat</Button></>}>
+        <div className="customer-form-fields">
+          <div className="customer-form-fields">
             <PlanField plans={plans} value={planId} onChange={changeProvisionPlan} />
             <SelectField
               label="Tipe layanan"
@@ -1439,7 +1273,7 @@ function SubscriptionAccessCard({
           </div>
 
           {macBased ? (
-            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="customer-form-fields">
               <TextField
                 label="MAC Address"
                 value={username}
@@ -1456,7 +1290,7 @@ function SubscriptionAccessCard({
               />
             </div>
           ) : (
-            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="customer-form-fields">
               <TextField
                 label="Username"
                 value={username}
@@ -1475,7 +1309,7 @@ function SubscriptionAccessCard({
             </div>
           )}
 
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="customer-form-fields">
             <NasField nasList={nasList} value={nasId} onChange={setNasId} />
 
           </div>
@@ -1487,7 +1321,7 @@ function SubscriptionAccessCard({
         <div className="spread" style={{ alignItems: 'center' }}>
           <Text as="span" size={300} className="muted" >Belum ada akun jaringan untuk langganan ini.</Text>
           <Button variant="primary" onClick={openProvision}>
-            Provisi akun
+            Buat akun jaringan
           </Button>
         </div>
       )}
@@ -1504,62 +1338,23 @@ function SubscriptionAccessCard({
  */
 function BrasSessionPanel({ accessId }: { accessId: string }) {
   const [session, setSession] = useState<BrasSessionView | null>(null)
-
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
   useEffect(() => {
     let alive = true
-    void getBrasSession(accessId)
-      .then((s) => alive && setSession(s))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
+    setLoading(true); setFailed(false)
+    void getBrasSession(accessId).then(value => { if (alive) setSession(value) })
+      .catch(() => { if (alive) setFailed(true) }).finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
   }, [accessId])
-
-  if (!session) {
-    return <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Memuat sesi…</Text>
-  }
-
-  const neverSeen = session.lastSeenAt == null
-  return (
-    <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.6rem' }}>
-      <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span
-          className="badge"
-          title={session.online ? 'BRAS melaporkan sesi aktif' : 'BRAS tak melaporkan sesi aktif'}
-          style={{ color: session.online ? 'var(--good-ink)' : 'var(--muted)',  }}
-        >
-          {session.online ? '● online' : '○ offline'}
-        </span>
-        {session.framedIp && (
-          <span className="badge neutral tnum" title="IP yang diberikan ke pelanggan">
-            {session.framedIp}
-          </span>
-        )}
-        {session.nasName && (
-          <span className="badge neutral" title="BRAS yang menaungi sesi">{session.nasName}</span>
-        )}
-        {session.online && session.uptimeSeconds != null && (
-          <span className="badge neutral" title="Lama sesi berjalan">
-            uptime {humanizeDuration(session.uptimeSeconds * 1000)}
-          </span>
-        )}
-      </div>
-
-      {neverSeen ? (
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Belum ada sesi dari BRAS.
-        </Text>
-      ) : (
-        <p className="muted" style={{ margin: 0,  }}>
-          {session.callingStationId && `MAC ${session.callingStationId} · `}
-          {session.nasIp && `NAS ${session.nasIp} · `}
-          terpantau terakhir {fmtInstant(session.lastSeenAt)}
-        </p>
-      )}
-
-      <SubscriberTrafficPanel accessId={accessId} />
-    </div>
-  )
+  return <section className="customer-section customer-section-divider"><h3>Sesi jaringan</h3>
+    {loading ? <Spinner /> : failed ? <p role="alert">Sesi jaringan gagal dimuat.</p> : session ? <Properties rows={[
+      ['Status sesi', session.online ? 'Online' : 'Offline'], ['Alamat IP', session.framedIp], ['BRAS', session.nasName],
+      ['IP BRAS', session.nasIp], ['Alamat MAC', session.callingStationId],
+      ['Durasi sesi', session.online && session.uptimeSeconds != null ? humanizeDuration(session.uptimeSeconds * 1000) : '—'],
+      ['Terpantau terakhir', fmtInstant(session.lastSeenAt)],
+    ]} /> : <p className="muted">Belum ada sesi jaringan.</p>}
+  </section>
 }
 
 /* ---------- Tab: Trafik (tren bandwidth per akun jaringan) ---------- */
@@ -1592,27 +1387,17 @@ function TrafikTab({ customerId }: { customerId: string }) {
   }
 
   if (accounts.length === 0) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>
-          Belum ada akun jaringan untuk pelanggan ini — provisi akun dulu di tab <strong>Akses</strong>.
-        </p>
-      </div>
-    )
+    return <DetailEmpty title="Trafik">Belum ada akun jaringan untuk dipantau.</DetailEmpty>
   }
 
   return (
     <div className="stack" style={{ gap: '0.75rem' }}>
       {accounts.map((account) => (
-        <div key={account.id} className="card stack" style={{ gap: '0.6rem' }}>
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="badge neutral tnum">{account.username}</span>
-            <span className="badge">{SERVICE_TYPE_LABEL[account.authType]}</span>
-            <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
-            <PlanMismatchBadge account={account} />
-            <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
-            <StatusBadge status={account.status} />
-          </div>
+        <div key={account.id} className="customer-section">
+          <SectionHead title="Trafik" />
+          <Properties rows={[
+            ['Username', account.username], ['Paket', account.planName ?? '—'], ['BRAS', account.nasName ?? '—'],
+          ]} />
           <SubscriberTrafficPanel accessId={account.id} />
         </div>
       ))}
@@ -1629,15 +1414,17 @@ function TrafikTab({ customerId }: { customerId: string }) {
  */
 function CpeTab({ customerId }: { customerId: string }) {
   const [devices, setDevices] = useState<CpeDeviceView[] | null>(null)
+  const [failed, setFailed] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
 
   const load = useCallback(() => {
+    setFailed(false)
     void listCpeDevices(customerId)
       .then((list) => {
         setDevices(list)
         setSelected((cur) => cur ?? list[0]?.id ?? null)
       })
-      .catch(() => setDevices([]))
+      .catch(() => { setDevices([]); setFailed(true) })
   }, [customerId])
 
   useEffect(() => load(), [load])
@@ -1649,27 +1436,17 @@ function CpeTab({ customerId }: { customerId: string }) {
       </div>
     )
   }
+  if (failed) return <section className="customer-section"><h2>ACS</h2><p role="alert">Perangkat ACS gagal dimuat.</p><div><Button onClick={load}>Coba lagi</Button></div></section>
   if (devices.length === 0) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>
-          Belum ada perangkat CPE tertaut. Penautan otomatis saat serial ONU pelanggan cocok dengan
-          perangkat di GenieACS.
-        </p>
-      </div>
-    )
+    return <DetailEmpty title="ACS">Belum ada perangkat pelanggan yang terhubung ke ACS.</DetailEmpty>
   }
 
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      {devices.length > 1 && (
-        <Segmented
-          ariaLabel="Pilih perangkat CPE"
-          value={selected ?? ''}
-          onChange={setSelected}
-          options={devices.map((d) => ({ value: d.id, label: d.model ?? d.serialNumber }))}
-        />
-      )}
+    <div className="customer-section">
+      <h2>ACS</h2>
+      {devices.length > 1 && <div className="customer-filters"><SelectField label="Perangkat" value={selected ?? ''} onChange={(_, data) => setSelected(data.value)}>
+        {devices.map(device => <option key={device.id} value={device.id}>{device.model ?? 'CPE'} · {device.serialNumber}</option>)}
+      </SelectField></div>}
       {selected && <CpeDevicePanel key={selected} deviceId={selected} />}
     </div>
   )
@@ -1686,6 +1463,8 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
   const toast = useToast()
   const [detail, setDetail] = useState<CpeDeviceDetail | null>(null)
   const [live, setLive] = useState<CpeLiveView | null>(null)
+  const [detailFailed, setDetailFailed] = useState(false)
+  const [liveFailed, setLiveFailed] = useState(false)
   const [rebooting, setRebooting] = useState(false)
 
   const canReboot = can('cpe.device.reboot')
@@ -1696,16 +1475,18 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
   const canManage = can('cpe.device.manage')
 
   const loadDetail = useCallback(() => {
+    setDetailFailed(false)
     void getCpeDevice(deviceId)
       .then(setDetail)
-      .catch(() => setDetail(null))
+      .catch(() => { setDetail(null); setDetailFailed(true) })
   }, [deviceId])
 
   const loadLive = useCallback(() => {
     if (!canWifiView) return
+    setLiveFailed(false)
     void getCpeLive(deviceId)
       .then(setLive)
-      .catch(() => setLive({ wifi: [], hosts: [] }))
+      .catch(() => { setLive({ wifi: [], hosts: [] }); setLiveFailed(true) })
   }, [deviceId, canWifiView])
 
   useEffect(() => loadDetail(), [loadDetail])
@@ -1737,6 +1518,7 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
     }
   }
 
+  if (detailFailed) return <section className="customer-section"><p role="alert">Detail perangkat gagal dimuat.</p><div><Button onClick={loadDetail}>Coba lagi</Button></div></section>
   if (!detail) {
     return (
       <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
@@ -1747,50 +1529,22 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
 
   const d = detail.device
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      <div className="card stack" style={{ gap: '0.75rem' }}>
-        <div className="spread" style={{ alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <div className="stack" style={{ gap: '0.35rem' }}>
-            <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div className="section-head">
-                <span className="ico" aria-hidden>
-                  <IconMonitor size={16} />
-                </span>
-                <h3 className="section-title">{d.model ?? d.productClass ?? 'CPE'}</h3>
-              </div>
-              <span
-                className="badge"
-                title={d.online ? 'Inform terakhir masih baru' : 'Tak ada inform terbaru dari ACS'}
-                style={{ color: d.online ? 'var(--good-ink)' : 'var(--muted)',  }}
-              >
-                {d.online ? 'online' : 'offline'}
-              </span>
-              {d.manufacturer && <span className="badge neutral">{d.manufacturer}</span>}
-            </div>
-            <Text as="span" size={300} className="muted" >{d.serialNumber}
-            {d.softwareVersion && ` · fw ${d.softwareVersion}`}
-            {d.ipAddress && ` · ${d.ipAddress}`}</Text>
-          </div>
-          {canReboot && (
-            <Button variant="danger" onClick={() => void reboot()} disabled={rebooting}>
-              {rebooting ? 'Mengirim…' : 'Reboot'}
-            </Button>
-          )}
-        </div>
-        <dl className="essentials wide">
-          <Ess label="Inform terakhir">{fmtInstant(d.lastInformAt)}</Ess>
-          <Ess label="OUI">{d.oui}</Ess>
-          <Ess label="Kelas produk">{d.productClass}</Ess>
-          <Ess label="GenieACS ID">
-            <span className="tnum">{d.genieacsId}</span>
-          </Ess>
-        </dl>
+    <div className="customer-section">
+      <div className="customer-section">
+        <h3>Informasi perangkat</h3>
+        {canReboot && <div className="customer-actions"><Button variant="subtle" onClick={() => void reboot()} disabled={rebooting}>{rebooting ? 'Mengirim…' : 'Reboot'}</Button></div>}
+        <Properties rows={[
+          ['Model', d.model ?? d.productClass ?? '—'], ['Status', d.online ? 'Online' : 'Offline'],
+          ['Produsen', d.manufacturer], ['Nomor seri', d.serialNumber], ['Versi firmware', d.softwareVersion],
+          ['Alamat IP', d.ipAddress], ['Inform terakhir', fmtInstant(d.lastInformAt)], ['OUI', d.oui],
+          ['Kelas produk', d.productClass], ['ID ACS', d.genieacsId],
+        ]} />
       </div>
 
       {canWifiView && (
-        <div className="card stack" style={{ gap: '0.75rem' }}>
-          <SectionHead icon={<IconWifi size={16} />} title="WiFi" />
-          {live == null ? (
+        <div className="customer-section">
+          <SectionHead title="WiFi" />
+          {liveFailed ? <p role="alert">Data perangkat gagal dimuat.</p> : live == null ? (
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat dari ACS…</Text>
           ) : live.wifi.length === 0 ? (
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada jaringan WiFi terbaca.</Text>
@@ -1808,9 +1562,9 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
       )}
 
       {canWifiView && (
-        <div className="card stack" style={{ gap: '0.6rem' }}>
-          <SectionHead icon={<IconMonitor size={16} />} title="Perangkat tersambung" />
-          {live == null ? (
+        <div className="customer-section">
+          <SectionHead title="Perangkat tersambung" />
+          {liveFailed ? <p role="alert">Data perangkat gagal dimuat.</p> : live == null ? (
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat…</Text>
           ) : live.hosts.length === 0 ? (
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada host aktif.</Text>
@@ -1889,21 +1643,23 @@ function DiagnosticsCard({
 
   const busy = running !== null
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      <SectionHead icon={<IconFlask size={16} />} title="Diagnostik" />
+    <div className="customer-section">
+      <SectionHead title="Diagnostik" />
       {!online && (
         <p className="muted" style={{ margin: 0,  }}>
           Perangkat offline; diagnostik mungkin gagal.
         </p>
       )}
-      <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div className="customer-filters">
         <TextField
           label="Sasaran ping"
           value={host}
-          placeholder="Bawaan server, mis. 8.8.8.8"
+          placeholder="Alamat IP atau nama host"
           onChange={(_, data) => setHost(data.value)}
           style={{ flex: 2, minWidth: 160 }}
         />
+      </div>
+      <div className="customer-actions">
         <Button onClick={() => void doPing()} disabled={busy}>
           {running === 'ping' ? 'Menguji…' : 'Ping'}
         </Button>
@@ -2026,9 +1782,8 @@ function FirmwareCard({
 
   const busy = pushing !== null
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
+    <div className="customer-section">
       <SectionHead
-        icon={<IconUpload size={16} />}
         title="Firmware"
         aside={
           <Text as="span" size={300} className="muted" >
@@ -2042,20 +1797,12 @@ function FirmwareCard({
           Tak ada firmware tersedia untuk model ini.
         </Text>
       ) : (
-        <div className="stack" style={{ gap: '0.35rem' }}>
-          {files.map((f) => (
-            <div key={f.name} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                <Text as="span" weight="semibold" size={200} >{f.version ?? f.name}</Text>
-                <Text as="span" size={300} className="muted" >{f.name}
-                {f.sizeBytes != null && ` · ${fmtBytes(f.sizeBytes)}`}</Text>
-              </div>
-              <Button onClick={() => void upgrade(f)} disabled={busy}>
-                {pushing === f.name ? 'Mengirim…' : 'Pasang'}
-              </Button>
-            </div>
-          ))}
-        </div>
+        <DataTable rows={files} rowKey={file => file.name} columns={[
+          { key: 'name', header: 'Nama berkas', minWidth: 220, cell: file => file.name },
+          { key: 'version', header: 'Versi', cell: file => file.version ?? '—' },
+          { key: 'size', header: 'Ukuran', cell: file => fmtBytes(file.sizeBytes) },
+          { key: 'action', header: 'Tindakan', cell: file => <Button variant="subtle" disabled={busy} onClick={() => void upgrade(file)}>{pushing === file.name ? 'Mengirim…' : 'Pasang'}</Button> },
+        ]} />
       )}
     </div>
   )
@@ -2118,9 +1865,8 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
 
   const busy = refreshing || resetting
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
+    <div className="customer-section">
       <SectionHead
-        icon={<IconShield size={16} />}
         title="ACS & pemeliharaan"
         aside={
           acs != null && (
@@ -2129,15 +1875,12 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
               title={acs.message}
               style={{ color: acs.connected ? 'var(--good-ink)' : 'var(--muted)',  }}
             >
-              {acs.connected ? 'ACS Connect' : 'Not Connect'}
+              {acs.connected ? 'Terhubung' : 'Tidak terhubung'}
             </span>
           )
         }
       />
-      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-        Refresh menghubungkan perangkat ke ACS; reset pabrik memulihkan setelan bawaan.
-      </Text>
-      <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="customer-actions">
         <Button onClick={() => void refresh()} disabled={busy}>
           {refreshing ? 'Menghubungi…' : 'Refresh ACS'}
         </Button>
@@ -2169,11 +1912,11 @@ function WifiCard({ wifi, canManage, onSave }: { wifi: WifiView; canManage: bool
     finally { setSaving(false) }
   }
   return <section className="customer-wifi">
+    {canManage && <div className="customer-actions"><Button variant="subtle" onClick={() => setEditing(true)}>Ubah WiFi</Button></div>}
     <dl className="essentials wide">
       <Ess label="SSID">{wifi.ssid}</Ess><Ess label="Frekuensi">{wifi.band ?? '—'}</Ess>
       <Ess label="Status">{wifi.enabled ? 'Aktif' : 'Nonaktif'}</Ess>
     </dl>
-    {canManage && <Button onClick={() => setEditing(true)}>Ubah WiFi</Button>}
     {editing && <ResourceForm title="Ubah WiFi" editing navigation={<></>} dirty={dirty} busy={saving} onClose={close} onBack={() => {}}
       footer={<><Button disabled={saving} onClick={close}>Batal</Button><Button variant="primary" disabled={saving || !dirty} onClick={() => void save()}>{saving ? 'Menyimpan…' : 'Simpan'}</Button></>}>
       <div className="stack">{error && <p role="alert">{error}</p>}
@@ -2187,7 +1930,7 @@ function WifiCard({ wifi, canManage, onSave }: { wifi: WifiView; canManage: bool
 /** Jejak aksi terakhir ke perangkat — reboot / ubah WiFi, berhasil atau gagal. */
 function CpeActionLog({ actions }: { actions: CpeActionView[] }) {
   if (actions.length === 0) return null
-  return <section className="card stack"><SectionHead icon={<IconAudit size={16} />} title="Riwayat tindakan" />
+  return <section className="card stack"><SectionHead title="Riwayat tindakan" />
     <DataTable rows={actions} rowKey={action => action.id} columns={[
       { key: 'action', header: 'Tindakan', cell: action => CPE_ACTION_LABEL[action.action] },
       { key: 'status', header: 'Status', cell: action => action.status === 'SUCCESS' ? 'Berhasil' : 'Gagal' },
@@ -2220,14 +1963,6 @@ function todayLocalDate(): string {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
 }
 
-const INVOICE_TONE: Record<InvoiceView['status'], 'good' | 'warning' | 'critical' | 'neutral' | 'accent'> = {
-  PAID: 'good',
-  ISSUED: 'warning',
-  OVERDUE: 'critical',
-  VOID: 'neutral',
-  REFUNDED: 'accent',
-}
-
 const INVOICE_LABEL: Record<InvoiceView['status'], string> = {
   PAID: 'Lunas',
   ISSUED: 'Terbit',
@@ -2253,6 +1988,9 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
   const toast = useToast()
   const [invoices, setInvoices] = useState<InvoiceView[] | null>(null)
   const canManage = can('billing.invoice.manage')
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Bayar tak lagi terjadi di modal sini: satu-satunya jalur adalah halaman bayar publik, supaya
   // tautan yang sama bisa dipakai operator (buka tab) maupun pelanggan (kirim via WhatsApp).
@@ -2285,110 +2023,46 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
     )
   }
 
-  if (invoices.length === 0) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>Belum ada tagihan untuk pelanggan ini.</p>
-      </div>
-    )
-  }
-
   const today = todayLocalDate()
   const tunggakan =
     billing != null
       ? Number(billing.outstandingAmount)
       : invoices.filter((inv) => isOutstanding(inv, today)).reduce((s, inv) => s + Number(inv.amount), 0)
 
-  return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      <div className="card stack" style={{ gap: '0.4rem' }}>
-        <SectionHead
-          icon={<IconReceipt size={16} />}
-          title="Tunggakan"
-          aside={
-            <span
-              className="tnum"
-              style={{ color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
-            >
-              {fmtRupiah(tunggakan)}
-            </span>
-          }
-        />
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Jumlah tagihan jatuh tempo yang belum dibayar.
-        </Text>
-      </div>
-
-      <div className="card">
-        <Table ><TableHeader><TableRow ><TableHeaderCell >Nomor</TableHeaderCell>
-        <TableHeaderCell >Periode</TableHeaderCell>
-        <TableHeaderCell >Jatuh tempo</TableHeaderCell>
-        <TableHeaderCell style={{ textAlign: 'right' }}>Jumlah</TableHeaderCell>
-        <TableHeaderCell >Status</TableHeaderCell></TableRow></TableHeader>
-        <TableBody>{invoices.map((inv) => (
-          <TableRow key={inv.id}><TableCell className="tnum">{inv.number}</TableCell>
-          <TableCell className="muted">{fmtDate(inv.periodStart)} – {fmtDate(inv.periodEnd)}</TableCell>
-          <TableCell className="muted">{fmtDate(inv.dueDate)}</TableCell>
-          <TableCell className="tnum" style={{ textAlign: 'right' }}>{fmtRupiah(Number(inv.amount))}
-          {inv.prorated && (
-            <span
-              className="badge neutral"
-              style={{ marginLeft: '0.4rem' }}
-              title={
-                inv.proratedDays != null
-                  ? `Diprorata ${inv.proratedDays} hari (aktivasi tengah periode)`
-                  : 'Diprorata (aktivasi tengah periode)'
-              }
-            >
-              prorata{inv.proratedDays != null ? ` ${inv.proratedDays}h` : ''}
-            </span>
-          )}
-          {Number(inv.taxAmount) > 0 && (
-            <span className="muted">
-              termasuk PPN {fmtRupiah(Number(inv.taxAmount))}</span>
-          )}</TableCell>
-          <TableCell ><Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
-          {/* Halaman bayar publik melayani KEDUA mode gateway (VA/QRIS Pivot maupun
-              instruksi transfer manual), jadi tak perlu lagi dibedakan di sini. */}
-          {canManage && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
-            <>
-              <Button
-                type="button"
-                variant="subtle"
-                onClick={() => window.open(shareLink(inv), '_blank', 'noopener')}
-                style={{ marginLeft: '0.5rem',  }}
-              >
-                bayar ↗
-              </Button>
-              <Button
-                type="button"
-                variant="subtle"
-                onClick={() => void copyLink(inv)}
-                style={{ marginLeft: '0.3rem',  }}
-              >
-                salin link
-              </Button>
-            </>
-          )}</TableCell></TableRow>
-        ))}</TableBody></Table>
-      </div>
-
-      <p className="muted" style={{ margin: 0,  }}>
-        Bagikan tautan pembayaran ke pelanggan melalui WhatsApp.
-      </p>
+  const selected = selectedIds.size === 1 ? invoices.find(inv => selectedIds.has(inv.id)) : undefined
+  const payable = selected && (selected.status === 'ISSUED' || selected.status === 'OVERDUE')
+  const rows = invoices.filter(inv => (!status || inv.status === status) && inv.number.toLowerCase().includes(query.toLowerCase()))
+  return <section className="customer-section">
+    <h2>Tagihan</h2>
+    <div className="stat-grid">
+      <MiniStat label="Tunggakan" value={fmtRupiah(tunggakan)} unit="" warn={tunggakan > 0} />
+      <MiniStat label="Belum dibayar" value={String(invoices.filter(inv => ['ISSUED', 'OVERDUE'].includes(inv.status)).length)} unit="tagihan" />
+      <MiniStat label="Lunas" value={String(invoices.filter(inv => inv.status === 'PAID').length)} unit="tagihan" />
     </div>
-  )
+    <div className="customer-list">
+      {canManage && <CommandBar layout="wrap" actions={[
+        { key: 'pay', label: 'Buka pembayaran', disabled: !payable, onClick: () => { if (selected && payable) window.open(shareLink(selected), '_blank', 'noopener') } },
+        { key: 'copy', label: 'Salin tautan pembayaran', disabled: !payable, onClick: () => { if (selected && payable) void copyLink(selected) } },
+      ]} />}
+      <div className="customer-filters">
+        <TextField label="Cari tagihan" placeholder="Nomor tagihan" value={query} onChange={(_, data) => { setQuery(data.value); setSelectedIds(new Set()) }} />
+        <SelectField label="Status tagihan" value={status} onChange={(_, data) => { setStatus(data.value); setSelectedIds(new Set()) }}><option value="">Semua status</option>{Object.entries(INVOICE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectField>
+        <span className="customer-result-count">{rows.length} tagihan{selectedIds.size > 0 ? ` · ${selectedIds.size} dipilih` : ''}</span>
+      </div>
+      <DataTable rows={rows} rowKey={inv => inv.id} selection={canManage ? { selected: selectedIds, onChange: setSelectedIds } : undefined} columns={[
+        { key: 'number', header: 'Nomor', minWidth: 180, cell: inv => inv.number, sortValue: inv => inv.number },
+        { key: 'period', header: 'Periode', minWidth: 230, cell: inv => `${fmtDate(inv.periodStart)} – ${fmtDate(inv.periodEnd)}` },
+        { key: 'due', header: 'Jatuh tempo', minWidth: 145, cell: inv => fmtDate(inv.dueDate), sortValue: inv => inv.dueDate },
+        { key: 'amount', header: 'Jumlah', minWidth: 150, align: 'right', cell: inv => fmtRupiah(Number(inv.amount)), sortValue: inv => Number(inv.amount) },
+        { key: 'tax', header: 'Termasuk PPN', minWidth: 150, align: 'right', cell: inv => fmtRupiah(Number(inv.taxAmount)) },
+        { key: 'prorata', header: 'Prorata', minWidth: 100, cell: inv => inv.prorated ? inv.proratedDays == null ? 'Ya' : `${inv.proratedDays} hari` : 'Tidak' },
+        { key: 'status', header: 'Status', cell: inv => INVOICE_LABEL[inv.status] },
+      ]} empty={<p>{query || status ? 'Tidak ada tagihan yang cocok.' : 'Belum ada tagihan.'}</p>} />
+    </div>
+  </section>
 }
 
 /* ---------- Tab: Tiket insiden & Work Order (module incident + workorder) ---------- */
-
-const WO_STATUS_TONE: Record<WorkOrderStatus, 'neutral' | 'accent' | 'warning' | 'good'> = {
-  DRAFT: 'neutral',
-  ASSIGNED: 'accent',
-  IN_PROGRESS: 'warning',
-  DONE: 'good',
-  CANCELLED: 'neutral',
-}
 
 const WO_STATUS_LABEL: Record<WorkOrderStatus, string> = {
   DRAFT: 'Draft',
@@ -2422,96 +2096,40 @@ function TiketWoTab({
     void listIncidentsForCustomer(customerId)
       .then((list) => alive && setIncidents(list))
       .catch(() => alive && setIncidents([]))
-    return () => {
-      alive = false
-    }
+    return () => { alive = false }
   }, [customerId, canIncident])
-
   useEffect(() => {
     if (!canWorkorder) return
     let alive = true
-    void listWorkOrdersForCustomer(customerId)
-      .then((list) => alive && setOrders(list))
-      .catch(() => alive && setOrders([]))
-    return () => {
-      alive = false
-    }
+    void listWorkOrdersForCustomer(customerId).then(value => { if (alive) setOrders(value) }).catch(() => { if (alive) setOrders([]) })
+    return () => { alive = false }
   }, [customerId, canWorkorder])
-
-  return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      {canIncident && (
-        <div className="card stack" style={{ gap: '0.6rem' }}>
-          <SectionHead
-            icon={<IconAlert size={16} />}
-            title="Insiden aktif"
-            aside={<Text as="span" className="muted" size={200}>Gangguan aktif</Text>}
-          />
-          {incidents == null ? (
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat insiden…</Text>
-          ) : incidents.length === 0 ? (
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tidak ada insiden aktif.</Text>
-          ) : (
-            incidents.map((inc) => (
-              <div key={inc.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                  <Text as="span" weight="semibold" size={200} >{inc.title}</Text>
-                  <Text as="span" size={300} className="muted" >{inc.rootLabel} · dibuka {fmtInstant(inc.openedAt)}</Text>
-                </div>
-                <div className="row" style={{ gap: '0.35rem' }}>
-                  <StatusBadge status={inc.severity} />
-                  <StatusBadge status={inc.status} />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {canWorkorder && (
-        <div className="card stack" style={{ gap: '0.6rem' }}>
-          <SectionHead
-            icon={<IconWorkOrder size={16} />}
-            title="Riwayat work order"
-            aside={<Text as="span" className="muted" size={200}>semua status</Text>}
-          />
-          {orders == null ? (
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat work order…</Text>
-          ) : orders.length === 0 ? (
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada work order untuk pelanggan ini.</Text>
-          ) : (
-            orders.map((wo) => (
-              <div key={wo.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                  <Text as="span" size={300}  ><Text as="span" weight="semibold" className="tnum" >{wo.code}</Text> · {wo.title}
-                  {wo.incidentId && (
-                    <span className="badge accent" style={{ marginLeft: '0.4rem' }}>dari insiden</span>
-                  )}</Text>
-                  <Text as="span" size={300} className="muted" >{wo.type} · dibuat {fmtInstant(wo.createdAt)}
-                  {wo.assignees.length > 0 &&
-                    ` · ${wo.assignees.map((a) => a.name ?? '—').join(', ')}`}</Text>
-                </div>
-                <Badge tone={WO_STATUS_TONE[wo.status]}>{WO_STATUS_LABEL[wo.status]}</Badge>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  )
+  return <div className="customer-section">
+    <h2>Tiket &amp; work order</h2>
+    {canIncident && <section className="customer-section"><h3>Insiden aktif</h3>
+      {incidents == null ? <Spinner /> : <DataTable rows={incidents} rowKey={row => row.id} columns={[
+        { key: 'title', header: 'Insiden', minWidth: 240, cell: row => row.title },
+        { key: 'root', header: 'Titik gangguan', minWidth: 180, cell: row => row.rootLabel },
+        { key: 'severity', header: 'Keparahan', cell: row => ({ CRITICAL: 'Kritis', WARNING: 'Peringatan', INFO: 'Informasi' }[row.severity] ?? row.severity) },
+        { key: 'status', header: 'Status', cell: row => ({ OPEN: 'Terbuka', ACKNOWLEDGED: 'Ditangani', RESOLVED: 'Selesai' }[row.status] ?? row.status) },
+        { key: 'opened', header: 'Dibuka', minWidth: 160, cell: row => fmtInstant(row.openedAt), sortValue: row => row.openedAt },
+      ]} empty={<p>Tidak ada insiden aktif.</p>} />}
+    </section>}
+    {canWorkorder && <section className="customer-section customer-section-divider"><h3>Work order</h3>
+      {orders == null ? <Spinner /> : <DataTable rows={orders} rowKey={row => row.id} columns={[
+        { key: 'code', header: 'Nomor', minWidth: 150, cell: row => row.code },
+        { key: 'title', header: 'Pekerjaan', minWidth: 240, cell: row => row.title },
+        { key: 'type', header: 'Jenis', minWidth: 140, cell: row => ({ PSB: 'Pasang baru', REPAIR: 'Perbaikan', MIGRATION: 'Migrasi', DISMANTLE: 'Pembongkaran', PREVENTIVE: 'Pemeliharaan' }[row.type]) },
+        { key: 'status', header: 'Status', cell: row => WO_STATUS_LABEL[row.status] },
+        { key: 'assignees', header: 'Petugas', minWidth: 180, cell: row => row.assignees.map(person => person.name ?? '—').join(', ') || 'Belum ditugaskan' },
+        { key: 'source', header: 'Sumber', cell: row => row.incidentId ? 'Insiden' : '—' },
+        { key: 'date', header: 'Dibuat', minWidth: 160, cell: row => fmtInstant(row.createdAt), sortValue: row => row.createdAt },
+      ]} empty={<p>Belum ada work order.</p>} />}
+    </section>}
+  </div>
 }
 
 /* ---------- Tab: Timeline aktivitas gabungan (gabung sisi klien) ---------- */
-
-type TimelineTone = 'good' | 'warning' | 'critical' | 'neutral' | 'accent'
-
-const TONE_INK: Record<TimelineTone, string> = {
-  good: 'var(--good-ink)',
-  warning: 'var(--warning-ink)',
-  critical: 'var(--critical-ink)',
-  accent: 'var(--accent)',
-  neutral: 'var(--muted)',
-}
 
 /**
  * Riwayat aktivitas satu pelanggan sebagai satu garis waktu — gabungan murni sisi
@@ -2532,6 +2150,8 @@ function TimelineTab({
   canIncident: boolean
   canWorkorder: boolean
 }) {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
   const [invoices, setInvoices] = useState<InvoiceView[]>([])
   const [incidents, setIncidents] = useState<IncidentView[]>([])
   const [orders, setOrders] = useState<WorkOrderView[]>([])
@@ -2569,53 +2189,41 @@ function TimelineTab({
     }
   }, [customerId, canWorkorder])
 
-  const entries: Array<{ at: string; label: string; tone: TimelineTone }> = []
-  const push = (at: string | null, label: string, tone: TimelineTone) => {
-    if (at) entries.push({ at, label, tone })
+  const entries: Array<{ at: string; label: string; category: string }> = []
+  const push = (at: string | null, label: string, category: string) => {
+    if (at) entries.push({ at, label, category })
   }
 
   const sub = customer.subscription
   if (sub) {
-    push(sub.activatedAt, `Langganan ${sub.packageName} diaktifkan`, 'good')
-    push(sub.terminatedAt, `Langganan ${sub.packageName} dihentikan`, 'critical')
+    push(sub.activatedAt, `Langganan ${sub.packageName} diaktifkan`, 'Langganan')
+    push(sub.terminatedAt, `Langganan ${sub.packageName} dihentikan`, 'Langganan')
   }
-  customer.onus.forEach((onu) => push(onu.installedAt, `ONU ${onu.serialNumber} dipasang`, 'accent'))
+  customer.onus.forEach((onu) => push(onu.installedAt, `ONU ${onu.serialNumber} dipasang`, 'Perangkat'))
   invoices.forEach((inv) => {
-    push(inv.issuedAt, `Tagihan ${inv.number} terbit`, 'warning')
-    push(inv.paidAt, `Tagihan ${inv.number} dibayar`, 'good')
+    push(inv.issuedAt, `Tagihan ${inv.number} terbit`, 'Tagihan')
+    push(inv.paidAt, `Tagihan ${inv.number} dibayar`, 'Tagihan')
   })
-  incidents.forEach((inc) => push(inc.openedAt, `Insiden ${inc.title} dibuka`, 'critical'))
+  incidents.forEach((inc) => push(inc.openedAt, `Insiden ${inc.title} dibuka`, 'Insiden'))
   orders.forEach((wo) => {
-    push(wo.createdAt, `WO ${wo.code} dibuat`, 'accent')
-    push(wo.completedAt, `WO ${wo.code} selesai`, 'good')
+    push(wo.createdAt, `WO ${wo.code} dibuat`, 'Work order')
+    push(wo.completedAt, `WO ${wo.code} selesai`, 'Work order')
   })
 
   // Terbaru lebih dulu; timestamp ISO 8601 aman dibandingkan leksikografis.
   entries.sort((a, b) => b.at.localeCompare(a.at))
 
-  if (entries.length === 0) {
-    return (
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>Belum ada aktivitas yang tercatat.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="card stack" style={{ gap: '0.5rem' }}>
-      <SectionHead icon={<IconAudit size={16} />} title="Aktivitas terbaru" />
-      <div className="stack" style={{ gap: '0.4rem' }}>
-        {entries.map((e, i) => (
-          <div key={`${e.at}-${i}`} className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-            <Text as="span" size={200} className="muted tnum" style={{ minWidth: 92 }} >{fmtInstant(e.at)}</Text>
-            <span
-              aria-hidden
-              style={{ width: 8, height: 8, borderRadius: '50%', background: TONE_INK[e.tone], flexShrink: 0 }}
-            />
-            <Text as="span" size={300}  >{e.label}</Text>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  const rows = entries.filter(entry => (!category || entry.category === category) && entry.label.toLowerCase().includes(query.toLowerCase()))
+  return <section className="customer-section">
+    <h2>Aktivitas</h2>
+    <div className="customer-list"><div className="customer-filters">
+      <TextField label="Cari aktivitas" value={query} onChange={(_, data) => setQuery(data.value)} placeholder="Cari dalam riwayat" />
+      <SelectField label="Kategori aktivitas" value={category} onChange={(_, data) => setCategory(data.value)}><option value="">Semua kategori</option>{['Langganan', 'Perangkat', 'Tagihan', 'Insiden', 'Work order'].map(value => <option key={value} value={value}>{value}</option>)}</SelectField>
+      <span className="customer-result-count">{rows.length} aktivitas</span>
+    </div><DataTable rows={rows.map((entry, index) => ({ ...entry, index }))} rowKey={entry => `${entry.at}-${entry.index}`} columns={[
+      { key: 'at', header: 'Waktu', minWidth: 170, cell: entry => fmtInstant(entry.at), sortValue: entry => entry.at },
+      { key: 'category', header: 'Kategori', minWidth: 140, cell: entry => entry.category },
+      { key: 'activity', header: 'Aktivitas', minWidth: 380, cell: entry => entry.label },
+    ]} empty={<p>{query || category ? 'Tidak ada aktivitas yang cocok.' : 'Belum ada aktivitas.'}</p>} /></div>
+  </section>
 }

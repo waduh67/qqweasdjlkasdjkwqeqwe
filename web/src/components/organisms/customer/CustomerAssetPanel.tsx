@@ -57,13 +57,13 @@ function Assets({ customerId, areaId, onChanged, readOnly }: { customerId: strin
     }
     return items
   }
-  return <section className="card stack" id="customer-assets" aria-label="Aset perangkat pelanggan"><h2>Aset perangkat pelanggan</h2>
+  return <section className="customer-section" id="customer-assets" aria-label="Aset perangkat pelanggan"><h2>Aset perangkat pelanggan</h2>
     {!online && <p role="status">Koneksi terputus. Tindakan perangkat tersedia setelah terhubung kembali.</p>}
     {areaId === null && result.state.status === 'error' && result.state.error instanceof ApiError && result.state.error.status === 404 && <p className="form-note">Tentukan area pelanggan untuk melihat riwayat perangkat.</p>}
     <WarehouseState {...result}>{({ context, history }) => <>
       {context.unresolvedDevices > 0 && <div role="status"><p>{context.unresolvedDevices} perangkat menunggu rekonsiliasi asal gudang.</p>
         {can('inventory.provenance.manage') && <Link to="/warehouse/provenance">Rekonsiliasi perangkat lama</Link>}</div>}
-      {manage && idle && <Button disabled={!enabled} onClick={() => setInstall(true)}>Pasang perangkat dari gudang</Button>}
+      {manage && idle && <div className="customer-actions"><Button variant="subtle" disabled={!enabled} onClick={() => setInstall(true)}>Pasang perangkat dari gudang</Button></div>}
       {can('inventory.approval.request') && can('inventory.custody.manage') && !can('inventory.approval.view') && <p role="note">Pengajuan kehilangan memerlukan akses lihat persetujuan.</p>}
       <DataTable columns={columns} rows={history.items} rowKey={row => row.asset.id} rowActions={actions} empty={<p>Belum ada riwayat aset gudang.</p>} />
       <WarehousePagination page={page} size={history.size} total={history.totalElements} onChange={setPage} />
