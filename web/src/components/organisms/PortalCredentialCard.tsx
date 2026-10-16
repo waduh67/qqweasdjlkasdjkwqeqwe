@@ -15,8 +15,7 @@ import {
   type PortalCredentialStatus,
 } from '@/api/portalAdmin'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, Spinner, TextField } from '@/components/atoms'
-import { IconKey } from '@/components/atoms/icons'
+import { Button, Spinner, TextField } from '@/components/atoms'
 import { Ess } from '@/components/molecules'
 import { useToast } from '@/system'
 
@@ -108,52 +107,10 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
   }
 
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      {/* Kepala seksi seragam dengan seksi lain di detail pelanggan: ikon beraksen +
-          judul, tanpa bingkai sendiri (wadahnya yang meratakan). */}
-      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-        <div className="section-head">
-          <span className="ico" aria-hidden>
-            <IconKey size={16} />
-          </span>
-          <h3 className="section-title">Portal pelanggan</h3>
-        </div>
-        {status?.provisioned && (
-          <Badge tone={status.active ? 'good' : 'neutral'}>{status.active ? 'aktif' : 'nonaktif'}</Badge>
-        )}
-      </div>
-
-      {loading ? (
-        <div style={{ display: 'grid', placeItems: 'center', minHeight: 60 }}>
-          <Spinner />
-        </div>
-      ) : loadError ? <p role="alert">Akun portal gagal dimuat. <Button onClick={load}>Coba lagi</Button></p> : !status?.provisioned ? (
-        <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
-          Akun portal belum dibuat.
-        </p>
-      ) : (
-        <dl className="essentials wide">
-          <Ess label="Login">
-            <span className="tnum">{status.login}</span>
-          </Ess>
-        </dl>
-      )}
-
-      {/* Password sementara — hanya muncul saat server yang membangkitkan. */}
-      {reveal?.temporaryPassword && (
-        <ResourceForm title="Akun portal pelanggan" readOnly onClose={() => setReveal(null)} onBack={() => {}}
-          footer={<Button onClick={() => setReveal(null)}>Selesai</Button>}>
-          <div className="stack"><p>Simpan password ini sebelum menutup panel.</p>
-            <CreationSummary rows={[
-              ['Login', reveal.login], ['Password', <span style={{ userSelect: 'all' }}>{reveal.temporaryPassword}</span>],
-            ]} />
-            <Button onClick={() => void copyText(reveal.temporaryPassword ?? '').then(ok => ok ? toast.success('Password disalin') : toast.error('Gagal menyalin password.'))}>Salin password</Button>
-          </div>
-        </ResourceForm>
-      )}
-
+    <section className="customer-section">
+      <h2>Portal pelanggan</h2>
       {canManage && !loading && !loadError && form === null && (
-        <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
+        <div className="customer-actions" role="group" aria-label="Aksi portal pelanggan">
           {!status?.provisioned ? (
             <>
               <Button
@@ -190,6 +147,36 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
         </div>
       )}
 
+      {loading ? (
+        <div style={{ display: 'grid', placeItems: 'center', minHeight: 60 }}>
+          <Spinner />
+        </div>
+      ) : loadError ? <p role="alert">Akun portal gagal dimuat. <Button onClick={load}>Coba lagi</Button></p> : !status?.provisioned ? (
+        <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
+          Akun portal belum dibuat.
+        </p>
+      ) : (
+        <dl className="essentials wide">
+          <Ess label="Status">{status.active ? 'Aktif' : 'Nonaktif'}</Ess>
+          <Ess label="Login">
+            <span className="tnum">{status.login}</span>
+          </Ess>
+        </dl>
+      )}
+
+      {/* Password sementara — hanya muncul saat server yang membangkitkan. */}
+      {reveal?.temporaryPassword && (
+        <ResourceForm title="Akun portal pelanggan" readOnly onClose={() => setReveal(null)} onBack={() => {}}
+          footer={<Button onClick={() => setReveal(null)}>Selesai</Button>}>
+          <div className="stack"><p>Simpan password ini sebelum menutup panel.</p>
+            <CreationSummary rows={[
+              ['Login', reveal.login], ['Password', <span key="temporary-password" style={{ userSelect: 'all' }}>{reveal.temporaryPassword}</span>],
+            ]} />
+            <Button onClick={() => void copyText(reveal.temporaryPassword ?? '').then(ok => ok ? toast.success('Password disalin') : toast.error('Gagal menyalin password.'))}>Salin password</Button>
+          </div>
+        </ResourceForm>
+      )}
+
       {canManage && form !== null && <Blade open title={form === 'provision' ? 'Buat login portal' : 'Reset password portal'} onClose={closeForm}
         creation={{ ...creation, busy, prepare: save, summary: <>{error && <p role="alert">{error}</p>}<CreationSummary rows={[
           ['Login', form === 'provision' ? login.trim() || 'Kode pelanggan' : status?.login], ['Password', password ? 'Ditentukan pengguna' : 'Dibuat otomatis'],
@@ -199,6 +186,6 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
         </div>
       </Blade>}
 
-    </div>
+    </section>
   )
 }

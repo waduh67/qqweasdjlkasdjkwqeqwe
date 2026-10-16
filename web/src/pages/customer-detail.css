@@ -1,31 +1,59 @@
-.customer-detail { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.customer-detail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .customer-identity { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; line-height: 20px; color: var(--muted); }
-.customer-detail .resource-detail-panel { display: flex; flex-direction: column; gap: 24px; }
-.customer-detail :is(h2, h3) { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
+.customer-detail .resource-detail-panel { display: flex; flex-direction: column; gap: 24px; container-type: inline-size; container-name: customer-content; }
+.customer-section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.customer-detail :is(h2, h3, p) { margin: 0; }
+.customer-detail h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.customer-detail h3 { font-size: 14px; line-height: 20px; font-weight: 600; }
 .customer-detail p { font-size: 13px; line-height: 20px; }
-.customer-detail .card { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.customer-detail .resource-detail-panel > .card + .card { padding-top: 24px; border-top: 1px solid var(--border); }
-.customer-detail .section-head { gap: 8px; }
-.customer-detail .section-head > :first-child:not(h3) { padding: 0; background: none; border: 0; border-radius: 0; color: var(--muted); }
-.customer-detail :is(.badge, .fui-Badge) { min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; line-height: 20px; }
-.customer-detail :is(.badge-dot, .status-dot, .fui-Badge__icon) { display: none; }
-.customer-overview { display: flex; flex-direction: column; gap: 20px; }
-.customer-overview .ess-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
-.customer-detail dl.essentials { margin: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px 20px; font-size: 13px; line-height: 20px; }
+.customer-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; }
+.customer-section-divider { padding-top: 24px; border-top: 1px solid var(--border); }
+.customer-detail .resource-detail-panel > .customer-section + .customer-section { padding-top: 24px; border-top: 1px solid var(--border); }
+.customer-property-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 40px; }
+.customer-detail dl.essentials { display: grid; grid-template-columns: 155px minmax(0, 1fr); gap: 10px 20px; margin: 0; font-size: 13px; line-height: 20px; }
 .customer-detail dl.essentials dt { color: var(--muted); font-weight: 400; }
 .customer-detail dl.essentials dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
-.customer-detail .stat-grid { display: flex; flex-wrap: wrap; gap: 24px; }
-.customer-detail .stat { min-width: 110px; padding: 0 24px 0 0; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: none; box-shadow: none; }
-.customer-detail .stat:last-child { border-right: 0; }
-.customer-detail .stat-value { font-size: 24px; line-height: 32px; font-weight: 400; }
-.customer-detail :is(.fui-TableCell, .fui-TableHeaderCell) { white-space: nowrap; font-size: 13px; line-height: 20px; }
+.customer-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-height: 36px; padding: 0 0 8px; border-bottom: 1px solid var(--border); }
+.customer-actions > .fui-Button { border-color: transparent; background: transparent; color: var(--accent); }
+.customer-actions > .fui-Button:hover { background: var(--accent-soft); }
+.customer-actions > .fui-Button:disabled { color: var(--muted); }
+.customer-action-group { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.customer-action-group .fui-Button { border-color: transparent; background: transparent; }
+.customer-list { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.customer-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px 16px; min-width: 0; }
+.customer-filters > .fui-Field { flex: 0 1 260px; min-width: 160px; max-width: 100%; }
+.customer-filters .fui-Label { font-weight: 400; }
+.customer-result-count { font-size: 12px; line-height: 28px; color: var(--muted); }
+.customer-form-fields { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 560px; }
+.customer-form-fields .fui-Field { flex: none !important; min-width: 0 !important; width: 100%; }
+.customer-detail .stat-grid { display: flex; flex-wrap: wrap; gap: 16px 32px; padding: 4px 0 12px; }
+.customer-detail .stat { min-width: 120px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.customer-detail .stat-label { font-size: 12px; line-height: 20px; color: var(--muted); }
+.customer-detail .stat-value { font-size: 24px; line-height: 36px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.customer-detail .stat-value .muted { font-weight: 400; }
+.customer-chart { min-width: 0; padding: 16px 12px 8px; border: 1px solid var(--border); }
+.customer-detail :is(.fui-TableCell, .fui-TableHeaderCell, .fui-DataGridCell) { white-space: nowrap; font-size: 13px; line-height: 20px; }
+.customer-detail :is(.badge, .fui-Badge) { min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; line-height: 20px; }
+.customer-detail :is(.badge-dot, .status-dot, .fui-Badge__icon) { display: none; }
 .customer-detail .table-wrap { max-width: 100%; overflow-x: auto; }
 .customer-detail .resource-detail-panel > .stack { gap: 24px !important; }
-@container (min-width: 1100px) {
-  .customer-overview .ess-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.customer-detail .card { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.customer-wifi { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.customer-wifi + .customer-wifi { margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border); }
+.customer-detail .network-section { display: flex; flex-direction: column; gap: 16px; }
+@container customer-content (min-width: 780px) {
+  .customer-property-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
-  .customer-detail dl.essentials { grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
+  .customer-detail dl.essentials { grid-template-columns: 112px minmax(0, 1fr); gap: 10px 12px; }
+  .customer-detail .stat-grid { gap: 16px 24px; }
+  .customer-detail .stat-value { font-size: 22px; }
+  .customer-chart { padding: 12px 4px 4px; }
+  .customer-filters > .fui-Field { flex: 1 1 220px; }
 }
-
-.customer-wifi { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.customer-notice { padding: 10px 12px; border-left: 3px solid var(--warning-ink); background: var(--warning-bg, var(--accent-soft)); }
+.customer-detail .badge .dot { display: none; }
+/* Filters sit inside a resource blade, but use labels above compact controls. */
+.resource-form-content .customer-filters .app-field:has(> .fui-Field__label) { display: flex; flex-direction: column; gap: 4px; }
+.resource-form-content .customer-filters .app-field > .fui-Field__label { padding: 0; margin: 0; }
+.resource-form-content .customer-filters .app-field > .app-control { width: 100%; min-width: 0; box-sizing: border-box; }

@@ -27,11 +27,11 @@ export function CustomerOnuPanel({ customerId, onus, onChanged }: { customerId: 
       .catch(() => { if (active) setError('Data migrasi belum berhasil dimuat.') })
     return () => { active = false }
   }, [customerId, attempt])
-  return <section className="card stack" aria-label="Pemantauan ONU">
+  return <section className="customer-section" aria-label="Pemantauan ONU">
     <h2>Pemantauan ONU</h2>
     {error && <div role="alert"><p>{error}</p><Button onClick={() => setAttempt(value => value + 1)}>Coba lagi</Button></div>}
-    {migration && can('customer.onu.assign') && can('monitoring.provisioning.view') && <div>
-      <Button disabled={readOnly} onClick={() => setOpen(true)}>Hubungkan ONU terpasang</Button>
+    {migration && can('customer.onu.assign') && can('monitoring.provisioning.view') && <div className="customer-actions">
+      <Button variant="subtle" disabled={readOnly} onClick={() => setOpen(true)}>Hubungkan ONU terpasang</Button>
     </div>}
     <DataTable rows={onus} rowKey={row => row.id} columns={[
       { key: 'serial', header: 'Nomor seri', minWidth: 180, cell: row => row.serialNumber },

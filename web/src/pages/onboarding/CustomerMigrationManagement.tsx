@@ -7,6 +7,7 @@ import { Button, SelectField, TextField } from '@/components/atoms'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { CreationSummary } from '@/components/organisms/CreationReview'
+import { Ess } from '@/components/molecules'
 import { useCan } from '@/auth/useCan'
 
 export function CustomerMigrationManagement({ customerId, mode, fallback, onUpdated }: { customerId: string; mode: 'billing' | 'network'; fallback?: ReactNode; onUpdated: () => void }) {
@@ -25,12 +26,15 @@ export function CustomerMigrationManagement({ customerId, mode, fallback, onUpda
   if (loading) return <p role="status">Memuat…</p>
   if (error) return <div role="alert"><p>{error}</p><Button onClick={() => setAttempt(value => value + 1)}>Coba lagi</Button></div>
   if (!migration || (mode === 'network' && migration.accessId)) return fallback
-  return <div className="stack">
-    <CreationSummary rows={mode === 'billing' ? [['Penagihan', migration.billingManaged ? 'Dikelola' : 'Belum dikelola'], ['Mulai penagihan', migration.firstInvoiceOn], ['Tanggal tagih setiap bulan', migration.billingDay]] : [['Akun RADIUS', 'Belum disiapkan'], ['Username lama', migration.username], ['Jenis koneksi', migration.authType]]} />
-    {mode === 'network' && <p className="muted">Akun RADIUS belum dibuat di aplikasi.</p>}
-    {((mode === 'billing' && !migration.billingManaged && can('customer.subscription.update')) || (mode === 'network' && can('bng.access.manage'))) && <div><Button onClick={() => setOpen(true)}>{mode === 'billing' ? 'Mulai penagihan' : 'Siapkan RADIUS'}</Button></div>}
+  const rows: [string, string | number | null][] = mode === 'billing'
+    ? [['Penagihan', migration.billingManaged ? 'Dikelola' : 'Belum dikelola'], ['Mulai penagihan', migration.firstInvoiceOn], ['Tanggal tagih setiap bulan', migration.billingDay]]
+    : [['Status akun', 'Belum disiapkan'], ['Username', migration.username], ['Jenis koneksi', migration.authType]]
+  return <section className="customer-section customer-section-divider">
+    <h2>{mode === 'billing' ? 'Jadwal penagihan' : 'Akun jaringan'}</h2>
+    {((mode === 'billing' && !migration.billingManaged && can('customer.subscription.update')) || (mode === 'network' && can('bng.access.manage'))) && <div className="customer-actions"><Button variant="subtle" onClick={() => setOpen(true)}>{mode === 'billing' ? 'Mulai penagihan' : 'Siapkan RADIUS'}</Button></div>}
+    <dl className="essentials">{rows.map(([label, value]) => <Ess key={label} label={label}>{value ?? '—'}</Ess>)}</dl>
     {open && <MigrationAction migration={migration} mode={mode} onClose={() => setOpen(false)} onSaved={value => { setMigration(value); setOpen(false); onUpdated() }} />}
-  </div>
+  </section>
 }
 function MigrationAction({ migration, mode, onClose, onSaved }: { migration: MigrationView; mode: 'billing' | 'network'; onClose: () => void; onSaved: (value: MigrationView) => void }) {
   const [date, setDate] = useState('')
