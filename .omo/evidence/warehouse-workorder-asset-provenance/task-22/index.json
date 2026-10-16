@@ -6,19 +6,19 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/AssetReplacementService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/AssetReplacementService.kt",
       "sha256": "0f08c48a7953cd57b27460d9b0496eb0fd7366fb8b30be7f869a37befa2e334d"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetReplacementService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetReplacementService.kt",
       "sha256": "e4539a16a88a53d17f5c2a38ef71fdfa40f2b63812a842659a272ad503275527"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetRelocationService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetRelocationService.kt",
       "sha256": "729ed360649f75a53e791377ca873cfbf287972a8e9828fbf42e28e7d970f200"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
       "sha256": "30a4e30106b61cbc0022c7393c432537136c15d6ddf97a4db5c47e186b3cba40"
     }
   ],
@@ -38,7 +38,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+            "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
             "tests": 48,
             "failures": 0,
             "errors": 0,
@@ -66,22 +66,22 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/AssetReplacementService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/AssetReplacementService.kt",
         "line": 12,
         "sha256": "0f08c48a7953cd57b27460d9b0496eb0fd7366fb8b30be7f869a37befa2e334d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetReplacementService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetReplacementService.kt",
         "line": 16,
         "sha256": "e4539a16a88a53d17f5c2a38ef71fdfa40f2b63812a842659a272ad503275527"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetRelocationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetRelocationService.kt",
         "line": 18,
         "sha256": "729ed360649f75a53e791377ca873cfbf287972a8e9828fbf42e28e7d970f200"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
         "line": 11,
         "sha256": "30a4e30106b61cbc0022c7393c432537136c15d6ddf97a4db5c47e186b3cba40"
       }
@@ -106,7 +106,7 @@
       "G(CustomerAssetReplacementIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetReplacementIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetReplacementIT.kt",
             "sha256": "f4be08bf9ca21bc4c17bb798b690d0286889d7ff3ec5df3b63040c139f3e39d3",
             "testAnnotations": 7
           }
@@ -124,13 +124,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
               "tests": 48,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d03e607e50ef3db4427444e28133f82c50cf2382b138c69742aa1cb56f50a35d",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetReplacementIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetReplacementIT.xml"
             }
           ],
           "proof": {
@@ -145,13 +145,13 @@
           "tests": 48,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
               "tests": 48,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1222b27f6c8411dccbae032fef2240236c644453d727640ed5629cf4f6ca2377",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetReplacementIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetReplacementIT.xml"
             }
           ]
         },
@@ -203,7 +203,7 @@
       "G(CustomerAssetReplacementIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetReplacementIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetReplacementIT.kt",
             "sha256": "f4be08bf9ca21bc4c17bb798b690d0286889d7ff3ec5df3b63040c139f3e39d3",
             "testAnnotations": 7
           }
@@ -221,13 +221,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
               "tests": 48,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d03e607e50ef3db4427444e28133f82c50cf2382b138c69742aa1cb56f50a35d",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetReplacementIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetReplacementIT.xml"
             }
           ],
           "proof": {
@@ -242,13 +242,13 @@
           "tests": 48,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
               "tests": 48,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1222b27f6c8411dccbae032fef2240236c644453d727640ed5629cf4f6ca2377",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetReplacementIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetReplacementIT.xml"
             }
           ]
         },
@@ -308,19 +308,19 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/AssetReplacementService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/AssetReplacementService.kt",
         "sha256": "0f08c48a7953cd57b27460d9b0496eb0fd7366fb8b30be7f869a37befa2e334d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetReplacementService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetReplacementService.kt",
         "sha256": "e4539a16a88a53d17f5c2a38ef71fdfa40f2b63812a842659a272ad503275527"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetRelocationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetRelocationService.kt",
         "sha256": "729ed360649f75a53e791377ca873cfbf287972a8e9828fbf42e28e7d970f200"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
         "sha256": "30a4e30106b61cbc0022c7393c432537136c15d6ddf97a4db5c47e186b3cba40"
       }
     ],

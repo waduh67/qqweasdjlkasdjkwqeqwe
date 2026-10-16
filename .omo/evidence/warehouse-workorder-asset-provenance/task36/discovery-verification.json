@@ -8,7 +8,7 @@
     "duration": "1m46s",
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferListIT",
         "tests": 3,
         "sha256": "7b6b2d4661419a4fec2d7491b03e3f58648bad780b36686c5e89b7eaf84eb478"
       }
@@ -21,37 +21,37 @@
     "skipped": 0,
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferContractTest",
         "tests": 1,
         "sha256": "42d049bba52b456d101aa90b9400f85a08a73f5c903e6aeb1d59ec7cca1a4865"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferIT",
         "tests": 3,
         "sha256": "66ea05817d83847712c40444bbc4d59479edfa450b93ab5ef5a878c21a99fdab"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDiscrepancy",
         "tests": 2,
         "sha256": "24636e86e2a766105741b3e4f18db795f50747fdbef75cdb8b8850bd5beffdf5"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDurability",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDurability",
         "tests": 3,
         "sha256": "fa8c12aaea98cd66ce66387acceacc8294eeba49af611b89026eb88a638aa2d8"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITGuards",
         "tests": 6,
         "sha256": "6a58e8c667b3ffca6e13f41c37ee80e544f30b118c0a5f7cc514dafdc8d1f36c"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITPositions",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITPositions",
         "tests": 2,
         "sha256": "d65c0be2a2f9b0278848c8036a6ca06c2e42414ff39dee07d1e4e9ca4ce505f8"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITSerial",
         "tests": 1,
         "sha256": "4c92917ba382c601f0dc0a66e1fe5cb52616660e9a092536567e01794a09d81c"
       }

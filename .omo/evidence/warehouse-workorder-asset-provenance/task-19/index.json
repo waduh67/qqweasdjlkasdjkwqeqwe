@@ -6,15 +6,15 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
       "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
       "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
       "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
     },
     {
@@ -62,14 +62,14 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+            "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaIT",
             "tests": 19,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+            "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity",
             "tests": 6,
             "failures": 0,
             "errors": 0,
@@ -97,17 +97,17 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
         "line": 17,
         "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
         "line": 15,
         "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
         "line": 1,
         "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
       },
@@ -167,12 +167,12 @@
       "G(CustomerAssetSchemaIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaITIntegrity.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetSchemaITIntegrity.kt",
             "sha256": "6358a8d547c465a7dbf42e0ee1125cf7408b28802c02942d77e5062c1583827a",
             "testAnnotations": 5
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetSchemaIT.kt",
             "sha256": "5ba431df58a430b52e492559aeb48738f9c6bedea8310fd7e1d41559f2f179f9",
             "testAnnotations": 8
           }
@@ -190,22 +190,22 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaIT",
               "tests": 19,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ec1b4e3b7ae17f12ea707c8a23734f40cf64ba18b256b0a9773d6dcf1b86adf5",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "46b7aec78ffa13cac11f1baf8f924688449d8e918dc717f5d356ca4b62813921",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
             }
           ],
           "proof": {
@@ -220,22 +220,22 @@
           "tests": 25,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaIT",
               "tests": 19,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1b8c9eeeb8eb905fae16923ee9b9b482e94f2cc99ea4c360c7792cccb03175dc",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "def6fd26a5f574318f6a00e6871672880789ec33783e61a28c91852d912526ef",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
             }
           ]
         },
@@ -287,12 +287,12 @@
       "G(CustomerAssetSchemaIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaITIntegrity.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetSchemaITIntegrity.kt",
             "sha256": "6358a8d547c465a7dbf42e0ee1125cf7408b28802c02942d77e5062c1583827a",
             "testAnnotations": 5
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetSchemaIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetSchemaIT.kt",
             "sha256": "5ba431df58a430b52e492559aeb48738f9c6bedea8310fd7e1d41559f2f179f9",
             "testAnnotations": 8
           }
@@ -310,22 +310,22 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaIT",
               "tests": 19,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ec1b4e3b7ae17f12ea707c8a23734f40cf64ba18b256b0a9773d6dcf1b86adf5",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "46b7aec78ffa13cac11f1baf8f924688449d8e918dc717f5d356ca4b62813921",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
             }
           ],
           "proof": {
@@ -340,22 +340,22 @@
           "tests": 25,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaIT",
               "tests": 19,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1b8c9eeeb8eb905fae16923ee9b9b482e94f2cc99ea4c360c7792cccb03175dc",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "def6fd26a5f574318f6a00e6871672880789ec33783e61a28c91852d912526ef",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity.xml"
             }
           ]
         },
@@ -415,15 +415,15 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
         "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
         "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
         "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
       },
       {

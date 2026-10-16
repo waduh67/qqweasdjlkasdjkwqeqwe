@@ -1,0 +1,58 @@
+package com.karuhun.ftth.workorder.application.service
+
+import com.karuhun.ftth.common.domain.error.ConflictException
+import com.karuhun.ftth.common.domain.error.NotFoundException
+import com.karuhun.ftth.workorder.WorkOrderFulfillmentApi
+import com.karuhun.ftth.workorder.WorkOrderFulfillmentCommand
+import com.karuhun.ftth.workorder.WorkOrderFulfillmentResult
+import com.karuhun.ftth.workorder.application.port.outbound.WorkOrderRepository
+import com.karuhun.ftth.workorder.domain.model.WorkOrderApprovalStatus
+import org.springframework.stereotype.Service
+import java.util.UUID
+import com.karuhun.ftth.workorder.adapter.outbound.persistence.WorkOrderFulfillmentResultJpaEntity
+import com.karuhun.ftth.workorder.adapter.outbound.persistence.WorkOrderFulfillmentResultJpaRepository
+import org.springframework.transaction.annotation.Transactional
+
+@Service
+class WorkOrderFulfillmentApiService(
+    private val workOrders: WorkOrderRepository,
+    private val outcomes: WorkOrderFulfillmentResultJpaRepository,
+    private val entityManager: jakarta.persistence.EntityManager,
+) : WorkOrderFulfillmentApi {
+
+    override fun validateFulfillment(command: WorkOrderFulfillmentCommand) {
+        val workOrder = workOrders.findById(command.workOrderId)
+            ?: throw NotFoundException("Work order tidak ditemukan")
+        if (workOrder.tenantId != command.tenantId) throw NotFoundException("Work order tidak ditemukan")
+        if (command.source == "REFERENCE_WORK_ORDER") {
+            val id = entityManager.createNativeQuery("""SELECT id FROM fulfillment_approval_snapshot WHERE tenant_id=:tenant AND work_order_id=:wo
+                AND namespace=:namespace AND operation_key=:key AND payload_hash=:hash AND source='REFERENCE_WORK_ORDER'""")
+                .setParameter("tenant", command.tenantId).setParameter("wo", command.workOrderId).setParameter("namespace", command.namespace)
+                .setParameter("key", command.operationKey).setParameter("hash", command.payloadHash).resultList.singleOrNull()
+                ?: throw ConflictException("FULFILLMENT_COMPLETION_REQUIRED")
+            entityManager.createNativeQuery("SELECT warehouse_assert_reference_fulfillment_snapshot(:tenant,:id,true)")
+                .setParameter("tenant", command.tenantId).setParameter("id", id).singleResult
+        } else if (workOrder.approvalStatus != WorkOrderApprovalStatus.APPROVED) {
+            throw ConflictException("Work order fulfillment requires approval")
+        }
+    }
+
+    @Transactional
+    override fun recordFulfillmentResult(command: WorkOrderFulfillmentCommand): WorkOrderFulfillmentResult {
+        require(command.namespace.isNotBlank() && command.operationKey.isNotBlank() && command.payloadHash.isNotBlank())
+        val prior = outcomes.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)
+        if (prior != null) {
+            if (prior.payloadHash != command.payloadHash || prior.workOrderId != command.workOrderId) throw ConflictException("Operation key was used with a different payload")
+            return WorkOrderFulfillmentResult(command.tenantId, command.workOrderId, prior.result, replayed = true)
+        }
+        validateFulfillment(command)
+        val inserted = outcomes.insertIfAbsent(UUID.randomUUID(), command.tenantId, command.workOrderId, command.namespace, command.operationKey, command.payloadHash, command.source, command.result)
+        if (inserted == 0) {
+            val replay = outcomes.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)
+                ?: throw ConflictException("Fulfillment result disappeared during concurrent insert")
+            if (replay.payloadHash != command.payloadHash || replay.workOrderId != command.workOrderId) throw ConflictException("Operation key was used with a different payload")
+            return WorkOrderFulfillmentResult(command.tenantId, command.workOrderId, replay.result, replayed = true)
+        }
+        return WorkOrderFulfillmentResult(command.tenantId, command.workOrderId, command.result, replayed = false)
+    }
+}

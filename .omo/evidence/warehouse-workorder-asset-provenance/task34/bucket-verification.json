@@ -5,7 +5,7 @@
   "tests": 11,
   "suites": [
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITBalances",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITBalances",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -13,7 +13,7 @@
       "sha256": "b575e70301dce95cd67647212cf55faf91308f3f5040bd3a76ce05d7ccd9326a"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITCompatibility",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITCompatibility",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -21,7 +21,7 @@
       "sha256": "86311483097a16c3135d0a15b2edf13047bc0fb253706e9f9206127281d09674"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITIdentity",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITIdentity",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -29,7 +29,7 @@
       "sha256": "1f7a66a9d62cb4bdbb29c0203aa47f5e800bfae1be8818d07975350c802435e6"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITLotFilters",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITLotFilters",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -37,7 +37,7 @@
       "sha256": "bf30818b9511c1ed16bc0ab56abb8995b58f5df0af0c799ab49867f026215d57"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITPrivacy",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -45,7 +45,7 @@
       "sha256": "8a271c9b80239e5e0377d2c287dbe8ff2eea4b8cdb03e2cf89da6cbbe27fd4d1"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITSerialFilters",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITSerialFilters",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -53,7 +53,7 @@
       "sha256": "5cc3b6d38d8c835aa6b1585341b74c1a66267a356366a4b770d2039368b1ea0d"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseQueryITStaged",
+      "name": "com.karuhun.ftth.inventory.WarehouseQueryITStaged",
       "tests": 2,
       "failures": 0,
       "errors": 0,

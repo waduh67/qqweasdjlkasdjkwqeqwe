@@ -43,11 +43,11 @@
     "missing": [],
     "unchangedFiles": 2599,
     "onlyChangedFiles": {
-      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftIT.kt": {
+      "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountDraftIT.kt": {
         "r1": "3f0ebde94df57ea49c341d52e982e820884a14541bb0e8b0400dc522d9197e4a",
         "currentAndR2": "cba0511b9b5c161673aac2e63ba25dc5ba87977a9b5f1af91f1d61832f175557"
       },
-      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftIT.kt": {
+      "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftIT.kt": {
         "r1": "743fd47b3eee54e404b5e6ceb937e669a827ce12be5db25051b2fdbc42ce462c",
         "currentAndR2": "5e0558a3c8907ac2754e414d02403a93a7eb63248d03bef2d923f99f5b2d0eb5"
       }
@@ -71,7 +71,7 @@
     "exactRootCompositionMatched": true,
     "suiteReports": [
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -79,7 +79,7 @@
         "reportSha256": "7abc7f9c08539d0854ca242b94bcecc38199872993efe793c006edd2daa141ef"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseNumericCountIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -87,7 +87,7 @@
         "reportSha256": "9bfdd11aa3b3ec47b0a88ecca470b770dc234124a550c5718a2bcf29141980a6"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountDraftIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftIT",
         "tests": 8,
         "failures": 0,
         "errors": 0,
@@ -95,7 +95,7 @@
         "reportSha256": "b2e6085c9c26daf6007f24ea3e12361a3ae1a2b325f5b658bfba7e4bddeb652c"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -103,7 +103,7 @@
         "reportSha256": "9699cb9e487949424a7da745a52d5970bffeaccb1ee41ca944702d726a7729f1"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
         "tests": 15,
         "failures": 0,
         "errors": 0,
@@ -111,7 +111,7 @@
         "reportSha256": "60884775d40325bdd4de88cc48391e16f0b420b8d4a667b950f1ee0134729350"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -119,7 +119,7 @@
         "reportSha256": "56563d482a7cde28b56fdd74fd32e7ee57143b180b08fc84e1eabed043808daf"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseLegacyReadScopeIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -127,7 +127,7 @@
         "reportSha256": "799203085df6eb35fa8601f526adb3510db2e00b8dbc6b7d724b7e4545be2f9d"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReservationIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseLegacyReservationIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -135,7 +135,7 @@
         "reportSha256": "18531279a71ea25398dd156800a3500112271fdcb4d401f8c7e210a1c87eef88"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferContractTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -143,7 +143,7 @@
         "reportSha256": "0429014c6e4a7893ace1d7a2214780174d3de72769e8e274073b8a276e1dc85b"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -151,7 +151,7 @@
         "reportSha256": "caf5f5be95df500c25777519773d336c1f81680b97f75b5cf1ba5190c2d01b28"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
@@ -159,7 +159,7 @@
         "reportSha256": "3e69c9a2757ae2bc42e2a33d7ba3dd5c2f1737b6c9e8fc7e327be955eea4a4d1"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -167,7 +167,7 @@
         "reportSha256": "222faea42bd4e67f5a7921b457d2b382082988c77e08530098fbe8a1df0594ec"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -175,7 +175,7 @@
         "reportSha256": "cb72357014964472e1b091f50c5503b6d1dd975738977e09b91de0558891a914"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDiscrepancy",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -183,7 +183,7 @@
         "reportSha256": "1aac09671cea0ea975dac410597ca7424863a00a1e8da2a6281b52ab9451aade"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDurability",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDurability",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -191,7 +191,7 @@
         "reportSha256": "03863cd52caecfdd6948159140c755b0c024aa1520b87f685ff696e5ae550cf5"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITGuards",
         "tests": 6,
         "failures": 0,
         "errors": 0,
@@ -199,7 +199,7 @@
         "reportSha256": "79366cbdb18b7f6915a2088d167c7e73ac98346f7920a1a5a13b8b0bb210cf47"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITPositions",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITPositions",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -207,7 +207,7 @@
         "reportSha256": "3de854a0c10995d316d39e2fbaffa574fad9fe9401d4493204ba4489b05ac2f7"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITSerial",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -215,7 +215,7 @@
         "reportSha256": "92cb26e9d37133b97b5b195733412d28ba7ee9f615e5dd0839d4ad48331ed1b4"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferListIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,

@@ -5,14 +5,14 @@
   "serverTests": 9,
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
       "tests": 6,
       "failures": 0,
       "errors": 0,
@@ -25,10 +25,10 @@
   "typescript": "PASS: tsc -b",
   "lint": "PASS: targeted oxlint",
   "files": {
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseProvenanceController.kt": "2b384cde9280118527d1baffbd29a867292815f47bb0d2093202f4137afbcbc9",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "e7c6b4e44431c641ee1162a97cd4fa129d9999e734e63cecea0a74b6a41524ee",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "d50dc1ed3d424c5fbbd0d07de8ce44c263a17bcc3eea72537cd08072a7eaccea",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseProvenanceController.kt": "2b384cde9280118527d1baffbd29a867292815f47bb0d2093202f4137afbcbc9",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt": "e7c6b4e44431c641ee1162a97cd4fa129d9999e734e63cecea0a74b6a41524ee",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "d50dc1ed3d424c5fbbd0d07de8ce44c263a17bcc3eea72537cd08072a7eaccea",
     "web/src/api/warehouse/migrationReview.ts": "1ff4ed00ccb4558bba3cd599f886499c6f9d2856cd4cd5228eea9cca784dd54b",
     "web/src/api/warehouse/provenance.test.ts": "d1bb0a3998bd4119b8f5279fbf2256de2dedc424026926b04c0a639408924470",
     "web/src/api/warehouse/provenance.ts": "d05483ede955c5dff4614e40c2c8aa29b39214fcd23f5c9ec2a80ac6031be6b4",

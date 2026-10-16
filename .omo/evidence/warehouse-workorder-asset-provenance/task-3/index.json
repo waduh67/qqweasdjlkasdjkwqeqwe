@@ -6,19 +6,19 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockQuantity.kt",
       "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockUnitDefinition.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockUnitDefinition.kt",
       "sha256": "fb48645faa7988972e3e899b3adb80db00461bd455688a3ca1283fbc818d5d5e"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/common/domain/identity/DeviceIdentity.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/common/domain/identity/DeviceIdentity.kt",
       "sha256": "1a002445614de81f28b1433871f9a8393f90b86e340fe11fea23ea2535c2e202"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
       "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
     }
   ],
@@ -38,28 +38,28 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+            "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTest",
             "tests": 55,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+            "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary",
             "tests": 3,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+            "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestConversion",
             "tests": 16,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+            "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity",
             "tests": 28,
             "failures": 0,
             "errors": 0,
@@ -87,22 +87,22 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockQuantity.kt",
         "line": 6,
         "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockUnitDefinition.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockUnitDefinition.kt",
         "line": 5,
         "sha256": "fb48645faa7988972e3e899b3adb80db00461bd455688a3ca1283fbc818d5d5e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/common/domain/identity/DeviceIdentity.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/common/domain/identity/DeviceIdentity.kt",
         "line": 6,
         "sha256": "1a002445614de81f28b1433871f9a8393f90b86e340fe11fea23ea2535c2e202"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
         "line": 1,
         "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
       }
@@ -127,22 +127,22 @@
       "G(WarehouseQuantityTest)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestIdentity.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTestIdentity.kt",
             "sha256": "135833c71bead6831f6af3d72ec5b60960421aac6ba3193005735cf74661c549",
             "testAnnotations": 6
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestConversion.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTestConversion.kt",
             "sha256": "4044d5824d33cd425689fd1d9cface42700cf5dd43215cd5c57f8ae07cfa3f2d",
             "testAnnotations": 6
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestBoundary.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTestBoundary.kt",
             "sha256": "abacfc79212db3041b757417f91b160860a8626b1b3aa11a705df1da63dc55af",
             "testAnnotations": 3
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTest.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTest.kt",
             "sha256": "9e29421121fe2ecd9bd9b23760b1ba22c21a7a111ec0c4e499c8ab522d2e88d6",
             "testAnnotations": 8
           }
@@ -160,40 +160,40 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTest",
               "tests": 55,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "8487469b4218fae1ac55d9d2c2ba6c6a589de44c1a5e233851c90065bfac680b",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "bc7928f7378fa8a6fdfed61c83d9a54b74d8bfc77dfd483ecbc2788a1a775d42",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestBoundary.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestConversion",
               "tests": 16,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b7d12ba8d77a7b013fba820697a4b71db5306c9c3fc031703adaf9ec6bbe0d77",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestConversion.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestConversion.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity",
               "tests": 28,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "eca734885316e070d36d59e78224b83d3d3745167c7b569fc4ba0cf73b8c82fd",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestIdentity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity.xml"
             }
           ],
           "proof": {
@@ -208,40 +208,40 @@
           "tests": 102,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTest",
               "tests": 55,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "99e4201ecf488319b5086b32b1952781a115af6e138e07b73f97d0a08d6d3d45",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "e66c9e6d242c03861fa516216f569ed228f545b84de81656d5d7c82059778014",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestBoundary.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestConversion",
               "tests": 16,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "5f836f29853c2cfb3f2bc7373f6ae63973fbe6a83e709a7cd7550688ca86d319",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestConversion.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestConversion.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity",
               "tests": 28,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "f4ad8f4d30bee35e9dd8a30ae5787b8e30eda30f597271cdcd2deb46df67c046",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestIdentity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity.xml"
             }
           ]
         },
@@ -293,22 +293,22 @@
       "G(WarehouseQuantityTest)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestIdentity.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTestIdentity.kt",
             "sha256": "135833c71bead6831f6af3d72ec5b60960421aac6ba3193005735cf74661c549",
             "testAnnotations": 6
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestConversion.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTestConversion.kt",
             "sha256": "4044d5824d33cd425689fd1d9cface42700cf5dd43215cd5c57f8ae07cfa3f2d",
             "testAnnotations": 6
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTestBoundary.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTestBoundary.kt",
             "sha256": "abacfc79212db3041b757417f91b160860a8626b1b3aa11a705df1da63dc55af",
             "testAnnotations": 3
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseQuantityTest.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseQuantityTest.kt",
             "sha256": "9e29421121fe2ecd9bd9b23760b1ba22c21a7a111ec0c4e499c8ab522d2e88d6",
             "testAnnotations": 8
           }
@@ -326,40 +326,40 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTest",
               "tests": 55,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "8487469b4218fae1ac55d9d2c2ba6c6a589de44c1a5e233851c90065bfac680b",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "bc7928f7378fa8a6fdfed61c83d9a54b74d8bfc77dfd483ecbc2788a1a775d42",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestBoundary.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestConversion",
               "tests": 16,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b7d12ba8d77a7b013fba820697a4b71db5306c9c3fc031703adaf9ec6bbe0d77",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestConversion.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestConversion.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity",
               "tests": 28,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "eca734885316e070d36d59e78224b83d3d3745167c7b569fc4ba0cf73b8c82fd",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestIdentity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity.xml"
             }
           ],
           "proof": {
@@ -374,40 +374,40 @@
           "tests": 102,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTest",
               "tests": 55,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "99e4201ecf488319b5086b32b1952781a115af6e138e07b73f97d0a08d6d3d45",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "e66c9e6d242c03861fa516216f569ed228f545b84de81656d5d7c82059778014",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestBoundary.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestConversion",
               "tests": 16,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "5f836f29853c2cfb3f2bc7373f6ae63973fbe6a83e709a7cd7550688ca86d319",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestConversion.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestConversion.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity",
               "tests": 28,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "f4ad8f4d30bee35e9dd8a30ae5787b8e30eda30f597271cdcd2deb46df67c046",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseQuantityTestIdentity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity.xml"
             }
           ]
         },
@@ -467,19 +467,19 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockQuantity.kt",
         "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockUnitDefinition.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockUnitDefinition.kt",
         "sha256": "fb48645faa7988972e3e899b3adb80db00461bd455688a3ca1283fbc818d5d5e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/common/domain/identity/DeviceIdentity.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/common/domain/identity/DeviceIdentity.kt",
         "sha256": "1a002445614de81f28b1433871f9a8393f90b86e340fe11fea23ea2535c2e202"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
         "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
       }
     ],

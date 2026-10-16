@@ -6,27 +6,27 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportService.kt",
       "sha256": "3877da2a0853a700a0d2113ae4784f2cd2803417564632436fc0043b5e160888"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
       "sha256": "367e9e939c4293474de2c636b21506ebd69128dd18ec1e2d346bd2e0078e6b7b"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
       "sha256": "945858cfcd5f8b9afba04503df8ad83b58d44f274cbd55ab2235f08d964e402c"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportCsv.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportCsv.kt",
       "sha256": "26ca2be6eeba505022491f83d3e943d8341a5b019dfc7b34ee8bb0f23e1b5d5f"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderReadPort.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderReadPort.kt",
       "sha256": "1bee78b31af3de2ecc06e50179205984534e5d138ebfb9e68239619d3b03b81e"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
       "sha256": "fc5020f89e9320a0a97d8c44c5ab5c737ce1df5de9e6466d4c6dcd0db5362375"
     }
   ],
@@ -53,7 +53,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
             "tests": 4,
             "failures": 0,
             "errors": 0,
@@ -81,32 +81,32 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportService.kt",
         "line": 17,
         "sha256": "3877da2a0853a700a0d2113ae4784f2cd2803417564632436fc0043b5e160888"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
         "line": 9,
         "sha256": "367e9e939c4293474de2c636b21506ebd69128dd18ec1e2d346bd2e0078e6b7b"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
         "line": 8,
         "sha256": "945858cfcd5f8b9afba04503df8ad83b58d44f274cbd55ab2235f08d964e402c"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportCsv.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportCsv.kt",
         "line": 1,
         "sha256": "26ca2be6eeba505022491f83d3e943d8341a5b019dfc7b34ee8bb0f23e1b5d5f"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderReadPort.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderReadPort.kt",
         "line": 7,
         "sha256": "1bee78b31af3de2ecc06e50179205984534e5d138ebfb9e68239619d3b03b81e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
         "line": 15,
         "sha256": "fc5020f89e9320a0a97d8c44c5ab5c737ce1df5de9e6466d4c6dcd0db5362375"
       }
@@ -131,7 +131,7 @@
       "G(WarehouseReportIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReportIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReportIT.kt",
             "sha256": "f41cda8439b469f1ca83020bc7327265cdafd1bef82dbd9eb0d3b3d62d8f692c",
             "testAnnotations": 4
           }
@@ -149,13 +149,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "aabd4ebdfbc419adcc3151c27d964850a98b23c1a7c1c889f8eb3a82326991d4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReportIT.xml"
             }
           ],
           "proof": {
@@ -170,13 +170,13 @@
           "tests": 4,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ad07547bf6e3f2a7f64d6746d89ff092373684df8d5ad9d77817446dedc6e4d1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReportIT.xml"
             }
           ]
         },
@@ -192,13 +192,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "238c2b9970761c8808dfa77774ac5fe1a3e2a4f69b73e151b040c0583e6ecbd2",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.inventory.WarehouseReportIT.xml"
             }
           ],
           "proof": {
@@ -238,7 +238,7 @@
       "G(WarehouseReportIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReportIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReportIT.kt",
             "sha256": "f41cda8439b469f1ca83020bc7327265cdafd1bef82dbd9eb0d3b3d62d8f692c",
             "testAnnotations": 4
           }
@@ -256,13 +256,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "aabd4ebdfbc419adcc3151c27d964850a98b23c1a7c1c889f8eb3a82326991d4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReportIT.xml"
             }
           ],
           "proof": {
@@ -277,13 +277,13 @@
           "tests": 4,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ad07547bf6e3f2a7f64d6746d89ff092373684df8d5ad9d77817446dedc6e4d1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReportIT.xml"
             }
           ]
         },
@@ -299,13 +299,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "238c2b9970761c8808dfa77774ac5fe1a3e2a4f69b73e151b040c0583e6ecbd2",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.inventory.WarehouseReportIT.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.inventory.WarehouseReportIT.xml"
             }
           ],
           "proof": {
@@ -353,27 +353,27 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportService.kt",
         "sha256": "3877da2a0853a700a0d2113ae4784f2cd2803417564632436fc0043b5e160888"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
         "sha256": "367e9e939c4293474de2c636b21506ebd69128dd18ec1e2d346bd2e0078e6b7b"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
         "sha256": "945858cfcd5f8b9afba04503df8ad83b58d44f274cbd55ab2235f08d964e402c"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportCsv.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportCsv.kt",
         "sha256": "26ca2be6eeba505022491f83d3e943d8341a5b019dfc7b34ee8bb0f23e1b5d5f"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderReadPort.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderReadPort.kt",
         "sha256": "1bee78b31af3de2ecc06e50179205984534e5d138ebfb9e68239619d3b03b81e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
         "sha256": "fc5020f89e9320a0a97d8c44c5ab5c737ce1df5de9e6466d4c6dcd0db5362375"
       }
     ],

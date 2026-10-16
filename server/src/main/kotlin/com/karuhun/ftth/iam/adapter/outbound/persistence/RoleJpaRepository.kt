@@ -1,0 +1,10 @@
+package com.karuhun.ftth.iam.adapter.outbound.persistence
+
+import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
+
+interface RoleJpaRepository : JpaRepository<RoleJpaEntity, UUID> {
+    fun findByName(name: String): RoleJpaEntity?
+    fun findByDefaultKey(defaultKey: String): RoleJpaEntity?
+    fun existsByName(name: String): Boolean
+}

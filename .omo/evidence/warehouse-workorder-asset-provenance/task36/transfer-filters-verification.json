@@ -7,7 +7,7 @@
       "tests": 4,
       "suites": [
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferListIT",
           "tests": 4,
           "failures": 0,
           "errors": 0,
@@ -22,7 +22,7 @@
       "tests": 5,
       "suites": [
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferContractTest",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -30,7 +30,7 @@
           "xmlSha256": "6b4d5c508eb34c85714d0361158e554b838cf07df3d2f4b7a10a9edb13849c67"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferIT",
           "tests": 3,
           "failures": 0,
           "errors": 0,
@@ -38,7 +38,7 @@
           "xmlSha256": "b2d6f0f6e27659269751cca3b4d9a91dbd142a5ac4f0cef2d83b2addc155738c"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferITSerial",
           "tests": 1,
           "failures": 0,
           "errors": 0,

@@ -9,7 +9,7 @@
   },
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "sha256": "4a4205139bfe0d71c7ff1b09e0924cd24aedab3588fa995d0b12fa190c26c49c",
       "tests": 3,
       "failures": 0,
@@ -17,7 +17,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.customer.CustomerAssetExceptionContextIT",
+      "suite": "com.karuhun.ftth.customer.CustomerAssetExceptionContextIT",
       "sha256": "57d4c731bf8e62b684799fc10a9a083692b8a5a5a4688f6c7f630ae6a12b2b65",
       "tests": 10,
       "failures": 0,
@@ -26,8 +26,8 @@
     }
   ],
   "changedSinceR2": {
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc",
-    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetExceptionContextIT.kt": "9a61868e7f7d18efd9a7d321d2e2cf82a06b4f048096a152dc895bd71996f84e"
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryAssetTitleService.kt": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc",
+    "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetExceptionContextIT.kt": "9a61868e7f7d18efd9a7d321d2e2cf82a06b4f048096a152dc895bd71996f84e"
   },
   "allServerInputsUnchangedDuringRun": true,
   "serverInputCount": 2602,

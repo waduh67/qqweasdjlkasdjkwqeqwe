@@ -3,9 +3,9 @@
   "sourceBase": "b36090652b7c33d3b06dc21df9962a6229595f58",
   "sourceSha256": {
     "server/src/main/resources/db/migration/V178_8__warehouse_return_title_scope_entry.sql": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnTitleScopeUpgradeIT.kt": "700d670b360ee38767957ed7f1e1e05a1b887b3391f463c7a0907bfd6a2be3fb",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDeferredGuardCatalog.kt": "0ad792c93d372a0fcd1890587569aa0c18a36a653b5248abe6cd82e1a450208b",
-    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt": "5b11a298619da67d7b4e1f12f27f57ba6752a542f4c35eafe0fb2677ae87e016"
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnTitleScopeUpgradeIT.kt": "700d670b360ee38767957ed7f1e1e05a1b887b3391f463c7a0907bfd6a2be3fb",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDeferredGuardCatalog.kt": "0ad792c93d372a0fcd1890587569aa0c18a36a653b5248abe6cd82e1a450208b",
+    "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt": "5b11a298619da67d7b4e1f12f27f57ba6752a542f4c35eafe0fb2677ae87e016"
   },
   "findings": [
     "AV02 opening provenance uses obsolete transition; assert current explicit source rejection and rollback.",

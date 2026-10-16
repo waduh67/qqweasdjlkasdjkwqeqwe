@@ -26,11 +26,14 @@ class HistoricalOverlayTest(unittest.TestCase):
             repo.mkdir()
             self.git(repo, "init", "-q")
             self.write(repo, f"{MIGRATIONS}/V1__base.sql", "SELECT 1;\n")
+        self.write(self.old, "server/src/main/kotlin/com/legacy/ftth/FtthApplication.kt", "package com.legacy.ftth\nclass FtthApplication\n")
+        self.write(self.current, "server/src/main/kotlin/com/karuhun/ftth/FtthApplication.kt", "package com.karuhun.ftth\nclass FtthApplication\n")
+        self.write(self.current, "scripts/warehouse/historical_namespace.py", (ROOT / "scripts/warehouse/historical_namespace.py").read_text())
         self.write(self.current, f"{MIGRATIONS}/V2__new.sql", "SELECT 2;\n")
         self.write(self.old, "server/src/test/kotlin/example/UpgradeIT.kt", "old fixture\n")
         self.write(self.current, "server/src/historicalTest/kotlin/example/UpgradeIT.kt", "historical fixture\n")
         for name in ("WarehouseSchemaDatabase", "WarehouseMigrationInventory"):
-            self.write(self.current, f"server/src/test/kotlin/com/duluin/ftth/inventory/{name}.kt", name + "\n")
+            self.write(self.current, f"server/src/test/kotlin/com/karuhun/ftth/inventory/{name}.kt", name + "\n")
         self.write(self.current, HELPER, "inventory helper\n")
         self.write(self.current, "scripts/warehouse/historical-upgrades.sh", RUNNER.read_text())
         for repo in (self.old, self.current):
@@ -47,10 +50,10 @@ class HistoricalOverlayTest(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
 
-    def overlay(self, attempt):
+    def overlay(self, attempt, name="example.UpgradeIT"):
         destination = self.base / attempt
         destination.mkdir()
-        result = subprocess.run(["python3", "-", str(self.old), str(self.current), str(destination), "example.UpgradeIT"],
+        result = subprocess.run(["python3", "-", str(self.old), str(self.current), str(destination), name],
                                 input=OVERLAY, env=self.environment, capture_output=True, text=True)
         return result, destination
 
@@ -82,6 +85,22 @@ class HistoricalOverlayTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Historical migration changed", result.stderr)
         self.assertEqual((self.old / f"{MIGRATIONS}/V1__base.sql").read_text(), "SELECT 999;\n")
+
+    def test_package_rename_adapts_only_harness_and_preserves_historical_product(self):
+        name = "com.karuhun.ftth.inventory.PackageUpgradeIT"
+        source = "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/PackageUpgradeIT.kt"
+        self.write(self.current, source, "package com.karuhun.ftth.inventory\nimport com.karuhun.ftth.FtthApplication\n")
+        original = (self.old / "server/src/main/kotlin/com/legacy/ftth/FtthApplication.kt").read_bytes()
+        result, destination = self.overlay("renamed", name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        proof = json.loads((destination / "inputs.json").read_text())
+        self.assertEqual(proof["classes"], ["com.legacy.ftth.inventory.PackageUpgradeIT"])
+        target = self.old / "server/src/test/kotlin/com/legacy/ftth/inventory/PackageUpgradeIT.kt"
+        self.assertEqual(target.read_text(), "package com.legacy.ftth.inventory\nimport com.legacy.ftth.FtthApplication\n")
+        self.assertEqual((self.old / "server/src/main/kotlin/com/legacy/ftth/FtthApplication.kt").read_bytes(), original)
+        self.assertIn("com.karuhun.ftth", (self.current / source).read_text())
+        second, _ = self.overlay("renamed-again", name)
+        self.assertEqual(second.returncode, 0, second.stderr)
 
 
 if __name__ == "__main__":

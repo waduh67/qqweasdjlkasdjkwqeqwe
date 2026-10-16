@@ -72,79 +72,79 @@
       "matches_r2": null
     },
     {
-      "path": "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+      "path": "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
       "sha256": "22a443ac2ce8d80504d921e38e9525da12aba6674d5c7a5a4bacef6aa092b76f",
       "r2_sha256": "22a443ac2ce8d80504d921e38e9525da12aba6674d5c7a5a4bacef6aa092b76f",
       "matches_r2": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
       "sha256": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
       "r2_sha256": "cab1020599eaa757fbc800555790f37d8eab1d3528cf7ec6d70598ba870cb960",
       "matches_r2": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
       "sha256": "d00dbc91068435ba1de6abf753bfab5715932705ef397a4d3baeda4966eb14c7",
       "r2_sha256": "d00dbc91068435ba1de6abf753bfab5715932705ef397a4d3baeda4966eb14c7",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeProcess.kt",
       "sha256": "f0ea9a23be070dd42ebf81b75991d096e6e7050edfced1f9a15ab95a50cc152c",
       "r2_sha256": "f0ea9a23be070dd42ebf81b75991d096e6e7050edfced1f9a15ab95a50cc152c",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
       "sha256": "fe4425924b1a4359a2a06954e566b454ed952fa21cb407ba4c12b9db3694ae37",
       "r2_sha256": "fe4425924b1a4359a2a06954e566b454ed952fa21cb407ba4c12b9db3694ae37",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
       "sha256": "430f6e188d2dfffcf091af39157f73c59ae1c4a91680e48098cb677fae76bb16",
       "r2_sha256": "430f6e188d2dfffcf091af39157f73c59ae1c4a91680e48098cb677fae76bb16",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
       "sha256": "6fbc5ffb2079bcb800f46f5c2298ed71dc91a7df58645f2530a83c78252f59a6",
       "r2_sha256": "6fbc5ffb2079bcb800f46f5c2298ed71dc91a7df58645f2530a83c78252f59a6",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt",
       "sha256": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
       "r2_sha256": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehousePostingFixture.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehousePostingFixture.kt",
       "sha256": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
       "r2_sha256": "bc01e610e3a25d97dea0d7aeb4014ee51600c390a2bb3d0e9689cf7ba091e363",
       "matches_r2": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferFixture.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferFixture.kt",
       "sha256": "a80ed43f0fe6c709b0b238a17ff62e59739e83edff1d8387cfeba17ad30efd65",
       "r2_sha256": "a80ed43f0fe6c709b0b238a17ff62e59739e83edff1d8387cfeba17ad30efd65",
       "matches_r2": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseTransferService.kt",
       "sha256": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
       "r2_sha256": "6ce9201e6f8acd3e275baebac87a27f80eb11516c5dce6e43ab8015c9e3e82dc",
       "matches_r2": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountService.kt",
       "sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
       "r2_sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022",
       "matches_r2": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseTransferController.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseTransferController.kt",
       "sha256": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8",
       "r2_sha256": "9090b97c103b459ff1f5d4c0964816ad274fa15bd1949d19cdf8a2dd98cab7d8",
       "matches_r2": true

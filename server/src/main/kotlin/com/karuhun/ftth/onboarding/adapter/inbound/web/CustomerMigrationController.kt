@@ -1,0 +1,59 @@
+package com.karuhun.ftth.onboarding.adapter.inbound.web
+
+import com.karuhun.ftth.common.domain.error.ValidationException
+import com.karuhun.ftth.onboarding.application.service.*
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.stereotype.Component
+import org.springframework.web.bind.annotation.*
+import java.time.LocalDate
+import java.util.UUID
+
+@Component
+class MigrationAreaAccess(private val authority: com.karuhun.ftth.iam.CurrentAuthorityApi, private val areas: com.karuhun.ftth.iam.IamApi) {
+    @org.springframework.transaction.annotation.Transactional
+    fun requireRadius(enabled: Boolean) {
+        if (enabled && "bng.access.manage" !in authority.lockCurrent().permissions)
+            throw org.springframework.security.access.AccessDeniedException("Akses pengelolaan akun RADIUS dibatasi")
+    }
+    @org.springframework.transaction.annotation.Transactional
+    fun requireArea(areaId: UUID?) {
+        val scope = authority.lockCurrent().areaScope
+        if (scope is com.karuhun.ftth.common.security.AuthorityScope.Restricted && areaId !in scope.ids) throw ValidationException("Pilih area yang dapat Anda kelola")
+        if (areaId != null && areas.areasByIds(setOf(areaId)).isEmpty()) throw ValidationException("Area tidak ditemukan")
+    }
+}
+
+@RestController
+@RequestMapping("/api/onboarding/migrations")
+class CustomerMigrationController(private val service: CustomerMigrationService, private val access: MigrationAreaAccess,
+    private val onus: CustomerMigrationOnuService) {
+    @PostMapping
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update') && (#command.onuSerial == null || #command.onuSerial.isBlank() || @authz.canAll('customer.onu.assign','monitoring.provisioning.view'))")
+    fun register(@RequestBody command: CustomerMigrationCommand): CustomerMigrationView {
+        access.requireRadius(command.prepareRadius)
+        access.requireArea(command.customer.areaId)
+        return service.register(command.copy(source = MigrationSource.MANUAL))
+    }
+
+    @GetMapping("/{customerId}")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun get(@PathVariable customerId: UUID) = service.get(customerId)
+
+    @PostMapping("/{customerId}/billing")
+    @PreAuthorize("@authz.can('customer.subscription.update')")
+    fun billing(@PathVariable customerId: UUID, @RequestBody command: StartMigrationBillingRequest) =
+        service.startBilling(customerId, command.firstInvoiceOn, command.billingDay)
+
+    @PostMapping("/{customerId}/radius")
+    @PreAuthorize("@authz.can('bng.access.manage')")
+    fun radius(@PathVariable customerId: UUID, @RequestBody command: MigrationRadiusCommand) =
+        service.prepareRadius(customerId, command)
+
+    @PostMapping("/{customerId}/onus")
+    @PreAuthorize("@authz.canAll('customer.onu.assign','monitoring.provisioning.view')")
+    fun linkOnu(@PathVariable customerId: UUID, @RequestBody command: LinkMigrationOnuRequest) =
+        onus.link(customerId, command.serialNumber)
+}
+
+data class StartMigrationBillingRequest(val firstInvoiceOn: LocalDate, val billingDay: Int? = null)
+data class LinkMigrationOnuRequest(val serialNumber: String)

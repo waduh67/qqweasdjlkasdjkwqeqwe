@@ -42,37 +42,37 @@
           "sha256": "d598701793f0a4913f0e1f9d7ff41802a12b0b63057e50eb53d1e348c40c7857"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderValidationPort.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderValidationPort.kt",
           "line": 6,
           "sha256": "9bae2bef7e07889c2bfc7a89699fdfbdd79b30af0cc003815fcc274c2a9d7eba"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/WorkOrderMaterialContextApi.kt",
           "line": 7,
           "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/iam/CurrentAuthorityApi.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/iam/CurrentAuthorityApi.kt",
           "line": 8,
           "sha256": "0fce38f6ff3bdee2660529595365a955a32cf0f2447893579d2fff5f1c7ca21d"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
           "line": 1,
           "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseDocumentContracts.kt",
           "line": 1,
           "sha256": "5bccecbfce1b0dd489460da0faa0fbe450a3bf2cf3d9e61e8eb6fefe511fc2d2"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehousePolicyContracts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehousePolicyContracts.kt",
           "line": 1,
           "sha256": "9a90336cdc9ae9e18d4bd2910ed886adcd3f641a726d49a6d35bec1775ea6260"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseApprovalContracts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseApprovalContracts.kt",
           "line": 1,
           "sha256": "2210b38bfead007eee1b39de8d01ec9b426ddc33e5d238cc74afe368d98001a7"
         }
@@ -91,22 +91,22 @@
       "task": 3,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockQuantity.kt",
           "line": 6,
           "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockUnitDefinition.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockUnitDefinition.kt",
           "line": 5,
           "sha256": "fb48645faa7988972e3e899b3adb80db00461bd455688a3ca1283fbc818d5d5e"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/common/domain/identity/DeviceIdentity.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/common/domain/identity/DeviceIdentity.kt",
           "line": 6,
           "sha256": "1a002445614de81f28b1433871f9a8393f90b86e340fe11fea23ea2535c2e202"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
           "line": 1,
           "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
         }
@@ -124,7 +124,7 @@
       "task": 4,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
           "line": 22,
           "sha256": "e3e73ce6cd9883d81503bc19a62e02a04acb909c99a7443c56c24cea0fdf59da"
         },
@@ -152,32 +152,32 @@
       "task": 5,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePostingService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehousePostingService.kt",
           "line": 13,
           "sha256": "078f9905f466f9067be04664bb59dd8ff8cb8b58831629fe305316cdf5b5132f"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehousePostingPersistence.kt",
           "line": 16,
           "sha256": "8e6b14f57a3975e167bc8a27567f1112fe05ad485053ef63831edef078d1edc0"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingStock.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/PostingStock.kt",
           "line": 1,
           "sha256": "cf7c85b2769e81ca4090ce6f0f868bdfa0d08ab234b92a69b191bffb67e95d55"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/PostingProjection.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/PostingProjection.kt",
           "line": 1,
           "sha256": "02a9ef90238f1eff3608faf21d8d44301a0eadadc8e24414fbdef78342454635"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableInventoryFulfillmentService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/DurableInventoryFulfillmentService.kt",
           "line": 14,
           "sha256": "2815bf094b7fe4623f1d3aef3bd472196c010114b46039215a4f91612329dd5a"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialConsumptionService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialConsumptionService.kt",
           "line": 13,
           "sha256": "503e5205358ada33a7abbd83c86a77d258319451343bfe2fefaca53450bb8a7e"
         }
@@ -195,27 +195,27 @@
       "task": 6,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseOperationStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseOperationStore.kt",
           "line": 8,
           "sha256": "613b659c129bb9bd5fa5799629582e4e7b512029b25266382ccef5dd30b0cb66"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseOutboxDeliveryStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseOutboxDeliveryStore.kt",
           "line": 11,
           "sha256": "2cf16b6fac873e071d5f69614dd7dce8cae568bfff1f0555d6420833871d73d7"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOutboxDispatcher.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOutboxDispatcher.kt",
           "line": 13,
           "sha256": "d42f4da129fa518ef6eed886d8783220b8cafd2cd055760156f7ac6ba82534b5"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/iam/adapter/outbound/persistence/CurrentAuthorityPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/iam/adapter/outbound/persistence/CurrentAuthorityPersistence.kt",
           "line": 20,
           "sha256": "2faccf09eab302d7c617e9f37610e5efd77a96694fb89a1dfbbc6244ae433637"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryTenantPolicyService.kt",
           "line": 22,
           "sha256": "e3e73ce6cd9883d81503bc19a62e02a04acb909c99a7443c56c24cea0fdf59da"
         }
@@ -233,17 +233,17 @@
       "task": 7,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseMasterController.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseMasterController.kt",
           "line": 22,
           "sha256": "a36d1798f9c23ea386d2804fa8685444d248465bbc662a84332cd53b7d4ed87d"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMasterService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseMasterService.kt",
           "line": 21,
           "sha256": "72935465502ff58801f481a892a05311e3c7bc2467bec781a55350240ed2f6f7"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMasterPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseMasterPersistence.kt",
           "line": 13,
           "sha256": "59334a3bef75234137dd8e483487d5690d473b2c51b76fd9cf7b0c9b8c48bd39"
         }
@@ -261,27 +261,27 @@
       "task": 8,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseReceiptController.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseReceiptController.kt",
           "line": 16,
           "sha256": "41ca444f1a8b4dbe67677fa73ea3b09edf8863670b271d74074a3910013a9986"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReceiptService.kt",
           "line": 19,
           "sha256": "aad286f05f70cf3c91f9d245858f666ede2790478d50c35ea09f7aee286a867b"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
           "line": 11,
           "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptOrigins.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptOrigins.kt",
           "line": 13,
           "sha256": "31b276132e28668cc86f1a77809c7cfdeffe1e3729e3b60beafac1e7bf8d0850"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
           "line": 26,
           "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
         }
@@ -299,17 +299,17 @@
       "task": 9,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseQueryController.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseQueryController.kt",
           "line": 12,
           "sha256": "2f8b0ac8da3af33672cf55a8e67ad3c3ba968abc3be43bdcb24628f1473f78cf"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseQueryService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseQueryService.kt",
           "line": 19,
           "sha256": "d7944e546a151e4ef4964f52066548c59751425df496b8981b826d1d247496c2"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseQueryPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseQueryPersistence.kt",
           "line": 8,
           "sha256": "ce8efccf7e89519328aa260ef274dfa62205a54a60b34223bcbccb3bdc28d3ff"
         }
@@ -327,27 +327,27 @@
       "task": 10,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationService.kt",
           "line": 23,
           "sha256": "1698d6e3b3f371719f4d744c86b51e91b9a0ab8af381233f4370b7413db0669c"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
           "line": 20,
           "sha256": "06f08914e2d28711875ab373ea65aa1cfb51c66a3b94591bda50717d8b2d2ded"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
           "line": 14,
           "sha256": "ceb9a73a9311582f326ac3f973f74602f3ab0f99976d2c585572242a6c7e71b0"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
           "line": 11,
           "sha256": "72e1f1a4b6035a238cb2b2e766cd466856ff26841dc48056ff26bcbf5933d273"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt",
           "line": 20,
           "sha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9"
         }
@@ -365,22 +365,22 @@
       "task": 11,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehousePolicyService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehousePolicyService.kt",
           "line": 12,
           "sha256": "b23762a3b0b652e5fe24b00936209bb54a258a3357cd22b4125eb7581b771b09"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDelegationService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseDelegationService.kt",
           "line": 14,
           "sha256": "9f21e17db268b1d34eb4ba43d3c728132e219c75b8a625377ff5cc2c843b204f"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/iam/domain/catalog/PermissionCatalog.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/iam/domain/catalog/PermissionCatalog.kt",
           "line": 13,
           "sha256": "5843d163672973f850c303ae31ea0d5c2f69147ad2b54596e8ff0a622da04bdf"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWarehouseScopeApi.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWarehouseScopeApi.kt",
           "line": 6,
           "sha256": "1d5bda19ded8bb0eb53dc46fb851b45e61b72f953807a164059b98ea471f0bac"
         },
@@ -403,22 +403,22 @@
       "task": 12,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseApprovalStore.kt",
           "line": 12,
           "sha256": "6ea8e615144ce7112180d150a4ed0d295e3add5f63060061bd5d005e66b05f76"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalAuthority.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseApprovalAuthority.kt",
           "line": 13,
           "sha256": "092a5b4e0c7656903b62dde8e57fb925c6acef25c8c4fdf342cd1ef1df3ef3d2"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalExpiry.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseApprovalExpiry.kt",
           "line": 15,
           "sha256": "d55cdee852b10a482567e4970fee5d1e6fbf49d69771a560243a7e73dc8ce340"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/DurableApprovalService.kt",
           "line": 1,
           "sha256": "19036b8adf56b4342d45472514d44b8b1f0824d5abadba10e21305020e555825"
         }
@@ -436,32 +436,32 @@
       "task": 13,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/MaterialWorkflowService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/MaterialWorkflowService.kt",
           "line": 12,
           "sha256": "d718c91eba0d8a8228c57530ff7a93b314c995af0edfe0b780ce90968c831a60"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/MaterialWorkflowController.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/MaterialWorkflowController.kt",
           "line": 12,
           "sha256": "1cef30ef05601a6246f097820661dff1b1a7120910fc16dd20ab1531eb75539c"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/WorkOrderMaterialContextApi.kt",
           "line": 7,
           "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialService.kt",
           "line": 16,
           "sha256": "48d46cc0dc4758b078503de8655337e37c28178c7112f992a87718a3a2623756"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialTemplateService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialTemplateService.kt",
           "line": 14,
           "sha256": "02def784721c2b11cbb5d341fec25c89b84cb4f7b7f1ff8a2cd1d786064f7337"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialPlans.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialPlans.kt",
           "line": 15,
           "sha256": "174321df2340802740507489621e114bac0d2e0f1a7feb4c0f945ddf2bf92987"
         }
@@ -479,12 +479,12 @@
       "task": 14,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseIssueService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseIssueService.kt",
           "line": 21,
           "sha256": "0f4dd7799a22c20574fef7ffb0ae0659ac222c28c6ac9fde5c25060ec83426b6"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseIssueStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseIssueStore.kt",
           "line": 11,
           "sha256": "1244697a4c5264db42203e200804c46f4480daf8ae1cd6dcc787fcdf7af88d78"
         }
@@ -502,12 +502,12 @@
       "task": 15,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialReceiptService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/application/service/MaterialReceiptService.kt",
           "line": 21,
           "sha256": "d2d17b89b6ac1ff06187f13a51430da8dbe91fe327bb3bb34adbb2ec7a8e2552"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
           "line": 22,
           "sha256": "028423ffa4e33b69a955457e4d77e3725a4541aa209f162a4b2553aa8f6e4f5d"
         }
@@ -525,22 +525,22 @@
       "task": 16,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialUsageService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/application/service/MaterialUsageService.kt",
           "line": 21,
           "sha256": "4ba8dd8637a582974ba104bd651031cbacc13072b5be17d502fbe95557d236fa"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialUsageService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialUsageService.kt",
           "line": 21,
           "sha256": "c9f9f939a67a9850daea7f7f68348da9251fd91fb72ffa5ac5322e5ab489692f"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialUsageDeltaService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialUsageDeltaService.kt",
           "line": 17,
           "sha256": "b8954c6012974320eab6632b25d0198505eb2bb89efec0df371c98bc00532808"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialFacts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseMaterialFacts.kt",
           "line": 16,
           "sha256": "7416ba18bd21fee9bdd44d9bbc81e237eab4d7e515393a509e1c980c70cfb83c"
         }
@@ -558,27 +558,27 @@
       "task": 17,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentContracts.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/FulfillmentContracts.kt",
           "line": 6,
           "sha256": "c6b2fb84209398cce97b8d4f70ff41b94c8a938d30d85cf4bd81c5c37d0099f7"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentEventListeners.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/FulfillmentEventListeners.kt",
           "line": 15,
           "sha256": "b196b7e76be6b9f084cfecc2f250a295a95415b6f8902c26d5e0484b37f9f579"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialConsumptionService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialConsumptionService.kt",
           "line": 13,
           "sha256": "503e5205358ada33a7abbd83c86a77d258319451343bfe2fefaca53450bb8a7e"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySettlementApi.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventorySettlementApi.kt",
           "line": 1,
           "sha256": "978be5445ba9cf740fcac7b32ded725a098133db3af7ed275deda83e18777a94"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventorySettlementService.kt",
           "line": 1,
           "sha256": "34805ef237b772dde31ce1cb93057578880ed5e53fdb6b64851ef117fa176eed"
         }
@@ -596,22 +596,22 @@
       "task": 18,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialSettlementService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/application/service/MaterialSettlementService.kt",
           "line": 13,
           "sha256": "55ea935e90867c80f9cf163970660498b1cb396db8d993e74fd6b6edb48266b4"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialLifecycleService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialLifecycleService.kt",
           "line": 15,
           "sha256": "c61648c896a6d9ac8a9b0d69af8dd2c3f7c76dc6320abd6a7415158126d81dd0"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialResidualService.kt",
           "line": 22,
           "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/application/service/WorkOrderMaterialReworkService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/application/service/WorkOrderMaterialReworkService.kt",
           "line": 20,
           "sha256": "61685f04039bf2d28e25f9364bbdcc66ba247b0442a42eddbd662d60df762a22"
         }
@@ -629,17 +629,17 @@
       "task": 19,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/AssetAssignmentPersistence.kt",
           "line": 17,
           "sha256": "b4f6cda57e8300a6348c19c0311903fb7b573073c4993c5b1999308060025b7b"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetInstallationStore.kt",
           "line": 15,
           "sha256": "1eb4a686da95bc98e2a870b8966689413ee7f109ddf372f98211d4d62733491e"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerEpisodeValidation.kt",
           "line": 1,
           "sha256": "471f381760cdc680be36a7e49a0868c20462aec97bb41884cbb5d9c30c79c7b8"
         },
@@ -692,27 +692,27 @@
       "task": 20,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryDeploymentApi.kt",
           "line": 6,
           "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryDeploymentService.kt",
           "line": 18,
           "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
           "line": 16,
           "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/CustomerAssetWorkflowService.kt",
           "line": 15,
           "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetService.kt",
           "line": 20,
           "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
         }
@@ -731,17 +731,17 @@
       "task": 21,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetHandoverService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetHandoverService.kt",
           "line": 17,
           "sha256": "6d1877832e88cad8e04b8e964f3412c9315841486ce549726b6d45234bacbe59"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
           "line": 15,
           "sha256": "0f88052f0b10822ea8c8174360c8865b7ccae5b874cefdbce122f179ea291bca"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
           "line": 8,
           "sha256": "5cf6f8412b73b0cc73837b072f5c2b8dd3ec14b7ada91c300111b903fcadb2eb"
         }
@@ -759,22 +759,22 @@
       "task": 22,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/AssetReplacementService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/AssetReplacementService.kt",
           "line": 12,
           "sha256": "0f08c48a7953cd57b27460d9b0496eb0fd7366fb8b30be7f869a37befa2e334d"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetReplacementService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetReplacementService.kt",
           "line": 16,
           "sha256": "e4539a16a88a53d17f5c2a38ef71fdfa40f2b63812a842659a272ad503275527"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetRelocationService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetRelocationService.kt",
           "line": 18,
           "sha256": "729ed360649f75a53e791377ca873cfbf287972a8e9828fbf42e28e7d970f200"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/CustomerAssetRetentionStore.kt",
           "line": 11,
           "sha256": "30a4e30106b61cbc0022c7393c432537136c15d6ddf97a4db5c47e186b3cba40"
         }
@@ -792,22 +792,22 @@
       "task": 23,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/DiscoveredOnuService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/monitoring/application/service/DiscoveredOnuService.kt",
           "line": 27,
           "sha256": "b21987ec8545936b72991f1dd4843a3064c3455036dc3c656fc48c3642207894"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/AutoProvisionScheduler.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/monitoring/application/service/AutoProvisionScheduler.kt",
           "line": 33,
           "sha256": "678e16a47e95bd05c5b6207d97c590d7aaec395d6933784258c491f9a0458e64"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/monitoring/application/service/MetricIngestionService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/monitoring/application/service/MetricIngestionService.kt",
           "line": 40,
           "sha256": "f89099d0b846001b04ecbbc814716b89f339649156549756c0f25cbf3f9ff7a9"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/cpe/adapter/outbound/persistence/CpeObservationBindingStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/cpe/adapter/outbound/persistence/CpeObservationBindingStore.kt",
           "line": 13,
           "sha256": "01e2766b48b59b535bbfd03b1597a099a319897626b8338c9e36de4572b651f0"
         },
@@ -830,27 +830,27 @@
       "task": 24,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/onboarding/application/service/ExpressOnboardingService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/onboarding/application/service/ExpressOnboardingService.kt",
           "line": 26,
           "sha256": "53e2fd26771b9230c35b37e0609d1b849d26de6ea5fd1e791d4e9ae51567c4de"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/onboarding/application/service/ImportCustomersService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/onboarding/application/service/ImportCustomersService.kt",
           "line": 42,
           "sha256": "62212d1b33f136754f742a1a11262475364dc85ff3a1d991d408d54646922ccc"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt",
           "line": 20,
           "sha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/subscriber360/application/service/Subscriber360Service.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/subscriber360/application/service/Subscriber360Service.kt",
           "line": 31,
           "sha256": "f6ec080ae25f1f5910911eb9daa752fcc3a8f52027f1ad61974f08b83c38a65c"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/MaterialConsumptionApiV2.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/MaterialConsumptionApiV2.kt",
           "line": 6,
           "sha256": "cccf5e2aa53e25cd031e110003d02bf439d9dd1173d3854dcbea7af8bf262bbf"
         }
@@ -868,17 +868,17 @@
       "task": 25,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseTransferService.kt",
           "line": 19,
           "sha256": "d27a67d1f7438b7a508c8795293aae0ae55c5c44e99352f280ce85a6630e3987"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseTransferDiscrepancyService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseTransferDiscrepancyService.kt",
           "line": 16,
           "sha256": "43d5c80af69fa3debead25120361d3d330f3b3f173b9e6d24bc83c6bbb709827"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferStore.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseTransferStore.kt",
           "line": 11,
           "sha256": "4f959e3bf849984393b1aca325c50c34d702422b1eca007871a8328e965b68bb"
         }
@@ -896,22 +896,22 @@
       "task": 26,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReturnService.kt",
           "line": 19,
           "sha256": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
           "line": 19,
           "sha256": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseRepairService.kt",
           "line": 18,
           "sha256": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialResidualService.kt",
           "line": 1,
           "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
         }
@@ -935,17 +935,17 @@
       "task": 27,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountService.kt",
           "line": 16,
           "sha256": "424d1d520f75dca21444d5980c7ca7fd1d89c159fc5db9dbd89730fb2915c6a5"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
           "line": 13,
           "sha256": "54020e00f658b03315d9ffabce54ba1b668ca70b8121d9853e0ec1d0be2c6d3d"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountQueryService.kt",
           "line": 19,
           "sha256": "c70bd771373dbaa4fe50041b19e36cd19160b18a16b11a3a30a41e35b9838a3f"
         }
@@ -963,17 +963,17 @@
       "task": 28,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseDispositionService.kt",
           "line": 17,
           "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCompensationService.kt",
           "line": 16,
           "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseAssetLossService.kt",
           "line": 18,
           "sha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a"
         }
@@ -1017,12 +1017,12 @@
       "task": 29,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReplenishmentService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReplenishmentService.kt",
           "line": 16,
           "sha256": "fe8dc468d10121ee16a5c2382cbb1bc681ee634533d7560d0f03bd4c8fededa7"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReplenishmentQueryService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReplenishmentQueryService.kt",
           "line": 19,
           "sha256": "f1dd9b097717e7d9ca632207823c4156c56802d5ffc1439ea7fcf5cf8034b270"
         }
@@ -1051,32 +1051,32 @@
       "task": 30,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportService.kt",
           "line": 17,
           "sha256": "3877da2a0853a700a0d2113ae4784f2cd2803417564632436fc0043b5e160888"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportPersistence.kt",
           "line": 9,
           "sha256": "367e9e939c4293474de2c636b21506ebd69128dd18ec1e2d346bd2e0078e6b7b"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReportDocuments.kt",
           "line": 8,
           "sha256": "945858cfcd5f8b9afba04503df8ad83b58d44f274cbd55ab2235f08d964e402c"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReportCsv.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReportCsv.kt",
           "line": 1,
           "sha256": "26ca2be6eeba505022491f83d3e943d8341a5b019dfc7b34ee8bb0f23e1b5d5f"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderReadPort.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderReadPort.kt",
           "line": 7,
           "sha256": "1bee78b31af3de2ecc06e50179205984534e5d138ebfb9e68239619d3b03b81e"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryReadAdapter.kt",
           "line": 15,
           "sha256": "fc5020f89e9320a0a97d8c44c5ab5c737ce1df5de9e6466d4c6dcd0db5362375"
         }
@@ -1775,12 +1775,12 @@
       "task": 42,
       "implementationSource": [
         {
-          "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+          "path": "mobile/domain/src/commonMain/kotlin/com/karuhun/ftth/mobile/domain/MaterialContracts.kt",
           "line": 6,
           "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
         },
         {
-          "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+          "path": "mobile/data/src/commonMain/kotlin/com/karuhun/ftth/mobile/data/MaterialRepository.kt",
           "line": 16,
           "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
         },
@@ -1789,7 +1789,7 @@
           "directory": true
         },
         {
-          "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+          "path": "mobile/app/src/commonMain/kotlin/com/karuhun/ftth/mobile/app/Di.kt",
           "line": 31,
           "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
         },
@@ -1833,17 +1833,17 @@
       "task": 43,
       "implementationSource": [
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
           "line": 15,
           "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
           "line": 26,
           "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
         },
         {
-          "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+          "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
           "line": 15,
           "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
         },
@@ -1968,12 +1968,12 @@
       "task": 44,
       "implementationSource": [
         {
-          "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+          "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
           "line": 16,
           "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d"
         },
         {
-          "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+          "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt",
           "line": 1,
           "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311"
         }
@@ -2154,12 +2154,12 @@
           "sha256": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2"
         },
         {
-          "path": "server/src/test/kotlin/com/duluin/ftth/WorkOrderIT.kt",
+          "path": "server/src/test/kotlin/com/karuhun/ftth/WorkOrderIT.kt",
           "line": 36,
           "sha256": "4d7934d192473964b02fc55a7df41e6ba2cf3e21850eed307959764265f7414d"
         },
         {
-          "path": "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt",
+          "path": "server/src/test/kotlin/com/karuhun/ftth/NetworkEndToEndIT.kt",
           "line": 29,
           "sha256": "7ac39bfa5a5077506a5526e54e004f7a095dc98702de184e80bd98b6fe02b015"
         }

@@ -8,7 +8,7 @@
   },
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "sha256": "71471a91cc8ecda28e1a607473397609c48735b3795bb2ef9a3e31fb42e0ba84",
       "tests": 3,
       "failures": 0,
@@ -16,7 +16,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftUpgradeIT",
       "sha256": "733c11692377eeae083122cdd7b8a589fc3cd9ebff51d17cf3521aea872f74f6",
       "tests": 1,
       "failures": 0,
@@ -24,7 +24,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryScopeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryScopeIT",
       "sha256": "ed14fd444e1e8e267e76687de4c90e7ca9aa10b8e3f42cfa3541d1e184bd3b5d",
       "tests": 1,
       "failures": 0,
@@ -32,7 +32,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
       "sha256": "156acb2cd40d6fcbd17561530ea01508faa8e50b1e67aae32aaf09ad780ad648",
       "tests": 1,
       "failures": 1,
@@ -40,7 +40,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDraftSchemaStartupIT",
       "sha256": "a45326f1934cedb1df83b639372466d60f8fddfa2036ff4bf9981d2e3c456e08",
       "tests": 2,
       "failures": 0,
@@ -48,7 +48,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftUpgradeIT",
       "sha256": "aaf9b7672e5b4a17db59a0b2c073875e6abff5b0fe98af2a9ce1c5ea78aeff45",
       "tests": 1,
       "failures": 0,

@@ -57,8 +57,8 @@
   "xmlSuites": 1,
   "privateArchiveSha256": {
     "server.log": "e87172917b777aba22932dbd28bee4d1b87fcd69d9d4a368eaaae5fe46f3559d",
-    "gradle-test-results/TEST-com.duluin.ftth.inventory.WarehouseEnvironmentIT.xml": "04b3ee5a9bf485776eb04f8042826d368c0e4cff6d46fddd0c6b1c9aab69e94c",
-    "wrapper-reports/TEST-com.duluin.ftth.inventory.WarehouseEnvironmentIT.xml": "04b3ee5a9bf485776eb04f8042826d368c0e4cff6d46fddd0c6b1c9aab69e94c",
+    "gradle-test-results/TEST-com.karuhun.ftth.inventory.WarehouseEnvironmentIT.xml": "04b3ee5a9bf485776eb04f8042826d368c0e4cff6d46fddd0c6b1c9aab69e94c",
+    "wrapper-reports/TEST-com.karuhun.ftth.inventory.WarehouseEnvironmentIT.xml": "04b3ee5a9bf485776eb04f8042826d368c0e4cff6d46fddd0c6b1c9aab69e94c",
     "wrapper-reports/counts.json": "eea8aa94e7d0a7ed20fe30631539794e88eca0e2ed7fe202ec5bb65b9e256a3b",
     "gradle-test-results/binary/in-progress-results-generic17163692398771545222.bin": "52b138cd0e493109848dc121eaf86ecd335a443ccdc24b15c512d923d013224f",
     "gradle-test-results/binary/output-events.bin": "1aacd04cd0106a0ce5223470b5acebf21cbf3c5c2a01ef918cb13789314f171d"
@@ -71,7 +71,7 @@
   "serverProductSourcesIdenticalAcrossThoseCheckpoints": true,
   "otherServerFilesChangedAcrossCheckpoints": [
     "server/Dockerfile",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseEnvironmentIT.kt"
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseEnvironmentIT.kt"
   ],
   "limitation": "The observed log counts include7 environment checks and1 historical projection check. The only XML is that prior7-test environment report; modern full XML was never finalized. Docker/environment-test files changed across the earlier checkpoints; do not claim all server test inputs remained identical. No successful full result exists."
 }

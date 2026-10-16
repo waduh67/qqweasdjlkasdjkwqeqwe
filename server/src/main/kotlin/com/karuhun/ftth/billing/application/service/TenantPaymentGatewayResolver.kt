@@ -1,0 +1,93 @@
+package com.karuhun.ftth.billing.application.service
+
+import com.karuhun.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
+import com.karuhun.ftth.billing.application.port.outbound.TenantPivotAccountRepository
+import com.karuhun.ftth.billing.config.BillingProperties
+import com.karuhun.ftth.billing.domain.model.GatewayMode
+import com.karuhun.ftth.billing.domain.model.ResolvedGatewayContext
+import com.karuhun.ftth.billing.domain.model.SubAccountStatus
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.tenancy.TenantApi
+import org.springframework.stereotype.Component
+
+/**
+ * Kontrak sempit "gateway aktif tenant tidak mendukung bayar in-app", dipisah dengan alasan yang
+ * sama seperti [InvoiceChargePort]: konsumen yang cuma perlu tahu apakah panel VA/QRIS layak
+ * dirender (mis. [BillingApiService] untuk halaman bayar publik) tak perlu menyeret seluruh
+ * kolaborator [TenantPaymentGatewayResolver]. Diimplementasikan oleh [TenantPaymentGatewayResolver].
+ */
+interface ActiveGatewayProbe {
+    /** true = charge in-app tak tersedia (MANUAL/fallback) → tunjukkan instruksi transfer/QRIS. */
+    fun manualOnly(): Boolean
+}
+
+/**
+ * Menyelesaikan gateway aktif untuk tenant saat ini. Tripay memakai kredensial tenant yang sudah
+ * didekripsi oleh repository. Model Pivot "business as platform":
+ * bila tenant memakai PIVOT dan sub-account-nya sudah terprovisi (aktif), charge dibuat di akun
+ * MASTER platform ([com.karuhun.ftth.billing.domain.model.PivotMasterConfig]) atas nama sub-account
+ * tenant (`x-submerchant-id`) plus split fee platform. Selain itu jatuh ke fallback MANUAL
+ * (instruksi transfer/QRIS tenant + verifikasi webhook bersecret global).
+ *
+ * Dipakai baik saat penerbitan tagihan (charge) maupun callback webhook (verifikasi) — satu tempat
+ * yang memetakan setelan mentah → bentuk siap-pakai, meniru langkah resolusi `NotificationSender`.
+ */
+@Component
+class TenantPaymentGatewayResolver(
+    private val repo: TenantPaymentGatewayRepository,
+    private val subAccounts: TenantPivotAccountRepository,
+    private val masterConfig: PivotMasterConfigProvider,
+    private val tenantApi: TenantApi,
+    private val props: BillingProperties,
+) : ActiveGatewayProbe {
+
+    override fun manualOnly(): Boolean = resolve().provider.equals("MANUAL", ignoreCase = true)
+
+    fun resolve(): ResolvedGatewayContext {
+        val settings = repo.find()
+        if (settings?.usesTripay == true) {
+            return ResolvedGatewayContext(
+                provider = "TRIPAY",
+                mode = GatewayMode.BYO,
+                secretKey = settings.tripay.privateKeyForGateway(),
+                webhookToken = null,
+                apiKey = settings.tripay.apiKeyForGateway(),
+                merchantCode = settings.tripay.merchantCode,
+                sandbox = settings.tripay.sandbox,
+            )
+        }
+        if (settings != null && settings.usesPivot) {
+            val master = masterConfig.current()
+            val sub = subAccounts.find()?.takeIf { it.provisioned && it.status.usableForCharge() }
+            if (master != null && sub?.subMerchantUuid != null) {
+                return ResolvedGatewayContext(
+                    provider = "PIVOT",
+                    mode = GatewayMode.PLATFORM,
+                    secretKey = master.merchantSecret,
+                    webhookToken = master.callbackApiKey,
+                    subAccountId = sub.subMerchantUuid,
+                    tenantSlug = tenantApi.findById(TenantContext.tenantId())?.slug,
+                    apiKey = master.merchantId,
+                    sandbox = master.sandbox,
+                    platformFeeMinor = master.platformFeeMinor,
+                    platformFeeType = master.platformFeeType,
+                )
+            }
+            // PIVOT dipilih tapi master nonaktif / sub-account belum siap → fallback MANUAL,
+            // agar pelanggan tetap mendapat instruksi bayar (bukan charge yang pasti gagal).
+        }
+        return manualFallback()
+    }
+
+    /** Fallback MANUAL memakai shared secret global — perilaku lama sebelum ada config per-tenant. */
+    private fun manualFallback() = ResolvedGatewayContext(
+        provider = "MANUAL",
+        mode = GatewayMode.BYO,
+        secretKey = null,
+        webhookToken = props.webhookSecret,
+    )
+
+    /** Sub-account bisa dipakai charge selama tidak dinonaktifkan/ditolak. */
+    private fun SubAccountStatus.usableForCharge(): Boolean =
+        this != SubAccountStatus.DEACTIVATED && this != SubAccountStatus.REJECTED
+}

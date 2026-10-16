@@ -1,0 +1,48 @@
+package com.karuhun.ftth.monitoring.application.port.outbound
+
+import com.karuhun.ftth.monitoring.domain.model.DiscoveredOnu
+import com.karuhun.ftth.monitoring.domain.model.DiscoveredOnuState
+import java.util.UUID
+
+/**
+ * Port keluar untuk kotak masuk ONU terdeteksi. Dedup per serial ditegakkan di
+ * lapisan ini (satu baris per serial per tenant) sehingga siklus polling yang
+ * berulang memperbarui baris yang sama, bukan menumpuk duplikat.
+ */
+interface DiscoveredOnuRepository {
+
+    fun save(discovered: DiscoveredOnu): DiscoveredOnu
+
+    fun findById(id: UUID): DiscoveredOnu?
+
+    /** Baris untuk sebuah serial di tenant aktif, apa pun state-nya — untuk upsert saat ingestion. */
+    fun findBySerialNumber(serialNumber: String): DiscoveredOnu?
+
+    /** Isi kotak masuk untuk sebuah state, terbaru dulu. */
+    fun findByState(state: DiscoveredOnuState): List<DiscoveredOnu>
+
+    /**
+     * Isi kotak masuk sebuah state yang disaring ke satu OLT, terbaru dulu — untuk
+     * pandangan per-OLT di halaman detail OLT. Baris ber-`oltId` null (OLT belum
+     * terpetakan di inventory) tak pernah ikut, memang di luar cakupan OLT itu.
+     */
+    fun findByStateAndOltId(state: DiscoveredOnuState, oltId: UUID): List<DiscoveredOnu>
+
+    /**
+     * Baris yang MASIH menunggu (DISCOVERED) untuk serial yang kini sudah dikenal —
+     * dipakai ingestion untuk menuntaskan sendiri kotak masuk begitu serial
+     * didaftarkan lewat jalur mana pun.
+     */
+    fun findDiscoveredBySerials(serialNumbers: Set<String>): List<DiscoveredOnu>
+
+    /** Menghapus permanen satu baris kotak masuk (bukan sekadar menandainya IGNORED). */
+    fun deleteById(id: UUID)
+
+    /**
+     * Menghapus semua baris kotak masuk milik sebuah OLT. Dipakai saat OLT-nya
+     * dihapus dari inventory: karena `discovered_onu` merujuk OLT tanpa foreign key
+     * lintas-module, ONU-nya tak ikut terhapus sendiri dan akan menggantung sebagai
+     * yatim. Mengembalikan jumlah baris yang terhapus.
+     */
+    fun deleteByOltId(oltId: UUID): Int
+}

@@ -10,31 +10,31 @@
       "sha256": "d598701793f0a4913f0e1f9d7ff41802a12b0b63057e50eb53d1e348c40c7857"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderValidationPort.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderValidationPort.kt",
       "sha256": "9bae2bef7e07889c2bfc7a89699fdfbdd79b30af0cc003815fcc274c2a9d7eba"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/WorkOrderMaterialContextApi.kt",
       "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/iam/CurrentAuthorityApi.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/iam/CurrentAuthorityApi.kt",
       "sha256": "0fce38f6ff3bdee2660529595365a955a32cf0f2447893579d2fff5f1c7ca21d"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
       "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseDocumentContracts.kt",
       "sha256": "638a23af0cf3dbb0710add7ecf59ec13a642013a02f2e98f92c62ed9058e4438"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehousePolicyContracts.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehousePolicyContracts.kt",
       "sha256": "9a90336cdc9ae9e18d4bd2910ed886adcd3f641a726d49a6d35bec1775ea6260"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseApprovalContracts.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseApprovalContracts.kt",
       "sha256": "2210b38bfead007eee1b39de8d01ec9b426ddc33e5d238cc74afe368d98001a7"
     }
   ],
@@ -55,7 +55,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+            "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
             "tests": 12,
             "failures": 0,
             "errors": 0,
@@ -69,7 +69,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.ModularityTests",
+            "suite": "com.karuhun.ftth.ModularityTests",
             "tests": 3,
             "failures": 0,
             "errors": 0,
@@ -102,37 +102,37 @@
         "sha256": "d598701793f0a4913f0e1f9d7ff41802a12b0b63057e50eb53d1e348c40c7857"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderValidationPort.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderValidationPort.kt",
         "line": 6,
         "sha256": "9bae2bef7e07889c2bfc7a89699fdfbdd79b30af0cc003815fcc274c2a9d7eba"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/WorkOrderMaterialContextApi.kt",
         "line": 7,
         "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/iam/CurrentAuthorityApi.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/iam/CurrentAuthorityApi.kt",
         "line": 8,
         "sha256": "0fce38f6ff3bdee2660529595365a955a32cf0f2447893579d2fff5f1c7ca21d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
         "line": 1,
         "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseDocumentContracts.kt",
         "line": 1,
         "sha256": "5bccecbfce1b0dd489460da0faa0fbe450a3bf2cf3d9e61e8eb6fefe511fc2d2"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehousePolicyContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehousePolicyContracts.kt",
         "line": 1,
         "sha256": "9a90336cdc9ae9e18d4bd2910ed886adcd3f641a726d49a6d35bec1775ea6260"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseApprovalContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseApprovalContracts.kt",
         "line": 1,
         "sha256": "2210b38bfead007eee1b39de8d01ec9b426ddc33e5d238cc74afe368d98001a7"
       }
@@ -157,12 +157,12 @@
       "G(WarehouseContractTest)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseContractTest.kt",
             "sha256": "e9d1177f32385d9a457e1b411b894ae1381d083146c94f051103f49483d912da",
             "testAnnotations": 12
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/MaterialWarehouseContractTest.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/MaterialWarehouseContractTest.kt",
             "sha256": "257c9623dae89a1c0132e2e143c8e6c5e62c3e7500f9eb54e5bb1caa62e66243",
             "testAnnotations": 7
           }
@@ -180,22 +180,22 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.MaterialWarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.MaterialWarehouseContractTest",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "7083cc8a66b206aeb1c3eb439c2b9f7d60b3e88b69892c20e80e2154839febb3",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.MaterialWarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.MaterialWarehouseContractTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "7c09f906814308cbaeff1d93dd25ea1b5afa5eec56645b755766cca82f2440da",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ],
           "proof": {
@@ -210,22 +210,22 @@
           "tests": 19,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.MaterialWarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.MaterialWarehouseContractTest",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "2a40b20539ce6cda684fc31a0085662cc444e402163aab4de5a975d2e97b2595",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.MaterialWarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.MaterialWarehouseContractTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "069fd904450299cf1139206c25b832e6d11d70ec9cdce9fe83ad6bb0bea33fef",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ]
         },
@@ -241,13 +241,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 2,
               "errors": 0,
               "skipped": 0,
               "sha256": "ebd5cb2bdf295f4cde142b7421451b133a699e1f51d1b61cc66936a1cfc32f56",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ],
           "proof": {
@@ -270,13 +270,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
-              "rawReference": "reports/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": "reports/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ],
           "fullServerPassClaim": false
@@ -285,7 +285,7 @@
       "G(ModularityTests)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/ModularityTests.kt",
             "sha256": "b4c97c3e8fee808e638539dcd3c8f3dd2f90bfdf0b1ac6e77f21e05b12e2dfbc",
             "testAnnotations": 3
           }
@@ -303,13 +303,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "03aae0f8819d45efaa2bcb1ef755874a1e2bf60674a81b9f0fa740f421528f52",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -324,13 +324,13 @@
           "tests": 3,
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1b84c43a06b9cdf58f7e1d42b21aa2e3590e68ac4e4eef1adf957c688dd64ca1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ]
         },
@@ -346,13 +346,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ac36aefabee49d2c2532d9c2efc02e6ee9473b07ac8f370daf3c11426a81fbdc",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -375,13 +375,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
-              "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "reports/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "fullServerPassClaim": false
@@ -417,12 +417,12 @@
       "G(WarehouseContractTest)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseContractTest.kt",
             "sha256": "e9d1177f32385d9a457e1b411b894ae1381d083146c94f051103f49483d912da",
             "testAnnotations": 12
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/MaterialWarehouseContractTest.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/MaterialWarehouseContractTest.kt",
             "sha256": "257c9623dae89a1c0132e2e143c8e6c5e62c3e7500f9eb54e5bb1caa62e66243",
             "testAnnotations": 7
           }
@@ -440,22 +440,22 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.MaterialWarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.MaterialWarehouseContractTest",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "7083cc8a66b206aeb1c3eb439c2b9f7d60b3e88b69892c20e80e2154839febb3",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.MaterialWarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.MaterialWarehouseContractTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "7c09f906814308cbaeff1d93dd25ea1b5afa5eec56645b755766cca82f2440da",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ],
           "proof": {
@@ -470,22 +470,22 @@
           "tests": 19,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.MaterialWarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.MaterialWarehouseContractTest",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "2a40b20539ce6cda684fc31a0085662cc444e402163aab4de5a975d2e97b2595",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.MaterialWarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.MaterialWarehouseContractTest.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "069fd904450299cf1139206c25b832e6d11d70ec9cdce9fe83ad6bb0bea33fef",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ]
         },
@@ -501,13 +501,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 2,
               "errors": 0,
               "skipped": 0,
               "sha256": "ebd5cb2bdf295f4cde142b7421451b133a699e1f51d1b61cc66936a1cfc32f56",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ],
           "proof": {
@@ -530,13 +530,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+              "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
               "tests": 12,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
-              "rawReference": "reports/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+              "rawReference": "reports/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
             }
           ],
           "fullServerPassClaim": false
@@ -545,7 +545,7 @@
       "G(ModularityTests)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/ModularityTests.kt",
             "sha256": "b4c97c3e8fee808e638539dcd3c8f3dd2f90bfdf0b1ac6e77f21e05b12e2dfbc",
             "testAnnotations": 3
           }
@@ -563,13 +563,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "03aae0f8819d45efaa2bcb1ef755874a1e2bf60674a81b9f0fa740f421528f52",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -584,13 +584,13 @@
           "tests": 3,
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1b84c43a06b9cdf58f7e1d42b21aa2e3590e68ac4e4eef1adf957c688dd64ca1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ]
         },
@@ -606,13 +606,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ac36aefabee49d2c2532d9c2efc02e6ee9473b07ac8f370daf3c11426a81fbdc",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -635,13 +635,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
-              "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "reports/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "fullServerPassClaim": false
@@ -690,31 +690,31 @@
         "sha256": "d598701793f0a4913f0e1f9d7ff41802a12b0b63057e50eb53d1e348c40c7857"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryWorkOrderValidationPort.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryWorkOrderValidationPort.kt",
         "sha256": "9bae2bef7e07889c2bfc7a89699fdfbdd79b30af0cc003815fcc274c2a9d7eba"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/WorkOrderMaterialContextApi.kt",
         "sha256": "ab9abb24c9e8311b4045f9e5ee2874f865e2d5bdf44b31bbc80fa6fed91362dc"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/iam/CurrentAuthorityApi.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/iam/CurrentAuthorityApi.kt",
         "sha256": "0fce38f6ff3bdee2660529595365a955a32cf0f2447893579d2fff5f1c7ca21d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseStockContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseStockContracts.kt",
         "sha256": "13153d3f640898e3a1f09bcdb833e147b8c2b2a9b024b043e2b9e9db9704fb57"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseDocumentContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseDocumentContracts.kt",
         "sha256": "638a23af0cf3dbb0710add7ecf59ec13a642013a02f2e98f92c62ed9058e4438"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehousePolicyContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehousePolicyContracts.kt",
         "sha256": "9a90336cdc9ae9e18d4bd2910ed886adcd3f641a726d49a6d35bec1775ea6260"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/WarehouseApprovalContracts.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/WarehouseApprovalContracts.kt",
         "sha256": "2210b38bfead007eee1b39de8d01ec9b426ddc33e5d238cc74afe368d98001a7"
       }
     ],

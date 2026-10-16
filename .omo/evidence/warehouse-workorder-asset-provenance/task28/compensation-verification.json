@@ -19,7 +19,7 @@
   "redaction": "Only test names/counts and source/result digests; no HTTP bodies, headers, tokens or raw logs",
   "suites": [
     {
-      "name": "com.duluin.ftth.ModularityTests",
+      "name": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -32,7 +32,7 @@
       "xmlSha256": "d78e48c654d62d005e3f3a62424d1d4652d4c61246b9d0c6f6200d1c82f4deff"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseCompensationGuardsIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseCompensationGuardsIT",
       "tests": 8,
       "failures": 0,
       "errors": 0,
@@ -50,7 +50,7 @@
       "xmlSha256": "f0a353d2d239ce0d60c37085142a87038ef985f9907dd71df8310e822de976af"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseCompensationIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseCompensationIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -62,7 +62,7 @@
       "xmlSha256": "f82f086b8b77dac905999d53430e40038857559d51d59dc70286cc7463b4937d"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseDispositionAssetIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseDispositionAssetIT",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -76,7 +76,7 @@
       "xmlSha256": "b821341d309841e2c07eaeb41bd22352fb39071e0b19d81574d6ae03783a460b"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseDispositionGuardsIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseDispositionGuardsIT",
       "tests": 11,
       "failures": 0,
       "errors": 0,
@@ -97,7 +97,7 @@
       "xmlSha256": "831fc28609367157456a118039ca10f5903cc870e0b89fd72ede549444d4968e"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,

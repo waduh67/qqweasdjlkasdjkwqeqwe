@@ -24,35 +24,35 @@
     },
     {
       "source": "validation",
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
       "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
       "bytes": 10179,
       "lines": 119
     },
     {
       "source": "validation",
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReceiptService.kt",
       "sha256": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
       "bytes": 10881,
       "lines": 161
     },
     {
       "source": "validation",
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReceiptDraftValidation.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/ReceiptDraftValidation.kt",
       "sha256": "7af5e0e5e39dbb8f4ba95a2ec986eb61de99bc5da89fdd277357dae28dd8b956",
       "bytes": 4627,
       "lines": 67
     },
     {
       "source": "validation",
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/domain/model/StockQuantity.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/domain/model/StockQuantity.kt",
       "sha256": "16dfa2421aa589148b3c265340a3b93f22c01d9d1ce676da1fb0ac1a8b93d642",
       "bytes": 3318,
       "lines": 76
     },
     {
       "source": "validation",
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
       "sha256": "32f5690f22de9cf03a7f7f7c918009a9714fb50fafa1e4bc2ca03684aa6a52ba",
       "bytes": 5235,
       "lines": 59

@@ -6,7 +6,7 @@
     "tests": 17,
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
         "tests": 15,
         "failures": 0,
         "errors": 0,
@@ -14,7 +14,7 @@
         "xmlSha256": "eea743c4f256db16940acb9bbc357c858abdc31ec343a62d49c4af00d1b0cf16"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,

@@ -41,19 +41,19 @@
       "sha256": "468eb859ded93670ae39d8792913ee4bf79d1d1af275d239dda21c432ea13123",
       "matchesApplicationCommit": true
     },
-    "server/src/main/kotlin/com/duluin/ftth/vpn/application/service/VpnConfigRenderer.kt": {
+    "server/src/main/kotlin/com/karuhun/ftth/vpn/application/service/VpnConfigRenderer.kt": {
       "sha256": "7b9352d4e5301a177f4d6afdab43c7c0f492957530344bd6daec4dba90f128db",
       "matchesApplicationCommit": true
     },
-    "server/src/main/kotlin/com/duluin/ftth/vpn/application/service/VpnServerService.kt": {
+    "server/src/main/kotlin/com/karuhun/ftth/vpn/application/service/VpnServerService.kt": {
       "sha256": "b2dd521b0730e249dee06cb98b27c58365bcad1fb9413bba696fffb201bfa24b",
       "matchesApplicationCommit": true
     },
-    "server/src/main/kotlin/com/duluin/ftth/vpn/adapter/inbound/web/VpnProvisioningController.kt": {
+    "server/src/main/kotlin/com/karuhun/ftth/vpn/adapter/inbound/web/VpnProvisioningController.kt": {
       "sha256": "4cf8ef2952d1075dbdd9bcc46074815752a24538b71a3689c51fa92f894935bc",
       "matchesApplicationCommit": true
     },
-    "server/src/test/kotlin/com/duluin/ftth/vpn/VpnInstallScriptTest.kt": {
+    "server/src/test/kotlin/com/karuhun/ftth/vpn/VpnInstallScriptTest.kt": {
       "sha256": "016b49e1b6b3db8eb9b830f68f65528cd758ba3e8d1262332dc7214a4874a68d",
       "matchesApplicationCommit": true
     }

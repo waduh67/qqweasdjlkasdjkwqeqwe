@@ -8,11 +8,11 @@ Scope: WarehouseDraftLifetimeStore/ExpiryService, receipt canonical-save integra
 
 **C7-core-1 — Material plan reads can disagree with their own expiry metadata.** `MaterialPlanningStore.current/get/history` select `warehouse_plan_current_state(...)` in one SQL call; `readHistory` then calls `lifetime.plan(plan.id)` in another call and returns the earlier state unchanged. A deadline crossing between those calls produces `state="DRAFT"` with non-null `draftExpiry`. This needs correction before accepting the changed current readers. Derive effective state and metadata from the same expiry observation, or return both from one coherent source query. Preserve submitted state and maximum plan revision. Receipt/count currentView already derive state and metadata together.
 
-Evidence: `server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt:13`, `:23`, `:32`, `:44`.
+Evidence: `server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/MaterialPlanningStore.kt:13`, `:23`, `:32`, `:44`.
 
 **C7-core-2 — Main work-order material summary loses expired-plan state.** `InventoryMaterialService.summary` obtains the new MaterialPlanHistory with expiry, but discards history state/expiry when constructing MaterialSummary. With no submitted demand, an expired latest plan still gives `demandState=DRAFT`, and the summary has no separate current plan state/expiry signal. History/get do expose EXPIRED. Include this ordinary summary in the remaining projection work; explicit current plan state/expiry avoids conflating an expired plan with a demand that has not been created. Do not change the immutable plan snapshot, lower the latest revision, or fall back to an older plan.
 
-Evidence: `server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialService.kt:22`, `:49`; `server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialApi.kt:88`. This is a concrete integration obligation, not a claim that the parent's known pending UI/projection work is complete.
+Evidence: `server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialService.kt:22`, `:49`; `server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryMaterialApi.kt:88`. This is a concrete integration obligation, not a claim that the parent's known pending UI/projection work is complete.
 
 ## Core behavior supported by source
 

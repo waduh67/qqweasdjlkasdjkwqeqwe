@@ -6,35 +6,35 @@
     "result": "BUILD SUCCESSFUL in 4m 13s",
     "suites": [
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsIT",
         "tests": 3,
         "failures": 0,
         "skipped": 0,
         "sha256": "9bffe2adb0459e87c0e616a4d6ee17264a0c6b42e446f5f5591aa975971dcdf6"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsRmaIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsRmaIT",
         "tests": 2,
         "failures": 0,
         "skipped": 0,
         "sha256": "9ac37b1f06087de6a41187ea953ef9244ed2b3bedcce90646a0a6179b06fb22d"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
         "tests": 3,
         "failures": 0,
         "skipped": 0,
         "sha256": "49c037ba710721073e9849582c92284214891a11b5b9a9b9554ea141b7404665"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
         "tests": 1,
         "failures": 0,
         "skipped": 0,
         "sha256": "5f5dcffa99e1ce4a518b3bd11f4f3cf6bedc2fc84c012783494971f829fce61c"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaHandoverIT",
         "tests": 1,
         "failures": 0,
         "skipped": 0,

@@ -5,28 +5,28 @@
   "tests": 13,
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationCaptureIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationCaptureIT",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
       "tests": 5,
       "failures": 0,
       "errors": 0,
@@ -34,10 +34,10 @@
     }
   ],
   "files": {
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "7f1794a28c4e8a2dd907166a97959382593a1c6461a2b6a1ed83600f3d0253b5",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "7f1794a28c4e8a2dd907166a97959382593a1c6461a2b6a1ed83600f3d0253b5",
     "server/src/main/resources/db/migration/V177_9__warehouse_current_identity_reservations.sql": "b66ace6e025d257171a9a5ceff5aa5d7e5deceaa94f1c9871fc64d1e105e6c69",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationCaptureIT.kt": "8fded6813621d2be29ece6c3853581a1fd915571f697f0e2fa16f2a740637749",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "4f0b848e4867d9cdf875537b16e72a411dac9eca8411edb663424d0db1157e3f"
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationCaptureIT.kt": "8fded6813621d2be29ece6c3853581a1fd915571f697f0e2fa16f2a740637749",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationOpeningApprovalIT.kt": "4f0b848e4867d9cdf875537b16e72a411dac9eca8411edb663424d0db1157e3f"
   },
   "checks": [
     "Full packaged boot accepts colliding legacy data and nullable malformed identities. Candidate uniqueness now retains each original raw version instead of overwriting source history.",

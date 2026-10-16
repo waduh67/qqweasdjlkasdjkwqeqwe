@@ -1,1 +1,1 @@
-org.springframework.test.context.ContextCustomizerFactory=com.duluin.ftth.SchedulingDisabledContextCustomizerFactory
+org.springframework.test.context.ContextCustomizerFactory=com.karuhun.ftth.SchedulingDisabledContextCustomizerFactory

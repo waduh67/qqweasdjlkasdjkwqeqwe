@@ -6,15 +6,15 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
       "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
       "sha256": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
       "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
     },
     {
@@ -158,14 +158,14 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+            "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
             "tests": 2,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+            "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
             "tests": 2,
             "failures": 0,
             "errors": 0,
@@ -193,17 +193,17 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
         "line": 15,
         "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
         "line": 26,
         "sha256": "1b9dff44cbb8ac4c72f163a39813e400155fb17692b68a56d74f827b7f23275d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
         "line": 15,
         "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
       },
@@ -248,12 +248,12 @@
       "G(WarehouseMigrationIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITQuery.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationITQuery.kt",
             "sha256": "23f5bc2b38817d946daa7152694ed83e2588769ba79500ec7b38102f0abeadc3",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITBoot.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationITBoot.kt",
             "sha256": "d5891a10b2ac45e74128a9c41bf39991208007d364391712a6d961abf5b43f51",
             "testAnnotations": 2
           }
@@ -271,22 +271,22 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "172f12da1feb1680e8a619ca1f2b384e2238b5c6fa633200d4a27a625c0751c6",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITBoot.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITBoot.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3f6b9ed919b15c331d497087db31beebef3bfac6a0b97efd8125e42a64de06ba",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITQuery.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITQuery.xml"
             }
           ],
           "proof": {
@@ -301,22 +301,22 @@
           "tests": 4,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "f3c71a25dacd11ba3971623a48d5108ebdd34bc889f9b7078c25160b04b94926",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITBoot.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITBoot.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ec4593f8299e85fa996371b188e573f7fc123ea620cc62e87cdaad796b07bbd4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITQuery.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITQuery.xml"
             }
           ]
         },
@@ -432,12 +432,12 @@
       "G(WarehouseMigrationIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITQuery.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationITQuery.kt",
             "sha256": "23f5bc2b38817d946daa7152694ed83e2588769ba79500ec7b38102f0abeadc3",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITBoot.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationITBoot.kt",
             "sha256": "d5891a10b2ac45e74128a9c41bf39991208007d364391712a6d961abf5b43f51",
             "testAnnotations": 2
           }
@@ -455,22 +455,22 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "172f12da1feb1680e8a619ca1f2b384e2238b5c6fa633200d4a27a625c0751c6",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITBoot.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITBoot.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3f6b9ed919b15c331d497087db31beebef3bfac6a0b97efd8125e42a64de06ba",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITQuery.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITQuery.xml"
             }
           ],
           "proof": {
@@ -485,22 +485,22 @@
           "tests": 4,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "f3c71a25dacd11ba3971623a48d5108ebdd34bc889f9b7078c25160b04b94926",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITBoot.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITBoot.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+              "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ec4593f8299e85fa996371b188e573f7fc123ea620cc62e87cdaad796b07bbd4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseMigrationITQuery.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseMigrationITQuery.xml"
             }
           ]
         },
@@ -614,15 +614,15 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt",
         "sha256": "e72f182e9a89b2f9a86aa87fd835e2d656d67785642d5cad3ec97459cd835376"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
         "sha256": "e1b7d43b4ba103a2508789306750525effb0e69e62e1cc46327d98d55b194b00"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseMigrationFinalizationService.kt",
         "sha256": "b7f133af94e461e2f56714df8bebe24e83b2b84da8f50c75fdd7bef95f4fb1d5"
       },
       {

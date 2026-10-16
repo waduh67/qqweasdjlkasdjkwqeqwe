@@ -1,0 +1,109 @@
+package com.karuhun.ftth.iam.adapter.outbound.persistence
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.common.infrastructure.persistence.toDomainPage
+import com.karuhun.ftth.common.infrastructure.persistence.toPageable
+import com.karuhun.ftth.common.infrastructure.persistence.TenantTransactionJdbc
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.iam.application.port.outbound.UserRepository
+import com.karuhun.ftth.iam.domain.model.User
+import com.karuhun.ftth.iam.domain.model.vo.Email
+import org.springframework.stereotype.Component
+import java.util.UUID
+
+@Component
+class UserPersistenceAdapter(
+    private val jpa: UserJpaRepository,
+    private val directory: UserDirectoryJpaRepository,
+    private val tenantJdbc: TenantTransactionJdbc,
+) : UserRepository {
+
+    override fun save(user: User): User {
+        val entity = jpa.findById(user.id).orElse(null)?.apply {
+            email = user.email.value
+            name = user.name
+            passwordHash = user.passwordHash
+            credentialVersion = user.credentialVersion
+            status = user.status
+            roleIds = user.roleIds.toMutableSet()
+            areaIds = user.areaIds.toMutableSet()
+            totpSecret = user.totpSecret
+            totpEnabledAt = user.totpEnabledAt
+            totpLastStep = user.totpLastStep
+        } ?: UserJpaEntity(
+            id = user.id,
+            email = user.email.value,
+            name = user.name,
+            passwordHash = user.passwordHash,
+            credentialVersion = user.credentialVersion,
+            status = user.status,
+            platformAdmin = user.platformAdmin,
+            roleIds = user.roleIds.toMutableSet(),
+            areaIds = user.areaIds.toMutableSet(),
+            totpSecret = user.totpSecret,
+            totpEnabledAt = user.totpEnabledAt,
+            totpLastStep = user.totpLastStep,
+        )
+        val saved = jpa.save(entity)
+        upsertDirectory(saved.id, user.tenantId, user.email.value.lowercase())
+        return saved.toDomain()
+    }
+
+    /**
+     * Pelihara indeks pre-auth email→tenant (login tanpa slug) tiap user disimpan.
+     * `user_directory` tak ter-RLS, jadi keunikan email ditegakkan GLOBAL: membuat
+     * user dengan email milik tenant lain gagal di UNIQUE(email_lower) — invarian
+     * "1 email = 1 tenant".
+     */
+    private fun upsertDirectory(userId: UUID, tenantId: UUID, emailLower: String) {
+        val row = directory.findById(userId).orElse(null)?.apply {
+            this.tenantId = tenantId
+            this.emailLower = emailLower
+        } ?: UserDirectoryJpaEntity(id = userId, tenantId = tenantId, emailLower = emailLower)
+        directory.save(row)
+    }
+
+    override fun findById(id: UUID): User? = jpa.findById(id).orElse(null)?.toDomain()
+
+    override fun findAllByIds(ids: Set<UUID>): List<User> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+
+    override fun findByEmail(email: Email): User? = jpa.findByEmail(email.value)?.toDomain()
+
+    override fun existsByEmail(email: Email): Boolean = jpa.existsByEmail(email.value)
+
+    override fun search(query: String?, pageRequest: PageRequest): Page<User> =
+        jpa.search(query?.trim()?.lowercase().orEmpty(), pageRequest.toPageable())
+            .map { it.toDomain() }
+            .toDomainPage()
+
+    override fun deleteById(id: UUID) = jpa.deleteById(id)
+
+    override fun searchNetworkEngineers(query: String, pageRequest: PageRequest): Page<User> {
+        var result: Page<User>? = null
+        tenantJdbc.withinTenant(TenantContext.tenantId()) {
+            result = jpa.searchNetworkEngineers(TenantContext.tenantId(), query.trim().lowercase(), pageRequest.toPageable())
+                .map { it.toDomain() }.toDomainPage()
+        }
+        return requireNotNull(result)
+    }
+}
+
+private fun UserJpaEntity.toDomain(): User =
+    User.rehydrate(
+        id = id,
+        tenantId = tenantId ?: TenantContext.tenantId(),
+        email = Email.of(email),
+        name = name,
+        passwordHash = passwordHash,
+        credentialVersion = credentialVersion,
+        status = status,
+        platformAdmin = platformAdmin,
+        roleIds = roleIds.toSet(),
+        areaIds = areaIds.toSet(),
+        createdAt = createdAt,
+        totpSecret = totpSecret,
+        totpEnabledAt = totpEnabledAt,
+        totpLastStep = totpLastStep,
+    )

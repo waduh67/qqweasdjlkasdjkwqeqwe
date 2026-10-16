@@ -5,7 +5,7 @@ mengikat implementasi berikutnya. Interface tidak memiliki adapter, bean,
 fallback, atau default sukses. Tes kontrak membuktikan bentuk API/wire dan arah
 dependensi; belum membuktikan transaksi, RLS, perubahan stok, atau deployment.
 
-Tipe publik berada di root module `com.duluin.ftth.<owner>`. UUID adalah referensi
+Tipe publik berada di root module `com.karuhun.ftth.<owner>`. UUID adalah referensi
 opaque, bukan bukti akses. Tidak ada entity JPA, repository, controller, atau
 domain internal yang boleh melintasi API baru. DTO request berbeda dari snapshot,
 event, dan binding server. Serialisasi binding server sebagai request dilarang.
@@ -14,11 +14,11 @@ event, dan binding server. Serialisasi binding server sebagai request dilarang.
 
 | Pemilik | Otoritas | Kontrak publik |
 |---|---|---|
-| inventory | Aset fisik, dokumen, ledger, saldo, reservasi, custody, pemakaian, episode assignment | [InventoryMaterialApi](../server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialApi.kt), [InventoryDeploymentApi](../server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt) |
-| workorder | Eksekusi, roster aktif, pembatalan, QA; referensi revisi material | [WorkOrderMaterialContextApi](../server/src/main/kotlin/com/duluin/ftth/workorder/WorkOrderMaterialContextApi.kt) |
-| customer | Proyeksi layanan/topologi ONU dan episode instalasi historis | [CustomerAssetApi](../server/src/main/kotlin/com/duluin/ftth/customer/CustomerAssetApi.kt) |
-| IAM | Pengguna aktif, role/izin/area efektif, epoch otorisasi | [CurrentAuthorityApi](../server/src/main/kotlin/com/duluin/ftth/iam/CurrentAuthorityApi.kt) |
-| common | Identifikasi sesi dan protokol fence, bukan penyimpanan otoritas | [AuthorityFence](../server/src/main/kotlin/com/duluin/ftth/common/security/AuthorityFence.kt) |
+| inventory | Aset fisik, dokumen, ledger, saldo, reservasi, custody, pemakaian, episode assignment | [InventoryMaterialApi](../server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryMaterialApi.kt), [InventoryDeploymentApi](../server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryDeploymentApi.kt) |
+| workorder | Eksekusi, roster aktif, pembatalan, QA; referensi revisi material | [WorkOrderMaterialContextApi](../server/src/main/kotlin/com/karuhun/ftth/workorder/WorkOrderMaterialContextApi.kt) |
+| customer | Proyeksi layanan/topologi ONU dan episode instalasi historis | [CustomerAssetApi](../server/src/main/kotlin/com/karuhun/ftth/customer/CustomerAssetApi.kt) |
+| IAM | Pengguna aktif, role/izin/area efektif, epoch otorisasi | [CurrentAuthorityApi](../server/src/main/kotlin/com/karuhun/ftth/iam/CurrentAuthorityApi.kt) |
+| common | Identifikasi sesi dan protokol fence, bukan penyimpanan otoritas | [AuthorityFence](../server/src/main/kotlin/com/karuhun/ftth/common/security/AuthorityFence.kt) |
 | network / CPE | Port/topologi / observasi ACS | Tetap melalui API pemilik masing-masing |
 | fulfillment | Koordinasi lintas pemilik dan outbox provisioning yang sudah ada | MaterialWorkflowService/Controller disediakan task berikutnya, bukan koordinator kedua |
 

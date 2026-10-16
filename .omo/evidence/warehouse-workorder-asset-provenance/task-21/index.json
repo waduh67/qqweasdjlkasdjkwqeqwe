@@ -6,23 +6,23 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetHandoverService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetHandoverService.kt",
       "sha256": "6d1877832e88cad8e04b8e964f3412c9315841486ce549726b6d45234bacbe59"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
       "sha256": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
       "sha256": "8bd63f0ecdffc636567428dc461f3a81b216a219579a100a6fbe4b9b8b0d1dc4"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryAssetTitleService.kt",
       "sha256": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
       "sha256": "c3876128c17c5295b574f7034813f7b9b83c9fd343cf519dad7ab79ec07a44c7"
     }
   ],
@@ -42,7 +42,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+            "suite": "com.karuhun.ftth.customer.CustomerAssetOwnershipIT",
             "tests": 72,
             "failures": 0,
             "errors": 0,
@@ -70,17 +70,17 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetHandoverService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetHandoverService.kt",
         "line": 17,
         "sha256": "6d1877832e88cad8e04b8e964f3412c9315841486ce549726b6d45234bacbe59"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
         "line": 15,
         "sha256": "0f88052f0b10822ea8c8174360c8865b7ccae5b874cefdbce122f179ea291bca"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
         "line": 8,
         "sha256": "5cf6f8412b73b0cc73837b072f5c2b8dd3ec14b7ada91c300111b903fcadb2eb"
       }
@@ -105,7 +105,7 @@
       "G(CustomerAssetOwnershipIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetOwnershipIT.kt",
             "sha256": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2",
             "testAnnotations": 13
           }
@@ -123,13 +123,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetOwnershipIT",
               "tests": 73,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "52bf7317f5bb1ee316eda5dcc5bb9616d73437b6d11395f76faf3c3a2d0c404f",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetOwnershipIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetOwnershipIT.xml"
             }
           ],
           "proof": {
@@ -144,13 +144,13 @@
           "tests": 73,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetOwnershipIT",
               "tests": 73,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "37c874f0663029c3990fed31cd1021627c81f4706c2b49bd0761fc26f9663cf8",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetOwnershipIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetOwnershipIT.xml"
             }
           ]
         },
@@ -202,7 +202,7 @@
       "G(CustomerAssetOwnershipIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetOwnershipIT.kt",
             "sha256": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2",
             "testAnnotations": 13
           }
@@ -220,13 +220,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetOwnershipIT",
               "tests": 73,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "52bf7317f5bb1ee316eda5dcc5bb9616d73437b6d11395f76faf3c3a2d0c404f",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetOwnershipIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetOwnershipIT.xml"
             }
           ],
           "proof": {
@@ -241,13 +241,13 @@
           "tests": 73,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+              "suite": "com.karuhun.ftth.customer.CustomerAssetOwnershipIT",
               "tests": 73,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "37c874f0663029c3990fed31cd1021627c81f4706c2b49bd0761fc26f9663cf8",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerAssetOwnershipIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerAssetOwnershipIT.xml"
             }
           ]
         },
@@ -309,23 +309,23 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetHandoverService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetHandoverService.kt",
         "sha256": "6d1877832e88cad8e04b8e964f3412c9315841486ce549726b6d45234bacbe59"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetOwnershipService.kt",
         "sha256": "bce839a8625f6eb60a61e14716f22199420d11ab7e3b8b59252e5f0e785aff32"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/inbound/web/CustomerAssetOwnershipController.kt",
         "sha256": "8bd63f0ecdffc636567428dc461f3a81b216a219579a100a6fbe4b9b8b0d1dc4"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryAssetTitleService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryAssetTitleService.kt",
         "sha256": "afaea77d3ca6d35c9e6067d4cc5ba9f23902590ed50b3eb74844904aa248d9cc"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
         "sha256": "c3876128c17c5295b574f7034813f7b9b83c9fd343cf519dad7ab79ec07a44c7"
       }
     ],

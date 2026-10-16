@@ -21,7 +21,7 @@
     "historicalTests": 7,
     "projectionTests": 1,
     "modularity": {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,

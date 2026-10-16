@@ -6,13 +6,13 @@
     "result": "BUILD SUCCESSFUL in 6m 26s",
     "suites": [
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
         "tests": 48,
         "failures": 0,
         "sha256": "dc2d8dcbc215e179897d658b7fbf0fc7fb5810f58af61e521e5e3c0f8c2d9eb3"
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetWorkbenchIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetWorkbenchIT",
         "tests": 4,
         "failures": 0,
         "sha256": "3a9aabc4bffccad9a7818b82c915b1c0520a6734ab18c4307a63c056bd477669"

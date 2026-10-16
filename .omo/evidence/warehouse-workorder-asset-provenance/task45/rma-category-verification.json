@@ -9,28 +9,28 @@
   },
   "green": [
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.fulfillment.MyMaterialsRmaIT",
+      "suite": "com.karuhun.ftth.fulfillment.MyMaterialsRmaIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaGuardsIT",
       "tests": 6,
       "failures": 0,
       "errors": 0,
@@ -39,14 +39,14 @@
   ],
   "populatedUpgradeTests": [
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaGuardsIT",
       "tests": 6,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
       "tests": 3,
       "failures": 0,
       "errors": 0,

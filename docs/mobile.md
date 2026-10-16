@@ -79,7 +79,7 @@ With JDK 21 and Android SDK 36 configured, build and install the debug host:
 adb install -r mobile/android/build/outputs/apk/debug/android-debug.apk
 ```
 
-Application ID: `com.duluin.ftth.technician`; minimum Android API 26, target API
+Application ID: `com.karuhun.ftth.technician`; minimum Android API 26, target API
 36. Use HTTPS for the server. Debug development HTTP is restricted to localhost,
 127.0.0.1 and the Android emulator host alias 10.0.2.2. Photos are selected or
 captured from the named slot, normalized to JPEG, bounded to 2048 pixels and 5 MB,

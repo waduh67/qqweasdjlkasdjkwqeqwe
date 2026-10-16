@@ -1,0 +1,83 @@
+package com.karuhun.ftth.monitoring.adapter.inbound.web
+
+import com.karuhun.ftth.monitoring.application.port.inbound.DiscoveredOnuView
+import com.karuhun.ftth.monitoring.application.port.inbound.ManageDiscoveredOnuUseCase
+import com.karuhun.ftth.monitoring.application.port.inbound.ProvisionDiscoveredOnuCommand
+import com.karuhun.ftth.monitoring.domain.model.DiscoveredOnuState
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotNull
+import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
+
+/**
+ * Kotak masuk auto-provisioning: ONU yang terlihat OLT tapi belum terdaftar,
+ * dituntaskan operator menjadi pelanggan terpasang tanpa mengetik ulang serial.
+ */
+@RestController
+@RequestMapping("/api/monitoring/discovered-onus")
+@Tag(name = "Monitoring — Provisioning")
+@SecurityRequirement(name = "bearer-jwt")
+class DiscoveredOnuController(
+    private val useCase: ManageDiscoveredOnuUseCase,
+) {
+    @GetMapping
+    @PreAuthorize("@authz.can('monitoring.provisioning.view')")
+    @Operation(summary = "Daftar ONU terdeteksi; default yang masih menunggu (DISCOVERED). Bisa disaring per-OLT lewat oltId")
+    fun list(
+        @RequestParam(required = false) state: DiscoveredOnuState?,
+        @RequestParam(required = false) oltId: UUID?,
+    ): List<DiscoveredOnuView> = useCase.list(state, oltId)
+
+    @PostMapping("/{id}/provision")
+    @PreAuthorize("@authz.can('monitoring.provisioning.manage')")
+    @Operation(summary = "Tuntaskan: daftarkan ONU untuk pelanggan; ODP+port opsional (tempel belakangan)")
+    fun provision(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: ProvisionDiscoveredOnuRequest,
+        @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key", required = false) operationKey: String?,
+    ): DiscoveredOnuView = useCase.provision(id, request.toCommand().copy(operationKey = operationKey.orEmpty()))
+
+    @PostMapping("/{id}/ignore")
+    @PreAuthorize("@authz.can('monitoring.provisioning.manage')")
+    fun ignore(@PathVariable id: UUID): DiscoveredOnuView = useCase.ignore(id)
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('monitoring.provisioning.manage')")
+    @Operation(summary = "Hapus permanen sebuah baris ONU terdeteksi dari kotak masuk")
+    fun delete(@PathVariable id: UUID) = useCase.delete(id)
+}
+
+data class ProvisionDiscoveredOnuRequest(
+    @field:NotNull val customerId: UUID,
+    /** ODP tujuan; boleh null = tempel ke pelanggan dulu, ODP menyusul di peta. */
+    val odpId: UUID?,
+    /** Port pada ODP; @Min hanya berlaku bila diisi (null dilewati validasi). */
+    @field:Min(1) val portNumber: Int?,
+    val installRxPowerDbm: Double?,
+    val authorizationId: UUID? = null,
+    val expectedRevision: Long = 0,
+) {
+    fun toCommand() = ProvisionDiscoveredOnuCommand(
+        customerId = customerId,
+        odpId = odpId,
+        portNumber = portNumber,
+        installRxPowerDbm = installRxPowerDbm,
+        authorizationId = authorizationId,
+        expectedRevision = expectedRevision,
+    )
+}

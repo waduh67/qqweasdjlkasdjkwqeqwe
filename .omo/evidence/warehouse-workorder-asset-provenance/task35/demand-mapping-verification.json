@@ -5,7 +5,7 @@
   "tests": 7,
   "suites": [
     {
-      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITDemand",
+      "name": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITDemand",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -13,7 +13,7 @@
       "sha256": "85f6dc1daba178bbf72bf9272ebbe4adfa618b76d319c111b9c71c2a85da0a65"
     },
     {
-      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITDemandMapping",
+      "name": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITDemandMapping",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -21,7 +21,7 @@
       "sha256": "d81a01b26fe00d3236421d6e3d07c957ff6abd9c472ff8a99c9b2d25b1ca35f5"
     },
     {
-      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITPostedFacts",
+      "name": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITPostedFacts",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -29,7 +29,7 @@
       "sha256": "abf67c1ba9f87b6799ab36b89878de3c501e461ad98ed97522b40b6fef04f6e5"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+      "name": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
       "tests": 3,
       "failures": 0,
       "errors": 0,

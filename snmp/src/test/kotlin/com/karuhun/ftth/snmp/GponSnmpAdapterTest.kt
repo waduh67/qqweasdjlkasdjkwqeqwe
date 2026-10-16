@@ -1,0 +1,197 @@
+package com.karuhun.ftth.snmp
+
+import com.karuhun.ftth.contract.OltTarget
+import com.karuhun.ftth.contract.OnuDownCause
+import com.karuhun.ftth.contract.OnuOperationalStatus
+import java.time.Instant
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * Menguji penafsiran data SNMP tanpa perangkat: skala redaman per vendor, format
+ * serial GPON, sentinel "tidak terbaca", pembuangan nilai mustahil, dan pemetaan
+ * status. Asumsi kompatibilitas ZTE bukan bukti unit/enum vendor; batas dokumentasi
+ * ada di docs/gpon-profile-evidence.md. Fixture tidak mensertifikasi hardware.
+ */
+class GponSnmpAdapterTest {
+
+    private val target = OltTarget(
+        oltId = "olt-1",
+        oltCode = "OLT-BKS-01",
+        vendor = "ZTE",
+        host = "10.0.0.1",
+        snmpCommunity = "public",
+    )
+
+    /** Pembaca SNMP tiruan: satu baris tabel, dikunci OID → nilai mentah. */
+    private fun readerOf(vararg rows: Map<String?, String>): SnmpReaderFactory =
+        SnmpReaderFactory { _, _, _ ->
+            object : SnmpReader {
+                override fun get(oid: String) = "tiruan sysDescr"
+                override fun walkTable(columnOids: List<String>): Map<String, Map<String, String>> =
+                    rows.mapIndexed { index, row -> "$index" to row.mapKeys { (oid, _) -> requireNotNull(oid) } }.toMap()
+                override fun close() {}
+            }
+        }
+
+    private fun adapter(profile: MibProfile, factory: SnmpReaderFactory) =
+        GponSnmpAdapter(profile, factory, clock = { Instant.parse("2026-07-20T00:00:00Z") })
+
+    @Test
+    fun `ZTE - serial di-decode ke kode vendor ASCII + heksa, redaman dibagi 1000`() {
+        // Serial mentah: ZTEG (5A544547) + C0FFEE01 -> "ZTEGC0FFEE01".
+        // rx -22,50 dBm dilaporkan sebagai -22500 dalam satuan 0,001 dBm.
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "3",
+            MibProfiles.ZTE.rxPowerOid to "-22500",
+        )
+        val readings = adapter(MibProfiles.ZTE, readerOf(row)).pollOnus(target)
+
+        assertEquals(1, readings.size)
+        val onu = readings.single()
+        assertEquals("ZTEGC0FFEE01", onu.serialNumber)
+        assertEquals(OnuOperationalStatus.ONLINE, onu.status)
+        assertEquals(-22.5, onu.rxPowerDbm)
+        assertEquals("OLT-BKS-01", onu.oltCode)
+        // Profil baku belum punya OID sebab-putus / waktu → jangan mengarang: null apa adanya.
+        assertNull(onu.lastDownCause)
+        assertNull(onu.lastOffAt)
+        assertNull(onu.lastOnAt)
+    }
+
+    @Test
+    fun `waktu putus dan pulih dibaca dari register, menerima epoch maupun ISO-8601`() {
+        val offOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.100"
+        val onOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.101"
+        val profile = MibProfiles.ZTE.copy(lastOffAtOid = offOid, lastOnAtOid = onOid)
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "3",
+            offOid to "1721433600", // epoch detik
+            onOid to "2026-07-20T01:00:00Z", // string ISO-8601
+        )
+        val onu = adapter(profile, readerOf(row)).pollOnus(target).single()
+
+        // Format register berbeda antar firmware; keduanya harus terbaca, bukan salah satu.
+        assertEquals(Instant.ofEpochSecond(1_721_433_600), onu.lastOffAt)
+        assertEquals(Instant.parse("2026-07-20T01:00:00Z"), onu.lastOnAt)
+    }
+
+    @Test
+    fun `sebab putus terakhir dipetakan dari register saat profil menyediakan OID-nya`() {
+        val downCauseOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.99"
+        val profile = MibProfiles.ZTE.copy(
+            downCauseOid = downCauseOid,
+            downCauseMapping = mapOf("9" to OnuDownCause.DYING_GASP),
+        )
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "1", // OFFLINE pada ZTE
+            downCauseOid to "9",
+        )
+        val onu = adapter(profile, readerOf(row)).pollOnus(target).single()
+
+        // Dying-gasp: ONU lapor kehilangan daya, bukan fiber putus.
+        assertEquals(OnuDownCause.DYING_GASP, onu.lastDownCause)
+        assertEquals(OnuOperationalStatus.OFFLINE, onu.status)
+    }
+
+    @Test
+    fun `nilai register di luar peta jatuh ke UNKNOWN, bukan hilang`() {
+        val downCauseOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.99"
+        val profile = MibProfiles.ZTE.copy(
+            downCauseOid = downCauseOid,
+            downCauseMapping = mapOf("9" to OnuDownCause.DYING_GASP),
+        )
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "1",
+            downCauseOid to "254", // kode vendor yang belum dipetakan
+        )
+        val onu = adapter(profile, readerOf(row)).pollOnus(target).single()
+
+        // Bahwa ONU pernah putus tetap informasi berharga meski sebabnya tak dikenal.
+        assertEquals(OnuDownCause.UNKNOWN, onu.lastDownCause)
+    }
+
+    @Test
+    fun `Huawei - redaman dibagi 100 dan status 3 tidak didokumentasikan`() {
+        val row = mapOf(
+            MibProfiles.HUAWEI.serialNumberOid to "48575443ABCDEF12",
+            MibProfiles.HUAWEI.statusOid to "3",
+            MibProfiles.HUAWEI.rxPowerOid to "-2415",
+        )
+        val onu = adapter(MibProfiles.HUAWEI, readerOf(row)).pollOnus(target).single()
+
+        assertEquals("HWTCABCDEF12", onu.serialNumber)
+        assertEquals(OnuOperationalStatus.UNKNOWN, onu.status)
+        assertEquals(-24.15, onu.rxPowerDbm)
+    }
+
+    @Test
+    fun `nilai sentinel menjadi null, bukan redaman ekstrem yang memicu alarm palsu`() {
+        // 2147483647 adalah penanda "tidak terbaca". Bila lolos, akan tampak
+        // sebagai ~2 juta dBm dan langsung memicu alarm.
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547DEADBEEF",
+            MibProfiles.ZTE.statusOid to "3",
+            MibProfiles.ZTE.rxPowerOid to "2147483647",
+        )
+        val onu = adapter(MibProfiles.ZTE, readerOf(row)).pollOnus(target).single()
+
+        assertNull(onu.rxPowerDbm)
+    }
+
+    @Test
+    fun `redaman di luar rentang masuk akal dibuang menjadi null`() {
+        // -60 dBm (dilaporkan -60000) di luar rentang -50..10; pasti salah baca.
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547DEADBEEF",
+            MibProfiles.ZTE.statusOid to "3",
+            MibProfiles.ZTE.rxPowerOid to "-60000",
+        )
+        val onu = adapter(MibProfiles.ZTE, readerOf(row)).pollOnus(target).single()
+
+        assertNull(onu.rxPowerDbm)
+    }
+
+    @Test
+    fun `status yang tidak dikenal jatuh ke UNKNOWN, bukan gagal`() {
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547DEADBEEF",
+            MibProfiles.ZTE.statusOid to "99",
+            MibProfiles.ZTE.rxPowerOid to "-20000",
+        )
+        val onu = adapter(MibProfiles.ZTE, readerOf(row)).pollOnus(target).single()
+
+        assertEquals(OnuOperationalStatus.UNKNOWN, onu.status)
+    }
+
+    @Test
+    fun `baris tanpa serial dibuang, tidak mengotori data server`() {
+        val withSerial = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A5445470000AAAA",
+            MibProfiles.ZTE.statusOid to "3",
+            MibProfiles.ZTE.rxPowerOid to "-20000",
+        )
+        val withoutSerial = mapOf(
+            MibProfiles.ZTE.statusOid to "3",
+            MibProfiles.ZTE.rxPowerOid to "-20000",
+        )
+        val readings = adapter(MibProfiles.ZTE, readerOf(withSerial, withoutSerial)).pollOnus(target)
+
+        assertEquals(1, readings.size)
+        assertEquals("ZTEG0000AAAA", readings.single().serialNumber)
+    }
+
+    @Test
+    fun `probe melaporkan tidak terjangkau saat community kosong, tanpa membuka soket`() {
+        val result = adapter(MibProfiles.ZTE, readerOf())
+            .probe(target.copy(snmpCommunity = null))
+
+        assertTrue(result is ProbeResult.Unreachable)
+    }
+}

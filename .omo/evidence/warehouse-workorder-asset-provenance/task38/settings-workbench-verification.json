@@ -4,7 +4,7 @@
     "tests": 9,
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITDelegation",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITDelegation",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -12,7 +12,7 @@
         "xmlSha256": "c5851310adf270b1270d87e08373a74cb52f6f304e151afb292a8c1411d8dc79"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -20,7 +20,7 @@
         "xmlSha256": "cb9adb85585bfef75bbcf9ecdd1111e6b96927193abc28c9b77e758ff1efc20e"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -28,7 +28,7 @@
         "xmlSha256": "7e18ad295178c682d9537f8f3f5d419d6c154642f1c7291b70500bfe8c5f605a"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSettingsWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSettingsWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,

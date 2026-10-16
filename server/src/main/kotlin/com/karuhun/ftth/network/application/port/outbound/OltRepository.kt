@@ -1,0 +1,37 @@
+package com.karuhun.ftth.network.application.port.outbound
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.network.domain.model.Olt
+import java.util.UUID
+
+interface OltRepository {
+
+    fun save(olt: Olt): Olt
+
+    fun findById(id: UUID): Olt?
+
+    fun findAllByIds(ids: Set<UUID>): List<Olt>
+
+    /** OLT di sebuah site, terurut kode — untuk panel inspeksi site di peta. */
+    fun findBySiteId(siteId: UUID): List<Olt>
+
+    fun findByCode(code: String): Olt?
+
+    /** Seluruh id OLT tenant ini — dipakai saat collector ditugasi "semua OLT". */
+    fun findAllIds(): Set<UUID>
+
+    fun search(query: String, siteId: UUID?, pageRequest: PageRequest): Page<Olt>
+
+    fun existsByCode(code: String): Boolean
+
+    fun countBySiteId(siteId: UUID): Long
+
+    /**
+     * Jumlah OLT per site dalam satu query. Ada demi menghindari N+1 saat
+     * merender daftar site; site tanpa OLT tidak muncul di hasil.
+     */
+    fun countBySiteIds(siteIds: Set<UUID>): Map<UUID, Long>
+
+    fun deleteById(id: UUID)
+}

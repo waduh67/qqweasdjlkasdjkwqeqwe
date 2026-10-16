@@ -4,7 +4,7 @@ Source: validation worktree HEAD `cc47f434e7c2fc58ff0095feb8c643717f889e86` plus
 
 **Targeted outcome: two corrections required before closure.** The selected-context read and UI solve the missing creation path in principle, but current customer-area enforcement must also cover command execution/replay, and the loss UI must give a valid approval-continuation path. Parent acknowledged both findings and plans fixes after the active run. Those fixes are not yet reviewed in this record. No final F1 approval.
 
-`S` = `server/src/main/kotlin/com/duluin/ftth`; `T` = `server/src/test/kotlin/com/duluin/ftth`. All paths are repository-relative.
+`S` = `server/src/main/kotlin/com/karuhun/ftth`; `T` = `server/src/test/kotlin/com/karuhun/ftth`. All paths are repository-relative.
 
 ## Required corrections
 

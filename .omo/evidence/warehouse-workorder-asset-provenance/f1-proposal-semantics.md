@@ -8,7 +8,7 @@ C8 does not mandate same-resource PUT merely because a backing `inventory_docume
 
 Operational receipt, material-plan, transfer and count drafts remain editable working documents and require their revision-guarded edit commands. The established saved transfer/count PUT/UI gaps remain valid. This interpretation does not exempt retained unapproved proposals from C7 idle expiry. Expiry must preserve immutable history and must not post stock, erase custody or release physical obligations.
 
-`S/` below means `server/src/main/kotlin/com/duluin/ftth/`; `T/` means `server/src/test/kotlin/com/duluin/ftth/`; `M/` means `server/src/main/resources/db/migration/`.
+`S/` below means `server/src/main/kotlin/com/karuhun/ftth/`; `T/` means `server/src/test/kotlin/com/karuhun/ftth/`; `M/` means `server/src/main/resources/db/migration/`.
 
 ## Specialized family matrix
 

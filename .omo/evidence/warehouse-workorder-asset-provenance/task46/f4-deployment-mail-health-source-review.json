@@ -18,9 +18,9 @@
   "finalF4Approval": false,
   "gitDiffCheckExitCode": 0,
   "inspectedApplicationSourceSha256": {
-    "server/src/main/kotlin/com/duluin/ftth/notification/adapter/outbound/messaging/SmtpEmailDispatcher.kt": "dabfbfe8007e207f41987084a6159bbfb5c859a7734e3aae41fdd8dcf5a0b145",
-    "server/src/main/kotlin/com/duluin/ftth/notification/adapter/outbound/messaging/SmtpSenderFactory.kt": "6dd4724f515aa7df8c0a6392e8a3471167d0d2f3d78328e621f43db4bde07516",
-    "server/src/main/kotlin/com/duluin/ftth/notification/application/service/PlatformEmailSettingsService.kt": "2f32ac1f99e1819e1ae96d79214ce05959d16eddabd1d07254c4343a0b96dbfa",
+    "server/src/main/kotlin/com/karuhun/ftth/notification/adapter/outbound/messaging/SmtpEmailDispatcher.kt": "dabfbfe8007e207f41987084a6159bbfb5c859a7734e3aae41fdd8dcf5a0b145",
+    "server/src/main/kotlin/com/karuhun/ftth/notification/adapter/outbound/messaging/SmtpSenderFactory.kt": "6dd4724f515aa7df8c0a6392e8a3471167d0d2f3d78328e621f43db4bde07516",
+    "server/src/main/kotlin/com/karuhun/ftth/notification/application/service/PlatformEmailSettingsService.kt": "2f32ac1f99e1819e1ae96d79214ce05959d16eddabd1d07254c4343a0b96dbfa",
     "server/src/main/resources/application.yml": "3438a4227c8bbcf21633f27d13a1652b53f726414561662233ed1c116d07b19b"
   },
   "mapping": "MANAGEMENT_HEALTH_MAIL_ENABLED=${FTTH_MAIL_HEALTH_ENABLED:-false}",

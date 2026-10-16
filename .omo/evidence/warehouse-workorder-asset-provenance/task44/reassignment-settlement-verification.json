@@ -5,7 +5,7 @@
   "regressionBeforeFix": {
     "suites": [
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
         "tests": 2,
         "failures": 2,
         "errors": 0,
@@ -19,84 +19,84 @@
       "tests": 108,
       "suites": [
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentIT",
           "tests": 4,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBinding",
           "tests": 24,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
           "tests": 7,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwners",
           "tests": 8,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageIT",
           "tests": 38,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseSerialSettlementIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
           "tests": 5,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITSources",
           "tests": 10,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
@@ -111,84 +111,84 @@
       "build": "BUILD FAILED in 7m 5s",
       "suites": [
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
           "tests": 2,
           "failures": 1,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentIT",
           "tests": 4,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBinding",
           "tests": 24,
           "failures": 3,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
           "tests": 7,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwners",
           "tests": 8,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageIT",
           "tests": 38,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseSerialSettlementIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
           "tests": 5,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITSources",
           "tests": 10,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
@@ -201,7 +201,7 @@
         "build": "BUILD SUCCESSFUL in 1m 16s",
         "suites": [
           {
-            "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+            "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
             "tests": 2,
             "failures": 0,
             "errors": 0,
@@ -213,7 +213,7 @@
         "build": "BUILD SUCCESSFUL in 1m 48s",
         "suites": [
           {
-            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+            "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBinding",
             "tests": 24,
             "failures": 0,
             "errors": 0,
@@ -287,7 +287,7 @@
     "build": "BUILD SUCCESSFUL in 2m 7s",
     "suites": [
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -316,12 +316,12 @@
     "Tasks45–48 and F1–F4. No native/runtime release or deployment claim."
   ],
   "files": {
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt": "34805ef237b772dde31ce1cb93057578880ed5e53fdb6b64851ef117fa176eed",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "a2ed9c82250ef793012ff0a1c32121d883963f58e716701858b0c7bc41c34972",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBinding.kt": "aa8a2cb8413a3c5df9f5aaa7927e92d50e6e65f6f9a269352dea9a9b7e501637",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseLifecycleFailurePort.kt": "1f3c1cb239c91d983e71e4e9626de02cc98b267ebb27582669fddd01ac316368",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventorySettlementService.kt": "34805ef237b772dde31ce1cb93057578880ed5e53fdb6b64851ef117fa176eed",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "a2ed9c82250ef793012ff0a1c32121d883963f58e716701858b0c7bc41c34972",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseFulfillmentITBinding.kt": "aa8a2cb8413a3c5df9f5aaa7927e92d50e6e65f6f9a269352dea9a9b7e501637",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseLifecycleFailurePort.kt": "1f3c1cb239c91d983e71e4e9626de02cc98b267ebb27582669fddd01ac316368",
     "server/src/main/resources/db/migration/V178_5__warehouse_historical_material_actors.sql": "85ae2a27ec50781cadc01871682aed0b26a17078fb64a2a0777df968d444ef81",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/FulfillmentEnvelopeFailurePort.kt": "d1d62bcd4ba5e0f92bae3a1aea4ee3ea62ba1f8ad09ee8b3f65662eade604b82",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseReassignmentSettlementIT.kt": "2bea019ca5579e6d39efdbd507a36f3c41447fdbcde09a1266b67e16b4185c8d"
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/FulfillmentEnvelopeFailurePort.kt": "d1d62bcd4ba5e0f92bae3a1aea4ee3ea62ba1f8ad09ee8b3f65662eade604b82",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseReassignmentSettlementIT.kt": "2bea019ca5579e6d39efdbd507a36f3c41447fdbcde09a1266b67e16b4185c8d"
   }
 }

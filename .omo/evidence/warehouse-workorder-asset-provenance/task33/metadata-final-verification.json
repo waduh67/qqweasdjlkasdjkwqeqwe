@@ -5,7 +5,7 @@
   "verifiedAt": "2026-09-24T17:42:37.135646+00:00",
   "suites": [
     {
-      "name": "com.duluin.ftth.inventory.WarehouseReceiptITAttachments",
+      "name": "com.karuhun.ftth.inventory.WarehouseReceiptITAttachments",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -13,7 +13,7 @@
       "sha256": "f14051af59c187f76e4ebc197bf6f9a2f6ba7b4926c992e342c9075c4c25d4ed"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseReceiptITGuards",
+      "name": "com.karuhun.ftth.inventory.WarehouseReceiptITGuards",
       "tests": 6,
       "failures": 0,
       "errors": 0,
@@ -21,7 +21,7 @@
       "sha256": "95289a535295a6acda0cea8867ca64110f08745b95b4e8fb33a6b67fc23e51dc"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseReceiptITIntakeEvidence",
+      "name": "com.karuhun.ftth.inventory.WarehouseReceiptITIntakeEvidence",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -29,7 +29,7 @@
       "sha256": "41f80dd021dd4244fa3a88019475e6d23aac28ceb763fcf88bd4f30e85661611"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseReceiptITMetadata",
+      "name": "com.karuhun.ftth.inventory.WarehouseReceiptITMetadata",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -37,7 +37,7 @@
       "sha256": "de894d7d56bd954b06e473933ade039c0170e2f3c29843c40d167083d25a9e52"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseReceiptITReceive",
+      "name": "com.karuhun.ftth.inventory.WarehouseReceiptITReceive",
       "tests": 1,
       "failures": 0,
       "errors": 0,

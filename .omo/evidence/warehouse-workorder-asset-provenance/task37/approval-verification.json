@@ -7,7 +7,7 @@
       "tests": 25,
       "suites": [
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseApprovalIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseApprovalIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
@@ -15,7 +15,7 @@
           "xmlSha256": "2f06853d8422b818b97437982c0cd07793d42ec7d54b90211e9f810558a86e8a"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseApprovalITCompatibility",
+          "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITCompatibility",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -23,7 +23,7 @@
           "xmlSha256": "e9cf7780e716b41453e01c819dd8db7844e662c7ec833c5d33839fb03938172f"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseApprovalITSource",
+          "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITSource",
           "tests": 4,
           "failures": 0,
           "errors": 0,
@@ -31,7 +31,7 @@
           "xmlSha256": "68034c911ea777896c6022d7afa00f086bf4a8c2847d0c5d973ed38e04d233d2"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -39,7 +39,7 @@
           "xmlSha256": "972e940703697ec7ffd8b11fa0976927aca4de9c3ab82c7be7234e0bac9e4d96"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
           "tests": 15,
           "failures": 0,
           "errors": 0,
@@ -47,7 +47,7 @@
           "xmlSha256": "525225ef0f784a5ce010bdc6b7b697938f4c92c2c9502e1fc4798c9db3a7a8bc"
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDiscrepancy",
           "tests": 2,
           "failures": 0,
           "errors": 0,
@@ -62,7 +62,7 @@
       "tests": 3,
       "suites": [
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseApprovalWorkbenchIT",
           "tests": 3,
           "failures": 0,
           "errors": 0,

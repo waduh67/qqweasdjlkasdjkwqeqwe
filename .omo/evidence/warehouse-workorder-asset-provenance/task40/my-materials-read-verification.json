@@ -4,7 +4,7 @@
     "tests": 9,
     "suites": [
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -12,7 +12,7 @@
         "xmlSha256": "ed8d48dc9d81edc1601e5d5e3b94c76351f14600b1a352cc5261077d8d26558a"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITReturns",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITReturns",
         "tests": 6,
         "failures": 0,
         "errors": 0,

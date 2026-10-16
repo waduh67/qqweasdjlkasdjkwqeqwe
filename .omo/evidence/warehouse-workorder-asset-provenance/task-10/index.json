@@ -6,23 +6,23 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationService.kt",
       "sha256": "1698d6e3b3f371719f4d744c86b51e91b9a0ab8af381233f4370b7413db0669c"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
       "sha256": "06f08914e2d28711875ab373ea65aa1cfb51c66a3b94591bda50717d8b2d2ded"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
       "sha256": "ceb9a73a9311582f326ac3f973f74602f3ab0f99976d2c585572242a6c7e71b0"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
       "sha256": "72e1f1a4b6035a238cb2b2e766cd466856ff26841dc48056ff26bcbf5933d273"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt",
       "sha256": "8889a17cbe57d2871c4ee5b52125eee4effa538bd415ed6f5ead6f82ee53601e"
     }
   ],
@@ -42,63 +42,63 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationIT",
             "tests": 1,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITAuthority",
             "tests": 4,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning",
             "tests": 3,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCompatibility",
             "tests": 2,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply",
             "tests": 1,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLifecycle",
             "tests": 5,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding",
             "tests": 6,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITRestart",
             "tests": 1,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
             "tests": 3,
             "failures": 0,
             "errors": 0,
@@ -126,27 +126,27 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationService.kt",
         "line": 23,
         "sha256": "1698d6e3b3f371719f4d744c86b51e91b9a0ab8af381233f4370b7413db0669c"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
         "line": 20,
         "sha256": "06f08914e2d28711875ab373ea65aa1cfb51c66a3b94591bda50717d8b2d2ded"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
         "line": 14,
         "sha256": "ceb9a73a9311582f326ac3f973f74602f3ab0f99976d2c585572242a6c7e71b0"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
         "line": 11,
         "sha256": "72e1f1a4b6035a238cb2b2e766cd466856ff26841dc48056ff26bcbf5933d273"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt",
         "line": 20,
         "sha256": "2b603186de5eb246a497d2c4f2c87ab9b4ce9e054c4eb9bb0788d1152b5148d9"
       }
@@ -171,47 +171,47 @@
       "G(WarehouseReservationIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITSupplyProjection.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITSupplyProjection.kt",
             "sha256": "e2bfe5c1245886e0e8b1f4daa3a81bc83355c0ba80f55e3379c27a4b45635144",
             "testAnnotations": 3
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITRestart.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITRestart.kt",
             "sha256": "b52576c59524bee409d83fddcd1859d7e049257738da86bc6249ce88ed08aea4",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITPlanBinding.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITPlanBinding.kt",
             "sha256": "e7d8069c94f152a154ae2798e578e7e0d066b0b9521bb6314aa4096f8cf62f70",
             "testAnnotations": 6
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLifecycle.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITLifecycle.kt",
             "sha256": "0d72c7d61e913a32ddbf352bba38461e2230ff1958730c16766c1a01d02a1efb",
             "testAnnotations": 5
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLargeSupply.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITLargeSupply.kt",
             "sha256": "29f12747325ef95cb7a253b14c5117da775dbde290863ee88a0b0a17211e34b4",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCompatibility.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITCompatibility.kt",
             "sha256": "47710bba6afdef0d382beb2bd55ef9f97933c0f55fb53efb66e7484f6eef8c0f",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCandidatePlanning.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITCandidatePlanning.kt",
             "sha256": "bc9c8971b3951002176c756e41156ce3bd11a850323b4ba3c61653ea63e7ca07",
             "testAnnotations": 3
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITAuthority.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITAuthority.kt",
             "sha256": "aa41795d73027c4bb17bb363ab413e2078d57ca5ff4b68c564d147a9c40c9581",
             "testAnnotations": 4
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationIT.kt",
             "sha256": "37d293d34e3e87c14dfeafcfecdb42a99446eb6154276f0e926621f31c82af58",
             "testAnnotations": 1
           }
@@ -229,85 +229,85 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationIT",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "a3566a3341a804f04f23a0b42ce1d38668a592f86a71eb8a2aa96ecd460fa62d",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITAuthority",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "9a89ce0006153a763548988d29c8117cfe6348961a4c073a1abc81d48fa48d64",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITAuthority.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITAuthority.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "57668f54237a16f7b5938f343cf671aadbe40fcba7c520e53a598b8d0d8708c4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCompatibility",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "0ccab8c2ab9a96c9ace3dceea71ac821385fc131e7c7cc18f89fff5c2553fb1b",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCompatibility.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCompatibility.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1172def4233b35868b72d2d545318fd9c6076cfd2ae2fd60bf0d2d77845fc1cf",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLargeSupply.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLifecycle",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "c921b3d9f99d9b56d163f7fb9b3a5ebb20b572c3494fae824d4849589d9ebca4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLifecycle.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "65ead5fb5bdd84261500dd8fd5076b04d4389476324ab70d20b9072667bdfd2a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITPlanBinding.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITRestart",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "61ca210adddfb059976ad0494eb81fffe6985e52c8cafd873f42584d6afe22b0",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITRestart.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITRestart.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "5bd91b100d45d6a840c696721c0acdce40f1d41cb5326f3cd966037712ef5f54",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
             }
           ],
           "proof": {
@@ -322,85 +322,85 @@
           "tests": 26,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationIT",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "eb2ca9f59e1c9dc6af627b83e729a7523a429263fc33545621e33dffc0aef9a0",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITAuthority",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "07cd27ddd65a863d41a9c45b235876e2795878cc5f4ea6bda2ce9b09e82a7fdc",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITAuthority.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITAuthority.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3c67e678a28374f48dd20106d8b1115a522666e83ef9b9f2ef1baddb8e4b55b1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCompatibility",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "e9a63c2a475995b035161772fc56e0d0b5bbaf7df99c4ac58d26c954d858f7b4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCompatibility.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCompatibility.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b9e9eb24e9f60ba5f1ad8be98376471991de82021bfff1739a626f0f1ef5ec28",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLargeSupply.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLifecycle",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3b5e59540667ec88bc61597a832565540cb48ec48b6a99bed29079296ece3999",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLifecycle.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "a3daebe4d7d4d64112c7df1e5159dc2fa1b47ab269562734bf99bb0ef3ed098c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITPlanBinding.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITRestart",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3a61ab7a5fabaf0ae67f80ee5b2ac6fddc20d9abe0af7124f1338651f6348071",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITRestart.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITRestart.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b0b865fee6692d6d28269d33834c4d9874ea662b7c6a19852203d77aaa5a832e",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
             }
           ]
         },
@@ -452,47 +452,47 @@
       "G(WarehouseReservationIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITSupplyProjection.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITSupplyProjection.kt",
             "sha256": "e2bfe5c1245886e0e8b1f4daa3a81bc83355c0ba80f55e3379c27a4b45635144",
             "testAnnotations": 3
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITRestart.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITRestart.kt",
             "sha256": "b52576c59524bee409d83fddcd1859d7e049257738da86bc6249ce88ed08aea4",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITPlanBinding.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITPlanBinding.kt",
             "sha256": "e7d8069c94f152a154ae2798e578e7e0d066b0b9521bb6314aa4096f8cf62f70",
             "testAnnotations": 6
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLifecycle.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITLifecycle.kt",
             "sha256": "0d72c7d61e913a32ddbf352bba38461e2230ff1958730c16766c1a01d02a1efb",
             "testAnnotations": 5
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITLargeSupply.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITLargeSupply.kt",
             "sha256": "29f12747325ef95cb7a253b14c5117da775dbde290863ee88a0b0a17211e34b4",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCompatibility.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITCompatibility.kt",
             "sha256": "47710bba6afdef0d382beb2bd55ef9f97933c0f55fb53efb66e7484f6eef8c0f",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITCandidatePlanning.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITCandidatePlanning.kt",
             "sha256": "bc9c8971b3951002176c756e41156ce3bd11a850323b4ba3c61653ea63e7ca07",
             "testAnnotations": 3
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationITAuthority.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationITAuthority.kt",
             "sha256": "aa41795d73027c4bb17bb363ab413e2078d57ca5ff4b68c564d147a9c40c9581",
             "testAnnotations": 4
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReservationIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReservationIT.kt",
             "sha256": "37d293d34e3e87c14dfeafcfecdb42a99446eb6154276f0e926621f31c82af58",
             "testAnnotations": 1
           }
@@ -510,85 +510,85 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationIT",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "a3566a3341a804f04f23a0b42ce1d38668a592f86a71eb8a2aa96ecd460fa62d",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITAuthority",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "9a89ce0006153a763548988d29c8117cfe6348961a4c073a1abc81d48fa48d64",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITAuthority.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITAuthority.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "57668f54237a16f7b5938f343cf671aadbe40fcba7c520e53a598b8d0d8708c4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCompatibility",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "0ccab8c2ab9a96c9ace3dceea71ac821385fc131e7c7cc18f89fff5c2553fb1b",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCompatibility.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCompatibility.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1172def4233b35868b72d2d545318fd9c6076cfd2ae2fd60bf0d2d77845fc1cf",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLargeSupply.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLifecycle",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "c921b3d9f99d9b56d163f7fb9b3a5ebb20b572c3494fae824d4849589d9ebca4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLifecycle.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "65ead5fb5bdd84261500dd8fd5076b04d4389476324ab70d20b9072667bdfd2a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITPlanBinding.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITRestart",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "61ca210adddfb059976ad0494eb81fffe6985e52c8cafd873f42584d6afe22b0",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITRestart.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITRestart.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "5bd91b100d45d6a840c696721c0acdce40f1d41cb5326f3cd966037712ef5f54",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
             }
           ],
           "proof": {
@@ -603,85 +603,85 @@
           "tests": 26,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationIT",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "eb2ca9f59e1c9dc6af627b83e729a7523a429263fc33545621e33dffc0aef9a0",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITAuthority",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "07cd27ddd65a863d41a9c45b235876e2795878cc5f4ea6bda2ce9b09e82a7fdc",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITAuthority.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITAuthority.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3c67e678a28374f48dd20106d8b1115a522666e83ef9b9f2ef1baddb8e4b55b1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCompatibility",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "e9a63c2a475995b035161772fc56e0d0b5bbaf7df99c4ac58d26c954d858f7b4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITCompatibility.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITCompatibility.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b9e9eb24e9f60ba5f1ad8be98376471991de82021bfff1739a626f0f1ef5ec28",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLargeSupply.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLifecycle",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3b5e59540667ec88bc61597a832565540cb48ec48b6a99bed29079296ece3999",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITLifecycle.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding",
               "tests": 6,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "a3daebe4d7d4d64112c7df1e5159dc2fa1b47ab269562734bf99bb0ef3ed098c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITPlanBinding.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITRestart",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3a61ab7a5fabaf0ae67f80ee5b2ac6fddc20d9abe0af7124f1338651f6348071",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITRestart.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITRestart.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b0b865fee6692d6d28269d33834c4d9874ea662b7c6a19852203d77aaa5a832e",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection.xml"
             }
           ]
         },
@@ -741,23 +741,23 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationService.kt",
         "sha256": "1698d6e3b3f371719f4d744c86b51e91b9a0ab8af381233f4370b7413db0669c"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReservationExpiry.kt",
         "sha256": "06f08914e2d28711875ab373ea65aa1cfb51c66a3b94591bda50717d8b2d2ded"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/ReservationAllocationPlanning.kt",
         "sha256": "ceb9a73a9311582f326ac3f973f74602f3ab0f99976d2c585572242a6c7e71b0"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReservationStore.kt",
         "sha256": "72e1f1a4b6035a238cb2b2e766cd466856ff26841dc48056ff26bcbf5933d273"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt",
         "sha256": "8889a17cbe57d2871c4ee5b52125eee4effa538bd415ed6f5ead6f82ee53601e"
       }
     ],

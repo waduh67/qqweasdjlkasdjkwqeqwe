@@ -5,7 +5,7 @@
     "tests": 5,
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -13,7 +13,7 @@
         "xmlSha256": "3c4f9f21fe87ec74d1885469ab8632e8ec8dbf30c8f781aa1ca61a23e13535ef"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnReacquisitionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnReacquisitionIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -21,7 +21,7 @@
         "xmlSha256": "cd0afd2c6d053afbb2712c61d757a2ac2d0e23b5ba44305bde72262b9bd51afd"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseRmaWorkOrderReadIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseRmaWorkOrderReadIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -29,7 +29,7 @@
         "xmlSha256": "80ab742ff68dbbb0d21248b1cebdb4e7a3f83433342e94a9664b124ccfdb9361"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairAccessIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,

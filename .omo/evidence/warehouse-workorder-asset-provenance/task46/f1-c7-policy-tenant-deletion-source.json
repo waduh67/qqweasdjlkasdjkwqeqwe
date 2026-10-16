@@ -9,13 +9,13 @@
   "required_executed_followup": "Corrected DeleteTenantIT with nonzero policy-only cleanup, direct policy delete denial, protected history rejection, other-tenant preservation and platform deletion rejection.",
   "inputs": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt",
       "sha256": "836df5b52e87817457833f70b974b93ef999395ea49db9cc8d93ce5baf7245c8",
       "head_sha256": "6afc61b6ef138e08245284ac7580b7f08655dda7b2531b819dc919ac3f21e1e4",
       "differs_from_head": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt",
       "sha256": "c0399b36afb31757efe76675cc4f548795f1883bd21ea5be2bd1cbffe8f439a1",
       "head_sha256": "fb1671eb338c15682e02a72f6dda877264cdbb216f1d78137bca1e8321509ee6",
       "differs_from_head": true
@@ -33,13 +33,13 @@
       "differs_from_head": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/tenancy/adapter/inbound/web/TenantController.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/tenancy/adapter/inbound/web/TenantController.kt",
       "sha256": "9e507f4d6d80227c81332e7d0f6ffb585d7fd97054199cc0bf3190d0ae7bbe17",
       "head_sha256": "9e507f4d6d80227c81332e7d0f6ffb585d7fd97054199cc0bf3190d0ae7bbe17",
       "differs_from_head": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/tenancy/application/service/TenantService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/tenancy/application/service/TenantService.kt",
       "sha256": "30c64268ccfab88a9fd9bd94621a149a40f279b2eac8a601232d46fa111e2378",
       "head_sha256": "30c64268ccfab88a9fd9bd94621a149a40f279b2eac8a601232d46fa111e2378",
       "differs_from_head": false

@@ -5,7 +5,7 @@
     "sourceCommit": "28b9b415",
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITSource",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITSource",
         "tests": 4,
         "failures": 0,
         "errors": 0,
@@ -13,7 +13,7 @@
         "xmlSha256": "7995b8565b291ec866516c485dbde1afa45b4e8e5ac2b90b56a9147865527cf2"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -21,7 +21,7 @@
         "xmlSha256": "b684cba53b50c4b6cf953ab7a182df921d456e36cceb8d77492050583aa58249"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDiscrepancy",
         "tests": 2,
         "failures": 0,
         "errors": 0,

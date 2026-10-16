@@ -5,7 +5,7 @@
     "tests": 11,
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -13,7 +13,7 @@
         "xmlSha256": "b7a92304adfa59baa0c911ef5f2d62a2259c9ff53ff01a7261283ed8499194c6"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaGuardsIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
@@ -21,7 +21,7 @@
         "xmlSha256": "5c047c9ec0380472f15cd2c7dd85020c9abd994f5997ec2b61c3c3dba53b33f8"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaHandoverIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -29,7 +29,7 @@
         "xmlSha256": "7996a7419f6337bfa599616ba9bec9171d3b46c9e7d8f1c30f8337b97ea6527a"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseRmaWorkOrderReadIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseRmaWorkOrderReadIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,

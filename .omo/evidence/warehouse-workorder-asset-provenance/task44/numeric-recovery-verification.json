@@ -10,7 +10,7 @@
     "skipped": 0,
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -35,8 +35,8 @@
     "Tasks45\u201348 and F1\u2013F4; known historical175.21 projection-upgrade fixture mismatch remains."
   ],
   "files": {
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseResponseLossProbe.kt": "2ab8ca6b95d1a94ee8e3ac9965d280264e7df22d519a1eac412d3e2e6e058107",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "7514d0c3ce45c1fc2022db0fcaead7fdce974001788a7bcc49c492a30d61c697"
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseResponseLossProbe.kt": "2ab8ca6b95d1a94ee8e3ac9965d280264e7df22d519a1eac412d3e2e6e058107",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "7514d0c3ce45c1fc2022db0fcaead7fdce974001788a7bcc49c492a30d61c697"
   }
 }

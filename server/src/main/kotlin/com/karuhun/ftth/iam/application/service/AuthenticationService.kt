@@ -1,0 +1,62 @@
+package com.karuhun.ftth.iam.application.service
+
+import com.karuhun.ftth.common.domain.error.AuthenticationException
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.iam.application.port.inbound.AuthTokens
+import com.karuhun.ftth.iam.application.port.inbound.AuthenticationUseCase
+import com.karuhun.ftth.iam.application.port.inbound.LoginCommand
+import com.karuhun.ftth.iam.application.port.outbound.RefreshTokenRepository
+import com.karuhun.ftth.iam.application.port.outbound.UserDirectory
+import com.karuhun.ftth.tenancy.TenantApi
+import com.karuhun.ftth.tenancy.TenantStatus
+import org.springframework.stereotype.Service
+
+/**
+ * Orkestrasi autentikasi. SENGAJA tidak `@Transactional`: ia me-resolve tenant
+ * lebih dulu, memasang [TenantContext], baru memanggil worker transaksional
+ * [TenantScopedAuthenticator] agar session Hibernate terbuka dengan tenant yang benar.
+ */
+@Service
+class AuthenticationService(
+    private val tenantApi: TenantApi,
+    private val authenticator: TenantScopedAuthenticator,
+    private val refreshTokens: RefreshTokenRepository,
+    private val userDirectory: UserDirectory,
+) : AuthenticationUseCase {
+
+    /**
+     * Login TANPA slug tenant: email di-resolve ke tenant lewat [UserDirectory]
+     * (indeks pre-auth, di luar RLS) — server belum tahu tenant sebelum email dikenali.
+     * Pesan gagal disamakan (email tak dikenal vs password salah) agar tak membocorkan
+     * email mana yang terdaftar.
+     */
+    override fun login(command: LoginCommand): AuthTokens {
+        val tenantId = userDirectory.findTenantByEmail(command.email.trim().lowercase())
+            ?: throw AuthenticationException("Email atau password salah")
+        val tenant = tenantApi.findById(tenantId)
+            ?: throw AuthenticationException("Email atau password salah")
+        if (tenant.status != TenantStatus.ACTIVE) throw AuthenticationException("Tenant tidak aktif")
+
+        return TenantContext.runAs(tenant.id) {
+            authenticator.authenticateAndIssue(command.email, command.password, command.otpCode)
+        }
+    }
+
+    override fun refresh(refreshToken: String): AuthTokens {
+        val hash = Tokens.sha256(refreshToken)
+        val tenantId = refreshTokens.findTenantByTokenHash(hash)
+            ?: throw AuthenticationException("Refresh token tidak valid atau kadaluarsa")
+
+        return TenantContext.runAs(tenantId) {
+            authenticator.rotateAndIssue(hash)
+        }
+    }
+
+    override fun logout(refreshToken: String) {
+        val hash = Tokens.sha256(refreshToken)
+        val tenantId = refreshTokens.findTenantByTokenHash(hash) ?: return
+        TenantContext.runAs(tenantId) {
+            authenticator.revoke(hash)
+        }
+    }
+}

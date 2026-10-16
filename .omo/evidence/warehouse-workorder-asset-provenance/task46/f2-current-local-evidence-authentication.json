@@ -9,7 +9,7 @@
       "countsSha256": "9587e1826d3f2dd7b860313336da71feb282c934575c667e6470be4d4086469e",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "a961810d94f567f600162d5b61e7d7ff1fa8e63195483e6ee010469eb70e8718",
           "tests": 3,
           "failures": 0,
@@ -17,7 +17,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftUpgradeIT",
           "sha256": "273ad7f093666daf5aaf8c7e40b9b2800fb4676d8641fca8ac95b3be44929179",
           "tests": 1,
           "failures": 0,
@@ -25,7 +25,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryScopeIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryScopeIT",
           "sha256": "cd0563192c2118efa13ebea8c4e2ea0b53dfa7c0e9864c00538d50dcc1ca3ec8",
           "tests": 1,
           "failures": 0,
@@ -33,7 +33,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
           "sha256": "993c99e2ab4b0cfe7fffa5d189d2944819c662c6794c302b21b403efcb3a6119",
           "tests": 1,
           "failures": 0,
@@ -41,7 +41,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftSchemaStartupIT",
           "sha256": "e7d60e623012366a3439b5235195a24cab5f0569bc4a7601d1bc40f2e38f07e9",
           "tests": 2,
           "failures": 0,
@@ -49,7 +49,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftUpgradeIT",
           "sha256": "435c3e4527fb8baefa9c6d58bf9963cb16c06142604e04ea7ebcddd48c2eb65d",
           "tests": 1,
           "failures": 0,
@@ -57,7 +57,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+          "suite": "com.karuhun.ftth.tenancy.DeleteTenantIT",
           "sha256": "dfc7aa352147157fe77c8151188f6493c7d686e762194aa02573731879c0ea1d",
           "tests": 4,
           "failures": 1,
@@ -75,7 +75,7 @@
         "manifestSha256": "652be05f7fc27760b73810265ce2909e81ea3ce24a5add3fa4804f7b8cb1d2da",
         "capturedInputs": 2625,
         "changedFromCurrent": [
-          "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+          "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt"
         ],
         "missingFromCurrent": [],
         "currentAdditionsWithinCapturedRoots": [],
@@ -94,7 +94,7 @@
       "countsSha256": "c2c078de6fd063473459baad1fc7a8f64309613d442337717213b5ef270c6962",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "dee699969c4350f9eb5113f39bb0fc62d1326c46c5de458e1e0f7da67f138202",
           "tests": 3,
           "failures": 0,
@@ -102,7 +102,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+          "suite": "com.karuhun.ftth.tenancy.DeleteTenantIT",
           "sha256": "5a2b7a4ded9203c02ff1087952ece14a4c926fced0abaa003cecda728fa5a8d5",
           "tests": 4,
           "failures": 0,
@@ -196,7 +196,7 @@
       "countsSha256": "ac667d12e7696ca0851381bee5f3da20c49cc06138bbfeb50b71fda924f0a4ef",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "d69db9692f82b100420240b9ecaba882076e71cdaaed323c44c40ae1c998de73",
           "tests": 3,
           "failures": 0,
@@ -204,7 +204,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryReceiptIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryReceiptIT",
           "sha256": "975c1db8706bc32170c9ef116f8fdf6ddcbd4ab43829f54fc36305e40588309d",
           "tests": 5,
           "failures": 0,
@@ -212,7 +212,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReceiptITFormState",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITFormState",
           "sha256": "af2626ed17de4acf116ac96b20c7b5cf59d88d8d6ab0acddc99ca99c154d6bce",
           "tests": 28,
           "failures": 0,
@@ -220,7 +220,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+          "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITSelectiveTiming",
           "sha256": "3349a4e9e8f27c6b6115ad320d8517c07208a7edf01dfffd82e386dcd7fd2d95",
           "tests": 62,
           "failures": 0,
@@ -238,43 +238,43 @@
         "manifestSha256": "5ef307956fa2439b8ce5d8f5d71d63236902ce2699f1c17d04000f24c24d7d68",
         "capturedInputs": 2607,
         "changedFromCurrent": [
-          "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryAssetLossApi.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryCompensationApi.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDispositionApi.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryReturnReacquisitionApi.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySupplierReplacementApi.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/ReturnReacquisitionStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCompensationStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDispositionStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseTransferDiscrepancyStore.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+          "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryAssetLossApi.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryCompensationApi.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryDispositionApi.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryReturnReacquisitionApi.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/InventorySupplierReplacementApi.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/MigrationOpeningStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/ReturnReacquisitionStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseAssetLossStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseCompensationStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDispositionStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseTransferDiscrepancyStore.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseOpeningBalanceService.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationOpeningIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt"
         ],
         "missingFromCurrent": [],
         "currentAdditionsWithinCapturedRoots": [
-          "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
-          "server/src/test/kotlin/com/duluin/ftth/fulfillment/MaterialDraftExpiryIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryApprovalIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDocumentIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryFacts.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt"
+          "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/fulfillment/MaterialDraftExpiryIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftClockFixture.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryApprovalIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryDocumentIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryFacts.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeProcess.kt"
         ],
         "fullTreeRootsCheckedForAdditions": [
           "server/src"
@@ -290,7 +290,7 @@
       "countsSha256": "effdb786e0a6f42e784b71d7a7fff5f4d69b7bed8ebf9150cec1d2fc418d1e39",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "d21cbf7c129f7046c0ec83b84ba1c3ee8c4fdd00dcd3bf4a48c890daf456abe7",
           "tests": 3,
           "failures": 0,
@@ -298,7 +298,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.MaterialDraftExpiryIT",
+          "suite": "com.karuhun.ftth.fulfillment.MaterialDraftExpiryIT",
           "sha256": "47cb32e7a6fa2d3a9ced28e6319cd9992c88cd9567a10e3d2f90ce8c805f1624",
           "tests": 3,
           "failures": 3,
@@ -306,7 +306,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseAssetLossIT",
           "sha256": "2dfe6fe18c0d0cf9d9d0383610f4c370901db057397f524c820b2a0e1bfad142",
           "tests": 2,
           "failures": 0,
@@ -314,7 +314,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCompensationIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCompensationIT",
           "sha256": "78ad1dc410419749e44330138b5fd7d78877bd36f52a2f36e07a245be2cbc4db",
           "tests": 2,
           "failures": 0,
@@ -322,7 +322,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCountDraftIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftIT",
           "sha256": "0e070c647869c02da1121ffb96ed3a6095a8d9879d49948d4dc8827a067ceb1d",
           "tests": 8,
           "failures": 0,
@@ -330,7 +330,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
           "sha256": "00c1ae1cdf8e0063e4499576b6e221da5e9609fbd9b8c9ff133909bacc2162e1",
           "tests": 2,
           "failures": 0,
@@ -338,7 +338,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryApprovalIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryApprovalIT",
           "sha256": "f60767f1b14e7c830345064f8c6df55a3ca1808d8ec73509d5dcfb96eaa902e7",
           "tests": 2,
           "failures": 0,
@@ -346,7 +346,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryDocumentIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryDocumentIT",
           "sha256": "e031a54e4f47061993105511c997e047eaeec6c12c41b94c23a38748c32e9efd",
           "tests": 4,
           "failures": 0,
@@ -354,7 +354,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryReceiptIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryReceiptIT",
           "sha256": "a5c5918ea2476c8e20976629c367a745b13bb522d306e529d1b0699b0aeb3d75",
           "tests": 5,
           "failures": 0,
@@ -362,7 +362,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnReacquisitionIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnReacquisitionIT",
           "sha256": "2cf4b140fa560353e1b0284b1e51c78f831dd4a5988dba23493d008fb08e2b73",
           "tests": 1,
           "failures": 0,
@@ -370,7 +370,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseSupplierReplacementIT",
           "sha256": "de8b3725cc6bef69e7c1c9663459b68bd598e78a1ce10b8c9c8de103d610d2dc",
           "tests": 2,
           "failures": 0,
@@ -378,7 +378,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftIT",
           "sha256": "c6d81001a3b771a00ff84139f49938c35dabed2b3bd83a15c722746333b553cb",
           "tests": 6,
           "failures": 0,
@@ -396,28 +396,28 @@
         "manifestSha256": "7da2e0e31a5a6656fc0fb6840d329b59e2492ad6d7602b1f934fb12b1d3af4f6",
         "capturedInputs": 2611,
         "changedFromCurrent": [
-          "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
-          "server/src/test/kotlin/com/duluin/ftth/fulfillment/MaterialDraftExpiryIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+          "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/fulfillment/MaterialDraftExpiryIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftClockFixture.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationOpeningIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt"
         ],
         "missingFromCurrent": [],
         "currentAdditionsWithinCapturedRoots": [
-          "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryFacts.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt"
+          "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryFacts.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeProcess.kt"
         ],
         "fullTreeRootsCheckedForAdditions": [
           "server/src"
@@ -433,7 +433,7 @@
       "countsSha256": "1745d04e549c7ee1ea8d02174b038852f5dcad4778e2cf8847a42482326d9c3c",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "78569948d2b587d2b503bf69a8f70bb307d4322ec93104ea98627bf4ae953b3e",
           "tests": 3,
           "failures": 0,
@@ -441,7 +441,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.MaterialDraftExpiryIT",
+          "suite": "com.karuhun.ftth.fulfillment.MaterialDraftExpiryIT",
           "sha256": "883fd15094e0d6eec09ef61d967a232730bcb484ac56e7c0aa0f4805906cc0a7",
           "tests": 3,
           "failures": 0,
@@ -449,7 +449,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsIT",
+          "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsIT",
           "sha256": "d70605f92c8d18e1cbc2c4ce6b432e4d10394e977d6d6522a64ab14649a0c94f",
           "tests": 1,
           "failures": 0,
@@ -467,27 +467,27 @@
         "manifestSha256": "e24f8d390a0b76b333a32580864544c48e9c2a7fa49ef4c45f57c1b34041aa83",
         "capturedInputs": 2611,
         "changedFromCurrent": [
-          "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+          "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftLifetimeStore.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftClockFixture.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationOpeningIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt"
         ],
         "missingFromCurrent": [],
         "currentAdditionsWithinCapturedRoots": [
-          "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
-          "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryFacts.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeProcess.kt"
+          "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseDraftSchemaGuard.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryFacts.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftSchemaStartupIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeProcess.kt"
         ],
         "fullTreeRootsCheckedForAdditions": [
           "server/src"
@@ -503,7 +503,7 @@
       "countsSha256": "ec8207d4c9bb20103ad9956d99a6bff2ea8f7012b947b6f5acb467fc9241dc9e",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "b0bdf66e3ca3f412bb0443bbcc30a9503d0dfb11962ca9b331d09d874efa8b58",
           "tests": 3,
           "failures": 0,
@@ -511,7 +511,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryAdjustmentIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryAdjustmentIT",
           "sha256": "ef4e87b913b81eab1e37a2d991f5ce230c545c6e9e7a9b236f93f1bbe2f1d262",
           "tests": 1,
           "failures": 0,
@@ -519,7 +519,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryAssetIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryAssetIT",
           "sha256": "f9b460e93751dbc61678e1b03b3060972b6f8dcfc17e284b47af6ac8502b39af",
           "tests": 2,
           "failures": 0,
@@ -527,7 +527,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryDispositionIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryDispositionIT",
           "sha256": "391ccd59ce3c272df0e29933cb53c9e284b55be5e47a76f9e5ad2402ebf05933",
           "tests": 4,
           "failures": 0,
@@ -535,7 +535,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryRepairIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryRepairIT",
           "sha256": "94f9192ebe87e356b0c42e96d3eb830a8e54d23373afaca7e1f9a288fc305aa1",
           "tests": 3,
           "failures": 0,
@@ -543,7 +543,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseMigrationOpeningIT",
           "sha256": "020ff8093e129b3931dfc60775d3aaffb1945177dc12dceaf38c09556491189c",
           "tests": 5,
           "failures": 0,
@@ -561,15 +561,15 @@
         "manifestSha256": "225174b1818e54622f3cc5ef1055837e219aaf3310a893ff6078876368f9010d",
         "capturedInputs": 2620,
         "changedFromCurrent": [
-          "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
-          "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+          "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt"
         ],
         "missingFromCurrent": [],
         "currentAdditionsWithinCapturedRoots": [
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt"
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt"
         ],
         "fullTreeRootsCheckedForAdditions": [
           "server/src"
@@ -585,7 +585,7 @@
       "countsSha256": "b5fb0741ce20cabb2154258df0a3a659e3afbda11b1ff21fdf19765fc63075ed",
       "reports": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "sha256": "71083f1c3e6794a8237d816dd0390616557419ba956f0e971ac27cc726aa7689",
           "tests": 3,
           "failures": 0,
@@ -593,7 +593,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftUpgradeIT",
           "sha256": "2fd68070f1ab92fe96cb794ec0ea59760a3a45a8290cc648bdb31093fb6349ac",
           "tests": 1,
           "failures": 0,
@@ -601,7 +601,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseDraftSchemaStartupIT",
           "sha256": "3e4a941b8ec5ccd93bb4dff3fcca09613cb433b23c79c463e5a91c7c5c3aea50",
           "tests": 2,
           "failures": 0,
@@ -609,7 +609,7 @@
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftUpgradeIT",
           "sha256": "66297e78ee874ff3d67fd221ebb8827f8511457934b7be4a3c239722b1bcb319",
           "tests": 1,
           "failures": 0,
@@ -628,22 +628,22 @@
         "capturedInputs": 2618,
         "changedFromCurrent": [
           "scripts/warehouse/qa.sh",
-          "server/src/historicalTest/kotlin/com/duluin/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
-          "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/persistence/TenantEraser.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftClockFixture.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationOpeningIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/tenancy/DeleteTenantIT.kt"
+          "server/src/historicalTest/kotlin/com/karuhun/ftth/inventory/WarehouseDraftUpgradeSeed.kt",
+          "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/persistence/TenantEraser.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftClockFixture.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationOpeningIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftUpgradeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/tenancy/DeleteTenantIT.kt"
         ],
         "missingFromCurrent": [],
         "currentAdditionsWithinCapturedRoots": [
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryFacts.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
-          "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt"
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAdjustmentIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryAssetIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryDispositionIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryFacts.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryRepairIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryScopeIT.kt",
+          "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDraftExpiryUpgradeIT.kt"
         ],
         "fullTreeRootsCheckedForAdditions": [
           "server/src"
