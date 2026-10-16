@@ -17,7 +17,7 @@ The follow-up screenshot `RixusMDXK9xn` showed map-panel commands wrapping into 
 Validation:
 - Production Kotlin and web builds passed; web lint has no errors.
 - 48 focused backend tests passed: migration replay/scope, credential encryption, explicit RADIUS, CSV partial failure/recovery, export safety, first-invoice/short-month billing and existing PSB behavior.
-- 16 focused frontend tests passed.
+- 28 focused frontend tests passed, including PSB/migration navigation and command-bar overflow.
 - 48 customer-form/resource-layer browser cases passed in Chromium/Firefox at desktop/mobile widths (44 initial passes plus four updated toolbar-assertion rechecks).
 - Four real-map browser cases passed for one-row ODP commands and relocation through the menu. Desktop/mobile Firefox screenshots were inspected.
 - The general ModularityTests structure check has an existing failure: an isolated checkout of base main `a22041fd` reproduced exactly the same 320 normalized violation groups, with zero added/removed groups. Do not suppress that check or report the entire backend suite as green.

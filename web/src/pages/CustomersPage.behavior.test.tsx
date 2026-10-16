@@ -66,14 +66,14 @@ describe('PSB entry from customers', () => {
   beforeEach(() => { fixtures.get.mockImplementation(async (url: string) => url.startsWith('/api/customers')
     ? { content: [customer('1')], totalElements: 1 } : []) })
 
-  it('opens beside customer creation, loads setup on demand, and closes without reloading the list', async () => {
+  it('opens beside customer migration; loads setup on demand, and closes without reloading the list', async () => {
     const user = userEvent.setup()
     show('/customers?q=Pelanggan&status=ACTIVE')
     await screen.findByRole('button', { name: 'Pelanggan 1' })
     const toolbar = screen.getByRole('toolbar', { name: 'Aksi' })
-    expect([...toolbar.querySelectorAll('button')].slice(0, 2).map(button => button.textContent)).toEqual(['Tambah pelanggan', 'PSB Ekspres'])
+    expect([...toolbar.querySelectorAll('button')].slice(0, 2).map(button => button.textContent)).toEqual(['PSB baru', 'Migrasi pelanggan'])
     expect(fixtures.plans).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'PSB Ekspres' }))
+    await user.click(screen.getByRole('button', { name: 'PSB baru' }))
     await screen.findByRole('tab', { name: 'Pelanggan' })
     expect(screen.getByLabelText('Current route').textContent).toBe('?q=Pelanggan&status=ACTIVE&create=psb')
     await user.click(screen.getByRole('button', { name: 'Batal' }))
@@ -87,8 +87,16 @@ describe('PSB entry from customers', () => {
     fixtures.denied = [permission]
     show()
     await screen.findByRole('button', { name: 'Pelanggan 1' })
-    expect(screen.queryByRole('button', { name: 'PSB Ekspres' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'PSB baru' })).toBeNull()
     expect(fixtures.plans).not.toHaveBeenCalled()
+  })
+
+  it('offers migration without installation or RADIUS management permissions', async () => {
+    fixtures.denied = ['bng.access.manage', 'workorder.order.create']
+    show()
+    await screen.findByRole('button', { name: 'Pelanggan 1' })
+    expect(screen.queryByRole('button', { name: 'PSB baru' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Migrasi pelanggan' })).toBeTruthy()
   })
 
   it('opens a legacy bookmark directly over the customer list and preserves its filters on close', async () => {
