@@ -97,6 +97,7 @@ object CustomerCsvParser {
         records.drop(1).forEachIndexed { offset, cells ->
             val rowNumber = offset + 2
             fun at(name: String): String? = index[name]?.let { cells.getOrNull(it)?.trim()?.takeIf(String::isNotEmpty) }
+            val password = index["password"]?.let { cells.getOrNull(it)?.takeIf(String::isNotBlank) }
             val username = at("username") ?: at("customer_code")
             if (username == null) errors += CsvImportError(rowNumber, "customer_code", "REQUIRED", "Isi customer_code atau username")
             if (username != null && !seen.add(username.lowercase())) errors += CsvImportError(rowNumber, "username", "DUPLICATE_KEY", "Kunci bisnis duplikat")
@@ -111,7 +112,7 @@ object CustomerCsvParser {
             val unlocated = latitude == 0.0 && longitude == 0.0
             val onuSerial = at("onu_serial")?.uppercase(java.util.Locale.ROOT)
             if (onuSerial != null && (onuSerial.length > 60 || !onus.add(onuSerial))) errors += CsvImportError(rowNumber, "onu_serial", "INVALID_ONU", "Nomor seri ONU tidak valid atau digunakan lebih dari sekali")
-            rows += CustomerImportRow(at("name"), at("phone"), at("address"), at("package_name"), at("connection_type"), date, at("username"), at("password"), at("email"), at("router_name"), at("id_card_number"), integer("next_billing"), latitude?.takeUnless { unlocated }, longitude?.takeUnless { unlocated }, at("framed_ip"), customerCode = at("customer_code"), serviceStatus = at("service_status") ?: "ACTIVE", firstInvoiceOn = dateAt("first_invoice_on"), monthlyFee = fee, onuSerial = onuSerial)
+            rows += CustomerImportRow(at("name"), at("phone"), at("address"), at("package_name"), at("connection_type"), date, at("username"), password, at("email"), at("router_name"), at("id_card_number"), integer("next_billing"), latitude?.takeUnless { unlocated }, longitude?.takeUnless { unlocated }, at("framed_ip"), customerCode = at("customer_code"), serviceStatus = at("service_status") ?: "ACTIVE", firstInvoiceOn = dateAt("first_invoice_on"), monthlyFee = fee, onuSerial = onuSerial)
         }
         return ParsedCustomerCsv(hash, rows, errors)
     }

@@ -26,6 +26,9 @@ class CustomerMigrationIT : WarehouseMasterHttpFixture() {
         val nasId = nas(token)
         val payload = mapper.readTree(body(token, planId)) as tools.jackson.databind.node.ObjectNode
         payload.put("prepareRadius", true).put("nasId", nasId)
+        payload.put("password", "   ")
+        assertThat(request("POST", "/api/onboarding/migrations", token, payload.toString()).status).isEqualTo(400)
+        payload.put("password", "legacy-password")
         payload.put("authType", "HOTSPOT")
         assertThat(request("POST", "/api/onboarding/migrations", token, payload.toString()).status).isEqualTo(409)
         payload.put("authType", "PPPOE").put("onuSerial", "NOT-DISCOVERED")
