@@ -65,8 +65,10 @@ class InvoiceGenerator(
         // (null = ikut global). Langganan yang tanggal tagihnya belum tiba dilewati
         // ronde ini — akan terbit pada ronde berikutnya setelah tanggalnya tercapai.
         val billable = customerApi.findBillableSubscriptions().filter { sub ->
-            sub.monthlyFee.signum() > 0 &&
-                today.dayOfMonth >= (sub.billingDayOfMonth ?: properties.billingDayOfMonth) &&
+            sub.billingManaged && (sub.billingStartsOn == null || !today.isBefore(sub.billingStartsOn)) &&
+                sub.monthlyFee.signum() > 0 &&
+                ((sub.billingStartsOn != null && java.time.YearMonth.from(today) == java.time.YearMonth.from(sub.billingStartsOn)) ||
+                    today.dayOfMonth >= minOf(sub.billingDayOfMonth ?: properties.billingDayOfMonth, today.lengthOfMonth())) &&
                 !invoiceRepository.existsForPeriod(sub.subscriptionId, periodStart)
         }
         if (billable.isEmpty()) return 0

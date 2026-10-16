@@ -26,342 +26,68 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
 
-/**
- * Menguji orkestrasi impor CSV pelanggan dengan fake murni (tanpa Spring/DB): upsert menurut
- * `mikrotik_username`. Menegakkan: baris baru → buat pelanggan+langganan+akun aktif dengan paket
- * dari nama & BRAS dari nama; `connection_type` dipetakan ke authType (pppoe/hotspot/dhcp/static),
- * Framed-IP diteruskan; username sudah ada → update parsial (paket TAK berubah, kolom kosong
- * dipertahankan, password kosong diteruskan apa adanya untuk dipertahankan bng); tanggal pasang jadi
- * aktivasi; `next_billing` di-clamp ≤28; baris tak layak (username kosong → dilewati; tipe tak
- * dikenal / paket / router tak ditemukan → gagal) tanpa menyeret batch.
- */
+import com.duluin.ftth.onboarding.application.service.*
+
 class ImportCustomersServiceTest {
+    private val homePlan = PlanCommercialRef(UuidV7.generate(), "Home 20", BigDecimal("150000"), 20, true, null, 1, null, null, null)
+    private val migration = RecordingMigration()
+    private val customer = FakeCustomerApi()
+    private val bng = FakeBngApi()
+    private val service = ImportCustomersService(CustomerRowImporter(customer, FakeCatalogApi(mapOf("home 20" to homePlan)), bng, migration))
+    private fun valid(username: String = "joko") = row(name = "Joko", address = "Jl. Melati", packageName = "Home 20", username = username)
 
-    private val homePlan = PlanCommercialRef(
-        planId = UuidV7.generate(),
-        packageName = "Home 20",
-        monthlyFee = BigDecimal("150000.00"),
-        bandwidthMbps = 20,
-        active = true,
-        prorateOnActivation = null,
-        billingDayOfMonth = 1,
-        dueDays = null,
-        graceDays = null,
-        autoIsolir = null,
-    )
-    private val brasId: UUID = UuidV7.generate()
-
-    private fun newService(catalog: FakeCatalogApi, bng: FakeBngApi, customer: FakeCustomerApi) =
-        RecordingPublisher().let { publisher ->
-            TestService(ImportCustomersService(CustomerRowImporter(customer, catalog, bng, publisher)), publisher)
-        }
-
-    private data class TestService(val service: ImportCustomersService, val publisher: RecordingPublisher) {
-        fun importCustomers(command: ImportCustomersCommand) = service.importCustomers(command)
-    }
-
-    @Test
-    fun `baris baru dibuat lengkap dan memprovisi RADIUS dengan paket & BRAS dari nama`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        val testService = newService(catalog, bng, customer)
-        val result = testService.importCustomers(
-            ImportCustomersCommand(
-                listOf(
-                    row(
-                        name = "Joko Susilo",
-                        address = "Jl. Melati 3",
-                        packageName = "Home 20",
-                        username = "joko",
-                        password = "rahasia",
-                        routerName = "BRAS-01",
-                        installationDate = LocalDate.of(2024, 1, 15),
-                        nextBillingDay = 10,
-                        latitude = -6.2,
-                        longitude = 106.8,
-                    ),
-                ),
-            ),
-        )
-
+    @Test fun `migration preserves dates price status and credentials without provisioning`() {
+        val date = LocalDate.now().plusDays(30)
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid().copy(serviceStatus = "SUSPENDED", installationDate = LocalDate.of(2020,1,2), firstInvoiceOn = date, nextBillingDay = 31, monthlyFee = BigDecimal("123000"), mikrotikPassword = "legacy"))))
         assertThat(result.created).isEqualTo(1)
-        assertThat(result.updated).isZero()
-        assertThat(result.failed).isZero()
-
-        val registered = customer.registered.single()
-        assertThat(registered.name).isEqualTo("Joko Susilo")
-        assertThat(registered.code).isNull() // kode auto-generate
-        assertThat(registered.location!!.longitude).isEqualTo(106.8)
-        assertThat(registered.location!!.latitude).isEqualTo(-6.2)
-
-        assertThat(bng.provisioned).isEmpty()
-        assertThat(customer.activatedImported).isEmpty()
-        assertThat(testService.publisher.requests).hasSize(1)
-        assertThat(testService.publisher.requests.single().username).isEqualTo("joko")
-        assertThat(testService.publisher.requests.single().credentialHandle).isNotNull()
-    }
-
-    @Test
-    fun `create tanpa password menyerahkan generate ke server`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        newService(catalog, bng, customer).importCustomers(
-            ImportCustomersCommand(
-                listOf(row(name = "Ani", address = "Jl. A", packageName = "Home 20", username = "ani", password = "  ", routerName = "BRAS-01")),
-            ),
-        )
-
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `username sudah ada memicu update parsial tanpa mengganti paket`() {
-        val existingPlan = UuidV7.generate()
-        val existingNas = UuidV7.generate()
-        val existing = ImportedAccessRef(
-            accessId = UuidV7.generate(),
-            subscriptionId = UuidV7.generate(),
-            customerId = UuidV7.generate(),
-            planId = existingPlan,
-            nasId = existingNas,
-            macBased = false,
-        )
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(accounts = mapOf("joko" to existing))
-        val customer = FakeCustomerApi()
-        val result = newService(catalog, bng, customer).importCustomers(
-            ImportCustomersCommand(
-                listOf(
-                    row(
-                        name = "Joko Baru",
-                        address = "  ", // kosong → dipertahankan
-                        packageName = "Home 20", // diabaikan pada update
-                        username = "joko",
-                        password = "", // kosong → dipertahankan (diteruskan apa adanya)
-                        routerName = "", // kosong → BRAS lama dipertahankan
-                        nextBillingDay = null,
-                    ),
-                ),
-            ),
-        )
-
-        assertThat(result.updated).isEqualTo(1)
-        assertThat(result.created).isZero()
-        assertThat(bng.provisioned).isEmpty() // tak ada create
-
-        val biodata = customer.biodataUpdates.single()
-        assertThat(biodata.customerId).isEqualTo(existing.customerId)
-        assertThat(biodata.name).isEqualTo("Joko Baru")
-        assertThat(biodata.address).isNull() // kolom kosong dipertahankan
-        assertThat(biodata.location).isNull()
-
-        assertThat(bng.accessUpdates).isEmpty()
-
-        assertThat(customer.billingOverrides).isEmpty() // next_billing kosong → tak disetel
-    }
-
-    @Test
-    fun `update router_name mengganti BRAS lewat nama`() {
-        val existing = ImportedAccessRef(
-            accessId = UuidV7.generate(),
-            subscriptionId = UuidV7.generate(),
-            customerId = UuidV7.generate(),
-            planId = UuidV7.generate(),
-            nasId = UuidV7.generate(),
-            macBased = false,
-        )
-        val newBras = UuidV7.generate()
-        val bng = FakeBngApi(accounts = mapOf("joko" to existing), routers = mapOf("bras-02" to newBras))
-        val customer = FakeCustomerApi()
-        newService(FakeCatalogApi(), bng, customer).importCustomers(
-            ImportCustomersCommand(listOf(row(username = "joko", routerName = "BRAS-02"))),
-        )
-
-        assertThat(bng.accessUpdates).isEmpty()
-    }
-
-    @Test
-    fun `next_billing di atas 28 di-clamp ke 28`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        newService(catalog, bng, customer).importCustomers(
-            ImportCustomersCommand(
-                listOf(row(name = "Budi", address = "Jl. B", packageName = "Home 20", username = "budi", routerName = "BRAS-01", nextBillingDay = 31)),
-            ),
-        )
-
-        assertThat(customer.activatedImported).isEmpty()
-    }
-
-    @Test
-    fun `update next_billing di atas 28 juga di-clamp`() {
-        val existing = ImportedAccessRef(
-            accessId = UuidV7.generate(),
-            subscriptionId = UuidV7.generate(),
-            customerId = UuidV7.generate(),
-            planId = UuidV7.generate(),
-            nasId = null,
-            macBased = false,
-        )
-        val bng = FakeBngApi(accounts = mapOf("joko" to existing))
-        val customer = FakeCustomerApi()
-        newService(FakeCatalogApi(), bng, customer).importCustomers(
-            ImportCustomersCommand(listOf(row(username = "joko", nextBillingDay = 30))),
-        )
-
-        assertThat(customer.billingOverrides.single()).isEqualTo(existing.subscriptionId to 28)
-    }
-
-    @Test
-    fun `mikrotik_username kosong dilewati`() {
-        val result = newService(FakeCatalogApi(), FakeBngApi(), FakeCustomerApi()).importCustomers(
-            ImportCustomersCommand(listOf(row(name = "Tanpa Username", username = "  "))),
-        )
-
-        assertThat(result.skipped).isEqualTo(1)
-        assertThat(result.rows.single().status).isEqualTo(CustomerImportStatus.SKIPPED)
-    }
-
-    @Test
-    fun `tipe hotspot memprovisi akun login HOTSPOT dengan password`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        newService(catalog, bng, customer).importCustomers(
-            ImportCustomersCommand(
-                listOf(
-                    row(
-                        name = "Wifi Warkop", address = "Jl. Kopi", packageName = "Home 20",
-                        username = "warkop", password = "kopi123", routerName = "BRAS-01",
-                        connectionType = "hotspot",
-                    ),
-                ),
-            ),
-        )
-
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `tipe dhcp memprovisi akun berbasis MAC`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        newService(catalog, bng, customer).importCustomers(
-            ImportCustomersCommand(
-                listOf(
-                    row(
-                        name = "Pelanggan DHCP", address = "Jl. Dinamis", packageName = "Home 20",
-                        username = "AA:BB:CC:DD:EE:FF", routerName = "BRAS-01",
-                        connectionType = "dhcp",
-                    ),
-                ),
-            ),
-        )
-
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `tipe static meneruskan reservasi framed_ip`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        newService(catalog, bng, customer).importCustomers(
-            ImportCustomersCommand(
-                listOf(
-                    row(
-                        name = "Pelanggan Static", address = "Jl. Tetap", packageName = "Home 20",
-                        username = "11:22:33:44:55:66", routerName = "BRAS-01",
-                        connectionType = "static", framedIp = "100.64.0.10",
-                    ),
-                ),
-            ),
-        )
-
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `tipe koneksi tak dikenal menggagalkan baris`() {
-        val result = newService(FakeCatalogApi(), FakeBngApi(), FakeCustomerApi()).importCustomers(
-            ImportCustomersCommand(listOf(row(username = "user-x", connectionType = "wireless"))),
-        )
-
-        assertThat(result.failed).isEqualTo(1)
-        assertThat(result.rows.single().status).isEqualTo(CustomerImportStatus.FAILED)
-        assertThat(result.rows.single().message).contains("tak dikenal")
-    }
-
-    @Test
-    fun `validate only tidak membuat customer atau fulfillment`() {
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        val testService = newService(FakeCatalogApi(mapOf("home 20" to homePlan)), bng, customer)
-
-        val result = testService.importCustomers(
-            ImportCustomersCommand(
-                rows = listOf(row(name = "Validasi", address = "Jl. A", packageName = "Home 20", username = "validate")),
-                mode = ImportMode.VALIDATE_ONLY,
-            ),
-        )
-
-        assertThat(result.skipped).isEqualTo(1)
+        val command = migration.commands.single()
+        assertThat(command.status).isEqualTo(MigrationStatus.SUSPENDED)
+        assertThat(command.installationDate).isEqualTo(LocalDate.of(2020,1,2))
+        assertThat(command.firstInvoiceOn).isEqualTo(date)
+        assertThat(command.billingDay).isEqualTo(31)
+        assertThat(command.customer.monthlyFeeOverride).isEqualTo(BigDecimal("123000"))
+        assertThat(command.password).isEqualTo("legacy")
+        assertThat(command.customer.location).isNull()
         assertThat(customer.registered).isEmpty()
-        assertThat(testService.publisher.requests).isEmpty()
-    }
-
-    @Test
-    fun `pending installation membuat customer tanpa activation provisioning atau handle`() {
-        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
-        val customer = FakeCustomerApi()
-        val testService = newService(FakeCatalogApi(mapOf("home 20" to homePlan)), bng, customer)
-
-        testService.importCustomers(
-            ImportCustomersCommand(
-                rows = listOf(row(name = "Pending", address = "Jl. A", packageName = "Home 20", username = "pending", password = "secret")),
-                mode = ImportMode.PENDING_INSTALLATION,
-            ),
-        )
-
-        assertThat(customer.registered.single().location).isNull()
-        assertThat(customer.activatedImported).isEmpty()
         assertThat(bng.provisioned).isEmpty()
-        assertThat(testService.publisher.requests).isEmpty()
     }
-
-    @Test
-    fun `paket tak dikenal pada create menggagalkan baris`() {
-        val result = newService(FakeCatalogApi(), FakeBngApi(), FakeCustomerApi()).importCustomers(
-            ImportCustomersCommand(
-                listOf(row(name = "Cici", address = "Jl. C", packageName = "Paket Hantu", username = "cici")),
-            ),
-        )
-
+    @Test fun `customer code supports migration without network credentials`() {
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid().copy(mikrotikUsername = null, customerCode = "OLD-123"))))
+        assertThat(result.created).isEqualTo(1)
+        assertThat(migration.commands.single().customer.code).isEqualTo("OLD-123")
+        assertThat(migration.commands.single().username).isNull()
+    }
+    @Test fun `bad status coordinate or package fails independently`() {
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid("a").copy(serviceStatus = "STOPPED"), valid("b").copy(latitude = -6.0), valid("c").copy(packageName = "missing"), valid("d"))))
+        assertThat(result.failed).isEqualTo(3)
+        assertThat(result.created).isEqualTo(1)
+        assertThat(migration.commands).hasSize(1)
+    }
+    @Test fun `existing source identity is skipped and later rows continue`() {
+        migration.existing += "joko"
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid(), valid("new"))))
+        assertThat(result.skipped).isEqualTo(1)
+        assertThat(result.created).isEqualTo(1)
+    }
+    @Test fun `validate only does not register or provision`() {
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid()), mode = ImportMode.VALIDATE_ONLY))
+        assertThat(result.skipped).isEqualTo(1)
+        assertThat(migration.commands).isEmpty()
+        assertThat(customer.registered).isEmpty()
+        assertThat(bng.provisioned).isEmpty()
+    }
+    @Test fun `pending installation remains a prospect instead of migration`() {
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid()), mode = ImportMode.PENDING_INSTALLATION))
+        assertThat(result.created).isEqualTo(1)
+        assertThat(customer.registered).hasSize(1)
+        assertThat(migration.commands).isEmpty()
+    }
+    @Test fun `missing identity and unknown connection do not create customers`() {
+        val result = service.importCustomers(ImportCustomersCommand(listOf(valid().copy(mikrotikUsername = null), valid().copy(connectionType = "invalid"))))
+        assertThat(result.skipped).isEqualTo(1)
         assertThat(result.failed).isEqualTo(1)
-        assertThat(result.rows.single().status).isEqualTo(CustomerImportStatus.FAILED)
-        assertThat(result.rows.single().message).contains("Paket 'Paket Hantu'")
+        assertThat(migration.commands).isEmpty()
     }
-
-    @Test
-    fun `router tak dikenal menggagalkan baris`() {
-        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
-        val result = newService(catalog, FakeBngApi(), FakeCustomerApi()).importCustomers(
-            ImportCustomersCommand(
-                listOf(row(name = "Dedi", address = "Jl. D", packageName = "Home 20", username = "dedi", routerName = "BRAS-HANTU")),
-            ),
-        )
-
-        assertThat(result.failed).isEqualTo(1)
-        assertThat(result.rows.single().message).contains("Router 'BRAS-HANTU'")
-    }
-
-    // ---- Fixture & fake ----
-
-    @Suppress("LongParameterList")
     private fun row(
         name: String? = null,
         phone: String? = null,
@@ -439,11 +165,6 @@ class ImportCustomersServiceTest {
     data class AccessUpdate(val accessId: UUID, val planId: UUID, val nasId: UUID?, val secret: String?)
 
     data class ActivatedImported(val subscriptionId: UUID, val activatedAt: Instant?, val billingDay: Int?)
-
-    private class RecordingPublisher : MigrationFulfillmentPublisher {
-        val requests = mutableListOf<MigrationFulfillmentRequested>()
-        override fun publish(request: MigrationFulfillmentRequested) { requests += request }
-    }
 
     private class FakeCustomerApi : com.duluin.ftth.customer.CustomerApi {
         val registered = mutableListOf<RegisterCustomerCommand>()

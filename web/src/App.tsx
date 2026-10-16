@@ -20,8 +20,6 @@ import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { InvoicesPage } from './pages/InvoicesPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
-import { ImportPppoePage } from './pages/ImportPppoePage'
-import { ImportCustomersPage } from './pages/ImportCustomersPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { NetworkProvisioningPage } from './pages/NetworkProvisioningPage'
@@ -248,7 +246,7 @@ function OperatorApp() {
               path="import-pppoe"
               element={
                 <RequirePermission permission="customer.customer.create">
-                  <ImportPppoePage />
+                  <Navigate to="/customers?create=migrate&source=mikrotik" replace />
                 </RequirePermission>
               }
             />
@@ -256,7 +254,7 @@ function OperatorApp() {
               path="import-customers"
               element={
                 <RequirePermission permission="customer.customer.create">
-                  <ImportCustomersPage />
+                  <Navigate to="/customers?create=migrate&source=csv" replace />
                 </RequirePermission>
               }
             />

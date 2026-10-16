@@ -23,6 +23,14 @@ import java.util.UUID
  * (tak ada di model baris ekspor).
  */
 class ExportCustomersServiceTest {
+    private fun exporter(customer: CustomerApi, bng: BngApi): ExportCustomersService {
+        val migrations = org.mockito.Mockito.mock(com.duluin.ftth.onboarding.adapter.outbound.persistence.CustomerMigrationJpaRepository::class.java)
+        val authority = org.mockito.Mockito.mock(com.duluin.ftth.iam.CurrentAuthorityApi::class.java)
+        org.mockito.Mockito.`when`(authority.lockCurrent()).thenReturn(com.duluin.ftth.iam.CurrentAuthority(
+            org.mockito.Mockito.mock(com.duluin.ftth.common.security.AuthorityFence::class.java), emptySet(), emptySet(), com.duluin.ftth.common.security.AuthorityScope.Unrestricted, false))
+        return ExportCustomersService(customer, bng, migrations, authority)
+    }
+
 
     @Test
     fun `merakit baris ekspor dari akun + langganan + biodata`() {
@@ -49,7 +57,7 @@ class ExportCustomersServiceTest {
             ),
         )
 
-        val lines = ExportCustomersService(customer, bng).exportCustomers()
+        val lines = exporter(customer, bng).exportCustomers()
 
         val line = lines.single()
         assertThat(line.mikrotikUsername).isEqualTo("joko")
@@ -91,7 +99,7 @@ class ExportCustomersServiceTest {
             ),
         )
 
-        val line = ExportCustomersService(customer, bng).exportCustomers().single()
+        val line = exporter(customer, bng).exportCustomers().single()
         assertThat(line.connectionType).isEqualTo("static")
         assertThat(line.mikrotikUsername).isEqualTo("AA:BB:CC:DD:EE:FF")
         assertThat(line.framedIp).isEqualTo("100.64.0.10")
@@ -103,14 +111,14 @@ class ExportCustomersServiceTest {
             listOf(AccessExportRef("hantu", "PPPOE", UuidV7.generate(), UuidV7.generate(), nasName = null)),
         )
         // findExportRows mengembalikan kosong → tak ada langganan cocok.
-        val lines = ExportCustomersService(FakeCustomerApi(emptyList()), bng).exportCustomers()
+        val lines = exporter(FakeCustomerApi(emptyList()), bng).exportCustomers()
 
         assertThat(lines).isEmpty()
     }
 
     @Test
     fun `tanpa akun menghasilkan keluaran kosong`() {
-        val lines = ExportCustomersService(FakeCustomerApi(emptyList()), FakeBngApi(emptyList())).exportCustomers()
+        val lines = exporter(FakeCustomerApi(emptyList()), FakeBngApi(emptyList())).exportCustomers()
 
         assertThat(lines).isEmpty()
     }
@@ -138,7 +146,7 @@ class ExportCustomersServiceTest {
             ),
         )
 
-        val line = ExportCustomersService(customer, bng).exportCustomers().single()
+        val line = exporter(customer, bng).exportCustomers().single()
         assertThat(line.installationDate).isNull()
         assertThat(line.nextBillingDay).isNull()
         assertThat(line.routerName).isNull()

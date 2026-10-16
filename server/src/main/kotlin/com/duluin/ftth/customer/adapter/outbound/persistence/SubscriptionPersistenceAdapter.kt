@@ -27,6 +27,8 @@ class SubscriptionPersistenceAdapter(
             status = subscription.status
             activatedAt = subscription.activatedAt
             terminatedAt = subscription.terminatedAt
+            billingManaged = subscription.billingManaged
+            billingStartsOn = subscription.billingStartsOn
         } ?: SubscriptionJpaEntity(
             id = subscription.id,
             customerId = subscription.customerId,
@@ -41,6 +43,8 @@ class SubscriptionPersistenceAdapter(
             status = subscription.status,
             activatedAt = subscription.activatedAt,
             terminatedAt = subscription.terminatedAt,
+            billingManaged = subscription.billingManaged,
+            billingStartsOn = subscription.billingStartsOn,
         )
         return jpa.save(entity).toDomain()
     }
@@ -96,4 +100,6 @@ internal fun SubscriptionJpaEntity.toDomain(): Subscription = Subscription.rehyd
     status = status,
     activatedAt = activatedAt,
     terminatedAt = terminatedAt,
+    billingManaged = billingManaged,
+    billingStartsOn = billingStartsOn,
 )

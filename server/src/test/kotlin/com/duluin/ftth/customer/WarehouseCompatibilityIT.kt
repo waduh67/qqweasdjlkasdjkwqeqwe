@@ -29,8 +29,8 @@ class WarehouseCompatibilityIT : CustomerDeploymentFixture() {
         plan(token)
         val response = request("POST", "/api/onboarding/import/customers", token,
             """{"mode":"ALREADY_INSTALLED","operationKey":"compatibility-import","rows":[
-                {"name":"Imported","address":"Test","packageName":"Compatibility","mikrotikUsername":"imported"},
-                {"mikrotikUsername":"bad","connectionType":"invalid"},{}]}""")
+                {"name":"Imported","address":"Test","packageName":"Compatibility","mikrotikUsername":"imported","areaId":"${area(token)}"},
+                {"mikrotikUsername":"bad","connectionType":"invalid","areaId":"${area(token)}"},{"areaId":"${area(token)}"}]}""")
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
         val result = mapper.readTree(response.contentAsString)
         assertThat(result.propertyNames()).containsExactlyInAnyOrder("created", "updated", "skipped", "failed", "rows")
@@ -40,7 +40,7 @@ class WarehouseCompatibilityIT : CustomerDeploymentFixture() {
         fixture(token).transaction {
             assertThat(scalar("SELECT count(*) FROM customer")).isEqualTo("1")
             assertThat(scalar("SELECT count(*) FROM subscription")).isEqualTo("1")
-            assertThat(scalar("SELECT count(*) FROM migration_fulfillment_inbox WHERE state='PENDING'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM customer_migration")).isEqualTo("1")
         }
         assertPhysicalEmpty(token)
     }

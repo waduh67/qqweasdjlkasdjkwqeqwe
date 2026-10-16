@@ -77,6 +77,7 @@ internal fun Subscription.toView() = SubscriptionView(
     status = status,
     activatedAt = activatedAt,
     terminatedAt = terminatedAt,
+    billingManaged = billingManaged, billingStartsOn = billingStartsOn, billingDayOfMonth = billingDayOfMonth,
 )
 
 internal fun Onu.toView(odpCode: String?, origin: OnuProvenanceProjection) = OnuView(

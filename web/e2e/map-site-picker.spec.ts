@@ -29,7 +29,7 @@ function tile(z: number, x: number, y: number, tilePoints = points) {
 }
 async function setup(page: Page, allowSites = true) {
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await installOltInventoryRoutes(page, true, false, {}, ['network.cable.create', 'network.odc.view', 'network.joint_box.view', ...(allowSites ? ['network.site.view'] : [])])
+  await installOltInventoryRoutes(page, true, false, {}, ['network.cable.create', 'network.odp.update', 'network.odp.delete', 'network.odc.view', 'network.joint_box.view', ...(allowSites ? ['network.site.view'] : [])])
   const tiles: string[] = [], errors: string[] = []
   let siteReads = 0
   page.on('pageerror', error => errors.push(error.message))
@@ -184,3 +184,33 @@ test('unmonitored PSB customer is visible and clickable on dark and satellite ma
   expect(requestedVersions[0]).not.toBe(firstVersion)
   expect(state.errors).toEqual([])
 })
+
+for (const width of [375, 1440]) {
+  test(`ODP panel commands stay on one row with secondary actions in the menu at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 1000 })
+    const state = await setup(page)
+    await page.route('**/api/gis/odps/odp-qa', route => route.fulfill({ json: {
+      odpId: 'odp-qa', code: 'ODP-CRB-002', name: 'ODP Cirebon 002', location: points[3], capacity: 16, usedPorts: 0,
+      availablePortNumbers: Array.from({ length: 16 }, (_, index) => index + 1), utilizationPercent: 0, occupants: [],
+      upstream: { complete: true, odcCode: 'ODC-CRB-001', ponPortLabel: 'PON1', oltCode: 'OLT-CRB-001', siteCode: 'POP-CRB', splitterLossDb: 27.6 },
+    } }))
+    await page.goto('/map')
+    await chooseSite(page, 'POP-LAB · Laboratorium')
+    await expect.poll(() => state.at(sites[0].location)).toBe(true)
+    const canvas = page.locator('.maplibregl-canvas'), box = (await canvas.boundingBox())!
+    const center = world(sites[0].location, 16), point = world(points[3], 16)
+    await canvas.click({ position: { x: box.width / 2 + (point[0] - center[0]) * 512, y: box.height / 2 + (point[1] - center[1]) * 512 } })
+    const panel = page.locator('.map-panel').filter({ hasText: 'ODP-CRB-002' })
+    const buttons = panel.getByRole('toolbar').getByRole('button')
+    await expect(buttons).toHaveCount(3)
+    const bounds = await buttons.evaluateAll(elements => elements.map(element => { const box = element.getBoundingClientRect(); return { top: box.top, bottom: box.bottom } }))
+    expect(Math.max(...bounds.map(box => box.top)) - Math.min(...bounds.map(box => box.top))).toBeLessThan(4)
+    await page.screenshot({ path: info.outputPath('odp-commands.png'), animations: 'disabled' })
+    await panel.getByRole('button', { name: 'Aksi lainnya' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Pindahkan' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Hapus ODP' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Pindahkan' }).click()
+    await expect(page.getByText(/Klik lokasi baru|lokasi baru/i).first()).toBeVisible()
+    expect(state.errors).toEqual([])
+  })
+}

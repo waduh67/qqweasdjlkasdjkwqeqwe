@@ -37,7 +37,7 @@ export function SitePanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={site.code} subtitle={`Site/POP · ${site.name}`} onClose={onClose} />
-      {actions.length > 0 && <CommandBar actions={actions} />}
+      {actions.length > 0 && <CommandBar compact actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         {canDelete && deleteBlocked && (

@@ -98,6 +98,10 @@ export interface ImportPppoeRequest {
   areaId?: string | null
   defaultAddress?: string | null
   defaultLocation?: LocationPayload | null
+  operationKey?: string
+  firstInvoiceOn?: string | null
+  billingDay?: number | null
+  installationDate?: string | null
 }
 
 export type ImportRowStatus = 'CREATED' | 'SKIPPED' | 'FAILED'
@@ -138,7 +142,7 @@ export const importPppoe = (body: ImportPppoeRequest) =>
 export const CUSTOMER_CSV_COLUMNS = [
   'name', 'phone', 'address', 'package_name', 'connection_type', 'installation_date',
   'mikrotik_username', 'mikrotik_password', 'email', 'router_name', 'framed_ip', 'id_card_number',
-  'next_billing', 'latitude', 'longitude', 'notes',
+  'next_billing', 'latitude', 'longitude', 'notes', 'customer_code', 'service_status', 'first_invoice_on', 'monthly_fee',
 ] as const
 
 /**
@@ -209,12 +213,18 @@ export interface CustomerImportBatchView {
   errors: Array<{ row: number; column: string | null; code: string; message: string }>
   result: ImportCustomersResult | null
   createdAt: string
+  rowCount?: number
+  preview?: Array<{ row: number; identity: string; name: string | null; packageName: string | null; status: string; firstInvoiceOn: string | null; monthlyFee: number | null }>
 }
 
-export const stageCustomerImport = (file: File, operationKey: string, mode: CustomerImportBatchView['mode']) => {
+export const stageCustomerImport = (file: File, operationKey: string, mode: CustomerImportBatchView['mode'], defaults?: { firstInvoiceOn: string | null; billingDay: number | null; areaId: string | null }) => {
   const form = new FormData()
   form.append('file', file)
-  return api.postForm<CustomerImportBatchView>(`/api/onboarding/v1/import/customers?operationKey=${encodeURIComponent(operationKey)}&mode=${mode}`, form)
+  const query = new URLSearchParams({ operationKey, mode })
+  if (defaults?.firstInvoiceOn) query.set('firstInvoiceOn', defaults.firstInvoiceOn)
+  if (defaults?.billingDay) query.set('billingDay', String(defaults.billingDay))
+  if (defaults?.areaId) query.set('areaId', defaults.areaId)
+  return api.postForm<CustomerImportBatchView>(`/api/onboarding/v1/import/customers?${query}`, form)
 }
 export const customerImportStatus = (id: string) => api.get<CustomerImportBatchView>(`/api/onboarding/v1/import/customers/${id}`)
 export interface CustomerImportCommitIdentity {

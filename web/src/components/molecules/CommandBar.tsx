@@ -18,20 +18,26 @@ export type CommandAction = {
 export function CommandBar({
   primary,
   actions = [],
+  compact = false,
 }: {
   primary?: CommandAction
   actions?: CommandAction[]
+  /** Keep narrow map panels on one row, with remaining actions in the menu. */
+  compact?: boolean
 }) {
-  const secondary = actions.filter(action => !action.pinned)
+  const leading = primary ?? (compact ? actions.find(action => action.key !== 'delete') : undefined)
+  const remaining = actions.filter(action => action !== leading)
+  const visible = compact ? remaining.filter(action => action.key === 'cable').slice(0, 1) : remaining.filter(action => action.pinned)
+  const secondary = remaining.filter(action => !visible.includes(action))
   return (
-    <Toolbar className="azure-commandbar" aria-label="Aksi">
-      {primary && <CommandButton action={primary} primary />}
-      {actions.filter(action => action.pinned).map(action => <CommandActionItem key={action.key} action={action} />)}
+    <Toolbar className={`azure-commandbar${compact ? ' commandbar-compact' : ''}`} aria-label="Aksi">
+      {leading && <CommandButton action={leading} primary />}
+      {visible.map(action => <CommandActionItem key={action.key} action={action} />)}
       <div className="command-secondary">
-        {primary && secondary.length > 0 && !secondary[0].dividerBefore && <CommandDivider />}
+        {leading && secondary.length > 0 && !secondary[0].dividerBefore && <CommandDivider />}
         {secondary.map((action) => <CommandActionItem key={action.key} action={action} />)}
       </div>
-      {secondary.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton size="small" appearance="subtle" icon={<MoreHorizontal size={18} />}>Aksi lainnya</MenuButton></MenuTrigger><MenuPopover><MenuList>{secondary.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
+      {secondary.length > 0 && <div className="command-overflow"><Menu positioning="below-end"><MenuTrigger disableButtonEnhancement><MenuButton aria-label="Aksi lainnya" size="small" appearance="subtle" icon={<MoreHorizontal size={18} />}>{compact ? null : 'Aksi lainnya'}</MenuButton></MenuTrigger><MenuPopover><MenuList>{secondary.map(action => <MenuItem key={action.key} icon={action.icon} disabled={action.disabled} onClick={action.onClick}>{action.label}</MenuItem>)}</MenuList></MenuPopover></Menu></div>}
     </Toolbar>
   )
 }

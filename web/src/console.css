@@ -242,3 +242,10 @@
   .page-header:has(.page-header-icon) .page-header-text { grid-column: 2; }
   .page-header:has(.page-header-icon) .page-header-actions { grid-column: 1 / -1; }
 }
+
+/* Map panels use their own width, independently of the browser viewport. */
+.azure-commandbar.commandbar-compact { flex-wrap: nowrap; justify-content: flex-start; gap: 0; overflow: visible; }
+.commandbar-compact .command-secondary { display: none; }
+.commandbar-compact .command-overflow { display: block; margin-left: auto; }
+.commandbar-compact .command-overflow .fui-MenuButton { min-width: 32px; padding-inline: 4px; }
+.commandbar-compact .command-overflow .fui-MenuButton__menuIcon { display: none; }

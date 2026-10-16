@@ -287,6 +287,26 @@ class CustomerApiService(
      * jadi validasi kode unik, audit, dan event ikut berjalan — orkestrasi tak menembus internal.
      */
     @Transactional
+    override fun startMigrationBilling(subscriptionId: UUID, firstInvoiceOn: java.time.LocalDate, billingDay: Int?) {
+        val subscription = subscriptionRepository.findById(subscriptionId) ?: throw NotFoundException("Langganan tidak ditemukan")
+        subscription.startMigrationBilling(firstInvoiceOn, billingDay)
+        subscriptionRepository.save(subscription)
+    }
+
+    @Transactional
+    override fun migrateCustomer(command: com.duluin.ftth.customer.MigrateCustomerCommand): RegisteredCustomer {
+        val registered = registerCustomer(command.customer)
+        val customer = checkNotNull(customerRepository.findById(registered.customerId))
+        customer.changeStatus(if (command.suspended) com.duluin.ftth.customer.domain.model.CustomerStatus.SUSPENDED
+            else com.duluin.ftth.customer.domain.model.CustomerStatus.ACTIVE)
+        customerRepository.save(customer)
+        val subscription = checkNotNull(subscriptionRepository.findById(registered.subscriptionId))
+        subscription.migrateExisting(command.suspended, command.installedAt, command.firstInvoiceOn, command.billingDay)
+        subscriptionRepository.save(subscription)
+        return registered
+    }
+
+    @Transactional
     override fun registerCustomer(command: RegisterCustomerCommand): RegisteredCustomer {
         val customer = manageCustomer.create(
             SaveCustomerCommand(
@@ -366,6 +386,9 @@ class CustomerApiService(
                 packageName = subscription.packageName,
                 activatedAt = subscription.activatedAt,
                 billingDayOfMonth = subscription.billingDayOfMonth,
+                customerCode = customer.code, serviceStatus = customer.status.name,
+                monthlyFee = subscription.monthlyFee, firstInvoiceOn = subscription.billingStartsOn,
+                areaId = customer.areaId,
             )
         }
     }
@@ -421,6 +444,8 @@ class CustomerApiService(
         billingDayOfMonth = billingDayOfMonth,
         graceDays = graceDays,
         autoIsolir = autoIsolir,
+        billingManaged = billingManaged,
+        billingStartsOn = billingStartsOn,
     )
 
     private fun Subscription.toRef() = SubscriptionRef(

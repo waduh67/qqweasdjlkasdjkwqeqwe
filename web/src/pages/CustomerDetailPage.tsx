@@ -1,3 +1,4 @@
+import { CustomerMigrationManagement } from './onboarding/CustomerMigrationManagement'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
@@ -342,13 +343,13 @@ export function CustomerDetailPage({
       <CommandBar primary={commands[0]} actions={commands.slice(1)} />
       <ResourceNavigation label="Bagian pelanggan" items={tabDefs} active={activeTab} onChange={setTab}>
       {activeTab === 'ringkasan' && <EssentialsBlock customer={customer} sub360={sub360} trace={trace} />}
-      {activeTab === 'langganan' && <SubscriptionManager customer={customer} run={run} />}
+      {activeTab === 'langganan' && <div className="stack"><SubscriptionManager customer={customer} run={run} /><CustomerMigrationManagement customerId={id} mode="billing" onUpdated={() => void reload()} /></div>}
       {activeTab === 'perangkat' && <><OnuManager customer={customer} run={run} />{customer.onus.length > 0 && <OntAcsSettingsCard />}</>}
       {activeTab === 'portal' && <PortalCredentialCard customerId={customer.id} />}
       {activeTab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {activeTab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {activeTab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
-      {activeTab === 'akses' && <NetworkAccessTab customerId={id} subscription={customer.subscription} />}
+      {activeTab === 'akses' && <CustomerMigrationManagement customerId={id} mode="network" onUpdated={() => void reload()} fallback={<NetworkAccessTab customerId={id} subscription={customer.subscription} />} />}
       {activeTab === 'trafik' && <TrafikTab customerId={id} />}
       {activeTab === 'cpe' && <CpeTab customerId={id} />}
       {activeTab === 'tagihan' && <TagihanTab customerId={id} billing={sub360?.billing ?? null} />}

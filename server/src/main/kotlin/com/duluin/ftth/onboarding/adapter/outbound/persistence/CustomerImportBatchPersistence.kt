@@ -102,6 +102,7 @@ interface CustomerImportBatchJpaRepository : JpaRepository<CustomerImportBatchJp
 }
 
 interface CustomerImportStagingRowJpaRepository : JpaRepository<CustomerImportStagingRowJpaEntity, UUID> {
+    fun findFirst20ByBatchIdOrderByRowNumber(batchId: UUID): List<CustomerImportStagingRowJpaEntity>
     fun findAllByBatchIdOrderByRowNumber(batchId: UUID): List<CustomerImportStagingRowJpaEntity>
     fun deleteAllByBatchId(batchId: UUID)
 }
