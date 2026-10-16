@@ -17,7 +17,7 @@ const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() }
 
 vi.mock('../auth/useCan', () => ({ useCan: () => ({ can }) }))
 vi.mock('../api/onboarding', () => ({
-  CUSTOMER_CSV_COLUMNS: ['name', 'mikrotik_username', 'mikrotik_password', 'id_card_number'],
+  CUSTOMER_CSV_COLUMNS: ['name', 'username', 'password', 'id_card_number'],
   stageCustomerImport,
   commitCustomerImport,
   cancelCustomerImport,

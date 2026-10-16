@@ -91,8 +91,9 @@ class SubscriberAccessService(
 
         // Bangun akun DULU: companion menormalkan identitas (MAC → `AA:BB:...`) & memvalidasi
         // per-tipe, jadi uji keunikan dilakukan atas identitas ternormalkan, bukan input mentah.
+        // Committed CSV batches run in a tenant context without an interactive user.
         val account = SubscriberAccess.create(
-            tenantId = currentUser.current().tenantId,
+            tenantId = currentUser.currentOrNull()?.tenantId ?: com.duluin.ftth.common.tenant.TenantContext.tenantId(),
             subscriptionId = subscription.id,
             customerId = subscription.customerId,
             username = username,
@@ -111,11 +112,11 @@ class SubscriberAccessService(
         // akun. No-op bila akun belum ditugaskan ke BRAS. Akun PENDING (langganan masih menunggu
         // instalasi) sengaja BELUM ditulis ke RADIUS — pelanggan baru online saat WO PSB selesai
         // (SubscriberAccessLifecycle.onActivated yang memprovisikannya).
-        val user = currentUser.current()
+        val user = currentUser.currentOrNull()
         if (access.status != AccessStatus.PENDING) {
             access.nasId?.let { nasId ->
-                bngActions.enqueueSyncGroup(nasId, access.tenantId, plan, user.userId, user.email)
-                bngActions.enqueueProvision(access, user.userId, user.email)
+                bngActions.enqueueSyncGroup(nasId, access.tenantId, plan, user?.userId, user?.email)
+                bngActions.enqueueProvision(access, user?.userId, user?.email)
             }
         }
         auditor.record(

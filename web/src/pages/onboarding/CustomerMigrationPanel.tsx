@@ -28,6 +28,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
 }) {
   const { can } = useCan()
   const [source, setSource] = useState<Source>(initialSource)
+  const [networkMode, setNetworkMode] = useState(() => can('bng.access.manage') ? 'radius' : 'data')
   const [draft, setDraft] = useState(initial)
   const [areaId, setAreaId] = useState<string | null>(null)
   const [nasId, setNasId] = useState('')
@@ -58,6 +59,8 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const canMikrotik = can('bng.nas.manage') && can('bng.nas.view')
   const canMigrate = can('customer.customer.create') && can('customer.subscription.update')
   const set = (patch: Partial<typeof initial>) => setDraft(previous => ({ ...previous, ...patch }))
+  const includeRadius = networkMode === 'radius' && can('bng.access.manage')
+  const reviewedRadius = source === 'csv' && batch ? batch.mode === 'ALREADY_INSTALLED_RADIUS' : includeRadius
   const useBillingDefaults = source === 'csv' ? csvBilling === 'defaults' : billing === 'start'
   const defaults = { firstInvoiceOn: useBillingDefaults ? firstInvoice : null, billingDay: useBillingDefaults && billingDay ? Number(billingDay) : null, areaId }
   const location = optionalCustomerLocation(draft.longitude, draft.latitude)
@@ -73,7 +76,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   useEffect(() => {
     if (!resumeId) return
     let active = true
-    void customerImportStatus(resumeId).then(value => { if (active) { setBatch(value); setSource('csv'); setReviewing(true) } }).catch(() => { if (active) setError('Status impor belum berhasil dimuat.') })
+    void customerImportStatus(resumeId).then(value => { if (active) { setBatch(value); setNetworkMode(value.mode === 'ALREADY_INSTALLED_RADIUS' ? 'radius' : 'data'); setSource('csv'); setReviewing(true) } }).catch(() => { if (active) setError('Status impor belum berhasil dimuat.') })
     return () => { active = false }
   }, [resumeId])
   useEffect(() => {
@@ -96,7 +99,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
     if (source === 'csv') {
       if (!file) { setError('Pilih berkas CSV.'); return }
       setBusy(true)
-      try { const staged = await stageCustomerImport(file, crypto.randomUUID(), 'ALREADY_INSTALLED', defaults); setBatch(staged); onBatch(staged.id); setReviewing(true) }
+      try { const staged = await stageCustomerImport(file, crypto.randomUUID(), includeRadius ? 'ALREADY_INSTALLED_RADIUS' : 'ALREADY_INSTALLED', defaults); setBatch(staged); onBatch(staged.id); setReviewing(true) }
       catch (e) { setError(e instanceof ApiError ? e.message : 'Berkas belum berhasil diunggah.') }
       finally { setBusy(false) }
     } else setReviewing(true)
@@ -107,7 +110,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
     try {
       if (source === 'manual') {
         command.current ??= {
-          operationKey: operation.current, onuSerial: onu?.serialNumber ?? null,
+          operationKey: operation.current, prepareRadius: includeRadius, onuSerial: onu?.serialNumber ?? null,
           customer: { code: draft.code || null, name: draft.name.trim(), phone: draft.phone || null, email: draft.email || null, address: draft.address.trim(), areaId, location: location.location, planId: draft.planId, monthlyFeeOverride: draft.price ? Number(draft.price) : null },
           status: draft.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE', installationDate: draft.installationDate || null,
           firstInvoiceOn: defaults.firstInvoiceOn, billingDay: defaults.billingDay,
@@ -118,7 +121,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       } else if (source === 'csv' && batch) {
         setBatch(await commitCustomerImport(batch.id, { commitOperationKey: `migration:${batch.id}`, commitHash: batch.sha256 }))
       } else if (source === 'mikrotik') {
-        setResult(await importPppoe({ operationKey: operation.current, nasId, source: 'NAS', onlyNames: [...selected], skipDisabled: false, profilePlanId: mapping, defaultPlanId: draft.planId || null, defaultAddress: draft.address || null, defaultLocation: location.location, areaId, firstInvoiceOn: defaults.firstInvoiceOn, billingDay: defaults.billingDay, installationDate: draft.installationDate || null }))
+        setResult(await importPppoe({ mode: includeRadius ? 'ALREADY_INSTALLED_RADIUS' : 'ALREADY_INSTALLED', operationKey: operation.current, nasId, source: 'NAS', onlyNames: [...selected], skipDisabled: false, profilePlanId: mapping, defaultPlanId: draft.planId || null, defaultAddress: draft.address || null, defaultLocation: location.location, areaId, firstInvoiceOn: defaults.firstInvoiceOn, billingDay: defaults.billingDay, installationDate: draft.installationDate || null }))
       }
       setUncertain(false)
     } catch (e) {
@@ -132,15 +135,18 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
     <ReviewLock locked={uncertain} />
     {error && <p role="alert" className="error">{error}</p>}
     <CreationSummary rows={source === 'manual' ? [
+      ['Cakupan impor', reviewedRadius ? 'Pelanggan + akun RADIUS' : 'Data pelanggan saja'],
       ['Pelanggan', draft.name], ['Status layanan', draft.status === 'ACTIVE' ? 'Aktif' : 'Ditangguhkan'], ['Paket', plans.find(plan => plan.id === draft.planId)?.name],
       ['Harga bulanan', `Rp ${Number(draft.price || plans.find(plan => plan.id === draft.planId)?.price || 0).toLocaleString('id-ID')}`],
       ['Mulai layanan', draft.installationDate || 'Belum diketahui'], ['Mulai penagihan', defaults.firstInvoiceOn || 'Belum dikelola'],
       ['Tanggal tagih setiap bulan', defaults.firstInvoiceOn ? defaults.billingDay || Number(defaults.firstInvoiceOn.slice(-2)) : 'Belum dikelola'],
       ['ONU', onu?.serialNumber || 'Belum dihubungkan'], ['Koordinat', draft.latitude && draft.longitude ? `${draft.latitude}, ${draft.longitude}` : 'Belum ditentukan'], ['Username', draft.username || 'Belum diisi'],
-    ] : [['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ...(source === 'csv' ? [] : [['Mulai penagihan', defaults.firstInvoiceOn || 'Belum dikelola'] as [string, string]])]} />
-    {!finished && <p className="muted">Akun jaringan lama tetap digunakan. RADIUS dapat disiapkan dari detail pelanggan.</p>}
+      ['Jenis koneksi', draft.authType], ['BRAS', routers.find(router => router.id === nasId)?.name || 'Belum ditentukan'],
+    ] : [['Cakupan impor', reviewedRadius ? 'Pelanggan + akun RADIUS' : 'Data pelanggan saja'], ['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ...(source === 'csv' ? [] : [['Mulai penagihan', defaults.firstInvoiceOn || 'Belum dikelola'] as [string, string]])]} />
+    {!finished && <p className="muted">{reviewedRadius ? 'Akun RADIUS dibuat menggunakan kredensial yang diimpor.' : 'Akun RADIUS belum dibuat. Autentikasi tetap menggunakan sistem lama.'}</p>}
     {batch && !finished && (batch.preview?.length ?? 0) > 0 && <div className="stack"><p>{batch.preview!.length} dari {batch.rowCount} pelanggan</p><DataTable rows={batch.preview!} rowKey={row => String(row.row)} columns={[
       { key: 'identity', header: 'Kode / username', minWidth: 160, cell: row => row.identity },
+      ...(reviewedRadius ? [{ key: 'username', header: 'Username', minWidth: 160, cell: (row: NonNullable<CustomerImportBatchView['preview']>[number]) => row.username || '—' }, { key: 'router', header: 'BRAS', minWidth: 170, cell: (row: NonNullable<CustomerImportBatchView['preview']>[number]) => row.routerName || '—' }] : []),
       { key: 'onu', header: 'ONU', minWidth: 160, cell: row => row.onuSerial || '—' },
       { key: 'name', header: 'Nama', minWidth: 170, cell: row => row.name || '—' },
       { key: 'packageName', header: 'Paket', minWidth: 150, cell: row => row.packageName || '—' },
@@ -158,13 +164,13 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const steps = [{ key: 'source', label: 'Sumber' }, ...(source === 'manual' ? [{ key: 'customer', label: 'Pelanggan' }, { key: 'service', label: 'Layanan' }] : source === 'mikrotik' ? [
     { key: 'accounts', label: 'Akun', validate: () => selected.size ? null : 'Pilih akun yang akan dimigrasikan.' },
     { key: 'service', label: 'Paket', validate: () => profiles.every(profile => mapping[profile] || draft.planId) ? null : 'Pilih paket untuk setiap profil.' },
-  ] : []), { key: 'billing', label: 'Penagihan' }, ...(source !== 'csv' ? [{ key: 'location', label: 'Lokasi', validate: () => location.error }] : []), ...(source === 'manual' ? [{ key: 'network', label: 'Akun lama' }, ...(can('customer.onu.assign') && can('monitoring.provisioning.view') ? [{ key: 'device', label: 'Perangkat' }] : [])] : [])]
+  ] : []), { key: 'billing', label: 'Penagihan' }, ...(source !== 'csv' ? [{ key: 'location', label: 'Lokasi', validate: () => location.error }] : []), ...(source === 'manual' ? [{ key: 'network', label: 'Akun jaringan' }, ...(can('customer.onu.assign') && can('monitoring.provisioning.view') ? [{ key: 'device', label: 'Perangkat' }] : [])] : [])]
   return <ResourceForm title="Migrasi pelanggan" onClose={onClose} onBack={() => { if (!uncertain) { setReviewing(false); command.current = null } }} loading={loading} busy={busy} readOnly={!canMigrate || !!loadError}
     steps={steps} onReview={() => void review()} review={reviewing ? summary : undefined}
     reviewFooter={<>{finished ? <Button variant="primary" onClick={() => onCreated()}>Selesai</Button> : <>
       <Button disabled={busy || uncertain || !!(batch && batch.state !== 'STAGED')} onClick={() => { setReviewing(false); command.current = null }}>Sebelumnya</Button>
       <Button disabled={busy || uncertain} onClick={onClose}>Tutup</Button>
-      <Button variant="primary" disabled={busy || !canMigrate || (source === 'csv' && (!batch || batch.errors.length > 0 || batch.state !== 'STAGED'))} onClick={() => void submit()}>{busy ? 'Memproses…' : uncertain ? 'Coba lagi' : 'Migrasikan'}</Button>
+      <Button variant="primary" disabled={busy || !canMigrate || (reviewedRadius && !can('bng.access.manage')) || (source === 'csv' && (!batch || batch.errors.length > 0 || batch.state !== 'STAGED'))} onClick={() => void submit()}>{busy ? 'Memproses…' : uncertain ? 'Coba lagi' : 'Migrasikan'}</Button>
     </>}</> }>
     <div className="stack">
       {error && <p role="alert" className="error">{error}</p>}
@@ -172,10 +178,14 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       {loadError && <div role="alert"><p>{loadError}</p><Button onClick={() => setLoadAttempt(value => value + 1)}>Coba lagi</Button></div>}
       <ResourceStep step="source">
         <p>Pindahkan pelanggan yang sudah berlangganan.</p>
+        <SelectField label="Cakupan impor" value={includeRadius ? 'radius' : 'data'} onChange={(_, data) => { setNetworkMode(data.value); setBatch(null); setError('') }}>
+          {can('bng.access.manage') && <option value="radius">Pelanggan + akun RADIUS</option>}
+          <option value="data">Data pelanggan saja</option>
+        </SelectField>
         <SelectField label="Sumber data" value={source} onChange={(_, data) => { setSource(data.value as Source); setBatch(null); setError('') }}>
           <option value="manual">Input manual</option>{can('customer.customer.update') && <option value="csv">Berkas CSV</option>}{canMikrotik && <option value="mikrotik">MikroTik</option>}
         </SelectField>
-        {source === 'csv' && <><Field label="Berkas CSV" required><input type="file" accept=".csv,text/csv" required onChange={event => setFile(event.target.files?.[0] || null)} /></Field><div><Button onClick={() => downloadBlob(new Blob([`\uFEFF${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`], { type: 'text/csv;charset=utf-8' }), 'template-migrasi.csv')}>Unduh template</Button></div><p className="muted">Isi nama, alamat, paket, serta kode pelanggan atau username. Gunakan ACTIVE atau SUSPENDED pada kolom service_status. Kolom onu_serial dapat diisi dengan nomor seri dari hasil deteksi ONU.</p><CustomerAreaField value={areaId} onChange={setAreaId} /></>}
+        {source === 'csv' && <><Field label="Berkas CSV" required><input type="file" accept=".csv,text/csv" required onChange={event => setFile(event.target.files?.[0] || null)} /></Field><div><Button onClick={() => downloadBlob(new Blob([`\uFEFF${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`], { type: 'text/csv;charset=utf-8' }), 'template-migrasi.csv')}>Unduh template</Button></div><p className="muted">{includeRadius ? 'Isi username, password, router_name, dan package_name untuk akun RADIUS.' : 'Isi nama, alamat, paket, serta kode pelanggan atau username.'} Kolom onu_serial dapat diisi dari hasil deteksi ONU.</p><CustomerAreaField value={areaId} onChange={setAreaId} /></>}
         {source === 'mikrotik' && <><SelectField label="BRAS MikroTik" required value={nasId} onChange={(_, data) => { setNasId(data.value); setRows([]); setSelected(new Set()) }}><option value="">Pilih BRAS</option>{routers.filter(router => router.vendor === 'MIKROTIK').map(router => <option key={router.id} value={router.id}>{router.name}</option>)}</SelectField><div><Button disabled={!nasId || busy || !canMikrotik} onClick={() => void readRouter()}>Muat akun</Button></div></>}
       </ResourceStep>
       {source === 'manual' && <ResourceStep step="customer"><TextField label="Kode pelanggan" value={draft.code} maxLength={40} placeholder="Otomatis" onChange={(_, data) => set({ code: data.value })} /><TextField label="Nama" required maxLength={150} value={draft.name} onChange={(_, data) => set({ name: data.value })} /><TextField label="Telepon" value={draft.phone} maxLength={30} onChange={(_, data) => set({ phone: data.value })} /><TextField label="Email" type="email" value={draft.email} onChange={(_, data) => set({ email: data.value })} /></ResourceStep>}
@@ -203,7 +213,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
         {source !== 'csv' && !useBillingDefaults && <p className="muted">Penagihan dapat dimulai nanti dari detail pelanggan.</p>}
       </ResourceStep>
       {source !== 'csv' && <ResourceStep step="location"><TextField label="Alamat" required={source === 'manual'} value={draft.address} onChange={(_, data) => set({ address: data.value })} /><CustomerAreaField value={areaId} onChange={setAreaId} /><Field label="Koordinat (opsional)"><LocationPicker longitude={draft.longitude} latitude={draft.latitude} onChange={(longitude, latitude) => set({ longitude, latitude })} /></Field></ResourceStep>}
-      {source === 'manual' && <ResourceStep step="network"><p className="muted">Simpan akun yang digunakan pelanggan saat ini.</p><TextField label="Username" value={draft.username} onChange={(_, data) => set({ username: data.value })} /><TextField label="Password" type="password" autoComplete="new-password" value={draft.password} onChange={(_, data) => set({ password: data.value })} /><SelectField label="Jenis koneksi" value={draft.authType} onChange={(_, data) => set({ authType: data.value as ServiceType })}><option value="PPPOE">PPPoE</option><option value="HOTSPOT">Hotspot</option><option value="DHCP">DHCP</option><option value="STATIC">IP statis</option></SelectField><SelectField label="BRAS" value={nasId} onChange={(_, data) => setNasId(data.value)}><option value="">Belum ditentukan</option>{routers.map(router => <option key={router.id} value={router.id}>{router.name}</option>)}</SelectField>{['STATIC', 'DHCP'].includes(draft.authType) && <TextField label="Alamat IP" value={draft.framedIp} onChange={(_, data) => set({ framedIp: data.value })} />}</ResourceStep>}
+      {source === 'manual' && <ResourceStep step="network"><p className="muted">Gunakan kredensial pelanggan yang sudah ada.</p><TextField label="Username" required={includeRadius} value={draft.username} onChange={(_, data) => set({ username: data.value })} /><TextField label="Password" required={includeRadius && ['PPPOE', 'HOTSPOT'].includes(draft.authType)} type="password" autoComplete="new-password" value={draft.password} onChange={(_, data) => set({ password: data.value })} /><SelectField label="Jenis koneksi" value={draft.authType} onChange={(_, data) => set({ authType: data.value as ServiceType })}><option value="PPPOE">PPPoE</option><option value="HOTSPOT">Hotspot</option><option value="DHCP">DHCP</option><option value="STATIC">IP statis</option></SelectField><SelectField label="BRAS" required={includeRadius} value={nasId} onChange={(_, data) => setNasId(data.value)}><option value="">Belum ditentukan</option>{routers.map(router => <option key={router.id} value={router.id}>{router.name}</option>)}</SelectField>{['STATIC', 'DHCP'].includes(draft.authType) && <TextField label="Alamat IP" required={includeRadius && draft.authType === 'STATIC'} value={draft.framedIp} onChange={(_, data) => set({ framedIp: data.value })} />}</ResourceStep>}
     </div>
   </ResourceForm>
 }

@@ -11,6 +11,11 @@ import java.util.UUID
 @Component
 class MigrationAreaAccess(private val authority: com.duluin.ftth.iam.CurrentAuthorityApi, private val areas: com.duluin.ftth.iam.IamApi) {
     @org.springframework.transaction.annotation.Transactional
+    fun requireRadius(enabled: Boolean) {
+        if (enabled && "bng.access.manage" !in authority.lockCurrent().permissions)
+            throw org.springframework.security.access.AccessDeniedException("Akses pengelolaan akun RADIUS dibatasi")
+    }
+    @org.springframework.transaction.annotation.Transactional
     fun requireArea(areaId: UUID?) {
         val scope = authority.lockCurrent().areaScope
         if (scope is com.duluin.ftth.common.security.AuthorityScope.Restricted && areaId !in scope.ids) throw ValidationException("Pilih area yang dapat Anda kelola")
@@ -25,6 +30,7 @@ class CustomerMigrationController(private val service: CustomerMigrationService,
     @PostMapping
     @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update') && (#command.onuSerial == null || #command.onuSerial.isBlank() || @authz.canAll('customer.onu.assign','monitoring.provisioning.view'))")
     fun register(@RequestBody command: CustomerMigrationCommand): CustomerMigrationView {
+        access.requireRadius(command.prepareRadius)
         access.requireArea(command.customer.areaId)
         return service.register(command.copy(source = MigrationSource.MANUAL))
     }

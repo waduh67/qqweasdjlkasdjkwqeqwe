@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import java.time.LocalDate
 
 /**
- * Menguji penulis CSV pelanggan: header sesuai template impor, urutan kolom, kolom `mikrotik_password`
+ * Menguji penulis CSV pelanggan: header sesuai template impor, urutan kolom, kolom `password`
  * & `notes` selalu kosong (rahasia tak diekspor), dan escaping RFC-4180 (koma/kutip/baris-baru).
  * Header & urutan yang tepat inilah yang menjamin keluaran ekspor bisa diimpor ulang.
  */
@@ -14,7 +14,7 @@ class CustomerCsvTest {
 
     private val header =
         "name,phone,address,package_name,connection_type,installation_date," +
-            "mikrotik_username,mikrotik_password,email,router_name,framed_ip,id_card_number," +
+            "username,password,email,router_name,framed_ip,id_card_number," +
             "next_billing,latitude,longitude,notes,customer_code,service_status,first_invoice_on,monthly_fee"
 
     @Test
@@ -41,7 +41,7 @@ class CustomerCsvTest {
 
         val rows = csv.split("\r\n")
         assertThat(rows[0]).isEqualTo(header)
-        // Kolom mikrotik_password, framed_ip (pppoe → tak ada), & notes kosong.
+        // Kolom password, framed_ip (pppoe → tak ada), & notes kosong.
         assertThat(rows[1]).isEqualTo("Joko,0812,Jl. A,Home 20,pppoe,2024-03-10,joko,,j@x.test,BRAS-01,,320,10,-6.2,106.8,,,,,")
     }
 
@@ -68,7 +68,7 @@ class CustomerCsvTest {
             ),
         )
 
-        // Framed-IP muncul persis setelah router_name (kolom ke-11), MAC jadi mikrotik_username.
+        // Framed-IP muncul persis setelah router_name (kolom ke-11), MAC jadi username.
         assertThat(csv.split("\r\n")[1])
             .isEqualTo("Static,,Jl. Tetap,Home 20,static,,AA:BB:CC:DD:EE:FF,,,BRAS-01,100.64.0.10,,,,,,,,,")
     }

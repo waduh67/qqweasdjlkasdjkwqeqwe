@@ -36,6 +36,7 @@ data class CustomerMigrationCommand(
     val nasId: UUID? = null,
     val framedIp: String? = null,
     val onuSerial: String? = null,
+    val prepareRadius: Boolean = false,
 )
 data class CustomerMigrationView(
     val customerId: UUID, val subscriptionId: UUID, val source: String,
@@ -46,7 +47,7 @@ data class CustomerMigrationView(
 )
 data class MigrationRadiusCommand(val nasId: UUID, val username: String, val password: String? = null, val authType: String = "PPPOE", val framedIp: String? = null)
 
-/** Records existing service without emitting installation or network activation events. */
+/** Imports existing service without an installation workflow; RADIUS provisioning is opt-in. */
 interface CustomerMigrationRegistration { fun register(command: CustomerMigrationCommand): CustomerMigrationView }
 
 @Service
@@ -75,6 +76,7 @@ class CustomerMigrationService(
         lock("register")
         val hashPayload = mapper.valueToTree<tools.jackson.databind.node.ObjectNode>(command)
         if (command.onuSerial == null) hashPayload.remove("onuSerial")
+        if (!command.prepareRadius) hashPayload.remove("prepareRadius")
         val hash = MessageDigest.getInstance("SHA-256").digest(mapper.writeValueAsBytes(hashPayload)).joinToString("") { "%02x".format(it) }
         records.findByOperationKey(command.operationKey)?.let {
             if (it.requestHash != hash) throw ConflictException("Permintaan ini sudah digunakan untuk data berbeda")
@@ -84,6 +86,11 @@ class CustomerMigrationService(
             throw ConflictException("Pelanggan sudah terdaftar")
         }
         if (command.nasId != null && !bng.hasNas(command.nasId)) throw ValidationException("BRAS tidak ditemukan")
+        if (command.prepareRadius) {
+            if (username == null) throw ValidationException("Username wajib diisi untuk akun RADIUS")
+            if (command.nasId == null) throw ValidationException("Pilih BRAS untuk akun RADIUS")
+            if (command.authType in setOf("PPPOE", "HOTSPOT") && command.password.isNullOrEmpty()) throw ValidationException("Password wajib diisi untuk akun RADIUS")
+        }
         validateDates(command.installationDate, command.firstInvoiceOn, command.billingDay)
         val registered = customers.migrateCustomer(MigrateCustomerCommand(command.customer,
             command.status == MigrationStatus.SUSPENDED, command.installationDate?.atStartOfDay()?.toInstant(ZoneOffset.UTC),
@@ -94,6 +101,7 @@ class CustomerMigrationService(
             this.username = username; secretCiphertext = command.password?.takeIf(String::isNotEmpty)?.let(cipher::encrypt)
             authType = command.authType; nasId = command.nasId; framedIp = command.framedIp
         })
+        if (command.prepareRadius) provisionRadius(record, MigrationRadiusCommand(command.nasId!!, username!!, command.password, command.authType, command.framedIp))
         command.onuSerial?.trim()?.takeIf(String::isNotEmpty)?.let {
             entityManager.flush()
             onus.register(registered.customerId, it)
@@ -126,7 +134,10 @@ class CustomerMigrationService(
     fun prepareRadius(customerId: UUID, command: MigrationRadiusCommand): CustomerMigrationView {
         visibility.requireVisibleCustomer(customerId)
         lock("customer:$customerId")
-        val record = requireRecord(customerId)
+        return provisionRadius(requireRecord(customerId), command)
+    }
+
+    private fun provisionRadius(record: CustomerMigrationJpaEntity, command: MigrationRadiusCommand): CustomerMigrationView {
         if (record.accessId != null) return view(record)
         val subscription = customers.findSubscription(record.subscriptionId) ?: throw NotFoundException("Langganan tidak ditemukan")
         if (subscription.status !in setOf("ACTIVE", "ISOLATED")) throw ConflictException("Langganan sudah tidak berjalan")
@@ -140,7 +151,7 @@ class CustomerMigrationService(
         record.username = username; record.authType = command.authType; record.nasId = command.nasId; record.framedIp = command.framedIp
         record.secretCiphertext = null
         records.save(record)
-        audit.record("customer.migration.radius_prepared", "Customer", customerId, TenantContext.tenantId(), mapOf("accessId" to access.accessId.toString()))
+        audit.record("customer.migration.radius_prepared", "Customer", record.customerId, TenantContext.tenantId(), mapOf("accessId" to access.accessId.toString()))
         return view(record)
     }
 

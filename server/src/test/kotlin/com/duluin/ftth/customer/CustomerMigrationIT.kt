@@ -13,6 +13,131 @@ import java.util.UUID
 import tools.jackson.databind.JsonNode
 
 class CustomerMigrationIT : WarehouseMasterHttpFixture() {
+    private fun nas(token: String): String {
+        val response = request("POST", "/api/bng/nas", token,
+            """{"name":"Migration BRAS","vendor":"MIKROTIK","areaIds":["${area(token)}"]}""")
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(201)
+        return mapper.readTree(response.contentAsString).path("id").asString()
+    }
+
+    @Test fun `complete migration rolls back failed network or ONU registration and preserves credentials on replay`() {
+        val token = tenant()
+        val planId = plan(token)
+        val nasId = nas(token)
+        val payload = mapper.readTree(body(token, planId)) as tools.jackson.databind.node.ObjectNode
+        payload.put("prepareRadius", true).put("nasId", nasId)
+        payload.put("authType", "HOTSPOT")
+        assertThat(request("POST", "/api/onboarding/migrations", token, payload.toString()).status).isEqualTo(409)
+        payload.put("authType", "PPPOE").put("onuSerial", "NOT-DISCOVERED")
+        assertThat(request("POST", "/api/onboarding/migrations", token, payload.toString()).status).isEqualTo(409)
+        fixture(token).transaction {
+            for (table in listOf("customer", "subscription", "customer_migration", "subscriber_access", "bng_action"))
+                assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("0")
+        }
+        payload.remove("onuSerial")
+        for (status in listOf("ACTIVE", "SUSPENDED")) {
+            payload.put("status", status).put("username", "old-${status.lowercase()}").put("operationKey", "radius-$status")
+            (payload.path("customer") as tools.jackson.databind.node.ObjectNode).put("code", "OLD-$status")
+            val result = migrate(token, payload.toString())
+            assertThat(result.path("accessId").isNull).isFalse()
+            assertThat(migrate(token, payload.toString()).path("accessId")).isEqualTo(result.path("accessId"))
+        }
+        fixture(token).transaction {
+            assertThat(scalar("SELECT count(*) FROM subscriber_access")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM subscriber_access WHERE status='ISOLATED'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM bng_action WHERE action='PROVISION'")).isEqualTo("2")
+            val secret = scalar("SELECT secret FROM subscriber_access WHERE username='old-active'")
+            assertThat(secret).isNotEqualTo("legacy-password")
+            assertThat(context.getBean(com.duluin.ftth.common.security.SecretCipher::class.java).decrypt(secret)).isEqualTo("legacy-password")
+            assertThat(scalar("SELECT count(*) FROM customer_migration WHERE secret_ciphertext IS NOT NULL")).isEqualTo("0")
+            for (table in listOf("work_order", "invoice")) assertThat(scalar("SELECT count(*) FROM $table")).isEqualTo("0")
+        }
+    }
+
+    private fun stageRadius(token: String, csv: String, key: String, areaId: String = area(token)) = mvc.perform(
+        multipart("/api/onboarding/v1/import/customers")
+            .file(MockMultipartFile("file", "radius.csv", "text/csv", csv.toByteArray()))
+            .param("operationKey", key).param("areaId", areaId).param("mode", "ALREADY_INSTALLED_RADIUS")
+            .header("Authorization", "Bearer $token")
+    ).andReturn().response
+
+    @Test fun `complete CSV validates credentials and promotes independent rows without an interactive principal`() {
+        val token = tenant()
+        plan(token); nas(token)
+        val invalid = stageRadius(token, "customer_code,name,address,package_name\nINVALID,Ani,Test,Existing service\n", "invalid")
+        assertThat(invalid.status).isEqualTo(202)
+        val invalidBatch = mapper.readTree(invalid.contentAsString)
+        assertThat(invalidBatch.path("errors").asSequence().map { it.path("column").asString() }.toList()).contains("username", "password", "router_name")
+        fun commitUrl(batch: JsonNode) = "/api/onboarding/v1/import/customers/${batch.path("id").asString()}/commit?commitOperationKey=promote&commitHash=${batch.path("sha256").asString()}"
+        val rejected = request("POST", commitUrl(invalidBatch), token)
+        assertThat(rejected.status).isEqualTo(200)
+        assertThat(mapper.readTree(rejected.contentAsString).path("state").asString()).isEqualTo("PERMANENT_FAILED")
+        val csv = "name,address,package_name,customer_code,service_status,monthly_fee,username,password,router_name\n" +
+            "Ani,Test,Existing service,OLD-A,ACTIVE,125000,ani,legacy-password,Migration BRAS\n" +
+            "Bad,Test,Existing service,OLD-B,ACTIVE,-1,bad,legacy-password,Migration BRAS\n" +
+            "Budi,Test,Existing service,OLD-C,SUSPENDED,120000,budi,legacy-password,Migration BRAS\n"
+        val uploaded = stageRadius(token, csv, "complete")
+        assertThat(uploaded.status).withFailMessage(uploaded.contentAsString).isEqualTo(202)
+        assertThat(uploaded.contentAsString).doesNotContain("legacy-password")
+        val batch = mapper.readTree(uploaded.contentAsString)
+        assertThat(batch.path("errors").size()).isZero()
+        assertThat(batch.path("preview")[0].path("username").asString()).isEqualTo("ani")
+        assertThat(batch.path("preview")[0].path("routerName").asString()).isEqualTo("Migration BRAS")
+        assertThat(request("POST", commitUrl(batch), token).status).isEqualTo(200)
+        val stock = fixture(token)
+        org.springframework.security.core.context.SecurityContextHolder.clearContext()
+        repeat(2) { TenantContext.runAs(stock.tenant) { context.getBean(CustomerImportPromotionPort::class.java).promoteOne() } }
+        val completed = mapper.readTree(request("GET", "/api/onboarding/v1/import/customers/${batch.path("id").asString()}", token).contentAsString)
+        assertThat(completed.path("result").path("created").asInt()).withFailMessage(completed.toString()).isEqualTo(2)
+        assertThat(completed.path("result").path("failed").asInt()).isEqualTo(1)
+        assertThat(request("POST", commitUrl(batch), token).status).isEqualTo(200)
+        stock.transaction {
+            assertThat(scalar("SELECT count(*) FROM customer")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM subscriber_access")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM subscriber_access WHERE status='ISOLATED'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM bng_action WHERE action='PROVISION' AND requested_by IS NULL")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM subscription WHERE billing_managed")).isEqualTo("0")
+        }
+    }
+
+    @Test fun `RADIUS import requires network permission at manual stage and commit boundaries`() {
+        val token = tenant()
+        val planId = plan(token); val nasId = nas(token)
+        val (operator, id) = user(token, setOf("customer.customer.create", "customer.customer.update", "customer.subscription.update", "customer.customer.view", "bng.nas.manage"))
+        val me = mapper.readTree(request("GET", "/api/me", operator).contentAsString)
+        assertThat(request("PUT", "/api/users/$id/access", token, mapper.writeValueAsString(mapOf(
+            "roleIds" to me.path("roleIds").asSequence().map { it.asString() }.toList(), "areaIds" to listOf(area(token))
+        ))).status).isEqualTo(200)
+        val payload = mapper.readTree(body(token, planId)) as tools.jackson.databind.node.ObjectNode
+        payload.put("prepareRadius", true).put("nasId", nasId)
+        assertThat(request("POST", "/api/onboarding/migrations", operator, payload.toString()).status).isEqualTo(403)
+        val csv = "name,address,package_name,customer_code,username,password,router_name\nAni,Test,Existing service,OLD-A,ani,legacy-password,Migration BRAS\n"
+        assertThat(stageRadius(operator, csv, "denied", area(token)).status).isEqualTo(403)
+        val batch = mapper.readTree(stageRadius(token, csv, "allowed").contentAsString)
+        assertThat(request("POST", "/api/onboarding/v1/import/customers/${batch.path("id").asString()}/commit?commitOperationKey=denied&commitHash=${batch.path("sha256").asString()}", operator).status).isEqualTo(403)
+        assertThat(request("POST", "/api/onboarding/import/customers", operator, """{"mode":"ALREADY_INSTALLED_RADIUS","rows":[]}""").status).isEqualTo(403)
+        assertThat(request("POST", "/api/onboarding/import/pppoe", operator, """{"mode":"ALREADY_INSTALLED_RADIUS","source":"INLINE","nasId":"$nasId","areaId":"${area(token)}","rows":[]}""").status).isEqualTo(403)
+        payload.put("prepareRadius", false)
+        assertThat(request("POST", "/api/onboarding/migrations", operator, payload.toString()).status).isEqualTo(200)
+        fixture(token).transaction { assertThat(scalar("SELECT count(*) FROM subscriber_access")).isEqualTo("0") }
+    }
+
+    @Test fun `MikroTik complete import preserves active and disabled accounts without installation workflow`() {
+        val token = tenant()
+        val planId = plan(token); val nasId = nas(token)
+        val response = request("POST", "/api/onboarding/import/pppoe", token, """{
+            "mode":"ALREADY_INSTALLED_RADIUS","source":"INLINE","operationKey":"inline-radius",
+            "nasId":"$nasId","areaId":"${area(token)}","defaultPlanId":"$planId","defaultAddress":"Test","skipDisabled":false,
+            "rows":[{"name":"ani","password":"legacy-password","disabled":false},{"name":"budi","password":"legacy-password","disabled":true}]
+        }""")
+        assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(200)
+        assertThat(mapper.readTree(response.contentAsString).path("created").asInt()).withFailMessage(response.contentAsString).isEqualTo(2)
+        fixture(token).transaction {
+            assertThat(scalar("SELECT count(*) FROM subscriber_access")).isEqualTo("2")
+            assertThat(scalar("SELECT count(*) FROM subscriber_access WHERE status='ISOLATED'")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM work_order")).isEqualTo("0")
+        }
+    }
     @Test fun `csv billing preview and imported schedules honor each row before optional defaults`() {
         val token = tenant()
         plan(token)

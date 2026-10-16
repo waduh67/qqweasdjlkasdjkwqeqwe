@@ -4,7 +4,7 @@ Branch: `feat/customer-migration-20261016`, based on main `a22041fd`.
 
 Customers now has two entry actions: **PSB baru** for a new installation and **Migrasi pelanggan** for an existing service. Migration supports manual entry, CSV and MikroTik. The grouped resource blade keeps the customer list mounted underneath it.
 
-Migration preserves ACTIVE/SUSPENDED business state, optional service start date and coordinates, negotiated price and the first invoice date. It creates neither a work order nor a RADIUS account. Disabled MikroTik accounts become suspended subscriptions. A source identity or request replay cannot create another customer or overwrite an already recorded service.
+Migration preserves ACTIVE/SUSPENDED business state, optional service start date and coordinates, negotiated price and the first invoice date. It creates no installation work order. **Pelanggan + akun RADIUS** also creates the account using existing credentials; **Data pelanggan saja** records the service without provisioning RADIUS. Disabled MikroTik accounts become suspended subscriptions and isolated network accounts. A source identity or request replay cannot create another customer or overwrite an already recorded service.
 
 Billing is initially unmanaged unless the operator supplies a first invoice date. That date determines the first invoice; subsequent months follow the recurring billing day, using the last day of a shorter month for dates such as 31. Migration does not prorate a historical installation. Deferred billing can be started from the customer's subscription section. A new subscription after termination restores ordinary billing behavior.
 
@@ -27,7 +27,7 @@ Contoh: tagihan 5 Oktober sudah diterbitkan di sistem lama, lalu data pelanggan 
 
 ## Implementation and validation history
 
-Legacy credentials are encrypted and never returned in previews, reports or customer exports. The separate **Siapkan RADIUS** action in the customer's network section uses the saved credentials or an explicit replacement. It respects the existing active/isolated state and does not remove local MikroTik accounts or change router authentication settings. Its reviewed effect is preparing the RADIUS account, not completing a router cutover.
+Passwords are encrypted and never returned in previews, reports or customer exports. The separate **Siapkan RADIUS** action remains available for data-only migrations and uses the saved credentials or an explicit replacement. Both paths respect the existing active/isolated state and do not remove local MikroTik accounts or change router authentication settings. Their effect is preparing the RADIUS account; router authentication cutover is a separate operation.
 
 CSV staging retains the existing asynchronous promotion flow with independent row transactions, durable request identity, a safe preview and a recovery URL. Partially failed rows do not roll back successful rows. Status/report access respects current tenant/area authority. Exports include migrated customers before RADIUS preparation and retain code, status, price and billing fields without credentials.
 
@@ -41,7 +41,7 @@ Validation:
 - Four real-map browser cases passed for one-row ODP commands and relocation through the menu. Desktop/mobile screenshots are retained; a final visual check found a mobile Site/POP overlap addressed by the follow-up below.
 - The general ModularityTests structure check has an existing failure: an isolated checkout of base main `a22041fd` reproduced exactly the same 320 normalized violation groups, with zero added/removed groups. Do not suppress that check or report the entire backend suite as green.
 
-Operator example: create the internet package, then open Customers → Migrasi pelanggan → Input manual. Select Aktif for a subscriber already online, choose their package/price, and choose the first unpaid billing date or Belum kelola tagihan. Leave unknown coordinates empty. Review and migrate. Location can be added from the map; billing and RADIUS preparation are separate actions in customer details.
+Operator example: create the internet package and BRAS, then open Customers → Migrasi pelanggan → Input manual. Select the import scope, choose Aktif for a subscriber already online, choose their package/price, and choose the first unpaid billing date or Belum kelola tagihan. Leave unknown coordinates empty. For complete migration, enter the existing username/password and BRAS in **Akun jaringan**. Review and migrate. Location and deferred billing can be set later.
 
 Private evidence/recovery: `.omo/runtime/customer-migration/` (ignored). No credentials or production exports are committed. Implementation merged in PR #74 as main `77046b7a`; final CI passed. Actions deployment and exact live verification are recorded in the PR release notes.
 

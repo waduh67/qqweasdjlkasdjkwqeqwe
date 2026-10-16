@@ -40,10 +40,10 @@ class ImportCustomersService(
     private fun process(command: ImportCustomersCommand, row: CustomerImportRow): CustomerImportOutcome {
         val username = row.mikrotikUsername?.trim()?.takeIf(String::isNotEmpty) ?: row.customerCode?.trim().orEmpty()
         if (username.isEmpty()) {
-            return CustomerImportOutcome("", CustomerImportStatus.SKIPPED, "Isi customer_code atau mikrotik_username")
+            return CustomerImportOutcome("", CustomerImportStatus.SKIPPED, "Isi customer_code atau username")
         }
         // Petakan `connection_type` ke tipe kanonis di sini (murah, tanpa DB) sebelum membuka transaksi.
-        val authType = resolveAuthType(row.connectionType)
+        val authType = resolveImportAuthType(row.connectionType)
             ?: return CustomerImportOutcome(
                 username, CustomerImportStatus.FAILED,
                 "Tipe koneksi '${row.connectionType}' tak dikenal (pppoe/hotspot/dhcp/static)",
@@ -54,26 +54,23 @@ class ImportCustomersService(
         return try {
             CustomerImportOutcome(username, rowImporter.importRow(command, username, authType, row), null)
         } catch (e: ConflictException) {
-            // Bentrok (mis. sudah pernah diimpor lewat jalur lain) → impor idempoten, lewati saja.
-            CustomerImportOutcome(username, if (row.onuSerial.isNullOrBlank()) CustomerImportStatus.SKIPPED else CustomerImportStatus.FAILED, e.message)
+            CustomerImportOutcome(username, if (!command.mode.includesRadius && row.onuSerial.isNullOrBlank()) CustomerImportStatus.SKIPPED else CustomerImportStatus.FAILED, e.message)
         } catch (e: RuntimeException) {
             CustomerImportOutcome(username, CustomerImportStatus.FAILED, if (e is com.duluin.ftth.common.domain.error.DomainException) e.message else "Baris belum berhasil diproses")
         }
     }
 
-    /**
-     * Petakan `connection_type` (nilai bebas dari CSV/RouterOS) ke nama [AuthType] kanonis via substring
-     * — toleran terhadap varian macam `pppoe_direct`. Kosong → PPPOE; tak dikenal → null (baris gagal).
-     */
-    private fun resolveAuthType(connectionType: String?): String? {
-        val value = connectionType?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return "PPPOE"
-        return when {
-            value.contains("pppoe") -> "PPPOE"
-            value.contains("hotspot") -> "HOTSPOT"
-            value.contains("static") -> "STATIC"
-            value.contains("dhcp") -> "DHCP"
-            else -> null
-        }
+}
+
+/** Accept legacy connection labels, defaulting an empty value to PPPoE. */
+internal fun resolveImportAuthType(connectionType: String?): String? {
+    val value = connectionType?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return "PPPOE"
+    return when {
+        value.contains("pppoe") -> "PPPOE"
+        value.contains("hotspot") -> "HOTSPOT"
+        value.contains("static") -> "STATIC"
+        value.contains("dhcp") -> "DHCP"
+        else -> null
     }
 }
 
@@ -98,7 +95,7 @@ class CustomerRowImporter(
         authType: String,
         row: CustomerImportRow,
     ): CustomerImportStatus {
-        if (command.mode == ImportMode.ALREADY_INSTALLED) return createNew(command, username, authType, row)
+        if (command.mode.isMigration) return createNew(command, username, authType, row)
         val existing = bngApi.findAccessByUsername(username)
         return if (existing == null) createNew(command, username, authType, row) else updateExisting(existing, row)
     }
@@ -120,7 +117,7 @@ class CustomerRowImporter(
                 planId = plan.planId,
                 monthlyFeeOverride = row.monthlyFee,
             )
-        if (command.mode == ImportMode.ALREADY_INSTALLED) {
+        if (command.mode.isMigration) {
             val status = when (row.serviceStatus.trim().uppercase()) {
                 "ACTIVE", "AKTIF" -> MigrationStatus.ACTIVE
                 "SUSPENDED", "ISOLATED", "DITANGGUHKAN", "TERISOLIR" -> MigrationStatus.SUSPENDED
@@ -129,7 +126,7 @@ class CustomerRowImporter(
             migration.register(CustomerMigrationCommand(
                 operationKey = (command.operationKey?.let { "$it:" } ?: "csv:") + username,
                 customer = customer, status = status, installationDate = row.installationDate,
-                firstInvoiceOn = row.firstInvoiceOn, billingDay = row.nextBillingDay, source = MigrationSource.CSV,
+                firstInvoiceOn = row.firstInvoiceOn, billingDay = row.nextBillingDay, source = MigrationSource.CSV, prepareRadius = command.mode.includesRadius,
                 username = row.mikrotikUsername, password = row.mikrotikPassword, authType = authType,
                 nasId = nasId, framedIp = row.framedIp,
                 onuSerial = row.onuSerial,

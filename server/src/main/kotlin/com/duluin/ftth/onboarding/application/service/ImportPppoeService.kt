@@ -69,8 +69,7 @@ class ImportPppoeService(
             rowImporter.importRow(command, row, planId)
             ImportRowOutcome(row.name, ImportRowStatus.CREATED, null)
         } catch (e: ConflictException) {
-            // Kode/username sudah ada → anggap sudah pernah diimpor; impor idempoten, aman diulang.
-            ImportRowOutcome(row.name, ImportRowStatus.SKIPPED, e.message)
+            ImportRowOutcome(row.name, if (command.mode.includesRadius) ImportRowStatus.FAILED else ImportRowStatus.SKIPPED, e.message)
         } catch (e: RuntimeException) {
             log.warn("Impor PPPoE gagal untuk '{}': {}", row.name, e.message)
             ImportRowOutcome(row.name, ImportRowStatus.FAILED, if (e is com.duluin.ftth.common.domain.error.DomainException) e.message else "Akun belum berhasil diproses")
@@ -93,11 +92,11 @@ class PppoeRowImporter(
             address = command.defaultAddress?.trim()?.takeIf(String::isNotEmpty) ?: PLACEHOLDER_ADDRESS,
             location = command.defaultLocation, areaId = command.areaId, planId = planId,
         )
-        if (command.mode == ImportMode.ALREADY_INSTALLED) {
+        if (command.mode.isMigration) {
             migration.register(CustomerMigrationCommand(
                 operationKey = (command.operationKey?.let { "$it:" } ?: "mikrotik:") + row.name,
                 customer = customer, status = if (row.disabled) MigrationStatus.SUSPENDED else MigrationStatus.ACTIVE,
-                source = MigrationSource.MIKROTIK, username = row.name, password = row.password, nasId = command.nasId,
+                source = MigrationSource.MIKROTIK, prepareRadius = command.mode.includesRadius, username = row.name, password = row.password, nasId = command.nasId,
                 installationDate = command.installationDate, firstInvoiceOn = command.firstInvoiceOn, billingDay = command.billingDay,
             ))
         } else customerApi.registerCustomer(customer)

@@ -64,7 +64,7 @@ export const onboardPsb = (body: ExpressPsbRequest) =>
 
 /**
  * Bulk-import PPPoE: migrasi akun `/ppp/secret` sebuah RouterOS jadi pelanggan+langganan+akun
- * yang langsung AKTIF dan terprovisi ke RADIUS pusat (cermin `OnboardingController.importPppoe`).
+ * dengan status sumber dipertahankan. Mode impor menentukan apakah akun RADIUS ikut dibuat.
  * Beda dari PSB: tanpa Work Order (pelanggan sudah terpasang). Per-baris atomik — satu baris
  * gagal tak menggagalkan batch; hasilnya per-baris.
  */
@@ -83,6 +83,7 @@ export interface ImportRowPayload {
 
 export interface ImportPppoeRequest {
   nasId: string
+  mode?: CustomerImportBatchView['mode']
   source: ImportSource
   /** Wajib untuk INLINE; diabaikan untuk NAS (server menarik sendiri). */
   rows?: ImportRowPayload[]
@@ -125,13 +126,12 @@ export interface ImportPppoeResult {
 export const importPppoe = (body: ImportPppoeRequest) =>
   api.post<ImportPppoeResult>('/api/onboarding/import/pppoe', body)
 
-// ---- Impor/ekspor CSV pelanggan (generik, upsert menurut mikrotik_username) ----
+// ---- Impor/ekspor CSV pelanggan ----
 
 /**
  * Impor CSV pelanggan generik: satu berkas berisi biodata + langganan + akun jaringan per baris,
- * di-UPSERT menurut `mikrotik_username` (cermin `OnboardingController.importCustomers`). Berbeda
- * dari impor PPPoE yang menyedot `/ppp/secret`: sumbernya berkas CSV yang dirakit operator dan
- * bersifat upsert. Baris sudah diurai KLIEN jadi bentuk terstruktur sebelum dikirim.
+ * dengan kode pelanggan atau username sebagai identitas. Mode migrasi mempertahankan
+ * pelanggan yang telah terdaftar; akun RADIUS dibuat hanya pada mode impor lengkap.
  */
 
 /**
@@ -141,7 +141,7 @@ export const importPppoe = (body: ImportPppoeRequest) =>
  */
 export const CUSTOMER_CSV_COLUMNS = [
   'name', 'phone', 'address', 'package_name', 'connection_type', 'installation_date',
-  'mikrotik_username', 'mikrotik_password', 'email', 'router_name', 'framed_ip', 'id_card_number',
+  'username', 'password', 'email', 'router_name', 'framed_ip', 'id_card_number',
   'next_billing', 'latitude', 'longitude', 'notes', 'customer_code', 'service_status', 'first_invoice_on', 'monthly_fee', 'onu_serial',
 ] as const
 
@@ -208,13 +208,13 @@ export type CustomerImportBatchState =
 export interface CustomerImportBatchView {
   id: string
   sha256: string
-  mode: 'VALIDATE_ONLY' | 'PENDING_INSTALLATION' | 'ALREADY_INSTALLED'
+  mode: 'VALIDATE_ONLY' | 'PENDING_INSTALLATION' | 'ALREADY_INSTALLED' | 'ALREADY_INSTALLED_RADIUS'
   state: CustomerImportBatchState
   errors: Array<{ row: number; column: string | null; code: string; message: string }>
   result: ImportCustomersResult | null
   createdAt: string
   rowCount?: number
-  preview?: Array<{ row: number; identity: string; name: string | null; packageName: string | null; status: string; firstInvoiceOn: string | null; monthlyFee: number | null; onuSerial?: string | null; billingDay?: number | null }>
+  preview?: Array<{ row: number; identity: string; name: string | null; packageName: string | null; status: string; firstInvoiceOn: string | null; monthlyFee: number | null; onuSerial?: string | null; billingDay?: number | null; username?: string | null; routerName?: string | null }>
 }
 
 export const stageCustomerImport = (file: File, operationKey: string, mode: CustomerImportBatchView['mode'], defaults?: { firstInvoiceOn: string | null; billingDay: number | null; areaId: string | null }) => {
