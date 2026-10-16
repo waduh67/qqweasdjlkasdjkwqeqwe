@@ -91,7 +91,6 @@ import {
   MENU_HEIGHT_PX,
   MENU_WIDTH_PX,
   MOVABLE_NODES,
-  NODE_KIND_LABEL,
   SURVEY_RADIUS_M,
   type AssetKind,
 } from '@/map/mapAssets'
@@ -1942,9 +1941,10 @@ export function MapPage() {
           di atas peta supaya membaca perangkat tak menghapus konteks jaringannya. */}
       <Blade
         open={detailOltId != null}
-        title="Detail OLT"
+        title={oltInsp?.code ?? 'Detail OLT'}
         size="full"
         className="blade-detail"
+        layout="resource"
         onClose={() => setDetailOltId(null)}
       >
         {detailOltId && (
@@ -1953,6 +1953,7 @@ export function MapPage() {
             // data OLT sebelumnya.
             key={detailOltId}
             oltId={detailOltId}
+            compact
             // Petanya sudah terbentang di belakang panel ini, lengkap dengan penanda OLT
             // yang panel inspeksinya terbuka — "Lihat di peta" cukup menyingkir.
             onShowOnMap={() => setDetailOltId(null)}
@@ -1976,6 +1977,7 @@ export function MapPage() {
         title="Detail ODF"
         size="full"
         className="blade-detail"
+        layout="resource"
         onClose={() => setDetailOdfId(null)}
       >
         {detailOdfId && (
@@ -2009,10 +2011,11 @@ export function MapPage() {
           mencarinya lagi di daftar, lalu kembali; sekarang cukup di tempat. */}
       <Blade
         open={detailNode != null}
-        title={detailNode ? `Detail ${NODE_KIND_LABEL[detailNode.kind]}` : ''}
+        title={detailNode?.code ?? ''}
         subtitle={detailNode?.code}
         size="full"
         className="blade-detail"
+        layout="resource"
         onClose={() => setDetailNode(null)}
       >
         {detailNode && (

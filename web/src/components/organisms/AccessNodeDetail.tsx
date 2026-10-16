@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Text, typographyStyles } from '@fluentui/react-components'
 import { Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type { AssetStatus, Coordinate, JointBoxView, OdcView, OdpView } from '@/api/network'
 import { SPLITTER_RATIOS } from '@/api/network'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextareaField, TextField } from '@/components/atoms'
+import { Button, EmptyState, SelectField, Spinner, TextareaField, TextField } from '@/components/atoms'
 import { IconInventory, IconMap } from '@/components/atoms/icons'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
@@ -25,6 +24,8 @@ import { LocationPicker } from './LocationPicker'
 import { FiberTracePanel } from './FiberTracePanel'
 import { OdpPortBoard } from './OdpPortBoard'
 import { SplicingManager } from './SplicingManager'
+import { NetworkProperties, NetworkResourceSections, type NetworkResourceSection } from './NetworkResourceSections'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 import { SplitterPanel } from './SplitterPanel'
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
@@ -37,26 +38,15 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'ABANDONED', label: 'Ditinggal' },
 ]
 
-/** Satu sel info berlabel di panel detail (pola `.stat` yang sama dipakai detail OLT). */
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="stat">
-      <Text block className="stat-label">{label}</Text>
-      <Text block style={{ ...typographyStyles.body1, color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</Text>
-    </div>
-  )
-}
-
 /**
  * Panel detail read-only sebuah aset jaringan di dalam blade lebar (`blade-detail`) —
  * kembar perilaku dengan detail OLT: klik baris membuka panel ini, tombol Edit membuka
  * drawer sunting yang lebih sempit (`blade-edit`) DI ATAS-nya (non-modal, tak menutup
  * penuh). Sengaja read-only: semua perubahan—termasuk lokasi—lewat drawer Edit yang
  * sudah punya peta pemilih, jadi detail = baca, edit = tulis (tanpa duplikasi form).
- * Presentasional murni: `badges`/`fields` datang dari pemanggil.
+ * Presentasional murni: `fields` datang dari pemanggil.
  */
 export function AssetDetailPanel({
-  badges,
   subtitle,
   fields,
   address,
@@ -68,8 +58,8 @@ export function AssetDetailPanel({
   onDelete,
   onShowOnMap,
   children,
+  sections = [],
 }: {
-  badges: ReactNode
   subtitle?: string
   fields: Array<{ label: string; value: string }>
   address?: string | null
@@ -93,6 +83,7 @@ export function AssetDetailPanel({
    * koordinatnya, yang toh sudah kelihatan di peta.
    */
   children?: ReactNode
+  sections?: NetworkResourceSection[]
 }) {
   // Aksi tingkat-aset duduk di command bar blade, sejajar dengan detail pelanggan:
   // satu tempat yang sama untuk "apa yang bisa kulakukan pada benda ini".
@@ -104,36 +95,21 @@ export function AssetDetailPanel({
   if (canDelete)
     commands.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: onDelete, dividerBefore: commands.length > 0 })
 
-  return (
-    <div className="stack asset-detail-panel" style={{ gap: '1.25rem' }}>
-      <div className="stack" style={{ gap: '0.35rem' }}>
-        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>{badges}</div>
-        {subtitle && <p className="page-sub" style={{ margin: 0 }}>{subtitle}</p>}
-      </div>
-
-      {commands.length > 0 && <CommandBar actions={commands} />}
-
-      <div className="card stack">
-        <Text as="h3" style={{ ...typographyStyles.title3, margin: 0 }}>Informasi</Text>
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          {fields.map((f) => (
-            <DetailField key={f.label} label={f.label} value={f.value} />
-          ))}
-        </div>
-        {address && <DetailField label="Alamat" value={address} />}
-        {notes && <DetailField label="Catatan teknis" value={notes} />}
-      </div>
-
-      {children}
-
-      <div className="card stack">
-        <Text as="h3" style={{ ...typographyStyles.title3, margin: 0 }}>Lokasi</Text>
-        <Text as="p" style={{ ...typographyStyles.caption1, margin: 0 }} className="muted tnum">
-          {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-        </Text>
-      </div>
-    </div>
-  )
+  return <div className="network-resource asset-detail-panel">
+    {subtitle && <p className="network-resource-subtitle">{subtitle}</p>}
+    {commands.length > 0 && <CommandBar layout="wrap" primary={commands[0]} actions={commands.slice(1)} />}
+    <NetworkResourceSections label="Bagian perangkat" sections={[
+      { key: 'overview', label: 'Ringkasan', icon: NavIcons.Dashboard, content: <NetworkProperties fields={[
+        ...fields, ...(address ? [{ label: 'Alamat', value: address }] : []), ...(notes ? [{ label: 'Catatan teknis', value: notes }] : []),
+      ]} /> },
+      ...sections,
+      ...(children ? [{ key: 'connections', label: 'Sambungan', icon: NavIcons.Cable, content: children }] : []),
+      { key: 'location', label: 'Lokasi', group: 'Pengaturan', icon: NavIcons.Map, content: <NetworkProperties fields={[
+        { label: 'Lintang', value: location.latitude.toFixed(6) }, { label: 'Bujur', value: location.longitude.toFixed(6) },
+        ...(address ? [{ label: 'Alamat', value: address }] : []),
+      ]} /> },
+    ]} />
+  </div>
 }
 
 /**
@@ -447,7 +423,7 @@ export function AccessNodeDetail({
     : odc
       ? odc.oltName
         ? `Hulu: ${odc.oltName} · ${odc.ponPortLabel}`
-        : 'Belum di-uplink'
+        : 'Belum tersambung ke OLT'
       : odp?.odcName
         ? `ODC induk: ${odp.odcName}`
         : 'Belum tersambung ke ODC'
@@ -455,20 +431,10 @@ export function AccessNodeDetail({
   return (
     <>
       <AssetDetailPanel
-        badges={
-          <>
-            {odc?.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={node.status} />}
-            <Badge>
-              {jointBox
-                ? `${jointBox.trayCount} tray`
-                : cabinet!.splitterCount === 0
-                  ? 'tanpa splitter'
-                  : `${cabinet!.splitterRatio} · ${cabinet!.splitterLegs} kaki`}
-            </Badge>
-          </>
-        }
         subtitle={subtitle}
         fields={[
+          { label: 'Kode', value: node.code },
+          { label: 'Status', value: STATUS_OPTIONS.find(option => option.value === node.status)?.label ?? node.status },
           ...(jointBox
             ? [
                 { label: 'Nama', value: jointBox.name },
@@ -481,8 +447,9 @@ export function AccessNodeDetail({
                   { label: 'Nama', value: odc.name },
                   {
                     label: 'Hulu (OLT · PON)',
-                    value: odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'belum di-uplink',
+                    value: odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'Belum tersambung ke OLT',
                   },
+                  { label: 'Sinyal', value: odc.energized ? 'Terdeteksi' : 'Belum terdeteksi' },
                   { label: 'Splitter', value: describeSplitter(odc) },
                   { label: meta.capacityLabel, value: String(odc.capacity) },
                   { label: 'Jumlah ODP', value: String(odc.odpCount) },
@@ -511,11 +478,9 @@ export function AccessNodeDetail({
         }}
         onDelete={() => void remove()}
         onShowOnMap={onShowOnMap ? () => onShowOnMap(mapFocusState(kind, nodeId, node.location)) : undefined}
-      >
-        {/* Joint box tak kebagian panel ini bukan karena disembunyikan: di dalamnya
-            memang tak ada splitter, serat langsung disambung ke serat. */}
-        {cabinet && (
-          <SplitterPanel
+
+        sections={[
+          ...(cabinet && can('network.splitter.view') ? [{ key: 'splitters', label: 'Splitter', group: 'Jaringan', icon: NavIcons.Workflow, content: <SplitterPanel
             ownerKind={kind === 'odc' ? 'ODC' : 'ODP'}
             ownerId={nodeId}
             onChanged={() => {
@@ -523,27 +488,9 @@ export function AccessNodeDetail({
               setSpliceVersion((v) => v + 1)
               onChanged?.()
             }}
-          />
-        )}
-
-        {/* Jalur mendahului meja kerja: "kotak ini disuapi PON port yang mana"
-            adalah yang pertama ditanya orang saat membukanya, dan jawabannya
-            muat dalam beberapa baris. */}
-        <FiberTracePanel
-          closureKind={kind === 'odc' ? 'ODC' : kind === 'odp' ? 'ODP' : 'JOINT_BOX'}
-          closureId={nodeId}
-          reloadKey={spliceVersion}
-        />
-
-        {/* Hanya ODP yang punya faceplate berlubang: di ODC serat berpindah ke
-            kabel lain, di joint box ia cuma bertemu serat. Papan ini mendahului
-            meja sambung karena urutan orangnya begitu — lihat dulu isinya, baru
-            memutuskan mau menyambung apa. */}
-        {odp && <OdpPortBoard odpId={nodeId} reloadKey={spliceVersion} />}
-
-        {/* Splicing datang SETELAH splitter: modulnya harus sudah ada sebelum
-            kakinya bisa ditunjuk sebagai tujuan sambungan. */}
-        <SplicingManager
+          /> }] : []),
+          ...(odp ? [{ key: 'ports', label: 'Port pelanggan', group: 'Jaringan', icon: NavIcons.Customers, content: <OdpPortBoard odpId={nodeId} reloadKey={spliceVersion} /> }] : []),
+          ...(can('network.splice.view') ? [{ key: 'splicing', label: 'Sambungan', group: 'Jaringan', icon: NavIcons.Cable, content: <SplicingManager
           closureKind={kind === 'odc' ? 'ODC' : kind === 'odp' ? 'ODP' : 'JOINT_BOX'}
           closureId={nodeId}
           onChanged={() => {
@@ -551,8 +498,14 @@ export function AccessNodeDetail({
             setSpliceVersion((v) => v + 1)
             onChanged?.()
           }}
-        />
-      </AssetDetailPanel>
+        /> },
+          { key: 'trace', label: 'Jalur serat', group: 'Jaringan', icon: NavIcons.Route, content: <FiberTracePanel
+          closureKind={kind === 'odc' ? 'ODC' : kind === 'odp' ? 'ODP' : 'JOINT_BOX'}
+          closureId={nodeId}
+          reloadKey={spliceVersion}
+        /> }] : []),
+        ]}
+      />
 
       {/* Drawer sunting lebih sempit yang menumpang DI ATAS detail — panel induknya tetap
           mengintip di kiri supaya operator tahu benda mana yang sedang ia ubah. */}
@@ -562,6 +515,8 @@ export function AccessNodeDetail({
         subtitle={meta.editHint}
         size="full"
         className="blade-edit"
+        layout="resource"
+        closeDisabled={saving}
         dirty={dirty}
         onClose={closeDraft}
         footer={

@@ -20,7 +20,7 @@ import { useCan } from '../auth/useCan'
 import { LocationPicker } from '@/components/organisms'
 import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
 import { Checkbox } from '@fluentui/react-components'
-import { CommandBar, Tabs, type CommandAction } from '@/components/molecules'
+import { CommandBar, type CommandAction } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Blade } from '@/components/organisms'
 import { IconInventory, IconMap } from '@/components/atoms/icons'
@@ -35,6 +35,8 @@ import { pollOltNow, type ManualOltPollResult } from '@/api/monitoring'
 import { SnmpDiagnosticPanel } from '@/components/organisms'
 import { PonPortLoadPanel } from '@/components/organisms'
 import { PonPortTab } from '@/components/organisms/PonPortTab'
+import { NetworkProperties, NetworkResourceSections } from '@/components/organisms/NetworkResourceSections'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 
 /**
  * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.
@@ -61,7 +63,6 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'INACTIVE', label: 'Nonaktif' },
 ]
 
-type Tab = 'ringkasan' | 'pon' | 'onu' | 'onuolt' | 'onubaru' | 'diagnostik'
 
 type ManualPollOutcome =
   | { readonly kind: 'completed'; readonly result: ManualOltPollResult }
@@ -201,7 +202,6 @@ export function OltDetail({
   const [olt, setOlt] = useState<OltView | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [tab, setTab] = useState<Tab>('ringkasan')
   const [editing, setEditing] = useState(false)
   const [onuRevision, setOnuRevision] = useState(0)
   const [manualPollOwner] = useState(() => Symbol('manual-poll-owner'))
@@ -364,50 +364,37 @@ export function OltDetail({
     commands.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => void remove(), dividerBefore: commands.length > 0 })
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="stack" style={{ gap: '0.35rem' }}>
-        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>
-          {!compact && <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>{olt.code}</Text>}
-          <StatusBadge status={olt.status} />
-          <Badge>{olt.vendor}</Badge>
-          {olt.pollable ? <Badge tone="good">SNMP siap</Badge> : <Badge tone="neutral">SNMP belum lengkap</Badge>}
-        </div>
-        {/* Di blade, header-nya sudah memuat nama & site — jangan diulang di badan. */}
-        {!compact && (
-          <p className="page-sub" style={{ margin: 0 }}>
-            {olt.name}
-            {olt.siteName ? ` · Site ${olt.siteName}` : ''}
-          </p>
-        )}
-      </div>
-
-      {commands.length > 0 && (
-        <div aria-busy={polling}>
-          <CommandBar actions={commands} />
-        </div>
-      )}
-
-      <Tabs<Tab>
-        tabs={[
-          { key: 'ringkasan', label: 'Ringkasan' },
-          { key: 'pon', label: 'PON Port', badge: olt.ponPortCount || undefined },
-          ...(canOnuList ? [{ key: 'onu', label: 'ONU Pelanggan' } satisfies { key: Tab; label: string }] : []),
-          ...(canDeviceOnus ? [{ key: 'onuolt', label: 'ONU di OLT' } satisfies { key: Tab; label: string }] : []),
-          ...(canProvisioning ? [{ key: 'onubaru', label: 'ONU Baru' } satisfies { key: Tab; label: string }] : []),
-          ...(canDiagnose ? [{ key: 'diagnostik', label: 'Diagnostik' } satisfies { key: Tab; label: string }] : []),
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
-
-      {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
-      {tab === 'pon' && <PonPortTab olt={olt} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} renderDetail={id => <PonDrilldown ponPortId={id} canDrillOdp={canDrill} />} />}
-      {tab === 'onu' && canOnuList && (
-        <OltRegisteredOnus key={`registered-${onuRevision}`} oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
-      )}
-      {tab === 'onuolt' && canDeviceOnus && <OltDeviceOnus key={`device-${onuRevision}`} oltId={id} />}
-      {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox key={`discovered-${onuRevision}`} oltId={olt.id} />}
-      {tab === 'diagnostik' && canDiagnose && <SnmpDiagnosticPanel oltId={olt.id} />}
+    <div className="network-resource">
+      {!compact && <div className="network-resource-heading"><h1 className="page-title">{olt.code}</h1><p className="page-sub">{olt.name}</p></div>}
+      {commands.length > 0 && <div aria-busy={polling}><CommandBar layout="wrap" primary={commands[0]} actions={commands.slice(1)} /></div>}
+      <NetworkResourceSections label="Bagian OLT" sections={[
+        { key: 'overview', label: 'Ringkasan', icon: NavIcons.Dashboard, content: <NetworkProperties fields={[
+          { label: 'Kode', value: olt.code }, { label: 'Nama', value: olt.name },
+          { label: 'Status', value: STATUS_OPTIONS.find(item => item.value === olt.status)?.label ?? olt.status },
+          { label: 'Site / POP', value: olt.siteName }, { label: 'Vendor', value: olt.vendor },
+          { label: 'Model', value: olt.model }, { label: 'IP manajemen', value: olt.managementIp },
+          { label: 'Port PON', value: olt.ponPortCount }, { label: 'Deskripsi', value: olt.description },
+        ]} /> },
+        { key: 'pon', label: 'PON Port', group: 'Jaringan', icon: NavIcons.Cable, content: <PonPortTab olt={olt} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} renderDetail={id => <PonDrilldown ponPortId={id} canDrillOdp={canDrill} />} /> },
+        ...(canOnuList ? [{ key: 'onu', label: 'ONU Pelanggan', group: 'Jaringan', icon: NavIcons.Customers, content: <OltRegisteredOnus key={`registered-${onuRevision}`} oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} /> }] : []),
+        ...(canDeviceOnus ? [{ key: 'onuolt', label: 'ONU di OLT', group: 'Jaringan', icon: NavIcons.Monitor, content: <OltDeviceOnus key={`device-${onuRevision}`} oltId={id} /> }] : []),
+        ...(canProvisioning ? [{ key: 'onubaru', label: 'ONU Baru', group: 'Jaringan', icon: NavIcons.Inbox, content: <DiscoveredOnuInbox key={`discovered-${onuRevision}`} oltId={olt.id} /> }] : []),
+        ...(canDiagnose ? [{ key: 'diagnostik', label: 'Diagnostik', group: 'Pemantauan', icon: NavIcons.Flask, content: <SnmpDiagnosticPanel oltId={olt.id} /> }] : []),
+        { key: 'management', label: 'Akses manajemen', group: 'Pengaturan', icon: NavIcons.Shield, content: <>
+          <h2>SNMP</h2><NetworkProperties fields={[
+            { label: 'Pemantauan', value: olt.snmpEnabled ? 'Aktif' : 'Nonaktif' },
+            { label: 'Konfigurasi', value: olt.pollable ? 'Siap' : 'Belum lengkap' },
+            { label: 'Versi', value: olt.snmpVersion.toLowerCase() }, { label: 'Port', value: olt.snmpPort },
+            { label: 'Community', value: olt.snmpConfigured ? 'Tersimpan' : 'Belum diatur' },
+          ]} />
+          <h2>Akses web</h2><NetworkProperties fields={[
+            { label: 'Status', value: olt.webEnabled ? 'Aktif' : 'Nonaktif' },
+            { label: 'Protokol', value: olt.webProtocol }, { label: 'Port', value: olt.webPort },
+            { label: 'Nama pengguna', value: olt.webUsername }, { label: 'Password', value: olt.webPasswordConfigured ? 'Tersimpan' : 'Belum diatur' },
+          ]} />
+        </> },
+        { key: 'location', label: 'Lokasi', group: 'Pengaturan', icon: NavIcons.Map, content: <OltLocation olt={olt} canUpdate={canUpdate} onSaved={load} /> },
+      ]} />
 
       {editing && (
         <EditOltModal
@@ -462,8 +449,8 @@ export function OltDetailPage() {
   )
 }
 
-/** Tab ringkasan: identitas perangkat, kesiapan SNMP, dan peta lokasi yang bisa dipindah. */
-function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: boolean; onSaved: () => void }) {
+/** Coordinates are edited separately from device identity and management access. */
+function OltLocation({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: boolean; onSaved: () => void }) {
   const toast = useToast()
   const [lon, setLon] = useState(String(olt.location.longitude))
   const [lat, setLat] = useState(String(olt.location.latitude))
@@ -519,50 +506,7 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
   }
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="card stack">
-        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Informasi perangkat</Text>
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Field label="Site" value={olt.siteName ?? '—'} />
-          <Field label="Vendor (hardware type)" value={olt.vendor} />
-          <Field label="Model" value={olt.model ?? '—'} />
-          <Field label="IP manajemen" value={olt.managementIp ?? '—'} />
-          <Field label="Jumlah PON port" value={String(olt.ponPortCount)} />
-        </div>
-        {olt.description && <Field label="Deskripsi" value={olt.description} />}
-      </div>
-
-      <div className="card stack">
-        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Monitoring SNMP</Text>
-        <div className="row wrap" style={{ gap: '0.5rem' }}>
-          {olt.snmpEnabled ? <Badge tone="accent">SNMP aktif</Badge> : <Badge tone="neutral">SNMP nonaktif</Badge>}
-          {olt.pollable ? <Badge tone="good">Siap dipolling</Badge> : <Badge tone="neutral">Belum lengkap</Badge>}
-          {olt.snmpConfigured ? <Badge tone="accent">Community tersimpan</Badge> : <Badge tone="neutral">Community belum diset</Badge>}
-          <Badge>{olt.snmpVersion.toLowerCase()}</Badge>
-          <Badge>Port {olt.snmpPort}</Badge>
-        </div>
-        {!olt.snmpEnabled ? (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            OLT dikelola melalui Web UI.
-          </Text>
-        ) : !olt.pollable ? (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Polling memerlukan vendor yang didukung, IP manajemen, dan SNMP community.
-          </Text>
-        ) : null}
-      </div>
-
-      <div className="card stack">
-        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Web UI / HTTP</Text>
-        <div className="row wrap" style={{ gap: '0.5rem' }}>
-          {olt.webEnabled ? <Badge tone="accent">Web aktif</Badge> : <Badge tone="neutral">Web nonaktif</Badge>}
-          <Badge>{olt.webProtocol}</Badge>
-          {olt.webPort != null && <Badge>Port {olt.webPort}</Badge>}
-          {olt.webUsername && <Badge>User {olt.webUsername}</Badge>}
-          {olt.webPasswordConfigured ? <Badge tone="accent">Password tersimpan</Badge> : <Badge tone="neutral">Password belum diset</Badge>}
-        </div>
-      </div>
-
+    <div className="stack">
       <div className="card stack">
         <Text as="h3" weight="semibold" style={{ margin: 0 }}>Lokasi</Text>
         <Text as="p" className="muted tnum" size={300} style={{ margin: 0 }}>
@@ -600,7 +544,7 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           </>
         ) : (
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Kamu tak punya izin memindahkan OLT ini.
+            Lokasi hanya dapat diubah oleh pengelola perangkat.
           </Text>
         )}
       </div>
@@ -935,6 +879,8 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
       title={`Edit ${olt.code}`}
       size="full"
       className="blade-edit"
+      layout="resource"
+      closeDisabled={saving}
       dirty={dirty}
       onClose={onClose}
       footer={
@@ -1115,20 +1061,10 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
         </div>
 
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Community string &amp; password Web disimpan terenkripsi dan tak pernah ditampilkan. Kosongkan untuk
-          mempertahankan yang tersimpan. Kode OLT tak bisa diubah.
+          Kosongkan community dan password untuk tetap menggunakan yang tersimpan.
         </Text>
       </div>
     </Blade>
-  )
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div style={{ ...typographyStyles.body2, color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
-    </div>
   )
 }
 

@@ -1,0 +1,16 @@
+.network-resource { min-width: 0; }
+.network-resource > .azure-commandbar, .network-resource > div > .azure-commandbar { margin-bottom: 20px; }
+.network-resource-heading { margin: 0 0 16px; }
+.network-resource-subtitle { color: var(--colorNeutralForeground3); margin: 0 0 12px; }
+.network-resource-section { min-width: 0; }
+.network-resource-section[hidden] { display: none; }
+.network-resource-section > .card { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+.network-resource-section > h2 { font-size: 14px; font-weight: 600; margin: 0 0 16px; }
+.network-resource-section > h2:not(:first-child) { border-top: 1px solid var(--colorNeutralStroke2); padding-top: 20px; margin-top: 24px; }
+.network-properties { display: grid; gap: 16px; margin: 0; }
+.network-properties > div { display: grid; grid-template-columns: minmax(140px, 190px) minmax(0, 1fr); gap: 16px; }
+.network-properties dt { color: var(--colorNeutralForeground3); }
+.network-properties dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .network-properties > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}

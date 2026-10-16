@@ -17,6 +17,8 @@ import { CableCauses } from './CableCauses'
 import { CablePhysicalFields } from './CablePhysicalFields'
 import { OtdrSection } from './OtdrSection'
 import { deleteAction } from './mapActions'
+import { NetworkResourceSections } from '../NetworkResourceSections'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 
 export function CablePanel({
   cable,
@@ -106,16 +108,13 @@ export function CablePanel({
       subtitle={`Kabel ${TYPE_LABEL[cable.cableType]} · ${cable.code}`}
       size="full"
       className="blade-detail"
+      layout="resource"
       onClose={onClose}
     >
+      <div className="network-resource">
       {(primary || actions.length > 0) && <CommandBar layout="wrap" primary={primary} actions={actions} />}
-      <div className="stack" style={{ gap: '0.9rem' }}>
+      <NetworkResourceSections label="Bagian kabel" sections={[{ key: 'overview', label: 'Ringkasan', icon: NavIcons.Dashboard, content: <div className="stack">
         {causes.length > 0 && <CableCauses causes={causes} />}
-
-        {/* Sebelum apa pun yang lain: ruas kotak-ke-kotak wajib menjelaskan
-            dirinya — splitter bertingkat atau selubung yang dipecah. Angka
-            panjang & core di bawahnya baru bisa dipercaya setelah itu terjawab. */}
-        <CableChainNotice cableId={cable.id} fromKind={cable.fromKind} toKind={cable.toKind} />
 
         {/* Lencana "Ditinggal" saja tak cukup menjelaskan akibatnya: yang perlu
             diketahui orang yang membuka ruas ini adalah kabelnya masih ada di
@@ -123,8 +122,7 @@ export function CablePanel({
         {abandoned && (
           <MessageBar intent="info">
             <MessageBarBody>
-              Kabel ini ditandai ditinggal — seratnya masih tergantung di tiang, tapi tak dihitung sebagai kabel
-              siap pakai. {canEdit && 'Pakai “Pakai lagi” bila rumahnya berlangganan kembali.'}
+              Kabel ini belum tersedia untuk digunakan kembali.
             </MessageBarBody>
           </MessageBar>
         )}
@@ -137,9 +135,7 @@ export function CablePanel({
         {legacyCode && canEdit && renaming == null && (
           <MessageBar intent="warning">
             <MessageBarBody>
-              Kode ruas ini masih bergaya UUID — tak bisa disebut lewat radio maupun ditulis di
-              label selubung. Ganti jadi sesuatu seperti DIST-ODC-01-ODP-07 lewat “Ubah” di baris
-              Kode; sambungan, core, dan riwayat ukurnya tetap utuh.
+              Ganti kode kabel agar mudah dikenali.
             </MessageBarBody>
           </MessageBar>
         )}
@@ -153,7 +149,7 @@ export function CablePanel({
               label="Kode kabel"
               value={renaming}
               maxLength={CODE_MAX}
-              hint="Yang tertulis di label selubung & disebut lewat radio. Sambungan, core, dan riwayat ukur tak ikut berubah."
+              hint="Kode pada label kabel."
               onChange={(_, data) => setRenaming(data.value)}
             />
             <div className="row" style={{ gap: '0.4rem' }}>
@@ -174,7 +170,7 @@ export function CablePanel({
           </div>
         )}
 
-        <dl className="essentials">
+        <dl className="network-properties">
           <Ess label="Kode">
             <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
               <span>{cable.code}</span>
@@ -212,36 +208,6 @@ export function CablePanel({
           )}
         </dl>
 
-        {/* Kisah lengkap sebuah selubung: berangkat dari mana, dibuka di kotak
-            mana saja, berhenti di mana. Cuma muncul untuk kabel yang memang
-            mampir di tengah jalan — buat kabel dua ujung, "Dari"/"Ke" di atas
-            sudah menceritakan semuanya.
-
-            Sengaja tak bisa disunting dari sini: yang berhak bilang "selubung
-            ini saya buka" adalah orang yang berdiri di depan kotaknya, dan ia
-            mencatatnya di meja sambung kotak itu — bukan dari panel kabel yang
-            bisa dibuka siapa saja dari balik meja kantor. */}
-        {cable.attachments.length > 2 && (
-          <div className="stack" style={{ gap: '0.3rem' }}>
-            <Text as="strong" size={300} weight="semibold">Perjalanan selubung</Text>
-            <ol className="stack" style={{ gap: '0.2rem', margin: 0, paddingLeft: '1.1rem' }}>
-              {cable.attachments.map((stop) => (
-                <li key={stop.id}>
-                  <Text as="span" size={200}>{stop.nodeCode ?? stop.nodeKind}</Text>
-                  <span className="muted"> · {stop.roleLabel}</span>
-                  {stop.distanceMeters != null && stop.distanceMeters > 0 && (
-                    <span className="muted tnum"> · m-{Math.round(stop.distanceMeters)}</span>
-                  )}
-                </li>
-              ))}
-            </ol>
-            <Text as="span" className="muted" size={100}>
-              Angka meter dihitung menyusuri rute dari pangkal — itu yang dicocokkan dengan hasil
-              OTDR saat mencari letak gangguan. Perannya diubah dari meja sambung kotaknya.
-            </Text>
-          </div>
-        )}
-
         {/* Yang berhak mengubah langsung dapat dropdown-nya — hasil survei sering
             baru masuk berhari-hari setelah jalurnya digambar, dan tersimpan
             begitu dipilih tanpa tombol simpan terpisah. */}
@@ -254,18 +220,32 @@ export function CablePanel({
           />
         )}
 
-        {/* Core lebih dulu daripada OTDR: inilah yang dibuka orang tiap hari
-            ("core mana yang masih bebas buat pasangan besok"), sedangkan OTDR
-            cuma dibuka saat ada gangguan. */}
-        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
-          <div className="spread">
-            <Text as="strong" size={300} weight="semibold">Core kabel</Text>
-            <Text as="span" className="muted" size={100}>{cable.coreCount} core</Text>
+      </div> },
+      { key: 'cores', label: 'Core kabel', group: 'Jaringan', icon: NavIcons.Cable, content: <CableCoreManager key={coreEpoch} cableId={cable.id} canEdit={canEdit} /> },
+      { key: 'route', label: 'Jalur kabel', group: 'Jaringan', icon: NavIcons.Route, content: <div className="stack">
+        <CableChainNotice cableId={cable.id} fromKind={cable.fromKind} toKind={cable.toKind} />
+        {cable.attachments.length > 0 && (
+          <div className="stack" style={{ gap: '0.3rem' }}>
+            <Text as="strong" size={300} weight="semibold">Titik pada jalur kabel</Text>
+            <ol className="stack" style={{ gap: '0.2rem', margin: 0, paddingLeft: '1.1rem' }}>
+              {cable.attachments.map((stop) => (
+                <li key={stop.id}>
+                  <Text as="span" size={200}>{stop.nodeCode ?? stop.nodeKind}</Text>
+                  <span className="muted"> · {stop.roleLabel}</span>
+                  {stop.distanceMeters != null && stop.distanceMeters > 0 && (
+                    <span className="muted tnum"> · m-{Math.round(stop.distanceMeters)}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+            <Text as="span" className="muted" size={100}>
+              Jarak diukur dari pangkal kabel.
+            </Text>
           </div>
-          <CableCoreManager key={coreEpoch} cableId={cable.id} canEdit={canEdit} />
-        </div>
+        )}
 
-        {canViewOtdr && (
+      </div> },
+        ...(canViewOtdr ? [{ key: 'otdr', label: 'OTDR', group: 'Pemantauan', icon: NavIcons.Flask, content: (
           <OtdrSection
             cable={cable}
             tests={otdrTests}
@@ -274,7 +254,8 @@ export function CablePanel({
             onDelete={onDeleteOtdr}
             onFocus={onFocusOtdr}
           />
-        )}
+        ) }] : []),
+      ]} />
       </div>
 
       {releasing && (

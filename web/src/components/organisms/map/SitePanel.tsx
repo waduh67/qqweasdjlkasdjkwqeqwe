@@ -1,7 +1,8 @@
-import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
-import type { SiteInspection, SiteOlt } from '@/api/network'
+import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import type { SiteInspection } from '@/api/network'
 import { BladeHead, CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { cableAction, deleteAction, relocateAction } from './mapActions'
+import { DataTable } from '../DataTable'
 
 /**
  * Panel isi sebuah site/POP: OLT yang berdiri di sini plus rekap seluruh
@@ -56,34 +57,15 @@ export function SitePanel({
         {site.olts.length > 0 && (
           <div className="stack" style={{ gap: '0.45rem' }}>
             <p className="blade-section-title">OLT di site ini ({site.olts.length})</p>
-            {site.olts.map((olt) => (
-              <SiteOltRow key={olt.id} olt={olt} />
-            ))}
+            <DataTable rows={site.olts} rowKey={olt => olt.id} presentation="resource" columns={[
+              { key: 'name', header: 'Nama', minWidth: 180, cell: olt => olt.name },
+              { key: 'code', header: 'Kode', minWidth: 140, cell: olt => olt.code },
+              { key: 'vendor', header: 'Vendor', minWidth: 100, cell: olt => olt.vendor },
+              { key: 'status', header: 'Status', minWidth: 100, cell: olt => olt.active ? 'Aktif' : 'Nonaktif' },
+            ]} />
           </div>
         )}
       </div>
     </aside>
-  )
-}
-
-function SiteOltRow({ olt }: { olt: SiteOlt }) {
-  return (
-    <div className="spread" style={{ gap: '0.45rem', alignItems: 'center' }}>
-      <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            flexShrink: 0,
-            background: olt.active ? '#34d399' : 'var(--muted)',
-          }}
-        />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{olt.name}</span>
-      </span>
-      <Text as="span" className="muted tnum" size={200} style={{ flexShrink: 0 }}>
-        {olt.code} · {olt.vendor}
-      </Text>
-    </div>
   )
 }

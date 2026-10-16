@@ -14,11 +14,11 @@ export function useResourceReviewLock(locked: boolean) {
 }
 
 /** A retained resource layer for details and review; form submission owns validation. */
-export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, loading = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus, navigation, steps: configuredSteps }: {
+export function ResourceForm({ title, children, footer, review, onBack, onClose, readOnly = false, editing = false, onReview, busy = false, loading = false, reviewFooter, className, reviewAction = false, dirty = false, returnFocus, navigation, steps: configuredSteps, reviewLabel: customReviewLabel }: {
   returnFocus?: HTMLElement | null;
   title: ReactNode; children: ReactNode; footer?: ReactNode; review?: ReactNode; navigation?: ReactNode; steps?: ResourceStepDefinition[];
   onBack: () => void; onClose: () => void; readOnly?: boolean; editing?: boolean;
-  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean | (() => boolean)
+  onReview?: () => void; busy?: boolean; loading?: boolean; reviewFooter?: ReactNode; className?: string; reviewAction?: boolean; dirty?: boolean | (() => boolean); reviewLabel?: string
 }) {
   const steps = readOnly ? undefined : configuredSteps
   const content = useRef<HTMLDivElement>(null)
@@ -71,7 +71,7 @@ export function ResourceForm({ title, children, footer, review, onBack, onClose,
   const withCancelGuard = (actions: ReactNode) => actions ? <div className="resource-action-contents" onClickCapture={interceptCancel}>{actions}</div> : undefined
   const reviewing = !!review
   useLayoutEffect(() => { if (reviewing) reviewContent.current?.focus() }, [reviewing])
-  const reviewLabel = editing ? 'Tinjau + simpan' : 'Tinjau + buat'
+  const reviewLabel = customReviewLabel ?? (editing ? 'Tinjau + simpan' : 'Tinjau + buat')
   const validate = (before?: number) => {
     type NativeField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     const fields = [...content.current?.querySelectorAll<HTMLElement>('input, select, textarea, [data-resource-required="true"]') ?? []]

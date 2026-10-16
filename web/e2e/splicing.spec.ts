@@ -58,6 +58,9 @@ async function setup(page: Page, jointBox = false, manage = true, longLabels = f
   await page.goto('/inventory')
   await page.getByRole('tab', { name: jointBox ? 'Joint box' : 'ODP', exact: true }).click()
   await page.getByText(node.name, { exact: true }).click()
+  const section = page.getByRole('tab', { name: 'Sambungan', exact: true })
+  if (await section.isVisible()) await section.click()
+  else await page.getByRole('combobox', { name: 'Bagian perangkat', exact: true }).selectOption('splicing')
   const manager = page.getByRole('region', { name: 'Sambungan serat', exact: true })
   await manager.scrollIntoViewIfNeeded()
   await expect(manager.getByRole(manage ? 'region' : 'table', { name: manage ? 'Meja sambung' : 'Daftar sambungan' })).toBeVisible()
@@ -154,7 +157,7 @@ for (const panelWidth of [385, 620]) {
   test(`joint-box content stays inside a ${panelWidth}px panel on desktop`, async ({ page }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     const state = await setup(page, true, true, true)
-    const drawer = page.locator('.azure-blade.blade-detail')
+    const drawer = page.getByRole('dialog', { name: state.data.closureCode, exact: true })
     await drawer.evaluate((node, width) => {
       const style = (node as HTMLElement).style
       style.setProperty('width', `${width}px`, 'important')
@@ -169,7 +172,7 @@ for (const panelWidth of [385, 620]) {
     const sourceBox = (await source.boundingBox())!, targetBox = (await target.boundingBox())!
     expect(targetBox.y).toBeGreaterThanOrEqual(sourceBox.y + sourceBox.height)
     expect(Math.abs(sourceBox.x - targetBox.x)).toBeLessThan(2)
-    const metrics = await drawer.locator('.azure-blade-body').evaluate(body => ({
+    const metrics = await drawer.locator('.resource-form-content').evaluate(body => ({
       width: body.clientWidth, scrollWidth: body.scrollWidth,
       children: [...body.querySelectorAll<HTMLElement>('.asset-detail-panel, .splice-manager, .splice-interactive, .splice-side, .splice-pair-preview')].map(node => ({ width: node.clientWidth, scrollWidth: node.scrollWidth })),
     }))
@@ -200,7 +203,7 @@ for (const panelWidth of [385, 620]) {
     await connectionScroll.screenshot({ path: info.outputPath(`connection-columns-${panelWidth}.png`) })
     await connectionScroll.focus(); await connectionScroll.press('ArrowRight')
     await expect.poll(() => connectionScroll.evaluate(node => node.scrollLeft)).toBeGreaterThan(0)
-    expect(await drawer.locator('.azure-blade-body').evaluate(body => body.scrollWidth <= body.clientWidth + 1)).toBe(true)
+    expect(await drawer.locator('.resource-form-content').evaluate(body => body.scrollWidth <= body.clientWidth + 1)).toBe(true)
     const table = state.manager.getByRole('region', { name: 'Tabel kabel', exact: true })
     await table.focus(); await table.press('ArrowRight')
     await expect(table).toBeFocused()
