@@ -19,9 +19,11 @@ Validation:
 - 50 focused backend tests passed: migration replay/scope, credential encryption, explicit RADIUS, CSV partial failure/recovery, export/report safety, first-invoice/short-month billing and existing PSB behavior.
 - 28 focused frontend tests passed, including PSB/migration navigation and command-bar overflow.
 - 48 customer-form/resource-layer browser cases passed in Chromium/Firefox at desktop/mobile widths (44 initial passes plus four updated toolbar-assertion rechecks).
-- Four real-map browser cases passed for one-row ODP commands and relocation through the menu. Desktop/mobile Firefox screenshots were inspected.
+- Four real-map browser cases passed for one-row ODP commands and relocation through the menu. Desktop/mobile screenshots are retained; a final visual check found a mobile Site/POP overlap addressed by the follow-up below.
 - The general ModularityTests structure check has an existing failure: an isolated checkout of base main `a22041fd` reproduced exactly the same 320 normalized violation groups, with zero added/removed groups. Do not suppress that check or report the entire backend suite as green.
 
 Operator example: create the internet package, then open Customers → Migrasi pelanggan → Input manual. Select Aktif for a subscriber already online, choose their package/price, and choose the first unpaid billing date or Belum kelola tagihan. Leave unknown coordinates empty. Review and migrate. Location can be added from the map; billing and RADIUS preparation are separate actions in customer details.
 
-Private evidence/recovery: `.omo/runtime/customer-migration/` (ignored). No credentials or production exports are committed. Local implementation and validation are complete; PR/CI, main merge, Actions deployment and exact live revision verification remain pending at this checkpoint.
+Private evidence/recovery: `.omo/runtime/customer-migration/` (ignored). No credentials or production exports are committed. Implementation merged in PR #74 as main `77046b7a`; final CI passed. Actions deployment and exact live verification are recorded in the PR release notes.
+
+Map follow-up: the detail panel has an opaque background so map controls cannot show through it. At mobile widths the map toolbar and Site/POP picker hide while a detail panel is open and return with the same site selection after closing. Browser regression also checks every visible command is clickable, not just aligned. The four follow-up cases pass in Chromium and Firefox at 375px/1440px; production web build and lint also pass. Final screenshots show no overlap.
