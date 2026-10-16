@@ -74,7 +74,7 @@ class OnboardingController(
         onboarding.onboardPsb(request.toCommand())
 
     /**
-     * Bulk-import PPPoE dari RouterOS ke sistem (pelanggan+langganan+akun AKTIF+terprovisi RADIUS).
+     * Migrasi pelanggan dari akun RouterOS; akun sumber tetap digunakan sampai RADIUS disiapkan.
      * Digating union izin langkah yang dirangkainya + `bng.nas.manage` (baca `/ppp/secret` router
      * pada sumber NAS). Membalas rekap per-baris (bukan resource tunggal) → 200, bukan 201.
      */
@@ -89,14 +89,14 @@ class OnboardingController(
     }
 
     /**
-     * Impor CSV pelanggan generik (upsert menurut `mikrotik_username`): buat/perbarui pelanggan +
-     * langganan + akun jaringan per baris. Digating union izin langkah yang dirangkainya (buat &
+     * Impor CSV pelanggan: buat catatan layanan berdasarkan kode pelanggan atau username.
+     * Jalur migrasi tidak membuat akun RADIUS. Izin yang dibutuhkan mencakup buat &
      * ubah pelanggan, ubah langganan, kelola akun jaringan). Membalas rekap per-baris → 200.
      */
     @PostMapping("/import/customers")
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize(
-        "@authz.canAll('customer.customer.create','customer.subscription.update')",
+        "@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')",
     )
     fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult {
         request.rows.forEach { migrationAccess.requireArea(it.areaId) }
@@ -105,7 +105,7 @@ class OnboardingController(
 
     @PostMapping("/v1/import/customers", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.ACCEPTED)
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')")
     fun stageCustomerImport(
         @RequestPart("file") file: MultipartFile,
         @RequestParam operationKey: String,
@@ -128,7 +128,7 @@ class OnboardingController(
     fun customerImportStatus(@PathVariable id: UUID) = customerBatches.status(id)
 
     @PostMapping("/v1/import/customers/{id}/commit")
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')")
     fun commitCustomerImport(
         @PathVariable id: UUID,
         @RequestParam commitOperationKey: String,
@@ -140,7 +140,7 @@ class OnboardingController(
     fun cancelCustomerImport(@PathVariable id: UUID) = customerBatches.cancel(id)
 
     @PostMapping("/v1/import/customers/{id}/retry")
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')")
     fun retryCustomerImport(
         @PathVariable id: UUID,
         @RequestParam commitOperationKey: String,
@@ -187,7 +187,7 @@ internal object CustomerCsv {
     private val HEADER = listOf(
         "name", "phone", "address", "package_name", "connection_type", "installation_date",
         "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number",
-        "next_billing", "latitude", "longitude", "notes",
+        "next_billing", "latitude", "longitude", "notes", "customer_code", "service_status", "first_invoice_on", "monthly_fee",
     )
 
     fun render(lines: List<CustomerExportLine>): String {
@@ -211,7 +211,9 @@ internal object CustomerCsv {
                     line.nextBillingDay?.toString().orEmpty(),
                     line.latitude?.toString().orEmpty(),
                     line.longitude?.toString().orEmpty(),
-                    "", // notes — tak dipetakan ke model
+                    "", // notes
+                    line.customerCode.orEmpty(), line.serviceStatus.orEmpty(),
+                    line.firstInvoiceOn?.toString().orEmpty(), line.monthlyFee?.toPlainString().orEmpty(),
                 ).joinToString(",") { escape(it) },
             ).append("\r\n")
         }

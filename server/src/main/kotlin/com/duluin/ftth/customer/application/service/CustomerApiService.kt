@@ -386,6 +386,9 @@ class CustomerApiService(
                 packageName = subscription.packageName,
                 activatedAt = subscription.activatedAt,
                 billingDayOfMonth = subscription.billingDayOfMonth,
+                customerCode = customer.code, serviceStatus = customer.status.name,
+                monthlyFee = subscription.monthlyFee, firstInvoiceOn = subscription.billingStartsOn,
+                areaId = customer.areaId,
             )
         }
     }

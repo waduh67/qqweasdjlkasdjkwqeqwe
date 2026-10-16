@@ -11,7 +11,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.*
 import com.duluin.ftth.onboarding.adapter.outbound.persistence.CustomerMigrationJpaEntity
 import com.duluin.ftth.onboarding.adapter.outbound.persistence.CustomerMigrationJpaRepository
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -78,6 +78,7 @@ class CustomerMigrationService(
         if (records.findBySourceKey(sourceKey) != null || username?.let { bng.findAccessByUsername(it) } != null) {
             throw ConflictException("Pelanggan sudah terdaftar")
         }
+        if (command.nasId != null && !bng.hasNas(command.nasId)) throw ValidationException("BRAS tidak ditemukan")
         validateDates(command.installationDate, command.firstInvoiceOn, command.billingDay)
         val registered = customers.migrateCustomer(MigrateCustomerCommand(command.customer,
             command.status == MigrationStatus.SUSPENDED, command.installationDate?.atStartOfDay()?.toInstant(ZoneOffset.UTC),

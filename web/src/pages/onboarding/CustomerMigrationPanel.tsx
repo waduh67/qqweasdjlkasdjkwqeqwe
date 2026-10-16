@@ -38,6 +38,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const [billingDay, setBillingDay] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [batch, setBatch] = useState<CustomerImportBatchView | null>(null)
+  const [resumeId] = useState(batchId)
   const [rows, setRows] = useState<PppSecretPreview[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [mapping, setMapping] = useState<Record<string, string>>({})
@@ -64,11 +65,11 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
     return () => { active = false }
   }, [can, loadAttempt])
   useEffect(() => {
-    if (!batchId || batch?.id === batchId) return
+    if (!resumeId) return
     let active = true
-    void customerImportStatus(batchId).then(value => { if (active) { setBatch(value); setSource('csv'); setReviewing(true) } }).catch(() => { if (active) setError('Status impor belum berhasil dimuat.') })
+    void customerImportStatus(resumeId).then(value => { if (active) { setBatch(value); setSource('csv'); setReviewing(true) } }).catch(() => { if (active) setError('Status impor belum berhasil dimuat.') })
     return () => { active = false }
-  }, [batchId, batch?.id])
+  }, [resumeId])
   useEffect(() => {
     if (!batch || !['PROCESSING', 'RETRYABLE_FAILED'].includes(batch.state)) return
     let active = true
@@ -129,8 +130,16 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       ['Harga bulanan', `Rp ${Number(draft.price || plans.find(plan => plan.id === draft.planId)?.price || 0).toLocaleString('id-ID')}`],
       ['Mulai layanan', draft.installationDate || 'Belum diketahui'], ['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola'],
       ['Koordinat', draft.latitude && draft.longitude ? `${draft.latitude}, ${draft.longitude}` : 'Belum ditentukan'], ['Username', draft.username || 'Belum diisi'],
-    ] : [['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola']]} />
+    ] : [['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ...(source === 'csv' ? [] : [['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola'] as [string, string]])]} />
     {!finished && <p className="muted">Akun jaringan lama tetap digunakan. RADIUS dapat disiapkan dari detail pelanggan.</p>}
+    {batch && !finished && (batch.preview?.length ?? 0) > 0 && <div className="stack"><p>{batch.preview!.length} dari {batch.rowCount} pelanggan</p><DataTable rows={batch.preview!} rowKey={row => String(row.row)} columns={[
+      { key: 'identity', header: 'Kode / username', minWidth: 160, cell: row => row.identity },
+      { key: 'name', header: 'Nama', minWidth: 170, cell: row => row.name || '—' },
+      { key: 'packageName', header: 'Paket', minWidth: 150, cell: row => row.packageName || '—' },
+      { key: 'status', header: 'Status', minWidth: 130, cell: row => ['SUSPENDED', 'ISOLATED', 'TERISOLIR', 'DITANGGUHKAN'].includes(row.status.toUpperCase()) ? 'Ditangguhkan' : row.status.toUpperCase() === 'ACTIVE' || row.status.toUpperCase() === 'AKTIF' ? 'Aktif' : row.status },
+      { key: 'firstInvoiceOn', header: 'Tagihan pertama', minWidth: 160, cell: row => row.firstInvoiceOn || 'Belum dikelola' },
+      { key: 'monthlyFee', header: 'Harga bulanan', minWidth: 140, cell: row => row.monthlyFee == null ? 'Sesuai paket' : `Rp ${Number(row.monthlyFee).toLocaleString('id-ID')}` },
+    ]} /></div>}
     {batch && batch.errors.length > 0 && <><p role="alert">Perbaiki data berikut, lalu unggah kembali.</p><DataTable rows={batch.errors} rowKey={row => `${row.row}:${row.column}:${row.code}`} columns={[{ key: 'row', header: 'Baris', cell: row => row.row }, { key: 'column', header: 'Kolom', cell: row => row.column || '—' }, { key: 'message', header: 'Keterangan', cell: row => row.message }]} /></>}
     {batch && ['PROCESSING', 'RETRYABLE_FAILED'].includes(batch.state) && <p role="status">Migrasi sedang diproses. Anda dapat menutup panel ini dan memeriksa hasilnya kembali.</p>}
     {batch?.state === 'PERMANENT_FAILED' && <p role="alert">Migrasi belum selesai. Unduh laporan untuk memeriksa hasilnya.</p>}
@@ -144,7 +153,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   return <ResourceForm title="Migrasi pelanggan" onClose={onClose} onBack={() => { if (!uncertain) { setReviewing(false); command.current = null } }} loading={loading} busy={busy} readOnly={!canMigrate || !!loadError}
     steps={steps} onReview={() => void review()} review={reviewing ? summary : undefined}
     reviewFooter={<>{finished ? <Button variant="primary" onClick={() => onCreated()}>Selesai</Button> : <>
-      <Button disabled={busy || uncertain} onClick={() => { setReviewing(false); setBatch(null); command.current = null }}>Sebelumnya</Button>
+      <Button disabled={busy || uncertain || !!(batch && batch.state !== 'STAGED')} onClick={() => { setReviewing(false); command.current = null }}>Sebelumnya</Button>
       <Button disabled={busy || uncertain} onClick={onClose}>Tutup</Button>
       <Button variant="primary" disabled={busy || !canMigrate || (source === 'csv' && (!batch || batch.errors.length > 0 || batch.state !== 'STAGED'))} onClick={() => void submit()}>{busy ? 'Memproses…' : uncertain ? 'Coba lagi' : 'Migrasikan'}</Button>
     </>}</> }>
@@ -155,7 +164,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       <ResourceStep step="source">
         <p>Pindahkan pelanggan yang sudah berlangganan.</p>
         <SelectField label="Sumber data" value={source} onChange={(_, data) => { setSource(data.value as Source); setBatch(null); setError('') }}>
-          <option value="manual">Input manual</option><option value="csv">Berkas CSV</option>{canMikrotik && <option value="mikrotik">MikroTik</option>}
+          <option value="manual">Input manual</option>{can('customer.customer.update') && <option value="csv">Berkas CSV</option>}{canMikrotik && <option value="mikrotik">MikroTik</option>}
         </SelectField>
         {source === 'csv' && <><Field label="Berkas CSV" required><input type="file" accept=".csv,text/csv" required onChange={event => setFile(event.target.files?.[0] || null)} /></Field><div><Button onClick={() => downloadBlob(new Blob([`\uFEFF${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`], { type: 'text/csv;charset=utf-8' }), 'template-migrasi.csv')}>Unduh template</Button></div><p className="muted">Isi nama, alamat, paket, serta kode pelanggan atau username. Gunakan ACTIVE atau SUSPENDED pada kolom service_status.</p><CustomerAreaField value={areaId} onChange={setAreaId} /></>}
         {source === 'mikrotik' && <><SelectField label="BRAS MikroTik" required value={nasId} onChange={(_, data) => { setNasId(data.value); setRows([]); setSelected(new Set()) }}><option value="">Pilih BRAS</option>{routers.filter(router => router.vendor === 'MIKROTIK').map(router => <option key={router.id} value={router.id}>{router.name}</option>)}</SelectField><div><Button disabled={!nasId || busy || !canMikrotik} onClick={() => void readRouter()}>Muat akun</Button></div></>}

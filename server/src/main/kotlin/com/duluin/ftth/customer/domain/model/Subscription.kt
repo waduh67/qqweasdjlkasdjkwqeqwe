@@ -184,6 +184,8 @@ class Subscription private constructor(
         status = SubscriptionStatus.PENDING
         activatedAt = null
         terminatedAt = null
+        billingManaged = true
+        billingStartsOn = null
         applySnapshot(validate(snapshot))
     }
 

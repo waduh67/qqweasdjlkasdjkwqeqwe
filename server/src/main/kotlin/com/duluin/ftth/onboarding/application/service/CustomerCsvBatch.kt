@@ -14,7 +14,7 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersResult
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
 import com.duluin.ftth.common.tenant.TenantContext
-import org.springframework.dao.DataIntegrityViolationException
+import com.duluin.ftth.common.domain.error.NotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.duluin.ftth.common.domain.error.ConflictException
@@ -113,7 +113,9 @@ object CustomerCsvParser {
 }
 
 enum class CustomerImportBatchState { STAGED, PROCESSING, COMMITTED, CANCELLED, FAILED, RETRYABLE_FAILED, PERMANENT_FAILED, PURGED }
-data class CustomerImportBatchView(val id: UUID, val sha256: String, val mode: ImportMode, val state: CustomerImportBatchState, val errors: List<CsvImportError>, val result: ImportCustomersResult?, val createdAt: Instant, val rowCount: Int = 0)
+data class CustomerImportBatchView(val id: UUID, val sha256: String, val mode: ImportMode, val state: CustomerImportBatchState, val errors: List<CsvImportError>, val result: ImportCustomersResult?, val createdAt: Instant, val rowCount: Int = 0, val preview: List<CustomerImportPreview> = emptyList())
+
+data class CustomerImportPreview(val row: Int, val identity: String, val name: String?, val packageName: String?, val status: String, val firstInvoiceOn: java.time.LocalDate?, val monthlyFee: java.math.BigDecimal?)
 
 @Service
 class CustomerImportBatchService(
@@ -124,11 +126,15 @@ class CustomerImportBatchService(
     private val mapper: ObjectMapper,
     private val outbox: CustomerImportOutboxJpaRepository,
     private val credentialVault: CustomerImportCredentialVault,
+    private val entityManager: jakarta.persistence.EntityManager,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) {
     @Transactional
     fun stage(operationKey: String, parsed: ParsedCustomerCsv, mode: ImportMode): CustomerImportBatchView {
         require(operationKey.length in 1..240) { "operation_key tidak valid" }
         require(TenantContext.tenantIdOrNull() != null) { "Tenant context diperlukan" }
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(:key,0))")
+            .setParameter("key", "customer-import-stage:${TenantContext.tenantId()}").resultList
         val byOperation = batches.findByOperationKey(operationKey)
         if (byOperation != null) require(byOperation.sha256 == parsed.sha256 && byOperation.mode == mode.name) { "operation_key sudah digunakan untuk berkas atau mode berbeda" }
         val byFile = batches.findBySha256(parsed.sha256)
@@ -139,30 +145,22 @@ class CustomerImportBatchService(
             this.operationKey = operationKey; sha256 = parsed.sha256; this.mode = mode.name; state = CustomerImportBatchState.STAGED
             objectKey = "customer-import/${parsed.sha256}"; rowCount = parsed.rows.size; schemaVersion = 1; importType = "CUSTOMERS_CSV"; retentionUntil = Instant.now().plus(Duration.ofDays(30))
         }
-        try { batches.saveAndFlush(entity) } catch (ex: DataIntegrityViolationException) {
-            val concurrentOperation = batches.findByOperationKey(operationKey)
-            if (concurrentOperation != null) {
-                require(concurrentOperation.sha256 == parsed.sha256 && concurrentOperation.mode == mode.name) { "operation_key sudah digunakan untuk berkas atau mode berbeda" }
-                return view(concurrentOperation)
-            }
-            val concurrentFile = batches.findBySha256(parsed.sha256)
-            if (concurrentFile != null) {
-                require(concurrentFile.mode == mode.name) { "Berkas sudah digunakan dalam mode berbeda" }
-                return view(concurrentFile)
-            }
-            throw ex
-        }
+        batches.saveAndFlush(entity)
         parsed.rows.forEachIndexed { index, row -> staging.save(CustomerImportStagingRowJpaEntity().apply { batchId = entity.id; rowNumber = index + 2; credentialHandleId = credentialVault.seal(row.mikrotikPassword)?.id; payload = mapper.writeValueAsString(row.copy(mikrotikPassword = null)) }) }
         parsed.errors.forEach { error -> errors.save(CustomerImportErrorJpaEntity().apply { batchId = entity.id; rowNumber = error.row; columnName = error.column; code = error.code; message = error.message }) }
         return view(entity, parsed.errors)
     }
 
-    @Transactional(readOnly = true) fun status(id: UUID): CustomerImportBatchView = view(batches.findById(id).orElseThrow())
+    @Transactional fun status(id: UUID): CustomerImportBatchView {
+        requireVisible(id)
+        return view(batches.findById(id).orElseThrow())
+    }
     @Transactional fun cancel(id: UUID): CustomerImportBatchView = transition(id, CustomerImportBatchState.CANCELLED)
     @Transactional fun retry(id: UUID, commitOperationKey: String, commitHash: String): CustomerImportBatchView = commit(id, commitOperationKey, commitHash)
 
     @Transactional
     fun commit(id: UUID, commitOperationKey: String, commitHash: String): CustomerImportBatchView {
+        requireVisible(id)
         require(commitOperationKey.length in 1..240) { "commit_operation_key tidak valid" }
         require(commitHash.matches(Regex("[0-9a-fA-F]{64}"))) { "commit_hash tidak valid" }
         val entity = batches.findForUpdate(id) ?: throw NoSuchElementException("Batch tidak ditemukan")
@@ -181,15 +179,29 @@ class CustomerImportBatchService(
         return view(entity)
     }
 
-    @Transactional(readOnly = true)
-    fun report(id: UUID): String = view(batches.findById(id).orElseThrow()).toSafeCsv()
+    @Transactional
+    fun report(id: UUID): String {
+        requireVisible(id)
+        return view(batches.findById(id).orElseThrow()).toSafeCsv()
+    }
+    private fun requireVisible(id: UUID) {
+        if (!batches.existsById(id)) throw NotFoundException("Impor tidak ditemukan")
+        val scope = authority.lockCurrent().areaScope as? com.duluin.ftth.common.security.AuthorityScope.Restricted ?: return
+        val areas = staging.findAllByBatchIdOrderByRowNumber(id).map { mapper.readValue(it.payload, CustomerImportRow::class.java).areaId }
+        if (areas.any { it !in scope.ids }) throw NotFoundException("Impor tidak ditemukan")
+    }
 
     private fun transition(id: UUID, state: CustomerImportBatchState): CustomerImportBatchView {
+        requireVisible(id)
         val entity = batches.findForUpdate(id) ?: throw NoSuchElementException("Batch tidak ditemukan")
         require(entity.state == CustomerImportBatchState.STAGED) { "Batch tidak dapat dibatalkan" }
         entity.state = state; return view(batches.save(entity))
     }
-    private fun view(entity: CustomerImportBatchJpaEntity, knownErrors: List<CsvImportError> = errors.findAllByBatchIdOrderByRowNumber(entity.id).map { CsvImportError(it.rowNumber, it.columnName, it.code, it.message) }): CustomerImportBatchView = CustomerImportBatchView(entity.id, entity.sha256, ImportMode.valueOf(entity.mode), entity.state, knownErrors, entity.result?.let { mapper.readValue(it, object : TypeReference<ImportCustomersResult>() {}) }, entity.createdAt, entity.rowCount)
+    private fun view(entity: CustomerImportBatchJpaEntity, knownErrors: List<CsvImportError> = errors.findAllByBatchIdOrderByRowNumber(entity.id).map { CsvImportError(it.rowNumber, it.columnName, it.code, it.message) }): CustomerImportBatchView = CustomerImportBatchView(entity.id, entity.sha256, ImportMode.valueOf(entity.mode), entity.state, knownErrors, entity.result?.let { mapper.readValue(it, object : TypeReference<ImportCustomersResult>() {}) }, entity.createdAt, entity.rowCount,
+        staging.findFirst20ByBatchIdOrderByRowNumber(entity.id).map { staged ->
+            val row = mapper.readValue(staged.payload, CustomerImportRow::class.java)
+            CustomerImportPreview(staged.rowNumber, row.customerCode ?: row.mikrotikUsername.orEmpty(), row.name, row.packageName, row.serviceStatus, row.firstInvoiceOn, row.monthlyFee)
+        })
 }
 
 @Component

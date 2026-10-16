@@ -73,7 +73,7 @@ class ImportPppoeService(
             ImportRowOutcome(row.name, ImportRowStatus.SKIPPED, e.message)
         } catch (e: RuntimeException) {
             log.warn("Impor PPPoE gagal untuk '{}': {}", row.name, e.message)
-            ImportRowOutcome(row.name, ImportRowStatus.FAILED, e.message)
+            ImportRowOutcome(row.name, ImportRowStatus.FAILED, if (e is com.duluin.ftth.common.domain.error.DomainException) e.message else "Akun belum berhasil diproses")
         }
     }
 }

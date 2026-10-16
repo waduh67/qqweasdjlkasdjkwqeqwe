@@ -57,7 +57,7 @@ class ImportCustomersService(
             // Bentrok (mis. sudah pernah diimpor lewat jalur lain) → impor idempoten, lewati saja.
             CustomerImportOutcome(username, CustomerImportStatus.SKIPPED, e.message)
         } catch (e: RuntimeException) {
-            CustomerImportOutcome(username, CustomerImportStatus.FAILED, e.message)
+            CustomerImportOutcome(username, CustomerImportStatus.FAILED, if (e is com.duluin.ftth.common.domain.error.DomainException) e.message else "Baris belum berhasil diproses")
         }
     }
 

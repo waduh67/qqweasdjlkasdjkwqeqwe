@@ -1,8 +1,6 @@
 package com.duluin.ftth.onboarding.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.error.ValidationException
-import com.duluin.ftth.common.security.CurrentUserProvider
-import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.onboarding.application.service.*
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Component
@@ -11,10 +9,12 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Component
-class MigrationAreaAccess(private val currentUser: CurrentUserProvider) {
+class MigrationAreaAccess(private val authority: com.duluin.ftth.iam.CurrentAuthorityApi, private val areas: com.duluin.ftth.iam.IamApi) {
+    @org.springframework.transaction.annotation.Transactional
     fun requireArea(areaId: UUID?) {
-        val allowed = currentUser.current().areaScope()
-        if (allowed != null && areaId !in allowed) throw ValidationException("Pilih area yang dapat Anda kelola")
+        val scope = authority.lockCurrent().areaScope
+        if (scope is com.duluin.ftth.common.security.AuthorityScope.Restricted && areaId !in scope.ids) throw ValidationException("Pilih area yang dapat Anda kelola")
+        if (areaId != null && areas.areasByIds(setOf(areaId)).isEmpty()) throw ValidationException("Area tidak ditemukan")
     }
 }
 

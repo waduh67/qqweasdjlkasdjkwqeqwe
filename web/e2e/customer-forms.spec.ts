@@ -18,7 +18,7 @@ async function setup(page: Page, platformAdmin = false, unlocated = false) {
     else if (path === '/api/v2/warehouse/workflow') body = { snapshot: { tenantId: assetIds.customer, epoch: 1, state: 'ENFORCED', workflow: 'REFERENCE' }, owner: true }
     else if (path === '/api/customers') body = { content: [customer], totalElements: 1, totalPages: 1, page: 0, size: 50 }
     else if (path === `/api/customers/${customer.id}`) body = customer
-    else if (path.startsWith('/api/gis/trace/')) body = null
+    else if (path.startsWith('/api/gis/trace/') || path.startsWith('/api/onboarding/migrations/')) body = null
     else if (path.startsWith('/api/subscriber-360/')) body = { customer, subscription: customer.subscription, placement: null, session: null, cpeDevices: [], openWorkOrder: null, billing: null, access: { billing: false, subscription: true, placement: true, session: false, cpe: false, workOrder: false } }
     else if (path === '/api/catalog/plans') body = [{ id: 'plan-1', name: 'Rumah 50 Mbps', downMbps: 50, upMbps: 25, price: 150000, active: true, serviceTypes: ['PPPOE'], fupEnabled: false }]
     else if (path === '/api/areas' || path === '/api/roles' || path === '/api/bng/nas') body = []
@@ -96,7 +96,7 @@ for (const width of [375, 1440]) {
     await expect(page.getByRole('button', { name: 'Budi Santoso', exact: true })).toBeVisible()
     expect(reads).not.toContain('/api/catalog/plans')
     await page.screenshot({ path: info.outputPath('customers-psb-commandbar.png'), fullPage: true, animations: 'disabled' })
-    await page.getByRole('button', { name: 'PSB Ekspres', exact: true }).click()
+    await page.getByRole('button', { name: 'PSB baru', exact: true }).click()
     const panel = page.getByRole('dialog', { name: 'Buat PSB', exact: true })
     await panel.getByRole('button', { name: 'Berikutnya: Lokasi' }).click()
     await expect(panel.getByRole('tab', { name: 'Pelanggan', exact: true })).toHaveAttribute('aria-selected', 'true')
@@ -193,16 +193,16 @@ for (const width of [375, 1440]) {
     await expect(page.locator('a[href="/express-psb"]')).toHaveCount(0)
     const customerList = await page.locator('.customers-page').elementHandle()
     const toolbar = page.getByRole('toolbar', { name: 'Aksi', exact: true })
-    await expect(toolbar.getByRole('button', { name: 'Tambah pelanggan', exact: true })).toBeVisible()
-    await expect(toolbar.getByRole('button', { name: 'PSB Ekspres', exact: true })).toBeVisible()
-    expect(await toolbar.locator(':scope > button').allTextContents()).toEqual(['Tambah pelanggan', 'PSB Ekspres'])
-    await toolbar.getByRole('button', { name: 'PSB Ekspres', exact: true }).click()
+    await expect(toolbar.getByRole('button', { name: 'Migrasi pelanggan', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'PSB baru', exact: true })).toBeVisible()
+    expect(await toolbar.locator(':scope > button').allTextContents()).toEqual(['PSB baru', 'Migrasi pelanggan'])
+    await toolbar.getByRole('button', { name: 'PSB baru', exact: true }).click()
     const panel = page.getByRole('dialog', { name: 'Buat PSB', exact: true })
     await expect(panel.getByRole('tab', { name: 'Pelanggan', exact: true })).toBeVisible()
     await panel.getByRole('button', { name: 'Batal', exact: true }).click()
     await expect(panel).toHaveCount(0)
     await expect(page).toHaveURL('/customers?q=Budi&status=ACTIVE')
-    await expect(toolbar.getByRole('button', { name: 'PSB Ekspres', exact: true })).toBeFocused()
+    await expect(toolbar.getByRole('button', { name: 'PSB baru', exact: true })).toBeFocused()
     expect(await customerList?.evaluate(node => node.isConnected)).toBe(true)
     expect(reads.filter(path => path === '/api/customers')).toHaveLength(1)
     await page.goto('/express-psb?q=Budi&status=ACTIVE')

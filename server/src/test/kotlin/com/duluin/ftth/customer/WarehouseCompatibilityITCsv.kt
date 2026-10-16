@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode
 
 class WarehouseCompatibilityITCsv : WarehouseMasterHttpFixture() {
     @Test
-    fun `connection loss before import commit rolls back customer subscription and fulfillment`() {
+    fun `connection loss in outer batch does not undo committed migration rows`() {
         val token = tenant()
         assertThat(request("POST", "/api/catalog/plans", token,
             """{"name":"Interrupted CSV","price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""").status).isEqualTo(201)
@@ -28,7 +28,8 @@ class WarehouseCompatibilityITCsv : WarehouseMasterHttpFixture() {
             }
         }.isInstanceOf(Exception::class.java)
         stock.transaction {
-            for (table in listOf("customer", "subscription", "migration_fulfillment_inbox", "onu", "inventory_asset_assignment")) {
+            for (table in listOf("customer", "subscription", "customer_migration")) assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("1")
+            for (table in listOf("migration_fulfillment_inbox", "onu", "inventory_asset_assignment")) {
                 assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("0")
             }
         }
@@ -74,7 +75,8 @@ class WarehouseCompatibilityITCsv : WarehouseMasterHttpFixture() {
         TenantContext.runAs(stock.tenant) { context.getBean(CustomerImportPromotionPort::class.java).promoteOne() }
         stock.transaction {
             assertThat(scalar("SELECT count(*) FROM customer")).isEqualTo("1")
-            assertThat(scalar("SELECT count(*) FROM migration_fulfillment_inbox")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM customer_migration")).isEqualTo("1")
+            assertThat(scalar("SELECT count(*) FROM migration_fulfillment_inbox")).isEqualTo("0")
             for (table in listOf("onu", "inventory_serialized_asset", "inventory_asset_assignment", "inventory_movement")) {
                 assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("0")
             }
@@ -95,7 +97,7 @@ class WarehouseCompatibilityITCsv : WarehouseMasterHttpFixture() {
     private fun stage(token: String, csv: String): JsonNode {
         val response = mvc.perform(multipart("/api/onboarding/v1/import/customers")
             .file(MockMultipartFile("file", "customers.csv", "text/csv", csv.toByteArray()))
-            .param("operationKey", "csv-stage").header("Authorization", "Bearer $token")).andReturn().response
+            .param("operationKey", "csv-stage").param("areaId", area(token)).header("Authorization", "Bearer $token")).andReturn().response
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(202)
         return mapper.readTree(response.contentAsString)
     }

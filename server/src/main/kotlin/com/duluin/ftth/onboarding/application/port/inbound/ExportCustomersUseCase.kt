@@ -41,4 +41,8 @@ data class CustomerExportLine(
     val latitude: Double?,
     val longitude: Double?,
     val framedIp: String? = null,
+    val customerCode: String? = null,
+    val serviceStatus: String? = null,
+    val firstInvoiceOn: LocalDate? = null,
+    val monthlyFee: java.math.BigDecimal? = null,
 )

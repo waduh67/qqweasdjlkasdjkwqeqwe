@@ -264,6 +264,11 @@ data class CustomerExportRow(
     val activatedAt: Instant?,
     val billingDayOfMonth: Int?,
     val locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
+    val customerCode: String? = null,
+    val serviceStatus: String? = null,
+    val monthlyFee: java.math.BigDecimal? = null,
+    val firstInvoiceOn: LocalDate? = null,
+    val areaId: UUID? = null,
 )
 
 /**

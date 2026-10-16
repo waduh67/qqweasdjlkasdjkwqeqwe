@@ -1,52 +1,43 @@
 package com.duluin.ftth.onboarding.application.service
 
 import com.duluin.ftth.bng.BngApi
+import com.duluin.ftth.common.security.AuthorityScope
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.iam.CurrentAuthorityApi
+import com.duluin.ftth.onboarding.adapter.outbound.persistence.CustomerMigrationJpaRepository
 import com.duluin.ftth.onboarding.application.port.inbound.CustomerExportLine
 import com.duluin.ftth.onboarding.application.port.inbound.ExportCustomersUseCase
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.ZoneOffset
 
-/**
- * Orkestrasi ekspor CSV pelanggan — module daun yang hanya memanggil kontrak publik bng & customer.
- * Anchor = akun jaringan (username): tiap akun jadi satu baris, diperkaya biodata + langganan
- * pemiliknya. Baris yang langganannya tak ter-resolusi (data anomali) dilewati agar ekspor tetap
- * jalan. Murni baca (readOnly) — tak menyentuh RADIUS/router.
- */
+/** Export recorded subscriptions even when their network account has not been migrated yet. */
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class ExportCustomersService(
     private val customerApi: CustomerApi,
     private val bngApi: BngApi,
+    private val migrations: CustomerMigrationJpaRepository,
+    private val authority: CurrentAuthorityApi,
 ) : ExportCustomersUseCase {
-
     override fun exportCustomers(): List<CustomerExportLine> {
-        val accesses = bngApi.exportAccesses()
-        if (accesses.isEmpty()) return emptyList()
-        val rowsBySubscription = customerApi
-            .findExportRows(accesses.mapTo(HashSet()) { it.subscriptionId })
-            .associateBy { it.subscriptionId }
-        return accesses.mapNotNull { access ->
-            val row = rowsBySubscription[access.subscriptionId] ?: return@mapNotNull null
+        val scope = authority.lockCurrent().areaScope
+        val accesses = bngApi.exportAccesses().associateBy { it.subscriptionId }
+        val imported = migrations.findAll().associateBy { it.subscriptionId }
+        val ids = accesses.keys + imported.keys
+        if (ids.isEmpty()) return emptyList()
+        return customerApi.findExportRows(ids).filter { scope !is AuthorityScope.Restricted || it.areaId in scope.ids }.map { row ->
+            val access = accesses[row.subscriptionId]
+            val migration = imported[row.subscriptionId]
             CustomerExportLine(
-                name = row.name,
-                phone = row.phone,
-                address = row.address,
-                packageName = row.packageName,
-                // Tipe koneksi huruf kecil agar round-trip (impor mengenali substring "pppoe").
-                connectionType = access.authType.lowercase(),
-                // Tanggal aktivasi (Instant) → tanggal UTC; impor membacanya kembali sebagai LocalDate.
+                name = row.name, phone = row.phone, address = row.address, packageName = row.packageName,
+                connectionType = (access?.authType ?: migration?.authType ?: "PPPOE").lowercase(),
                 installationDate = row.activatedAt?.atZone(ZoneOffset.UTC)?.toLocalDate(),
-                mikrotikUsername = access.username,
-                email = row.email,
-                routerName = access.nasName,
-                idCardNumber = row.idCardNumber,
-                nextBillingDay = row.billingDayOfMonth,
-                    latitude = row.location?.latitude,
-                    longitude = row.location?.longitude,
-                // Framed-IP hanya terisi untuk akun Static/DHCP; null → kolom kosong (round-trip).
-                framedIp = access.framedIp,
+                mikrotikUsername = access?.username ?: migration?.username.orEmpty(),
+                email = row.email, routerName = access?.nasName, idCardNumber = row.idCardNumber,
+                nextBillingDay = row.billingDayOfMonth, latitude = row.location?.latitude, longitude = row.location?.longitude,
+                framedIp = access?.framedIp ?: migration?.framedIp, customerCode = row.customerCode,
+                serviceStatus = row.serviceStatus, firstInvoiceOn = row.firstInvoiceOn, monthlyFee = row.monthlyFee,
             )
         }
     }

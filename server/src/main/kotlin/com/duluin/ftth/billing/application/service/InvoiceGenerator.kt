@@ -67,7 +67,8 @@ class InvoiceGenerator(
         val billable = customerApi.findBillableSubscriptions().filter { sub ->
             sub.billingManaged && (sub.billingStartsOn == null || !today.isBefore(sub.billingStartsOn)) &&
                 sub.monthlyFee.signum() > 0 &&
-                today.dayOfMonth >= minOf(sub.billingDayOfMonth ?: properties.billingDayOfMonth, today.lengthOfMonth()) &&
+                ((sub.billingStartsOn != null && java.time.YearMonth.from(today) == java.time.YearMonth.from(sub.billingStartsOn)) ||
+                    today.dayOfMonth >= minOf(sub.billingDayOfMonth ?: properties.billingDayOfMonth, today.lengthOfMonth())) &&
                 !invoiceRepository.existsForPeriod(sub.subscriptionId, periodStart)
         }
         if (billable.isEmpty()) return 0
