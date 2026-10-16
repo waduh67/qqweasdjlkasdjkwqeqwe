@@ -214,7 +214,7 @@ export interface CustomerImportBatchView {
   result: ImportCustomersResult | null
   createdAt: string
   rowCount?: number
-  preview?: Array<{ row: number; identity: string; name: string | null; packageName: string | null; status: string; firstInvoiceOn: string | null; monthlyFee: number | null; onuSerial?: string | null }>
+  preview?: Array<{ row: number; identity: string; name: string | null; packageName: string | null; status: string; firstInvoiceOn: string | null; monthlyFee: number | null; onuSerial?: string | null; billingDay?: number | null }>
 }
 
 export const stageCustomerImport = (file: File, operationKey: string, mode: CustomerImportBatchView['mode'], defaults?: { firstInvoiceOn: string | null; billingDay: number | null; areaId: string | null }) => {

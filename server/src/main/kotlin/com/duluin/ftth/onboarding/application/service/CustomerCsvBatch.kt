@@ -117,7 +117,7 @@ object CustomerCsvParser {
 enum class CustomerImportBatchState { STAGED, PROCESSING, COMMITTED, CANCELLED, FAILED, RETRYABLE_FAILED, PERMANENT_FAILED, PURGED }
 data class CustomerImportBatchView(val id: UUID, val sha256: String, val mode: ImportMode, val state: CustomerImportBatchState, val errors: List<CsvImportError>, val result: ImportCustomersResult?, val createdAt: Instant, val rowCount: Int = 0, val preview: List<CustomerImportPreview> = emptyList())
 
-data class CustomerImportPreview(val row: Int, val identity: String, val name: String?, val packageName: String?, val status: String, val firstInvoiceOn: java.time.LocalDate?, val monthlyFee: java.math.BigDecimal?, val onuSerial: String? = null)
+data class CustomerImportPreview(val row: Int, val identity: String, val name: String?, val packageName: String?, val status: String, val firstInvoiceOn: java.time.LocalDate?, val monthlyFee: java.math.BigDecimal?, val onuSerial: String? = null, val billingDay: Int? = null)
 
 @Service
 class CustomerImportBatchService(
@@ -212,7 +212,8 @@ class CustomerImportBatchService(
     private fun view(entity: CustomerImportBatchJpaEntity, knownErrors: List<CsvImportError> = errors.findAllByBatchIdOrderByRowNumber(entity.id).map { CsvImportError(it.rowNumber, it.columnName, it.code, it.message) }): CustomerImportBatchView = CustomerImportBatchView(entity.id, entity.sha256, ImportMode.valueOf(entity.mode), entity.state, knownErrors, entity.result?.let { mapper.readValue(it, object : TypeReference<ImportCustomersResult>() {}) }, entity.createdAt, entity.rowCount,
         staging.findFirst20ByBatchIdOrderByRowNumber(entity.id).map { staged ->
             val row = mapper.readValue(staged.payload, CustomerImportRow::class.java)
-            CustomerImportPreview(staged.rowNumber, row.customerCode ?: row.mikrotikUsername.orEmpty(), row.name, row.packageName, row.serviceStatus, row.firstInvoiceOn, row.monthlyFee, row.onuSerial)
+            CustomerImportPreview(staged.rowNumber, row.customerCode ?: row.mikrotikUsername.orEmpty(), row.name, row.packageName, row.serviceStatus, row.firstInvoiceOn, row.monthlyFee, row.onuSerial,
+                billingDay = row.firstInvoiceOn?.let { row.nextBillingDay ?: it.dayOfMonth })
         })
 }
 

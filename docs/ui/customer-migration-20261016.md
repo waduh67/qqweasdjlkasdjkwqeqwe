@@ -8,6 +8,25 @@ Migration preserves ACTIVE/SUSPENDED business state, optional service start date
 
 Billing is initially unmanaged unless the operator supplies a first invoice date. That date determines the first invoice; subsequent months follow the recurring billing day, using the last day of a shorter month for dates such as 31. Migration does not prorate a historical installation. Deferred billing can be started from the customer's subscription section. A new subscription after termination restores ordinary billing behavior.
 
+## Jadwal penagihan saat migrasi
+
+**Mulai penagihan di aplikasi ini** menentukan tanggal aplikasi mulai menerbitkan tagihan. Pilih jadwal berikutnya yang belum diterbitkan di sistem lama; aplikasi tidak memeriksa riwayat tagihan sistem lama secara otomatis.
+
+Untuk CSV, pilihan awal **Sesuai CSV** memakai jadwal masing-masing pelanggan:
+
+| Kolom | Isi | Contoh |
+| --- | --- | --- |
+| `first_invoice_on` | Mulai penagihan di aplikasi ini, `YYYY-MM-DD` | `2026-11-05` |
+| `next_billing` | Tanggal tagih rutin setiap bulan, 1–31 | `5` |
+
+Pelanggan lain dapat memakai tanggal 20 pada kedua kolom tersebut. Jika `first_invoice_on` kosong, penagihan belum dikelola. Jika hanya `next_billing` kosong, jadwal bulanan mengikuti tanggal mulai penagihan.
+
+Pilihan **Sesuai CSV, dengan tanggal bawaan** menyediakan nilai pengganti untuk setiap kolom yang kosong. Nilai yang sudah diisi pada CSV tetap digunakan. Memilih kembali **Sesuai CSV** menghentikan pengiriman kedua tanggal bawaan, termasuk nilai yang sebelumnya sempat diisi. Pratinjau menampilkan tanggal mulai dan tanggal bulanan yang akan dipakai; aturan ini juga berlaku ketika membuka kembali impor tersimpan.
+
+Contoh: tagihan 5 Oktober sudah diterbitkan di sistem lama, lalu data pelanggan dimigrasikan pada 20 Oktober. Isi `first_invoice_on=2026-11-05` dan `next_billing=5` agar aplikasi ini mulai menagih pada 5 November. Tanggal 29–31 jatuh pada hari terakhir jika bulan berikutnya lebih pendek.
+
+## Implementation and validation history
+
 Legacy credentials are encrypted and never returned in previews, reports or customer exports. The separate **Siapkan RADIUS** action in the customer's network section uses the saved credentials or an explicit replacement. It respects the existing active/isolated state and does not remove local MikroTik accounts or change router authentication settings. Its reviewed effect is preparing the RADIUS account, not completing a router cutover.
 
 CSV staging retains the existing asynchronous promotion flow with independent row transactions, durable request identity, a safe preview and a recovery URL. Partially failed rows do not roll back successful rows. Status/report access respects current tenant/area authority. Exports include migrated customers before RADIUS preparation and retain code, status, price and billing fields without credentials.
