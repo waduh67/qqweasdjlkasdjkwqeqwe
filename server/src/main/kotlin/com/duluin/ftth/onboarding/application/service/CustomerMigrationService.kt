@@ -89,7 +89,7 @@ class CustomerMigrationService(
         if (command.prepareRadius) {
             if (username == null) throw ValidationException("Username wajib diisi untuk akun RADIUS")
             if (command.nasId == null) throw ValidationException("Pilih BRAS untuk akun RADIUS")
-            if (command.authType in setOf("PPPOE", "HOTSPOT") && command.password.isNullOrEmpty()) throw ValidationException("Password wajib diisi untuk akun RADIUS")
+            if (command.authType in setOf("PPPOE", "HOTSPOT") && command.password.isNullOrBlank()) throw ValidationException("Password wajib diisi untuk akun RADIUS")
         }
         validateDates(command.installationDate, command.firstInvoiceOn, command.billingDay)
         val registered = customers.migrateCustomer(MigrateCustomerCommand(command.customer,
@@ -144,7 +144,7 @@ class CustomerMigrationService(
         val username = command.username.trim()
         if (username.isEmpty()) throw ValidationException("Username wajib diisi")
         val secret = command.password?.takeIf(String::isNotEmpty) ?: record.secretCiphertext?.let(cipher::decrypt)
-        if (command.authType in setOf("PPPOE", "HOTSPOT") && secret.isNullOrEmpty()) throw ValidationException("Password wajib diisi")
+        if (command.authType in setOf("PPPOE", "HOTSPOT") && secret.isNullOrBlank()) throw ValidationException("Password wajib diisi")
         val access = bng.provisionAccess(ProvisionAccessSpec(record.subscriptionId, username, secret,
             subscription.planId ?: throw ValidationException("Pilih paket langganan"), command.nasId, command.authType, command.framedIp))
         record.accessId = access.accessId

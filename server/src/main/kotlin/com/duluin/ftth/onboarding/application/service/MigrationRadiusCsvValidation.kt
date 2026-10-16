@@ -19,7 +19,7 @@ class MigrationRadiusCsvValidation(private val bng: BngApi, private val catalog:
                 fun issue(column: String, message: String) { add(CsvImportError(index + 2, column, "RADIUS_VALIDATION", message)) }
                 val type = resolveImportAuthType(row.connectionType)
                 if (row.mikrotikUsername.isNullOrBlank()) issue("username", "Isi username akun jaringan")
-                if (type in setOf("PPPOE", "HOTSPOT") && row.mikrotikPassword.isNullOrEmpty()) issue("password", "Isi password akun jaringan")
+                if (type in setOf("PPPOE", "HOTSPOT") && row.mikrotikPassword.isNullOrBlank()) issue("password", "Isi password akun jaringan")
                 if (routers[row.routerName?.trim()] == null) issue("router_name", "Pilih nama BRAS yang terdaftar")
                 val plan = plans[row.packageName]
                 if (plan == null) issue("package_name", "Pilih paket yang terdaftar")

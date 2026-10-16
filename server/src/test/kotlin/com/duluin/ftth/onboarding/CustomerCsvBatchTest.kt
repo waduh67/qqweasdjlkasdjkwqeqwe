@@ -6,6 +6,15 @@ import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 
 class CustomerCsvBatchTest {
+    @Test fun `password whitespace is preserved while blank passwords stay absent`() {
+        for (column in listOf("password", "mikrotik_password")) {
+            val csv = "username,$column\nani,\" pass word \"\nbudi,   \n"
+            val parsed = CustomerCsvParser.parse(csv.byteInputStream(), csv.toByteArray().size.toLong())
+            assertThat(parsed.errors).isEmpty()
+            assertThat(parsed.rows[0].mikrotikPassword).isEqualTo(" pass word ")
+            assertThat(parsed.rows[1].mikrotikPassword).isNull()
+        }
+    }
     @Test fun `generic credential columns and legacy aliases preserve identical values`() {
         fun parse(header: String) = "$header\npelanggan0001,legacy-pass\n".let {
             CustomerCsvParser.parse(it.byteInputStream(), it.toByteArray().size.toLong())
