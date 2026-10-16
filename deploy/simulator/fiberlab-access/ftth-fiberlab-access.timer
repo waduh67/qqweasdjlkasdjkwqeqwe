@@ -1,0 +1,11 @@
+[Unit]
+Description=Restore FTTH Fiberlab access after container or Docker changes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Unit=ftth-fiberlab-access.service
+
+[Install]
+WantedBy=timers.target
