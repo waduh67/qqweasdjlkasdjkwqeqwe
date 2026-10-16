@@ -15,6 +15,9 @@ import { useCan } from '@/auth/useCan'
 import { optionalCustomerLocation } from '@/utils/customerLocation'
 import { downloadBlob } from '@/utils/download'
 
+import { MigrationOnuPicker } from './MigrationOnuPicker'
+import type { DiscoveredOnuView } from '@/api/monitoring'
+
 type Source = 'manual' | 'csv' | 'mikrotik'
 const SOURCE_LABEL = { manual: 'Input manual', csv: 'Berkas CSV', mikrotik: 'MikroTik' }
 const initial = { code: '', name: '', phone: '', email: '', address: '', latitude: '', longitude: '', planId: '', price: '', status: 'ACTIVE', installationDate: '', username: '', password: '', authType: 'PPPOE' as ServiceType, framedIp: '' }
@@ -28,6 +31,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const [draft, setDraft] = useState(initial)
   const [areaId, setAreaId] = useState<string | null>(null)
   const [nasId, setNasId] = useState('')
+  const [onu, setOnu] = useState<DiscoveredOnuView | null>(null)
   const [plans, setPlans] = useState<PlanView[]>([])
   const [routers, setRouters] = useState<NasView[]>([])
   const [loading, setLoading] = useState(true)
@@ -101,7 +105,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
     try {
       if (source === 'manual') {
         command.current ??= {
-          operationKey: operation.current,
+          operationKey: operation.current, onuSerial: onu?.serialNumber ?? null,
           customer: { code: draft.code || null, name: draft.name.trim(), phone: draft.phone || null, email: draft.email || null, address: draft.address.trim(), areaId, location: location.location, planId: draft.planId, monthlyFeeOverride: draft.price ? Number(draft.price) : null },
           status: draft.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE', installationDate: draft.installationDate || null,
           firstInvoiceOn: defaults.firstInvoiceOn, billingDay: defaults.billingDay,
@@ -129,11 +133,12 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       ['Pelanggan', draft.name], ['Status layanan', draft.status === 'ACTIVE' ? 'Aktif' : 'Ditangguhkan'], ['Paket', plans.find(plan => plan.id === draft.planId)?.name],
       ['Harga bulanan', `Rp ${Number(draft.price || plans.find(plan => plan.id === draft.planId)?.price || 0).toLocaleString('id-ID')}`],
       ['Mulai layanan', draft.installationDate || 'Belum diketahui'], ['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola'],
-      ['Koordinat', draft.latitude && draft.longitude ? `${draft.latitude}, ${draft.longitude}` : 'Belum ditentukan'], ['Username', draft.username || 'Belum diisi'],
+      ['ONU', onu?.serialNumber || 'Belum dihubungkan'], ['Koordinat', draft.latitude && draft.longitude ? `${draft.latitude}, ${draft.longitude}` : 'Belum ditentukan'], ['Username', draft.username || 'Belum diisi'],
     ] : [['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ...(source === 'csv' ? [] : [['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola'] as [string, string]])]} />
     {!finished && <p className="muted">Akun jaringan lama tetap digunakan. RADIUS dapat disiapkan dari detail pelanggan.</p>}
     {batch && !finished && (batch.preview?.length ?? 0) > 0 && <div className="stack"><p>{batch.preview!.length} dari {batch.rowCount} pelanggan</p><DataTable rows={batch.preview!} rowKey={row => String(row.row)} columns={[
       { key: 'identity', header: 'Kode / username', minWidth: 160, cell: row => row.identity },
+      { key: 'onu', header: 'ONU', minWidth: 160, cell: row => row.onuSerial || '—' },
       { key: 'name', header: 'Nama', minWidth: 170, cell: row => row.name || '—' },
       { key: 'packageName', header: 'Paket', minWidth: 150, cell: row => row.packageName || '—' },
       { key: 'status', header: 'Status', minWidth: 130, cell: row => ['SUSPENDED', 'ISOLATED', 'TERISOLIR', 'DITANGGUHKAN'].includes(row.status.toUpperCase()) ? 'Ditangguhkan' : row.status.toUpperCase() === 'ACTIVE' || row.status.toUpperCase() === 'AKTIF' ? 'Aktif' : row.status },
@@ -149,7 +154,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const steps = [{ key: 'source', label: 'Sumber' }, ...(source === 'manual' ? [{ key: 'customer', label: 'Pelanggan' }, { key: 'service', label: 'Layanan' }] : source === 'mikrotik' ? [
     { key: 'accounts', label: 'Akun', validate: () => selected.size ? null : 'Pilih akun yang akan dimigrasikan.' },
     { key: 'service', label: 'Paket', validate: () => profiles.every(profile => mapping[profile] || draft.planId) ? null : 'Pilih paket untuk setiap profil.' },
-  ] : []), { key: 'billing', label: 'Penagihan' }, ...(source !== 'csv' ? [{ key: 'location', label: 'Lokasi', validate: () => location.error }] : []), ...(source === 'manual' ? [{ key: 'network', label: 'Akun lama' }] : [])]
+  ] : []), { key: 'billing', label: 'Penagihan' }, ...(source !== 'csv' ? [{ key: 'location', label: 'Lokasi', validate: () => location.error }] : []), ...(source === 'manual' ? [{ key: 'network', label: 'Akun lama' }, ...(can('customer.onu.assign') && can('monitoring.provisioning.view') ? [{ key: 'device', label: 'Perangkat' }] : [])] : [])]
   return <ResourceForm title="Migrasi pelanggan" onClose={onClose} onBack={() => { if (!uncertain) { setReviewing(false); command.current = null } }} loading={loading} busy={busy} readOnly={!canMigrate || !!loadError}
     steps={steps} onReview={() => void review()} review={reviewing ? summary : undefined}
     reviewFooter={<>{finished ? <Button variant="primary" onClick={() => onCreated()}>Selesai</Button> : <>
@@ -166,7 +171,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
         <SelectField label="Sumber data" value={source} onChange={(_, data) => { setSource(data.value as Source); setBatch(null); setError('') }}>
           <option value="manual">Input manual</option>{can('customer.customer.update') && <option value="csv">Berkas CSV</option>}{canMikrotik && <option value="mikrotik">MikroTik</option>}
         </SelectField>
-        {source === 'csv' && <><Field label="Berkas CSV" required><input type="file" accept=".csv,text/csv" required onChange={event => setFile(event.target.files?.[0] || null)} /></Field><div><Button onClick={() => downloadBlob(new Blob([`\uFEFF${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`], { type: 'text/csv;charset=utf-8' }), 'template-migrasi.csv')}>Unduh template</Button></div><p className="muted">Isi nama, alamat, paket, serta kode pelanggan atau username. Gunakan ACTIVE atau SUSPENDED pada kolom service_status.</p><CustomerAreaField value={areaId} onChange={setAreaId} /></>}
+        {source === 'csv' && <><Field label="Berkas CSV" required><input type="file" accept=".csv,text/csv" required onChange={event => setFile(event.target.files?.[0] || null)} /></Field><div><Button onClick={() => downloadBlob(new Blob([`\uFEFF${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`], { type: 'text/csv;charset=utf-8' }), 'template-migrasi.csv')}>Unduh template</Button></div><p className="muted">Isi nama, alamat, paket, serta kode pelanggan atau username. Gunakan ACTIVE atau SUSPENDED pada kolom service_status. Kolom onu_serial dapat diisi dengan nomor seri dari hasil deteksi ONU.</p><CustomerAreaField value={areaId} onChange={setAreaId} /></>}
         {source === 'mikrotik' && <><SelectField label="BRAS MikroTik" required value={nasId} onChange={(_, data) => { setNasId(data.value); setRows([]); setSelected(new Set()) }}><option value="">Pilih BRAS</option>{routers.filter(router => router.vendor === 'MIKROTIK').map(router => <option key={router.id} value={router.id}>{router.name}</option>)}</SelectField><div><Button disabled={!nasId || busy || !canMikrotik} onClick={() => void readRouter()}>Muat akun</Button></div></>}
       </ResourceStep>
       {source === 'manual' && <ResourceStep step="customer"><TextField label="Kode pelanggan" value={draft.code} maxLength={40} placeholder="Otomatis" onChange={(_, data) => set({ code: data.value })} /><TextField label="Nama" required maxLength={150} value={draft.name} onChange={(_, data) => set({ name: data.value })} /><TextField label="Telepon" value={draft.phone} maxLength={30} onChange={(_, data) => set({ phone: data.value })} /><TextField label="Email" type="email" value={draft.email} onChange={(_, data) => set({ email: data.value })} /></ResourceStep>}
@@ -178,6 +183,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
         {source === 'manual' && <TextField label="Harga bulanan (Rp)" type="number" min={0} step="0.01" value={draft.price} placeholder={String(plans.find(plan => plan.id === draft.planId)?.price || '')} onChange={(_, data) => set({ price: data.value })} />}
         <TextField label="Mulai berlangganan (opsional)" type="date" max={localToday()} value={draft.installationDate} onChange={(_, data) => set({ installationDate: data.value })} />
       </ResourceStep>}
+      {source === 'manual' && can('customer.onu.assign') && can('monitoring.provisioning.view') && <ResourceStep step="device"><MigrationOnuPicker value={onu} onChange={setOnu} /><p className="muted">Pilih ONU yang sudah digunakan pelanggan. Dapat dihubungkan nanti dari detail pelanggan.</p></ResourceStep>}
       <ResourceStep step="billing">
         <SelectField label="Penagihan" value={billing} onChange={(_, data) => setBilling(data.value)}><option value="later">Belum kelola tagihan</option><option value="start">Mulai kelola tagihan</option></SelectField>
         {billing === 'start' && <><TextField label="Tanggal tagihan pertama" type="date" required min={localToday()} value={firstInvoice} onChange={(_, data) => setFirstInvoice(data.value)} /><TextField label="Tanggal tagih setiap bulan" type="number" min={1} max={31} value={billingDay} placeholder={firstInvoice ? String(Number(firstInvoice.slice(-2))) : 'Mengikuti tanggal tagihan pertama'} onChange={(_, data) => setBillingDay(data.value)} /><p className="muted">Pilih periode yang belum ditagih di sistem sebelumnya. Jika tanggal tidak tersedia, tagihan terbit pada hari terakhir bulan tersebut.</p></>}

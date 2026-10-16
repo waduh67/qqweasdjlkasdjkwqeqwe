@@ -35,12 +35,14 @@ data class CustomerMigrationCommand(
     val authType: String = "PPPOE",
     val nasId: UUID? = null,
     val framedIp: String? = null,
+    val onuSerial: String? = null,
 )
 data class CustomerMigrationView(
     val customerId: UUID, val subscriptionId: UUID, val source: String,
     val username: String?, val authType: String, val nasId: UUID?, val framedIp: String?,
     val hasPassword: Boolean, val accessId: UUID?, val billingManaged: Boolean,
     val firstInvoiceOn: LocalDate?, val billingDay: Int?,
+    val onus: List<MigrationOnuView> = emptyList(),
 )
 data class MigrationRadiusCommand(val nasId: UUID, val username: String, val password: String? = null, val authType: String = "PPPOE", val framedIp: String? = null)
 
@@ -57,6 +59,7 @@ class CustomerMigrationService(
     private val mapper: ObjectMapper,
     private val entityManager: EntityManager,
     private val audit: AuditRecorder,
+    private val onus: CustomerMigrationOnuService,
 ) : CustomerMigrationRegistration {
     @Transactional
     override fun register(command: CustomerMigrationCommand): CustomerMigrationView {
@@ -70,7 +73,9 @@ class CustomerMigrationService(
         if (sourceKey.length > 240) throw ValidationException("Identitas pelanggan terlalu panjang")
         // Serialize registrations in one tenant, including retries with changed usernames.
         lock("register")
-        val hash = MessageDigest.getInstance("SHA-256").digest(mapper.writeValueAsBytes(command)).joinToString("") { "%02x".format(it) }
+        val hashPayload = mapper.valueToTree<tools.jackson.databind.node.ObjectNode>(command)
+        if (command.onuSerial == null) hashPayload.remove("onuSerial")
+        val hash = MessageDigest.getInstance("SHA-256").digest(mapper.writeValueAsBytes(hashPayload)).joinToString("") { "%02x".format(it) }
         records.findByOperationKey(command.operationKey)?.let {
             if (it.requestHash != hash) throw ConflictException("Permintaan ini sudah digunakan untuk data berbeda")
             return view(it)
@@ -89,6 +94,10 @@ class CustomerMigrationService(
             this.username = username; secretCiphertext = command.password?.takeIf(String::isNotEmpty)?.let(cipher::encrypt)
             authType = command.authType; nasId = command.nasId; framedIp = command.framedIp
         })
+        command.onuSerial?.trim()?.takeIf(String::isNotEmpty)?.let {
+            entityManager.flush()
+            onus.register(registered.customerId, it)
+        }
         audit.record("customer.migrated", "Customer", record.customerId, TenantContext.tenantId(),
             mapOf("source" to record.source, "status" to command.status.name, "billingManaged" to (command.firstInvoiceOn != null)))
         return view(record)
@@ -139,7 +148,7 @@ class CustomerMigrationService(
     private fun view(record: CustomerMigrationJpaEntity): CustomerMigrationView {
         val billing = customers.findBillableSubscription(record.subscriptionId) ?: throw NotFoundException("Langganan tidak ditemukan")
         return CustomerMigrationView(record.customerId, record.subscriptionId, record.source, record.username, record.authType,
-            record.nasId, record.framedIp, record.secretCiphertext != null, record.accessId, billing.billingManaged, billing.billingStartsOn, billing.billingDayOfMonth)
+            record.nasId, record.framedIp, record.secretCiphertext != null, record.accessId, billing.billingManaged, billing.billingStartsOn, billing.billingDayOfMonth, onus.list(record.customerId))
     }
     private fun lock(key: String) {
         entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))")

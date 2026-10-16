@@ -42,7 +42,7 @@ data class ParsedCustomerCsv(val sha256: String, val rows: List<CustomerImportRo
 object CustomerCsvParser {
     const val MAX_BYTES: Long = 25L * 1024 * 1024
     const val MAX_ROWS = 100_000
-    private val columns = setOf("name", "phone", "address", "package_name", "connection_type", "installation_date", "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number", "next_billing", "latitude", "longitude", "notes", "customer_code", "service_status", "first_invoice_on", "monthly_fee")
+    private val columns = setOf("name", "phone", "address", "package_name", "connection_type", "installation_date", "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number", "next_billing", "latitude", "longitude", "notes", "customer_code", "service_status", "first_invoice_on", "monthly_fee", "onu_serial")
 
     fun parse(input: InputStream, byteCount: Long): ParsedCustomerCsv {
         require(byteCount in 1..MAX_BYTES) { "Ukuran CSV harus antara 1 byte dan 25 MiB" }
@@ -89,7 +89,7 @@ object CustomerCsvParser {
         if (records.size - 1 > MAX_ROWS) return ParsedCustomerCsv(hash, emptyList(), listOf(CsvImportError(MAX_ROWS + 2, null, "ROW_LIMIT", "Jumlah baris melebihi 100000")))
         val header = records.first().map { it.trim().lowercase() }
         val errors = header.distinct().filter { it !in columns }.map { CsvImportError(1, it, "UNKNOWN_COLUMN", "Kolom tidak dikenal") }.toMutableList()
-        val index = header.withIndex().associate { it.value to it.index }; val seen = mutableSetOf<String>(); val rows = mutableListOf<CustomerImportRow>()
+        val index = header.withIndex().associate { it.value to it.index }; val seen = mutableSetOf<String>(); val rows = mutableListOf<CustomerImportRow>(); val onus = mutableSetOf<String>()
         records.drop(1).forEachIndexed { offset, cells ->
             val rowNumber = offset + 2
             fun at(name: String): String? = index[name]?.let { cells.getOrNull(it)?.trim()?.takeIf(String::isNotEmpty) }
@@ -105,7 +105,9 @@ object CustomerCsvParser {
             val longitude = decimal("longitude")
             if ((latitude == null) != (longitude == null)) errors += CsvImportError(rowNumber, "latitude", "INCOMPLETE_LOCATION", "Isi lintang dan bujur bersama")
             val unlocated = latitude == 0.0 && longitude == 0.0
-            rows += CustomerImportRow(at("name"), at("phone"), at("address"), at("package_name"), at("connection_type"), date, at("mikrotik_username"), at("mikrotik_password"), at("email"), at("router_name"), at("id_card_number"), integer("next_billing"), latitude?.takeUnless { unlocated }, longitude?.takeUnless { unlocated }, at("framed_ip"), customerCode = at("customer_code"), serviceStatus = at("service_status") ?: "ACTIVE", firstInvoiceOn = dateAt("first_invoice_on"), monthlyFee = fee)
+            val onuSerial = at("onu_serial")?.uppercase(java.util.Locale.ROOT)
+            if (onuSerial != null && (onuSerial.length > 60 || !onus.add(onuSerial))) errors += CsvImportError(rowNumber, "onu_serial", "INVALID_ONU", "Nomor seri ONU tidak valid atau digunakan lebih dari sekali")
+            rows += CustomerImportRow(at("name"), at("phone"), at("address"), at("package_name"), at("connection_type"), date, at("mikrotik_username"), at("mikrotik_password"), at("email"), at("router_name"), at("id_card_number"), integer("next_billing"), latitude?.takeUnless { unlocated }, longitude?.takeUnless { unlocated }, at("framed_ip"), customerCode = at("customer_code"), serviceStatus = at("service_status") ?: "ACTIVE", firstInvoiceOn = dateAt("first_invoice_on"), monthlyFee = fee, onuSerial = onuSerial)
         }
         return ParsedCustomerCsv(hash, rows, errors)
     }
@@ -115,7 +117,7 @@ object CustomerCsvParser {
 enum class CustomerImportBatchState { STAGED, PROCESSING, COMMITTED, CANCELLED, FAILED, RETRYABLE_FAILED, PERMANENT_FAILED, PURGED }
 data class CustomerImportBatchView(val id: UUID, val sha256: String, val mode: ImportMode, val state: CustomerImportBatchState, val errors: List<CsvImportError>, val result: ImportCustomersResult?, val createdAt: Instant, val rowCount: Int = 0, val preview: List<CustomerImportPreview> = emptyList())
 
-data class CustomerImportPreview(val row: Int, val identity: String, val name: String?, val packageName: String?, val status: String, val firstInvoiceOn: java.time.LocalDate?, val monthlyFee: java.math.BigDecimal?)
+data class CustomerImportPreview(val row: Int, val identity: String, val name: String?, val packageName: String?, val status: String, val firstInvoiceOn: java.time.LocalDate?, val monthlyFee: java.math.BigDecimal?, val onuSerial: String? = null)
 
 @Service
 class CustomerImportBatchService(
@@ -131,6 +133,9 @@ class CustomerImportBatchService(
 ) {
     @Transactional
     fun stage(operationKey: String, parsed: ParsedCustomerCsv, mode: ImportMode): CustomerImportBatchView {
+        requireOnuAccess(parsed.rows)
+        if (mode != ImportMode.ALREADY_INSTALLED && parsed.rows.any { !it.onuSerial.isNullOrBlank() })
+            throw com.duluin.ftth.common.domain.error.ValidationException("ONU terpasang hanya tersedia untuk migrasi pelanggan")
         require(operationKey.length in 1..240) { "operation_key tidak valid" }
         require(TenantContext.tenantIdOrNull() != null) { "Tenant context diperlukan" }
         entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(:key,0))")
@@ -161,6 +166,7 @@ class CustomerImportBatchService(
     @Transactional
     fun commit(id: UUID, commitOperationKey: String, commitHash: String): CustomerImportBatchView {
         requireVisible(id)
+        requireOnuAccess(staging.findAllByBatchIdOrderByRowNumber(id).map { mapper.readValue(it.payload, CustomerImportRow::class.java) })
         require(commitOperationKey.length in 1..240) { "commit_operation_key tidak valid" }
         require(commitHash.matches(Regex("[0-9a-fA-F]{64}"))) { "commit_hash tidak valid" }
         val entity = batches.findForUpdate(id) ?: throw NoSuchElementException("Batch tidak ditemukan")
@@ -184,6 +190,12 @@ class CustomerImportBatchService(
         requireVisible(id)
         return view(batches.findById(id).orElseThrow()).toSafeCsv()
     }
+    private fun requireOnuAccess(rows: List<CustomerImportRow>) {
+        if (rows.none { !it.onuSerial.isNullOrBlank() }) return
+        val permissions = authority.lockCurrent().permissions
+        if (!permissions.containsAll(setOf("customer.onu.assign", "monitoring.provisioning.view")))
+            throw org.springframework.security.access.AccessDeniedException("Akses pengaitan ONU dibatasi")
+    }
     private fun requireVisible(id: UUID) {
         if (!batches.existsById(id)) throw NotFoundException("Impor tidak ditemukan")
         val scope = authority.lockCurrent().areaScope as? com.duluin.ftth.common.security.AuthorityScope.Restricted ?: return
@@ -200,7 +212,7 @@ class CustomerImportBatchService(
     private fun view(entity: CustomerImportBatchJpaEntity, knownErrors: List<CsvImportError> = errors.findAllByBatchIdOrderByRowNumber(entity.id).map { CsvImportError(it.rowNumber, it.columnName, it.code, it.message) }): CustomerImportBatchView = CustomerImportBatchView(entity.id, entity.sha256, ImportMode.valueOf(entity.mode), entity.state, knownErrors, entity.result?.let { mapper.readValue(it, object : TypeReference<ImportCustomersResult>() {}) }, entity.createdAt, entity.rowCount,
         staging.findFirst20ByBatchIdOrderByRowNumber(entity.id).map { staged ->
             val row = mapper.readValue(staged.payload, CustomerImportRow::class.java)
-            CustomerImportPreview(staged.rowNumber, row.customerCode ?: row.mikrotikUsername.orEmpty(), row.name, row.packageName, row.serviceStatus, row.firstInvoiceOn, row.monthlyFee)
+            CustomerImportPreview(staged.rowNumber, row.customerCode ?: row.mikrotikUsername.orEmpty(), row.name, row.packageName, row.serviceStatus, row.firstInvoiceOn, row.monthlyFee, row.onuSerial)
         })
 }
 

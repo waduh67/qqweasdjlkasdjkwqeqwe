@@ -37,6 +37,7 @@ data class CustomerImportRow(
     val firstInvoiceOn: LocalDate? = null,
     val monthlyFee: java.math.BigDecimal? = null,
     val areaId: java.util.UUID? = null,
+    val onuSerial: String? = null,
 )
 
 data class ImportCustomersResult(

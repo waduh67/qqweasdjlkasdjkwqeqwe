@@ -6,6 +6,15 @@ import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 
 class CustomerCsvBatchTest {
+    @Test fun `csv accepts optional normalized ONU serial and rejects duplicate device assignments`() {
+        val csv = "customer_code,onu_serial\nA, onu-123 \nB,ONU-123\nC,\n"
+        val parsed = CustomerCsvParser.parse(csv.byteInputStream(), csv.toByteArray().size.toLong())
+        assertThat(parsed.rows[0].onuSerial).isEqualTo("ONU-123")
+        assertThat(parsed.rows[2].onuSerial).isNull()
+        assertThat(parsed.errors).hasSize(1)
+        assertThat(parsed.errors.single().column).isEqualTo("onu_serial")
+        assertThat(parsed.errors.single().row).isEqualTo(3)
+    }
     @Test
     fun `parser accepts BOM and reports duplicate business keys without exposing secret`() {
         val csv = "\uFEFFmikrotik_username,name,mikrotik_password\nuser,=formula,secret\nuser,second,secret2\n"

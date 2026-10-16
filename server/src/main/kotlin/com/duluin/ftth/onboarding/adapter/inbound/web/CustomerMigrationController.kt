@@ -20,9 +20,10 @@ class MigrationAreaAccess(private val authority: com.duluin.ftth.iam.CurrentAuth
 
 @RestController
 @RequestMapping("/api/onboarding/migrations")
-class CustomerMigrationController(private val service: CustomerMigrationService, private val access: MigrationAreaAccess) {
+class CustomerMigrationController(private val service: CustomerMigrationService, private val access: MigrationAreaAccess,
+    private val onus: CustomerMigrationOnuService) {
     @PostMapping
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update') && (#command.onuSerial == null || #command.onuSerial.isBlank() || @authz.canAll('customer.onu.assign','monitoring.provisioning.view'))")
     fun register(@RequestBody command: CustomerMigrationCommand): CustomerMigrationView {
         access.requireArea(command.customer.areaId)
         return service.register(command.copy(source = MigrationSource.MANUAL))
@@ -41,6 +42,12 @@ class CustomerMigrationController(private val service: CustomerMigrationService,
     @PreAuthorize("@authz.can('bng.access.manage')")
     fun radius(@PathVariable customerId: UUID, @RequestBody command: MigrationRadiusCommand) =
         service.prepareRadius(customerId, command)
+
+    @PostMapping("/{customerId}/onus")
+    @PreAuthorize("@authz.canAll('customer.onu.assign','monitoring.provisioning.view')")
+    fun linkOnu(@PathVariable customerId: UUID, @RequestBody command: LinkMigrationOnuRequest) =
+        onus.link(customerId, command.serialNumber)
 }
 
 data class StartMigrationBillingRequest(val firstInvoiceOn: LocalDate, val billingDay: Int? = null)
+data class LinkMigrationOnuRequest(val serialNumber: String)

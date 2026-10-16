@@ -15,7 +15,7 @@ import java.util.UUID
 class CustomerObservationStore(private val entityManager: EntityManager,
     private val inventory: com.duluin.ftth.inventory.InventoryDeploymentApi) {
     private data class EpisodeRow(val onu: OnuRef, val assignmentId: UUID?, val revision: Long,
-        val start: Instant, val end: Instant?, val legacy: Boolean)
+        val start: Instant, val end: Instant?, val legacy: Boolean, val migrated: Boolean)
     private fun <T> jdbc(block: (Connection) -> T): T = entityManager.unwrap(Session::class.java).doReturningWork(block)
 
     fun lockOwnershipView() = jdbc { connection ->
@@ -38,6 +38,16 @@ class CustomerObservationStore(private val entityManager: EntityManager,
 
     fun episodes(serial: String): List<ObservationEpisode> = episodes(setOf(serial))
 
+    fun matchesMigrationPath(onuId: UUID, path: com.duluin.ftth.customer.ObservationPath): Boolean = jdbc { connection ->
+        connection.prepareStatement("""SELECT olt_id,olt_code,pon_port_label FROM customer_migration_onu
+            WHERE tenant_id=? AND onu_id=?""").use { query ->
+            query.setObject(1, TenantContext.tenantId()); query.setObject(2, onuId)
+            query.executeQuery().use { rows -> !rows.next() ||
+                ((rows.getObject(1, UUID::class.java)?.let { it == path.oltId } ?: (rows.getString(2) == path.oltCode)) &&
+                    (rows.getString(3)?.let { it == path.ponPortLabel } ?: true)) }
+        }
+    }
+
     fun activeSerials(serials: Set<String>): List<String> = jdbc { connection ->
         connection.prepareStatement("""SELECT warehouse_canonical_serial(serial_number) FROM onu
             WHERE tenant_id=? AND retired_at IS NULL AND warehouse_canonical_serial(serial_number)=ANY(?) ORDER BY id""").use { query ->
@@ -57,14 +67,14 @@ class CustomerObservationStore(private val entityManager: EntityManager,
                     OnuRef(rows.getObject(1, UUID::class.java), rows.getString(2), rows.getObject(3, UUID::class.java),
                         rows.getString(4), rows.getObject(5, UUID::class.java), rows.getString(6)),
                     rows.getObject(7, UUID::class.java), rows.getLong(8), rows.getTimestamp(9).toInstant(),
-                    rows.getTimestamp(10)?.toInstant(), rows.getString(11) == "LEGACY_UNRESOLVED"))
+                    rows.getTimestamp(10)?.toInstant(), rows.getString(11) == "LEGACY_UNRESOLVED", rows.getString(11) == "MIGRATED"))
             } }
-        }.also { episodes -> episodes.filterNot { it.legacy }.forEach { connection.validateOnuEpisode(it.onu.id) } }.let { episodes ->
+        }.also { episodes -> episodes.filterNot { it.legacy || it.migrated }.forEach { connection.validateOnuEpisode(it.onu.id) } }.let { episodes ->
             val revisions = inventory.assignmentRevisions(episodes.mapNotNullTo(HashSet()) { it.assignmentId })
             episodes.map { episode ->
                 val revision = if (episode.assignmentId == null) 0L else revisions[episode.assignmentId]
                     ?: throw com.duluin.ftth.common.domain.error.ConflictException("ASSIGNMENT_REVISION_REQUIRED")
-                ObservationEpisode(episode.onu, episode.assignmentId, revision, episode.revision, episode.start, episode.end, episode.legacy)
+                ObservationEpisode(episode.onu, episode.assignmentId, revision, episode.revision, episode.start, episode.end, episode.legacy, episode.migrated)
             }
         }
     }
