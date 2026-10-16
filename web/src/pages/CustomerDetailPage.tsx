@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Te
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { api, ApiError } from '../api/client'
+import { CustomerOnuPanel } from '@/components/organisms/customer/CustomerOnuPanel'
 import { CustomerAssetPanel } from '@/components/organisms/customer/CustomerAssetPanel'
 import type {
   CustomerTrace,
@@ -73,7 +74,6 @@ import {
   IconCustomers,
   IconFlask,
   IconGauge,
-  IconInventory,
   IconMap,
   IconMonitor,
   IconPackage,
@@ -616,14 +616,7 @@ function OnuManager({ customer, run }: {
 }) {
   return <>
     <CustomerAssetPanel customerId={customer.id} areaId={customer.areaId} onChanged={() => void run(async () => undefined, 'Data perangkat diperbarui')} />
-    <div className="card stack" style={{ gap: '0.5rem' }}>
-      <SectionHead icon={<IconInventory size={16} />} title="Pemantauan ONU" />
-      {customer.onus.length === 0 && <p className="muted">Tidak ada ONU terdaftar.</p>}
-      {customer.onus.map(onu => <div key={onu.id} className="spread wrap">
-        <span>{onu.serialNumber} · {onu.odpCode ? `${onu.odpCode} port ${onu.odpPortNumber}` : 'Belum terhubung ke port ODP'}</span>
-        <span style={{ color: HEALTH_COLOR[onu.opticalHealth] }}>{onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}</span>
-      </div>)}
-    </div>
+    <CustomerOnuPanel key={customer.id} customerId={customer.id} onus={customer.onus} onChanged={() => void run(async () => undefined, 'ONU terhubung')} />
   </>
 }
 

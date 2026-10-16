@@ -15,6 +15,7 @@ async function setup(page: Page) {
     else if (path === '/api/catalog/plans') body = [{ id: 'plan1', name: 'Rumah 50 Mbps', price: 150000, downMbps: 50, upMbps: 25, serviceTypes: ['PPPOE'], active: true }]
     else if (path === '/api/bng/nas') body = [{ id: 'nas1', name: 'BRAS Bandung', vendor: 'MIKROTIK' }]
     else if (path === '/api/areas') body = [{ id: 'area1', name: 'Bandung', code: 'BDG' }]
+    else if (path === '/api/monitoring/discovered-onus') body = [{ id: 'observed1', serialNumber: '024654000002', oltCode: 'OLT-CRB-001', ponPortLabel: 'PON1' }]
     else if (path.endsWith('/ppp-secrets')) body = [{ name: 'ani', profile: 'rumah', comment: 'Ani', disabled: false }, { name: 'budi', profile: 'rumah', comment: 'Budi', disabled: true }]
     else if (path === '/api/onboarding/import/pppoe') body = { created: 2, skipped: 0, failed: 0, rows: [{ username: 'ani', status: 'CREATED', message: null }, { username: 'budi', status: 'CREATED', message: null }] }
     else if (path.startsWith('/api/onboarding/v1/import/customers')) {
@@ -49,12 +50,16 @@ for (const width of [375, 1440]) {
     await panel.getByRole('button', { name: 'Berikutnya: Lokasi' }).click()
     await panel.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Jl. Melati 10')
     await panel.getByRole('button', { name: 'Berikutnya: Akun lama' }).click()
+    await panel.getByRole('button', { name: 'Berikutnya: Perangkat' }).click()
+    await panel.getByRole('combobox', { name: 'ONU terpasang' }).click()
+    await page.getByRole('option', { name: /024654000002/ }).click()
+    await page.screenshot({ path: info.outputPath('migration-onu.png'), animations: 'disabled' })
     await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
     await expect(panel.locator('.resource-summary')).toContainText('Ditangguhkan')
     await expect(panel.locator('.resource-summary')).toContainText('Belum dikelola')
     await panel.getByRole('button', { name: 'Migrasikan', exact: true }).click()
     await expect.poll(() => state.writes.length).toBe(1)
-    expect(state.writes[0].body).toMatchObject({ status: 'SUSPENDED', firstInvoiceOn: null, customer: { name: 'Budi Santoso', location: null, monthlyFeeOverride: 125000 } })
+    expect(state.writes[0].body).toMatchObject({ status: 'SUSPENDED', firstInvoiceOn: null, onuSerial: '024654000002', customer: { name: 'Budi Santoso', location: null, monthlyFeeOverride: 125000 } })
     expect(state.errors).toEqual([])
     const bounds = await panel.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1)
   })

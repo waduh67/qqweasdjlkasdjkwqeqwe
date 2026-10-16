@@ -193,7 +193,7 @@ class MetricIngestionService(
         return when {
             oltId == null -> "UNVERIFIED_OLT"
             episode == null -> if (attribution.reason == "PATH_MISMATCH") "UNVERIFIED_PON_IDENTITY" else requireNotNull(attribution.reason)
-            !episode.legacy || episode.endedAt != null || episode.onu.odpId != null || attribution.networkEdgeIds.isNotEmpty() -> "UNVERIFIED_PON_IDENTITY"
+            !(episode.legacy || episode.migrated) || episode.endedAt != null || episode.onu.odpId != null || attribution.networkEdgeIds.isNotEmpty() -> "UNVERIFIED_PON_IDENTITY"
             else -> null
         }
     }

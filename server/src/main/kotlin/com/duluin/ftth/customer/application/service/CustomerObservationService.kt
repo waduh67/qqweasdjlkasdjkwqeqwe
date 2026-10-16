@@ -37,6 +37,8 @@ class CustomerObservationService(private val store: CustomerObservationStore,
             val path = store.historicalPath(episode, observedAt)
                 ?: return ObservationAttribution(null, "MISSING_PATH_HISTORY")
             topologyRevision = path.revision
+            if (episode.migrated && !path.hasOdp && !store.matchesMigrationPath(episode.onu.id, context))
+                return ObservationAttribution(null, "PATH_MISMATCH")
             if (path.hasOdp) {
                 if (path.unverified) return ObservationAttribution(null, "UNVERIFIED_PATH_HISTORY")
                 val upstream = path.odpId?.let { network.pathAt(it, observedAt) }

@@ -55,7 +55,7 @@ class ImportCustomersService(
             CustomerImportOutcome(username, rowImporter.importRow(command, username, authType, row), null)
         } catch (e: ConflictException) {
             // Bentrok (mis. sudah pernah diimpor lewat jalur lain) → impor idempoten, lewati saja.
-            CustomerImportOutcome(username, CustomerImportStatus.SKIPPED, e.message)
+            CustomerImportOutcome(username, if (row.onuSerial.isNullOrBlank()) CustomerImportStatus.SKIPPED else CustomerImportStatus.FAILED, e.message)
         } catch (e: RuntimeException) {
             CustomerImportOutcome(username, CustomerImportStatus.FAILED, if (e is com.duluin.ftth.common.domain.error.DomainException) e.message else "Baris belum berhasil diproses")
         }
@@ -132,6 +132,7 @@ class CustomerRowImporter(
                 firstInvoiceOn = row.firstInvoiceOn, billingDay = row.nextBillingDay, source = MigrationSource.CSV,
                 username = row.mikrotikUsername, password = row.mikrotikPassword, authType = authType,
                 nasId = nasId, framedIp = row.framedIp,
+                onuSerial = row.onuSerial,
             ))
         } else customerApi.registerCustomer(customer)
         return CustomerImportStatus.CREATED
