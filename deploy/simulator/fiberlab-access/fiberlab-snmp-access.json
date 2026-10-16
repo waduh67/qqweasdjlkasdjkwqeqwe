@@ -1,0 +1,6 @@
+{
+  "source_container": "ftth-server-1",
+  "runtime_container": "fiberlab-runtime-1",
+  "target_ip": "10.203.0.64",
+  "port": 161
+}

@@ -1,0 +1,8 @@
+[Unit]
+Description=FTTH access to the local Fiberlab SNMP endpoint
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/ftth/fiberlab-snmp-access.py --config /etc/ftth/fiberlab-snmp-access.json --apply
