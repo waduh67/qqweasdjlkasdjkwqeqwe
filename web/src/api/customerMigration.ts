@@ -15,6 +15,7 @@ export interface MigrationRequest {
   status: 'ACTIVE' | 'SUSPENDED'; installationDate: string | null; firstInvoiceOn: string | null; billingDay: number | null
   username: string | null; password: string | null; authType: ServiceType; nasId: string | null; framedIp: string | null
   onuSerial?: string | null
+  prepareRadius?: boolean
 }
 export const migrateCustomer = (body: MigrationRequest) => api.post<MigrationView>('/api/onboarding/migrations', body)
 export const getCustomerMigration = (id: string) => api.get<MigrationView | null>(`/api/onboarding/migrations/${id}`)

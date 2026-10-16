@@ -220,6 +220,7 @@ export function ImportCustomersPage() {
 function modeLabel(mode: ImportMode): string {
   const labels: Record<ImportMode, string> = {
     ALREADY_INSTALLED: 'Pelanggan sudah terpasang',
+    ALREADY_INSTALLED_RADIUS: 'Pelanggan + akun RADIUS',
     PENDING_INSTALLATION: 'Menunggu pemasangan',
     VALIDATE_ONLY: 'Validasi saja',
   }

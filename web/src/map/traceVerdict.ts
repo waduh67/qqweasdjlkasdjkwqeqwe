@@ -71,7 +71,7 @@ export function traceVerdict(trace: CustomerTrace): { tone: VerdictTone; text: s
   if (rx != null && rx <= RX_WARN_DBM)
     return { tone: 'warning', text: `Redaman lemah ${rx.toFixed(1)} dBm — masih jalan tapi rawan. Jadwalkan cek jalur.` }
   if (!bras)
-    return { tone: 'warning', text: 'ONU online tapi belum punya akun PPPoE — layanan belum bisa dipakai.' }
+    return { tone: 'warning', text: 'ONU online. Akun jaringan belum terdaftar di aplikasi.' }
   if (!bras.online)
     return { tone: 'warning', text: 'Fisik sehat, PPPoE tak tersambung — coba Reset Login, lalu cek user/password.' }
   if (trace.cpeOnline === false)

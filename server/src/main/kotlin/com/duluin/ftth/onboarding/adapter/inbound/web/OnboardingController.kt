@@ -84,13 +84,14 @@ class OnboardingController(
         "@authz.canAll('customer.customer.create','customer.subscription.update','bng.nas.manage')",
     )
     fun importPppoe(@Valid @RequestBody request: ImportPppoeRequest): ImportPppoeResult {
+        migrationAccess.requireRadius(request.mode.includesRadius)
         migrationAccess.requireArea(request.areaId)
         return importPppoe.importPppoe(request.toCommand())
     }
 
     /**
      * Impor CSV pelanggan: buat catatan layanan berdasarkan kode pelanggan atau username.
-     * Jalur migrasi tidak membuat akun RADIUS. Izin yang dibutuhkan mencakup buat &
+     * Mode migrasi menentukan apakah akun RADIUS ikut dibuat. Izin mencakup buat &
      * ubah pelanggan, ubah langganan, kelola akun jaringan). Membalas rekap per-baris → 200.
      */
     @PostMapping("/import/customers")
@@ -99,6 +100,7 @@ class OnboardingController(
         "@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')",
     )
     fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult {
+        migrationAccess.requireRadius(request.mode.includesRadius)
         request.rows.forEach { migrationAccess.requireArea(it.areaId) }
         return importCustomers.importCustomers(request.toCommand())
     }
@@ -116,7 +118,7 @@ class OnboardingController(
     ): com.duluin.ftth.onboarding.application.service.CustomerImportBatchView {
         migrationAccess.requireArea(areaId)
         val parsed = CustomerCsvParser.parse(file.inputStream, file.size)
-        val settings = "$firstInvoiceOn|$billingDay|$areaId"
+        val settings = "$firstInvoiceOn|$billingDay|$areaId" + if (mode.includesRadius) "|RADIUS" else ""
         val hash = java.security.MessageDigest.getInstance("SHA-256").digest((parsed.sha256 + settings).toByteArray()).joinToString("") { "%02x".format(it) }
         return customerBatches.stage(operationKey, parsed.copy(sha256 = hash, rows = parsed.rows.map {
             it.copy(firstInvoiceOn = it.firstInvoiceOn ?: firstInvoiceOn, nextBillingDay = it.nextBillingDay ?: billingDay, areaId = areaId)
@@ -156,7 +158,7 @@ class OnboardingController(
 
     /**
      * Ekspor CSV pelanggan (kebalikan simetris impor) — satu baris per akun jaringan, kolom cocok
-     * template impor sehingga hasilnya bisa diunggah kembali. `mikrotik_password` & `notes` selalu
+     * template impor sehingga hasilnya bisa diunggah kembali. `password` & `notes` selalu
      * KOSONG (rahasia tak diekspor; kolom kosong = "pertahankan" saat diimpor ulang). Digating izin
      * BACA union (lihat/telaah pelanggan, langganan, akun jaringan). Membalas `text/csv` sebagai
      * unduhan berkas.
@@ -177,7 +179,7 @@ class OnboardingController(
 /**
  * Penulis CSV pelanggan (satu-satunya tempat urutan & escaping kolom hidup, di sisi adapter web).
  * Header identik template impor agar keluaran ekspor bisa diunggah kembali tanpa penyesuaian.
- * Kolom `mikrotik_password` & `notes` selalu kosong.
+ * Kolom `password` & `notes` selalu kosong.
  */
 internal object CustomerCsv {
 
@@ -186,7 +188,7 @@ internal object CustomerCsv {
     /** Urutan kolom = template impor. Diubah = klien impor/ekspor harus ikut disesuaikan. */
     private val HEADER = listOf(
         "name", "phone", "address", "package_name", "connection_type", "installation_date",
-        "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number",
+        "username", "password", "email", "router_name", "framed_ip", "id_card_number",
         "next_billing", "latitude", "longitude", "notes", "customer_code", "service_status", "first_invoice_on", "monthly_fee",
     )
 
@@ -203,7 +205,7 @@ internal object CustomerCsv {
                     line.connectionType,
                     line.installationDate?.toString().orEmpty(),
                     line.mikrotikUsername,
-                    "", // mikrotik_password — sengaja kosong (rahasia tak diekspor)
+                    "", // password — sengaja kosong (rahasia tak diekspor)
                     line.email.orEmpty(),
                     line.routerName.orEmpty(),
                     line.framedIp.orEmpty(),
@@ -232,7 +234,7 @@ internal object CustomerCsv {
 }
 
 /**
- * Muatan impor CSV pelanggan: baris sudah diurai klien menjadi bentuk terstruktur. `mikrotik_username`
+ * Muatan impor CSV pelanggan: baris sudah diurai klien menjadi bentuk terstruktur. `username`
  * jadi kunci upsert (kosong = baris dilewati). Kolom lain opsional — pada jalur update yang kosong
  * dipertahankan.
  */

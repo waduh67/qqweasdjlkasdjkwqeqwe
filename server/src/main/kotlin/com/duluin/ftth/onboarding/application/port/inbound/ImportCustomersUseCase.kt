@@ -7,7 +7,11 @@ interface ImportCustomersUseCase {
     fun importCustomers(command: ImportCustomersCommand): ImportCustomersResult
 }
 
-enum class ImportMode { VALIDATE_ONLY, PENDING_INSTALLATION, ALREADY_INSTALLED }
+enum class ImportMode {
+    VALIDATE_ONLY, PENDING_INSTALLATION, ALREADY_INSTALLED, ALREADY_INSTALLED_RADIUS;
+    val isMigration: Boolean get() = this == ALREADY_INSTALLED || this == ALREADY_INSTALLED_RADIUS
+    val includesRadius: Boolean get() = this == ALREADY_INSTALLED_RADIUS
+}
 
 data class ImportCustomersCommand(
     val rows: List<CustomerImportRow>,

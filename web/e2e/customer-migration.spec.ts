@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 
-async function setup(page: Page) {
+async function setup(page: Page, networkPermission = true) {
   const writes: { path: string; body: unknown; query: Record<string, string> }[] = [], errors: string[] = []
-  const profile = { id: 'qa', tenantId: 'qa', tenantSlug: 'qa', email: 'qa@example.test', name: 'Rina', platformAdmin: true, permissions: [], areaIds: [], roleIds: [], twoFactorEnabled: false }
-  let batchState = 'STAGED'
+  const profile = { id: 'qa', tenantId: 'qa', tenantSlug: 'qa', email: 'qa@example.test', name: 'Rina', platformAdmin: networkPermission, permissions: ['customer.customer.view', 'customer.customer.create', 'customer.customer.update', 'customer.subscription.update', 'catalog.plan.view', 'iam.area.view'], areaIds: [], roleIds: [], twoFactorEnabled: false }
+  let batchState = 'STAGED', batchMode = 'ALREADY_INSTALLED'
   page.on('pageerror', error => errors.push(error.message))
   await page.addInitScript(() => localStorage.setItem('ftth.refreshToken', 'migration-test'))
   await page.route('**/api/**', async route => {
@@ -19,11 +19,12 @@ async function setup(page: Page) {
     else if (path.endsWith('/ppp-secrets')) body = [{ name: 'ani', profile: 'rumah', comment: 'Ani', disabled: false }, { name: 'budi', profile: 'rumah', comment: 'Budi', disabled: true }]
     else if (path === '/api/onboarding/import/pppoe') body = { created: 2, skipped: 0, failed: 0, rows: [{ username: 'ani', status: 'CREATED', message: null }, { username: 'budi', status: 'CREATED', message: null }] }
     else if (path.startsWith('/api/onboarding/v1/import/customers')) {
+      if (req.method() === 'POST' && !path.endsWith('/commit')) batchMode = new URL(req.url()).searchParams.get('mode') || 'ALREADY_INSTALLED'
       if (path.endsWith('/commit')) batchState = 'PROCESSING'
       else if (req.method() === 'GET' && batchState === 'PROCESSING') batchState = 'COMMITTED'
-      body = { id: 'batch1', sha256: 'f'.repeat(64), mode: 'ALREADY_INSTALLED', state: batchState, rowCount: 2, errors: [], result: batchState === 'COMMITTED' ? { created: 2, updated: 0, skipped: 0, failed: 0, rows: [{ username: 'OLD-1', status: 'CREATED', message: null }] } : null, createdAt: '2026-10-16T00:00:00Z', preview: [
-        { row: 2, identity: 'OLD-1', name: 'Ani', packageName: 'Rumah 50 Mbps', status: 'ACTIVE', firstInvoiceOn: '2099-11-05', billingDay: 20, monthlyFee: null },
-        { row: 3, identity: 'OLD-2', name: 'Budi', packageName: 'Rumah 50 Mbps', status: 'ACTIVE', firstInvoiceOn: '2099-11-20', billingDay: 5, monthlyFee: null },
+      body = { id: 'batch1', sha256: 'f'.repeat(64), mode: batchMode, state: batchState, rowCount: 2, errors: [], result: batchState === 'COMMITTED' ? { created: 2, updated: 0, skipped: 0, failed: 0, rows: [{ username: 'OLD-1', status: 'CREATED', message: null }] } : null, createdAt: '2026-10-16T00:00:00Z', preview: [
+        { row: 2, identity: 'OLD-1', username: 'ani', routerName: 'BRAS Bandung', name: 'Ani', packageName: 'Rumah 50 Mbps', status: 'ACTIVE', firstInvoiceOn: '2099-11-05', billingDay: 20, monthlyFee: null },
+        { row: 3, identity: 'OLD-2', username: 'budi', routerName: 'BRAS Bandung', name: 'Budi', packageName: 'Rumah 50 Mbps', status: 'ACTIVE', firstInvoiceOn: '2099-11-20', billingDay: 5, monthlyFee: null },
       ] }
     } else if (path === '/api/onboarding/migrations') {
       // Keep the form visible after a rejected write, so its submission can be inspected.
@@ -56,7 +57,13 @@ for (const width of [375, 1440]) {
     await panel.getByRole('combobox', { name: 'Penagihan', exact: true }).selectOption('later')
     await panel.getByRole('button', { name: 'Berikutnya: Lokasi' }).click()
     await panel.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Jl. Melati 10')
-    await panel.getByRole('button', { name: 'Berikutnya: Akun lama' }).click()
+    await panel.getByRole('button', { name: 'Berikutnya: Akun jaringan' }).click()
+    await panel.getByRole('button', { name: 'Berikutnya: Perangkat' }).click()
+    await expect(panel.getByRole('textbox', { name: 'Username', exact: true })).toBeVisible()
+    await panel.getByRole('textbox', { name: 'Username', exact: true }).fill('budi-lama')
+    await panel.getByLabel(/^Password/).fill('existing-secret')
+    await panel.getByRole('combobox', { name: 'BRAS', exact: true }).selectOption('nas1')
+    await page.screenshot({ path: info.outputPath('migration-network.png'), animations: 'disabled' })
     await panel.getByRole('button', { name: 'Berikutnya: Perangkat' }).click()
     await panel.getByRole('combobox', { name: 'ONU terpasang' }).click()
     await page.getByRole('option', { name: /024654000002/ }).click()
@@ -64,9 +71,11 @@ for (const width of [375, 1440]) {
     await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
     await expect(panel.locator('.resource-summary')).toContainText('Ditangguhkan')
     await expect(panel.locator('.resource-summary')).toContainText('Belum dikelola')
+    await expect(panel.locator('.resource-summary')).toContainText('Pelanggan + akun RADIUS')
+    await expect(panel.locator('.resource-summary')).not.toContainText('existing-secret')
     await panel.getByRole('button', { name: 'Migrasikan', exact: true }).click()
     await expect.poll(() => state.writes.length).toBe(1)
-    expect(state.writes[0].body).toMatchObject({ status: 'SUSPENDED', firstInvoiceOn: null, billingDay: null, onuSerial: '024654000002', customer: { name: 'Budi Santoso', location: null, monthlyFeeOverride: 125000 } })
+    expect(state.writes[0].body).toMatchObject({ prepareRadius: true, username: 'budi-lama', password: 'existing-secret', nasId: 'nas1', status: 'SUSPENDED', firstInvoiceOn: null, billingDay: null, onuSerial: '024654000002', customer: { name: 'Budi Santoso', location: null, monthlyFeeOverride: 125000 } })
     expect(state.errors).toEqual([])
     const bounds = await panel.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1)
   })
@@ -78,6 +87,7 @@ for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto('/import-customers')
     const panel = page.getByRole('dialog', { name: 'Migrasi pelanggan', exact: true })
+    await panel.getByRole('combobox', { name: 'Cakupan impor' }).selectOption('data')
     await panel.locator('input[type=file]').setInputFiles({ name: 'billing.csv', mimeType: 'text/csv', buffer: Buffer.from('name,address,package_name,customer_code,first_invoice_on,next_billing\nAni,Bandung,Rumah 50 Mbps,OLD-1,2099-11-05,5\n') })
     await panel.getByRole('button', { name: 'Berikutnya: Penagihan' }).click()
     const choice = panel.getByRole('combobox', { name: 'Jadwal penagihan', exact: true })
@@ -93,6 +103,7 @@ for (const width of [375, 1440]) {
     await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
     let staged = state.writes.filter(write => write.path === '/api/onboarding/v1/import/customers')
     expect(staged).toHaveLength(1)
+    expect(staged[0].query.mode).toBe('ALREADY_INSTALLED')
     expect(staged[0].query).not.toHaveProperty('firstInvoiceOn')
     expect(staged[0].query).not.toHaveProperty('billingDay')
     await expect(panel.getByRole('columnheader', { name: 'Mulai penagihan', exact: true })).toBeVisible()
@@ -114,10 +125,14 @@ test('CSV migration stages for review, records the recovery URL and resumes comp
   const state = await setup(page)
   await page.goto('/import-customers')
   const panel = page.getByRole('dialog', { name: 'Migrasi pelanggan', exact: true })
-  await panel.locator('input[type=file]').setInputFiles({ name: 'old.csv', mimeType: 'text/csv', buffer: Buffer.from('name,address,package_name,customer_code\nAni,Bandung,Rumah 50 Mbps,OLD-1\n') })
+  await panel.locator('input[type=file]').setInputFiles({ name: 'old.csv', mimeType: 'text/csv', buffer: Buffer.from('name,address,package_name,customer_code,username,password,router_name\nAni,Bandung,Rumah 50 Mbps,OLD-1,ani,existing-secret,BRAS Bandung\n') })
   await panel.getByRole('button', { name: 'Berikutnya: Penagihan' }).click()
   await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   await expect(page).toHaveURL(/migrationBatch=batch1/)
+  expect(state.writes.find(write => write.path === '/api/onboarding/v1/import/customers')?.query.mode).toBe('ALREADY_INSTALLED_RADIUS')
+  await expect(panel.getByRole('columnheader', { name: 'Username', exact: true })).toBeVisible()
+  await expect(panel.getByRole('columnheader', { name: 'BRAS', exact: true })).toBeVisible()
+  await expect(panel).not.toContainText('existing-secret')
   await panel.getByRole('button', { name: 'Sebelumnya', exact: true }).click()
   await expect(panel.getByRole('button', { name: 'Migrasikan', exact: true })).toHaveCount(0)
   await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
@@ -145,6 +160,24 @@ test('MikroTik migration keeps disabled accounts selected and maps profiles befo
   await page.screenshot({ path: info.outputPath('migration-mikrotik-review.png'), animations: 'disabled' })
   await panel.getByRole('button', { name: 'Migrasikan', exact: true }).click()
   await expect(panel.getByRole('status')).toContainText('2 ditambahkan')
-  expect(state.writes.find(write => write.path.endsWith('/pppoe'))?.body).toMatchObject({ skipDisabled: false, onlyNames: ['ani', 'budi'], profilePlanId: { rumah: 'plan1' }, firstInvoiceOn: null })
+  expect(state.writes.find(write => write.path.endsWith('/pppoe'))?.body).toMatchObject({ mode: 'ALREADY_INSTALLED_RADIUS', skipDisabled: false, onlyNames: ['ani', 'budi'], profilePlanId: { rumah: 'plan1' }, firstInvoiceOn: null })
+  expect(state.errors).toEqual([])
+})
+
+test('data-only migration remains available without network management permission', async ({ page }) => {
+  const state = await setup(page, false)
+  await page.goto('/import-customers')
+  const panel = page.getByRole('dialog', { name: 'Migrasi pelanggan', exact: true })
+  const scope = panel.getByRole('combobox', { name: 'Cakupan impor' })
+  await expect(scope).toHaveValue('data')
+  await expect(scope.locator('option')).toHaveCount(1)
+  const download = page.waitForEvent('download')
+  await panel.getByRole('button', { name: 'Unduh template' }).click()
+  const stream = await (await download).createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream!) chunks.push(Buffer.from(chunk))
+  const headers = Buffer.concat(chunks).toString('utf8')
+  expect(headers).toContain(',username,password,')
+  expect(headers).not.toContain('mikrotik_')
   expect(state.errors).toEqual([])
 })

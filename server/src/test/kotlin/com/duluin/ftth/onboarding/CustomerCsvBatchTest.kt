@@ -6,6 +6,20 @@ import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 
 class CustomerCsvBatchTest {
+    @Test fun `generic credential columns and legacy aliases preserve identical values`() {
+        fun parse(header: String) = "$header\npelanggan0001,legacy-pass\n".let {
+            CustomerCsvParser.parse(it.byteInputStream(), it.toByteArray().size.toLong())
+        }
+        val generic = parse("username,password")
+        val legacy = parse("mikrotik_username,mikrotik_password")
+        assertThat(generic.errors).isEmpty()
+        assertThat(legacy.errors).isEmpty()
+        assertThat(generic.rows).isEqualTo(legacy.rows)
+        assertThat(generic.rows.single().mikrotikUsername).isEqualTo("pelanggan0001")
+        assertThat(generic.rows.single().mikrotikPassword).isEqualTo("legacy-pass")
+        val ambiguous = parse("username,mikrotik_username")
+        assertThat(ambiguous.errors).anyMatch { it.column == "username" && it.code == "DUPLICATE_COLUMN" }
+    }
     @Test fun `csv accepts optional normalized ONU serial and rejects duplicate device assignments`() {
         val csv = "customer_code,onu_serial\nA, onu-123 \nB,ONU-123\nC,\n"
         val parsed = CustomerCsvParser.parse(csv.byteInputStream(), csv.toByteArray().size.toLong())

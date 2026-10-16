@@ -27,7 +27,7 @@ export function CustomerMigrationManagement({ customerId, mode, fallback, onUpda
   if (!migration || (mode === 'network' && migration.accessId)) return fallback
   return <div className="stack">
     <CreationSummary rows={mode === 'billing' ? [['Penagihan', migration.billingManaged ? 'Dikelola' : 'Belum dikelola'], ['Mulai penagihan', migration.firstInvoiceOn], ['Tanggal tagih setiap bulan', migration.billingDay]] : [['Akun RADIUS', 'Belum disiapkan'], ['Username lama', migration.username], ['Jenis koneksi', migration.authType]]} />
-    {mode === 'network' && <p className="muted">Pelanggan masih menggunakan akun jaringan sebelumnya.</p>}
+    {mode === 'network' && <p className="muted">Akun RADIUS belum dibuat di aplikasi.</p>}
     {((mode === 'billing' && !migration.billingManaged && can('customer.subscription.update')) || (mode === 'network' && can('bng.access.manage'))) && <div><Button onClick={() => setOpen(true)}>{mode === 'billing' ? 'Mulai penagihan' : 'Siapkan RADIUS'}</Button></div>}
     {open && <MigrationAction migration={migration} mode={mode} onClose={() => setOpen(false)} onSaved={value => { setMigration(value); setOpen(false); onUpdated() }} />}
   </div>

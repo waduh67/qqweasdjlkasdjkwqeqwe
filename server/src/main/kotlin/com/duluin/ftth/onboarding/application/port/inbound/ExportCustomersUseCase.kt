@@ -4,11 +4,11 @@ import java.time.LocalDate
 
 /**
  * Ekspor CSV pelanggan — kebalikan simetris dari [ImportCustomersUseCase]. Merakit satu baris per
- * AKUN jaringan (anchor = `mikrotik_username`, kunci upsert impor) dengan menggabungkan biodata
+ * AKUN jaringan (anchor = `username`, kunci upsert impor) dengan menggabungkan biodata
  * pelanggan, snapshot langganan, dan identitas jaringan (BRAS, tipe koneksi) melalui kontrak publik
  * customer & bng.
  *
- * Sengaja TANPA password: `mikrotik_password` selalu kosong di keluaran (rahasia tak pernah menembus
+ * Sengaja TANPA password: `password` selalu kosong di keluaran (rahasia tak pernah menembus
  * batas module, dan impor ulang memperlakukan kolom kosong sebagai "pertahankan"). Kolom `notes`
  * juga kosong (tak dipetakan ke model). Hasilnya dapat diimpor kembali (round-trip) lewat template
  * yang sama.
@@ -23,7 +23,7 @@ interface ExportCustomersUseCase {
  * (selalu ada; MAC untuk tipe DHCP/Static). [connectionType] nama tipe koneksi huruf kecil (mis.
  * "pppoe", "static"). [framedIp] reservasi Framed-IP untuk Static/DHCP (null bila tak ada).
  * [installationDate] diturunkan dari tanggal aktivasi langganan (tanggal UTC). Kolom rahasia
- * (`mikrotik_password`) dan `notes` sengaja tak ada di sini — adapter menulisnya kosong agar tetap
+ * (`password`) dan `notes` sengaja tak ada di sini — adapter menulisnya kosong agar tetap
  * cocok template impor.
  */
 data class CustomerExportLine(
