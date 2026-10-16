@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { optionalCustomerLocation } from '@/utils/customerLocation'
 import { api, ApiError } from '@/api/client'
 import type { Area, PageResponse, Role, User } from '@/api/types'
 import { listNas, type NasView } from '@/api/bng'
@@ -148,13 +149,11 @@ export function useExpressPsb() {
     if (auto) setNasId(auto)
   }
 
+  const { location, error: locationError } = optionalCustomerLocation(draft.longitude, draft.latitude)
   const invalid =
     !draft.name.trim() ||
     !draft.address.trim() ||
-    !draft.longitude.trim() ||
-    !draft.latitude.trim() ||
-    Number.isNaN(Number(draft.longitude)) ||
-    Number.isNaN(Number(draft.latitude)) ||
+    locationError !== null ||
     !planId ||
     (macBased && !draft.username.trim()) ||
     (authType === 'STATIC' && !draft.framedIp.trim()) ||
@@ -175,7 +174,7 @@ export function useExpressPsb() {
         email: draft.email.trim() || null,
         address: draft.address.trim(),
         areaId: draft.areaId || null,
-        location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
+        location,
         planId,
         monthlyFeeOverride: draft.monthlyFeeOverride.trim() ? Number(draft.monthlyFeeOverride) : null,
         // MAC-based → username = MAC, tanpa secret; PPPoE/Hotspot → username opsional (server generate) + secret.
@@ -201,6 +200,6 @@ export function useExpressPsb() {
 
   return { canManage, canViewPlans, workflow, workflowMode, reference, plans, nasList, areas, technicians, loading, loadError,
     reloadPlans: () => setLoadAttempt(attempt => attempt + 1), draft,
-    secret, showSecret, planId, nasId, authType, saving, nasByArea, availableTypes, macBased, invalid,
+    secret, showSecret, planId, nasId, authType, saving, nasByArea, availableTypes, macBased, invalid, locationError,
     set, changePlan, changeArea, setAuthType, setNasId, setSecret, setShowSecret, randomSecret, submit }
 }

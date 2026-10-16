@@ -1,8 +1,8 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
 import { assetHistoryFixture, assetWorkspaceFixture, assetIds } from '../src/test/customerAssetFixture'
 
-async function setup(page: Page, platformAdmin = false) {
-  const customer = { id: assetIds.customer, code: 'C-001', name: 'Budi Santoso', phone: '081234567890', email: 'budi@example.test', address: 'Jl. Cihanjuang No. 12, Cimahi', location: { longitude: 107.55, latitude: -6.87 }, areaId: null, idCardNumber: '3204000000000001', status: 'ACTIVE', subscription: { id: 'sub-1', customerId: assetIds.customer, planId: 'plan-1', packageName: 'Rumah 50 Mbps', bandwidthMbps: 50, monthlyFee: '150000', status: 'ACTIVE', activatedAt: '2026-10-01T00:00:00Z', terminatedAt: null }, onus: [], awaitingInstallation: false }
+async function setup(page: Page, platformAdmin = false, unlocated = false) {
+  const customer = { id: assetIds.customer, code: 'C-001', name: 'Budi Santoso', phone: '081234567890', email: 'budi@example.test', address: 'Jl. Cihanjuang No. 12, Cimahi', location: unlocated ? null : { longitude: 107.55, latitude: -6.87 }, areaId: null, idCardNumber: '3204000000000001', status: unlocated ? 'PROSPECT' : 'ACTIVE', subscription: { id: 'sub-1', customerId: assetIds.customer, planId: 'plan-1', packageName: 'Rumah 50 Mbps', bandwidthMbps: 50, monthlyFee: '150000', status: unlocated ? 'PENDING' : 'ACTIVE', activatedAt: unlocated ? null : '2026-10-01T00:00:00Z', terminatedAt: null }, onus: [], awaitingInstallation: unlocated }
   const profile = { id: 'qa', email: 'admin@example.test', name: 'Rina', tenantId: 'qa', tenantSlug: 'qa', platformAdmin, permissions: ['customer.customer.view', 'customer.customer.create', 'customer.customer.update', 'customer.subscription.update', 'catalog.plan.view', 'customer.onu.view', 'customer.onu.assign', 'workorder.order.view', 'workorder.order.field', 'iam.user.view', 'iam.user.resetpassword', 'iam.area.view', 'bng.access.manage', 'workorder.order.create', 'billing.gateway.view', 'billing.gateway.manage'], areaIds: [], roleIds: [], twoFactorEnabled: false }
   const staff = { id: 'staff', name: 'Andi', email: 'andi@example.test', status: 'ACTIVE', roleIds: [], areaIds: [], platformAdmin: false, tenantOwner: false, twoFactorEnabled: false }
   const writes: string[] = [], errors: string[] = [], reads: string[] = []
@@ -83,7 +83,8 @@ for (const width of [375, 1440]) {
 }
 
 for (const width of [375, 1440]) {
-  test(`PSB keeps a rejected draft through five steps at ${width}px`, async ({ page }, info) => {
+  for (const located of [true, false]) {
+  test(`PSB keeps a rejected draft through five steps (${located ? 'located' : 'unlocated'}) at ${width}px`, async ({ page }, info) => {
     const { errors, reads } = await setup(page), requests: Record<string, unknown>[] = []
     await page.route('**/api/onboarding/psb', async route => {
       requests.push(route.request().postDataJSON())
@@ -102,7 +103,15 @@ for (const width of [375, 1440]) {
     await panel.getByRole('textbox', { name: 'Nama', exact: true }).fill('Budi Baru')
     await panel.getByRole('button', { name: 'Berikutnya: Lokasi' }).click()
     await panel.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Jl. Cihanjuang 12')
-    await panel.getByLabel('Longitude', { exact: true }).fill('107.55'); await panel.getByLabel('Latitude', { exact: true }).fill('-6.87')
+    if (located) {
+      await panel.getByLabel('Longitude', { exact: true }).fill('107.55'); await panel.getByLabel('Latitude', { exact: true }).fill('-6.87')
+    } else {
+      await expect(panel.getByText('Koordinat (opsional)', { exact: true })).toBeVisible()
+      await panel.getByLabel('Longitude', { exact: true }).fill('107.55')
+      await panel.getByRole('button', { name: 'Berikutnya: Paket' }).click()
+      await expect(panel.getByRole('tab', { name: 'Lokasi', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await panel.getByRole('button', { name: 'Kosongkan koordinat' }).click()
+    }
     await panel.getByRole('button', { name: 'Berikutnya: Paket' }).click()
     await panel.getByRole('button', { name: 'Berikutnya: Akun jaringan' }).click()
     await panel.getByLabel(/^Password/).fill('Fixture-network-secret')
@@ -126,9 +135,11 @@ for (const width of [375, 1440]) {
     await expect(page.getByText('Fixture-network-secret', { exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Tugaskan teknisi', exact: true })).toHaveAttribute('href', '/work-orders/wo-1')
     expect(requests).toHaveLength(2); expect(requests[1]).toEqual(requests[0])
-    expect(requests[1]).toMatchObject({ name: 'Budi Baru', planId: 'plan-1', serviceType: 'PPPOE', secret: 'Fixture-network-secret', location: { latitude: -6.87, longitude: 107.55 }, assignees: [] })
+    expect(requests[1]).toMatchObject({ name: 'Budi Baru', planId: 'plan-1', serviceType: 'PPPOE', secret: 'Fixture-network-secret', location: located ? { latitude: -6.87, longitude: 107.55 } : null, assignees: [] })
     expect(errors).toEqual([]); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
+
+  }
 
   test(`payment profile saves separately from registration at ${width}px`, async ({ page }, info) => {
     const { errors } = await setup(page), writes: { path: string; input: Record<string, unknown> }[] = []
@@ -250,3 +261,21 @@ for (const width of [375, 1440]) {
     expect(writes).toEqual([expect.objectContaining({ code: 'OLT-01', name: 'OLT Cimahi', siteId: 'site-1', snmpCommunity: 'Fixture-olt-secret', snmpPort: 161 })]); expect(errors).toEqual([])
   })
 }
+
+
+test('unlocated PSB has one clear status and opens both customer blades', async ({ page }) => {
+  const { errors } = await setup(page, false, true)
+  await page.goto('/customers')
+  const row = page.getByRole('row').filter({ hasText: 'Budi Santoso' })
+  await expect(row.getByText('Menunggu instalasi', { exact: true })).toBeVisible()
+  await expect(row.getByText('Prospek', { exact: true })).toHaveCount(0)
+  await row.getByRole('button', { name: 'Budi Santoso', exact: true }).click()
+  const detail = page.getByRole('dialog', { name: 'Budi Santoso', exact: true })
+  await expect(detail.getByRole('button', { name: 'Lihat di peta', exact: true })).toBeDisabled()
+  await expect(detail.getByText('Belum ditentukan', { exact: true })).toBeVisible()
+  await detail.getByRole('button', { name: 'Tutup', exact: true }).click()
+  await row.getByRole('button', { name: 'Aksi sel', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Nama', exact: true })).toHaveValue('Budi Santoso')
+  expect(errors).toEqual([])
+})

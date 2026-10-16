@@ -126,28 +126,15 @@ export const HEATMAP_COLOR: any = [
   '#ef4444',
 ]
 
-/**
- * Warna ONU pelanggan menurut status hidup — dasar "perangkat modar → merah".
- *
- * Amber SENGAJA tak dipakai di sini: itu warna identitas ODP (dan warna simpul
- * peringatan). Dulu pelanggan OFFLINE ikut amber sehingga di peta titik pelanggan
- * padam tak bisa dibedakan dari ODP selain dari ukurannya. Kini pelanggan hanya
- * memakai palet kesehatan: hijau (hidup), merah (mati/LOS), kelabu (belum
- * terpantau) — persis yang dijanjikan legenda.
- */
+/** Online stays green, faults red; an unmonitored customer stays visible in blue. */
+export const UNMONITORED_CUSTOMER_COLOR = '#3399ff'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const CUSTOMER_COLOR: any = [
-  'match',
-  ['get', 'onu_status'],
-  'ONLINE',
-  '#34d399',
-  'OFFLINE',
-  '#ff5470',
-  'LOS',
-  '#ff3b5c',
-  // Belum pernah terpantau (PENDING) atau dibongkar → kelabu, bukan merah:
-  // tak tahu kabarnya bukan berarti mati.
-  '#8b95a7',
+  'match', ['coalesce', ['get', 'onu_status'], 'PENDING'],
+  'ONLINE', '#34d399',
+  'OFFLINE', '#ff5470',
+  'LOS', '#ff3b5c',
+  UNMONITORED_CUSTOMER_COLOR,
 ]
 
 /**
@@ -186,7 +173,7 @@ export const zoomWidth = (near: number, far: number): any => [
 
 /** Lingkaran bercahaya: inti terang + halo blur di bawahnya. Dua lapisan per aset. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function glowCircle(id: string, sourceLayer: string, color: any, radius: number): any[] {
+function glowCircle(id: string, sourceLayer: string, color: any, radius: number, strokeColor?: string): any[] {
   return [
     {
       id: `${id}-glow`,
@@ -208,6 +195,7 @@ function glowCircle(id: string, sourceLayer: string, color: any, radius: number)
       paint: {
         'circle-radius': radius,
         'circle-color': color,
+        ...(strokeColor ? { 'circle-stroke-color': strokeColor, 'circle-stroke-width': 1.5 } : {}),
       },
     },
   ]
@@ -260,7 +248,7 @@ export const FUTURISTIC_STYLE: StyleSpecification = {
       },
     },
     // Aset bercahaya
-    ...glowCircle('customer', 'customer', CUSTOMER_COLOR, 4),
+    ...glowCircle('customer', 'customer', CUSTOMER_COLOR, 5, '#102a43'),
     // Joint box digambar lebih kecil dari ODP dan di bawahnya: ia perangkat PASIF
     // (tak ada splitter, tak ada port), jadi ia tak boleh menarik mata lebih dulu
     // daripada kotak yang benar-benar melayani pelanggan.
@@ -321,7 +309,12 @@ export function createMapStyle(mode: BasemapMode): StyleSpecification {
   const basemap = createBasemapStyle(mode)
   return {
     ...FUTURISTIC_STYLE,
-    sources: { ...basemap.sources, ...FUTURISTIC_STYLE.sources },
+    // Start each map visit with fresh inventory; HTTP tiles can otherwise hide a just-created PSB.
+    sources: {
+      ...basemap.sources,
+      ...FUTURISTIC_STYLE.sources,
+      ftth: { ...FUTURISTIC_STYLE.sources.ftth, tiles: [`${window.location.origin}/api/gis/tiles/{z}/{x}/{y}.mvt?v=${Date.now()}`] } as StyleSpecification['sources'][string],
+    },
     layers: [...basemap.layers, ...FUTURISTIC_STYLE.layers],
   }
 }

@@ -200,7 +200,7 @@ data class CustomerRequest(
     @field:Size(max = 30) val phone: String? = null,
     @field:Size(max = 255) val email: String? = null,
     @field:NotBlank @field:Size(max = 500) val address: String,
-    @field:Valid val location: CustomerLocationRequest,
+    @field:Valid val location: CustomerLocationRequest? = null,
     val areaId: UUID? = null,
     @field:Size(max = 32) val idCardNumber: String? = null,
 )
@@ -224,7 +224,7 @@ data class RegisterCustomerRequest(
     @field:Size(max = 30) val phone: String? = null,
     @field:Size(max = 255) val email: String? = null,
     @field:NotBlank @field:Size(max = 500) val address: String,
-    @field:Valid val location: CustomerLocationRequest,
+    @field:Valid val location: CustomerLocationRequest? = null,
     val areaId: UUID? = null,
     @field:Size(max = 32) val idCardNumber: String? = null,
     val planId: UUID? = null,
@@ -260,7 +260,7 @@ private fun CustomerRequest.toCommand() = SaveCustomerCommand(
     phone = phone,
     email = email,
     address = address,
-    location = Coordinate(location.longitude, location.latitude),
+    location = location?.let { Coordinate(it.longitude, it.latitude) },
     areaId = areaId,
     idCardNumber = idCardNumber,
 )
@@ -276,7 +276,7 @@ private fun RegisterCustomerRequest.toCustomerCommand() = SaveCustomerCommand(
     phone = phone,
     email = email,
     address = address,
-    location = Coordinate(location.longitude, location.latitude),
+    location = location?.let { Coordinate(it.longitude, it.latitude) },
     areaId = areaId,
     idCardNumber = idCardNumber,
 )

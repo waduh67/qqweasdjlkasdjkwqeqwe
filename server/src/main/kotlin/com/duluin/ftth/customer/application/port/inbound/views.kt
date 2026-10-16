@@ -29,9 +29,9 @@ data class CustomerView(
     val subscription: SubscriptionView?,
     val onus: List<OnuView>,
 ) {
-    /** Ditandai di UI: pelanggan aktif yang ONU-nya belum terpasang ke ODP mana pun. */
+    /** Pendaftaran berpaket yang layanannya belum diaktifkan. */
     val awaitingInstallation: Boolean
-        get() = status != CustomerStatus.TERMINATED && onus.none { it.odpId != null }
+        get() = status == CustomerStatus.PROSPECT && subscription?.status == SubscriptionStatus.PENDING
 }
 
 /**

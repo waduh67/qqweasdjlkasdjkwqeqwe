@@ -6,7 +6,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import { customerStatusLabel, type CustomerStatus, type CustomerView } from '../api/network'
+import { optionalCustomerLocation } from '@/utils/customerLocation'
+import { customerStatusLabel, hasCustomerLocation, type CustomerStatus, type CustomerView } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
@@ -66,7 +67,7 @@ const EMPTY_CUSTOMER: CustomerDraft = {
 
 const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: '', label: 'Semua status' },
-  { value: 'PROSPECT', label: 'Prospek' },
+  { value: 'PROSPECT', label: 'Belum aktif' },
   { value: 'ACTIVE', label: 'Aktif' },
   { value: 'SUSPENDED', label: 'Ditangguhkan' },
   { value: 'TERMINATED', label: 'Berhenti' },
@@ -221,8 +222,8 @@ export function CustomersPage() {
       email: c.email ?? '',
       idCardNumber: c.idCardNumber ?? '',
       address: c.address,
-      longitude: String(c.location.longitude),
-      latitude: String(c.location.latitude),
+      longitude: hasCustomerLocation(c.location) ? String(c.location.longitude) : '',
+      latitude: hasCustomerLocation(c.location) ? String(c.location.latitude) : '',
       areaId: c.areaId,
       planId: '',
     })
@@ -243,6 +244,8 @@ export function CustomersPage() {
       toast.error('Lengkapi isian wajib.')
       return
     }
+    const { location, error: locationError } = optionalCustomerLocation(draft.longitude, draft.latitude)
+    if (locationError) { toast.error(locationError); return }
     if (creation.beforeSave()) return
     setSaving(true)
     try {
@@ -253,7 +256,7 @@ export function CustomersPage() {
         email: draft.email.trim() || null,
         idCardNumber: draft.idCardNumber.trim() || null,
         address: draft.address,
-        location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
+        location,
         areaId: draft.areaId,
       }
       if (draft.id) {
@@ -350,8 +353,7 @@ export function CustomersPage() {
       header: 'Status',
       minWidth: 150,
       sortValue: (c) => c.status,
-      cell: (c) => customerStatusLabel(c.status),
-      description: (c) => c.awaitingInstallation ? 'Menunggu instalasi' : null,
+      cell: (c) => customerStatusLabel(c.status, c.awaitingInstallation),
     },
     { key: 'address', header: 'Alamat', minWidth: 240, sortValue: (c) => c.address, cell: (c) => c.address },
     { key: 'onuCount', header: 'ONU', minWidth: 64, align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
@@ -464,7 +466,7 @@ export function CustomersPage() {
       {!loadError && <Pagination page={pageIndex} size={50} total={total} busy={loading} onChange={index => setParams(previous => { const next = new URLSearchParams(previous); next.set('page', String(index)); return next })} />}
 
       <Blade
-        creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'location', label: 'Lokasi' }, ...(!draft?.id ? [{ key: 'service', label: 'Layanan' }] : [])], busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama', draft?.name], ['Telepon', draft?.phone], ['Alamat', draft?.address], ['Paket', plans.find(plan => plan.id === draft?.planId)?.name]]} /> }}
+        creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'location', label: 'Lokasi', validate: () => draft ? optionalCustomerLocation(draft.longitude, draft.latitude).error : null }, ...(!draft?.id ? [{ key: 'service', label: 'Layanan' }] : [])], busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama', draft?.name], ['Telepon', draft?.phone], ['Alamat', draft?.address], ['Paket', plans.find(plan => plan.id === draft?.planId)?.name]]} /> }}
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
         subtitle={draft?.id ? draft.code : undefined}

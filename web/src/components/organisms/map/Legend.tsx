@@ -1,5 +1,5 @@
 import { Text } from '@fluentui/react-components'
-import { JOINT_BOX_COLOR, ODF_COLOR, OLT_COLOR } from '@/map/mapStyle'
+import { JOINT_BOX_COLOR, ODF_COLOR, OLT_COLOR, UNMONITORED_CUSTOMER_COLOR } from '@/map/mapStyle'
 
 /**
  * Kartu legenda kiri-bawah. `hidden` = kelompok lapisan yang sedang dimatikan dari
@@ -17,7 +17,7 @@ export function Legend({ hidden }: { hidden: Set<string> }) {
       ['joint_box', JOINT_BOX_COLOR, 'Joint box'],
       ['customer', '#34d399', 'Pelanggan online'],
       ['customer', '#ff5470', 'ONU mati'],
-      ['customer', '#8b95a7', 'Belum terpantau'],
+      ['customer', UNMONITORED_CUSTOMER_COLOR, 'Belum terpantau'],
     ] as Array<[string, string, string]>
   )
     .filter(([group]) => !hidden.has(group))

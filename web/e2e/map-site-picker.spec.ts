@@ -17,13 +17,13 @@ function world(at: { longitude: number; latitude: number }, z: number) {
   const sin = Math.sin(at.latitude * Math.PI / 180), n = 2 ** z
   return [(at.longitude / 360 + .5) * n, (.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * n]
 }
-function tile(z: number, x: number, y: number) {
+function tile(z: number, x: number, y: number, tilePoints = points) {
   const layers: Record<string, { features: unknown[] }> = {}
-  points.forEach((p, id) => {
+  tilePoints.forEach((p, id) => {
     const xy = world(p, z).map((v, axis) => Math.round((v - [x, y][axis]) * 4096))
     if (xy.some(v => v < -32 || v > 4128)) return
     layers[p.kind] ??= { features: [] }
-    layers[p.kind].features.push({ id, type: 1, geometry: [xy], tags: { id: p.id, code: p.code, status: 'ACTIVE' } })
+    layers[p.kind].features.push({ id, type: 1, geometry: [xy], tags: { id: p.id, code: p.code, status: p.kind === 'customer' ? 'PROSPECT' : 'ACTIVE' } })
   })
   return Buffer.from(fromGeojsonVt(layers as never))
 }
@@ -141,3 +141,46 @@ for (const [source, target] of [[0, 1], [1, 2], [2, 3]]) {
     expect(state.errors).toEqual([])
   })
 }
+
+
+test('unmonitored PSB customer is visible and clickable on dark and satellite maps', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const state = await setup(page)
+  const customer = { kind: 'customer', id: 'psb-qa', code: 'CUST-PSB', longitude: 106.9955, latitude: -6.2428 }
+  const requestedVersions: string[] = []
+  await page.route('**/api/gis/tiles/**', route => {
+    const url = new URL(route.request().url())
+    const [z, x, y] = url.pathname.match(/tiles\/(\d+)\/(\d+)\/(\d+)/)!.slice(1).map(Number)
+    requestedVersions.push(url.searchParams.get('v') ?? '')
+    // No ONU properties: this is the actual shape of a customer just created by PSB.
+    return route.fulfill({ contentType: 'application/vnd.mapbox-vector-tile', body: tile(z, x, y, [customer]) })
+  })
+  await page.route('**/api/gis/trace/customers/psb-qa', route => route.fulfill({ json: {
+    customerId: customer.id, customerCode: customer.code, customerName: 'Pelanggan PSB', location: customer,
+    onuSerialNumber: null, onuStatus: null, installRxPowerDbm: null, opticalHealth: null, odpPortNumber: null,
+    upstream: null, estimatedLossDb: null, bras: null, liveOnuStatus: null, liveRxPowerDbm: null,
+    distanceMeters: null, hops: [], cpeDevices: [],
+  } }))
+  // Render real basemaps in the visual evidence, with no production application data.
+  await page.route(/https:\/\/mt[0-3]\.google\.com\/vt\?/, route => route.continue())
+  await page.goto('/map')
+  await chooseSite(page, 'POP-LAB · Laboratorium')
+  const canvas = page.locator('.maplibregl-canvas')
+  for (const mode of ['Peta gelap', 'Google Earth']) {
+    await page.getByRole('button', { name: mode, exact: true }).click()
+    await expect(async () => {
+      const box = (await canvas.boundingBox())!, center = world(sites[0].location, 16), point = world(customer, 16)
+      await canvas.click({ position: { x: box.width / 2 + (point[0] - center[0]) * 512, y: box.height / 2 + (point[1] - center[1]) * 512 } })
+      await expect(page.getByRole('heading', { name: 'Pelanggan PSB', exact: true })).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    await page.getByRole('button', { name: 'Tutup', exact: true }).click()
+    await page.screenshot({ path: info.outputPath(`psb-${mode}.png`), animations: 'disabled' })
+  }
+  expect(requestedVersions[0]).toMatch(/^\d+$/)
+  const firstVersion = requestedVersions[0]
+  requestedVersions.length = 0
+  await page.reload()
+  await expect.poll(() => requestedVersions.length).toBeGreaterThan(0)
+  expect(requestedVersions[0]).not.toBe(firstVersion)
+  expect(state.errors).toEqual([])
+})
