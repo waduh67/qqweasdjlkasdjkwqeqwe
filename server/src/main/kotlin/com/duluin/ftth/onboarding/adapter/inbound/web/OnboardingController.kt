@@ -62,6 +62,7 @@ class OnboardingController(
     private val importCustomers: ImportCustomersUseCase,
     private val exportCustomers: ExportCustomersUseCase,
     private val customerBatches: CustomerImportBatchService,
+    private val migrationAccess: MigrationAreaAccess,
 ) {
 
     @PostMapping("/psb")
@@ -80,10 +81,12 @@ class OnboardingController(
     @PostMapping("/import/pppoe")
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize(
-        "@authz.canAll('customer.customer.create','customer.subscription.update','bng.access.manage','bng.nas.manage')",
+        "@authz.canAll('customer.customer.create','customer.subscription.update','bng.nas.manage')",
     )
-    fun importPppoe(@Valid @RequestBody request: ImportPppoeRequest): ImportPppoeResult =
-        importPppoe.importPppoe(request.toCommand())
+    fun importPppoe(@Valid @RequestBody request: ImportPppoeRequest): ImportPppoeResult {
+        migrationAccess.requireArea(request.areaId)
+        return importPppoe.importPppoe(request.toCommand())
+    }
 
     /**
      * Impor CSV pelanggan generik (upsert menurut `mikrotik_username`): buat/perbarui pelanggan +
@@ -93,26 +96,39 @@ class OnboardingController(
     @PostMapping("/import/customers")
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize(
-        "@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')",
+        "@authz.canAll('customer.customer.create','customer.subscription.update')",
     )
-    fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult =
-        importCustomers.importCustomers(request.toCommand())
+    fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult {
+        request.rows.forEach { migrationAccess.requireArea(it.areaId) }
+        return importCustomers.importCustomers(request.toCommand())
+    }
 
     @PostMapping("/v1/import/customers", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.ACCEPTED)
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
     fun stageCustomerImport(
         @RequestPart("file") file: MultipartFile,
         @RequestParam operationKey: String,
         @RequestParam(defaultValue = "ALREADY_INSTALLED") mode: ImportMode,
-    ) = customerBatches.stage(operationKey, CustomerCsvParser.parse(file.inputStream, file.size), mode)
+        @RequestParam(required = false) firstInvoiceOn: LocalDate?,
+        @RequestParam(required = false) billingDay: Int?,
+        @RequestParam(required = false) areaId: UUID?,
+    ): com.duluin.ftth.onboarding.application.service.CustomerImportBatchView {
+        migrationAccess.requireArea(areaId)
+        val parsed = CustomerCsvParser.parse(file.inputStream, file.size)
+        val settings = "$firstInvoiceOn|$billingDay|$areaId"
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest((parsed.sha256 + settings).toByteArray()).joinToString("") { "%02x".format(it) }
+        return customerBatches.stage(operationKey, parsed.copy(sha256 = hash, rows = parsed.rows.map {
+            it.copy(firstInvoiceOn = it.firstInvoiceOn ?: firstInvoiceOn, nextBillingDay = it.nextBillingDay ?: billingDay, areaId = areaId)
+        }), mode)
+    }
 
     @GetMapping("/v1/import/customers/{id}")
     @PreAuthorize("@authz.can('customer.customer.view')")
     fun customerImportStatus(@PathVariable id: UUID) = customerBatches.status(id)
 
     @PostMapping("/v1/import/customers/{id}/commit")
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
     fun commitCustomerImport(
         @PathVariable id: UUID,
         @RequestParam commitOperationKey: String,
@@ -124,7 +140,7 @@ class OnboardingController(
     fun cancelCustomerImport(@PathVariable id: UUID) = customerBatches.cancel(id)
 
     @PostMapping("/v1/import/customers/{id}/retry")
-    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.subscription.update')")
     fun retryCustomerImport(
         @PathVariable id: UUID,
         @RequestParam commitOperationKey: String,
@@ -242,6 +258,8 @@ data class ImportCustomersRequest(
                 latitude = it.latitude,
                 longitude = it.longitude,
                 framedIp = it.framedIp,
+                customerCode = it.customerCode, serviceStatus = it.serviceStatus,
+                firstInvoiceOn = it.firstInvoiceOn, monthlyFee = it.monthlyFee, areaId = it.areaId,
             )
             },
             schemaVersion = schemaVersion,
@@ -272,6 +290,11 @@ data class CustomerImportRowPayload(
     val latitude: Double? = null,
     val longitude: Double? = null,
     @field:Size(max = 45) val framedIp: String? = null,
+    @field:Size(max = 40) val customerCode: String? = null,
+    val serviceStatus: String = "ACTIVE",
+    val firstInvoiceOn: LocalDate? = null,
+    val monthlyFee: BigDecimal? = null,
+    val areaId: UUID? = null,
 )
 
 /**
@@ -294,6 +317,9 @@ data class ImportPppoeRequest(
     val schemaVersion: Int = 1,
     val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
     val operationKey: String? = null,
+    val firstInvoiceOn: LocalDate? = null,
+    val billingDay: Int? = null,
+    val installationDate: LocalDate? = null,
 ) {
     fun toCommand() = ImportPppoeCommand(
         nasId = nasId!!,
@@ -309,6 +335,7 @@ data class ImportPppoeRequest(
         schemaVersion = schemaVersion,
         mode = mode,
         operationKey = operationKey,
+        firstInvoiceOn = firstInvoiceOn, billingDay = billingDay, installationDate = installationDate,
     )
 }
 

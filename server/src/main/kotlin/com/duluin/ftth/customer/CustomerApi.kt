@@ -152,6 +152,11 @@ interface CustomerApi {
      * gagal di tengah dan meninggalkan pelanggan tanpa paket. Langganannya lahir PENDING
      * (menunggu instalasi), sehingga akun jaringannya pun PENDING sampai WO PSB selesai.
      */
+    /** Import an existing service; no installation, provisioning or activation events. */
+    fun migrateCustomer(command: MigrateCustomerCommand): RegisteredCustomer = throw UnsupportedOperationException()
+
+    fun startMigrationBilling(subscriptionId: UUID, firstInvoiceOn: LocalDate, billingDay: Int?) { throw UnsupportedOperationException() }
+
     fun registerCustomer(command: RegisterCustomerCommand): RegisteredCustomer
 
     /**
@@ -334,6 +339,8 @@ data class BillableSubscription(
     val billingDayOfMonth: Int?,
     val graceDays: Int?,
     val autoIsolir: Boolean?,
+    val billingManaged: Boolean = true,
+    val billingStartsOn: java.time.LocalDate? = null,
 )
 
 /**
@@ -430,4 +437,14 @@ data class OdpOccupant(
     val subscriptionPackage: String?,
     val subscriptionStatus: String?,
     val locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
+)
+
+
+/** Existing customer service, independently of who authenticates its network account. */
+data class MigrateCustomerCommand(
+    val customer: RegisterCustomerCommand,
+    val suspended: Boolean,
+    val installedAt: Instant?,
+    val firstInvoiceOn: java.time.LocalDate?,
+    val billingDay: Int?,
 )

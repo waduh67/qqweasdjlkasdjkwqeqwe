@@ -2,30 +2,7 @@ package com.duluin.ftth.onboarding.application.port.inbound
 
 import java.time.LocalDate
 
-/**
- * Impor CSV pelanggan generik — satu berkas berisi biodata + langganan + akun jaringan per baris,
- * di-UPSERT menurut `mikrotik_username`. Beda dari [ImportPppoeUseCase] yang khusus menyedot
- * `/ppp/secret` sebuah RouterOS: sumbernya berkas CSV yang dirakit operator (kolom lengkap:
- * nama, alamat, koordinat, paket, tanggal pasang, tanggal tagih), dan bersifat UPSERT — bukan
- * sekadar create.
- *
- * Kunci upsert = username akun jaringan (`mikrotik_username`):
- *  - belum ada  → BUAT pelanggan + langganan (paket dari `package_name`) + akun jaringan (tipe dari
- *                 `connection_type`), langsung AKTIF (pelanggan impor sudah terpasang), aktivasi
- *                 memakai `installation_date`.
- *  - sudah ada  → PERBARUI parsial: biodata (kolom kosong dilewati), tanggal tagih, BRAS, dan
- *                 password (kosong = pertahankan). Paket SENGAJA tak diubah pada jalur update —
- *                 ganti paket bukan lingkup impor massal ini.
- *
- * Per-baris ATOMIK (tiap baris commit sendiri): satu baris gagal tak menyeret batch. Hasil
- * per-baris ([CustomerImportOutcome]).
- *
- * Tipe koneksi: `pppoe`/`hotspot` (username+password) & `dhcp`/`static` (identitas MAC, `use-radius`
- * MikroTik — `static` menambah reservasi Framed-IP). Kolom `connection_type` kosong → PPPoE; nilai tak
- * dikenal → baris GAGAL. Aktivasi MEMPRORATA dari `installation_date` (lampau → tagih penuh, tak ada
- * masalah prorata). `next_billing` dipetakan ke HARI tanggal tagih (Opsi A), di-clamp ≤28 agar aman di
- * Februari; kolom `notes` diabaikan.
- */
+/** Import existing service records without changing network authentication. */
 interface ImportCustomersUseCase {
 
     fun importCustomers(command: ImportCustomersCommand): ImportCustomersResult
@@ -67,6 +44,11 @@ data class CustomerImportRow(
     val latitude: Double?,
     val longitude: Double?,
     val framedIp: String? = null,
+    val customerCode: String? = null,
+    val serviceStatus: String = "ACTIVE",
+    val firstInvoiceOn: LocalDate? = null,
+    val monthlyFee: java.math.BigDecimal? = null,
+    val areaId: java.util.UUID? = null,
 )
 
 /** Rekap hasil impor + rincian per-baris. */

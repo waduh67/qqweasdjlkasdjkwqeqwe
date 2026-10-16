@@ -93,6 +93,10 @@ class SubscriptionJpaEntity(
 
     @Column(name = "terminated_at")
     var terminatedAt: Instant?,
+    @Column(name = "billing_managed", nullable = false)
+    var billingManaged: Boolean = true,
+    @Column(name = "billing_starts_on")
+    var billingStartsOn: java.time.LocalDate? = null,
 ) : TenantAwareJpaEntity(id)
 
 @Entity

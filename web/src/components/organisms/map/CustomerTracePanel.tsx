@@ -200,7 +200,7 @@ export function CustomerTracePanel({
     <aside className="map-panel blade">
       <BladeHead title={trace.customerName} subtitle={`Pelanggan · ${trace.customerCode}`} onClose={onClose} />
 
-      {(primaryAction || actions.length > 0) && <CommandBar primary={primaryAction} actions={actions} />}
+      {(primaryAction || actions.length > 0) && <CommandBar compact primary={primaryAction} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         <MessageBar intent={VERDICT_INTENT[verdict.tone]}>

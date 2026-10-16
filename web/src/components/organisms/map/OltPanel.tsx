@@ -40,7 +40,7 @@ export function OltPanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={olt.code} subtitle={`OLT · ${olt.name}`} onClose={onClose} />
-      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar compact primary={primary} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         {/* SNMP mati bukan sekadar keterangan — tanpa itu OLT ini tak terpantau sama

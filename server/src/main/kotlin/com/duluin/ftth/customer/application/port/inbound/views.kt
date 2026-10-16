@@ -59,6 +59,9 @@ data class SubscriptionView(
     val status: SubscriptionStatus,
     val activatedAt: Instant?,
     val terminatedAt: Instant?,
+    val billingManaged: Boolean = true,
+    val billingStartsOn: java.time.LocalDate? = null,
+    val billingDayOfMonth: Int? = null,
 )
 
 data class OnuView(

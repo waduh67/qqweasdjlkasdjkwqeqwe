@@ -42,7 +42,7 @@ data class ParsedCustomerCsv(val sha256: String, val rows: List<CustomerImportRo
 object CustomerCsvParser {
     const val MAX_BYTES: Long = 25L * 1024 * 1024
     const val MAX_ROWS = 100_000
-    private val columns = setOf("name", "phone", "address", "package_name", "connection_type", "installation_date", "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number", "next_billing", "latitude", "longitude", "notes")
+    private val columns = setOf("name", "phone", "address", "package_name", "connection_type", "installation_date", "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number", "next_billing", "latitude", "longitude", "notes", "customer_code", "service_status", "first_invoice_on", "monthly_fee")
 
     fun parse(input: InputStream, byteCount: Long): ParsedCustomerCsv {
         require(byteCount in 1..MAX_BYTES) { "Ukuran CSV harus antara 1 byte dan 25 MiB" }
@@ -93,15 +93,19 @@ object CustomerCsvParser {
         records.drop(1).forEachIndexed { offset, cells ->
             val rowNumber = offset + 2
             fun at(name: String): String? = index[name]?.let { cells.getOrNull(it)?.trim()?.takeIf(String::isNotEmpty) }
-            val username = at("mikrotik_username")
+            val username = at("mikrotik_username") ?: at("customer_code")
+            if (username == null) errors += CsvImportError(rowNumber, "customer_code", "REQUIRED", "Isi customer_code atau mikrotik_username")
             if (username != null && !seen.add(username.lowercase())) errors += CsvImportError(rowNumber, "mikrotik_username", "DUPLICATE_KEY", "Kunci bisnis duplikat")
             fun decimal(name: String): Double? = at(name)?.toDoubleOrNull() ?: at(name)?.let { errors += CsvImportError(rowNumber, name, "INVALID_NUMBER", "Angka tidak valid"); null }
             fun integer(name: String): Int? = at(name)?.toIntOrNull() ?: at(name)?.let { errors += CsvImportError(rowNumber, name, "INVALID_NUMBER", "Bilangan bulat tidak valid"); null }
             val date = at("installation_date")?.let { runCatching { java.time.LocalDate.parse(it) }.getOrElse { errors += CsvImportError(rowNumber, "installation_date", "INVALID_DATE", "Tanggal tidak valid"); null } }
+            fun dateAt(column: String) = at(column)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrElse { errors += CsvImportError(rowNumber, column, "INVALID_DATE", "Tanggal tidak valid"); null } }
+            val fee = at("monthly_fee")?.let { it.toBigDecimalOrNull() ?: run { errors += CsvImportError(rowNumber, "monthly_fee", "INVALID_NUMBER", "Harga tidak valid"); null } }
             val latitude = decimal("latitude")
             val longitude = decimal("longitude")
+            if ((latitude == null) != (longitude == null)) errors += CsvImportError(rowNumber, "latitude", "INCOMPLETE_LOCATION", "Isi lintang dan bujur bersama")
             val unlocated = latitude == 0.0 && longitude == 0.0
-            rows += CustomerImportRow(at("name"), at("phone"), at("address"), at("package_name"), at("connection_type"), date, username, at("mikrotik_password"), at("email"), at("router_name"), at("id_card_number"), integer("next_billing"), latitude?.takeUnless { unlocated }, longitude?.takeUnless { unlocated }, at("framed_ip"))
+            rows += CustomerImportRow(at("name"), at("phone"), at("address"), at("package_name"), at("connection_type"), date, at("mikrotik_username"), at("mikrotik_password"), at("email"), at("router_name"), at("id_card_number"), integer("next_billing"), latitude?.takeUnless { unlocated }, longitude?.takeUnless { unlocated }, at("framed_ip"), customerCode = at("customer_code"), serviceStatus = at("service_status") ?: "ACTIVE", firstInvoiceOn = dateAt("first_invoice_on"), monthlyFee = fee)
         }
         return ParsedCustomerCsv(hash, rows, errors)
     }
@@ -109,7 +113,7 @@ object CustomerCsvParser {
 }
 
 enum class CustomerImportBatchState { STAGED, PROCESSING, COMMITTED, CANCELLED, FAILED, RETRYABLE_FAILED, PERMANENT_FAILED, PURGED }
-data class CustomerImportBatchView(val id: UUID, val sha256: String, val mode: ImportMode, val state: CustomerImportBatchState, val errors: List<CsvImportError>, val result: ImportCustomersResult?, val createdAt: Instant)
+data class CustomerImportBatchView(val id: UUID, val sha256: String, val mode: ImportMode, val state: CustomerImportBatchState, val errors: List<CsvImportError>, val result: ImportCustomersResult?, val createdAt: Instant, val rowCount: Int = 0)
 
 @Service
 class CustomerImportBatchService(
@@ -185,7 +189,7 @@ class CustomerImportBatchService(
         require(entity.state == CustomerImportBatchState.STAGED) { "Batch tidak dapat dibatalkan" }
         entity.state = state; return view(batches.save(entity))
     }
-    private fun view(entity: CustomerImportBatchJpaEntity, knownErrors: List<CsvImportError> = errors.findAllByBatchIdOrderByRowNumber(entity.id).map { CsvImportError(it.rowNumber, it.columnName, it.code, it.message) }): CustomerImportBatchView = CustomerImportBatchView(entity.id, entity.sha256, ImportMode.valueOf(entity.mode), entity.state, knownErrors, entity.result?.let { mapper.readValue(it, object : TypeReference<ImportCustomersResult>() {}) }, entity.createdAt)
+    private fun view(entity: CustomerImportBatchJpaEntity, knownErrors: List<CsvImportError> = errors.findAllByBatchIdOrderByRowNumber(entity.id).map { CsvImportError(it.rowNumber, it.columnName, it.code, it.message) }): CustomerImportBatchView = CustomerImportBatchView(entity.id, entity.sha256, ImportMode.valueOf(entity.mode), entity.state, knownErrors, entity.result?.let { mapper.readValue(it, object : TypeReference<ImportCustomersResult>() {}) }, entity.createdAt, entity.rowCount)
 }
 
 @Component

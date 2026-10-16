@@ -2,8 +2,8 @@ import { CreationSummary, useCreationReview } from '@/components/organisms/Creat
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { Pagination } from '@/components/molecules/Pagination'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { Download, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import { optionalCustomerLocation } from '@/utils/customerLocation'
@@ -24,6 +24,7 @@ import { IconCustomers } from '@/components/atoms/icons'
 import { downloadBlob } from '@/utils/download'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { CustomerAreaField } from '@/components/organisms/customer/CustomerAreaField'
+import { CustomerMigrationPanel } from './onboarding/CustomerMigrationPanel'
 import { ExpressPsbPanel } from './onboarding/ExpressPsbPanel'
 import { ExpressPsbResultCard } from './onboarding/ExpressPsbResultCard'
 import { PSB_PERMISSIONS, type CreatedPsb } from './onboarding/useExpressPsb'
@@ -51,20 +52,6 @@ type CustomerDraft = {
   planId: string
 }
 
-const EMPTY_CUSTOMER: CustomerDraft = {
-  id: null,
-  code: '',
-  name: '',
-  phone: '',
-  email: '',
-  idCardNumber: '',
-  address: '',
-  longitude: '',
-  latitude: '',
-  areaId: null,
-  planId: '',
-}
-
 const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: '', label: 'Semua status' },
   { value: 'PROSPECT', label: 'Belum aktif' },
@@ -84,7 +71,6 @@ export function CustomersPage() {
   const { can } = useCan()
   const toast = useToast()
   const confirm = useConfirm()
-  const navigate = useNavigate()
   const [customers, setCustomers] = useState<CustomerView[]>([])
   // Detail pelanggan kini tampil sebagai flyout fullscreen (bukan rute) — id yang dipilih ada di sini.
   const [params, setParams] = useSearchParams()
@@ -92,7 +78,15 @@ export function CustomersPage() {
   const setParamsRef = useRef(setParams)
   useLayoutEffect(() => { setParamsRef.current = setParams }, [setParams])
   const detailId = params.get('customer')
-  const psbOpen = params.get('create') === 'psb'
+  const migrationOpen = params.get('create') === 'migrate'
+  const canMigrate = can('customer.customer.create') && can('customer.subscription.update')
+  const setMigrationOpen = (open: boolean) => setParams(previous => {
+    const next = new URLSearchParams(previous)
+    if (open) next.set('create', 'migrate')
+    else { next.delete('create'); next.delete('source'); next.delete('migrationBatch') }
+    return next
+  }, { replace: true })
+  const psbOpen = params.get('create') === 'psb' 
   const canCreatePsb = PSB_PERMISSIONS.every(can)
   const [psbResult, setPsbResult] = useState<{ result: CreatedPsb; reference: boolean } | null>(null)
   const setPsbOpen = (open: boolean) => setParams(previous => {
@@ -362,18 +356,11 @@ export function CustomersPage() {
 
   // CommandBar: primary `+ Tambah` dipatok kiri; sekunder berjajar berkelompok
   // (hapus | ekspor/impor | segarkan). Pemisah disisipkan di awal tiap kelompok non-kosong.
-  const primary: CommandAction | undefined = can('customer.customer.create')
-    ? {
-        key: 'create',
-        label: 'Tambah pelanggan',
-        icon: <Plus size={16} />,
-        onClick: () => openDraft({ ...EMPTY_CUSTOMER }),
-      }
-    : undefined
-
-  const actions: CommandAction[] = canCreatePsb ? [{
-    key: 'psb', label: 'PSB Ekspres', pinned: true, icon: <Plus size={16} />, onClick: () => setPsbOpen(true),
-  }] : []
+  const migrationAction: CommandAction = { key: 'migration', label: 'Migrasi pelanggan', pinned: true, icon: <Upload size={16} />, onClick: () => setMigrationOpen(true) }
+  const primary: CommandAction | undefined = canCreatePsb
+    ? { key: 'psb', label: 'PSB baru', icon: <Plus size={16} />, onClick: () => setPsbOpen(true) }
+    : canMigrate ? migrationAction : undefined
+  const actions: CommandAction[] = canCreatePsb && canMigrate ? [migrationAction] : []
   const pushGroup = (items: CommandAction[]) => {
     items.forEach((it, i) => actions.push({ ...it, dividerBefore: i === 0 && actions.length > 0 }))
   }
@@ -399,22 +386,6 @@ export function CustomersPage() {
             icon: <Download size={16} />,
             onClick: () => void exportCsv(),
             disabled: exporting,
-          },
-        ]
-      : []),
-    ...(can('customer.customer.create')
-      ? [
-          {
-            key: 'import-csv',
-            label: 'Impor CSV',
-            icon: <Upload size={16} />,
-            onClick: () => navigate('/import-customers'),
-          },
-          {
-            key: 'import-pppoe',
-            label: 'Impor PPPoE',
-            icon: <FileUp size={16} />,
-            onClick: () => navigate('/import-pppoe'),
           },
         ]
       : []),
@@ -566,6 +537,13 @@ export function CustomersPage() {
           </div>
         )}
       </Blade>
+
+      {migrationOpen && <CustomerMigrationPanel initialSource={params.get('source') === 'csv' ? 'csv' : params.get('source') === 'mikrotik' ? 'mikrotik' : 'manual'} batchId={params.get('migrationBatch')} onBatch={id => setParams(previous => { const next = new URLSearchParams(previous); next.set('migrationBatch', id); return next }, { replace: true })} onClose={() => setMigrationOpen(false)} onCreated={id => {
+        setMigrationOpen(false)
+        setRefreshVersion(version => version + 1)
+        if (id) setDetailId(id)
+        toast.success('Migrasi pelanggan selesai')
+      }} />}
 
       {psbOpen && <ExpressPsbPanel onClose={() => setPsbOpen(false)} onCreated={(result, reference) => {
         setPsbResult({ result, reference })

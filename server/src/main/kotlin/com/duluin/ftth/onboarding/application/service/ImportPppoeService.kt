@@ -13,18 +13,13 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportRowOutcome
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRowStatus
 import com.duluin.ftth.onboarding.application.port.inbound.ImportSource
 import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
-import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
-import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
-import com.duluin.ftth.onboarding.NoopMigrationFulfillmentPublisher
-import com.duluin.ftth.onboarding.CredentialSealer
-import com.duluin.ftth.onboarding.UuidCredentialSealer
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 /** Placeholder alamat pelanggan impor — `/ppp/secret` tak punya alamat; operator memperkayanya. */
-private const val PLACEHOLDER_ADDRESS = "(impor PPPoE — lengkapi alamat)"
+private const val PLACEHOLDER_ADDRESS = "Belum diisi"
 
 /**
  * Orkestrasi bulk-import PPPoE — module daun yang hanya memanggil kontrak publik bng & customer.
@@ -83,48 +78,28 @@ class ImportPppoeService(
     }
 }
 
-/**
- * Menyalin satu baris `/ppp/secret` menjadi pelanggan+langganan+akun dalam SATU transaksi fisik:
- * daftar pelanggan → buka langganan → aktifkan (prorata dari kini) → provisi akun PPPoE (lahir
- * ACTIVE karena langganan sudah aktif + ber-BRAS → server menulis identitas ke RADIUS pusat).
- * Bean terpisah dari [ImportPppoeService] AGAR proxy @Transactional benar-benar membuka transaksi
- * baru per pemanggilan (self-invocation takkan). Melempar bila gagal → transaksi baris roll-back
- * utuh, ditangani pemanggil jadi outcome per-baris.
- */
+/** An imported row has its own transaction, independent of the rest of the batch. */
 @Service
 class PppoeRowImporter(
     private val customerApi: CustomerApi,
-    private val bngApi: BngApi,
-    private val fulfillment: MigrationFulfillmentPublisher = NoopMigrationFulfillmentPublisher,
-    private val credentialSealer: CredentialSealer = UuidCredentialSealer,
+    private val migration: CustomerMigrationRegistration,
 ) {
-
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     fun importRow(command: ImportPppoeCommand, row: ImportRow, planId: UUID) {
-        val subscriptionId = customerApi.registerCustomer(
-            RegisterCustomerCommand(
-                code = row.name,
-                name = row.comment?.trim()?.takeIf { it.isNotEmpty() } ?: row.name,
-                phone = null,
-                email = null,
-                address = command.defaultAddress?.trim()?.takeIf { it.isNotEmpty() } ?: PLACEHOLDER_ADDRESS,
-                location = command.defaultLocation,
-                areaId = command.areaId,
-                planId = planId,
-            ),
-        ).subscriptionId
+        val customer = RegisterCustomerCommand(
+            code = null,
+            name = row.comment?.trim()?.takeIf(String::isNotEmpty) ?: row.name,
+            phone = null, email = null,
+            address = command.defaultAddress?.trim()?.takeIf(String::isNotEmpty) ?: PLACEHOLDER_ADDRESS,
+            location = command.defaultLocation, areaId = command.areaId, planId = planId,
+        )
         if (command.mode == ImportMode.ALREADY_INSTALLED) {
-            fulfillment.publish(
-                MigrationFulfillmentRequested(
-                    operationKey = command.operationKey ?: "import-pppoe:${row.name}",
-                    subscriptionId = subscriptionId,
-                    username = row.name,
-                    planId = planId,
-                    nasId = command.nasId,
-                    authType = "PPPOE",
-                    credentialHandle = credentialSealer.seal(row.password),
-                ),
-            )
-        }
+            migration.register(CustomerMigrationCommand(
+                operationKey = (command.operationKey?.let { "$it:" } ?: "mikrotik:") + row.name,
+                customer = customer, status = if (row.disabled) MigrationStatus.SUSPENDED else MigrationStatus.ACTIVE,
+                source = MigrationSource.MIKROTIK, username = row.name, password = row.password, nasId = command.nasId,
+                installationDate = command.installationDate, firstInvoiceOn = command.firstInvoiceOn, billingDay = command.billingDay,
+            ))
+        } else customerApi.registerCustomer(customer)
     }
 }

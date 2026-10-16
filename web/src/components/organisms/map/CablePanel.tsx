@@ -108,7 +108,7 @@ export function CablePanel({
       className="blade-detail"
       onClose={onClose}
     >
-      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar compact primary={primary} actions={actions} />}
       <div className="stack" style={{ gap: '0.9rem' }}>
         {causes.length > 0 && <CableCauses causes={causes} />}
 

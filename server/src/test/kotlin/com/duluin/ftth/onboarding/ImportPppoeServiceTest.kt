@@ -24,216 +24,50 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.util.UUID
 
-/**
- * Menguji orkestrasi bulk-import PPPoE dengan fake murni (tanpa Spring/DB): tiap baris
- * `/ppp/secret` → daftar pelanggan + buka langganan + aktifkan + provisi akun PPPoE ke RADIUS,
- * dengan password ASLI router dan paket hasil pemetaan profil. Menegakkan: mapping profil→paket
- * + fallback default, lewati disabled/username-sudah-ada, penyaringan onlyNames, dan penarikan
- * sumber NAS lewat [BngApi.fetchPppSecretsFromNas].
- */
+import com.duluin.ftth.onboarding.application.service.*
+
 class ImportPppoeServiceTest {
+    private val nasId = UuidV7.generate()
+    private val planId = UuidV7.generate()
+    private val migration = RecordingMigration()
+    private val customer = FakeCustomerApi()
+    private val bng = FakeBngApi()
+    private val service = ImportPppoeService(bng, PppoeRowImporter(customer, migration))
+    private fun command(rows: List<ImportRow>) = ImportPppoeCommand(nasId, ImportSource.INLINE, rows, emptyMap(), planId, false, null, null, null, null)
 
-    private val nasId: UUID = UuidV7.generate()
-    private val vipPlan: UUID = UuidV7.generate()
-    private val defaultPlan: UUID = UuidV7.generate()
-
-    @Test
-    fun `INLINE dua baris ter-map jadi CREATED dan memprovisi RADIUS dengan password asli`() {
-        val bng = FakeBngApi()
-        val customer = FakeCustomerApi()
-        val result = ImportPppoeService(bng, PppoeRowImporter(customer, bng)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(
-                    ImportRow("budi", "pwd-budi", "vip", "Budi Santoso", disabled = false),
-                    ImportRow("siti", "pwd-siti", "vip", null, disabled = false),
-                ),
-                profilePlanId = mapOf("vip" to vipPlan),
-            ),
-        )
-
+    @Test fun `disabled source accounts remain suspended and passwords are retained for later preparation`() {
+        val result = service.importPppoe(command(listOf(ImportRow("a", "old", null, "Ani", false), ImportRow("b", "old2", null, null, true))))
         assertThat(result.created).isEqualTo(2)
-        assertThat(result.skipped).isZero()
-        assertThat(result.failed).isZero()
+        assertThat(migration.commands.map { it.status }).containsExactly(MigrationStatus.ACTIVE, MigrationStatus.SUSPENDED)
+        assertThat(migration.commands.map { it.password }).containsExactly("old", "old2")
+        assertThat(migration.commands.first().customer.name).isEqualTo("Ani")
+        assertThat(migration.commands.first().customer.location).isNull()
         assertThat(bng.provisioned).isEmpty()
-        // comment jadi nama pelanggan; tanpa comment jatuh ke username.
-        assertThat(customer.registered.first { it.code == "budi" }.name).isEqualTo("Budi Santoso")
-        assertThat(customer.registered.first { it.code == "siti" }.name).isEqualTo("siti")
         assertThat(customer.activatedCount).isZero()
     }
-
-    @Test
-    fun `profil tak dipetakan tanpa default dilewati`() {
-        val bng = FakeBngApi()
-        val result = ImportPppoeService(bng, PppoeRowImporter(FakeCustomerApi(), bng)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(ImportRow("budi", "pwd", "misteri", null, disabled = false)),
-                profilePlanId = mapOf("vip" to vipPlan),
-            ),
-        )
-
-        assertThat(result.created).isZero()
+    @Test fun `only selected accounts are imported with profile package and billing defaults`() {
+        val mapped = UuidV7.generate()
+        val date = java.time.LocalDate.now().plusDays(20)
+        val result = service.importPppoe(command(listOf(ImportRow("a", null, "premium", null, false), ImportRow("b", null, null, null, false))).copy(onlyNames = setOf("a"), profilePlanId = mapOf("premium" to mapped), firstInvoiceOn = date, billingDay = 31))
+        assertThat(result.created).isEqualTo(1)
+        assertThat(migration.commands.single().customer.planId).isEqualTo(mapped)
+        assertThat(migration.commands.single().firstInvoiceOn).isEqualTo(date)
+        assertThat(migration.commands.single().billingDay).isEqualTo(31)
+    }
+    @Test fun `existing identity and missing mappings are skipped`() {
+        migration.existing += "a"
+        val result = service.importPppoe(command(listOf(ImportRow("a", null, null, null, false), ImportRow("b", null, null, null, false))))
         assertThat(result.skipped).isEqualTo(1)
-        assertThat(result.rows.single().status).isEqualTo(ImportRowStatus.SKIPPED)
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `defaultPlanId dipakai saat profil tak ada di peta`() {
-        val bng = FakeBngApi()
-        val result = ImportPppoeService(bng, PppoeRowImporter(FakeCustomerApi(), bng)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(ImportRow("budi", "pwd", "misteri", null, disabled = false)),
-                profilePlanId = mapOf("vip" to vipPlan),
-                defaultPlanId = defaultPlan,
-            ),
-        )
-
         assertThat(result.created).isEqualTo(1)
-        assertThat(bng.provisioned).isEmpty()
+        val missing = service.importPppoe(command(listOf(ImportRow("c", null, null, null, false))).copy(defaultPlanId = null))
+        assertThat(missing.skipped).isEqualTo(1)
     }
-
-    @Test
-    fun `akun disabled dilewati bila skipDisabled`() {
-        val bng = FakeBngApi()
-        val result = ImportPppoeService(bng, PppoeRowImporter(FakeCustomerApi(), bng)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(
-                    ImportRow("aktif", "p1", "vip", null, disabled = false),
-                    ImportRow("mati", "p2", "vip", null, disabled = true),
-                ),
-                profilePlanId = mapOf("vip" to vipPlan),
-                skipDisabled = true,
-            ),
-        )
-
-        assertThat(result.created).isEqualTo(1)
-        assertThat(result.rows.map { it.username }).containsExactly("aktif")
+    @Test fun `validation and disabled exclusion never write service records`() {
+        val rows = listOf(ImportRow("a", null, null, null, true))
+        assertThat(service.importPppoe(command(rows).copy(skipDisabled = true)).created).isZero()
+        assertThat(service.importPppoe(command(rows).copy(mode = ImportMode.VALIDATE_ONLY)).created).isZero()
+        assertThat(migration.commands).isEmpty()
     }
-
-    @Test
-    fun `username sudah ada dianggap SKIPPED`() {
-        val bng = FakeBngApi()
-        val customer = FakeCustomerApi(existingCodes = setOf("budi"))
-        val result = ImportPppoeService(bng, PppoeRowImporter(customer, bng)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(ImportRow("budi", "pwd", "vip", null, disabled = false)),
-                profilePlanId = mapOf("vip" to vipPlan),
-            ),
-        )
-
-        assertThat(result.skipped).isEqualTo(1)
-        assertThat(result.created).isZero()
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `sumber NAS menarik baris dari BngApi`() {
-        val bng = FakeBngApi(
-            onNas = listOf(
-                PppSecretRef("budi", "pwd-budi", "vip", "pppoe", "Budi", disabled = false),
-                PppSecretRef("mati", "pwd", "vip", "pppoe", null, disabled = true),
-            ),
-        )
-        val result = ImportPppoeService(bng, PppoeRowImporter(FakeCustomerApi(), bng)).importPppoe(
-            command(source = ImportSource.NAS, rows = emptyList(), profilePlanId = mapOf("vip" to vipPlan)),
-        )
-
-        // Server menarik dari NAS; yang disabled dilewati (skipDisabled default).
-        assertThat(result.created).isEqualTo(1)
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `onlyNames membatasi baris yang diproses`() {
-        val bng = FakeBngApi()
-        val result = ImportPppoeService(bng, PppoeRowImporter(FakeCustomerApi(), bng)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(
-                    ImportRow("budi", "p1", "vip", null, disabled = false),
-                    ImportRow("siti", "p2", "vip", null, disabled = false),
-                ),
-                profilePlanId = mapOf("vip" to vipPlan),
-                onlyNames = setOf("siti"),
-            ),
-        )
-
-        assertThat(result.created).isEqualTo(1)
-        assertThat(bng.provisioned).isEmpty()
-    }
-
-    @Test
-    fun `ALREADY_INSTALLED queues opaque credential without activation or provisioning`() {
-        val bng = FakeBngApi()
-        val customer = FakeCustomerApi()
-        val publisher = RecordingPublisher()
-        val result = ImportPppoeService(bng, PppoeRowImporter(customer, bng, publisher)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(ImportRow("queued", "plaintext-secret", "vip", null, disabled = false)),
-                profilePlanId = mapOf("vip" to vipPlan),
-            ),
-        )
-
-        assertThat(result.created).isEqualTo(1)
-        assertThat(customer.activatedCount).isZero()
-        assertThat(bng.provisioned).isEmpty()
-        assertThat(customer.registered.single().location).isNull()
-        assertThat(publisher.requests.single().credentialHandle).isNotNull()
-        assertThat(publisher.requests.toString()).doesNotContain("plaintext-secret")
-    }
-
-    @Test
-    fun `VALIDATE_ONLY performs no registration or queueing`() {
-        val bng = FakeBngApi()
-        val customer = FakeCustomerApi()
-        val publisher = RecordingPublisher()
-        val result = ImportPppoeService(bng, PppoeRowImporter(customer, bng, publisher)).importPppoe(
-            command(
-                source = ImportSource.INLINE,
-                rows = listOf(ImportRow("validate", "secret", "vip", null, disabled = false)),
-                profilePlanId = mapOf("vip" to vipPlan),
-            ).copy(mode = ImportMode.VALIDATE_ONLY),
-        )
-
-        assertThat(result.skipped).isEqualTo(1)
-        assertThat(customer.registered).isEmpty()
-        assertThat(publisher.requests).isEmpty()
-    }
-
-    // ---- Fixture & fake ----
-
-    private class RecordingPublisher : MigrationFulfillmentPublisher {
-        val requests = mutableListOf<MigrationFulfillmentRequested>()
-        override fun publish(request: MigrationFulfillmentRequested) { requests += request }
-    }
-
-    @Suppress("LongParameterList")
-    private fun command(
-        source: ImportSource,
-        rows: List<ImportRow>,
-        profilePlanId: Map<String, UUID>,
-        defaultPlanId: UUID? = null,
-        skipDisabled: Boolean = true,
-        onlyNames: Set<String>? = null,
-    ) = ImportPppoeCommand(
-        nasId = nasId,
-        source = source,
-        rows = rows,
-        profilePlanId = profilePlanId,
-        defaultPlanId = defaultPlanId,
-        skipDisabled = skipDisabled,
-        onlyNames = onlyNames,
-        areaId = null,
-        defaultAddress = null,
-        defaultLocation = null,
-    )
-
     private class FakeBngApi(
         private val onNas: List<PppSecretRef> = emptyList(),
     ) : BngApi {

@@ -3,28 +3,7 @@ package com.duluin.ftth.onboarding.application.port.inbound
 import com.duluin.ftth.common.domain.geo.Coordinate
 import java.util.UUID
 
-/**
- * Bulk-import PPPoE: migrasi akun `/ppp/secret` sebuah RouterOS menjadi pelanggan +
- * langganan + a pending fulfillment request — untuk operator
- * yang memindah pelanggan existing dari router lama ke platform. Berbeda dari PSB ekspres:
- * TAK ada Work Order (pelanggan sudah terpasang di lapangan) dan langganan langsung diaktifkan
- * lalu diprovisi ke RADIUS (bukan menunggu WO PSB).
- *
- * Sumber baris ([ImportSource]):
- *  - [ImportSource.NAS]    server menarik `/ppp/secret` langsung dari RouterOS BRAS (password
- *                          tak pernah lewat browser).
- *  - [ImportSource.INLINE] operator menempel/upload hasil export; baris (termasuk password)
- *                          datang di [ImportPppoeCommand.rows].
- *
- * Per-baris ATOMIK (bukan satu transaksi raksasa): tiap baris commit sendiri, jadi satu baris
- * gagal tak menggagalkan seluruh batch. Hasilnya per-baris ([ImportRowOutcome]).
- *
- * Catatan penting yang diwariskan ke pemanggil/operator:
- *  - `/ppp/secret` tak punya alamat/koordinat pelanggan → import memakai placeholder
- *    ([ImportPppoeCommand.defaultAddress]/[ImportPppoeCommand.defaultLocation]); operator
- *    memperkaya lokasi/alamat asli belakangan.
- *  - ALREADY_INSTALLED queues fulfillment; activation and provisioning are coordinator effects.
- */
+/** Import existing MikroTik subscribers; the source router is read only. */
 interface ImportPppoeUseCase {
 
     fun importPppoe(command: ImportPppoeCommand): ImportPppoeResult
@@ -56,6 +35,9 @@ data class ImportPppoeCommand(
     val schemaVersion: Int = 1,
     val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
     val operationKey: String? = null,
+    val firstInvoiceOn: java.time.LocalDate? = null,
+    val billingDay: Int? = null,
+    val installationDate: java.time.LocalDate? = null,
 )
 
 /**

@@ -16,28 +16,11 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersComman
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersResult
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
-import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
-import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
-import com.duluin.ftth.onboarding.NoopMigrationFulfillmentPublisher
-import com.duluin.ftth.onboarding.CredentialSealer
-import com.duluin.ftth.onboarding.UuidCredentialSealer
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.ZoneOffset
 import java.util.UUID
 
-/** Koordinat placeholder saat baris CSV tak membawa lat/long — operator memperkayanya belakangan. */
-
-/** Batas atas hari tanggal tagih: hari >28 di-clamp ke 28 agar tetap ada di tiap bulan (Februari). */
-private const val MAX_BILLING_DAY = 28
-
-/**
- * Orkestrasi impor CSV pelanggan — module daun yang hanya memanggil kontrak publik customer,
- * catalog, & bng. Loop di sini SENGAJA tak transaksional: tiap baris diproses [CustomerRowImporter]
- * yang @Transactional (satu transaksi fisik per baris), sehingga satu baris gagal roll-back sendiri
- * tanpa menyeret batch. Validasi murah yang tak butuh DB (username kosong, tipe koneksi) disaring di
- * sini sebelum membuka transaksi.
- */
+/** Each row is committed independently; retries are deduplicated by source identity. */
 @Service
 class ImportCustomersService(
     private val rowImporter: CustomerRowImporter,
@@ -55,9 +38,9 @@ class ImportCustomersService(
     }
 
     private fun process(command: ImportCustomersCommand, row: CustomerImportRow): CustomerImportOutcome {
-        val username = row.mikrotikUsername?.trim().orEmpty()
+        val username = row.mikrotikUsername?.trim()?.takeIf(String::isNotEmpty) ?: row.customerCode?.trim().orEmpty()
         if (username.isEmpty()) {
-            return CustomerImportOutcome("", CustomerImportStatus.SKIPPED, "mikrotik_username kosong — baris dilewati")
+            return CustomerImportOutcome("", CustomerImportStatus.SKIPPED, "Isi customer_code atau mikrotik_username")
         }
         // Petakan `connection_type` ke tipe kanonis di sini (murah, tanpa DB) sebelum membuka transaksi.
         val authType = resolveAuthType(row.connectionType)
@@ -105,17 +88,17 @@ class CustomerRowImporter(
     private val customerApi: CustomerApi,
     private val catalogApi: CatalogApi,
     private val bngApi: BngApi,
-    private val fulfillment: MigrationFulfillmentPublisher = NoopMigrationFulfillmentPublisher,
-    private val credentialSealer: CredentialSealer = UuidCredentialSealer,
+    private val migration: CustomerMigrationRegistration,
 ) {
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     fun importRow(
         command: ImportCustomersCommand,
         username: String,
         authType: String,
         row: CustomerImportRow,
     ): CustomerImportStatus {
+        if (command.mode == ImportMode.ALREADY_INSTALLED) return createNew(command, username, authType, row)
         val existing = bngApi.findAccessByUsername(username)
         return if (existing == null) createNew(command, username, authType, row) else updateExisting(existing, row)
     }
@@ -125,33 +108,32 @@ class CustomerRowImporter(
         val plan = catalogApi.findPlanByName(row.packageName.orEmpty())
             ?: throw ValidationException("Paket '${row.packageName ?: "-"}' tidak ditemukan")
         val nasId = resolveNas(row.routerName)
-        val registered = customerApi.registerCustomer(
-            RegisterCustomerCommand(
-                code = null,
+        val customer = RegisterCustomerCommand(
+                code = row.customerCode,
                 name = row.name?.trim().orEmpty(),
                 phone = row.phone?.trim()?.takeIf { it.isNotEmpty() },
                 email = row.email?.trim()?.takeIf { it.isNotEmpty() },
                 address = row.address?.trim().orEmpty(),
                 location = coordinateOf(row),
-                areaId = null,
+                areaId = row.areaId,
                 idCardNumber = row.idCardNumber?.trim()?.takeIf { it.isNotEmpty() },
                 planId = plan.planId,
-            ),
-        )
-        val subscriptionId = registered.subscriptionId
-        if (command.mode == ImportMode.ALREADY_INSTALLED) {
-            fulfillment.publish(
-                MigrationFulfillmentRequested(
-                    operationKey = command.operationKey ?: "import-customers:$username",
-                    subscriptionId = subscriptionId,
-                    username = username,
-                    planId = plan.planId,
-                    nasId = nasId,
-                    authType = authType,
-                    credentialHandle = credentialSealer.seal(row.mikrotikPassword),
-                ),
+                monthlyFeeOverride = row.monthlyFee,
             )
-        }
+        if (command.mode == ImportMode.ALREADY_INSTALLED) {
+            val status = when (row.serviceStatus.trim().uppercase()) {
+                "ACTIVE", "AKTIF" -> MigrationStatus.ACTIVE
+                "SUSPENDED", "ISOLATED", "DITANGGUHKAN", "TERISOLIR" -> MigrationStatus.SUSPENDED
+                else -> throw ValidationException("Status layanan harus ACTIVE atau SUSPENDED")
+            }
+            migration.register(CustomerMigrationCommand(
+                operationKey = (command.operationKey?.let { "$it:" } ?: "csv:") + username,
+                customer = customer, status = status, installationDate = row.installationDate,
+                firstInvoiceOn = row.firstInvoiceOn, billingDay = row.nextBillingDay, source = MigrationSource.CSV,
+                username = row.mikrotikUsername, password = row.mikrotikPassword, authType = authType,
+                nasId = nasId, framedIp = row.framedIp,
+            ))
+        } else customerApi.registerCustomer(customer)
         return CustomerImportStatus.CREATED
     }
 
@@ -170,7 +152,7 @@ class CustomerRowImporter(
         )
         // Tanggal tagih hanya disetel bila kolom membawanya (kosong = biarkan snapshot paket).
         row.nextBillingDay?.let {
-            customerApi.overrideSubscriptionBillingDay(existing.subscriptionId, clampBillingDay(it))
+            customerApi.overrideSubscriptionBillingDay(existing.subscriptionId, it)
         }
         if (!row.routerName.isNullOrBlank()) resolveNas(row.routerName)
         return CustomerImportStatus.UPDATED
@@ -182,14 +164,12 @@ class CustomerRowImporter(
         return bngApi.resolveNasByName(name) ?: throw ValidationException("Router '$name' tidak ditemukan")
     }
 
-    /** Koordinat baris bila lat & long lengkap; salah satu kosong → null (jalur update: pertahankan). */
     private fun coordinateOf(row: CustomerImportRow): Coordinate? {
+        if ((row.latitude == null) != (row.longitude == null)) throw ValidationException("Isi lintang dan bujur bersama")
         val lat = row.latitude ?: return null
         val lon = row.longitude ?: return null
+        if (!lat.isFinite() || !lon.isFinite() || lat !in -90.0..90.0 || lon !in -180.0..180.0) throw ValidationException("Koordinat tidak valid")
         if (lon == 0.0 && lat == 0.0) return null
         return Coordinate(lon, lat)
     }
-
-    /** Opsi A: hari tanggal tagih >28 di-clamp ke 28; null tetap null (ikut kebijakan billing). */
-    private fun clampBillingDay(day: Int?): Int? = day?.let { minOf(it, MAX_BILLING_DAY) }
 }

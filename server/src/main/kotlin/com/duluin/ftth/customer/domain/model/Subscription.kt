@@ -63,6 +63,8 @@ class Subscription private constructor(
     status: SubscriptionStatus,
     activatedAt: Instant?,
     terminatedAt: Instant?,
+    billingManaged: Boolean = true,
+    billingStartsOn: java.time.LocalDate? = null,
 ) {
     /** Asal paket katalog; null untuk langganan warisan sebelum sistem paket terpadu. */
     var planId: UUID? = planId
@@ -97,6 +99,30 @@ class Subscription private constructor(
 
     var terminatedAt: Instant? = terminatedAt
         private set
+
+    var billingManaged: Boolean = billingManaged
+        private set
+    var billingStartsOn: java.time.LocalDate? = billingStartsOn
+        private set
+
+    /** Records an existing service without emitting a new-installation activation event. */
+    fun startMigrationBilling(firstInvoiceOn: java.time.LocalDate, billingDay: Int?) {
+        if (billingManaged) throw ConflictException("Penagihan sudah dikelola")
+        if (status !in setOf(SubscriptionStatus.ACTIVE, SubscriptionStatus.ISOLATED)) throw ConflictException("Langganan sudah tidak berjalan")
+        billingManaged = true
+        billingStartsOn = firstInvoiceOn
+        billingDayOfMonth = validateBillingDay(billingDay ?: firstInvoiceOn.dayOfMonth)
+    }
+
+    fun migrateExisting(suspended: Boolean, installedAt: Instant?, firstInvoiceOn: java.time.LocalDate?, billingDay: Int?) {
+        if (status != SubscriptionStatus.PENDING) throw ConflictException("Langganan sudah diproses")
+        status = if (suspended) SubscriptionStatus.ISOLATED else SubscriptionStatus.ACTIVE
+        activatedAt = installedAt
+        billingManaged = firstInvoiceOn != null
+        billingStartsOn = firstInvoiceOn
+        billingDayOfMonth = validateBillingDay(billingDay ?: firstInvoiceOn?.dayOfMonth)
+        prorateOnActivation = false
+    }
 
     /** Salin ulang snapshot paket (mis. ganti paket atau harga negosiasi). */
     fun updatePackage(snapshot: PlanSnapshot) {
@@ -219,10 +245,12 @@ class Subscription private constructor(
             status: SubscriptionStatus,
             activatedAt: Instant?,
             terminatedAt: Instant?,
+            billingManaged: Boolean = true,
+            billingStartsOn: java.time.LocalDate? = null,
         ): Subscription = Subscription(
             id, tenantId, customerId, planId, packageName, bandwidthMbps, monthlyFee,
             prorateOnActivation, billingDayOfMonth, graceDays, autoIsolir,
-            status, activatedAt, terminatedAt,
+            status, activatedAt, terminatedAt, billingManaged, billingStartsOn,
         )
 
         private fun validate(snapshot: PlanSnapshot): PlanSnapshot = snapshot.copy(
