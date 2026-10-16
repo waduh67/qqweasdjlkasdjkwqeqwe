@@ -39,8 +39,9 @@ class CustomerMigrationOnuIT : WarehouseMasterHttpFixture() {
         mapper.writeValueAsString(mapOf("serialNumber" to serial)))
 
     @Test fun `link existing subscriber replays without installation or stock and accepts only new matching telemetry`() {
-        val token = tenant(); val customer = migrate(token, plan(token), "OLD-1"); discover(token, "ONU-OLD-1")
-        repeat(2) { assertThat(link(token, customer, " onu-old-1 ").status).isEqualTo(200) }
+        val serial = "ONU-OLD-${UUID.randomUUID().toString().take(8).uppercase()}"
+        val token = tenant(); val customer = migrate(token, plan(token), "OLD-1"); discover(token, serial)
+        repeat(2) { assertThat(link(token, customer, " ${serial.lowercase()} ").status).isEqualTo(200) }
         val fixture = fixture(token)
         fixture.transaction {
             assertThat(scalar("SELECT count(*) FROM onu")).isEqualTo("1")
@@ -51,12 +52,12 @@ class CustomerMigrationOnuIT : WarehouseMasterHttpFixture() {
             for (table in listOf("inventory_movement", "inventory_serialized_asset", "inventory_asset_assignment", "work_order", "subscriber_access", "invoice"))
                 assertThat(scalar("SELECT count(*) FROM $table")).describedAs(table).isEqualTo("0")
             val api = context.getBean(CustomerObservationApi::class.java)
-            assertThat(api.resolveObservation("ONU-OLD-1", Instant.now().minusSeconds(3600)).episode).isNull()
-            assertThat(api.resolveObservation("ONU-OLD-1", Instant.now(), ObservationPath(null, "OLT-OTHER", "PON1")).reason).isEqualTo("PATH_MISMATCH")
+            assertThat(api.resolveObservation(serial, Instant.now().minusSeconds(3600)).episode).isNull()
+            assertThat(api.resolveObservation(serial, Instant.now(), ObservationPath(null, "OLT-OTHER", "PON1")).reason).isEqualTo("PATH_MISMATCH")
         }
         TenantContext.runAs(fixture.tenant) {
             context.getBean(MetricIngestionService::class.java).ingestReadings(fixture.tenant, listOf(
-                OnuReading("ONU-OLD-1", "OLT-OLD", "PON1", OnuOperationalStatus.ONLINE, -19.5, null, null, null, Instant.now())))
+                OnuReading(serial, "OLT-OLD", "PON1", OnuOperationalStatus.ONLINE, -19.5, null, null, null, Instant.now())))
         }
         val detail = mapper.readTree(request("GET", "/api/customers/$customer", token).contentAsString)
         assertThat(detail.path("onus").size()).isEqualTo(1)
@@ -64,7 +65,7 @@ class CustomerMigrationOnuIT : WarehouseMasterHttpFixture() {
         fixture.transaction { assertThat(scalar("SELECT count(*) FROM onu_metric")).isEqualTo("1") }
         val sync = context.getBean(com.duluin.ftth.cpe.application.service.CpeSyncService::class.java)
         fun snapshot(at: Instant) = com.duluin.ftth.cpe.application.port.outbound.AcsDevice(
-            "MIGRATED-CPE", "ONU-OLD-1", null, null, "Vendor", "ONU", null, null, at, observedFieldsAt = at)
+            "MIGRATED-CPE", serial, null, null, "Vendor", "ONU", null, null, at, observedFieldsAt = at)
         TenantContext.runAs(fixture.tenant) { sync.sync(listOf(snapshot(Instant.now().minusSeconds(3600)))) }
         fixture.transaction { assertThat(scalar("SELECT count(*) FROM cpe_device")).isEqualTo("0") }
         TenantContext.runAs(fixture.tenant) { sync.sync(listOf(snapshot(Instant.now()))) }
