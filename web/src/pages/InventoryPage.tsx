@@ -15,7 +15,7 @@ import { PageHeader } from '@/components/molecules'
 import { LocationPicker } from '@/components/organisms'
 import { Blade } from '@/components/organisms'
 import { OltDetail } from './OltDetailPage'
-import { Badge, Button, EmptyState, SelectField, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInventory } from '@/components/atoms/icons'
@@ -427,14 +427,15 @@ return (
         open={openSite != null}
         size="full"
         className="blade-detail"
+        layout="resource"
         title={openSite?.code ?? ''}
         subtitle={openSite?.name}
         onClose={() => setOpenSite(null)}
       >
         {openSite && (
           <AssetDetailPanel
-            badges={<Badge>{openSite.oltCount} OLT</Badge>}
             fields={[
+              { label: 'Kode', value: openSite.code },
               { label: 'Nama', value: openSite.name },
               { label: 'Jumlah OLT', value: String(openSite.oltCount) },
             ]}
@@ -940,6 +941,7 @@ return (
         open={openOlt != null}
         size="full"
         className="blade-detail"
+        layout="resource"
         title={openOlt?.code ?? ''}
         subtitle={openOlt ? `${openOlt.name}${openOlt.siteName ? ` · Site ${openOlt.siteName}` : ''}` : undefined}
         onClose={() => {
@@ -1116,6 +1118,7 @@ function OdfsTab() {
         open={openOdf != null}
         size="full"
         className="blade-detail"
+        layout="resource"
         title={openOdf?.code ?? ''}
         subtitle={openOdf?.name}
         onClose={() => setOpenOdf(null)}
@@ -1267,6 +1270,7 @@ function OdcsTab() {
         open={openOdc != null}
         size="full"
         className="blade-detail"
+        layout="resource"
         title={openOdc?.code ?? ''}
         subtitle={openOdc?.name}
         onClose={() => setOpenOdc(null)}
@@ -1401,6 +1405,7 @@ function OdpsTab() {
         open={openOdp != null}
         size="full"
         className="blade-detail"
+        layout="resource"
         title={openOdp?.code ?? ''}
         subtitle={openOdp?.name}
         onClose={() => setOpenOdp(null)}
@@ -1558,6 +1563,7 @@ function JointBoxesTab() {
         open={openBox != null}
         size="full"
         className="blade-detail"
+        layout="resource"
         title={openBox?.code ?? ''}
         subtitle={openBox?.name}
         onClose={() => setOpenBox(null)}

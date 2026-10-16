@@ -1,0 +1,13 @@
+.incident-detail { min-width: 0; }
+.incident-detail > .azure-commandbar { margin: 0 0 12px; }
+.incident-content { padding-top: 20px; min-width: 0; }
+.incident-essentials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 32px; margin: 0; }
+.incident-essentials > div { display: grid; grid-template-columns: 155px minmax(0, 1fr); gap: 12px; align-items: start; }
+.incident-essentials dt { color: var(--colorNeutralForeground3); }
+.incident-essentials dd { margin: 0; overflow-wrap: anywhere; }
+.incident-section { border-top: 1px solid var(--colorNeutralStroke2); padding-top: 20px; margin-top: 24px; }
+.incident-section h2 { margin: 0 0 12px; }
+.incident-message { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 700px; }
+.incident-error { margin: 16px 0; color: var(--colorPaletteRedForeground1); }
+@media (max-width: 1050px) { .incident-essentials { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .incident-essentials > div { grid-template-columns: minmax(0, 1fr); gap: 4px; } }

@@ -156,7 +156,7 @@ class CustomerMigrationService(
     }
     private fun validateDates(installed: LocalDate?, firstInvoice: LocalDate?, day: Int?) {
         if (installed != null && installed.isAfter(LocalDate.now())) throw ValidationException("Tanggal mulai layanan tidak boleh di masa depan")
-        if (firstInvoice != null && firstInvoice.isBefore(LocalDate.now())) throw ValidationException("Tanggal tagihan pertama tidak boleh sebelum hari ini")
+        if (firstInvoice != null && firstInvoice.isBefore(LocalDate.now())) throw ValidationException("Mulai penagihan tidak boleh sebelum hari ini")
         if (day != null && day !in 1..31) throw ValidationException("Tanggal tagih harus antara 1 dan 31")
     }
 }

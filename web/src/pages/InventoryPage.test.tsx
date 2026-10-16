@@ -168,7 +168,7 @@ describe('tab OLT — kontrak tampilan dan aksi', () => {
 
     await user.click(name)
     expect(screen.getByRole('heading', { name: 'OLT-satu' })).toBeDefined()
-    expect(screen.getByText('OLT Pusat · Site POP Pusat')).toBeDefined()
+    expect(screen.getByRole('dialog', { name: 'OLT-satu' })).toBeDefined()
     expect(screen.getByText('Detail OLT satu')).toBeDefined()
   })
 

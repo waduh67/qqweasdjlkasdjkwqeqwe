@@ -76,7 +76,7 @@ export function Blade({
     const prepare = () => creation?.prepare()
     return <ResourceForm title={title} className={className} onClose={onClose} dirty={dirty}
       steps={creation?.steps}
-      readOnly={!creation} editing={creation?.editing} busy={creation?.busy} onReview={prepare} reviewAction={!!creation}
+      readOnly={!creation} editing={creation?.editing} busy={creation?.busy || closeDisabled} onReview={prepare} reviewAction={!!creation}
       onBack={() => creation?.back()} review={reviewing ? creation.summary : undefined}
       footer={footer}
       reviewFooter={reviewing ? <><Button disabled={creation.busy} onClick={creation.back}>Sebelumnya</Button>{footer}</> : undefined}>

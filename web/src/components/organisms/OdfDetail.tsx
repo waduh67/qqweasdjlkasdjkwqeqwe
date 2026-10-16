@@ -4,7 +4,7 @@ import { api, ApiError } from '@/api/client'
 import type { AssetStatus, OdfView, SiteView } from '@/api/network'
 import type { PageResponse } from '@/api/types'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
+import { Button, EmptyState, SelectField, Spinner, TextField } from '@/components/atoms'
 import { IconInventory } from '@/components/atoms/icons'
 import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
@@ -14,6 +14,7 @@ import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
 import { FiberTracePanel } from './FiberTracePanel'
 import { SplicingManager } from './SplicingManager'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'PLANNED', label: 'Rencana' },
@@ -197,32 +198,28 @@ export function OdfDetail({
   return (
     <>
       <AssetDetailPanel
-        badges={
-          <>
-            <StatusBadge status={odf.status} />
-            <Badge>{odf.portCount} port</Badge>
-          </>
-        }
         subtitle={
           free === 0
             ? `Rak penuh — ${odf.portCount} port terpakai semua`
             : `${odf.usedPortCount}/${odf.portCount} port terpakai · sisa ${free}`
         }
         fields={[
+          { label: 'Kode', value: odf.code },
+          { label: 'Status', value: STATUS_OPTIONS.find(option => option.value === odf.status)?.label ?? odf.status },
           { label: 'Nama', value: odf.name },
           { label: 'POP', value: odf.siteName ?? '—' },
           // Bukan isian: dibaca dari patchcord yang benar-benar tercolok, jadi
           // boleh lebih dari satu OLT dan boleh belum ada sama sekali.
           {
             label: 'OLT terkait',
-            value: odf.olts.length === 0 ? 'belum ada patchcord tercatat' : odf.olts.map(uplinkLabel).join(', '),
+            value: odf.olts.length === 0 ? 'Belum tersambung' : odf.olts.map(uplinkLabel).join(', '),
           },
           { label: 'Jumlah port', value: String(odf.portCount) },
           { label: 'Port terpakai', value: `${odf.usedPortCount}` },
           // Dua angka, bukan satu yang dibagi dua: satu port dipakai DUA sambungan
           // (belakang ke core kabel luar, depan ke patchcord OLT), jadi jumlah
           // sambungan memang bisa melebihi jumlah port terpakai.
-          { label: 'Sambungan di dalamnya', value: String(odf.spliceCount) },
+          { label: 'Jumlah sambungan', value: String(odf.spliceCount) },
         ]}
         location={odf.location}
         canUpdate={canUpdate}
@@ -234,23 +231,18 @@ export function OdfDetail({
         }}
         onDelete={() => void remove()}
         onShowOnMap={onShowOnMap ? () => onShowOnMap(mapFocusState('odf', odfId, odf.location)) : undefined}
-      >
-        {/* Jalur di ATAS meja kerja: yang dicari orang saat membuka rak adalah
-            "port ini bermuara ke mana", bukan formulir menyambung. */}
-        <FiberTracePanel closureKind="ODF" closureId={odfId} reloadKey={spliceVersion} />
-
-        {/* Rak ODF adalah satu-satunya kotak yang sisi tujuannya bukan serat: di
-            sini core kabel luar bertemu port (sisi belakang), lalu patchcord dari
-            sisi depan lanjut ke PON port OLT. */}
-        <SplicingManager
+        sections={can('network.splice.view') ? [
+          { key: 'splicing', label: 'Sambungan', group: 'Jaringan', icon: NavIcons.Cable, content: <SplicingManager
           closureKind="ODF"
           closureId={odfId}
           onChanged={() => {
             void load()
             setSpliceVersion((v) => v + 1)
           }}
-        />
-      </AssetDetailPanel>
+        /> },
+          { key: 'trace', label: 'Jalur serat', group: 'Jaringan', icon: NavIcons.Route, content: <FiberTracePanel closureKind="ODF" closureId={odfId} reloadKey={spliceVersion} /> },
+        ] : []}
+      />
 
       <Blade
         open={draft != null}
@@ -258,6 +250,8 @@ export function OdfDetail({
         subtitle="Ubah identitas, POP induk & jumlah port. Kabel yang berhenti di rak ini diatur di peta."
         size="full"
         className="blade-edit"
+        layout="resource"
+        closeDisabled={saving}
         dirty={dirty}
         onClose={closeDraft}
         footer={

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 async function setup(page: Page) {
-  const writes: { path: string; body: unknown }[] = [], errors: string[] = []
+  const writes: { path: string; body: unknown; query: Record<string, string> }[] = [], errors: string[] = []
   const profile = { id: 'qa', tenantId: 'qa', tenantSlug: 'qa', email: 'qa@example.test', name: 'Rina', platformAdmin: true, permissions: [], areaIds: [], roleIds: [], twoFactorEnabled: false }
   let batchState = 'STAGED'
   page.on('pageerror', error => errors.push(error.message))
@@ -21,13 +21,16 @@ async function setup(page: Page) {
     else if (path.startsWith('/api/onboarding/v1/import/customers')) {
       if (path.endsWith('/commit')) batchState = 'PROCESSING'
       else if (req.method() === 'GET' && batchState === 'PROCESSING') batchState = 'COMMITTED'
-      body = { id: 'batch1', sha256: 'f'.repeat(64), mode: 'ALREADY_INSTALLED', state: batchState, rowCount: 2, errors: [], result: batchState === 'COMMITTED' ? { created: 2, updated: 0, skipped: 0, failed: 0, rows: [{ username: 'OLD-1', status: 'CREATED', message: null }] } : null, createdAt: '2026-10-16T00:00:00Z' }
+      body = { id: 'batch1', sha256: 'f'.repeat(64), mode: 'ALREADY_INSTALLED', state: batchState, rowCount: 2, errors: [], result: batchState === 'COMMITTED' ? { created: 2, updated: 0, skipped: 0, failed: 0, rows: [{ username: 'OLD-1', status: 'CREATED', message: null }] } : null, createdAt: '2026-10-16T00:00:00Z', preview: [
+        { row: 2, identity: 'OLD-1', name: 'Ani', packageName: 'Rumah 50 Mbps', status: 'ACTIVE', firstInvoiceOn: '2099-11-05', billingDay: 20, monthlyFee: null },
+        { row: 3, identity: 'OLD-2', name: 'Budi', packageName: 'Rumah 50 Mbps', status: 'ACTIVE', firstInvoiceOn: '2099-11-20', billingDay: 5, monthlyFee: null },
+      ] }
     } else if (path === '/api/onboarding/migrations') {
       // Keep the form visible after a rejected write, so its submission can be inspected.
-      writes.push({ path, body: req.postDataJSON() })
+      writes.push({ path, body: req.postDataJSON(), query: Object.fromEntries(new URL(req.url()).searchParams) })
       await route.fulfill({ status: 400, json: { detail: 'Contoh validasi server.' } }); return
     }
-    if (req.method() !== 'GET' && path !== '/api/auth/refresh') writes.push({ path, body: req.headers()['content-type']?.includes('json') ? req.postDataJSON() : null })
+    if (req.method() !== 'GET' && path !== '/api/auth/refresh') writes.push({ path, body: req.headers()['content-type']?.includes('json') ? req.postDataJSON() : null, query: Object.fromEntries(new URL(req.url()).searchParams) })
     await route.fulfill({ json: body })
   })
   return { writes, errors }
@@ -47,6 +50,10 @@ for (const width of [375, 1440]) {
     await page.screenshot({ path: info.outputPath('migration-service.png'), animations: 'disabled' })
     await panel.getByRole('button', { name: 'Berikutnya: Penagihan' }).click()
     await expect(panel.getByRole('combobox', { name: 'Penagihan', exact: true })).toHaveValue('later')
+    await panel.getByRole('combobox', { name: 'Penagihan', exact: true }).selectOption('start')
+    await panel.getByRole('textbox', { name: 'Mulai penagihan di aplikasi ini', exact: true }).fill('2099-11-05')
+    await panel.getByRole('spinbutton', { name: 'Tanggal tagih setiap bulan' }).fill('20')
+    await panel.getByRole('combobox', { name: 'Penagihan', exact: true }).selectOption('later')
     await panel.getByRole('button', { name: 'Berikutnya: Lokasi' }).click()
     await panel.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Jl. Melati 10')
     await panel.getByRole('button', { name: 'Berikutnya: Akun lama' }).click()
@@ -59,9 +66,47 @@ for (const width of [375, 1440]) {
     await expect(panel.locator('.resource-summary')).toContainText('Belum dikelola')
     await panel.getByRole('button', { name: 'Migrasikan', exact: true }).click()
     await expect.poll(() => state.writes.length).toBe(1)
-    expect(state.writes[0].body).toMatchObject({ status: 'SUSPENDED', firstInvoiceOn: null, onuSerial: '024654000002', customer: { name: 'Budi Santoso', location: null, monthlyFeeOverride: 125000 } })
+    expect(state.writes[0].body).toMatchObject({ status: 'SUSPENDED', firstInvoiceOn: null, billingDay: null, onuSerial: '024654000002', customer: { name: 'Budi Santoso', location: null, monthlyFeeOverride: 125000 } })
     expect(state.errors).toEqual([])
     const bounds = await panel.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1)
+  })
+}
+
+for (const width of [375, 1440]) {
+  test(`CSV billing uses customer schedules and sends defaults only when selected at ${width}px`, async ({ page }, info) => {
+    const state = await setup(page)
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto('/import-customers')
+    const panel = page.getByRole('dialog', { name: 'Migrasi pelanggan', exact: true })
+    await panel.locator('input[type=file]').setInputFiles({ name: 'billing.csv', mimeType: 'text/csv', buffer: Buffer.from('name,address,package_name,customer_code,first_invoice_on,next_billing\nAni,Bandung,Rumah 50 Mbps,OLD-1,2099-11-05,5\n') })
+    await panel.getByRole('button', { name: 'Berikutnya: Penagihan' }).click()
+    const choice = panel.getByRole('combobox', { name: 'Jadwal penagihan', exact: true })
+    await expect(choice).toHaveValue('csv')
+    await expect(panel.locator('input[type=date]')).toHaveCount(0)
+    await expect(panel).toContainText('next_billing')
+    await page.screenshot({ path: info.outputPath('csv-billing.png'), animations: 'disabled' })
+    await choice.selectOption('defaults')
+    await panel.getByRole('textbox', { name: 'Mulai penagihan di aplikasi ini', exact: true }).fill('2099-11-01')
+    await panel.getByRole('spinbutton', { name: 'Tanggal tagih setiap bulan' }).fill('10')
+    await page.screenshot({ path: info.outputPath('csv-billing-defaults.png'), animations: 'disabled' })
+    await choice.selectOption('csv')
+    await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
+    let staged = state.writes.filter(write => write.path === '/api/onboarding/v1/import/customers')
+    expect(staged).toHaveLength(1)
+    expect(staged[0].query).not.toHaveProperty('firstInvoiceOn')
+    expect(staged[0].query).not.toHaveProperty('billingDay')
+    await expect(panel.getByRole('columnheader', { name: 'Mulai penagihan', exact: true })).toBeVisible()
+    await expect(panel.getByRole('row').filter({ hasText: 'OLD-1' }).getByText('20', { exact: true })).toBeVisible()
+    await panel.getByRole('button', { name: 'Sebelumnya', exact: true }).click()
+    await choice.selectOption('defaults')
+    await panel.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
+    staged = state.writes.filter(write => write.path === '/api/onboarding/v1/import/customers')
+    expect(staged).toHaveLength(2)
+    expect(staged[1].query).toMatchObject({ firstInvoiceOn: '2099-11-01', billingDay: '10' })
+    expect(state.errors).toEqual([])
+    const bounds = await panel.boundingBox()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1)
   })
 }
 

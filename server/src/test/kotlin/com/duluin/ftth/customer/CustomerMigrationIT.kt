@@ -13,6 +13,57 @@ import java.util.UUID
 import tools.jackson.databind.JsonNode
 
 class CustomerMigrationIT : WarehouseMasterHttpFixture() {
+    @Test fun `csv billing preview and imported schedules honor each row before optional defaults`() {
+        val token = tenant()
+        plan(token)
+        val month = LocalDate.now().plusMonths(1).withDayOfMonth(1)
+        for (useDefaults in listOf(false, true)) {
+            val prefix = if (useDefaults) "DEFAULT" else "CSV"
+            val csv = "name,address,package_name,customer_code,first_invoice_on,next_billing\n" +
+                "Ani,Test,Existing service,$prefix-A,${month.withDayOfMonth(5)},20\n" +
+                "Budi,Test,Existing service,$prefix-B,${month.withDayOfMonth(15)},\n" +
+                "Cici,Test,Existing service,$prefix-C,,25\n" +
+                "Dedi,Test,Existing service,$prefix-D,,\n"
+            val uploaded = mvc.perform(multipart("/api/onboarding/v1/import/customers")
+                .file(MockMultipartFile("file", "billing.csv", "text/csv", csv.toByteArray()))
+                .param("operationKey", "billing-$prefix").param("areaId", area(token))
+                .apply { if (useDefaults) { param("firstInvoiceOn", month.toString()); param("billingDay", "1") } }
+                .header("Authorization", "Bearer $token")).andReturn().response
+            assertThat(uploaded.status).withFailMessage(uploaded.contentAsString).isEqualTo(202)
+            val batch = mapper.readTree(uploaded.contentAsString)
+            val preview = batch.path("preview")
+            val expected = listOf(
+                month.withDayOfMonth(5) to 20,
+                month.withDayOfMonth(15) to if (useDefaults) 1 else 15,
+                (month.takeIf { useDefaults }) to 25.takeIf { useDefaults },
+                (month.takeIf { useDefaults }) to 1.takeIf { useDefaults },
+            )
+            expected.forEachIndexed { index, (first, day) ->
+                assertThat(preview[index].path("firstInvoiceOn").takeUnless { it.isNull }?.asString()).isEqualTo(first?.toString())
+                assertThat(preview[index].path("billingDay").takeUnless { it.isNull }?.asInt()).isEqualTo(day)
+            }
+            val id = batch.path("id").asString()
+            assertThat(request("POST", "/api/onboarding/v1/import/customers/$id/commit?commitOperationKey=commit-$prefix&commitHash=${batch.path("sha256").asString()}", token).status).isEqualTo(200)
+            val stock = fixture(token)
+            TenantContext.runAs(stock.tenant) { context.getBean(CustomerImportPromotionPort::class.java).promoteOne() }
+            val completed = mapper.readTree(request("GET", "/api/onboarding/v1/import/customers/$id", token).contentAsString)
+            assertThat(completed.path("result").path("created").asInt()).withFailMessage(completed.toString()).isEqualTo(4)
+            stock.transaction {
+                expected.forEachIndexed { index, (first, day) ->
+                    val code = "$prefix-${'A' + index}"
+                    val customer = scalar("SELECT id FROM customer WHERE code='$code'")
+                    assertThat(scalar("SELECT billing_managed FROM subscription WHERE customer_id='$customer'"))
+                        .isEqualTo(if (first == null) "f" else "t")
+                    if (first != null) {
+                        assertThat(scalar("SELECT billing_starts_on FROM subscription WHERE customer_id='$customer'")).isEqualTo(first.toString())
+                        assertThat(scalar("SELECT billing_day_of_month FROM subscription WHERE customer_id='$customer'")).isEqualTo(day.toString())
+                    }
+                }
+                assertThat(scalar("SELECT count(*) FROM invoice")).isEqualTo("0")
+            }
+        }
+    }
+
     private fun plan(token: String): String {
         val response = request("POST", "/api/catalog/plans", token,
             """{"name":"Existing service","price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""")

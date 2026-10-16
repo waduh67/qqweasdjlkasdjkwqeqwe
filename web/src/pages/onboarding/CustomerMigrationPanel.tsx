@@ -38,6 +38,7 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const [loadError, setLoadError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [billing, setBilling] = useState('later')
+  const [csvBilling, setCsvBilling] = useState('csv')
   const [firstInvoice, setFirstInvoice] = useState('')
   const [billingDay, setBillingDay] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -57,7 +58,8 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
   const canMikrotik = can('bng.nas.manage') && can('bng.nas.view')
   const canMigrate = can('customer.customer.create') && can('customer.subscription.update')
   const set = (patch: Partial<typeof initial>) => setDraft(previous => ({ ...previous, ...patch }))
-  const defaults = { firstInvoiceOn: billing === 'start' ? firstInvoice : null, billingDay: billingDay ? Number(billingDay) : null, areaId }
+  const useBillingDefaults = source === 'csv' ? csvBilling === 'defaults' : billing === 'start'
+  const defaults = { firstInvoiceOn: useBillingDefaults ? firstInvoice : null, billingDay: useBillingDefaults && billingDay ? Number(billingDay) : null, areaId }
   const location = optionalCustomerLocation(draft.longitude, draft.latitude)
   useEffect(() => {
     let active = true
@@ -132,9 +134,10 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
     <CreationSummary rows={source === 'manual' ? [
       ['Pelanggan', draft.name], ['Status layanan', draft.status === 'ACTIVE' ? 'Aktif' : 'Ditangguhkan'], ['Paket', plans.find(plan => plan.id === draft.planId)?.name],
       ['Harga bulanan', `Rp ${Number(draft.price || plans.find(plan => plan.id === draft.planId)?.price || 0).toLocaleString('id-ID')}`],
-      ['Mulai layanan', draft.installationDate || 'Belum diketahui'], ['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola'],
+      ['Mulai layanan', draft.installationDate || 'Belum diketahui'], ['Mulai penagihan', defaults.firstInvoiceOn || 'Belum dikelola'],
+      ['Tanggal tagih setiap bulan', defaults.firstInvoiceOn ? defaults.billingDay || Number(defaults.firstInvoiceOn.slice(-2)) : 'Belum dikelola'],
       ['ONU', onu?.serialNumber || 'Belum dihubungkan'], ['Koordinat', draft.latitude && draft.longitude ? `${draft.latitude}, ${draft.longitude}` : 'Belum ditentukan'], ['Username', draft.username || 'Belum diisi'],
-    ] : [['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ...(source === 'csv' ? [] : [['Tagihan pertama', defaults.firstInvoiceOn || 'Belum dikelola'] as [string, string]])]} />
+    ] : [['Sumber', SOURCE_LABEL[source]], [source === 'csv' ? 'Berkas' : 'BRAS', source === 'csv' ? file?.name || 'Impor tersimpan' : routers.find(router => router.id === nasId)?.name], ['Pelanggan', source === 'csv' ? batch?.rowCount : selected.size], ...(source === 'csv' ? [] : [['Mulai penagihan', defaults.firstInvoiceOn || 'Belum dikelola'] as [string, string]])]} />
     {!finished && <p className="muted">Akun jaringan lama tetap digunakan. RADIUS dapat disiapkan dari detail pelanggan.</p>}
     {batch && !finished && (batch.preview?.length ?? 0) > 0 && <div className="stack"><p>{batch.preview!.length} dari {batch.rowCount} pelanggan</p><DataTable rows={batch.preview!} rowKey={row => String(row.row)} columns={[
       { key: 'identity', header: 'Kode / username', minWidth: 160, cell: row => row.identity },
@@ -142,7 +145,8 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       { key: 'name', header: 'Nama', minWidth: 170, cell: row => row.name || '—' },
       { key: 'packageName', header: 'Paket', minWidth: 150, cell: row => row.packageName || '—' },
       { key: 'status', header: 'Status', minWidth: 130, cell: row => ['SUSPENDED', 'ISOLATED', 'TERISOLIR', 'DITANGGUHKAN'].includes(row.status.toUpperCase()) ? 'Ditangguhkan' : row.status.toUpperCase() === 'ACTIVE' || row.status.toUpperCase() === 'AKTIF' ? 'Aktif' : row.status },
-      { key: 'firstInvoiceOn', header: 'Tagihan pertama', minWidth: 160, cell: row => row.firstInvoiceOn || 'Belum dikelola' },
+      { key: 'firstInvoiceOn', header: 'Mulai penagihan', minWidth: 160, cell: row => row.firstInvoiceOn || 'Belum dikelola' },
+      { key: 'billingDay', header: 'Tanggal tiap bulan', minWidth: 160, cell: row => row.firstInvoiceOn ? row.billingDay ?? Number(row.firstInvoiceOn.slice(-2)) : '—' },
       { key: 'monthlyFee', header: 'Harga bulanan', minWidth: 140, cell: row => row.monthlyFee == null ? 'Sesuai paket' : `Rp ${Number(row.monthlyFee).toLocaleString('id-ID')}` },
     ]} /></div>}
     {batch && batch.errors.length > 0 && <><p role="alert">Perbaiki data berikut, lalu unggah kembali.</p><DataTable rows={batch.errors} rowKey={row => `${row.row}:${row.column}:${row.code}`} columns={[{ key: 'row', header: 'Baris', cell: row => row.row }, { key: 'column', header: 'Kolom', cell: row => row.column || '—' }, { key: 'message', header: 'Keterangan', cell: row => row.message }]} /></>}
@@ -185,10 +189,18 @@ export function CustomerMigrationPanel({ initialSource = 'manual', batchId, onBa
       </ResourceStep>}
       {source === 'manual' && can('customer.onu.assign') && can('monitoring.provisioning.view') && <ResourceStep step="device"><MigrationOnuPicker value={onu} onChange={setOnu} /><p className="muted">Pilih ONU yang sudah digunakan pelanggan. Dapat dihubungkan nanti dari detail pelanggan.</p></ResourceStep>}
       <ResourceStep step="billing">
-        <SelectField label="Penagihan" value={billing} onChange={(_, data) => setBilling(data.value)}><option value="later">Belum kelola tagihan</option><option value="start">Mulai kelola tagihan</option></SelectField>
-        {billing === 'start' && <><TextField label="Tanggal tagihan pertama" type="date" required min={localToday()} value={firstInvoice} onChange={(_, data) => setFirstInvoice(data.value)} /><TextField label="Tanggal tagih setiap bulan" type="number" min={1} max={31} value={billingDay} placeholder={firstInvoice ? String(Number(firstInvoice.slice(-2))) : 'Mengikuti tanggal tagihan pertama'} onChange={(_, data) => setBillingDay(data.value)} /><p className="muted">Pilih periode yang belum ditagih di sistem sebelumnya. Jika tanggal tidak tersedia, tagihan terbit pada hari terakhir bulan tersebut.</p></>}
-        {billing === 'later' && <p className="muted">Penagihan dapat dimulai nanti dari detail pelanggan.</p>}
-        {source === 'csv' && <p className="muted">Tanggal dan harga pada CSV digunakan jika diisi. Kolom first_invoice_on yang kosong mengikuti pilihan di atas.</p>}
+        {source === 'csv' ? <>
+          <SelectField label="Jadwal penagihan" value={csvBilling} onChange={(_, data) => setCsvBilling(data.value)}>
+            <option value="csv">Sesuai CSV</option><option value="defaults">Sesuai CSV, dengan tanggal bawaan</option>
+          </SelectField>
+          <CreationSummary rows={[
+            ['first_invoice_on', 'Mulai penagihan (YYYY-MM-DD)'],
+            ['next_billing', 'Tanggal setiap bulan (1–31)'],
+          ]} />
+          <p className="muted">{useBillingDefaults ? 'Tanggal bawaan hanya digunakan untuk kolom CSV yang kosong.' : 'Pelanggan tanpa tanggal mulai belum ditagih.'}</p>
+        </> : <SelectField label="Penagihan" value={billing} onChange={(_, data) => setBilling(data.value)}><option value="later">Belum kelola tagihan</option><option value="start">Mulai kelola tagihan</option></SelectField>}
+        {useBillingDefaults && <><TextField label="Mulai penagihan di aplikasi ini" type="date" required min={localToday()} value={firstInvoice} onChange={(_, data) => setFirstInvoice(data.value)} /><TextField label="Tanggal tagih setiap bulan" type="number" min={1} max={31} value={billingDay} placeholder={firstInvoice ? String(Number(firstInvoice.slice(-2))) : 'Mengikuti tanggal mulai penagihan'} onChange={(_, data) => setBillingDay(data.value)} /><p className="muted">Pilih jadwal berikutnya yang belum ditagih di sistem lama.</p></>}
+        {source !== 'csv' && !useBillingDefaults && <p className="muted">Penagihan dapat dimulai nanti dari detail pelanggan.</p>}
       </ResourceStep>
       {source !== 'csv' && <ResourceStep step="location"><TextField label="Alamat" required={source === 'manual'} value={draft.address} onChange={(_, data) => set({ address: data.value })} /><CustomerAreaField value={areaId} onChange={setAreaId} /><Field label="Koordinat (opsional)"><LocationPicker longitude={draft.longitude} latitude={draft.latitude} onChange={(longitude, latitude) => set({ longitude, latitude })} /></Field></ResourceStep>}
       {source === 'manual' && <ResourceStep step="network"><p className="muted">Simpan akun yang digunakan pelanggan saat ini.</p><TextField label="Username" value={draft.username} onChange={(_, data) => set({ username: data.value })} /><TextField label="Password" type="password" autoComplete="new-password" value={draft.password} onChange={(_, data) => set({ password: data.value })} /><SelectField label="Jenis koneksi" value={draft.authType} onChange={(_, data) => set({ authType: data.value as ServiceType })}><option value="PPPOE">PPPoE</option><option value="HOTSPOT">Hotspot</option><option value="DHCP">DHCP</option><option value="STATIC">IP statis</option></SelectField><SelectField label="BRAS" value={nasId} onChange={(_, data) => setNasId(data.value)}><option value="">Belum ditentukan</option>{routers.map(router => <option key={router.id} value={router.id}>{router.name}</option>)}</SelectField>{['STATIC', 'DHCP'].includes(draft.authType) && <TextField label="Alamat IP" value={draft.framedIp} onChange={(_, data) => set({ framedIp: data.value })} />}</ResourceStep>}
