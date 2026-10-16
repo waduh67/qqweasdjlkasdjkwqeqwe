@@ -1918,8 +1918,7 @@ td.dg-actions {
   border-radius: var(--radius);
   background-repeat: repeat;
 }
-/* Panel info mengambang DI DALAM peta (pojok kanan-atas), bukan kolom di samping.
-   Peta tetap penuh & interaktif; kartu kaca buram menumpuk di atasnya. */
+/* Panel detail tetap terbaca saat menutupi kontrol atau label peta. */
 .map-panel {
   position: absolute;
   top: 0.75rem;
@@ -1929,8 +1928,7 @@ td.dg-actions {
   max-width: calc(100% - 1.5rem);
   max-height: calc(100% - 1.5rem);
   overflow-y: auto;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg, var(--shadow-md));
@@ -1938,6 +1936,9 @@ td.dg-actions {
 }
 /* Di layar sempit, kartu melar ke kedua sisi agar tetap terbaca. */
 @media (max-width: 640px) {
+  .map-shell:has(> .map-panel) > .map-navigation {
+    display: none;
+  }
   .map-panel {
     left: 0.75rem;
     width: auto;
@@ -1973,8 +1974,7 @@ td.dg-actions {
   z-index: 2;
   padding: 0.8rem 0.95rem 0.65rem;
   /* Latar sendiri (bukan transparan) supaya isi yang tergulung tak menembus judul. */
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 /* Tombol tutup menempel ke atas: subjudul boleh membungkus dua baris tanpa
