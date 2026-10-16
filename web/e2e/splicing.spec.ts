@@ -179,6 +179,28 @@ for (const panelWidth of [385, 620]) {
     await expect(state.manager.getByRole('table', { name: 'Daftar sambungan', exact: true })).toBeVisible()
     await expect(state.manager.getByRole('table', { name: 'Kabel di lokasi', exact: true })).toBeVisible()
     await expect(state.manager.getByRole('tab')).toHaveCount(0)
+    await board.getByRole('button', { name: 'Sambungkan', exact: true }).click()
+    const connections = state.manager.getByRole('table', { name: 'Daftar sambungan', exact: true })
+    await expect(connections.getByRole('cell', { name: `${state.data.cables[0].code} · Core 7`, exact: true })).toBeVisible()
+    for (const name of ['Daftar sambungan', 'Kabel di lokasi']) {
+      const cells = await state.manager.getByRole('table', { name, exact: true }).locator('tbody td:not(:first-child)').evaluateAll(nodes => nodes.map(cell => {
+        const range = document.createRange(); range.selectNodeContents(cell)
+        const text = range.getBoundingClientRect(), bounds = cell.getBoundingClientRect(), style = getComputedStyle(cell)
+        return { label: cell.textContent, textLeft: text.left, textRight: text.right,
+          left: bounds.left + parseFloat(style.paddingLeft), right: bounds.right - parseFloat(style.paddingRight),
+          lines: range.getClientRects().length }
+      }))
+      for (const cell of cells) {
+        expect(cell.textLeft, cell.label ?? '').toBeGreaterThanOrEqual(cell.left - 1)
+        expect(cell.textRight, cell.label ?? '').toBeLessThanOrEqual(cell.right + 1)
+        expect(cell.lines, cell.label ?? '').toBe(1)
+      }
+    }
+    const connectionScroll = state.manager.getByRole('region', { name: 'Tabel sambungan', exact: true })
+    await connectionScroll.screenshot({ path: info.outputPath(`connection-columns-${panelWidth}.png`) })
+    await connectionScroll.focus(); await connectionScroll.press('ArrowRight')
+    await expect.poll(() => connectionScroll.evaluate(node => node.scrollLeft)).toBeGreaterThan(0)
+    expect(await drawer.locator('.azure-blade-body').evaluate(body => body.scrollWidth <= body.clientWidth + 1)).toBe(true)
     const table = state.manager.getByRole('region', { name: 'Tabel kabel', exact: true })
     await table.focus(); await table.press('ArrowRight')
     await expect(table).toBeFocused()

@@ -3118,6 +3118,8 @@ td.dg-actions {
 .splice-list-section { min-width: 0; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
 .splice-list-section > h4 { margin: 0 0 8px; font-size: var(--fontSizeBase300); font-weight: 600; }
 .splice-list-section .table-wrap { min-width: 0; max-width: 100%; border-radius: 0; }
+/* Keep single-line labels inside their columns; the wrapper scrolls when needed. */
+.splice-list-section .fui-Table { table-layout: auto; }
 .splice-list-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
 .splice-list-filter > .fui-Field { width: 280px; max-width: 100%; }
 .splice-manager .fui-TableCell { white-space: nowrap; }
