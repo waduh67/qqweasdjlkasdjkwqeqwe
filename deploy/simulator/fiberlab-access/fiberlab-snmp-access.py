@@ -46,9 +46,9 @@ def plan(config):
         raise ValueError('The host route must lead to an address owned by the separate Fiberlab runtime')
     address = str(ipaddress.IPv4Address(source_network['IPAddress']))
     rules = [
-        ['-A', CHAIN, '-i', ingress, '-o', egress, '-s', address + '/32', '-d', target + '/32',
+        ['-A', CHAIN, '-s', address + '/32', '-d', target + '/32', '-i', ingress, '-o', egress,
          '-p', 'udp', '-m', 'udp', '--dport', str(port), '-m', 'conntrack', '--ctstate', 'NEW,ESTABLISHED', '-j', 'ACCEPT'],
-        ['-A', CHAIN, '-i', egress, '-o', ingress, '-s', target + '/32', '-d', address + '/32',
+        ['-A', CHAIN, '-s', target + '/32', '-d', address + '/32', '-i', egress, '-o', ingress,
          '-p', 'udp', '-m', 'udp', '--sport', str(port), '-m', 'conntrack', '--ctstate', 'ESTABLISHED', '-j', 'ACCEPT'],
     ]
     return {'source': address, 'target': target, 'port': port, 'ingress': ingress, 'egress': egress, 'rules': rules}
